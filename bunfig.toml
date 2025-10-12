@@ -1,0 +1,9 @@
+[serve.static]
+plugins = ["bun-plugin-tailwind"]
+env = "BUN_PUBLIC_*"
+
+[test]
+# Load .env.test and tweak globals before any test files run
+preload = ["./tests/setup.ts"]
+# Enable coverage if you want a summary after tests
+coverage = true
