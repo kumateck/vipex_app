@@ -53,7 +53,9 @@ export function errorHandler(app: Elysia) {
     }
 
     // Heuristic mapping for known infra errors (DB/SMTP), otherwise 500
-    const { status, reason } = toHttpStatus(error);
+    const { status, reason } = toHttpStatus(
+      error as unknown as { code?: string; command?: string },
+    );
     set.status = status;
     const err = error as { message?: string; details?: unknown };
     return {
