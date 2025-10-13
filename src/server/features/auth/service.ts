@@ -16,6 +16,8 @@ import {
 } from './repository';
 import { env } from '../../utils/env';
 import { parseDurationToSeconds } from '../../utils/duration';
+import { sendPasswordResetEmail } from '@/server/services/mail/templates/password-reset';
+import { UserStatus } from '@/db/schemas/enums';
 
 // function sha256Hex(input: string): string {
 //   // Bun supports SubtleCrypto
@@ -40,9 +42,9 @@ function generateOpaqueToken(bytes = 32): string {
 export async function loginSvc(email: string, password: string, ua?: string, ip?: string) {
   const user = await getUserByEmailRepo(email);
   if (!user) throw new Error('Invalid credentials');
-  if (user.userStatus && user.userStatus !== 'ACTIVE') throw new Error('Account disabled');
+  if (user.status && user.status !== UserStatus.ACTIVE) throw new Error('Account disabled');
 
-  const ok = await verifyPassword(password, user.password);
+  const ok = await verifyPassword(password, user?.password);
   if (!ok) throw new Error('Invalid credentials');
 
   const payload = {
@@ -117,25 +119,52 @@ export async function logoutSvc(refreshToken: string) {
   }
 }
 
+// export async function forgotPasswordSvc(email: string) {
+//   const user = await getUserByEmailRepo(email);
+//   // Always respond success to avoid user enumeration
+//   if (!user) return;
+
+//   const tokenPlain = generateOpaqueToken(32);
+//   const tokenHash = await sha256HexAsync(tokenPlain);
+//   const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+//   await insertPasswordResetRepo({ userId: user.id, tokenHash, expiresAt });
+
+//   // Send email with token link
+//   const resetUrl = `${
+//     process.env.APP_BASE_URL || 'http://localhost:3000'
+//   }/reset-password?token=${tokenPlain}`;
+//   // Replace with real mailer integration later
+//   console.log(`Password reset link for ${email}: ${resetUrl}`);
+// }
+
 export async function forgotPasswordSvc(email: string) {
   const user = await getUserByEmailRepo(email);
+  console.log(user, 'user', email);
   // Always respond success to avoid user enumeration
   if (!user) return;
 
-  const tokenPlain = generateOpaqueToken(32);
-  const tokenHash = await sha256HexAsync(tokenPlain);
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+  const tokenPlain = randomBytes(32).toString('hex');
+  const enc = new TextEncoder().encode(tokenPlain);
+  const digest = await crypto.subtle.digest('SHA-256', enc);
+  const tokenHash = Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
   await insertPasswordResetRepo({ userId: user.id, tokenHash, expiresAt });
 
-  // Send email with token link
-  const resetUrl = `${
-    process.env.APP_BASE_URL || 'http://localhost:3000'
-  }/reset-password?token=${tokenPlain}`;
-  // Replace with real mailer integration later
-  console.log(`Password reset link for ${email}: ${resetUrl}`);
-}
+  const resetUrl = `${env.APP_BASE_URL}/reset-password?token=${tokenPlain}`;
 
+  try {
+    await sendPasswordResetEmail(user.email, resetUrl);
+  } catch (err) {
+    // Do not leak details to the client; log for operators
+    console.error('Failed to send password reset email:', err);
+    // You can also capture with Sentry here if desired
+    // Sentry.captureException(err);
+  }
+}
 export async function resetPasswordSvc(token: string, newPassword: string) {
   const tokenHash = await sha256HexAsync(token);
   const record = await findPasswordResetRepo(tokenHash);

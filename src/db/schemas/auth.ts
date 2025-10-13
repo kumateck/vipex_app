@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, uuid, varchar, index, uniqueIndex } from 'drizzle-orm/pg-core';
-import { users } from './schema';
+import { users } from './core';
 
-// Opaque refresh tokens stored as SHA-256 hex strings
+// Refresh tokens
 export const refreshTokens = pgTable(
   'refresh_tokens',
   {
@@ -24,7 +24,7 @@ export const refreshTokens = pgTable(
   }),
 );
 
-// Password reset tokens stored as SHA-256 hex strings
+// Password reset tokens
 export const passwordResets = pgTable(
   'password_resets',
   {

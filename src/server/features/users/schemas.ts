@@ -5,6 +5,7 @@ import {
   Telephone,
   NonEmptyString255,
   PaginationQuery,
+  SmallInt,
 } from '../../schemas/common';
 
 // Request schemas
@@ -18,12 +19,15 @@ export const CreateUserBody = t.Object({
   fullname: NonEmptyString255,
   email: Email,
   telephone: Telephone,
-  password: t.String({ minLength: 8, maxLength: 128 }),
+  // password: t.String({ minLength: 8, maxLength: 128 }),
   companyId: UUID,
   branchId: UUID,
   roleId: UUID,
   // In real auth, createdBy comes from auth context; for now accept it in body
   createdBy: UUID,
+  // No password here – invites will handle password setup
+  // Optional flag to control emailing (defaults true)
+  sendInvite: t.Optional(t.Boolean()),
 });
 
 // Response DTOs
@@ -32,7 +36,7 @@ export const UserDto = t.Object({
   fullname: NonEmptyString255,
   email: Email,
   telephone: Telephone,
-  status: t.String({ minLength: 1, maxLength: 20 }),
+  status: SmallInt,
   companyId: UUID,
   branchId: UUID,
   createdAt: t.Union([t.String({ format: 'date-time' }), t.Null()]),

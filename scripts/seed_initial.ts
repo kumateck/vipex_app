@@ -2,7 +2,9 @@ import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../src/db/config';
-import { companies, branches, roles, users } from '../src/db/schema';
+import { companies, branches, roles, users } from '@/db/schemas';
+import { UserStatus } from '@/db/schemas/enums';
+// import { companies, branches, roles, users } from '../src/db/schema';
 
 async function main() {
   // Deterministic "sys" user id for cross-referencing created_by, even before user insert.
@@ -122,7 +124,7 @@ async function main() {
         telephone: SYS_TELEPHONE,
         email: SYS_EMAIL,
         password: SYS_PASSWORD, // replace with hash as needed
-        userStatus: 'ACTIVE',
+        status: UserStatus.ACTIVE,
         roleId,
         companyId,
         branchId,

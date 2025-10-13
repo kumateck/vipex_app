@@ -1,51 +1,51 @@
-import { randomUUID } from 'node:crypto';
-import { hashPassword } from '../../utils/password';
-import { Conflict, NotFound } from '../../utils/http-error';
+import { BadRequest, NotFound } from '../../utils/http-error';
 import {
   createUserRepo,
-  getUserByEmailRepo,
-  getUserByIdRepo,
+  getUserRepo,
   listUsersRepo,
-  type ListUsersParams,
+  updateUserRepo,
+  type ListUserParams,
 } from './repository';
 
-export async function listUsersSvc(params: ListUsersParams) {
-  return listUsersRepo(params);
+export async function listUsersSvc(p: ListUserParams) {
+  return listUsersRepo(p);
 }
-
-export async function getUserByIdSvc(id: string) {
-  const user = await getUserByIdRepo(id);
-  if (!user) throw NotFound('User not found');
-  return user;
+export async function getUserSvc(id: string) {
+  const u = await getUserRepo(id);
+  if (!u) throw NotFound('User not found');
+  return u;
 }
-
 export async function createUserSvc(input: {
   fullname: string;
-  email: string;
   telephone: string;
-  password: string;
+  email: string;
+  status?: number;
   roleId: string;
   companyId: string;
   branchId: string;
   createdBy: string;
 }) {
-  const existing = await getUserByEmailRepo(input.email);
-  if (existing) throw Conflict('Email already registered');
-
-  const id = randomUUID();
-  const passwordHash = await hashPassword(input.password);
-
-  await createUserRepo({
-    id,
-    fullname: input.fullname,
-    email: input.email,
-    telephone: input.telephone,
-    passwordHash,
-    roleId: input.roleId,
-    companyId: input.companyId,
-    branchId: input.branchId,
-    createdBy: input.createdBy,
+  if (!input.fullname || !input.email || !input.telephone)
+    throw BadRequest('Missing required fields');
+  const created = await createUserRepo({
+    ...input,
   });
-
-  return { id };
+  return { id: created?.id };
+}
+export async function updateUserSvc(
+  id: string,
+  patch: {
+    fullname?: string;
+    telephone?: string;
+    email?: string;
+    status?: number;
+    roleId?: string;
+    branchId?: string;
+  },
+) {
+  const cur = await getUserRepo(id);
+  if (!cur) throw NotFound('User not found');
+  const updated = await updateUserRepo(id, patch);
+  if (!updated) throw NotFound('User not found');
+  return { id: updated.id };
 }

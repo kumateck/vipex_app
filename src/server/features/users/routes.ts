@@ -1,82 +1,81 @@
-import { Elysia } from 'elysia';
-import { t } from '../../schemas/common';
-import { decodeCursor } from '../../utils/cursor';
-import { listUsersCtrl, getUserByIdCtrl, createUserCtrl } from './controller';
-import {
-  CreateUserBody,
-  CreateUserResponse,
-  GetUserParams,
-  ListUsersQuery,
-  ListUsersResponse,
-} from './schemas';
+import { Elysia, t } from 'elysia';
+
+import { createUserSvc, getUserSvc, listUsersSvc, updateUserSvc } from './service';
+import { decodeCursor, encodeCursor } from '@/server/utils/cursor';
+import { PaginationQuery, NonEmpty255, UUID } from '@/server/schemas/common';
 
 export const usersRoutes = new Elysia({ name: 'users' })
-  // List users with keyset pagination
   .get(
     '/',
     async ({ query }) => {
-      const limit = query.limit ? Number(query.limit) : 25;
-      const safeLimit = Number.isFinite(limit) ? Math.min(Math.max(limit, 1), 100) : 25;
+      const limit = query.limit ? Math.min(Math.max(query.limit, 1), 100) : 25;
       const after = decodeCursor<{ createdAt: string; id: string }>(query.after || null);
-      const res = await listUsersCtrl({ limit: safeLimit, after });
-      return res;
+      const { data, nextCursor } = await listUsersSvc({
+        limit,
+        after,
+        companyId: query.companyId ?? null,
+        branchId: query.branchId ?? null,
+        roleId: query.roleId ?? null,
+        status: query.status ?? null,
+        search: query.search ?? null,
+      });
+      return {
+        data: data.map((u) => ({
+          ...u,
+          createdAt: u.createdAt?.toISOString?.() ?? u.createdAt,
+          updatedAt: u.updatedAt?.toISOString?.() ?? u.updatedAt,
+        })),
+        nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+      };
     },
     {
-      query: ListUsersQuery,
-      response: ListUsersResponse,
-      detail: {
-        tags: ['Users'],
-        summary: 'List users',
-        description:
-          'Returns a paginated list of users using keyset pagination. Use the nextCursor to fetch subsequent pages.',
-        operationId: 'listUsers',
-      },
+      query: t.Intersect([
+        PaginationQuery,
+        t.Object({
+          companyId: t.Optional(UUID),
+          branchId: t.Optional(UUID),
+          roleId: t.Optional(UUID),
+          status: t.Optional(t.Number()),
+          search: t.Optional(t.String()),
+        }),
+      ]),
+      detail: { tags: ['Users'], summary: 'List users', operationId: 'listUsers' },
     },
   )
-  // Get by id
-  .get(
-    '/:id',
-    async ({ params }) => {
-      return await getUserByIdCtrl(params.id);
-    },
-    {
-      params: GetUserParams,
-      response: t.Ref('UserDtoRef'),
-      detail: {
-        tags: ['Users'],
-        summary: 'Get user by ID',
-        operationId: 'getUserById',
-      },
-    },
-  )
-  // Create user
+  .get('/:id', async ({ params }) => getUserSvc(params.id), {
+    params: t.Object({ id: UUID }),
+    detail: { tags: ['Users'], summary: 'Get user', operationId: 'getUser' },
+  })
   .post(
     '/',
     async ({ body, set }) => {
-      const created = await createUserCtrl(body);
+      const res = await createUserSvc(body);
       set.status = 201;
-      return created;
+      return res;
     },
     {
-      body: CreateUserBody,
-      response: { 201: CreateUserResponse },
-      detail: {
-        tags: ['Users'],
-        summary: 'Create a new user',
-        operationId: 'createUser',
-      },
+      body: t.Object({
+        fullname: NonEmpty255,
+        telephone: NonEmpty255,
+        email: NonEmpty255,
+        status: t.Optional(t.Number()),
+        roleId: UUID,
+        companyId: UUID,
+        branchId: UUID,
+        createdBy: UUID,
+      }),
+      detail: { tags: ['Users'], summary: 'Create user', operationId: 'createUser' },
     },
   )
-  // Shared ref for User DTO (re-usable in docs)
-  .model({
-    UserDtoRef: t.Object({
-      id: t.String({ format: 'uuid' }),
-      fullname: t.String({ minLength: 1, maxLength: 255 }),
-      email: t.String({ format: 'email', maxLength: 255 }),
-      telephone: t.String({ minLength: 6, maxLength: 30 }),
-      status: t.String({ minLength: 1, maxLength: 20 }),
-      companyId: t.String({ format: 'uuid' }),
-      branchId: t.String({ format: 'uuid' }),
-      createdAt: t.Union([t.String({ format: 'date-time' }), t.Null()]),
+  .patch('/:id', async ({ params, body }) => updateUserSvc(params.id, body), {
+    params: t.Object({ id: UUID }),
+    body: t.Object({
+      fullname: t.Optional(NonEmpty255),
+      telephone: t.Optional(NonEmpty255),
+      email: t.Optional(NonEmpty255),
+      status: t.Optional(t.Number()),
+      roleId: t.Optional(UUID),
+      branchId: t.Optional(UUID),
     }),
+    detail: { tags: ['Users'], summary: 'Update user', operationId: 'updateUser' },
   });

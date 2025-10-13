@@ -8,7 +8,7 @@ const server = serve({
     // Swagger / OpenAPI (must come before the catch-all)
     '/docs': (req) => apiFetch(req),
     '/docs/*': (req) => apiFetch(req),
-
+    '/dev/*': (req) => apiFetch(req),
     // API routes (Elysia)
     '/health': (req) => apiFetch(req),
     '/v1/*': (req) => apiFetch(req),

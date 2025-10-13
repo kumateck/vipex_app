@@ -10,15 +10,39 @@ export class HttpError extends Error {
   }
 }
 
-export const BadRequest = (message = 'Bad Request', details?: unknown) =>
-  new HttpError(400, message, details);
+export function BadRequest(message = 'Bad Request', details?: unknown) {
+  return new HttpError(400, message, details);
+}
 
-export const Unauthorized = (message = 'Unauthorized') => new HttpError(401, message);
-export const Forbidden = (message = 'Forbidden') => new HttpError(403, message);
-export const NotFound = (message = 'Not Found') => new HttpError(404, message);
-export const Conflict = (message = 'Conflict', details?: unknown) =>
-  new HttpError(409, message, details);
-export const Unprocessable = (message = 'Unprocessable Entity', details?: unknown) =>
-  new HttpError(422, message, details);
-export const Internal = (message = 'Internal Server Error', details?: unknown) =>
-  new HttpError(500, message, details);
+export function Unauthorized(message = 'Unauthorized', details?: unknown) {
+  return new HttpError(401, message, details);
+}
+
+export function Forbidden(message = 'Forbidden', details?: unknown) {
+  return new HttpError(403, message, details);
+}
+
+export function NotFound(message = 'Not Found', details?: unknown) {
+  return new HttpError(404, message, details);
+}
+
+export function Conflict(message = 'Conflict', details?: unknown) {
+  return new HttpError(409, message, details);
+}
+
+export function UnprocessableEntity(message = 'Unprocessable Entity', details?: unknown) {
+  return new HttpError(422, message, details);
+}
+
+export function TooManyRequests(message = 'Too Many Requests', details?: unknown) {
+  return new HttpError(429, message, details);
+}
+
+export function ServiceUnavailable(message = 'Service Unavailable', details?: unknown) {
+  return new HttpError(503, message, details);
+}
+
+// Type guard
+export function isHttpError(err: unknown): err is HttpError {
+  return !!err && typeof err === 'object' && 'status' in err && typeof err.status === 'number';
+}

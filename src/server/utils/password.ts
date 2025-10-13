@@ -5,6 +5,7 @@ export async function hashPassword(plain: string) {
   });
 }
 
-export async function verifyPassword(plain: string, hash: string) {
+export async function verifyPassword(plain: string, hash: string | null) {
+  if (!hash) return false;
   return await Bun.password.verify(plain, hash);
 }
