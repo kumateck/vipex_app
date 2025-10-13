@@ -1,7 +1,7 @@
 import { eq, and, gt } from 'drizzle-orm';
 import { db } from '../../../db/config';
-import { users } from '../../../db/schema';
-import { UserStatus } from '@/db/enums/user-status';
+import { users } from '@/db/schemas';
+import { UserStatus } from '@/db/schemas/enums';
 
 // Store a hashed token and expiry on the user record
 export async function setUserResetTokenRepo(input: {

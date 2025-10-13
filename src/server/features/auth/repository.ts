@@ -1,7 +1,6 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '../../../db/config';
-import { users } from '../../../db/schema';
-import { passwordResets, refreshTokens } from '../../../db/schema.auth';
+import { passwordResets, refreshTokens, users } from '@/db/schemas';
 
 export async function getUserByEmailRepo(email: string) {
   const [u] = await db.select().from(users).where(eq(users.email, email)).limit(1);
