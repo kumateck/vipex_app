@@ -6,4 +6,5 @@ export * from './deliveries';
 export * from './payments';
 export * from './accounting';
 export * from './auth';
+export * from './inventory';
 export * from './enums';

@@ -14,6 +14,16 @@ import { cashierSessionTypes, cashierSessions } from './cashiers';
 import { bookings, parcels, consignments, consignmentItems } from './shipments';
 import { deliveries } from './deliveries';
 import { payments } from './payments';
+import {
+  productCategories,
+  products,
+  inventoryLocations,
+  stockLevels,
+  stockMovements,
+  stockAdjustments,
+  stockTransfers,
+  stockTransferItems,
+} from './inventory';
 
 // Core
 export const companiesRelations = relations(companies, ({ many }) => ({
@@ -136,4 +146,79 @@ export const deliveriesRelations = relations(deliveries, ({ one }) => ({
 // Payments
 export const paymentsRelations = relations(payments, ({ one }) => ({
   parcel: one(parcels, { fields: [payments.parcelId], references: [parcels.id] }),
+}));
+
+// Inventory
+export const productCategoriesRelations = relations(productCategories, ({ one, many }) => ({
+  company: one(companies, { fields: [productCategories.companyId], references: [companies.id] }),
+  products: many(products),
+}));
+
+export const productsRelations = relations(products, ({ one, many }) => ({
+  company: one(companies, { fields: [products.companyId], references: [companies.id] }),
+  category: one(productCategories, {
+    fields: [products.categoryId],
+    references: [productCategories.id],
+  }),
+  stockLevels: many(stockLevels),
+  stockMovements: many(stockMovements),
+  transferItems: many(stockTransferItems),
+}));
+
+export const inventoryLocationsRelations = relations(inventoryLocations, ({ one, many }) => ({
+  branch: one(branches, { fields: [inventoryLocations.branchId], references: [branches.id] }),
+  stockLevels: many(stockLevels),
+  stockMovements: many(stockMovements),
+  transfersFrom: many(stockTransfers),
+  transfersTo: many(stockTransfers),
+}));
+
+export const stockLevelsRelations = relations(stockLevels, ({ one }) => ({
+  product: one(products, { fields: [stockLevels.productId], references: [products.id] }),
+  location: one(inventoryLocations, {
+    fields: [stockLevels.locationId],
+    references: [inventoryLocations.id],
+  }),
+}));
+
+export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
+  product: one(products, { fields: [stockMovements.productId], references: [products.id] }),
+  location: one(inventoryLocations, {
+    fields: [stockMovements.locationId],
+    references: [inventoryLocations.id],
+  }),
+  adjustment: one(stockAdjustments, {
+    fields: [stockMovements.id],
+    references: [stockAdjustments.movementId],
+  }),
+}));
+
+export const stockAdjustmentsRelations = relations(stockAdjustments, ({ one }) => ({
+  movement: one(stockMovements, {
+    fields: [stockAdjustments.movementId],
+    references: [stockMovements.id],
+  }),
+  approver: one(users, { fields: [stockAdjustments.approvedBy], references: [users.id] }),
+}));
+
+export const stockTransfersRelations = relations(stockTransfers, ({ one, many }) => ({
+  fromLocation: one(inventoryLocations, {
+    fields: [stockTransfers.fromLocationId],
+    references: [inventoryLocations.id],
+  }),
+  toLocation: one(inventoryLocations, {
+    fields: [stockTransfers.toLocationId],
+    references: [inventoryLocations.id],
+  }),
+  requester: one(users, { fields: [stockTransfers.requestedBy], references: [users.id] }),
+  approver: one(users, { fields: [stockTransfers.approvedBy], references: [users.id] }),
+  items: many(stockTransferItems),
+}));
+
+export const stockTransferItemsRelations = relations(stockTransferItems, ({ one }) => ({
+  transfer: one(stockTransfers, {
+    fields: [stockTransferItems.transferId],
+    references: [stockTransfers.id],
+  }),
+  product: one(products, { fields: [stockTransferItems.productId], references: [products.id] }),
 }));
