@@ -241,6 +241,7 @@ describe('Inventory Reports API', () => {
       productId: product!.id,
       locationId: location1!.id,
       quantity: BigInt(30),
+      companyId: testCompany.id,
     });
 
     // Adequate stock in location2
@@ -248,6 +249,7 @@ describe('Inventory Reports API', () => {
       productId: product!.id,
       locationId: location2!.id,
       quantity: BigInt(150),
+      companyId: testCompany.id,
     });
 
     const res = await http('GET', `/v1/inventory/reports/low-stock?companyId=${testCompany.id}`);
