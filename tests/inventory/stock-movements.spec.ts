@@ -26,6 +26,7 @@ describe('Stock Movements API', () => {
     testLocation = (await createTestInventoryLocation({
       branchId: testBranch.id,
       createdBy: testUserId,
+      companyId: testCompany.id,
     }))!;
   });
 
@@ -62,9 +63,10 @@ describe('Stock Movements API', () => {
 
     // Set initial stock
     await createTestStockLevel({
+      companyId: testCompany.id,
       productId: product!.id,
-      locationId: testLocation!.id,
-      quantityAvailable: BigInt(100),
+      locationId: testLocation.id,
+      quantity: BigInt(100),
     });
 
     const movementData = {
@@ -91,6 +93,7 @@ describe('Stock Movements API', () => {
       createdBy: testUserId,
     });
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Auto-Update-${Date.now()}`,
       createdBy: testUserId,
@@ -200,6 +203,7 @@ describe('Stock Movements API', () => {
 
   test('GET /v1/inventory/stock-movements - filters by location', async () => {
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Filter-${Date.now()}`,
       createdBy: testUserId,
@@ -231,9 +235,10 @@ describe('Stock Movements API', () => {
     });
 
     await createTestStockLevel({
+      companyId: testCompany.id,
       productId: product!.id,
-      locationId: testLocation!.id,
-      quantityAvailable: BigInt(100),
+      locationId: testLocation.id,
+      quantity: BigInt(100),
     });
 
     // Create receipt
@@ -310,6 +315,7 @@ describe('Stock Movements API', () => {
       createdBy: testUserId,
     });
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `No-Stock-${Date.now()}`,
       createdBy: testUserId,

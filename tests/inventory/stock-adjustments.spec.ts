@@ -32,6 +32,7 @@ describe('Stock Adjustments API', () => {
     const location = await createTestInventoryLocation({
       branchId: testBranch.id,
       createdBy: testUserId,
+      companyId: testCompany.id,
     });
     if (!location) throw new Error('Failed to create test location');
     testLocation = location;
@@ -49,9 +50,10 @@ describe('Stock Adjustments API', () => {
     });
 
     await createTestStockLevel({
+      companyId: testCompany.id,
       productId: product!.id,
       locationId: testLocation.id,
-      quantityAvailable: BigInt(50),
+      quantity: BigInt(50),
     });
 
     const adjustmentData = {
@@ -136,6 +138,7 @@ describe('Stock Adjustments API', () => {
       createdBy: testUserId,
     });
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `New-Adj-${Date.now()}`,
       createdBy: testUserId,
@@ -170,6 +173,7 @@ describe('Stock Adjustments API', () => {
       createdBy: testUserId,
     });
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Count-${Date.now()}`,
       createdBy: testUserId,

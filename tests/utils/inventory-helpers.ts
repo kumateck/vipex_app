@@ -20,6 +20,7 @@ import {
   StockAdjustmentReason,
   // TransferStatus,
   UserStatus,
+  TransferStatus,
 } from '@/db/schemas/enums';
 
 // Test data generators
@@ -151,19 +152,21 @@ export async function createTestProduct(data: {
 }
 
 export async function createTestInventoryLocation(data: {
+  companyId: string;
   branchId: string;
   name?: string;
   description?: string;
-  isActive?: boolean;
+  isDeleted?: boolean;
   createdBy?: string;
 }) {
   const [location] = await db
     .insert(inventoryLocations)
     .values({
+      companyId: data.companyId,
       branchId: data.branchId,
       name: data.name || `Test Location ${Date.now()}`,
       description: data.description,
-      isActive: data.isActive ?? true,
+      isDeleted: data.isDeleted ?? false,
       createdBy: data.createdBy || crypto.randomUUID(),
     })
     .returning();
@@ -171,18 +174,18 @@ export async function createTestInventoryLocation(data: {
 }
 
 export async function createTestStockLevel(data: {
+  companyId: string;
   productId: string;
   locationId: string;
-  quantityAvailable?: bigint;
-  quantityReserved?: bigint;
+  quantity?: bigint;
 }) {
   const [stockLevel] = await db
     .insert(stockLevels)
     .values({
+      companyId: data.companyId,
       productId: data.productId,
       locationId: data.locationId,
-      quantityAvailable: data.quantityAvailable ?? BigInt(100),
-      quantityReserved: data.quantityReserved ?? BigInt(0),
+      quantity: data.quantity ?? BigInt(100),
     })
     .returning();
   return stockLevel;
@@ -221,8 +224,8 @@ export async function createTestStockAdjustment(data: {
   productId: string;
   locationId: string;
   reason?: number;
-  reasonDetails?: string;
-  approvedBy?: string;
+  quantityChange?: bigint;
+  notes?: string;
   createdBy?: string;
 }) {
   const [adjustment] = await db
@@ -232,8 +235,8 @@ export async function createTestStockAdjustment(data: {
       productId: data.productId,
       locationId: data.locationId,
       reason: data.reason ?? StockAdjustmentReason.RECOUNT,
-      reasonDetails: data.reasonDetails,
-      approvedBy: data.approvedBy,
+      quantityChange: data.quantityChange ?? BigInt(10),
+      notes: data.notes,
       createdBy: data.createdBy || crypto.randomUUID(),
     })
     .returning();
@@ -245,7 +248,8 @@ export async function createTestStockTransfer(data: {
   productId: string;
   fromLocationId: string;
   toLocationId: string;
-  // transferNumber?: string;
+  quantity?: bigint;
+  status?: number;
   notes?: string;
   createdBy?: string;
 }) {
@@ -256,6 +260,8 @@ export async function createTestStockTransfer(data: {
       productId: data.productId,
       fromLocationId: data.fromLocationId,
       toLocationId: data.toLocationId,
+      quantity: data.quantity ?? BigInt(10),
+      status: data.status ?? TransferStatus.PENDING,
       notes: data.notes,
       createdBy: data.createdBy || crypto.randomUUID(),
     })
@@ -263,33 +269,10 @@ export async function createTestStockTransfer(data: {
   return transfer;
 }
 
-export async function createTestStockTransferItem(data: {
-  transferId: string;
-  productId: string;
-  quantityRequested?: bigint;
-  quantityShipped?: bigint;
-  quantityReceived?: bigint;
-  notes?: string;
-}) {
-  const [item] = await db
-    .insert(stockTransferItems)
-    .values({
-      transferId: data.transferId,
-      productId: data.productId,
-      quantityRequested: data.quantityRequested ?? BigInt(10),
-      quantityShipped: data.quantityShipped,
-      quantityReceived: data.quantityReceived,
-      notes: data.notes,
-    })
-    .returning();
-  return item;
-}
-
 // Cleanup functions
 
 export async function cleanupTestData() {
   // Delete in reverse order of dependencies
-  await db.delete(stockTransferItems);
   await db.delete(stockTransfers);
   await db.delete(stockAdjustments);
   await db.delete(stockMovements);

@@ -28,11 +28,13 @@ describe('Stock Transfers API', () => {
       branchId: testBranch.id,
       name: `Location 1 ${Date.now()}`,
       createdBy: testUserId,
+      companyId: testCompany.id,
     }))!;
     testLocation2 = (await createTestInventoryLocation({
       branchId: testBranch.id,
       name: `Location 2 ${Date.now()}`,
       createdBy: testUserId,
+      companyId: testCompany.id,
     }))!;
   });
 
@@ -186,9 +188,10 @@ describe('Stock Transfers API', () => {
 
     // Set initial stock in source location
     await createTestStockLevel({
+      companyId: testCompany.id,
       productId: product!.id,
       locationId: testLocation1.id,
-      quantityAvailable: BigInt(100),
+      quantity: BigInt(100),
     });
 
     // Create transfer
@@ -316,9 +319,10 @@ describe('Stock Transfers API', () => {
 
     // Set low stock
     await createTestStockLevel({
+      companyId: testCompany.id,
       productId: product!.id,
       locationId: testLocation1.id,
-      quantityAvailable: BigInt(10),
+      quantity: BigInt(10),
     });
 
     // Create transfer requesting more than available

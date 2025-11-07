@@ -31,6 +31,7 @@ describe('Inventory Reports API', () => {
 
   test('GET /v1/inventory/reports/low-stock - returns products below minimum stock', async () => {
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Low Stock ${Date.now()}`,
       createdBy: testUserId,
@@ -50,7 +51,8 @@ describe('Inventory Reports API', () => {
     await createTestStockLevel({
       productId: lowStockProduct.id,
       locationId: location.id,
-      quantityAvailable: BigInt(30), // Below minStockLevel of 50
+      quantity: BigInt(30), // Below minStockLevel of 50
+      companyId: testCompany.id,
     });
 
     // Create product with adequate stock
@@ -65,7 +67,8 @@ describe('Inventory Reports API', () => {
     await createTestStockLevel({
       productId: adequateProduct!.id,
       locationId: location.id,
-      quantityAvailable: BigInt(100), // Above minStockLevel
+      quantity: BigInt(100), // Above minStockLevel
+      companyId: testCompany.id,
     });
 
     const res = await http('GET', `/v1/inventory/reports/low-stock?companyId=${testCompany.id}`);
@@ -92,6 +95,7 @@ describe('Inventory Reports API', () => {
       createdBy: testUserId,
     });
     const location2 = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: branch2!.id,
       name: `Location B2 ${Date.now()}`,
       createdBy: testUserId,
@@ -107,7 +111,8 @@ describe('Inventory Reports API', () => {
     await createTestStockLevel({
       productId: product!.id,
       locationId: location2!.id,
-      quantityAvailable: BigInt(50), // Low stock
+      quantity: BigInt(50), // Low stock
+      companyId: testCompany.id,
     });
 
     const res = await http('GET', `/v1/inventory/reports/low-stock?branchId=${branch2!.id}`);
@@ -122,6 +127,7 @@ describe('Inventory Reports API', () => {
 
   test('GET /v1/inventory/reports/low-stock - shows deficit correctly', async () => {
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Deficit ${Date.now()}`,
       createdBy: testUserId,
@@ -137,7 +143,8 @@ describe('Inventory Reports API', () => {
     await createTestStockLevel({
       productId: product!.id,
       locationId: location!.id,
-      quantityAvailable: BigInt(75),
+      quantity: BigInt(75),
+      companyId: testCompany.id,
     });
 
     const res = await http('GET', `/v1/inventory/reports/low-stock?companyId=${testCompany.id}`);
@@ -146,7 +153,7 @@ describe('Inventory Reports API', () => {
     const body = await json<{
       data: Array<{
         productId: string;
-        quantityAvailable: string;
+        quantity: string;
         minStockLevel: string;
         deficit: string;
       }>;
@@ -154,13 +161,14 @@ describe('Inventory Reports API', () => {
 
     const item = body.data.find((i) => i.productId === product!.id);
     expect(item).toBeDefined();
-    expect(item?.quantityAvailable).toBe('75');
+    expect(item?.quantity).toBe('75');
     expect(item?.minStockLevel).toBe('200');
     expect(item?.deficit).toBe('125'); // 200 - 75
   });
 
   test('GET /v1/inventory/reports/low-stock - excludes deleted products', async () => {
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Deleted ${Date.now()}`,
       createdBy: testUserId,
@@ -176,7 +184,9 @@ describe('Inventory Reports API', () => {
     await createTestStockLevel({
       productId: product!.id,
       locationId: location!.id,
-      quantityAvailable: BigInt(50),
+      quantity: BigInt(50),
+      companyId: testCompany.id,
+      // quantityAvailable: BigInt(50),
     });
 
     // Delete the product
@@ -207,11 +217,13 @@ describe('Inventory Reports API', () => {
 
   test('GET /v1/inventory/reports/low-stock - handles multiple locations for same product', async () => {
     const location1 = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Multi-Loc-1-${Date.now()}`,
       createdBy: testUserId,
     });
     const location2 = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Multi-Loc-2-${Date.now()}`,
       createdBy: testUserId,
@@ -228,14 +240,14 @@ describe('Inventory Reports API', () => {
     await createTestStockLevel({
       productId: product!.id,
       locationId: location1!.id,
-      quantityAvailable: BigInt(30),
+      quantity: BigInt(30),
     });
 
     // Adequate stock in location2
     await createTestStockLevel({
       productId: product!.id,
       locationId: location2!.id,
-      quantityAvailable: BigInt(150),
+      quantity: BigInt(150),
     });
 
     const res = await http('GET', `/v1/inventory/reports/low-stock?companyId=${testCompany.id}`);
@@ -258,6 +270,7 @@ describe('Inventory Reports API', () => {
 
   test('GET /v1/inventory/reports/low-stock - includes product and location names', async () => {
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Named Location ${Date.now()}`,
       createdBy: testUserId,
@@ -274,7 +287,8 @@ describe('Inventory Reports API', () => {
     await createTestStockLevel({
       productId: product!.id,
       locationId: location!.id,
-      quantityAvailable: BigInt(20),
+      quantity: BigInt(20),
+      companyId: testCompany.id,
     });
 
     const res = await http('GET', `/v1/inventory/reports/low-stock?companyId=${testCompany.id}`);
