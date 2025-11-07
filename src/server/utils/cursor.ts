@@ -40,6 +40,8 @@ function fromBase64Url(b64url: string): string {
   return b64;
 }
 
+export type CursorKey = { createdAt: string; id: string };
+
 export function encodeCursor<T extends object>(obj: T): string {
   const json = JSON.stringify(obj);
   const b64 = base64Encode(json);

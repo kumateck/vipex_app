@@ -1,0 +1,215 @@
+import { asc, eq, sql } from 'drizzle-orm';
+import { db } from '@/db/config';
+import {
+  bookings,
+  parcels,
+  payments,
+  PaymentComponent,
+  Payer,
+  CashierType,
+  PaymentMethod,
+  users,
+  branches,
+} from '@/db/schemas';
+import { sanitizeString } from '@/lib/utils';
+import { generateBookingCode, generateTrackingCode } from '@/server/utils/codegen';
+
+export type CreatedParcelRef = { id: string; trackingCode: string };
+export type CreatedPaymentRef = { id: string };
+
+export type CreateBookingWithParcelsInput = {
+  // booking header
+  senderId: string;
+  companyId: string;
+  sourceId: string;
+  statusId: string;
+  createdBy: string;
+  cashierSessionId?: string | null;
+
+  // parcels to create
+  // bookingCode?: string | null; // if absent, will be generated once and applied to all parcels
+  parcels: Array<{
+    destinationId: string;
+    receiverId: string;
+    statusId: string; // initial parcel status
+    parcelDetails: string;
+    parcelContent: string;
+    parcelValuePsw?: bigint; // pre-converted pesewas; optional
+    plannedToBePaidPsw?: bigint; // pre-converted pesewas; optional
+    method: PaymentMethod; // the method captured for this parcel context
+    trackingCode?: string | null; // if absent, will be generated
+    // optional sender payment at booking-time (component=PRINCIPAL)
+    senderPaymentPsw?: bigint; // pesewas, optional
+    senderPaymentMethod?: PaymentMethod; // fallback to parcel.method if not provided
+    cashierUserId: string; // sending cashier user id for this parcel
+    branchId: string; // branch taking the cash
+  }>;
+};
+
+export type CreateBookingWithParcelsOutput = {
+  bookingId: string;
+  bookingCode?: string;
+  parcels: CreatedParcelRef[];
+  payments: CreatedPaymentRef[];
+};
+
+// Simple, readable booking code generator: BK-YYMMDD-XXXXX
+// export function generateBookingCode(now: Date): string {
+//   const yy = String(now.getFullYear()).slice(-2);
+//   const mm = String(now.getMonth() + 1).padStart(2, '0');
+//   const dd = String(now.getDate()).padStart(2, '0');
+//   const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
+//   return `BK-${yy}${mm}${dd}-${rand}`;
+// }
+
+// // Tracking code generator: TRK-XXXXXXXXXX (uppercase base36)
+// export function generateTrackingCode(): string {
+//   return `TRK-${Math.random().toString(36).slice(2, 12).toUpperCase()}`;
+// }
+
+// Fetch authenticated cashier's branch name (used for booking code initial)
+async function getCashierBranchName(tx: typeof db, userId: string): Promise<string> {
+  const uAlias = users;
+  const bAlias = branches;
+  const [row] = await tx
+    .select({ branchName: bAlias.name })
+    .from(uAlias)
+    .innerJoin(bAlias, eq(bAlias.id, uAlias.branchId))
+    .where(eq(uAlias.id, userId))
+    .limit(1);
+  if (!row || !row.branchName) {
+    // Fallback initial handled by generator; return empty string
+    return '';
+  }
+  return row.branchName;
+}
+
+async function isTrackingTaken(tx: typeof db, companyId: string, code: string): Promise<boolean> {
+  const [row] = await tx
+    .select({ id: parcels.id })
+    .from(parcels)
+    .where(sql`${parcels.companyId} = ${companyId} AND ${parcels.trackingCode} = ${code}`)
+    .limit(1);
+  return !!row;
+}
+
+async function createUniqueTrackingCode(
+  tx: typeof db,
+  companyId: string,
+  maxAttempts = 6,
+): Promise<string> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const code = generateTrackingCode();
+    const taken = await isTrackingTaken(tx, companyId, code);
+    if (!taken) return code;
+  }
+  // Fallback: append a tiny suffix if collisions persist (extremely unlikely)
+  return `${generateTrackingCode()}X`;
+}
+
+export async function createBookingWithParcelsAndPaymentsRepo(
+  input: CreateBookingWithParcelsInput,
+  taxComputer: (principalPsw: bigint) => {
+    principal: bigint;
+    net: bigint;
+    vat: bigint;
+    getfund: bigint;
+    nhil: bigint;
+    covid: bigint;
+    totalTax: bigint;
+  },
+): Promise<CreateBookingWithParcelsOutput> {
+  return db.transaction(async (tx) => {
+    // Get branch name from authenticated cashier (createdBy)
+    const branchName = await getCashierBranchName(tx, input.createdBy);
+
+    const bookingCreatedAt = new Date();
+    // Generate or use provided booking code
+
+    const [b] = await tx
+      .insert(bookings)
+      .values({
+        senderId: input.senderId,
+        companyId: input.companyId,
+        sourceId: input.sourceId,
+        statusId: input.statusId,
+        createdBy: input.createdBy,
+        cashierSessionId: input.cashierSessionId ?? null,
+        // createdAt/updatedAt default at DB
+      })
+      .returning({ id: bookings?.id });
+
+    const createdParcels: CreatedParcelRef[] = [];
+    const createdPayments: CreatedPaymentRef[] = [];
+
+    for (const p of input.parcels) {
+      const tracking = await createUniqueTrackingCode(tx, input.companyId);
+
+      const code = generateBookingCode(branchName, bookingCreatedAt);
+
+      const [parcelRow] = await tx
+        .insert(parcels)
+        .values({
+          companyId: input.companyId,
+          sourceId: input.sourceId,
+          destinationId: p.destinationId,
+          bookingId: sanitizeString(b?.id),
+          bookingCode: code,
+          trackingCode: tracking,
+          senderId: input.senderId,
+          receiverId: p.receiverId,
+          statusId: p.statusId,
+          parcelDetails: p.parcelDetails,
+          parcelContent: p.parcelContent,
+          parcelValuePsw: p.parcelValuePsw ?? sql`0`,
+          plannedToBePaidPsw: p.plannedToBePaidPsw ?? sql`0`,
+          method: p.method,
+          createdBy: input.createdBy,
+          cashierSessionId: input.cashierSessionId ?? null,
+        })
+        .returning({ id: parcels.id, trackingCode: parcels.trackingCode });
+
+      createdParcels.push({
+        id: sanitizeString(parcelRow?.id),
+        trackingCode: sanitizeString(parcelRow?.trackingCode),
+      });
+
+      if (p.senderPaymentPsw && p.senderPaymentPsw > 0n) {
+        const tax = taxComputer(p.senderPaymentPsw);
+        const [pay] = await tx
+          .insert(payments)
+          .values({
+            companyId: input.companyId,
+            branchId: p.branchId,
+            parcelId: sanitizeString(parcelRow?.id),
+            component: PaymentComponent.PRINCIPAL,
+            payer: Payer.SENDER,
+            cashierType: CashierType.SENDING,
+            method: p.senderPaymentMethod ?? p.method,
+            cashierUserId: p.cashierUserId,
+            grossAmountPsw: tax.principal,
+            netAmountPsw: tax.net,
+            vatPsw: tax.vat,
+            getfundPsw: tax.getfund,
+            nhilPsw: tax.nhil,
+            covidPsw: tax.covid,
+            taxTotalPsw: tax.totalTax,
+            receivedAt: new Date(),
+            notes: null,
+            receiptNo: null,
+          })
+          .returning({ id: payments.id });
+        createdPayments.push({ id: sanitizeString(pay?.id) });
+      }
+    }
+
+    // Optional: deterministic ordering in response
+    createdParcels.sort((a, b2) => (a.id < b2.id ? -1 : a.id > b2.id ? 1 : 0));
+
+    return {
+      bookingId: b?.id,
+      parcels: createdParcels,
+      payments: createdPayments,
+    };
+  });
+}

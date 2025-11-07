@@ -103,6 +103,48 @@ export function computeGhanaTaxesFromPrincipal(principal: number): GhanaTaxBreak
   };
 }
 
+export type GhanaTaxBreakdownPsw = {
+  principal: bigint;
+  net: bigint;
+  vat: bigint;
+  getfund: bigint;
+  nhil: bigint;
+  covid: bigint;
+  totalTax: bigint;
+  residual: bigint;
+};
+export function computeGhanaTaxesFromPesewas(principalPsw: bigint): GhanaTaxBreakdownPsw {
+  if (principalPsw < 0n) throw new Error('Principal must be non-negative');
+
+  const vat = roundDivHalfUp(principalPsw * FRACTIONS.VAT.num, FRACTIONS.VAT.den);
+  const getfund = roundDivHalfUp(principalPsw * FRACTIONS.GETFUND.num, FRACTIONS.GETFUND.den);
+  const nhil = roundDivHalfUp(principalPsw * FRACTIONS.NHIL.num, FRACTIONS.NHIL.den);
+  const covid = roundDivHalfUp(principalPsw * FRACTIONS.COVID.num, FRACTIONS.COVID.den);
+
+  const totalTax = vat + getfund + nhil + covid;
+  const net = principalPsw - totalTax;
+
+  const residual = principalPsw - (net + totalTax);
+  if (residual !== 0n) {
+    const adjustedVat = vat + residual;
+    const finalVat = adjustedVat < 0n ? 0n : adjustedVat;
+    const finalTotal = finalVat + getfund + nhil + covid;
+    const finalNet = principalPsw - finalTotal;
+    return {
+      principal: principalPsw,
+      net: finalNet,
+      vat: finalVat,
+      getfund,
+      nhil,
+      covid,
+      totalTax: finalTotal,
+      residual,
+    };
+  }
+
+  return { principal: principalPsw, net, vat, getfund, nhil, covid, totalTax, residual: 0n };
+}
+
 /**
  * Convenience helpers aligned with your original API
  */
