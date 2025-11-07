@@ -1,7 +1,5 @@
 import { Conflict, NotFound, BadRequest } from '../../utils/http-error';
-import { db } from '@/db/config';
-import { StockMovementType } from '@/db/schemas/enums';
-import { stockAdjustments } from '@/db/schemas';
+import { StockMovementType, TransferStatus } from '@/db/schemas/enums';
 import {
   createProductCategoryRepo,
   findProductCategoryByNameRepo,
@@ -275,44 +273,38 @@ export async function createStockAdjustmentSvc(input: {
   const location = await getInventoryLocationRepo(input.locationId);
   if (!location) throw NotFound('Inventory location not found');
 
-  // Use transaction to ensure consistency
-  return await db.transaction(async (tx) => {
-    // Create adjustment record
-    const [adjustment] = await tx
-      .insert(stockAdjustments)
-      .values(input)
-      .returning({ id: stockAdjustments.id });
+  // Get current stock level
+  const currentLevel = await getStockLevelRepo(input.productId, input.locationId);
+  const currentQty = currentLevel?.quantity || BigInt(0);
+  const newQuantity = currentQty + input.quantityChange;
 
-    // Get current stock level
-    const currentLevel = await getStockLevelRepo(input.productId, input.locationId);
-    const currentQty = currentLevel?.quantity || BigInt(0);
-    const newQuantity = currentQty + input.quantityChange;
+  if (newQuantity < BigInt(0)) throw BadRequest('Adjustment would result in negative stock');
 
-    if (newQuantity < BigInt(0)) throw BadRequest('Adjustment would result in negative stock');
+  // Create adjustment record
+  const created = await createStockAdjustmentRepo(input);
 
-    // Create stock movement
-    await createStockMovementRepo({
-      companyId: input.companyId,
-      productId: input.productId,
-      locationId: input.locationId,
-      movementType: StockMovementType.ADJUSTMENT,
-      quantity: newQuantity,
-      referenceId: adjustment.id,
-      referenceType: 'adjustment',
-      notes: input.notes,
-      createdBy: input.createdBy,
-    });
-
-    // Update stock level
-    await upsertStockLevelRepo({
-      companyId: input.companyId,
-      productId: input.productId,
-      locationId: input.locationId,
-      quantity: newQuantity,
-    });
-
-    return { id: adjustment.id };
+  // Create stock movement
+  await createStockMovementRepo({
+    companyId: input.companyId,
+    productId: input.productId,
+    locationId: input.locationId,
+    movementType: StockMovementType.ADJUSTMENT,
+    quantity: newQuantity,
+    referenceId: created.id,
+    referenceType: 'adjustment',
+    notes: input.notes,
+    createdBy: input.createdBy,
   });
+
+  // Update stock level
+  await upsertStockLevelRepo({
+    companyId: input.companyId,
+    productId: input.productId,
+    locationId: input.locationId,
+    quantity: newQuantity,
+  });
+
+  return { id: created.id };
 }
 
 // Stock Transfers
@@ -362,44 +354,41 @@ export async function updateStockTransferSvc(
   const transfer = await getStockTransferRepo(id);
   if (!transfer) throw NotFound('Stock transfer not found');
 
-  // Use transaction for completing transfers
-  if (patch.status === 2) {
-    // TransferStatus.COMPLETED
-    return await db.transaction(async (tx) => {
-      // Create transfer-out movement
-      await createStockMovementRepo({
-        companyId: transfer.companyId,
-        productId: transfer.productId,
-        locationId: transfer.fromLocationId,
-        movementType: StockMovementType.TRANSFER_OUT,
-        quantity: transfer.quantity,
-        referenceId: id,
-        referenceType: 'transfer',
-        notes: transfer.notes,
-        createdBy: patch.completedBy || transfer.createdBy,
-      });
-
-      // Create transfer-in movement
-      await createStockMovementRepo({
-        companyId: transfer.companyId,
-        productId: transfer.productId,
-        locationId: transfer.toLocationId,
-        movementType: StockMovementType.TRANSFER_IN,
-        quantity: transfer.quantity,
-        referenceId: id,
-        referenceType: 'transfer',
-        notes: transfer.notes,
-        createdBy: patch.completedBy || transfer.createdBy,
-      });
-
-      // Update transfer record
-      const updated = await updateStockTransferRepo(id, {
-        ...patch,
-        completedAt: new Date(),
-      });
-
-      return { id: updated?.id };
+  // Handle transfer completion
+  if (patch.status === TransferStatus.COMPLETED) {
+    // Create transfer-out movement
+    await createStockMovementRepo({
+      companyId: transfer.companyId,
+      productId: transfer.productId,
+      locationId: transfer.fromLocationId,
+      movementType: StockMovementType.TRANSFER_OUT,
+      quantity: transfer.quantity,
+      referenceId: id,
+      referenceType: 'transfer',
+      notes: transfer.notes,
+      createdBy: patch.completedBy || transfer.createdBy,
     });
+
+    // Create transfer-in movement
+    await createStockMovementRepo({
+      companyId: transfer.companyId,
+      productId: transfer.productId,
+      locationId: transfer.toLocationId,
+      movementType: StockMovementType.TRANSFER_IN,
+      quantity: transfer.quantity,
+      referenceId: id,
+      referenceType: 'transfer',
+      notes: transfer.notes,
+      createdBy: patch.completedBy || transfer.createdBy,
+    });
+
+    // Update transfer record
+    const updated = await updateStockTransferRepo(id, {
+      ...patch,
+      completedAt: new Date(),
+    });
+
+    return { id: updated?.id };
   }
 
   const updated = await updateStockTransferRepo(id, patch);
