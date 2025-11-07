@@ -30,6 +30,9 @@ export async function createDeliveryRepo(
   values: typeof deliveries.$inferInsert,
 ): Promise<{ id: string }> {
   const [row] = await db.insert(deliveries).values(values).returning({ id: deliveries.id });
+  if (!row) {
+    throw new Error('Failed to create delivery');
+  }
   return row;
 }
 

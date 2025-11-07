@@ -51,7 +51,7 @@ export async function createBookingWithParcelsSvc(
     statusId: body.statusId,
     createdBy: body.createdBy,
     cashierSessionId: body.cashierSessionId ?? null,
-    bookingCode: body.bookingCode ?? null,
+    // bookingCode: body.bookingCode ?? null,
     parcels: body.parcels.map((p) => ({
       destinationId: p.destinationId,
       receiverId: p.receiverId,

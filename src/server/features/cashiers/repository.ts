@@ -35,7 +35,7 @@ export async function createSessionTypeRepo(
     .insert(cashierSessionTypes)
     .values(values)
     .returning({ id: cashierSessionTypes.id });
-  return row;
+  return row!;
 }
 
 export type SessionRow = {
@@ -114,7 +114,7 @@ export async function openSessionRepo(
     .insert(cashierSessions)
     .values(values)
     .returning({ id: cashierSessions.id });
-  return row;
+  return row!;
 }
 
 export async function closeSessionRepo(

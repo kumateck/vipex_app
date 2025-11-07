@@ -68,7 +68,10 @@ export type CreateBookingWithParcelsOutput = {
 // }
 
 // Fetch authenticated cashier's branch name (used for booking code initial)
-async function getCashierBranchName(tx: typeof db, userId: string): Promise<string> {
+async function getCashierBranchName(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  userId: string,
+): Promise<string> {
   const uAlias = users;
   const bAlias = branches;
   const [row] = await tx
@@ -84,7 +87,11 @@ async function getCashierBranchName(tx: typeof db, userId: string): Promise<stri
   return row.branchName;
 }
 
-async function isTrackingTaken(tx: typeof db, companyId: string, code: string): Promise<boolean> {
+async function isTrackingTaken(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  companyId: string,
+  code: string,
+): Promise<boolean> {
   const [row] = await tx
     .select({ id: parcels.id })
     .from(parcels)
@@ -94,7 +101,7 @@ async function isTrackingTaken(tx: typeof db, companyId: string, code: string): 
 }
 
 async function createUniqueTrackingCode(
-  tx: typeof db,
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   companyId: string,
   maxAttempts = 6,
 ): Promise<string> {
@@ -207,7 +214,7 @@ export async function createBookingWithParcelsAndPaymentsRepo(
     createdParcels.sort((a, b2) => (a.id < b2.id ? -1 : a.id > b2.id ? 1 : 0));
 
     return {
-      bookingId: b?.id,
+      bookingId: sanitizeString(b?.id),
       parcels: createdParcels,
       payments: createdPayments,
     };

@@ -1,4 +1,5 @@
 import { and, asc, eq, gt, ilike, isNull, isNotNull, or } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
 import { parcels, bookings, customers } from '@/db/schemas';
 import { type CursorKey } from '@/server/utils/cursor';
@@ -80,9 +81,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       ),
     );
   }
-
-  const s = customers.as('s');
-  const r = customers.as('r');
+  const s = alias(customers, 's');
+  const r = alias(customers, 'r');
 
   const rows = await db
     .select({
@@ -202,7 +202,7 @@ export async function createParcelRepo(
   values: typeof parcels.$inferInsert,
 ): Promise<{ id: string }> {
   const [row] = await db.insert(parcels).values(values).returning({ id: parcels.id });
-  return row;
+  return row ?? { id: '' };
 }
 
 export async function updateParcelRepo(

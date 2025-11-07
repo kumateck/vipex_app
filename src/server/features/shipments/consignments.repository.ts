@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, max } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, max } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { consignments, consignmentItems } from '@/db/schemas';
 
@@ -38,6 +38,9 @@ export async function createConsignmentRepo(
   values: typeof consignments.$inferInsert,
 ): Promise<{ id: string }> {
   const [row] = await db.insert(consignments).values(values).returning({ id: consignments.id });
+  if (!row) {
+    throw new Error('Failed to create consignment');
+  }
   return row;
 }
 
@@ -71,7 +74,7 @@ export async function removeConsignmentItemRepo(
       and(
         eq(consignmentItems.consignmentId, consignmentId),
         eq(consignmentItems.parcelId, parcelId),
-        eq(consignmentItems.removedAt, null),
+        isNull(consignmentItems.removedAt),
       ),
     )
     .returning({ parcelId: consignmentItems.parcelId });

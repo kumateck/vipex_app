@@ -25,7 +25,7 @@ function randomIndex(max: number): number {
     const buf = new Uint32Array(1);
     g.getRandomValues(buf);
     // Using modulo for simplicity; bias is negligible for small alphabets and code generation
-    return Number(buf[0] % max);
+    return buf[0] !== undefined ? Number(buf[0] % max) : Math.floor(Math.random() * max);
   }
   // Fallback
   return Math.floor(Math.random() * max);

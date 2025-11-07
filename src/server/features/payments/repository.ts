@@ -31,6 +31,9 @@ export async function createPaymentRepo(
   values: typeof payments.$inferInsert,
 ): Promise<{ id: string }> {
   const [row] = await db.insert(payments).values(values).returning({ id: payments.id });
+  if (!row) {
+    throw new Error('Failed to create payment');
+  }
   return row;
 }
 
