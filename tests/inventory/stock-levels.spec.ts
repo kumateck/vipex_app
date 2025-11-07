@@ -25,6 +25,7 @@ describe('Stock Levels API', () => {
     testBranch = await createTestBranch({ companyId: testCompany.id, createdBy: testUserId });
     testProduct = await createTestProduct({ companyId: testCompany.id, createdBy: testUserId });
     testLocation = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       createdBy: testUserId,
     });
@@ -37,9 +38,10 @@ describe('Stock Levels API', () => {
   test('GET /v1/inventory/stock-levels - lists stock levels', async () => {
     // Create stock level
     await createTestStockLevel({
+      companyId: testCompany.id,
       productId: testProduct.id,
       locationId: testLocation.id,
-      quantityAvailable: BigInt(100),
+      quantity: BigInt(100),
     });
 
     const res = await http('GET', `/v1/inventory/stock-levels?locationId=${testLocation.id}`);
@@ -57,15 +59,17 @@ describe('Stock Levels API', () => {
       createdBy: testUserId,
     });
     const location2 = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Location ${Date.now()}`,
       createdBy: testUserId,
     });
 
     await createTestStockLevel({
+      companyId: testCompany.id,
       productId: product2.id,
       locationId: location2.id,
-      quantityAvailable: BigInt(50),
+      quantity: BigInt(50),
     });
 
     const res = await http('GET', `/v1/inventory/stock-levels?productId=${product2.id}`);
@@ -83,25 +87,29 @@ describe('Stock Levels API', () => {
     });
 
     const location1 = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Loc1-${Date.now()}`,
       createdBy: testUserId,
     });
     const location2 = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Loc2-${Date.now()}`,
       createdBy: testUserId,
     });
 
     await createTestStockLevel({
+      companyId: testCompany.id,
       productId: product.id,
       locationId: location1.id,
-      quantityAvailable: BigInt(100),
+      quantity: BigInt(100),
     });
     await createTestStockLevel({
+      companyId: testCompany.id,
       productId: product.id,
       locationId: location2.id,
-      quantityAvailable: BigInt(50),
+      quantity: BigInt(50),
     });
 
     const res = await http('GET', `/v1/inventory/products/${product.id}/stock`);
@@ -122,6 +130,7 @@ describe('Stock Levels API', () => {
       createdBy: testUserId,
     });
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Auto-${Date.now()}`,
       createdBy: testUserId,
@@ -157,6 +166,7 @@ describe('Stock Levels API', () => {
       createdBy: testUserId,
     });
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Update-${Date.now()}`,
       createdBy: testUserId,
@@ -199,6 +209,7 @@ describe('Stock Levels API', () => {
       createdBy: testUserId,
     });
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Insufficient-${Date.now()}`,
       createdBy: testUserId,
@@ -206,9 +217,10 @@ describe('Stock Levels API', () => {
 
     // Set initial stock
     await createTestStockLevel({
+      companyId: testCompany.id,
       productId: product.id,
       locationId: location.id,
-      quantityAvailable: BigInt(50),
+      quantity: BigInt(50),
     });
 
     // Try to issue more than available
@@ -235,16 +247,17 @@ describe('Stock Levels API', () => {
       createdBy: testUserId,
     });
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Reserved-${Date.now()}`,
       createdBy: testUserId,
     });
 
     await createTestStockLevel({
+      companyId: testCompany.id,
       productId: product.id,
       locationId: location.id,
-      quantityAvailable: BigInt(100),
-      quantityReserved: BigInt(20),
+      quantity: BigInt(100),
     });
 
     const res = await http('GET', `/v1/inventory/products/${product.id}/stock`);
@@ -266,14 +279,16 @@ describe('Stock Levels API', () => {
     // Create multiple stock levels
     for (let i = 0; i < 5; i++) {
       const location = await createTestInventoryLocation({
+        companyId: testCompany.id,
         branchId: testBranch.id,
         name: `Page-Loc-${i}-${Date.now()}`,
         createdBy: testUserId,
       });
       await createTestStockLevel({
+        companyId: testCompany.id,
         productId: product.id,
         locationId: location.id,
-        quantityAvailable: BigInt(10 * (i + 1)),
+        quantity: BigInt(10 * (i + 1)),
       });
     }
 

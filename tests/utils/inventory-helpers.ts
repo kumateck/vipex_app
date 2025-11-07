@@ -8,7 +8,6 @@ import {
   stockMovements,
   stockAdjustments,
   stockTransfers,
-  stockTransferItems,
   companies,
   branches,
   users,
@@ -146,19 +145,21 @@ export async function createTestProduct(data: {
 }
 
 export async function createTestInventoryLocation(data: {
+  companyId: string;
   branchId: string;
   name?: string;
   description?: string;
-  isActive?: boolean;
+  isDeleted?: boolean;
   createdBy?: string;
 }) {
   const [location] = await db
     .insert(inventoryLocations)
     .values({
+      companyId: data.companyId,
       branchId: data.branchId,
       name: data.name || `Test Location ${Date.now()}`,
       description: data.description,
-      isActive: data.isActive ?? true,
+      isDeleted: data.isDeleted ?? false,
       createdBy: data.createdBy || crypto.randomUUID(),
     })
     .returning();
@@ -166,24 +167,25 @@ export async function createTestInventoryLocation(data: {
 }
 
 export async function createTestStockLevel(data: {
+  companyId: string;
   productId: string;
   locationId: string;
-  quantityAvailable?: bigint;
-  quantityReserved?: bigint;
+  quantity?: bigint;
 }) {
   const [stockLevel] = await db
     .insert(stockLevels)
     .values({
+      companyId: data.companyId,
       productId: data.productId,
       locationId: data.locationId,
-      quantityAvailable: data.quantityAvailable ?? BigInt(100),
-      quantityReserved: data.quantityReserved ?? BigInt(0),
+      quantity: data.quantity ?? BigInt(100),
     })
     .returning();
   return stockLevel;
 }
 
 export async function createTestStockMovement(data: {
+  companyId: string;
   productId: string;
   locationId: string;
   movementType?: number;
@@ -196,6 +198,7 @@ export async function createTestStockMovement(data: {
   const [movement] = await db
     .insert(stockMovements)
     .values({
+      companyId: data.companyId,
       productId: data.productId,
       locationId: data.locationId,
       movementType: data.movementType ?? StockMovementType.RECEIPT,
@@ -210,19 +213,23 @@ export async function createTestStockMovement(data: {
 }
 
 export async function createTestStockAdjustment(data: {
-  movementId: string;
+  companyId: string;
+  productId: string;
+  locationId: string;
   reason?: number;
-  reasonDetails?: string;
-  approvedBy?: string;
+  quantityChange?: bigint;
+  notes?: string;
   createdBy?: string;
 }) {
   const [adjustment] = await db
     .insert(stockAdjustments)
     .values({
-      movementId: data.movementId,
+      companyId: data.companyId,
+      productId: data.productId,
+      locationId: data.locationId,
       reason: data.reason ?? StockAdjustmentReason.RECOUNT,
-      reasonDetails: data.reasonDetails,
-      approvedBy: data.approvedBy,
+      quantityChange: data.quantityChange ?? BigInt(10),
+      notes: data.notes,
       createdBy: data.createdBy || crypto.randomUUID(),
     })
     .returning();
@@ -230,54 +237,37 @@ export async function createTestStockAdjustment(data: {
 }
 
 export async function createTestStockTransfer(data: {
+  companyId: string;
+  productId: string;
   fromLocationId: string;
   toLocationId: string;
-  transferNumber?: string;
+  quantity?: bigint;
   status?: number;
-  requestedBy?: string;
   notes?: string;
+  createdBy?: string;
 }) {
   const [transfer] = await db
     .insert(stockTransfers)
     .values({
-      transferNumber: data.transferNumber || `TRF-${Date.now()}`,
+      companyId: data.companyId,
+      productId: data.productId,
       fromLocationId: data.fromLocationId,
       toLocationId: data.toLocationId,
+      quantity: data.quantity ?? BigInt(10),
       status: data.status ?? TransferStatus.PENDING,
-      requestedBy: data.requestedBy || crypto.randomUUID(),
       notes: data.notes,
+      createdBy: data.createdBy || crypto.randomUUID(),
     })
     .returning();
   return transfer;
 }
 
-export async function createTestStockTransferItem(data: {
-  transferId: string;
-  productId: string;
-  quantityRequested?: bigint;
-  quantityShipped?: bigint;
-  quantityReceived?: bigint;
-  notes?: string;
-}) {
-  const [item] = await db
-    .insert(stockTransferItems)
-    .values({
-      transferId: data.transferId,
-      productId: data.productId,
-      quantityRequested: data.quantityRequested ?? BigInt(10),
-      quantityShipped: data.quantityShipped,
-      quantityReceived: data.quantityReceived,
-      notes: data.notes,
-    })
-    .returning();
-  return item;
-}
+
 
 // Cleanup functions
 
 export async function cleanupTestData() {
   // Delete in reverse order of dependencies
-  await db.delete(stockTransferItems);
   await db.delete(stockTransfers);
   await db.delete(stockAdjustments);
   await db.delete(stockMovements);

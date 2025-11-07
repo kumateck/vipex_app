@@ -27,6 +27,7 @@ describe('Inventory Reports API', () => {
 
   test('GET /v1/inventory/reports/low-stock - returns products below minimum stock', async () => {
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Low Stock ${Date.now()}`,
       createdBy: testUserId,
@@ -86,6 +87,7 @@ describe('Inventory Reports API', () => {
       createdBy: testUserId,
     });
     const location2 = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: branch2.id,
       name: `Location B2 ${Date.now()}`,
       createdBy: testUserId,
@@ -116,6 +118,7 @@ describe('Inventory Reports API', () => {
 
   test('GET /v1/inventory/reports/low-stock - shows deficit correctly', async () => {
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Deficit ${Date.now()}`,
       createdBy: testUserId,
@@ -155,6 +158,7 @@ describe('Inventory Reports API', () => {
 
   test('GET /v1/inventory/reports/low-stock - excludes deleted products', async () => {
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Deleted ${Date.now()}`,
       createdBy: testUserId,
@@ -201,11 +205,13 @@ describe('Inventory Reports API', () => {
 
   test('GET /v1/inventory/reports/low-stock - handles multiple locations for same product', async () => {
     const location1 = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Multi-Loc-1-${Date.now()}`,
       createdBy: testUserId,
     });
     const location2 = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Multi-Loc-2-${Date.now()}`,
       createdBy: testUserId,
@@ -252,6 +258,7 @@ describe('Inventory Reports API', () => {
 
   test('GET /v1/inventory/reports/low-stock - includes product and location names', async () => {
     const location = await createTestInventoryLocation({
+      companyId: testCompany.id,
       branchId: testBranch.id,
       name: `Named Location ${Date.now()}`,
       createdBy: testUserId,
