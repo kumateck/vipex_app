@@ -22,7 +22,6 @@ import {
   stockMovements,
   stockAdjustments,
   stockTransfers,
-  stockTransferItems,
 } from './inventory';
 
 // Core
@@ -162,18 +161,20 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   }),
   stockLevels: many(stockLevels),
   stockMovements: many(stockMovements),
-  transferItems: many(stockTransferItems),
+  stockAdjustments: many(stockAdjustments),
+  stockTransfers: many(stockTransfers),
 }));
 
 export const inventoryLocationsRelations = relations(inventoryLocations, ({ one, many }) => ({
+  company: one(companies, { fields: [inventoryLocations.companyId], references: [companies.id] }),
   branch: one(branches, { fields: [inventoryLocations.branchId], references: [branches.id] }),
   stockLevels: many(stockLevels),
   stockMovements: many(stockMovements),
-  transfersFrom: many(stockTransfers),
-  transfersTo: many(stockTransfers),
+  stockAdjustments: many(stockAdjustments),
 }));
 
 export const stockLevelsRelations = relations(stockLevels, ({ one }) => ({
+  company: one(companies, { fields: [stockLevels.companyId], references: [companies.id] }),
   product: one(products, { fields: [stockLevels.productId], references: [products.id] }),
   location: one(inventoryLocations, {
     fields: [stockLevels.locationId],
@@ -182,26 +183,28 @@ export const stockLevelsRelations = relations(stockLevels, ({ one }) => ({
 }));
 
 export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
+  company: one(companies, { fields: [stockMovements.companyId], references: [companies.id] }),
   product: one(products, { fields: [stockMovements.productId], references: [products.id] }),
   location: one(inventoryLocations, {
     fields: [stockMovements.locationId],
     references: [inventoryLocations.id],
   }),
-  adjustment: one(stockAdjustments, {
-    fields: [stockMovements.id],
-    references: [stockAdjustments.movementId],
-  }),
+  creator: one(users, { fields: [stockMovements.createdBy], references: [users.id] }),
 }));
 
 export const stockAdjustmentsRelations = relations(stockAdjustments, ({ one }) => ({
-  movement: one(stockMovements, {
-    fields: [stockAdjustments.movementId],
-    references: [stockMovements.id],
+  company: one(companies, { fields: [stockAdjustments.companyId], references: [companies.id] }),
+  product: one(products, { fields: [stockAdjustments.productId], references: [products.id] }),
+  location: one(inventoryLocations, {
+    fields: [stockAdjustments.locationId],
+    references: [inventoryLocations.id],
   }),
-  approver: one(users, { fields: [stockAdjustments.approvedBy], references: [users.id] }),
+  creator: one(users, { fields: [stockAdjustments.createdBy], references: [users.id] }),
 }));
 
-export const stockTransfersRelations = relations(stockTransfers, ({ one, many }) => ({
+export const stockTransfersRelations = relations(stockTransfers, ({ one }) => ({
+  company: one(companies, { fields: [stockTransfers.companyId], references: [companies.id] }),
+  product: one(products, { fields: [stockTransfers.productId], references: [products.id] }),
   fromLocation: one(inventoryLocations, {
     fields: [stockTransfers.fromLocationId],
     references: [inventoryLocations.id],
@@ -210,15 +213,6 @@ export const stockTransfersRelations = relations(stockTransfers, ({ one, many })
     fields: [stockTransfers.toLocationId],
     references: [inventoryLocations.id],
   }),
-  requester: one(users, { fields: [stockTransfers.requestedBy], references: [users.id] }),
-  approver: one(users, { fields: [stockTransfers.approvedBy], references: [users.id] }),
-  items: many(stockTransferItems),
-}));
-
-export const stockTransferItemsRelations = relations(stockTransferItems, ({ one }) => ({
-  transfer: one(stockTransfers, {
-    fields: [stockTransferItems.transferId],
-    references: [stockTransfers.id],
-  }),
-  product: one(products, { fields: [stockTransferItems.productId], references: [products.id] }),
+  creator: one(users, { fields: [stockTransfers.createdBy], references: [users.id] }),
+  completer: one(users, { fields: [stockTransfers.completedBy], references: [users.id] }),
 }));

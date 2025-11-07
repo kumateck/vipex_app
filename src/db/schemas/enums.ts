@@ -41,16 +41,6 @@ export enum UserStatus {
 }
 
 // Inventory enums
-export enum UnitOfMeasure {
-  PIECE = 0,
-  BOX = 1,
-  CARTON = 2,
-  KG = 3,
-  LITER = 4,
-  METER = 5,
-  PACK = 6,
-}
-
 export enum StockMovementType {
   RECEIPT = 0,
   ISSUE = 1,
@@ -73,4 +63,15 @@ export enum TransferStatus {
   IN_TRANSIT = 1,
   COMPLETED = 2,
   CANCELLED = 3,
+}
+
+export enum UnitOfMeasure {
+  PIECE = 0,
+  BOX = 1,
+  CARTON = 2,
+  KG = 3,
+  LITER = 4,
+  METER = 5,
+  PACK = 6,
+  DOZEN = 7,
 }

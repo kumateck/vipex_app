@@ -1,88 +1,67 @@
 import { Elysia, t } from 'elysia';
-import { decodeCursor, encodeCursor } from '@/server/utils/cursor';
-import { UUID } from '@/server/schemas/common';
-import * as ctrl from './controller';
-import * as schemas from './schemas';
-
-// Helper to format dates in responses
-function formatDates<T extends Record<string, unknown>>(obj: T): T {
-  const result = { ...obj };
-  for (const [key, value] of Object.entries(result)) {
-    if (value instanceof Date) {
-      result[key] = value.toISOString() as T[Extract<keyof T, string>];
-    }
-  }
-  return result;
-}
-
-// Helper to format bigint values to strings
-function formatBigInts<T extends Record<string, unknown>>(obj: T): T {
-  const result = { ...obj };
-  for (const [key, value] of Object.entries(result)) {
-    if (typeof value === 'bigint') {
-      result[key] = value.toString() as T[Extract<keyof T, string>];
-    }
-  }
-  return result;
-}
-
-function formatResponse<T extends Record<string, unknown>>(obj: T): T {
-  return formatBigInts(formatDates(obj));
-}
+import { UUID, NonEmptyString255, PaginationQuery, SmallInt } from '@/server/schemas/common';
+import {
+  listProductCategoriesCtrl,
+  getProductCategoryCtrl,
+  createProductCategoryCtrl,
+  updateProductCategoryCtrl,
+  deleteProductCategoryCtrl,
+  listProductsCtrl,
+  getProductCtrl,
+  createProductCtrl,
+  updateProductCtrl,
+  deleteProductCtrl,
+  listInventoryLocationsCtrl,
+  getInventoryLocationCtrl,
+  createInventoryLocationCtrl,
+  updateInventoryLocationCtrl,
+  deleteInventoryLocationCtrl,
+  listStockLevelsCtrl,
+  getStockLevelCtrl,
+  listStockMovementsCtrl,
+  createStockMovementCtrl,
+  listStockAdjustmentsCtrl,
+  createStockAdjustmentCtrl,
+  listStockTransfersCtrl,
+  getStockTransferCtrl,
+  createStockTransferCtrl,
+  updateStockTransferCtrl,
+  getLowStockReportCtrl,
+  getMovementHistoryCtrl,
+} from './controller';
 
 export const inventoryRoutes = new Elysia({ name: 'inventory' })
   // Product Categories
-  .get(
-    '/categories',
-    async ({ query }) => {
-      const limit = query.limit ? Math.min(Math.max(query.limit, 1), 100) : 25;
-      const after = decodeCursor<{ createdAt: string; id: string }>(query.after || null);
-      const { data, nextCursor } = await ctrl.listProductCategories({
-        limit,
-        after,
-        companyId: query.companyId ?? null,
-      });
-      return {
-        data: data.map(formatResponse),
-        nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
-      };
+  .get('/categories', async ({ query }) => listProductCategoriesCtrl(query), {
+    query: t.Intersect([PaginationQuery, t.Object({ companyId: t.Optional(UUID) })]),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'List product categories',
+      operationId: 'listProductCategories',
     },
-    {
-      query: schemas.ListProductCategoriesQuery,
-      response: schemas.ListProductCategoriesResponse,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'List product categories',
-        operationId: 'listProductCategories',
-      },
+  })
+  .get('/categories/:id', async ({ params }) => getProductCategoryCtrl(params.id), {
+    params: t.Object({ id: UUID }),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'Get product category',
+      operationId: 'getProductCategory',
     },
-  )
-  .get(
-    '/categories/:id',
-    async ({ params }) => {
-      const category = await ctrl.getProductCategory(params.id);
-      return formatResponse(category);
-    },
-    {
-      params: schemas.GetProductCategoryParams,
-      response: schemas.ProductCategoryDto,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'Get product category',
-        operationId: 'getProductCategory',
-      },
-    },
-  )
+  })
   .post(
     '/categories',
     async ({ body, set }) => {
-      const result = await ctrl.createProductCategory(body);
+      const res = await createProductCategoryCtrl(body);
       set.status = 201;
-      return result;
+      return res;
     },
     {
-      body: schemas.CreateProductCategoryBody,
-      response: schemas.CreateResponse,
+      body: t.Object({
+        companyId: UUID,
+        name: NonEmptyString255,
+        description: t.Optional(t.String()),
+        createdBy: UUID,
+      }),
       detail: {
         tags: ['Inventory'],
         summary: 'Create product category',
@@ -90,181 +69,111 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
       },
     },
   )
-  .put(
-    '/categories/:id',
-    async ({ params, body }) => {
-      const result = await ctrl.updateProductCategory(params.id, body);
-      return result;
+  .patch('/categories/:id', async ({ params, body }) => updateProductCategoryCtrl(params.id, body), {
+    params: t.Object({ id: UUID }),
+    body: t.Object({
+      name: t.Optional(NonEmptyString255),
+      description: t.Optional(t.Union([t.String(), t.Null()])),
+    }),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'Update product category',
+      operationId: 'updateProductCategory',
     },
-    {
-      params: schemas.GetProductCategoryParams,
-      body: schemas.UpdateProductCategoryBody,
-      response: schemas.CreateResponse,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'Update product category',
-        operationId: 'updateProductCategory',
-      },
+  })
+  .delete('/categories/:id', async ({ params }) => deleteProductCategoryCtrl(params.id), {
+    params: t.Object({ id: UUID }),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'Delete product category',
+      operationId: 'deleteProductCategory',
     },
-  )
-  .delete(
-    '/categories/:id',
-    async ({ params }) => {
-      const result = await ctrl.deleteProductCategory(params.id);
-      return result;
-    },
-    {
-      params: schemas.GetProductCategoryParams,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'Delete product category',
-        operationId: 'deleteProductCategory',
-      },
-    },
-  )
+  })
 
   // Products
-  .get(
-    '/products',
-    async ({ query }) => {
-      const limit = query.limit ? Math.min(Math.max(query.limit, 1), 100) : 25;
-      const after = decodeCursor<{ createdAt: string; id: string }>(query.after || null);
-      const { data, nextCursor } = await ctrl.listProducts({
-        limit,
-        after,
-        companyId: query.companyId ?? null,
-        categoryId: query.categoryId ?? null,
-        search: query.search ?? null,
-      });
-      return {
-        data: data.map(formatResponse),
-        nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
-      };
-    },
-    {
-      query: schemas.ListProductsQuery,
-      response: schemas.ListProductsResponse,
-      detail: { tags: ['Inventory'], summary: 'List products', operationId: 'listProducts' },
-    },
-  )
-  .get(
-    '/products/:id',
-    async ({ params }) => {
-      const product = await ctrl.getProduct(params.id);
-      return formatResponse(product);
-    },
-    {
-      params: schemas.GetProductParams,
-      response: schemas.ProductDto,
-      detail: { tags: ['Inventory'], summary: 'Get product', operationId: 'getProduct' },
-    },
-  )
+  .get('/products', async ({ query }) => listProductsCtrl(query), {
+    query: t.Intersect([
+      PaginationQuery,
+      t.Object({ companyId: t.Optional(UUID), categoryId: t.Optional(UUID) }),
+    ]),
+    detail: { tags: ['Inventory'], summary: 'List products', operationId: 'listProducts' },
+  })
+  .get('/products/:id', async ({ params }) => getProductCtrl(params.id), {
+    params: t.Object({ id: UUID }),
+    detail: { tags: ['Inventory'], summary: 'Get product', operationId: 'getProduct' },
+  })
   .post(
     '/products',
     async ({ body, set }) => {
-      const result = await ctrl.createProduct(body);
+      const res = await createProductCtrl(body);
       set.status = 201;
-      return result;
+      return res;
     },
     {
-      body: schemas.CreateProductBody,
-      response: schemas.CreateResponse,
+      body: t.Object({
+        companyId: UUID,
+        categoryId: t.Optional(UUID),
+        sku: t.String({ minLength: 1, maxLength: 100 }),
+        name: NonEmptyString255,
+        description: t.Optional(t.String()),
+        unitOfMeasure: SmallInt,
+        minStockLevel: t.Optional(t.String()),
+        createdBy: UUID,
+      }),
       detail: { tags: ['Inventory'], summary: 'Create product', operationId: 'createProduct' },
     },
   )
-  .put(
-    '/products/:id',
-    async ({ params, body }) => {
-      const result = await ctrl.updateProduct(params.id, body);
-      return result;
-    },
-    {
-      params: schemas.GetProductParams,
-      body: schemas.UpdateProductBody,
-      response: schemas.CreateResponse,
-      detail: { tags: ['Inventory'], summary: 'Update product', operationId: 'updateProduct' },
-    },
-  )
-  .delete(
-    '/products/:id',
-    async ({ params }) => {
-      const result = await ctrl.deleteProduct(params.id);
-      return result;
-    },
-    {
-      params: schemas.GetProductParams,
-      detail: { tags: ['Inventory'], summary: 'Delete product', operationId: 'deleteProduct' },
-    },
-  )
-  .get(
-    '/products/:id/stock',
-    async ({ params }) => {
-      const stock = await ctrl.getProductStock(params.id);
-      return { data: stock.map(formatResponse) };
-    },
-    {
-      params: schemas.GetProductParams,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'Get product stock levels',
-        operationId: 'getProductStock',
-      },
-    },
-  )
+  .patch('/products/:id', async ({ params, body }) => updateProductCtrl(params.id, body), {
+    params: t.Object({ id: UUID }),
+    body: t.Object({
+      categoryId: t.Optional(t.Union([UUID, t.Null()])),
+      name: t.Optional(NonEmptyString255),
+      description: t.Optional(t.Union([t.String(), t.Null()])),
+      unitOfMeasure: t.Optional(SmallInt),
+      minStockLevel: t.Optional(t.String()),
+    }),
+    detail: { tags: ['Inventory'], summary: 'Update product', operationId: 'updateProduct' },
+  })
+  .delete('/products/:id', async ({ params }) => deleteProductCtrl(params.id), {
+    params: t.Object({ id: UUID }),
+    detail: { tags: ['Inventory'], summary: 'Delete product', operationId: 'deleteProduct' },
+  })
 
   // Inventory Locations
-  .get(
-    '/locations',
-    async ({ query }) => {
-      const limit = query.limit ? Math.min(Math.max(query.limit, 1), 100) : 25;
-      const after = decodeCursor<{ createdAt: string; id: string }>(query.after || null);
-      const { data, nextCursor } = await ctrl.listInventoryLocations({
-        limit,
-        after,
-        branchId: query.branchId ?? null,
-        isActive: query.isActive ?? null,
-      });
-      return {
-        data: data.map(formatResponse),
-        nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
-      };
+  .get('/locations', async ({ query }) => listInventoryLocationsCtrl(query), {
+    query: t.Intersect([
+      PaginationQuery,
+      t.Object({ companyId: t.Optional(UUID), branchId: t.Optional(UUID) }),
+    ]),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'List inventory locations',
+      operationId: 'listInventoryLocations',
     },
-    {
-      query: schemas.ListInventoryLocationsQuery,
-      response: schemas.ListInventoryLocationsResponse,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'List inventory locations',
-        operationId: 'listInventoryLocations',
-      },
+  })
+  .get('/locations/:id', async ({ params }) => getInventoryLocationCtrl(params.id), {
+    params: t.Object({ id: UUID }),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'Get inventory location',
+      operationId: 'getInventoryLocation',
     },
-  )
-  .get(
-    '/locations/:id',
-    async ({ params }) => {
-      const location = await ctrl.getInventoryLocation(params.id);
-      return formatResponse(location);
-    },
-    {
-      params: schemas.GetInventoryLocationParams,
-      response: schemas.InventoryLocationDto,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'Get inventory location',
-        operationId: 'getInventoryLocation',
-      },
-    },
-  )
+  })
   .post(
     '/locations',
     async ({ body, set }) => {
-      const result = await ctrl.createInventoryLocation(body);
+      const res = await createInventoryLocationCtrl(body);
       set.status = 201;
-      return result;
+      return res;
     },
     {
-      body: schemas.CreateInventoryLocationBody,
-      response: schemas.CreateResponse,
+      body: t.Object({
+        companyId: UUID,
+        branchId: UUID,
+        name: NonEmptyString255,
+        description: t.Optional(t.String()),
+        createdBy: UUID,
+      }),
       detail: {
         tags: ['Inventory'],
         summary: 'Create inventory location',
@@ -272,111 +181,122 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
       },
     },
   )
-  .put(
-    '/locations/:id',
-    async ({ params, body }) => {
-      const result = await ctrl.updateInventoryLocation(params.id, body);
-      return result;
+  .patch('/locations/:id', async ({ params, body }) => updateInventoryLocationCtrl(params.id, body), {
+    params: t.Object({ id: UUID }),
+    body: t.Object({
+      name: t.Optional(NonEmptyString255),
+      description: t.Optional(t.Union([t.String(), t.Null()])),
+    }),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'Update inventory location',
+      operationId: 'updateInventoryLocation',
     },
-    {
-      params: schemas.GetInventoryLocationParams,
-      body: schemas.UpdateInventoryLocationBody,
-      response: schemas.CreateResponse,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'Update inventory location',
-        operationId: 'updateInventoryLocation',
-      },
+  })
+  .delete('/locations/:id', async ({ params }) => deleteInventoryLocationCtrl(params.id), {
+    params: t.Object({ id: UUID }),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'Delete inventory location',
+      operationId: 'deleteInventoryLocation',
     },
-  )
+  })
 
   // Stock Levels
-  .get(
-    '/stock-levels',
-    async ({ query }) => {
-      const limit = query.limit ? Math.min(Math.max(query.limit, 1), 100) : 25;
-      const after = decodeCursor<{ updatedAt: string; id: string }>(query.after || null);
-      const { data, nextCursor } = await ctrl.listStockLevels({
-        limit,
-        after,
-        productId: query.productId ?? null,
-        locationId: query.locationId ?? null,
-      });
-      return {
-        data: data.map(formatResponse),
-        nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
-      };
-    },
-    {
-      query: schemas.ListStockLevelsQuery,
-      response: schemas.ListStockLevelsResponse,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'List stock levels',
-        operationId: 'listStockLevels',
-      },
-    },
-  )
+  .get('/stock-levels', async ({ query }) => listStockLevelsCtrl(query), {
+    query: t.Intersect([
+      PaginationQuery,
+      t.Object({
+        companyId: t.Optional(UUID),
+        productId: t.Optional(UUID),
+        locationId: t.Optional(UUID),
+      }),
+    ]),
+    detail: { tags: ['Inventory'], summary: 'List stock levels', operationId: 'listStockLevels' },
+  })
+  .get('/stock-levels/:productId/:locationId', async ({ params }) =>
+    getStockLevelCtrl(params.productId, params.locationId), {
+    params: t.Object({ productId: UUID, locationId: UUID }),
+    detail: { tags: ['Inventory'], summary: 'Get stock level', operationId: 'getStockLevel' },
+  })
 
   // Stock Movements
+  .get('/stock-movements', async ({ query }) => listStockMovementsCtrl(query), {
+    query: t.Intersect([
+      PaginationQuery,
+      t.Object({
+        companyId: t.Optional(UUID),
+        productId: t.Optional(UUID),
+        locationId: t.Optional(UUID),
+        movementType: t.Optional(SmallInt),
+      }),
+    ]),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'List stock movements',
+      operationId: 'listStockMovements',
+    },
+  })
   .post(
     '/stock-movements',
     async ({ body, set }) => {
-      const result = await ctrl.recordStockMovement(body);
+      const res = await createStockMovementCtrl(body);
       set.status = 201;
-      return { id: result.id };
+      return res;
     },
     {
-      body: schemas.CreateStockMovementBody,
-      response: schemas.CreateResponse,
+      body: t.Object({
+        companyId: UUID,
+        productId: UUID,
+        locationId: UUID,
+        movementType: SmallInt,
+        quantity: t.String(),
+        referenceId: t.Optional(UUID),
+        referenceType: t.Optional(t.String({ maxLength: 50 })),
+        notes: t.Optional(t.String()),
+        createdBy: UUID,
+      }),
       detail: {
         tags: ['Inventory'],
-        summary: 'Record stock movement',
-        operationId: 'recordStockMovement',
-      },
-    },
-  )
-  .get(
-    '/stock-movements',
-    async ({ query }) => {
-      const limit = query.limit ? Math.min(Math.max(query.limit, 1), 100) : 25;
-      const after = decodeCursor<{ createdAt: string; id: string }>(query.after || null);
-      const { data, nextCursor } = await ctrl.listStockMovements({
-        limit,
-        after,
-        productId: query.productId ?? null,
-        locationId: query.locationId ?? null,
-        movementType: query.movementType ?? null,
-        startDate: query.startDate ?? null,
-        endDate: query.endDate ?? null,
-      });
-      return {
-        data: data.map(formatResponse),
-        nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
-      };
-    },
-    {
-      query: schemas.ListMovementsQuery,
-      response: schemas.ListStockMovementsResponse,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'List stock movements',
-        operationId: 'listStockMovements',
+        summary: 'Create stock movement',
+        operationId: 'createStockMovement',
       },
     },
   )
 
   // Stock Adjustments
+  .get('/stock-adjustments', async ({ query }) => listStockAdjustmentsCtrl(query), {
+    query: t.Intersect([
+      PaginationQuery,
+      t.Object({
+        companyId: t.Optional(UUID),
+        productId: t.Optional(UUID),
+        locationId: t.Optional(UUID),
+      }),
+    ]),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'List stock adjustments',
+      operationId: 'listStockAdjustments',
+    },
+  })
   .post(
     '/stock-adjustments',
     async ({ body, set }) => {
-      const result = await ctrl.createStockAdjustment(body);
+      const res = await createStockAdjustmentCtrl(body);
       set.status = 201;
-      return { id: result.id };
+      return res;
     },
     {
-      body: schemas.CreateStockAdjustmentBody,
-      response: schemas.CreateResponse,
+      body: t.Object({
+        companyId: UUID,
+        productId: UUID,
+        locationId: UUID,
+        reason: SmallInt,
+        quantityChange: t.String(),
+        notes: t.Optional(t.String()),
+        createdBy: UUID,
+      }),
       detail: {
         tags: ['Inventory'],
         summary: 'Create stock adjustment',
@@ -386,43 +306,42 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
 
   // Stock Transfers
-  .get(
-    '/transfers',
-    async ({ query }) => {
-      const limit = query.limit ? Math.min(Math.max(query.limit, 1), 100) : 25;
-      const after = decodeCursor<{ createdAt: string; id: string }>(query.after || null);
-      const { data, nextCursor } = await ctrl.listStockTransfers({
-        limit,
-        after,
-        fromLocationId: query.fromLocationId ?? null,
-        toLocationId: query.toLocationId ?? null,
-        status: query.status ?? null,
-      });
-      return {
-        data: data.map(formatResponse),
-        nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
-      };
+  .get('/stock-transfers', async ({ query }) => listStockTransfersCtrl(query), {
+    query: t.Intersect([
+      PaginationQuery,
+      t.Object({
+        companyId: t.Optional(UUID),
+        productId: t.Optional(UUID),
+        status: t.Optional(SmallInt),
+      }),
+    ]),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'List stock transfers',
+      operationId: 'listStockTransfers',
     },
-    {
-      query: schemas.ListTransfersQuery,
-      response: schemas.ListStockTransfersResponse,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'List stock transfers',
-        operationId: 'listStockTransfers',
-      },
-    },
-  )
+  })
+  .get('/stock-transfers/:id', async ({ params }) => getStockTransferCtrl(params.id), {
+    params: t.Object({ id: UUID }),
+    detail: { tags: ['Inventory'], summary: 'Get stock transfer', operationId: 'getStockTransfer' },
+  })
   .post(
-    '/transfers',
+    '/stock-transfers',
     async ({ body, set }) => {
-      const result = await ctrl.createStockTransfer(body);
+      const res = await createStockTransferCtrl(body);
       set.status = 201;
-      return { id: result.id };
+      return res;
     },
     {
-      body: schemas.CreateTransferBody,
-      response: schemas.CreateResponse,
+      body: t.Object({
+        companyId: UUID,
+        productId: UUID,
+        fromLocationId: UUID,
+        toLocationId: UUID,
+        quantity: t.String(),
+        notes: t.Optional(t.String()),
+        createdBy: UUID,
+      }),
       detail: {
         tags: ['Inventory'],
         summary: 'Create stock transfer',
@@ -430,82 +349,45 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
       },
     },
   )
-  .get(
-    '/transfers/:id',
-    async ({ params }) => {
-      const transfer = await ctrl.getStockTransfer(params.id);
-      return {
-        ...formatResponse(transfer),
-        items: transfer.items.map(formatResponse),
-      };
+  .patch('/stock-transfers/:id', async ({ params, body }) => updateStockTransferCtrl(params.id, body), {
+    params: t.Object({ id: UUID }),
+    body: t.Object({
+      status: SmallInt,
+      completedBy: t.Optional(UUID),
+    }),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'Update stock transfer',
+      operationId: 'updateStockTransfer',
     },
-    {
-      params: schemas.GetTransferParams,
-      response: schemas.StockTransferDto,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'Get stock transfer',
-        operationId: 'getStockTransfer',
-      },
-    },
-  )
-  .put(
-    '/transfers/:id/status',
-    async ({ params, body }) => {
-      const result = await ctrl.updateTransferStatus(
-        params.id,
-        body.status,
-        body.notes,
-        body.cancellationReason,
-      );
-      return { id: result.id };
-    },
-    {
-      params: schemas.GetTransferParams,
-      body: schemas.UpdateTransferStatusBody,
-      response: schemas.CreateResponse,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'Update transfer status',
-        operationId: 'updateTransferStatus',
-      },
-    },
-  )
-  .post(
-    '/transfers/:id/complete',
-    async ({ params, body }) => {
-      const result = await ctrl.completeStockTransfer(params.id, body.userId);
-      return { id: result.id };
-    },
-    {
-      params: schemas.GetTransferParams,
-      body: t.Object({ userId: UUID }),
-      response: schemas.CreateResponse,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'Complete stock transfer',
-        operationId: 'completeStockTransfer',
-      },
-    },
-  )
+  })
 
   // Reports
-  .get(
-    '/reports/low-stock',
-    async ({ query }) => {
-      const data = await ctrl.getLowStockReport({
-        companyId: query.companyId ?? null,
-        branchId: query.branchId ?? null,
-      });
-      return { data: data.map(formatResponse) };
+  .get('/reports/low-stock', async ({ query }) => getLowStockReportCtrl(query.companyId, query.locationId), {
+    query: t.Object({
+      companyId: UUID,
+      locationId: t.Optional(UUID),
+    }),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'Get low stock report',
+      operationId: 'getLowStockReport',
     },
-    {
-      query: schemas.ListLowStockQuery,
-      response: schemas.ListLowStockResponse,
-      detail: {
-        tags: ['Inventory'],
-        summary: 'Get low stock report',
-        operationId: 'getLowStockReport',
-      },
+  })
+  .get('/reports/movements', async ({ query }) => getMovementHistoryCtrl(query), {
+    query: t.Intersect([
+      PaginationQuery,
+      t.Object({
+        companyId: UUID,
+        productId: t.Optional(UUID),
+        locationId: t.Optional(UUID),
+        startDate: t.Optional(t.String({ format: 'date-time' })),
+        endDate: t.Optional(t.String({ format: 'date-time' })),
+      }),
+    ]),
+    detail: {
+      tags: ['Inventory'],
+      summary: 'Get movement history report',
+      operationId: 'getMovementHistory',
     },
-  );
+  });
