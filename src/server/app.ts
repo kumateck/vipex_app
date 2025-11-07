@@ -25,6 +25,7 @@ import { paymentsRoutes } from './features/payments/routes';
 import { deliveriesRoutes } from './features/deliveries/routes';
 import { accountingRoutes } from './features/accounting/routes';
 import { bookingWithParcelsRoutes } from './features/shipments/booking-with-parcels.routes';
+import { inventoryRoutes } from './features/inventory/routes';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -54,7 +55,8 @@ export const app = new Elysia()
       )
       .group('/payments', (r) => r.use(paymentsRoutes))
       .group('/deliveries', (r) => r.use(deliveriesRoutes))
-      .group('/accounting', (r) => r.use(accountingRoutes)),
+      .group('/accounting', (r) => r.use(accountingRoutes))
+      .group('/inventory', (r) => r.use(inventoryRoutes)),
   )
   // .group('/v1', (v1) =>
   //   v1
