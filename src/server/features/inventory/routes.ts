@@ -1,5 +1,6 @@
-import { Elysia } from 'elysia';
+import { Elysia, t } from 'elysia';
 import { decodeCursor, encodeCursor } from '@/server/utils/cursor';
+import { UUID } from '@/server/schemas/common';
 import * as ctrl from './controller';
 import * as schemas from './schemas';
 
@@ -478,7 +479,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     },
     {
       params: schemas.GetTransferParams,
-      body: schemas.t.Object({ userId: schemas.UUID }),
+      body: t.Object({ userId: UUID }),
       response: schemas.CreateResponse,
       detail: {
         tags: ['Inventory'],

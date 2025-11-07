@@ -14,6 +14,7 @@ import {
   users,
   roles,
 } from '@/db/schemas';
+import { eq, inArray } from 'drizzle-orm';
 import { UnitOfMeasure, StockMovementType, StockAdjustmentReason, TransferStatus, UserStatus } from '@/db/schemas/enums';
 
 // Test data generators
@@ -292,19 +293,19 @@ export async function cleanupTestCompanyData(companyId: string) {
   const companyProducts = await db
     .select({ id: products.id })
     .from(products)
-    .where({ companyId });
+    .where(eq(products.companyId, companyId));
 
   const productIds = companyProducts.map((p) => p.id);
 
   if (productIds.length > 0) {
     await db.delete(stockMovements).where(
-      stockMovements.productId.in(productIds)
+      inArray(stockMovements.productId, productIds)
     );
     await db.delete(stockLevels).where(
-      stockLevels.productId.in(productIds)
+      inArray(stockLevels.productId, productIds)
     );
   }
 
-  await db.delete(products).where({ companyId });
-  await db.delete(productCategories).where({ companyId });
+  await db.delete(products).where(eq(products.companyId, companyId));
+  await db.delete(productCategories).where(eq(productCategories.companyId, companyId));
 }
