@@ -102,7 +102,7 @@ export async function createCustomerRepo(
   values: typeof customers.$inferInsert,
 ): Promise<{ id: string }> {
   const [row] = await db.insert(customers).values(values).returning({ id: customers.id });
-  return row;
+  return row!;
 }
 
 export async function updateCustomerRepo(

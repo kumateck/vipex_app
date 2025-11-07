@@ -92,5 +92,6 @@ export async function createBookingRepo(
   values: typeof bookings.$inferInsert,
 ): Promise<{ id: string }> {
   const [row] = await db.insert(bookings).values(values).returning({ id: bookings.id });
+  if (!row) throw new Error('Failed to create booking');
   return row;
 }
