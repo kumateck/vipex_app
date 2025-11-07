@@ -21,19 +21,19 @@ describe('Stock Transfers API', () => {
 
   beforeAll(async () => {
     testUserId = crypto.randomUUID();
-    testCompany = await createTestCompany({ createdBy: testUserId });
-    testBranch = await createTestBranch({ companyId: testCompany.id, createdBy: testUserId });
-    testProduct = await createTestProduct({ companyId: testCompany.id, createdBy: testUserId });
-    testLocation1 = await createTestInventoryLocation({
+    testCompany = (await createTestCompany({ createdBy: testUserId }))!;
+    testBranch = (await createTestBranch({ companyId: testCompany.id, createdBy: testUserId }))!;
+    testProduct = (await createTestProduct({ companyId: testCompany.id, createdBy: testUserId }))!;
+    testLocation1 = (await createTestInventoryLocation({
       branchId: testBranch.id,
       name: `Location 1 ${Date.now()}`,
       createdBy: testUserId,
-    });
-    testLocation2 = await createTestInventoryLocation({
+    }))!;
+    testLocation2 = (await createTestInventoryLocation({
       branchId: testBranch.id,
       name: `Location 2 ${Date.now()}`,
       createdBy: testUserId,
-    });
+    }))!;
   });
 
   afterAll(async () => {
@@ -46,7 +46,7 @@ describe('Stock Transfers API', () => {
       toLocationId: testLocation2.id,
       items: [
         {
-          productId: testProduct.id,
+          productId: testProduct!.id,
           quantityRequested: '50',
           notes: 'Transfer item notes',
         },
@@ -69,7 +69,7 @@ describe('Stock Transfers API', () => {
     const transferData = {
       fromLocationId: testLocation1.id,
       toLocationId: testLocation1.id,
-      items: [{ productId: testProduct.id, quantityRequested: '10' }],
+      items: [{ productId: testProduct!.id, quantityRequested: '10' }],
       requestedBy: testUserId,
     };
 
@@ -104,7 +104,7 @@ describe('Stock Transfers API', () => {
       body: JSON.stringify({
         fromLocationId: testLocation1.id,
         toLocationId: testLocation2.id,
-        items: [{ productId: testProduct.id, quantityRequested: '20' }],
+        items: [{ productId: testProduct!.id, quantityRequested: '20' }],
         requestedBy: testUserId,
       }),
     });
@@ -123,9 +123,7 @@ describe('Stock Transfers API', () => {
       body: JSON.stringify({
         fromLocationId: testLocation1.id,
         toLocationId: testLocation2.id,
-        items: [
-          { productId: testProduct.id, quantityRequested: '30' },
-        ],
+        items: [{ productId: testProduct!.id, quantityRequested: '30' }],
         notes: 'Test transfer',
         requestedBy: testUserId,
       }),
@@ -146,7 +144,7 @@ describe('Stock Transfers API', () => {
     expect(body.transferNumber).toBeDefined();
     expect(body.items).toBeDefined();
     expect(body.items.length).toBe(1);
-    expect(body.items[0].quantityRequested).toBe('30');
+    expect(body.items[0]?.quantityRequested).toBe('30');
   });
 
   test('PUT /v1/inventory/transfers/:id/status - updates transfer status', async () => {
@@ -155,7 +153,7 @@ describe('Stock Transfers API', () => {
       body: JSON.stringify({
         fromLocationId: testLocation1.id,
         toLocationId: testLocation2.id,
-        items: [{ productId: testProduct.id, quantityRequested: '15' }],
+        items: [{ productId: testProduct!.id, quantityRequested: '15' }],
         requestedBy: testUserId,
       }),
     });
@@ -188,7 +186,7 @@ describe('Stock Transfers API', () => {
 
     // Set initial stock in source location
     await createTestStockLevel({
-      productId: product.id,
+      productId: product!.id,
       locationId: testLocation1.id,
       quantityAvailable: BigInt(100),
     });
@@ -199,7 +197,7 @@ describe('Stock Transfers API', () => {
       body: JSON.stringify({
         fromLocationId: testLocation1.id,
         toLocationId: testLocation2.id,
-        items: [{ productId: product.id, quantityRequested: '40' }],
+        items: [{ productId: product!.id, quantityRequested: '40' }],
         requestedBy: testUserId,
       }),
     });
@@ -221,7 +219,7 @@ describe('Stock Transfers API', () => {
     expect(completeRes.status).toBe(HttpStatus.OK);
 
     // Verify stock was moved
-    const stockRes = await http('GET', `/v1/inventory/products/${product.id}/stock`);
+    const stockRes = await http('GET', `/v1/inventory/products/${product!.id}/stock`);
     const stockBody = await json<{
       data: Array<{ locationId: string; quantityAvailable: string }>;
     }>(stockRes);
@@ -239,7 +237,7 @@ describe('Stock Transfers API', () => {
       body: JSON.stringify({
         fromLocationId: testLocation1.id,
         toLocationId: testLocation2.id,
-        items: [{ productId: testProduct.id, quantityRequested: '5' }],
+        items: [{ productId: testProduct!.id, quantityRequested: '5' }],
         requestedBy: testUserId,
       }),
     });
@@ -261,7 +259,7 @@ describe('Stock Transfers API', () => {
       body: JSON.stringify({
         fromLocationId: testLocation1.id,
         toLocationId: testLocation2.id,
-        items: [{ productId: testProduct.id, quantityRequested: '10' }],
+        items: [{ productId: testProduct!.id, quantityRequested: '10' }],
         requestedBy: testUserId,
       }),
     });
@@ -297,7 +295,7 @@ describe('Stock Transfers API', () => {
       body: JSON.stringify({
         fromLocationId: testLocation1.id,
         toLocationId: testLocation2.id,
-        items: [{ productId: testProduct.id, quantityRequested: '5' }],
+        items: [{ productId: testProduct!.id, quantityRequested: '5' }],
         requestedBy: testUserId,
       }),
     });
@@ -318,7 +316,7 @@ describe('Stock Transfers API', () => {
 
     // Set low stock
     await createTestStockLevel({
-      productId: product.id,
+      productId: product!.id,
       locationId: testLocation1.id,
       quantityAvailable: BigInt(10),
     });
@@ -329,7 +327,7 @@ describe('Stock Transfers API', () => {
       body: JSON.stringify({
         fromLocationId: testLocation1.id,
         toLocationId: testLocation2.id,
-        items: [{ productId: product.id, quantityRequested: '50' }],
+        items: [{ productId: product!.id, quantityRequested: '50' }],
         requestedBy: testUserId,
       }),
     });

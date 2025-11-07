@@ -11,12 +11,14 @@ import { UnitOfMeasure } from '../../src/db/schemas/enums';
 
 describe('Product API', () => {
   let testCompany: { id: string };
-  let testCategory: { id: string };
+  let testCategory: { id: string } | undefined;
   let testUserId: string;
 
   beforeAll(async () => {
     testUserId = crypto.randomUUID();
-    testCompany = await createTestCompany({ createdBy: testUserId });
+    const company = await createTestCompany({ createdBy: testUserId });
+    if (!company) throw new Error('Failed to create test company');
+    testCompany = company;
     testCategory = await createTestProductCategory({
       companyId: testCompany.id,
       name: 'Test Category',
@@ -31,7 +33,7 @@ describe('Product API', () => {
   test('POST /v1/inventory/products - creates a new product', async () => {
     const productData = {
       companyId: testCompany.id,
-      categoryId: testCategory.id,
+      categoryId: testCategory?.id,
       sku: `SKU-${Date.now()}`,
       name: 'Test Product',
       description: 'A test product',
@@ -112,18 +114,18 @@ describe('Product API', () => {
 
     const product = await createTestProduct({
       companyId: testCompany.id,
-      categoryId: category.id,
+      categoryId: category?.id,
       sku: `FILTER-${Date.now()}`,
       name: 'Filtered Product',
       createdBy: testUserId,
     });
 
-    const res = await http('GET', `/v1/inventory/products?categoryId=${category.id}`);
+    const res = await http('GET', `/v1/inventory/products?categoryId=${category?.id}`);
 
     expect(res.status).toBe(HttpStatus.OK);
     const body = await json<{ data: Array<{ id: string; categoryId: string | null }> }>(res);
-    expect(body.data.some((p) => p.id === product.id)).toBe(true);
-    expect(body.data.every((p) => p.categoryId === category.id)).toBe(true);
+    expect(body.data.some((p) => p.id === product?.id)).toBe(true);
+    expect(body.data.every((p) => p.categoryId === category?.id)).toBe(true);
   });
 
   test('GET /v1/inventory/products - searches by name and SKU', async () => {
@@ -139,26 +141,26 @@ describe('Product API', () => {
     const res1 = await http('GET', `/v1/inventory/products?search=${uniqueName}`);
     expect(res1.status).toBe(HttpStatus.OK);
     const body1 = await json<{ data: Array<{ id: string }> }>(res1);
-    expect(body1.data.some((p) => p.id === product.id)).toBe(true);
+    expect(body1.data.some((p) => p.id === product?.id)).toBe(true);
 
     // Search by SKU
-    const res2 = await http('GET', `/v1/inventory/products?search=${product.sku}`);
+    const res2 = await http('GET', `/v1/inventory/products?search=${product?.sku}`);
     expect(res2.status).toBe(HttpStatus.OK);
     const body2 = await json<{ data: Array<{ id: string }> }>(res2);
-    expect(body2.data.some((p) => p.id === product.id)).toBe(true);
+    expect(body2.data.some((p) => p.id === product?.id)).toBe(true);
   });
 
   test('GET /v1/inventory/products/:id - gets a single product', async () => {
     const product = await createTestProduct({
       companyId: testCompany.id,
-      categoryId: testCategory.id,
+      categoryId: testCategory?.id,
       sku: `GET-${Date.now()}`,
       name: 'Get Product',
       description: 'Product to get',
       createdBy: testUserId,
     });
 
-    const res = await http('GET', `/v1/inventory/products/${product.id}`);
+    const res = await http('GET', `/v1/inventory/products/${product?.id}`);
 
     expect(res.status).toBe(HttpStatus.OK);
     const body = await json<{
@@ -167,9 +169,10 @@ describe('Product API', () => {
       name: string;
       categoryName: string | null;
     }>(res);
-    expect(body.id).toBe(product.id);
-    expect(body.sku).toBe(product.sku);
-    expect(body.name).toBe(product.name);
+    expect(product).toBeDefined();
+    expect(body.id).toBe(product!.id);
+    expect(body.sku).toBe(product!.sku);
+    expect(body.name).toBe(product!.name);
   });
 
   test('GET /v1/inventory/products/:id - returns 404 for non-existent product', async () => {
@@ -193,7 +196,7 @@ describe('Product API', () => {
       minStockLevel: '20',
     };
 
-    const res = await http('PUT', `/v1/inventory/products/${product.id}`, {
+    const res = await http('PUT', `/v1/inventory/products/${product?.id}`, {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updateData),
     });
@@ -201,7 +204,7 @@ describe('Product API', () => {
     expect(res.status).toBe(HttpStatus.OK);
 
     // Verify the update
-    const getRes = await http('GET', `/v1/inventory/products/${product.id}`);
+    const getRes = await http('GET', `/v1/inventory/products/${product?.id}`);
     const body = await json<{ name: string; description: string | null; minStockLevel: string }>(
       getRes,
     );
@@ -226,10 +229,10 @@ describe('Product API', () => {
     });
 
     const updateData = {
-      sku: product2.sku, // Try to use product2's SKU
+      sku: product2?.sku, // Try to use product2's SKU
     };
 
-    const res = await http('PUT', `/v1/inventory/products/${product1.id}`, {
+    const res = await http('PUT', `/v1/inventory/products/${product1?.id}`, {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updateData),
     });
@@ -245,12 +248,12 @@ describe('Product API', () => {
       createdBy: testUserId,
     });
 
-    const res = await http('DELETE', `/v1/inventory/products/${product.id}`);
+    const res = await http('DELETE', `/v1/inventory/products/${product?.id}`);
 
     expect(res.status).toBe(HttpStatus.OK);
 
     // Verify product is no longer accessible
-    const getRes = await http('GET', `/v1/inventory/products/${product.id}`);
+    const getRes = await http('GET', `/v1/inventory/products/${product?.id}`);
     expect(getRes.status).toBe(HttpStatus.NOT_FOUND);
   });
 

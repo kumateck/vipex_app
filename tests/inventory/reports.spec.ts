@@ -17,8 +17,12 @@ describe('Inventory Reports API', () => {
 
   beforeAll(async () => {
     testUserId = crypto.randomUUID();
-    testCompany = await createTestCompany({ createdBy: testUserId });
-    testBranch = await createTestBranch({ companyId: testCompany.id, createdBy: testUserId });
+    const company = await createTestCompany({ createdBy: testUserId });
+    if (!company) throw new Error('Failed to create test company');
+    testCompany = company;
+    const branch = await createTestBranch({ companyId: testCompany.id, createdBy: testUserId });
+    if (!branch) throw new Error('Failed to create test branch');
+    testBranch = branch;
   });
 
   afterAll(async () => {
@@ -31,6 +35,7 @@ describe('Inventory Reports API', () => {
       name: `Low Stock ${Date.now()}`,
       createdBy: testUserId,
     });
+    if (!location) throw new Error('Failed to create test inventory location');
 
     // Create product with low stock
     const lowStockProduct = await createTestProduct({
@@ -40,6 +45,7 @@ describe('Inventory Reports API', () => {
       minStockLevel: BigInt(50),
       createdBy: testUserId,
     });
+    if (!lowStockProduct) throw new Error('Failed to create low stock product');
 
     await createTestStockLevel({
       productId: lowStockProduct.id,
@@ -57,7 +63,7 @@ describe('Inventory Reports API', () => {
     });
 
     await createTestStockLevel({
-      productId: adequateProduct.id,
+      productId: adequateProduct!.id,
       locationId: location.id,
       quantityAvailable: BigInt(100), // Above minStockLevel
     });
@@ -75,7 +81,7 @@ describe('Inventory Reports API', () => {
     expect(lowStockItem?.deficit).toBe('20'); // 50 - 30
 
     // Adequate stock product should NOT be in results
-    const adequateItem = body.data.find((item) => item.productId === adequateProduct.id);
+    const adequateItem = body.data.find((item) => item.productId === adequateProduct!.id);
     expect(adequateItem).toBeUndefined();
   });
 
@@ -86,7 +92,7 @@ describe('Inventory Reports API', () => {
       createdBy: testUserId,
     });
     const location2 = await createTestInventoryLocation({
-      branchId: branch2.id,
+      branchId: branch2!.id,
       name: `Location B2 ${Date.now()}`,
       createdBy: testUserId,
     });
@@ -99,19 +105,19 @@ describe('Inventory Reports API', () => {
     });
 
     await createTestStockLevel({
-      productId: product.id,
-      locationId: location2.id,
+      productId: product!.id,
+      locationId: location2!.id,
       quantityAvailable: BigInt(50), // Low stock
     });
 
-    const res = await http('GET', `/v1/inventory/reports/low-stock?branchId=${branch2.id}`);
+    const res = await http('GET', `/v1/inventory/reports/low-stock?branchId=${branch2!.id}`);
 
     expect(res.status).toBe(HttpStatus.OK);
     const body = await json<{ data: Array<{ productId: string; locationId: string }> }>(res);
 
-    const found = body.data.find((item) => item.productId === product.id);
+    const found = body.data.find((item) => item.productId === product?.id);
     expect(found).toBeDefined();
-    expect(found?.locationId).toBe(location2.id);
+    expect(found?.locationId).toBe(location2?.id);
   });
 
   test('GET /v1/inventory/reports/low-stock - shows deficit correctly', async () => {
@@ -129,8 +135,8 @@ describe('Inventory Reports API', () => {
     });
 
     await createTestStockLevel({
-      productId: product.id,
-      locationId: location.id,
+      productId: product!.id,
+      locationId: location!.id,
       quantityAvailable: BigInt(75),
     });
 
@@ -146,7 +152,7 @@ describe('Inventory Reports API', () => {
       }>;
     }>(res);
 
-    const item = body.data.find((i) => i.productId === product.id);
+    const item = body.data.find((i) => i.productId === product!.id);
     expect(item).toBeDefined();
     expect(item?.quantityAvailable).toBe('75');
     expect(item?.minStockLevel).toBe('200');
@@ -168,13 +174,13 @@ describe('Inventory Reports API', () => {
     });
 
     await createTestStockLevel({
-      productId: product.id,
-      locationId: location.id,
+      productId: product!.id,
+      locationId: location!.id,
       quantityAvailable: BigInt(50),
     });
 
     // Delete the product
-    await http('DELETE', `/v1/inventory/products/${product.id}`);
+    await http('DELETE', `/v1/inventory/products/${product!.id}`);
 
     const res = await http('GET', `/v1/inventory/reports/low-stock?companyId=${testCompany.id}`);
 
@@ -182,7 +188,7 @@ describe('Inventory Reports API', () => {
     const body = await json<{ data: Array<{ productId: string }> }>(res);
 
     // Deleted product should not appear
-    const found = body.data.find((item) => item.productId === product.id);
+    const found = body.data.find((item) => item.productId === product!.id);
     expect(found).toBeUndefined();
   });
 
@@ -192,7 +198,7 @@ describe('Inventory Reports API', () => {
       createdBy: testUserId,
     });
 
-    const res = await http('GET', `/v1/inventory/reports/low-stock?companyId=${company2.id}`);
+    const res = await http('GET', `/v1/inventory/reports/low-stock?companyId=${company2!.id}`);
 
     expect(res.status).toBe(HttpStatus.OK);
     const body = await json<{ data: unknown[] }>(res);
@@ -220,15 +226,15 @@ describe('Inventory Reports API', () => {
 
     // Low stock in location1
     await createTestStockLevel({
-      productId: product.id,
-      locationId: location1.id,
+      productId: product!.id,
+      locationId: location1!.id,
       quantityAvailable: BigInt(30),
     });
 
     // Adequate stock in location2
     await createTestStockLevel({
-      productId: product.id,
-      locationId: location2.id,
+      productId: product!.id,
+      locationId: location2!.id,
       quantityAvailable: BigInt(150),
     });
 
@@ -239,13 +245,13 @@ describe('Inventory Reports API', () => {
 
     // Should show location1 in low stock report
     const loc1Item = body.data.find(
-      (item) => item.productId === product.id && item.locationId === location1.id,
+      (item) => item.productId === product!.id && item.locationId === location1!.id,
     );
     expect(loc1Item).toBeDefined();
 
     // Location2 should not be in low stock report
     const loc2Item = body.data.find(
-      (item) => item.productId === product.id && item.locationId === location2.id,
+      (item) => item.productId === product!.id && item.locationId === location2!.id,
     );
     expect(loc2Item).toBeUndefined();
   });
@@ -266,8 +272,8 @@ describe('Inventory Reports API', () => {
     });
 
     await createTestStockLevel({
-      productId: product.id,
-      locationId: location.id,
+      productId: product!.id,
+      locationId: location!.id,
       quantityAvailable: BigInt(20),
     });
 
@@ -278,9 +284,9 @@ describe('Inventory Reports API', () => {
       data: Array<{ productName: string; productSku: string; locationName: string }>;
     }>(res);
 
-    const item = body.data.find((i) => i.productSku === product.sku);
+    const item = body.data.find((i) => i.productSku === product!.sku);
     expect(item).toBeDefined();
     expect(item?.productName).toBe('Named Product for Report');
-    expect(item?.locationName).toBe(location.name);
+    expect(item?.locationName).toBe(location!.name);
   });
 });

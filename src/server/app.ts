@@ -10,7 +10,7 @@ import { HttpStatus } from './utils/http-status';
 import { devMailRoutes } from './routes/dev-mail';
 import { isDev } from './utils/env';
 import { corsPlugin } from './plugins/cors';
-import { authPasswordRoutes } from './features/auth/routes.reset-password';
+// import { authPasswordRoutes } from './features/auth/routes.reset-password';
 import { usersInviteRoutes } from './features/auth/routes.invite-resend';
 import { branchesRoutes } from './features/branches/routes';
 import { locationsRoutes } from './features/locations/routes';

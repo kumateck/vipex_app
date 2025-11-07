@@ -18,7 +18,9 @@ export type ListProductCategoriesParams = {
 };
 
 export async function listProductCategoriesRepo(p: ListProductCategoriesParams) {
-  const where = [eq(productCategories.isDeleted, false)];
+  const where: (ReturnType<typeof eq> | ReturnType<typeof and> | ReturnType<typeof or>)[] = [
+    eq(productCategories.isDeleted, false),
+  ];
   if (p.companyId) where.push(eq(productCategories.companyId, p.companyId));
   if (p.after) {
     where.push(
@@ -71,7 +73,10 @@ export async function findProductCategoryByNameRepo(companyId: string, name: str
 }
 
 export async function createProductCategoryRepo(values: typeof productCategories.$inferInsert) {
-  const [row] = await db.insert(productCategories).values(values).returning({ id: productCategories.id });
+  const [row] = await db
+    .insert(productCategories)
+    .values(values)
+    .returning({ id: productCategories.id });
   return row;
 }
 
@@ -113,7 +118,7 @@ export async function listProductsRepo(p: ListProductsParams) {
       or(
         gt(products.createdAt, new Date(p.after.createdAt)),
         and(eq(products.createdAt, new Date(p.after.createdAt)), gt(products.id, p.after.id)),
-      ),
+      )!,
     );
   }
   const rows = await db
@@ -187,7 +192,9 @@ export type ListInventoryLocationsParams = {
 };
 
 export async function listInventoryLocationsRepo(p: ListInventoryLocationsParams) {
-  const where = [eq(inventoryLocations.isDeleted, false)];
+  const where: (ReturnType<typeof eq> | ReturnType<typeof and> | ReturnType<typeof or>)[] = [
+    eq(inventoryLocations.isDeleted, false),
+  ];
   if (p.companyId) where.push(eq(inventoryLocations.companyId, p.companyId));
   if (p.branchId) where.push(eq(inventoryLocations.branchId, p.branchId));
   if (p.after) {
@@ -198,7 +205,7 @@ export async function listInventoryLocationsRepo(p: ListInventoryLocationsParams
           eq(inventoryLocations.createdAt, new Date(p.after.createdAt)),
           gt(inventoryLocations.id, p.after.id),
         ),
-      ),
+      )!,
     );
   }
   const rows = await db
@@ -241,7 +248,10 @@ export async function findInventoryLocationByNameRepo(branchId: string, name: st
 }
 
 export async function createInventoryLocationRepo(values: typeof inventoryLocations.$inferInsert) {
-  const [row] = await db.insert(inventoryLocations).values(values).returning({ id: inventoryLocations.id });
+  const [row] = await db
+    .insert(inventoryLocations)
+    .values(values)
+    .returning({ id: inventoryLocations.id });
   return row;
 }
 
@@ -413,7 +423,10 @@ export async function listStockAdjustmentsRepo(p: ListStockAdjustmentsParams) {
 }
 
 export async function createStockAdjustmentRepo(values: typeof stockAdjustments.$inferInsert) {
-  const [row] = await db.insert(stockAdjustments).values(values).returning({ id: stockAdjustments.id });
+  const [row] = await db
+    .insert(stockAdjustments)
+    .values(values)
+    .returning({ id: stockAdjustments.id });
   return row;
 }
 
@@ -435,7 +448,10 @@ export async function listStockTransfersRepo(p: ListStockTransfersParams) {
     where.push(
       or(
         lt(stockTransfers.createdAt, new Date(p.after.createdAt)),
-        and(eq(stockTransfers.createdAt, new Date(p.after.createdAt)), gt(stockTransfers.id, p.after.id)),
+        and(
+          eq(stockTransfers.createdAt, new Date(p.after.createdAt)),
+          gt(stockTransfers.id, p.after.id),
+        ),
       ),
     );
   }
@@ -515,15 +531,14 @@ export async function getMovementHistoryRepo(p: MovementHistoryParams) {
   if (p.startDate) where.push(gte(stockMovements.createdAt, p.startDate));
   if (p.endDate) where.push(lte(stockMovements.createdAt, p.endDate));
   if (p.after) {
-    where.push(
-      or(
-        lt(stockMovements.createdAt, new Date(p.after.createdAt)),
-        and(
-          eq(stockMovements.createdAt, new Date(p.after.createdAt)),
-          gt(stockMovements.id, p.after.id),
-        ),
+    const afterCondition = or(
+      lt(stockMovements.createdAt, new Date(p.after.createdAt)),
+      and(
+        eq(stockMovements.createdAt, new Date(p.after.createdAt)),
+        gt(stockMovements.id, p.after.id),
       ),
     );
+    if (afterCondition) where.push(afterCondition);
   }
 
   const rows = await db

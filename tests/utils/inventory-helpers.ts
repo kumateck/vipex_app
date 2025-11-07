@@ -8,14 +8,19 @@ import {
   stockMovements,
   stockAdjustments,
   stockTransfers,
-  stockTransferItems,
   companies,
   branches,
   users,
   roles,
 } from '@/db/schemas';
 import { eq, inArray } from 'drizzle-orm';
-import { UnitOfMeasure, StockMovementType, StockAdjustmentReason, TransferStatus, UserStatus } from '@/db/schemas/enums';
+import {
+  UnitOfMeasure,
+  StockMovementType,
+  StockAdjustmentReason,
+  // TransferStatus,
+  UserStatus,
+} from '@/db/schemas/enums';
 
 // Test data generators
 
@@ -184,6 +189,7 @@ export async function createTestStockLevel(data: {
 }
 
 export async function createTestStockMovement(data: {
+  companyId: string;
   productId: string;
   locationId: string;
   movementType?: number;
@@ -196,6 +202,7 @@ export async function createTestStockMovement(data: {
   const [movement] = await db
     .insert(stockMovements)
     .values({
+      companyId: data.companyId,
       productId: data.productId,
       locationId: data.locationId,
       movementType: data.movementType ?? StockMovementType.RECEIPT,
@@ -210,7 +217,9 @@ export async function createTestStockMovement(data: {
 }
 
 export async function createTestStockAdjustment(data: {
-  movementId: string;
+  companyId: string;
+  productId: string;
+  locationId: string;
   reason?: number;
   reasonDetails?: string;
   approvedBy?: string;
@@ -219,7 +228,9 @@ export async function createTestStockAdjustment(data: {
   const [adjustment] = await db
     .insert(stockAdjustments)
     .values({
-      movementId: data.movementId,
+      companyId: data.companyId,
+      productId: data.productId,
+      locationId: data.locationId,
       reason: data.reason ?? StockAdjustmentReason.RECOUNT,
       reasonDetails: data.reasonDetails,
       approvedBy: data.approvedBy,
@@ -230,22 +241,23 @@ export async function createTestStockAdjustment(data: {
 }
 
 export async function createTestStockTransfer(data: {
+  companyId: string;
+  productId: string;
   fromLocationId: string;
   toLocationId: string;
-  transferNumber?: string;
-  status?: number;
-  requestedBy?: string;
+  // transferNumber?: string;
   notes?: string;
+  createdBy?: string;
 }) {
   const [transfer] = await db
     .insert(stockTransfers)
     .values({
-      transferNumber: data.transferNumber || `TRF-${Date.now()}`,
+      companyId: data.companyId,
+      productId: data.productId,
       fromLocationId: data.fromLocationId,
       toLocationId: data.toLocationId,
-      status: data.status ?? TransferStatus.PENDING,
-      requestedBy: data.requestedBy || crypto.randomUUID(),
       notes: data.notes,
+      createdBy: data.createdBy || crypto.randomUUID(),
     })
     .returning();
   return transfer;
@@ -298,12 +310,8 @@ export async function cleanupTestCompanyData(companyId: string) {
   const productIds = companyProducts.map((p) => p.id);
 
   if (productIds.length > 0) {
-    await db.delete(stockMovements).where(
-      inArray(stockMovements.productId, productIds)
-    );
-    await db.delete(stockLevels).where(
-      inArray(stockLevels.productId, productIds)
-    );
+    await db.delete(stockMovements).where(inArray(stockMovements.productId, productIds));
+    await db.delete(stockLevels).where(inArray(stockLevels.productId, productIds));
   }
 
   await db.delete(products).where(eq(products.companyId, companyId));

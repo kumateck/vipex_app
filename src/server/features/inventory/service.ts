@@ -74,7 +74,8 @@ export async function updateProductCategorySvc(
     if (!existing) throw NotFound('Product category not found');
     if (patch.name !== existing.name) {
       const dup = await findProductCategoryByNameRepo(existing.companyId, patch.name);
-      if (dup && dup.id !== id) throw Conflict('Product category name already exists for this company');
+      if (dup && dup.id !== id)
+        throw Conflict('Product category name already exists for this company');
     }
   }
   const updated = await updateProductCategoryRepo(id, patch);
@@ -233,8 +234,7 @@ export async function createStockMovementSvc(input: {
     case StockMovementType.ISSUE:
     case StockMovementType.TRANSFER_OUT:
       newQuantity -= input.quantity;
-      if (newQuantity < BigInt(0))
-        throw BadRequest('Insufficient stock for this operation');
+      if (newQuantity < BigInt(0)) throw BadRequest('Insufficient stock for this operation');
       break;
     case StockMovementType.ADJUSTMENT:
       // For adjustments, quantity can be positive or negative
@@ -290,7 +290,7 @@ export async function createStockAdjustmentSvc(input: {
     locationId: input.locationId,
     movementType: StockMovementType.ADJUSTMENT,
     quantity: newQuantity,
-    referenceId: created.id,
+    referenceId: created?.id,
     referenceType: 'adjustment',
     notes: input.notes,
     createdBy: input.createdBy,
@@ -304,7 +304,7 @@ export async function createStockAdjustmentSvc(input: {
     quantity: newQuantity,
   });
 
-  return { id: created.id };
+  return { id: created?.id };
 }
 
 // Stock Transfers

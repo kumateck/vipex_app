@@ -20,13 +20,21 @@ describe('Stock Adjustments API', () => {
 
   beforeAll(async () => {
     testUserId = crypto.randomUUID();
-    testCompany = await createTestCompany({ createdBy: testUserId });
-    testBranch = await createTestBranch({ companyId: testCompany.id, createdBy: testUserId });
-    testProduct = await createTestProduct({ companyId: testCompany.id, createdBy: testUserId });
-    testLocation = await createTestInventoryLocation({
+    const company = await createTestCompany({ createdBy: testUserId });
+    if (!company) throw new Error('Failed to create test company');
+    testCompany = company;
+    const branch = await createTestBranch({ companyId: testCompany.id, createdBy: testUserId });
+    if (!branch) throw new Error('Failed to create test branch');
+    testBranch = branch;
+    const product = await createTestProduct({ companyId: testCompany.id, createdBy: testUserId });
+    if (!product) throw new Error('Failed to create test product');
+    testProduct = product;
+    const location = await createTestInventoryLocation({
       branchId: testBranch.id,
       createdBy: testUserId,
     });
+    if (!location) throw new Error('Failed to create test location');
+    testLocation = location;
   });
 
   afterAll(async () => {
@@ -41,13 +49,13 @@ describe('Stock Adjustments API', () => {
     });
 
     await createTestStockLevel({
-      productId: product.id,
+      productId: product!.id,
       locationId: testLocation.id,
       quantityAvailable: BigInt(50),
     });
 
     const adjustmentData = {
-      productId: product.id,
+      productId: product!.id,
       locationId: testLocation.id,
       quantity: '100',
       reason: StockAdjustmentReason.RECOUNT,
@@ -66,7 +74,7 @@ describe('Stock Adjustments API', () => {
     expect(body.id).toBeDefined();
 
     // Verify stock was adjusted
-    const stockRes = await http('GET', `/v1/inventory/products/${product.id}/stock`);
+    const stockRes = await http('GET', `/v1/inventory/products/${product!.id}/stock`);
     const stockBody = await json<{ data: Array<{ quantityAvailable: string }> }>(stockRes);
     expect(stockBody.data.some((s) => s.quantityAvailable === '100')).toBe(true);
   });
@@ -87,7 +95,7 @@ describe('Stock Adjustments API', () => {
       });
 
       const adjustmentData = {
-        productId: product.id,
+        productId: product!.id,
         locationId: testLocation.id,
         quantity: '50',
         reason,
@@ -134,8 +142,8 @@ describe('Stock Adjustments API', () => {
     });
 
     const adjustmentData = {
-      productId: product.id,
-      locationId: location.id,
+      productId: product!.id,
+      locationId: location!.id,
       quantity: '75',
       reason: StockAdjustmentReason.FOUND,
       reasonDetails: 'Found stock in storage',
@@ -150,7 +158,7 @@ describe('Stock Adjustments API', () => {
     expect(res.status).toBe(HttpStatus.CREATED);
 
     // Verify stock level was created
-    const stockRes = await http('GET', `/v1/inventory/products/${product.id}/stock`);
+    const stockRes = await http('GET', `/v1/inventory/products/${product!.id}/stock`);
     const stockBody = await json<{ data: Array<{ quantityAvailable: string }> }>(stockRes);
     expect(stockBody.data.some((s) => s.quantityAvailable === '75')).toBe(true);
   });
@@ -170,16 +178,17 @@ describe('Stock Adjustments API', () => {
     await http('POST', '/v1/inventory/stock-adjustments', {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        productId: product.id,
-        locationId: location.id,
+        productId: product!.id,
+        locationId: location!.id,
         quantity: '50',
         reason: StockAdjustmentReason.RECOUNT,
         createdBy: testUserId,
       }),
     });
 
-    const stockRes = await http('GET', `/v1/inventory/products/${product.id}/stock`);
+    const stockRes = await http('GET', `/v1/inventory/products/${product!.id}/stock`);
     const stockBody = await json<{ data: Array<{ lastCountDate: string | null }> }>(stockRes);
-    expect(stockBody.data[0].lastCountDate).not.toBeNull();
+    expect(stockBody.data.length).toBeGreaterThan(0);
+    expect(stockBody.data[0]?.lastCountDate).not.toBeNull();
   });
 });

@@ -7,7 +7,7 @@ import {
   createTestProduct,
   createTestInventoryLocation,
   createTestStockLevel,
-  createTestStockMovement,
+  // createTestStockMovement,
   cleanupTestData,
 } from '../utils/inventory-helpers';
 import { StockMovementType } from '../../src/db/schemas/enums';
@@ -21,13 +21,13 @@ describe('Stock Levels API', () => {
 
   beforeAll(async () => {
     testUserId = crypto.randomUUID();
-    testCompany = await createTestCompany({ createdBy: testUserId });
-    testBranch = await createTestBranch({ companyId: testCompany.id, createdBy: testUserId });
-    testProduct = await createTestProduct({ companyId: testCompany.id, createdBy: testUserId });
-    testLocation = await createTestInventoryLocation({
+    testCompany = (await createTestCompany({ createdBy: testUserId }))!;
+    testBranch = (await createTestBranch({ companyId: testCompany.id, createdBy: testUserId }))!;
+    testProduct = (await createTestProduct({ companyId: testCompany.id, createdBy: testUserId }))!;
+    testLocation = (await createTestInventoryLocation({
       branchId: testBranch.id,
       createdBy: testUserId,
-    });
+    }))!;
   });
 
   afterAll(async () => {
@@ -63,16 +63,16 @@ describe('Stock Levels API', () => {
     });
 
     await createTestStockLevel({
-      productId: product2.id,
-      locationId: location2.id,
+      productId: product2!.id,
+      locationId: location2!.id,
       quantityAvailable: BigInt(50),
     });
 
-    const res = await http('GET', `/v1/inventory/stock-levels?productId=${product2.id}`);
+    const res = await http('GET', `/v1/inventory/stock-levels?productId=${product2!.id}`);
 
     expect(res.status).toBe(HttpStatus.OK);
     const body = await json<{ data: Array<{ productId: string }> }>(res);
-    expect(body.data.every((s) => s.productId === product2.id)).toBe(true);
+    expect(body.data.every((s) => s.productId === product2!.id)).toBe(true);
   });
 
   test('GET /v1/inventory/products/:id/stock - gets stock levels for a product', async () => {
@@ -94,25 +94,25 @@ describe('Stock Levels API', () => {
     });
 
     await createTestStockLevel({
-      productId: product.id,
-      locationId: location1.id,
+      productId: product!.id,
+      locationId: location1!.id,
       quantityAvailable: BigInt(100),
     });
     await createTestStockLevel({
-      productId: product.id,
-      locationId: location2.id,
+      productId: product!.id,
+      locationId: location2!.id,
       quantityAvailable: BigInt(50),
     });
 
-    const res = await http('GET', `/v1/inventory/products/${product.id}/stock`);
+    const res = await http('GET', `/v1/inventory/products/${product!.id}/stock`);
 
     expect(res.status).toBe(HttpStatus.OK);
     const body = await json<{ data: Array<{ locationId: string; quantityAvailable: string }> }>(
       res,
     );
     expect(body.data.length).toBe(2);
-    expect(body.data.some((s) => s.locationId === location1.id)).toBe(true);
-    expect(body.data.some((s) => s.locationId === location2.id)).toBe(true);
+    expect(body.data.some((s) => s.locationId === location1!.id)).toBe(true);
+    expect(body.data.some((s) => s.locationId === location2!.id)).toBe(true);
   });
 
   test('Stock level is created automatically on first movement', async () => {
@@ -129,8 +129,8 @@ describe('Stock Levels API', () => {
 
     // Record a receipt movement
     const movementData = {
-      productId: product.id,
-      locationId: location.id,
+      productId: product!.id,
+      locationId: location!.id,
       movementType: StockMovementType.RECEIPT,
       quantity: '50',
       createdBy: testUserId,
@@ -144,10 +144,10 @@ describe('Stock Levels API', () => {
     expect(res.status).toBe(HttpStatus.CREATED);
 
     // Verify stock level was created
-    const stockRes = await http('GET', `/v1/inventory/products/${product.id}/stock`);
+    const stockRes = await http('GET', `/v1/inventory/products/${product!.id}/stock`);
     const stockBody = await json<{ data: Array<{ quantityAvailable: string }> }>(stockRes);
     expect(stockBody.data.length).toBe(1);
-    expect(stockBody.data[0].quantityAvailable).toBe('50');
+    expect(stockBody.data[0]?.quantityAvailable).toBe('50');
   });
 
   test('Stock level is updated correctly on movements', async () => {
@@ -166,8 +166,8 @@ describe('Stock Levels API', () => {
     await http('POST', '/v1/inventory/stock-movements', {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        productId: product.id,
-        locationId: location.id,
+        productId: product!.id,
+        locationId: location!.id,
         movementType: StockMovementType.RECEIPT,
         quantity: '100',
         createdBy: testUserId,
@@ -178,8 +178,8 @@ describe('Stock Levels API', () => {
     await http('POST', '/v1/inventory/stock-movements', {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        productId: product.id,
-        locationId: location.id,
+        productId: product!.id,
+        locationId: location!.id,
         movementType: StockMovementType.ISSUE,
         quantity: '30',
         createdBy: testUserId,
@@ -187,9 +187,9 @@ describe('Stock Levels API', () => {
     });
 
     // Verify final stock level
-    const stockRes = await http('GET', `/v1/inventory/products/${product.id}/stock`);
+    const stockRes = await http('GET', `/v1/inventory/products/${product!.id}/stock`);
     const stockBody = await json<{ data: Array<{ quantityAvailable: string }> }>(stockRes);
-    expect(stockBody.data[0].quantityAvailable).toBe('70'); // 100 - 30
+    expect(stockBody.data[0]?.quantityAvailable).toBe('70'); // 100 - 30
   });
 
   test('Cannot issue more stock than available', async () => {
@@ -206,15 +206,15 @@ describe('Stock Levels API', () => {
 
     // Set initial stock
     await createTestStockLevel({
-      productId: product.id,
-      locationId: location.id,
+      productId: product!.id,
+      locationId: location!.id,
       quantityAvailable: BigInt(50),
     });
 
     // Try to issue more than available
     const movementData = {
-      productId: product.id,
-      locationId: location.id,
+      productId: product!.id,
+      locationId: location!.id,
       movementType: StockMovementType.ISSUE,
       quantity: '100',
       createdBy: testUserId,
@@ -241,19 +241,20 @@ describe('Stock Levels API', () => {
     });
 
     await createTestStockLevel({
-      productId: product.id,
-      locationId: location.id,
+      productId: product!.id,
+      locationId: location!.id,
       quantityAvailable: BigInt(100),
       quantityReserved: BigInt(20),
     });
 
-    const res = await http('GET', `/v1/inventory/products/${product.id}/stock`);
+    const res = await http('GET', `/v1/inventory/products/${product!.id}/stock`);
     const body = await json<{
       data: Array<{ quantityAvailable: string; quantityReserved: string }>;
     }>(res);
 
-    expect(body.data[0].quantityAvailable).toBe('100');
-    expect(body.data[0].quantityReserved).toBe('20');
+    expect(body.data.length).toBeGreaterThan(0);
+    expect(body.data[0]!.quantityAvailable).toBe('100');
+    expect(body.data[0]!.quantityReserved).toBe('20');
   });
 
   test('GET /v1/inventory/stock-levels - supports pagination', async () => {
@@ -271,13 +272,13 @@ describe('Stock Levels API', () => {
         createdBy: testUserId,
       });
       await createTestStockLevel({
-        productId: product.id,
-        locationId: location.id,
+        productId: product!.id,
+        locationId: location!.id,
         quantityAvailable: BigInt(10 * (i + 1)),
       });
     }
 
-    const res = await http('GET', `/v1/inventory/stock-levels?productId=${product.id}&limit=3`);
+    const res = await http('GET', `/v1/inventory/stock-levels?productId=${product!.id}&limit=3`);
     expect(res.status).toBe(HttpStatus.OK);
     const body = await json<{ data: unknown[]; nextCursor: string | null }>(res);
     expect(body.data.length).toBeLessThanOrEqual(3);
