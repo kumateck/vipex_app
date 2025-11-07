@@ -1,6 +1,7 @@
 import { Conflict, NotFound, BadRequest } from '../../utils/http-error';
 import { db } from '@/db/config';
 import { StockMovementType } from '@/db/schemas/enums';
+import { stockAdjustments } from '@/db/schemas';
 import {
   createProductCategoryRepo,
   findProductCategoryByNameRepo,
@@ -278,9 +279,9 @@ export async function createStockAdjustmentSvc(input: {
   return await db.transaction(async (tx) => {
     // Create adjustment record
     const [adjustment] = await tx
-      .insert(await import('@/db/schemas').then((m) => m.stockAdjustments))
+      .insert(stockAdjustments)
       .values(input)
-      .returning({ id: (await import('@/db/schemas').then((m) => m.stockAdjustments)).id });
+      .returning({ id: stockAdjustments.id });
 
     // Get current stock level
     const currentLevel = await getStockLevelRepo(input.productId, input.locationId);
