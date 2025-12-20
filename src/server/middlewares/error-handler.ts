@@ -18,7 +18,6 @@ function toHttpStatus(err: { code?: string; command?: string }): {
 
 export function errorHandler(app: Elysia) {
   return app.onError(({ code, error, set, request }) => {
-    console.log('Error Handler caught error:', error, code);
     // Known framework codes
     if (code === 'NOT_FOUND') {
       set.status = 404;

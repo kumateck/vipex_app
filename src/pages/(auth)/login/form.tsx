@@ -48,7 +48,6 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
       toast.success('Signed in successfully');
       navigate(from, { replace: true });
     } catch (error) {
-      console.log(error);
       ThrowErrorMessage(error);
     }
   };
