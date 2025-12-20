@@ -12,12 +12,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { companies, branches } from './core';
-import {
-  StockMovementType,
-  StockAdjustmentReason,
-  TransferStatus,
-  UnitOfMeasure,
-} from './enums';
+import { TransferStatus, UnitOfMeasure } from './enums';
 
 // Product Categories
 export const productCategories = pgTable(
@@ -113,7 +108,9 @@ export const stockLevels = pgTable(
     locationId: uuid('location_id')
       .notNull()
       .references(() => inventoryLocations.id),
-    quantity: bigint('quantity', { mode: 'bigint' }).notNull().default(sql`0`),
+    quantity: bigint('quantity', { mode: 'bigint' })
+      .notNull()
+      .default(sql`0`),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },
   (t) => ({

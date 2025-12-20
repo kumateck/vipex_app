@@ -1,17 +1,19 @@
 import { Outlet } from 'react-router-dom';
-// import { Header } from '@/components/layout/header';
-// import { Sidebar } from '@/components/layout/sidebar';
 
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { AppSidebar } from '../sidebar';
+
+import { SiteHeader } from '../sidebar/header';
 export function AuthenticatedLayout() {
   return (
-    <div className="flex h-screen bg-background">
-      {/* <Sidebar /> */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* <Header /> */}
-        <main className="flex-1 overflow-y-auto p-6">
+    <SidebarProvider>
+      <AppSidebar variant="inset" />
+      <SidebarInset className="flex flex-col overflow-hidden bg-white">
+        <SiteHeader />
+        <div className="flex-1 overflow-auto w-full max-w-full  p-5">
           <Outlet />
-        </main>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

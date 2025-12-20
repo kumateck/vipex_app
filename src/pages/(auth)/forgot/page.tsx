@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { toast } from 'sonner';
 
-export function ForgotPassword() {
+export default function ForgotPassword() {
   const [email, setEmail] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 

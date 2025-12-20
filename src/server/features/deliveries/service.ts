@@ -3,12 +3,7 @@ import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 import { DeliveryMode, PaymentComponent, Payer, CashierType, PaymentMethod } from '@/db/schemas';
 import { createPaymentSvc, sumPrincipalPaidForParcelSvc } from '../payments/service';
 import { getParcelRepo } from '../shipments/parcels.repository';
-import {
-  createDeliveryRepo,
-  getDeliveryByParcelRepo,
-  updateDeliveryRepo,
-  type DeliveryRow,
-} from './repository';
+import { createDeliveryRepo, getDeliveryByParcelRepo, updateDeliveryRepo } from './repository';
 import { toPesewas } from '@/server/utils/gh-money';
 
 export async function createDeliverySvc(input: {

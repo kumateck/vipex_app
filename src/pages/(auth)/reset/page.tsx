@@ -14,7 +14,7 @@ import {
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
 
-export function ResetPassword() {
+export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const navigate = useNavigate();

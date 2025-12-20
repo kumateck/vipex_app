@@ -16,6 +16,7 @@ export default [
       '.next/',
       'coverage/',
       'bun.lockb',
+      'scripts/generate-routes.ts',
     ],
     languageOptions: {
       parser: tsparser,

@@ -9,6 +9,13 @@ export * from './icon';
 export * from './field';
 export * from './form';
 export * from './input-group';
+export * from './label';
+export * from './spinner';
+export * from './sidebar';
+export * from './badge';
+// export * from "./calendar"
+export * from './checkbox';
+export * from './collapsible';
 // export * from "./scroll-area"
 export * from './separator';
 // export * from "./switch"
