@@ -24,6 +24,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/ui/sidebar';
+import { useAuthStore, type AuthUser } from '@/stores/auth-store';
 
 export interface UserProfileData {
   name: string;
@@ -43,7 +44,7 @@ interface UserProfileProps {
 export function UserProfile({ variant = 'header', user, className }: UserProfileProps) {
   const navigate = useNavigate();
   const { isMobile } = useSidebar();
-
+  const authUser = useAuthStore((s) => s.user);
   // TODO: Get from auth context if not provided
   const userData: UserProfileData = user ?? {
     name: 'Desmond Adusei',
@@ -54,7 +55,7 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
     company: 'VIPEX',
   };
 
-  const initials = userData.name
+  const initials = authUser?.fullname
     .split(' ')
     .map((n) => n[0])
     .join('')
@@ -80,16 +81,16 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
             )}
           >
             <Avatar className="h-8 w-8 rounded-lg">
-              <AvatarImage src={userData.avatar} alt={userData.name} />
+              <AvatarImage src={userData.avatar} alt={authUser?.fullname} />
               <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-xs font-semibold">
                 {initials}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-1 flex-col items-start text-left leading-tight">
               <span className="truncate text-sm font-semibold text-foreground">
-                {userData.name}
+                {authUser?.fullname}
               </span>
-              <span className="truncate text-xs text-muted-foreground">{userData.email}</span>
+              <span className="truncate text-xs text-muted-foreground">{authUser?.email}</span>
             </div>
             <ChevronsUpDown className="ml-auto h-4 w-4 text-muted-foreground shrink-0" />
           </button>
@@ -101,7 +102,7 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
           sideOffset={4}
           forceMount
         >
-          <UserMenuContent userData={userData} onLogout={handleLogout} onNavigate={navigate} />
+          <UserMenuContent userData={authUser} onLogout={handleLogout} onNavigate={navigate} />
         </DropdownMenuContent>
       </DropdownMenu>
     );
@@ -121,21 +122,21 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
           )}
         >
           <Avatar className="h-10 w-10">
-            <AvatarImage src={userData.avatar} alt={userData.name} />
+            <AvatarImage src={userData.avatar} alt={authUser?.fullname} />
             <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
               {initials}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-1 flex-col items-start text-left leading-tight">
             <span className="truncate text-sm font-semibold text-foreground">
-              {userData.branch}
+              {authUser?.branch?.name}
             </span>
-            <span className="truncate text-xs text-muted-foreground">{userData.role}</span>
+            <span className="truncate text-xs text-muted-foreground">{authUser?.role?.name}</span>
           </div>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-72" align="end" sideOffset={8} forceMount>
-        <UserMenuContent userData={userData} onLogout={handleLogout} onNavigate={navigate} />
+        <UserMenuContent userData={authUser} onLogout={handleLogout} onNavigate={navigate} />
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -147,11 +148,11 @@ function UserMenuContent({
   onLogout,
   onNavigate,
 }: {
-  userData: UserProfileData;
+  userData: AuthUser | null;
   onLogout: () => void;
   onNavigate: (path: string) => void;
 }) {
-  const initials = userData.name
+  const initials = userData?.fullname
     .split(' ')
     .map((n) => n[0])
     .join('')
@@ -162,25 +163,25 @@ function UserMenuContent({
       <DropdownMenuLabel className="p-0 font-normal">
         <div className="flex items-center gap-3 px-2 py-3">
           <Avatar className="h-10 w-10 rounded-lg">
-            <AvatarImage src={userData.avatar} alt={userData.name} />
+            <AvatarImage src={'authuser.avatar'} alt={userData?.fullname} />
             <AvatarFallback className="rounded-lg bg-primary text-primary-foreground font-semibold">
               {initials}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-1 flex-col space-y-1">
-            <p className="text-sm font-semibold leading-none">{userData.name}</p>
-            <p className="text-xs leading-none text-muted-foreground">{userData.email}</p>
+            <p className="text-sm font-semibold leading-none">{userData?.fullname}</p>
+            <p className="text-xs leading-none text-muted-foreground">{userData?.email}</p>
             <div className="flex flex-col gap-0.5 mt-1">
-              {userData.role && (
+              {userData?.role && (
                 <div className="flex items-center gap-1.5">
                   <Shield className="h-3 w-3 text-primary" />
-                  <span className="text-xs text-primary font-medium">{userData.role}</span>
+                  <span className="text-xs text-primary font-medium">{userData?.role?.name}</span>
                 </div>
               )}
-              {userData.branch && (
+              {userData?.branch && (
                 <div className="flex items-center gap-1.5">
                   <Building2 className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">{userData.branch}</span>
+                  <span className="text-xs text-muted-foreground">{userData?.branch?.name}</span>
                 </div>
               )}
             </div>

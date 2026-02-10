@@ -126,7 +126,7 @@ export async function createProductCtrl(input: {
 }) {
   return createProductSvc({
     ...input,
-    minStockLevel: input.minStockLevel ? BigInt(input.minStockLevel) : undefined,
+    minStockLevel: input.minStockLevel ? parseFloat(input.minStockLevel) : undefined,
   });
 }
 
@@ -142,7 +142,7 @@ export async function updateProductCtrl(
 ) {
   return updateProductSvc(id, {
     ...patch,
-    minStockLevel: patch.minStockLevel ? BigInt(patch.minStockLevel) : undefined,
+    minStockLevel: patch.minStockLevel ? parseFloat(patch.minStockLevel) : undefined,
   });
 }
 
@@ -283,7 +283,7 @@ export async function createStockMovementCtrl(input: {
 }) {
   return createStockMovementSvc({
     ...input,
-    quantity: BigInt(input.quantity),
+    quantity: parseFloat(input.quantity),
   });
 }
 
@@ -327,7 +327,7 @@ export async function createStockAdjustmentCtrl(input: {
 }) {
   return createStockAdjustmentSvc({
     ...input,
-    quantityChange: BigInt(input.quantityChange),
+    quantityChange: parseFloat(input.quantityChange),
   });
 }
 
@@ -381,7 +381,7 @@ export async function createStockTransferCtrl(input: {
 }) {
   return createStockTransferSvc({
     ...input,
-    quantity: BigInt(input.quantity),
+    quantity: parseFloat(input.quantity),
   });
 }
 

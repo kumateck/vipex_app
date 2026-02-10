@@ -107,7 +107,7 @@ export async function createProductSvc(input: {
   name: string;
   description?: string | null;
   unitOfMeasure: number;
-  minStockLevel?: bigint;
+  minStockLevel?: number;
   createdBy: string;
 }) {
   const dup = await findProductBySkuRepo(input.companyId, input.sku);
@@ -123,7 +123,7 @@ export async function updateProductSvc(
     name?: string;
     description?: string | null;
     unitOfMeasure?: number;
-    minStockLevel?: bigint;
+    minStockLevel?: number;
   },
 ) {
   const updated = await updateProductRepo(id, patch);
@@ -206,7 +206,7 @@ export async function createStockMovementSvc(input: {
   productId: string;
   locationId: string;
   movementType: number;
-  quantity: bigint;
+  quantity: number;
   referenceId?: string | null;
   referenceType?: string | null;
   notes?: string | null;
@@ -223,7 +223,7 @@ export async function createStockMovementSvc(input: {
 
   // Update stock level based on movement type
   const currentLevel = await getStockLevelRepo(input.productId, input.locationId);
-  let newQuantity = currentLevel?.quantity || BigInt(0);
+  let newQuantity = currentLevel?.quantity || 0;
 
   // Apply quantity changes based on movement type
   switch (input.movementType) {
@@ -234,7 +234,7 @@ export async function createStockMovementSvc(input: {
     case StockMovementType.ISSUE:
     case StockMovementType.TRANSFER_OUT:
       newQuantity -= input.quantity;
-      if (newQuantity < BigInt(0)) throw BadRequest('Insufficient stock for this operation');
+      if (newQuantity < 0) throw BadRequest('Insufficient stock for this operation');
       break;
     case StockMovementType.ADJUSTMENT:
       // For adjustments, quantity can be positive or negative
@@ -263,7 +263,7 @@ export async function createStockAdjustmentSvc(input: {
   productId: string;
   locationId: string;
   reason: number;
-  quantityChange: bigint;
+  quantityChange: number;
   notes?: string | null;
   createdBy: string;
 }) {
@@ -275,10 +275,10 @@ export async function createStockAdjustmentSvc(input: {
 
   // Get current stock level
   const currentLevel = await getStockLevelRepo(input.productId, input.locationId);
-  const currentQty = currentLevel?.quantity || BigInt(0);
+  const currentQty = currentLevel?.quantity || 0;
   const newQuantity = currentQty + input.quantityChange;
 
-  if (newQuantity < BigInt(0)) throw BadRequest('Adjustment would result in negative stock');
+  if (newQuantity < 0) throw BadRequest('Adjustment would result in negative stock');
 
   // Create adjustment record
   const created = await createStockAdjustmentRepo(input);
@@ -323,7 +323,7 @@ export async function createStockTransferSvc(input: {
   productId: string;
   fromLocationId: string;
   toLocationId: string;
-  quantity: bigint;
+  quantity: number;
   notes?: string | null;
   createdBy: string;
 }) {

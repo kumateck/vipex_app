@@ -1,10 +1,34 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '../../../db/config';
-import { passwordResets, refreshTokens, users } from '@/db/schemas';
+import { branches, companies, passwordResets, refreshTokens, roles, users } from '@/db/schemas';
 
+// export async function getUserByEmailRepo(email: string) {
+//   const [u] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+//   return u ?? null;
+// }
 export async function getUserByEmailRepo(email: string) {
-  const [u] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  return u ?? null;
+  const [row] = await db
+    .select({
+      user: users,
+      branch: { id: branches.id, name: branches.name },
+      company: { id: companies.id, name: companies.name },
+      role: { id: roles.id, name: roles.name },
+    })
+    .from(users)
+    .leftJoin(branches, eq(branches.id, users.branchId))
+    .leftJoin(companies, eq(companies.id, users.companyId))
+    .leftJoin(roles, eq(roles.id, users.roleId))
+    .where(eq(users.email, email))
+    .limit(1);
+
+  if (!row) return null;
+
+  return {
+    ...row.user,
+    branch: row.branch?.id ? row.branch : null,
+    company: row.company?.id ? row.company : null,
+    role: row.role?.id ? row.role : null,
+  };
 }
 
 export async function getUserByIdRepo(id: string) {

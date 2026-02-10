@@ -66,9 +66,9 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
       id: user.id,
       email: user.email,
       fullname: user.fullname,
-      roleId: user.roleId ?? null,
-      companyId: user.companyId ?? null,
-      branchId: user.branchId ?? null,
+      role: user.role ?? null,
+      company: user.company ?? null,
+      branch: user.branch ?? null,
     },
   };
 }

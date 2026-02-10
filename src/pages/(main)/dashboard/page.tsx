@@ -1,16 +1,45 @@
+import { largeData } from './data';
+import { columns, type User } from './column';
+import { DataGrid } from '@/components/datagrid';
+import { useCallback, useState } from 'react';
+
 const Dashboard = () => {
+  const [data, setData] = useState<User[]>(largeData);
+
+  const handleDeleteRow = useCallback((rowId: string) => {
+    setData((prev) => prev.filter((item) => item.id !== rowId));
+  }, []);
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground mt-2">Welcome to VIP Parcel dashboard.</p>
-      </div>
+    <div className="h-screen w-full flex flex-col bg-gray-50 text-gray-900 font-sans">
+      {/* App Header */}
+      {/* <header className="h-14 bg-white border-b border-gray-200 px-4 flex items-center justify-between shadow-sm z-30 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#002b36] to-[#0f3d4e] rounded flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            C
+          </div>
+          <div>
+            <h1 className="text-lg font-bold tracking-tight text-gray-800 leading-tight">
+              ConsignGrid
+            </h1>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
+              Logistics Management
+            </p>
+          </div>
+        </div>
+      </header> */}
 
-      {/* Placeholder content to see layout */}
-
-      <div className="rounded-lg border bg-card p-6">
-        <p className="text-sm text-muted-foreground">Main content area</p>
-      </div>
+      {/* Main Content */}
+      <main className="flex-1 overflow-hidden relative pb-24 ">
+        <DataGrid
+          data={data}
+          columns={columns}
+          onDataChange={setData}
+          onDeleteRow={handleDeleteRow}
+          enableSelection={true}
+          enableEditing={true}
+          getRowId={(row) => row.id}
+        />
+      </main>
     </div>
   );
 };

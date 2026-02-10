@@ -9,14 +9,17 @@ import {
   index,
 } from 'drizzle-orm/pg-core';
 import { companies } from './core';
+import { createId } from '@paralleldrive/cuid2';
 
 // Optional but powerful: DB-driven tax definition with rational rates to avoid FP.
 // You can keep using your fixed Ghana scheme in code; this supports future changes.
 export const taxProfiles = pgTable(
   'tax_profiles',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
     name: varchar('name', { length: 255 }).notNull(), // e.g., "Ghana Default"
@@ -32,14 +35,16 @@ export const taxProfiles = pgTable(
 export const taxComponents = pgTable(
   'tax_components',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    profileId: uuid('profile_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    profileId: varchar('profile_id', { length: 25 })
       .notNull()
       .references(() => taxProfiles.id),
     key: varchar('key', { length: 50 }).notNull(), // 'VAT' | 'GETFUND' | 'NHIL' | 'COVID'
     // rate as rational: numerator/denominator; e.g., VAT 3/23 → 3, 23
-    numerator: bigint('numerator', { mode: 'bigint' }).notNull(),
-    denominator: bigint('denominator', { mode: 'bigint' }).notNull(),
+    numerator: bigint('numerator', { mode: 'number' }).notNull(),
+    denominator: bigint('denominator', { mode: 'number' }).notNull(),
     inclusive: boolean('inclusive').notNull().default(true),
     sortOrder: integer('sort_order').notNull().default(0),
     startsAt: timestamp('starts_at', { withTimezone: false }).notNull().defaultNow(),

@@ -75,3 +75,51 @@ export enum UnitOfMeasure {
   PACK = 6,
   DOZEN = 7,
 }
+
+export enum PaymentResponsibility {
+  SENDER = 0,
+  RECIPIENT = 1,
+  SPLIT = 2,
+}
+
+export enum PendingBookingStatus {
+  PENDING = 0,
+  CONFIRMED = 1,
+  CANCELLED = 2,
+  EXPIRED = 3,
+}
+
+export enum ReceiptType {
+  PAYMENT = 0,
+  TRACKING_STICKER = 1,
+}
+
+export enum SplitPaymentType {
+  PERCENTAGE = 0,
+  FIXED = 1,
+  WEIGHTED = 2,
+}
+
+export enum DeliveryFeeBasis {
+  DISTANCE = 0,
+  WEIGHT = 1,
+  VALUE = 2,
+  FIXED = 3,
+}
+
+export enum ConsignmentStatus {
+  PREPARING = 0,
+  READY = 1,
+  IN_TRANSIT = 2,
+  DELIVERED = 3,
+  CANCELLED = 4,
+  DELAYED = 5,
+}
+
+export enum AutoGroupingMode {
+  BY_DESTINATION = 0,
+  BY_WEIGHT = 1,
+  BY_VALUE = 2,
+  BY_SCHEDULE = 3,
+  NONE = 4,
+}

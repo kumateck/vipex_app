@@ -1,12 +1,15 @@
 import { pgTable, uuid, varchar, boolean, timestamp, index } from 'drizzle-orm/pg-core';
 import { companies } from './core';
+import { createId } from '@paralleldrive/cuid2';
 
 // Customers (company-scoped; no branch linkage)
 export const customers = pgTable(
   'customers',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
     fullname: varchar('fullname', { length: 255 }).notNull(),
@@ -15,7 +18,7 @@ export const customers = pgTable(
     address: varchar('address', { length: 255 }),
     email: varchar('email', { length: 255 }),
     isDeleted: boolean('is_deleted').notNull().default(false),
-    createdBy: uuid('created_by').notNull(),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },
@@ -29,24 +32,28 @@ export const customers = pgTable(
 
 // Cards
 export const cards = pgTable('cards', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  companyId: uuid('company_id')
+  id: varchar('id', { length: 25 })
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  companyId: varchar('company_id', { length: 25 })
     .notNull()
     .references(() => companies.id),
   name: varchar('name', { length: 255 }).notNull(),
   isDeleted: boolean('is_deleted').notNull().default(false),
-  createdBy: uuid('created_by').notNull(),
+  createdBy: varchar('created_by', { length: 25 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
 });
 
 // Customer Cards
 export const customerCards = pgTable('customer_cards', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  customerId: uuid('customer_id')
+  id: varchar('id', { length: 25 })
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  customerId: varchar('customer_id', { length: 25 })
     .notNull()
     .references(() => customers.id),
-  cardId: uuid('card_id')
+  cardId: varchar('card_id', { length: 25 })
     .notNull()
     .references(() => cards.id),
   cardNumber: varchar('card_number', { length: 255 }).notNull(),

@@ -84,7 +84,13 @@ function sanitizeComponentName(filePath: string): string {
 }
 
 function fileToRoutePath(relativeToPages: string): string {
-  let r = posix(relativeToPages)
+  const rel = posix(relativeToPages);
+
+  // ✅ Special-case root files
+  if (/^page\.(tsx|ts)$/.test(rel)) return '/';
+  if (/^layout\.(tsx|ts)$/.test(rel)) return '/';
+
+  let r = rel
     .replace(/\/page\.(tsx|ts)$/, '')
     .replace(/\/layout\.(tsx|ts)$/, '')
     .replace(/\/loading\.(tsx|ts)$/, '')
@@ -104,6 +110,24 @@ function fileToRoutePath(relativeToPages: string): string {
   r = '/' + stripLeadingSlashes(r);
   r = r === '/' ? '/' : r.replace(/\/+$/, '');
   return r;
+}
+
+// ----------------------------------------------------------------------------
+// ✅ Grouping by filesystem directory instead of by routePath prefix
+// ----------------------------------------------------------------------------
+
+function dirOfRouteFile(filePath: string): string {
+  // filePath is relative to src/pages, POSIX
+  // e.g. "(main)/layout.tsx" -> "(main)"
+  return dirnamePosix(posix(filePath));
+}
+
+function isUnderDir(parentDir: string, childFilePath: string): boolean {
+  const parent = stripTrailingSlashes(posix(parentDir));
+  const child = posix(childFilePath);
+
+  if (parent === '') return true; // root layout can wrap everything
+  return child === parent || child.startsWith(parent + '/');
 }
 
 function isCatchAllRoute(routePath: string): boolean {
@@ -217,7 +241,11 @@ function groupPagesUnderLayouts(routes: RouteInfo[]) {
     let best: RouteInfo | null = null;
 
     for (const layout of layouts) {
-      if (!isRoutePrefix(layout.routePath, page.routePath)) continue;
+      // ✅ Only layouts in the same folder tree can own the page
+      const layoutDir = dirOfRouteFile(layout.filePath);
+      if (!isUnderDir(layoutDir, page.filePath)) continue;
+
+      // Prefer the most specific (deepest) layout
       if (!best || layout.depth > best.depth) best = layout;
     }
 
@@ -236,8 +264,8 @@ function groupPagesUnderLayouts(routes: RouteInfo[]) {
     groups.set(k, list);
   }
 
-  // Stable layout ordering
-  layouts.sort((a, b) => a.depth - b.depth || a.routePath.localeCompare(b.routePath));
+  // Stable layout ordering (root layout first, then deeper)
+  layouts.sort((a, b) => a.depth - b.depth || a.filePath.localeCompare(b.filePath));
 
   return { layouts, pages, groups };
 }

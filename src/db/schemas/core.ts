@@ -1,6 +1,5 @@
 import {
   pgTable,
-  uuid,
   varchar,
   boolean,
   timestamp,
@@ -10,16 +9,19 @@ import {
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { CashierType, UserStatus } from './enums';
+import { createId } from '@paralleldrive/cuid2';
 
 // Companies
 export const companies = pgTable('companies', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: varchar('id', { length: 25 })
+    .primaryKey()
+    .$defaultFn(() => createId()),
   name: varchar('name', { length: 255 }).notNull(),
   type: varchar('type', { length: 255 }).notNull(),
   code: varchar('code', { length: 255 }).notNull(),
   tin: varchar('tin', { length: 255 }),
   isDeleted: boolean('is_deleted').notNull().default(false),
-  createdBy: uuid('created_by').notNull(),
+  createdBy: varchar('created_by', { length: 25 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
 });
@@ -28,8 +30,10 @@ export const companies = pgTable('companies', {
 export const branches = pgTable(
   'branches',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
     name: varchar('name', { length: 255 }).notNull(),
@@ -38,7 +42,7 @@ export const branches = pgTable(
     address: varchar('address', { length: 255 }),
     email: varchar('email', { length: 255 }),
     isDeleted: boolean('is_deleted').notNull().default(false),
-    createdBy: uuid('created_by').notNull(),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },
@@ -55,16 +59,18 @@ export const branches = pgTable(
 export const locations = pgTable(
   'locations',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
-    branchId: uuid('branch_id')
+    branchId: varchar('branch_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
     name: varchar('name', { length: 255 }).notNull(),
     isDeleted: boolean('is_deleted').notNull().default(false),
-    createdBy: uuid('created_by').notNull(),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },
@@ -82,15 +88,17 @@ export const locations = pgTable(
 export const statuses = pgTable(
   'statuses',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
     type: smallint('type').notNull().default(CashierType.SENDING),
     name: varchar('name', { length: 255 }).notNull(),
     color: varchar('color', { length: 255 }).notNull(),
     isDeleted: boolean('is_deleted').notNull().default(false),
-    createdBy: uuid('created_by').notNull(),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },
@@ -107,13 +115,15 @@ export const statuses = pgTable(
 export const roles = pgTable(
   'roles',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
     name: varchar('name', { length: 255 }).notNull(),
     isDeleted: boolean('is_deleted').notNull().default(false),
-    createdBy: uuid('created_by').notNull(),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },
@@ -130,8 +140,10 @@ export const roles = pgTable(
 export const permissions = pgTable(
   'permissions',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
     permission: varchar('permission', { length: 255 }).notNull(),
@@ -140,7 +152,7 @@ export const permissions = pgTable(
     permIcon: varchar('perm_icon', { length: 255 }),
     permParent: varchar('perm_parent', { length: 255 }),
     isDeleted: boolean('is_deleted').notNull().default(false),
-    createdBy: uuid('created_by').notNull(),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },
@@ -151,14 +163,16 @@ export const permissions = pgTable(
 
 // Role Permissions
 export const rolePermissions = pgTable('role_permissions', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  roleId: uuid('role_id')
+  id: varchar('id', { length: 25 })
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  roleId: varchar('role_id', { length: 25 })
     .notNull()
     .references(() => roles.id),
-  companyId: uuid('company_id')
+  companyId: varchar('company_id', { length: 25 })
     .notNull()
     .references(() => companies.id),
-  permissionId: uuid('permission_id')
+  permissionId: varchar('permission_id', { length: 25 })
     .notNull()
     .references(() => permissions.id),
   createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
@@ -167,22 +181,24 @@ export const rolePermissions = pgTable('role_permissions', {
 
 // Users (status is smallint; map in app with your enums)
 export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: varchar('id', { length: 25 })
+    .primaryKey()
+    .$defaultFn(() => createId()),
   fullname: varchar('fullname', { length: 255 }).notNull(),
   telephone: varchar('telephone', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull(),
   password: varchar('password', { length: 255 }),
   status: smallint('status').notNull().default(UserStatus.INVITED), // INVITED default
-  roleId: uuid('role_id')
+  roleId: varchar('role_id', { length: 25 })
     .notNull()
     .references(() => roles.id),
-  companyId: uuid('company_id')
+  companyId: varchar('company_id', { length: 25 })
     .notNull()
     .references(() => companies.id),
-  branchId: uuid('branch_id')
+  branchId: varchar('branch_id', { length: 25 })
     .notNull()
     .references(() => branches.id),
-  createdBy: uuid('created_by').notNull(),
+  createdBy: varchar('created_by', { length: 25 }).notNull(),
   taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
   resetToken: varchar('reset_token', { length: 255 }),
   resetTokenExpires: timestamp('reset_token_expires', { withTimezone: false }),

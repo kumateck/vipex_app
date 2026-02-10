@@ -13,19 +13,22 @@ import {
 import { sql } from 'drizzle-orm';
 import { companies, branches } from './core';
 import { TransferStatus, UnitOfMeasure } from './enums';
+import { createId } from '@paralleldrive/cuid2';
 
 // Product Categories
 export const productCategories = pgTable(
   'product_categories',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     isDeleted: boolean('is_deleted').notNull().default(false),
-    createdBy: uuid('created_by').notNull(),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },
@@ -42,20 +45,22 @@ export const productCategories = pgTable(
 export const products = pgTable(
   'products',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
-    categoryId: uuid('category_id').references(() => productCategories.id),
+    categoryId: varchar('category_id', { length: 25 }).references(() => productCategories.id),
     sku: varchar('sku', { length: 100 }).notNull(),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     unitOfMeasure: smallint('unit_of_measure').notNull().default(UnitOfMeasure.PIECE),
-    minStockLevel: bigint('min_stock_level', { mode: 'bigint' })
+    minStockLevel: bigint('min_stock_level', { mode: 'number' })
       .notNull()
       .default(sql`0`),
     isDeleted: boolean('is_deleted').notNull().default(false),
-    createdBy: uuid('created_by').notNull(),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },
@@ -70,17 +75,19 @@ export const products = pgTable(
 export const inventoryLocations = pgTable(
   'inventory_locations',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
-    branchId: uuid('branch_id')
+    branchId: varchar('branch_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
     isDeleted: boolean('is_deleted').notNull().default(false),
-    createdBy: uuid('created_by').notNull(),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },
@@ -98,17 +105,19 @@ export const inventoryLocations = pgTable(
 export const stockLevels = pgTable(
   'stock_levels',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
-    productId: uuid('product_id')
+    productId: varchar('product_id', { length: 25 })
       .notNull()
       .references(() => products.id),
-    locationId: uuid('location_id')
+    locationId: varchar('location_id', { length: 25 })
       .notNull()
       .references(() => inventoryLocations.id),
-    quantity: bigint('quantity', { mode: 'bigint' })
+    quantity: bigint('quantity', { mode: 'number' })
       .notNull()
       .default(sql`0`),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
@@ -128,22 +137,24 @@ export const stockLevels = pgTable(
 export const stockMovements = pgTable(
   'stock_movements',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
-    productId: uuid('product_id')
+    productId: varchar('product_id', { length: 25 })
       .notNull()
       .references(() => products.id),
-    locationId: uuid('location_id')
+    locationId: varchar('location_id', { length: 25 })
       .notNull()
       .references(() => inventoryLocations.id),
     movementType: smallint('movement_type').notNull(),
-    quantity: bigint('quantity', { mode: 'bigint' }).notNull(),
-    referenceId: uuid('reference_id'), // Links to adjustment, transfer, etc.
+    quantity: bigint('quantity', { mode: 'number' }).notNull(),
+    referenceId: varchar('reference_id', { length: 25 }), // Links to adjustment, transfer, etc.
     referenceType: varchar('reference_type', { length: 50 }), // 'adjustment', 'transfer', etc.
     notes: text('notes'),
-    createdBy: uuid('created_by').notNull(),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   },
   (t) => ({
@@ -159,20 +170,22 @@ export const stockMovements = pgTable(
 export const stockAdjustments = pgTable(
   'stock_adjustments',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
-    productId: uuid('product_id')
+    productId: varchar('product_id', { length: 25 })
       .notNull()
       .references(() => products.id),
-    locationId: uuid('location_id')
+    locationId: varchar('location_id', { length: 25 })
       .notNull()
       .references(() => inventoryLocations.id),
     reason: smallint('reason').notNull(),
-    quantityChange: bigint('quantity_change', { mode: 'bigint' }).notNull(),
+    quantityChange: bigint('quantity_change', { mode: 'number' }).notNull(),
     notes: text('notes'),
-    createdBy: uuid('created_by').notNull(),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   },
   (t) => ({
@@ -187,25 +200,27 @@ export const stockAdjustments = pgTable(
 export const stockTransfers = pgTable(
   'stock_transfers',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
-    productId: uuid('product_id')
+    productId: varchar('product_id', { length: 25 })
       .notNull()
       .references(() => products.id),
-    fromLocationId: uuid('from_location_id')
+    fromLocationId: varchar('from_location_id', { length: 25 })
       .notNull()
       .references(() => inventoryLocations.id),
-    toLocationId: uuid('to_location_id')
+    toLocationId: varchar('to_location_id', { length: 25 })
       .notNull()
       .references(() => inventoryLocations.id),
-    quantity: bigint('quantity', { mode: 'bigint' }).notNull(),
+    quantity: bigint('quantity', { mode: 'number' }).notNull(),
     status: smallint('status').notNull().default(TransferStatus.PENDING),
     notes: text('notes'),
-    createdBy: uuid('created_by').notNull(),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
-    completedBy: uuid('completed_by'),
+    completedBy: varchar('completed_by', { length: 25 }),
     completedAt: timestamp('completed_at', { withTimezone: false }),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },

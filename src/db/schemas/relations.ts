@@ -9,8 +9,10 @@ import {
   rolePermissions,
   users,
 } from './core';
+import { pendingBookings } from './shipments';
+import { receiptTemplates, generatedReceipts } from './receipts';
 import { customers, cards, customerCards } from './customers';
-import { cashierSessionTypes, cashierSessions } from './cashiers';
+import { cashierSessionTypes, cashierSessions } from './shifts';
 import { bookings, parcels, consignments, consignmentItems } from './shipments';
 import { deliveries } from './deliveries';
 import { payments } from './payments';
@@ -215,4 +217,20 @@ export const stockTransfersRelations = relations(stockTransfers, ({ one }) => ({
   }),
   creator: one(users, { fields: [stockTransfers.createdBy], references: [users.id] }),
   completer: one(users, { fields: [stockTransfers.completedBy], references: [users.id] }),
+}));
+
+// Receipt System Relations
+export const pendingBookingsRelations = relations(pendingBookings, ({ one }) => ({
+  company: one(companies, { fields: [pendingBookings.companyId], references: [companies.id] }),
+  branch: one(branches, { fields: [pendingBookings.branchId], references: [branches.id] }),
+  attendant: one(users, { fields: [pendingBookings.attendantId], references: [users.id] }),
+}));
+
+export const receiptTemplatesRelations = relations(receiptTemplates, ({ one }) => ({
+  company: one(companies, { fields: [receiptTemplates.companyId], references: [companies.id] }),
+}));
+
+export const generatedReceiptsRelations = relations(generatedReceipts, ({ one }) => ({
+  company: one(companies, { fields: [generatedReceipts.companyId], references: [companies.id] }),
+  printedBy: one(users, { fields: [generatedReceipts.printedBy], references: [users.id] }),
 }));

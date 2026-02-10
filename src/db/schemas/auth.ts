@@ -1,12 +1,15 @@
-import { pgTable, text, timestamp, uuid, varchar, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, varchar, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { users } from './core';
+import { createId } from '@paralleldrive/cuid2';
 
 // Refresh tokens
 export const refreshTokens = pgTable(
   'refresh_tokens',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: varchar('user_id', { length: 25 })
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     tokenHash: varchar('token_hash', { length: 64 }).notNull(),
@@ -28,8 +31,10 @@ export const refreshTokens = pgTable(
 export const passwordResets = pgTable(
   'password_resets',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: varchar('user_id', { length: 25 })
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     tokenHash: varchar('token_hash', { length: 64 }).notNull(),

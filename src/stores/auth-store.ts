@@ -6,13 +6,14 @@ export interface AuthUser {
   fullname: string;
   email: string;
   telephone: string;
-  companyId: string;
-  branchId: string;
-  branchName: string;
+  company: {
+    id: string;
+    name: string;
+  };
+  branch: { id: string; name: string };
+  role: { id: string; name: string };
   locationId?: string;
   locationName?: string;
-  roleId: string;
-  roleName: string;
 }
 
 export interface AuthState {

@@ -9,36 +9,41 @@ import {
   uniqueIndex,
   smallint,
   integer,
+  json,
+  text,
 } from 'drizzle-orm/pg-core';
 import { companies, branches, users, statuses, locations } from './core';
 import { customers, cards } from './customers';
 import { sql } from 'drizzle-orm';
-import { PaymentMethod } from './enums';
+import { PaymentMethod, PaymentResponsibility, PendingBookingStatus } from './enums';
+import { createId } from '@paralleldrive/cuid2';
 
 // Bookings: pure header (no destinationId, invoice, paymentMode, actionType)
 // id is UUID primary key; parcels link via bookingId
 export const bookings = pgTable(
   'bookings',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    senderId: uuid('sender_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    senderId: varchar('sender_id', { length: 25 })
       .notNull()
       .references(() => customers.id),
-    companyId: uuid('company_id')
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
-    sourceId: uuid('source_id')
+    sourceId: varchar('source_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
-    statusId: uuid('status_id')
+    statusId: varchar('status_id', { length: 25 })
       .notNull()
       .references(() => statuses.id),
-    createdBy: uuid('created_by')
+    createdBy: varchar('created_by', { length: 25 })
       .notNull()
       .references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
-    cashierSessionId: uuid('cashier_session_id'),
+    cashierSessionId: varchar('cashier_session_id', { length: 25 }),
   },
   (t) => ({
     bySender: index('bookings_sender_idx').on(t.senderId),
@@ -49,50 +54,52 @@ export const bookings = pgTable(
 export const parcels = pgTable(
   'parcels',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
-    sourceId: uuid('source_id')
+    sourceId: varchar('source_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
-    destinationId: uuid('destination_id')
+    destinationId: varchar('destination_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
 
-    bookingId: uuid('booking_id')
+    bookingId: varchar('booking_id', { length: 25 })
       .notNull()
       .references(() => bookings.id),
     bookingCode: varchar('booking_code', { length: 255 }).notNull(),
     trackingCode: varchar('tracking_code', { length: 255 }).notNull(),
 
-    senderId: uuid('sender_id')
+    senderId: varchar('sender_id', { length: 25 })
       .notNull()
       .references(() => customers.id),
-    receiverId: uuid('receiver_id')
+    receiverId: varchar('receiver_id', { length: 25 })
       .notNull()
       .references(() => customers.id),
-    secondReceiverId: uuid('second_receiver_id').references(() => customers.id),
+    secondReceiverId: varchar('second_receiver_id', { length: 25 }).references(() => customers.id),
 
-    statusId: uuid('status_id')
+    statusId: varchar('status_id', { length: 25 })
       .notNull()
       .references(() => statuses.id),
     parcelDetails: varchar('parcel_details', { length: 255 }).notNull(),
     parcelContent: varchar('parcel_content', { length: 255 }).notNull(),
 
     // bigint defaults via SQL literal
-    parcelValuePsw: bigint('parcel_value_psw', { mode: 'bigint' })
+    parcelValuePsw: bigint('parcel_value_psw', { mode: 'number' })
       .notNull()
       .default(sql`0`),
 
-    cardId: uuid('card_id').references(() => cards.id),
+    cardId: varchar('card_id', { length: 25 }).references(() => cards.id),
     cardNumber: varchar('card_number', { length: 255 }),
-    secondCardId: uuid('second_card_id').references(() => cards.id),
+    secondCardId: varchar('second_card_id', { length: 25 }).references(() => cards.id),
     secondCardNumber: varchar('second_card_number', { length: 255 }),
 
-    pickupLocationId: uuid('pickup_location_id').references(() => locations.id),
+    pickupLocationId: varchar('pickup_location_id', { length: 25 }).references(() => locations.id),
 
-    plannedToBePaidPsw: bigint('planned_tobepaid_psw', { mode: 'bigint' })
+    plannedToBePaidPsw: bigint('planned_tobepaid_psw', { mode: 'number' })
       .notNull()
       .default(sql`0`),
 
@@ -101,14 +108,14 @@ export const parcels = pgTable(
     taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
 
-    createdBy: uuid('created_by'),
+    createdBy: varchar('created_by', { length: 25 }),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
-    receivedBy: uuid('received_by'),
+    receivedBy: varchar('received_by', { length: 25 }),
     receivedAt: timestamp('received_at', { withTimezone: false }),
-    confirmedBy: uuid('confirmed_by'),
+    confirmedBy: varchar('confirmed_by', { length: 25 }),
     confirmedAt: timestamp('confirmed_at', { withTimezone: false }),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
-    cashierSessionId: uuid('cashier_session_id'),
+    cashierSessionId: varchar('cashier_session_id', { length: 25 }),
   },
   (t) => ({
     byBookingId: index('parcels_booking_id_idx').on(t.bookingId),
@@ -125,14 +132,16 @@ export const parcels = pgTable(
 export const consignments = pgTable(
   'consignments',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    companyId: uuid('company_id')
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
-    sourceId: uuid('source_id')
+    sourceId: varchar('source_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
-    destinationId: uuid('destination_id')
+    destinationId: varchar('destination_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
 
@@ -145,7 +154,7 @@ export const consignments = pgTable(
     // Human code like YYYYMMDD-<serial>
     code: varchar('code', { length: 255 }).notNull(),
 
-    createdBy: uuid('created_by')
+    createdBy: varchar('created_by', { length: 25 })
       .notNull()
       .references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
@@ -165,10 +174,10 @@ export const consignments = pgTable(
 export const consignmentItems = pgTable(
   'consignment_items',
   {
-    consignmentId: uuid('consignment_id')
+    consignmentId: varchar('consignment_id', { length: 25 })
       .notNull()
       .references(() => consignments.id),
-    parcelId: uuid('parcel_id')
+    parcelId: varchar('parcel_id', { length: 25 })
       .notNull()
       .references(() => parcels.id),
     addedAt: timestamp('added_at', { withTimezone: false }).notNull().defaultNow(),
@@ -180,5 +189,59 @@ export const consignmentItems = pgTable(
     uqActiveParcel: uniqueIndex('consignment_items_parcel_active_uq')
       .on(t.parcelId)
       .where(sql`${t.removedAt} IS NULL`),
+  }),
+);
+
+// Pending Bookings awaiting cashier confirmation
+export const pendingBookings = pgTable(
+  'pending_bookings',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    branchId: varchar('branch_id', { length: 25 })
+      .notNull()
+      .references(() => branches.id),
+
+    // Complete booking data from attendant (JSON object)
+    bookingData: json('booking_data').notNull(),
+
+    // Payment responsibility
+    paymentResponsibility: smallint('payment_responsibility')
+      .notNull()
+      .default(PaymentResponsibility.SENDER),
+    senderAmountPsw: bigint('sender_amount_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    recipientAmountPsw: bigint('recipient_amount_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+
+    // Attendant who created the pending booking
+    attendantId: varchar('attendant_id', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+
+    // Status tracking
+    status: smallint('status').notNull().default(PendingBookingStatus.PENDING),
+
+    // Timestamps
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    confirmedAt: timestamp('confirmed_at', { withTimezone: false }),
+    expiresAt: timestamp('expires_at', { withTimezone: false }).notNull(),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: false }),
+    cancelledBy: varchar('cancelled_by', { length: 25 }).references(() => users.id),
+    cancelReason: text('cancel_reason'),
+  },
+  (t) => ({
+    byCompany: index('pending_bookings_company_idx').on(t.companyId),
+    byBranch: index('pending_bookings_branch_idx').on(t.branchId),
+    byAttendant: index('pending_bookings_attendant_idx').on(t.attendantId),
+    byStatus: index('pending_bookings_status_idx').on(t.status),
+    byExpires: index('pending_bookings_expires_idx').on(t.expiresAt),
+    byCreated: index('pending_bookings_created_idx').on(t.createdAt),
   }),
 );

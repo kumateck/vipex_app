@@ -20,8 +20,10 @@ import { customersRoutes } from './features/customers/routes';
 import { bookingsRoutes } from './features/shipments/bookings.routes';
 import { parcelsRoutes } from './features/shipments/parcels.routes';
 import { consignmentsRoutes } from './features/shipments/consignments.routes';
+import { autoGroupingRoutes } from './features/consignments/auto-grouping.routes';
 import { cashiersRoutes } from './features/cashiers/routes';
 import { paymentsRoutes } from './features/payments/routes';
+import { paymentCalculationRoutes } from './features/payments/calculation.routes';
 import { deliveriesRoutes } from './features/deliveries/routes';
 import { accountingRoutes } from './features/accounting/routes';
 import { bookingWithParcelsRoutes } from './features/shipments/booking-with-parcels.routes';
@@ -47,13 +49,18 @@ export const app = new Elysia()
       .group('/locations', (r) => r.use(locationsRoutes))
       .group('/customers', (r) => r.use(customersRoutes))
       .group('/cashiers', (r) => r.use(cashiersRoutes))
-      .group('/shipments', (s) =>
-        s
-          .group('/bookings', (r) => r.use(bookingsRoutes).use(bookingWithParcelsRoutes))
-          .group('/parcels', (r) => r.use(parcelsRoutes))
-          .group('/consignments', (r) => r.use(consignmentsRoutes)),
+      .group(
+        '/shipments',
+        (s) =>
+          s
+            .group('/bookings', (r) => r.use(bookingsRoutes).use(bookingWithParcelsRoutes))
+            .group('/parcels', (r) => r.use(parcelsRoutes))
+            .group('/consignments', (r) => r.use(consignmentsRoutes))
+            .group('/auto-grouping', (r) => r.use(autoGroupingRoutes)),
+        // .group('/shifts', (r) => r.use(shiftManagementRoutes))
+        // .group('/shift-management', (r) => r.use(shiftManagementRoutes)),
       )
-      .group('/payments', (r) => r.use(paymentsRoutes))
+      .group('/payments', (r) => r.use(paymentsRoutes).use(paymentCalculationRoutes))
       .group('/deliveries', (r) => r.use(deliveriesRoutes))
       .group('/accounting', (r) => r.use(accountingRoutes))
       .group('/inventory', (r) => r.use(inventoryRoutes)),
