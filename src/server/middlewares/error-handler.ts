@@ -1,69 +1,226 @@
 import type { Elysia } from 'elysia';
-import { isHttpError } from '../utils/http-error';
+import { HttpStatus } from '../utils/http-status';
+import { isHttpError, type ErrorDetails } from '../utils/http-error';
+import { isDev } from '../utils/env';
 
-// Optional: Detect common DB/SMTP errors and map to HTTP statuses
-function toHttpStatus(err: { code?: string; command?: string }): {
+type FrameworkErrorCode = 'NOT_FOUND' | 'VALIDATION' | 'PARSE' | 'UNKNOWN';
+
+type ErrorLike = {
+  message?: string;
+  code?: string;
+  command?: string;
+  status?: number;
+  details?: ErrorDetails;
+  all?: Array<{ path?: string; message?: string; summary?: string }>;
+  cause?: string | Record<string, string>;
+  name?: string;
+  stack?: string;
+};
+
+type ErrorBody = {
+  error: {
+    code: string;
+    message: string;
+    status: number;
+    requestId: string;
+    path: string;
+    method: string;
+    timestamp: string;
+    details?: ErrorDetails;
+  };
+};
+
+type InfraMapping = {
   status: number;
-  reason?: string;
-} {
-  // Postgres unique violation
-  if (err?.code === '23505') return { status: 409, reason: 'unique_violation' };
-  // Postgres foreign key violation
-  if (err?.code === '23503') return { status: 409, reason: 'foreign_key_violation' };
-  // SMTP connection issues (surface as 502/503)
-  if (err?.code === 'ESOCKET' || err?.command === 'CONN')
-    return { status: 502, reason: 'smtp_connect' };
-  return { status: 500 };
-}
+  code: string;
+  message: string;
+};
+
+const INTERNAL_MESSAGE = 'Something went wrong. Please try again.';
+
+const pickRequestId = (headerRequestId: string | null, responseRequestId: string | undefined): string =>
+  headerRequestId || responseRequestId || crypto.randomUUID();
+
+const toErrorLike = (error: object | null | undefined): ErrorLike => {
+  if (!error) return {};
+  return error as ErrorLike;
+};
+
+const toInfraMapping = (err: ErrorLike): InfraMapping => {
+  if (err.code === '23505') {
+    return {
+      status: HttpStatus.CONFLICT,
+      code: 'UNIQUE_VIOLATION',
+      message: 'A record with the same unique value already exists.',
+    };
+  }
+  if (err.code === '23503') {
+    return {
+      status: HttpStatus.CONFLICT,
+      code: 'FOREIGN_KEY_VIOLATION',
+      message: 'A related record is missing or invalid.',
+    };
+  }
+  if (err.code === 'ESOCKET' || err.command === 'CONN') {
+    return {
+      status: HttpStatus.BAD_GATEWAY,
+      code: 'UPSTREAM_UNAVAILABLE',
+      message: 'A dependent service is temporarily unavailable.',
+    };
+  }
+  if (err.code === '42883') {
+    return {
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+      code: 'POSTGIS_NOT_ENABLED',
+      message: 'Geospatial features are unavailable. Please enable PostGIS.',
+    };
+  }
+
+  return {
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    code: 'INTERNAL_SERVER_ERROR',
+    message: INTERNAL_MESSAGE,
+  };
+};
+
+const extractValidationDetails = (err: ErrorLike): ErrorDetails | undefined => {
+  if (Array.isArray(err.all) && err.all.length > 0) {
+    const fields = err.all
+      .map((issue) => {
+        const fieldPath = issue.path ?? '';
+        const fieldMessage = issue.summary ?? issue.message ?? '';
+        if (!fieldMessage) return null;
+        return fieldPath ? `${fieldPath}: ${fieldMessage}` : fieldMessage;
+      })
+      .filter((item): item is string => item !== null);
+
+    if (fields.length > 0) return { fields };
+  }
+
+  if (typeof err.cause === 'string' && err.cause.length > 0) {
+    return { cause: err.cause };
+  }
+
+  return undefined;
+};
+
+const buildErrorBody = (params: {
+  code: string;
+  message: string;
+  status: number;
+  requestId: string;
+  path: string;
+  method: string;
+  details?: ErrorDetails;
+}): ErrorBody => ({
+  error: {
+    code: params.code,
+    message: params.message,
+    status: params.status,
+    requestId: params.requestId,
+    path: params.path,
+    method: params.method,
+    timestamp: new Date().toISOString(),
+    details: params.details,
+  },
+});
+
+const sanitizeMessage = (value: string | undefined, fallback: string): string => {
+  if (typeof value !== 'string') return fallback;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+};
 
 export function errorHandler(app: Elysia) {
   return app.onError(({ code, error, set, request }) => {
-    // Known framework codes
-    if (code === 'NOT_FOUND') {
-      set.status = 404;
-      return {
-        error: { message: 'Route not found', status: 404, path: new URL(request.url).pathname },
-      };
-    }
-
-    if (code === 'VALIDATION') {
-      // Elysia validation error
-      set.status = 400;
-      return {
-        error: {
-          message: 'Validation failed',
-          status: 400,
-          // Elysia’s error can carry detail under error.all or error.cause; we include message fallback
-          details: error?.all ?? error?.cause ?? String(error?.message || ''),
-        },
-      };
-    }
-
-    // Our custom HttpError
-    if (isHttpError(error)) {
-      const err = error as { status: number; message: string; details?: unknown };
-      set.status = error.status;
-      return {
-        error: {
-          message: err.message,
-          status: err.status,
-          details: err.details ?? undefined,
-        },
-      };
-    }
-
-    // Heuristic mapping for known infra errors (DB/SMTP), otherwise 500
-    const { status, reason } = toHttpStatus(
-      error as unknown as { code?: string; command?: string },
+    const path = new URL(request.url).pathname;
+    const requestId = pickRequestId(
+      request.headers.get('x-request-id'),
+      set.headers['x-request-id']?.toString(),
     );
-    set.status = status;
-    const err = error as { message?: string; details?: unknown };
-    return {
-      error: {
-        message: status >= 500 ? 'Internal Server Error' : err?.message || 'Request failed',
-        status,
-        reason,
-      },
-    };
+    const method = request.method;
+    const frameworkCode = (code as FrameworkErrorCode) || 'UNKNOWN';
+
+    if (frameworkCode === 'NOT_FOUND') {
+      set.status = HttpStatus.NOT_FOUND;
+      return buildErrorBody({
+        code: 'ROUTE_NOT_FOUND',
+        message: 'The requested route was not found.',
+        status: HttpStatus.NOT_FOUND,
+        requestId,
+        path,
+        method,
+      });
+    }
+
+    if (frameworkCode === 'VALIDATION') {
+      const err = toErrorLike(typeof error === 'object' ? error : null);
+      set.status = HttpStatus.BAD_REQUEST;
+      return buildErrorBody({
+        code: 'VALIDATION_ERROR',
+        message: 'Request validation failed. Check the provided input.',
+        status: HttpStatus.BAD_REQUEST,
+        requestId,
+        path,
+        method,
+        details: extractValidationDetails(err),
+      });
+    }
+
+    if (frameworkCode === 'PARSE') {
+      set.status = HttpStatus.BAD_REQUEST;
+      return buildErrorBody({
+        code: 'INVALID_REQUEST_BODY',
+        message: 'Request body could not be parsed. Ensure the payload format is valid.',
+        status: HttpStatus.BAD_REQUEST,
+        requestId,
+        path,
+        method,
+      });
+    }
+
+    if (typeof error === 'object' && isHttpError(error)) {
+      const message = sanitizeMessage(error.message, 'Request failed.');
+      set.status = error.status;
+      return buildErrorBody({
+        code: 'HTTP_ERROR',
+        message,
+        status: error.status,
+        requestId,
+        path,
+        method,
+        details: error.details,
+      });
+    }
+
+    const err = toErrorLike(typeof error === 'object' ? error : null);
+    const mapped = toInfraMapping(err);
+    set.status = mapped.status;
+
+    // Log detailed error information only in development mode for debugging.
+    // In production/test, avoid exposing sensitive internal details.
+    if (isDev) {
+      console.error(
+        JSON.stringify({
+          t: new Date().toISOString(),
+          requestId,
+          path,
+          method,
+          code: mapped.code,
+          originalMessage: err.message || null,
+          originalCode: err.code || null,
+          stack: err.stack || null,
+        }),
+      );
+    }
+
+    return buildErrorBody({
+      code: mapped.code,
+      message: mapped.message,
+      status: mapped.status,
+      requestId,
+      path,
+      method,
+    });
   });
 }

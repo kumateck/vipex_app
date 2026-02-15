@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia';
+import { HttpStatus } from '../../utils/http-status';
 
 import {
   createBranchSvc,
@@ -40,7 +41,7 @@ export const branchesRoutes = new Elysia({ name: 'branches' })
     '/',
     async ({ body, set }) => {
       const res = await createBranchSvc(body);
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {

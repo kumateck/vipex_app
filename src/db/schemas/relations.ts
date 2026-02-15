@@ -9,11 +9,23 @@ import {
   rolePermissions,
   users,
 } from './core';
+import { pendingBookings } from './shipments';
+import { receiptTemplates, generatedReceipts } from './receipts';
 import { customers, cards, customerCards } from './customers';
-import { cashierSessionTypes, cashierSessions } from './cashiers';
+import { cashierSessionTypes, cashierSessions } from './shifts';
+import { shiftTypes } from './shifts';
 import { bookings, parcels, consignments, consignmentItems } from './shipments';
 import { deliveries } from './deliveries';
 import { payments } from './payments';
+import {
+  productCategories,
+  products,
+  inventoryLocations,
+  stockLevels,
+  stockMovements,
+  stockAdjustments,
+  stockTransfers,
+} from './inventory';
 
 // Core
 export const companiesRelations = relations(companies, ({ many }) => ({
@@ -84,9 +96,9 @@ export const cashierSessionTypesRelations = relations(cashierSessionTypes, ({ ma
 export const cashierSessionsRelations = relations(cashierSessions, ({ one }) => ({
   cashier: one(users, { fields: [cashierSessions.cashierId], references: [users.id] }),
   branch: one(branches, { fields: [cashierSessions.branchId], references: [branches.id] }),
-  sessionType: one(cashierSessionTypes, {
-    fields: [cashierSessions.sessionTypeId],
-    references: [cashierSessionTypes.id],
+  shiftType: one(shiftTypes, {
+    fields: [cashierSessions.shiftTypeId],
+    references: [shiftTypes.id],
   }),
 }));
 
@@ -136,4 +148,90 @@ export const deliveriesRelations = relations(deliveries, ({ one }) => ({
 // Payments
 export const paymentsRelations = relations(payments, ({ one }) => ({
   parcel: one(parcels, { fields: [payments.parcelId], references: [parcels.id] }),
+}));
+
+// Inventory
+export const productCategoriesRelations = relations(productCategories, ({ one, many }) => ({
+  company: one(companies, { fields: [productCategories.companyId], references: [companies.id] }),
+  products: many(products),
+}));
+
+export const productsRelations = relations(products, ({ one, many }) => ({
+  company: one(companies, { fields: [products.companyId], references: [companies.id] }),
+  category: one(productCategories, {
+    fields: [products.categoryId],
+    references: [productCategories.id],
+  }),
+  stockLevels: many(stockLevels),
+  stockMovements: many(stockMovements),
+  stockAdjustments: many(stockAdjustments),
+  stockTransfers: many(stockTransfers),
+}));
+
+export const inventoryLocationsRelations = relations(inventoryLocations, ({ one, many }) => ({
+  company: one(companies, { fields: [inventoryLocations.companyId], references: [companies.id] }),
+  branch: one(branches, { fields: [inventoryLocations.branchId], references: [branches.id] }),
+  stockLevels: many(stockLevels),
+  stockMovements: many(stockMovements),
+  stockAdjustments: many(stockAdjustments),
+}));
+
+export const stockLevelsRelations = relations(stockLevels, ({ one }) => ({
+  company: one(companies, { fields: [stockLevels.companyId], references: [companies.id] }),
+  product: one(products, { fields: [stockLevels.productId], references: [products.id] }),
+  location: one(inventoryLocations, {
+    fields: [stockLevels.locationId],
+    references: [inventoryLocations.id],
+  }),
+}));
+
+export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
+  company: one(companies, { fields: [stockMovements.companyId], references: [companies.id] }),
+  product: one(products, { fields: [stockMovements.productId], references: [products.id] }),
+  location: one(inventoryLocations, {
+    fields: [stockMovements.locationId],
+    references: [inventoryLocations.id],
+  }),
+  creator: one(users, { fields: [stockMovements.createdBy], references: [users.id] }),
+}));
+
+export const stockAdjustmentsRelations = relations(stockAdjustments, ({ one }) => ({
+  company: one(companies, { fields: [stockAdjustments.companyId], references: [companies.id] }),
+  product: one(products, { fields: [stockAdjustments.productId], references: [products.id] }),
+  location: one(inventoryLocations, {
+    fields: [stockAdjustments.locationId],
+    references: [inventoryLocations.id],
+  }),
+  creator: one(users, { fields: [stockAdjustments.createdBy], references: [users.id] }),
+}));
+
+export const stockTransfersRelations = relations(stockTransfers, ({ one }) => ({
+  company: one(companies, { fields: [stockTransfers.companyId], references: [companies.id] }),
+  product: one(products, { fields: [stockTransfers.productId], references: [products.id] }),
+  fromLocation: one(inventoryLocations, {
+    fields: [stockTransfers.fromLocationId],
+    references: [inventoryLocations.id],
+  }),
+  toLocation: one(inventoryLocations, {
+    fields: [stockTransfers.toLocationId],
+    references: [inventoryLocations.id],
+  }),
+  creator: one(users, { fields: [stockTransfers.createdBy], references: [users.id] }),
+  completer: one(users, { fields: [stockTransfers.completedBy], references: [users.id] }),
+}));
+
+// Receipt System Relations
+export const pendingBookingsRelations = relations(pendingBookings, ({ one }) => ({
+  company: one(companies, { fields: [pendingBookings.companyId], references: [companies.id] }),
+  branch: one(branches, { fields: [pendingBookings.branchId], references: [branches.id] }),
+  attendant: one(users, { fields: [pendingBookings.attendantId], references: [users.id] }),
+}));
+
+export const receiptTemplatesRelations = relations(receiptTemplates, ({ one }) => ({
+  company: one(companies, { fields: [receiptTemplates.companyId], references: [companies.id] }),
+}));
+
+export const generatedReceiptsRelations = relations(generatedReceipts, ({ one }) => ({
+  company: one(companies, { fields: [generatedReceipts.companyId], references: [companies.id] }),
+  printedBy: one(users, { fields: [generatedReceipts.printedBy], references: [users.id] }),
 }));

@@ -1,4 +1,6 @@
 import { Elysia, t } from 'elysia';
+import { HttpStatus } from '../../utils/http-status';
+import { UUID } from '../../schemas/common';
 
 import {
   createDeliveryCtrl,
@@ -24,18 +26,18 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
           cashierSessionId?: string | null;
         },
       );
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {
       body: t.Object({
-        parcelId: t.String({ format: 'uuid' }),
+        parcelId: UUID,
         mode: t.Number(),
-        officeLocationId: t.Optional(t.Union([t.String({ format: 'uuid' }), t.Null()])),
+        officeLocationId: t.Optional(t.Union([UUID, t.Null()])),
         dropoffAddress: t.Optional(t.Union([t.String(), t.Null()])),
         chargeCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
-        createdBy: t.String({ format: 'uuid' }),
-        cashierSessionId: t.Optional(t.String({ format: 'uuid' })),
+        createdBy: UUID,
+        cashierSessionId: t.Optional(UUID),
       }),
       detail: { tags: ['Deliveries'], summary: 'Create delivery order (OFFICE or DOORSTEP)' },
     },
@@ -49,10 +51,10 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
         deliveryUserId: (body as { deliveryUserId: string }).deliveryUserId,
       }),
     {
-      params: t.Object({ parcelId: t.String({ format: 'uuid' }) }),
+      params: t.Object({ parcelId: UUID }),
       body: t.Object({
-        frontDeskUserId: t.String({ format: 'uuid' }),
-        deliveryUserId: t.String({ format: 'uuid' }),
+        frontDeskUserId: UUID,
+        deliveryUserId: UUID,
       }),
       detail: {
         tags: ['Deliveries'],
@@ -65,8 +67,8 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
     async ({ params, body }) =>
       ddCallCtrl({ parcelId: params.parcelId, userId: (body as { userId: string }).userId }),
     {
-      params: t.Object({ parcelId: t.String({ format: 'uuid' }) }),
-      body: t.Object({ userId: t.String({ format: 'uuid' }) }),
+      params: t.Object({ parcelId: UUID }),
+      body: t.Object({ userId: UUID }),
       detail: { tags: ['Deliveries'], summary: 'Doorstep: mark called' },
     },
   )
@@ -78,13 +80,13 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
         riderUserId: (body as { riderUserId: string }).riderUserId,
       }),
     {
-      params: t.Object({ parcelId: t.String({ format: 'uuid' }) }),
-      body: t.Object({ riderUserId: t.String({ format: 'uuid' }) }),
+      params: t.Object({ parcelId: UUID }),
+      body: t.Object({ riderUserId: UUID }),
       detail: { tags: ['Deliveries'], summary: 'Doorstep: assign rider' },
     },
   )
   .post('/dd/:parcelId/out', async ({ params }) => ddOutCtrl({ parcelId: params.parcelId }), {
-    params: t.Object({ parcelId: t.String({ format: 'uuid' }) }),
+    params: t.Object({ parcelId: UUID }),
     detail: { tags: ['Deliveries'], summary: 'Doorstep: out for delivery' },
   })
   .post(
@@ -102,11 +104,11 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
         method: (body as { method: number }).method,
       }),
     {
-      params: t.Object({ parcelId: t.String({ format: 'uuid' }) }),
+      params: t.Object({ parcelId: UUID }),
       body: t.Object({
-        cashierUserId: t.String({ format: 'uuid' }),
-        branchId: t.String({ format: 'uuid' }),
-        companyId: t.String({ format: 'uuid' }),
+        cashierUserId: UUID,
+        branchId: UUID,
+        companyId: UUID,
         principalAmountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
         deliveryFeeAmountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
         method: t.Number(),

@@ -3,12 +3,7 @@ import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 import { DeliveryMode, PaymentComponent, Payer, CashierType, PaymentMethod } from '@/db/schemas';
 import { createPaymentSvc, sumPrincipalPaidForParcelSvc } from '../payments/service';
 import { getParcelRepo } from '../shipments/parcels.repository';
-import {
-  createDeliveryRepo,
-  getDeliveryByParcelRepo,
-  updateDeliveryRepo,
-  type DeliveryRow,
-} from './repository';
+import { createDeliveryRepo, getDeliveryByParcelRepo, updateDeliveryRepo } from './repository';
 import { toPesewas } from '@/server/utils/gh-money';
 
 export async function createDeliverySvc(input: {
@@ -29,6 +24,7 @@ export async function createDeliverySvc(input: {
     throw BadRequest('dropoffAddress required for DOORSTEP');
 
   const chargePsw = input.chargeCedis != null ? toPesewas(input.chargeCedis) : 0n;
+  const chargePswNumber = Number(chargePsw);
 
   const created = await createDeliveryRepo({
     parcelId: input.parcelId,
@@ -36,8 +32,8 @@ export async function createDeliverySvc(input: {
     status: 'QUEUED',
     officeLocationId: input.mode === DeliveryMode.OFFICE ? (input.officeLocationId ?? null) : null,
     dropoffAddress: input.mode === DeliveryMode.DOORSTEP ? (input.dropoffAddress ?? null) : null,
-    chargePsw,
-    amountPaidPsw: 0n,
+    chargePsw: chargePswNumber,
+    amountPaidPsw: 0,
     createdBy: input.createdBy,
     cashierSessionId: input.cashierSessionId ?? null,
   });
@@ -58,8 +54,8 @@ export async function markOfficePickupCompleteSvc(input: {
   // Ensure no outstanding principal dues before office handover
   const principalPaid = await sumPrincipalPaidForParcelSvc(input.parcelId);
   const outstanding =
-    parcel.plannedToBePaidPsw > principalPaid ? parcel.plannedToBePaidPsw - principalPaid : 0n;
-  if (outstanding > 0n)
+    parcel.plannedToBePaidPsw > principalPaid ? parcel.plannedToBePaidPsw - principalPaid : 0;
+  if (outstanding > 0)
     throw Conflict('Outstanding to-be-paid principal exists; collect before release');
 
   const updated = await updateDeliveryRepo(delivery.id, {

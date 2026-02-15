@@ -1,7 +1,7 @@
 import { t } from 'elysia';
 
 // Reusable primitives
-export const UUID = t.String({ format: 'uuid' });
+export const UUID = t.String({ minLength: 1, maxLength: 25, pattern: '^[A-Za-z0-9_-]+$' });
 export const Email = t.String({ format: 'email', maxLength: 255 });
 export const Telephone = t.String({ minLength: 6, maxLength: 30 });
 export const NonEmptyString255 = t.String({ minLength: 1, maxLength: 255 });

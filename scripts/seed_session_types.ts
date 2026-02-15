@@ -1,36 +1,44 @@
 import 'dotenv/config';
-import postgres from 'postgres';
+import { eq } from 'drizzle-orm';
+import { db } from '../src/db/config';
+import { users, cashierSessionTypes } from '@/db/schemas';
 
-const DATABASE_URL = process.env.DATABASE_URL;
-const CREATED_BY = process.env.SESSION_TYPES_CREATED_BY; // UUID of a user to attribute seed rows
+async function main() {
+  const [firstUser] = await db.select({ id: users.id }).from(users).limit(1);
 
-if (!DATABASE_URL) {
-  console.error('DATABASE_URL is not set');
-  process.exit(1);
-}
+  if (!firstUser) {
+    console.error('No users found in database. Please seed users first.');
+    process.exit(1);
+  }
 
-if (!CREATED_BY || !/^[0-9a-fA-F-]{36}$/.test(CREATED_BY)) {
-  console.error('SESSION_TYPES_CREATED_BY must be a valid UUID (user id).');
-  process.exit(1);
-}
+  const CREATED_BY = firstUser.id;
+  console.log(`Using user ${CREATED_BY} as creator`);
 
-const sql = postgres(DATABASE_URL, { max: 1 });
+  const sessionTypes = [
+    { sessionType: '24-Hour', startTime: '00:00', endTime: '23:59', createdBy: CREATED_BY },
+    { sessionType: 'Day Shift', startTime: '08:00', endTime: '17:00', createdBy: CREATED_BY },
+    { sessionType: 'Night Shift', startTime: '17:00', endTime: '08:00', createdBy: CREATED_BY },
+  ];
 
-try {
-  await sql.begin(async (tx) => {
-    await tx`
-      insert into cashier_session_types (session_type, start_time, end_time, created_by)
-      values 
-        ('24-Hour', '00:00', '23:59', ${CREATED_BY}),
-        ('Day Shift', '08:00', '17:00', ${CREATED_BY}),
-        ('Night Shift', '17:00', '08:00', ${CREATED_BY})
-      on conflict (session_type) do nothing
-    `;
-  });
+  for (const session of sessionTypes) {
+    const existing = await db
+      .select({ id: cashierSessionTypes.id })
+      .from(cashierSessionTypes)
+      .where(eq(cashierSessionTypes.sessionType, session.sessionType))
+      .limit(1);
+
+    if (existing.length === 0) {
+      await db.insert(cashierSessionTypes).values(session);
+      console.log(`  ✓ Created session type: ${session.sessionType}`);
+    } else {
+      console.log(`  ✓ Session type already exists: ${session.sessionType}`);
+    }
+  }
+
   console.log('Seeded cashier_session_types.');
-} catch (err) {
-  console.error('Seeding error:', err);
-  process.exitCode = 1;
-} finally {
-  await sql.end({ timeout: 5 });
 }
+
+main().catch((err) => {
+  console.error('Seeding error:', err);
+  process.exit(1);
+});

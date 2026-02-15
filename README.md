@@ -1,21 +1,31 @@
-# bun-react-tailwind-shadcn-template
+# VIPEX ERP Backend
 
-To install dependencies:
+## Quick Start
+
+Install dependencies:
 
 ```bash
 bun install
 ```
 
-To start a development server:
+Run development server:
 
 ```bash
-bun dev
+bun run dev
 ```
 
-To run for production:
+Run tests:
 
 ```bash
-bun start
+bun test
 ```
 
-This project was created using `bun init` in bun v1.2.19. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+## Infrastructure
+- PostgreSQL (primary DB)
+- PostGIS extension (geospatial endpoints)
+- Redis (rate limiting + caching, optional with memory fallback)
+
+## Documentation
+- Architecture: `docs/ARCHITECTURE.md`
+- API index: `docs/API.md`
+- Developer onboarding: `docs/ONBOARDING.md`

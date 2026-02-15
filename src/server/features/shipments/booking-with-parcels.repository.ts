@@ -1,4 +1,4 @@
-import { asc, eq, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
   bookings,
@@ -34,12 +34,12 @@ export type CreateBookingWithParcelsInput = {
     statusId: string; // initial parcel status
     parcelDetails: string;
     parcelContent: string;
-    parcelValuePsw?: bigint; // pre-converted pesewas; optional
-    plannedToBePaidPsw?: bigint; // pre-converted pesewas; optional
+    parcelValuePsw?: number; // pre-converted pesewas; optional
+    plannedToBePaidPsw?: number; // pre-converted pesewas; optional
     method: PaymentMethod; // the method captured for this parcel context
     trackingCode?: string | null; // if absent, will be generated
     // optional sender payment at booking-time (component=PRINCIPAL)
-    senderPaymentPsw?: bigint; // pesewas, optional
+    senderPaymentPsw?: number; // pesewas, optional
     senderPaymentMethod?: PaymentMethod; // fallback to parcel.method if not provided
     cashierUserId: string; // sending cashier user id for this parcel
     branchId: string; // branch taking the cash
@@ -116,14 +116,14 @@ async function createUniqueTrackingCode(
 
 export async function createBookingWithParcelsAndPaymentsRepo(
   input: CreateBookingWithParcelsInput,
-  taxComputer: (principalPsw: bigint) => {
-    principal: bigint;
-    net: bigint;
-    vat: bigint;
-    getfund: bigint;
-    nhil: bigint;
-    covid: bigint;
-    totalTax: bigint;
+  taxComputer: (principalPsw: number) => {
+    principal: number;
+    net: number;
+    vat: number;
+    getfund: number;
+    nhil: number;
+    covid: number;
+    totalTax: number;
   },
 ): Promise<CreateBookingWithParcelsOutput> {
   return db.transaction(async (tx) => {
@@ -168,8 +168,8 @@ export async function createBookingWithParcelsAndPaymentsRepo(
           statusId: p.statusId,
           parcelDetails: p.parcelDetails,
           parcelContent: p.parcelContent,
-          parcelValuePsw: p.parcelValuePsw ?? sql`0`,
-          plannedToBePaidPsw: p.plannedToBePaidPsw ?? sql`0`,
+          parcelValuePsw: p.parcelValuePsw ?? 0,
+          plannedToBePaidPsw: p.plannedToBePaidPsw ?? 0,
           method: p.method,
           createdBy: input.createdBy,
           cashierSessionId: input.cashierSessionId ?? null,
@@ -181,7 +181,7 @@ export async function createBookingWithParcelsAndPaymentsRepo(
         trackingCode: sanitizeString(parcelRow?.trackingCode),
       });
 
-      if (p.senderPaymentPsw && p.senderPaymentPsw > 0n) {
+      if (p.senderPaymentPsw && p.senderPaymentPsw > 0) {
         const tax = taxComputer(p.senderPaymentPsw);
         const [pay] = await tx
           .insert(payments)

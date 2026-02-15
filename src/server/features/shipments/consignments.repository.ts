@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, max } from 'drizzle-orm';
+import { and, eq, isNull, max } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { consignments, consignmentItems } from '@/db/schemas';
 

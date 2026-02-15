@@ -58,11 +58,12 @@ export async function createBookingWithParcelsSvc(
       statusId: p.statusId,
       parcelDetails: p.parcelDetails,
       parcelContent: p.parcelContent,
-      parcelValuePsw: p.parcelValueCedis != null ? toPesewas(p.parcelValueCedis) : 0n,
-      plannedToBePaidPsw: p.plannedToBePaidCedis != null ? toPesewas(p.plannedToBePaidCedis) : 0n,
+      parcelValuePsw: p.parcelValueCedis != null ? Number(toPesewas(p.parcelValueCedis)) : 0,
+      plannedToBePaidPsw:
+        p.plannedToBePaidCedis != null ? Number(toPesewas(p.plannedToBePaidCedis)) : 0,
       method: p.method,
       trackingCode: p.trackingCode ?? null,
-      senderPaymentPsw: p.senderPaymentCedis != null ? toPesewas(p.senderPaymentCedis) : 0n,
+      senderPaymentPsw: p.senderPaymentCedis != null ? Number(toPesewas(p.senderPaymentCedis)) : 0,
       senderPaymentMethod: p.senderPaymentMethod ?? undefined,
       cashierUserId: p.cashierUserId,
       branchId: p.branchId,
@@ -70,15 +71,15 @@ export async function createBookingWithParcelsSvc(
   };
 
   return createBookingWithParcelsAndPaymentsRepo(input, (psw) => {
-    const t = computeGhanaTaxesFromPesewas(psw);
+    const t = computeGhanaTaxesFromPesewas(BigInt(psw));
     return {
-      principal: t.principal,
-      net: t.net,
-      vat: t.vat,
-      getfund: t.getfund,
-      nhil: t.nhil,
-      covid: t.covid,
-      totalTax: t.totalTax,
+      principal: Number(t.principal),
+      net: Number(t.net),
+      vat: Number(t.vat),
+      getfund: Number(t.getfund),
+      nhil: Number(t.nhil),
+      covid: Number(t.covid),
+      totalTax: Number(t.totalTax),
     };
   });
 }

@@ -1,4 +1,6 @@
 import { Elysia, t } from 'elysia';
+import { HttpStatus } from '../../utils/http-status';
+import { UUID } from '../../schemas/common';
 import { createPaymentCtrl, listPaymentsForParcelCtrl } from './controller';
 
 export const paymentsRoutes = new Elysia({ name: 'payments' })
@@ -21,19 +23,19 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
           receiptNo?: string | null;
         },
       );
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {
       body: t.Object({
-        companyId: t.String({ format: 'uuid' }),
-        branchId: t.String({ format: 'uuid' }),
-        parcelId: t.String({ format: 'uuid' }),
+        companyId: UUID,
+        branchId: UUID,
+        parcelId: UUID,
         component: t.Number(), // enum value
         payer: t.Number(),
         cashierType: t.Number(),
         method: t.Number(),
-        cashierUserId: t.String({ format: 'uuid' }),
+        cashierUserId: UUID,
         amountCedis: t.Union([t.Number(), t.String()]),
         receivedAt: t.Optional(t.String({ format: 'date-time' })),
         notes: t.Optional(t.Union([t.String(), t.Null()])),
@@ -46,6 +48,6 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
     },
   )
   .get('/by-parcel/:parcelId', async ({ params }) => listPaymentsForParcelCtrl(params.parcelId), {
-    params: t.Object({ parcelId: t.String({ format: 'uuid' }) }),
+    params: t.Object({ parcelId: UUID }),
     detail: { tags: ['Payments'], summary: 'List payments for a parcel' },
   });

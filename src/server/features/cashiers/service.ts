@@ -41,12 +41,16 @@ export async function openSessionSvc(input: {
   openingBalanceCedis?: number | string | null;
 }) {
   const openingBalancePsw =
-    input.openingBalanceCedis != null ? toPesewas(input.openingBalanceCedis) : 0n;
+    input.openingBalanceCedis != null ? Number(toPesewas(input.openingBalanceCedis)) : 0;
+  const scheduledStartTime = new Date(input.startTime);
+  const scheduledEndTime = new Date(scheduledStartTime.getTime() + 8 * 60 * 60 * 1000);
   const created = await openSessionRepo({
     cashierId: input.cashierId,
     branchId: input.branchId,
-    sessionTypeId: input.sessionTypeId,
-    startTime: new Date(input.startTime),
+    shiftTypeId: input.sessionTypeId,
+    scheduledStartTime,
+    scheduledEndTime,
+    actualStartTime: scheduledStartTime,
     openingBalancePsw,
     status: 'ACTIVE',
   });
@@ -57,10 +61,10 @@ export async function closeSessionSvc(
   input: { endTime: string; closingBalanceCedis?: number | string | null },
 ) {
   const patch = {
-    endTime: new Date(input.endTime),
+    actualEndTime: new Date(input.endTime),
     closingBalancePsw:
-      input.closingBalanceCedis != null ? toPesewas(input.closingBalanceCedis) : 0n,
-    status: 'CLOSED',
+      input.closingBalanceCedis != null ? Number(toPesewas(input.closingBalanceCedis)) : 0,
+    status: 'COMPLETED',
   };
   const updated = await closeSessionRepo(id, patch);
   if (!updated) throw NotFound('Session not found');

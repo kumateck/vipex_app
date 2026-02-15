@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia';
+import { HttpStatus } from '../../utils/http-status';
 import { decodeCursor, encodeCursor } from '@/server/utils/cursor';
 import { PaginationQuery, NonEmpty255, UUID } from '@/server/schemas/common';
 
@@ -49,7 +50,7 @@ export const locationsRoutes = new Elysia({ name: 'locations' })
     '/',
     async ({ body, set }) => {
       const res = await createLocationSvc(body);
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {

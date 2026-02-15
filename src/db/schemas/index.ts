@@ -1,9 +1,15 @@
 export * from './core';
 export * from './customers';
-export * from './cashiers';
+// export * from './cashiers';
 export * from './shipments';
 export * from './deliveries';
 export * from './payments';
 export * from './accounting';
 export * from './auth';
+export * from './inventory';
 export * from './enums';
+export * from './receipts';
+export * from './payments-rules';
+export * from './shifts';
+// export * from './shifts';
+// export * from './shifts';

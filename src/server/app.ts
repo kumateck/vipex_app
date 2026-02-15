@@ -4,13 +4,14 @@ import { swaggerPlugin } from './plugins/swagger';
 import { requestId } from './middlewares/requestId';
 import { logger } from './middlewares/logger';
 import { errorHandler } from './middlewares/error-handler';
+import { rateLimit } from './middlewares/rate-limit';
 import { health } from './routes/health';
 import { api } from './routes';
 import { HttpStatus } from './utils/http-status';
 import { devMailRoutes } from './routes/dev-mail';
 import { isDev } from './utils/env';
 import { corsPlugin } from './plugins/cors';
-import { authPasswordRoutes } from './features/auth/routes.reset-password';
+// import { authPasswordRoutes } from './features/auth/routes.reset-password';
 import { usersInviteRoutes } from './features/auth/routes.invite-resend';
 import { branchesRoutes } from './features/branches/routes';
 import { locationsRoutes } from './features/locations/routes';
@@ -20,11 +21,21 @@ import { customersRoutes } from './features/customers/routes';
 import { bookingsRoutes } from './features/shipments/bookings.routes';
 import { parcelsRoutes } from './features/shipments/parcels.routes';
 import { consignmentsRoutes } from './features/shipments/consignments.routes';
+import { autoGroupingRoutes } from './features/consignments/auto-grouping.routes';
 import { cashiersRoutes } from './features/cashiers/routes';
 import { paymentsRoutes } from './features/payments/routes';
+import { paymentCalculationRoutes } from './features/payments/calculation.routes';
 import { deliveriesRoutes } from './features/deliveries/routes';
 import { accountingRoutes } from './features/accounting/routes';
 import { bookingWithParcelsRoutes } from './features/shipments/booking-with-parcels.routes';
+import { inventoryRoutes } from './features/inventory/routes';
+import { shiftsRoutes } from './features/shifts/routes';
+import { reportingRoutes } from './features/reporting/routes';
+import { auditRoutes } from './features/audit/routes';
+import { hrRoutes } from './features/hr/routes';
+import { payrollRoutes } from './features/payroll/routes';
+import { rbacRoutes } from './features/rbac/routes';
+import { geolocationRoutes } from './features/geolocation/routes';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -32,6 +43,7 @@ export const app = new Elysia()
   // CORS early so preflights succeed
   .use(corsPlugin)
   .use(requestId)
+  .use(rateLimit)
   .use(logger)
   .use(errorHandler)
   .use(health)
@@ -46,15 +58,28 @@ export const app = new Elysia()
       .group('/locations', (r) => r.use(locationsRoutes))
       .group('/customers', (r) => r.use(customersRoutes))
       .group('/cashiers', (r) => r.use(cashiersRoutes))
-      .group('/shipments', (s) =>
-        s
-          .group('/bookings', (r) => r.use(bookingsRoutes).use(bookingWithParcelsRoutes))
-          .group('/parcels', (r) => r.use(parcelsRoutes))
-          .group('/consignments', (r) => r.use(consignmentsRoutes)),
+      .group(
+        '/shipments',
+        (s) =>
+          s
+            .group('/bookings', (r) => r.use(bookingsRoutes).use(bookingWithParcelsRoutes))
+            .group('/parcels', (r) => r.use(parcelsRoutes))
+            .group('/consignments', (r) => r.use(consignmentsRoutes))
+            .group('/auto-grouping', (r) => r.use(autoGroupingRoutes)),
+        // .group('/shifts', (r) => r.use(shiftManagementRoutes))
+        // .group('/shift-management', (r) => r.use(shiftManagementRoutes)),
       )
-      .group('/payments', (r) => r.use(paymentsRoutes))
+      .group('/payments', (r) => r.use(paymentsRoutes).use(paymentCalculationRoutes))
       .group('/deliveries', (r) => r.use(deliveriesRoutes))
-      .group('/accounting', (r) => r.use(accountingRoutes)),
+      .group('/accounting', (r) => r.use(accountingRoutes))
+      .group('/inventory', (r) => r.use(inventoryRoutes))
+      .group('/shifts', (r) => r.use(shiftsRoutes))
+      .group('/reports', (r) => r.use(reportingRoutes))
+      .group('/audit', (r) => r.use(auditRoutes))
+      .group('/hr', (r) => r.use(hrRoutes))
+      .group('/payroll', (r) => r.use(payrollRoutes))
+      .group('/rbac', (r) => r.use(rbacRoutes))
+      .group('/geolocation', (r) => r.use(geolocationRoutes)),
   )
   // .group('/v1', (v1) =>
   //   v1

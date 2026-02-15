@@ -18,14 +18,8 @@ import { env } from '../../utils/env';
 import { parseDurationToSeconds } from '../../utils/duration';
 import { sendPasswordResetEmail } from '@/server/services/mail/templates/password-reset';
 import { UserStatus } from '@/db/schemas/enums';
-
-// function sha256Hex(input: string): string {
-//   // Bun supports SubtleCrypto
-//   const enc = new TextEncoder().encode(input);
-//   // Note: top-level await not allowed here; make a sync-like helper via deopt (not ideal)
-//   // We’ll compute in async functions where needed.
-//   throw new Error("Use sha256HexAsync instead");
-// }
+import { HttpError } from '@/server/utils/http-error';
+import { HttpStatus } from '@/server/utils/http-status';
 
 async function sha256HexAsync(input: string): Promise<string> {
   const enc = new TextEncoder().encode(input);
@@ -41,12 +35,11 @@ function generateOpaqueToken(bytes = 32): string {
 
 export async function loginSvc(email: string, password: string, ua?: string, ip?: string) {
   const user = await getUserByEmailRepo(email);
-  if (!user) throw new Error('Invalid credentials');
-  if (user.status && user.status !== UserStatus.ACTIVE) throw new Error('Account disabled');
-
+  if (!user || user === null) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
+  if (user.status && user.status !== UserStatus.ACTIVE)
+    throw new HttpError(HttpStatus.FORBIDDEN, 'Account disabled');
   const ok = await verifyPassword(password, user?.password);
-  if (!ok) throw new Error('Invalid credentials');
-
+  if (!ok) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
   const payload = {
     sub: user.id,
     email: user.email,
@@ -54,9 +47,7 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
     companyId: user.companyId ?? null,
     branchId: user.branchId ?? null,
   };
-
   const accessToken = await signAccessToken(payload);
-
   const refreshPlain = generateOpaqueToken(32);
   const refreshHash = await sha256HexAsync(refreshPlain);
   const refreshExpSec = parseDurationToSeconds(env.JWT_REFRESH_EXPIRES);
@@ -69,16 +60,15 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
     userAgent: ua,
     ip,
   });
-
   return {
     tokens: { accessToken, refreshToken: refreshPlain },
     user: {
       id: user.id,
       email: user.email,
       fullname: user.fullname,
-      roleId: user.roleId ?? null,
-      companyId: user.companyId ?? null,
-      branchId: user.branchId ?? null,
+      role: user.role ?? null,
+      company: user.company ?? null,
+      branch: user.branch ?? null,
     },
   };
 }
@@ -86,12 +76,13 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
 export async function refreshSvc(refreshToken: string) {
   const hash = await sha256HexAsync(refreshToken);
   const current = await findRefreshTokenRepo(hash);
-  if (!current) throw new Error('Invalid refresh token');
-  if (current.revokedAt) throw new Error('Token revoked');
-  if (current.expiresAt.getTime() <= Date.now()) throw new Error('Token expired');
+  if (!current) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
+  if (current.revokedAt) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token revoked');
+  if (current.expiresAt.getTime() <= Date.now())
+    throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token expired');
 
   const user = await getUserByIdRepo(current.userId);
-  if (!user) throw new Error('Invalid refresh token');
+  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
 
   // Rotate
   const nextPlain = generateOpaqueToken(32);
@@ -140,7 +131,7 @@ export async function logoutSvc(refreshToken: string) {
 
 export async function forgotPasswordSvc(email: string) {
   const user = await getUserByEmailRepo(email);
-  console.log(user, 'user', email);
+
   // Always respond success to avoid user enumeration
   if (!user) return;
 
@@ -168,9 +159,10 @@ export async function forgotPasswordSvc(email: string) {
 export async function resetPasswordSvc(token: string, newPassword: string) {
   const tokenHash = await sha256HexAsync(token);
   const record = await findPasswordResetRepo(tokenHash);
-  if (!record) throw new Error('Invalid token');
-  if (record.usedAt) throw new Error('Token already used');
-  if (record.expiresAt.getTime() <= Date.now()) throw new Error('Token expired');
+  if (!record) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid token');
+  if (record.usedAt) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token already used');
+  if (record.expiresAt.getTime() <= Date.now())
+    throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token expired');
 
   const passwordHash = await hashPassword(newPassword);
   await updateUserPasswordRepo(record.userId, passwordHash);
@@ -180,10 +172,10 @@ export async function resetPasswordSvc(token: string, newPassword: string) {
 
 export async function changePasswordSvc(userId: string, oldPassword: string, newPassword: string) {
   const user = await getUserByIdRepo(userId);
-  if (!user) throw new Error('User not found');
+  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
 
   const ok = await verifyPassword(oldPassword, user.password);
-  if (!ok) throw new Error('Invalid credentials');
+  if (!ok) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
 
   const passwordHash = await hashPassword(newPassword);
   await updateUserPasswordRepo(user.id, passwordHash);

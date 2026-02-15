@@ -1,4 +1,6 @@
 import { Elysia, t } from 'elysia';
+import { HttpStatus } from '../../utils/http-status';
+import { UUID } from '../../schemas/common';
 import {
   createCustomerCtrl,
   deleteCustomerCtrl,
@@ -22,7 +24,7 @@ export const customersRoutes = new Elysia({ name: 'customers' })
       ),
     {
       query: t.Object({
-        companyId: t.String({ format: 'uuid' }),
+        companyId: UUID,
         limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
         after: t.Optional(t.String()),
         search: t.Optional(t.String()),
@@ -32,7 +34,7 @@ export const customersRoutes = new Elysia({ name: 'customers' })
     },
   )
   .get('/:id', async ({ params }) => getCustomerByIdCtrl(params.id), {
-    params: t.Object({ id: t.String({ format: 'uuid' }) }),
+    params: t.Object({ id: UUID }),
     detail: { tags: ['Customers'], summary: 'Get customer' },
   })
   .post(
@@ -49,18 +51,18 @@ export const customersRoutes = new Elysia({ name: 'customers' })
           createdBy: string;
         },
       );
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {
       body: t.Object({
-        companyId: t.String({ format: 'uuid' }),
+        companyId: UUID,
         fullname: t.String({ minLength: 1, maxLength: 255 }),
         telephone: t.Optional(t.String()),
         telephone2: t.Optional(t.String()),
         address: t.Optional(t.String()),
         email: t.Optional(t.String()),
-        createdBy: t.String({ format: 'uuid' }),
+        createdBy: UUID,
       }),
       detail: { tags: ['Customers'], summary: 'Create customer' },
     },
@@ -79,7 +81,7 @@ export const customersRoutes = new Elysia({ name: 'customers' })
         },
       ),
     {
-      params: t.Object({ id: t.String({ format: 'uuid' }) }),
+      params: t.Object({ id: UUID }),
       body: t.Object({
         fullname: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
         telephone: t.Optional(t.Union([t.String(), t.Null()])),
@@ -91,6 +93,6 @@ export const customersRoutes = new Elysia({ name: 'customers' })
     },
   )
   .delete('/:id', async ({ params }) => deleteCustomerCtrl(params.id), {
-    params: t.Object({ id: t.String({ format: 'uuid' }) }),
+    params: t.Object({ id: UUID }),
     detail: { tags: ['Customers'], summary: 'Soft delete customer' },
   });

@@ -12,13 +12,13 @@ export type PaymentRow = {
   cashierType: number;
   method: number;
   cashierUserId: string;
-  grossAmountPsw: bigint;
-  netAmountPsw: bigint;
-  vatPsw: bigint;
-  getfundPsw: bigint;
-  nhilPsw: bigint;
-  covidPsw: bigint;
-  taxTotalPsw: bigint;
+  grossAmountPsw: number;
+  netAmountPsw: number;
+  vatPsw: number;
+  getfundPsw: number;
+  nhilPsw: number;
+  covidPsw: number;
+  taxTotalPsw: number;
   receivedAt: Date;
   notes: string | null;
   receiptNo: string | null;
@@ -72,9 +72,9 @@ export async function listPaymentsForParcelRepo(parcelId: string): Promise<Payme
 export async function sumPaymentsForParcelComponentRepo(
   parcelId: string,
   component: number,
-): Promise<bigint> {
+): Promise<number> {
   const rows = await listPaymentsForParcelRepo(parcelId);
   return rows
     .filter((r) => r.component === component)
-    .reduce<bigint>((acc, r) => acc + r.grossAmountPsw, 0n);
+    .reduce<number>((acc, r) => acc + r.grossAmountPsw, 0);
 }
