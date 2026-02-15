@@ -1,6 +1,7 @@
 import type { Elysia } from 'elysia';
 import { HttpStatus } from '../utils/http-status';
 import { isHttpError, type ErrorDetails } from '../utils/http-error';
+import { isDev } from '../utils/env';
 
 type FrameworkErrorCode = 'NOT_FOUND' | 'VALIDATION' | 'PARSE' | 'UNKNOWN';
 
@@ -196,19 +197,22 @@ export function errorHandler(app: Elysia) {
     const mapped = toInfraMapping(err);
     set.status = mapped.status;
 
-    // Keep unexpected error diagnostics in server logs, but return safe message to clients.
-    console.error(
-      JSON.stringify({
-        t: new Date().toISOString(),
-        requestId,
-        path,
-        method,
-        code: mapped.code,
-        originalMessage: err.message || null,
-        originalCode: err.code || null,
-        stack: err.stack || null,
-      }),
-    );
+    // Log detailed error information only in development mode for debugging.
+    // In production/test, avoid exposing sensitive internal details.
+    if (isDev) {
+      console.error(
+        JSON.stringify({
+          t: new Date().toISOString(),
+          requestId,
+          path,
+          method,
+          code: mapped.code,
+          originalMessage: err.message || null,
+          originalCode: err.code || null,
+          stack: err.stack || null,
+        }),
+      );
+    }
 
     return buildErrorBody({
       code: mapped.code,
