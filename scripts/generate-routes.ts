@@ -371,22 +371,28 @@ ${routeLines.join('\n')}
 //   if (exitCode !== 0) throw new Error(`Failed to create directory: ${outDir}`);
 // }
 
+// async function ensureOutputDirExists(): Promise<void> {
+//   const outDir = dirnamePosix(OUTPUT_FILE);
+//   if (!outDir) return;
+
+//   const isWindows = process.platform === 'win32';
+//   const cmd = isWindows
+//     ? ['cmd', '/c', 'mkdir', outDir.replace(/\//g, '\\')]
+//     : ['mkdir', '-p', outDir];
+
+//   const proc = Bun.spawn(cmd, {
+//     stdout: 'ignore',
+//     stderr: 'inherit',
+//   });
+
+//   const exitCode = await proc.exited;
+//   if (exitCode !== 0) throw new Error(`Failed to create directory: ${outDir}`);
+// }
 async function ensureOutputDirExists(): Promise<void> {
   const outDir = dirnamePosix(OUTPUT_FILE);
   if (!outDir) return;
 
-  const isWindows = process.platform === 'win32';
-  const cmd = isWindows
-    ? ['cmd', '/c', 'mkdir', outDir.replace(/\//g, '\\')]
-    : ['mkdir', '-p', outDir];
-
-  const proc = Bun.spawn(cmd, {
-    stdout: 'ignore',
-    stderr: 'inherit',
-  });
-
-  const exitCode = await proc.exited;
-  if (exitCode !== 0) throw new Error(`Failed to create directory: ${outDir}`);
+  await Bun.$`mkdir -p ${outDir}`;
 }
 /**
  * Bun-only change detection:
