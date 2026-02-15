@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia';
+import { HttpStatus } from '../../utils/http-status';
 import { UUID, NonEmptyString255, PaginationQuery, SmallInt } from '../../schemas/common';
 import {
   listPendingBookingsCtrl,
@@ -41,7 +42,7 @@ export const pendingBookingsRoutes = new Elysia({ name: 'pending-bookings' })
     '/',
     async ({ body, set }) => {
       const res = await createPendingBookingCtrl(body as any);
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {

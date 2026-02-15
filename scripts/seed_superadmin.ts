@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { randomUUID } from 'node:crypto';
+import { createId } from '@paralleldrive/cuid2';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../src/db/config';
 import { companies, branches, roles, users } from '@/db/schemas';
@@ -97,7 +97,7 @@ async function main() {
       .where(eq(users.id, userId));
     console.log(`   ✓ Updated user details, password, and status to ACTIVE`);
   } else {
-    userId = randomUUID();
+    userId = createId();
     await db.insert(users).values({
       id: userId,
       fullname: SUPERADMIN_FULLNAME,

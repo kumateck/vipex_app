@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia';
+import { HttpStatus } from '../utils/http-status';
 import { sendMail } from '../services/mail/mailer';
 
 export const devMailRoutes = new Elysia({ name: 'dev-mail' })
@@ -16,7 +17,7 @@ export const devMailRoutes = new Elysia({ name: 'dev-mail' })
           html: query.html,
         });
 
-        set.status = 200;
+        set.status = HttpStatus.OK;
         return {
           ok: true,
           messageId: info.messageId,
@@ -24,7 +25,7 @@ export const devMailRoutes = new Elysia({ name: 'dev-mail' })
         };
       } catch (err) {
         const error = err as { message?: string; code?: string; command?: string };
-        set.status = 500;
+        set.status = HttpStatus.INTERNAL_SERVER_ERROR;
         return {
           ok: false,
           error: String(error?.message || err),
@@ -57,7 +58,7 @@ export const devMailRoutes = new Elysia({ name: 'dev-mail' })
           html: body.html,
         });
 
-        set.status = 200;
+        set.status = HttpStatus.OK;
         return {
           ok: true,
           messageId: info.messageId,
@@ -65,7 +66,7 @@ export const devMailRoutes = new Elysia({ name: 'dev-mail' })
         };
       } catch (err) {
         const error = err as { message?: string; code?: string; command?: string };
-        set.status = 500;
+        set.status = HttpStatus.INTERNAL_SERVER_ERROR;
         return {
           ok: false,
           error: String(error?.message || err),
@@ -87,5 +88,5 @@ export const devMailRoutes = new Elysia({ name: 'dev-mail' })
   // Trailing slash redirects
   .get(
     '/dev/mail-test/',
-    () => new Response(null, { status: 308, headers: { Location: '/dev/mail-test' } }),
+    () => new Response(null, { status: HttpStatus.PERMANENT_REDIRECT, headers: { Location: '/dev/mail-test' } }),
   );

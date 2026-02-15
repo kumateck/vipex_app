@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia';
+import { HttpStatus } from '../../utils/http-status';
 import { resetPasswordWithTokenSvc, validateResetTokenSvc } from './service.reset-password';
 
 export const authPasswordRoutes = new Elysia({ name: 'auth-password' })
@@ -8,7 +9,7 @@ export const authPasswordRoutes = new Elysia({ name: 'auth-password' })
     async ({ query, set }) => {
       const ok = await validateResetTokenSvc(query.token);
       if (!ok) {
-        set.status = 400;
+        set.status = HttpStatus.BAD_REQUEST;
         return { valid: false };
       }
       return { valid: true };

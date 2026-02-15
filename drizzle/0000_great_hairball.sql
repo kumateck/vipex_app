@@ -6,6 +6,8 @@ CREATE TABLE "branches" (
 	"telephone" varchar(255),
 	"address" varchar(255),
 	"email" varchar(255),
+	"latitude" double precision,
+	"longitude" double precision,
 	"is_deleted" boolean DEFAULT false NOT NULL,
 	"created_by" varchar(25) NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -480,6 +482,16 @@ CREATE TABLE "payment_rules" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "cashier_session_types" (
+	"id" varchar(25) PRIMARY KEY NOT NULL,
+	"session_type" varchar(50) NOT NULL,
+	"start_time" varchar(5) NOT NULL,
+	"end_time" varchar(5) NOT NULL,
+	"created_by" varchar(25) NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "cashier_sessions_enhanced" (
 	"id" varchar(25) PRIMARY KEY NOT NULL,
 	"cashier_id" varchar(25) NOT NULL,
@@ -761,6 +773,7 @@ CREATE INDEX "payment_rules_route_idx" ON "payment_rules" USING btree ("source_b
 CREATE INDEX "payment_rules_active_idx" ON "payment_rules" USING btree ("is_active");--> statement-breakpoint
 CREATE INDEX "payment_rules_weight_range_idx" ON "payment_rules" USING btree ("min_weight","max_weight");--> statement-breakpoint
 CREATE UNIQUE INDEX "payment_rules_company_route_uq" ON "payment_rules" USING btree ("company_id","source_branch_id","destination_branch_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "cashier_session_types_session_type_uq" ON "cashier_session_types" USING btree ("session_type");--> statement-breakpoint
 CREATE INDEX "cashier_sessions_enhanced_cashier_idx" ON "cashier_sessions_enhanced" USING btree ("cashier_id");--> statement-breakpoint
 CREATE INDEX "cashier_sessions_enhanced_branch_idx" ON "cashier_sessions_enhanced" USING btree ("branch_id");--> statement-breakpoint
 CREATE INDEX "cashier_sessions_enhanced_shift_type_idx" ON "cashier_sessions_enhanced" USING btree ("shift_type_id");--> statement-breakpoint

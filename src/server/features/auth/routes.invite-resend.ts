@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia';
+import { UUID } from '../../schemas/common';
 import { resendSetupInviteSvc } from './service.invite-resend';
 
 export const usersInviteRoutes = new Elysia({ name: 'users-invite' }).post(
@@ -8,7 +9,7 @@ export const usersInviteRoutes = new Elysia({ name: 'users-invite' }).post(
     return res;
   },
   {
-    params: t.Object({ id: t.String({ format: 'uuid' }) }),
+    params: t.Object({ id: UUID }),
     body: t.Optional(t.Object({ force: t.Optional(t.Boolean()) })),
     response: t.Object({
       ok: t.Boolean(),

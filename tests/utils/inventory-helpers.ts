@@ -1,4 +1,5 @@
 // Test helpers for inventory system
+import { createId } from '@paralleldrive/cuid2';
 import { db } from '@/db/client';
 import {
   productCategories,
@@ -37,7 +38,7 @@ export async function createTestCompany(data?: {
       name: data?.name || `Test Company ${Date.now()}`,
       type: data?.type || 'test',
       code: data?.code || `TEST${Date.now()}`,
-      createdBy: data?.createdBy || crypto.randomUUID(),
+      createdBy: data?.createdBy || createId(),
       isDeleted: false,
     })
     .returning();
@@ -56,7 +57,7 @@ export async function createTestBranch(data: {
       companyId: data.companyId,
       name: data.name || `Test Branch ${Date.now()}`,
       type: data.type || 'test',
-      createdBy: data.createdBy || crypto.randomUUID(),
+      createdBy: data.createdBy || createId(),
       isDeleted: false,
     })
     .returning();
@@ -73,7 +74,7 @@ export async function createTestRole(data: {
     .values({
       companyId: data.companyId,
       name: data.name || `Test Role ${Date.now()}`,
-      createdBy: data.createdBy || crypto.randomUUID(),
+      createdBy: data.createdBy || createId(),
       isDeleted: false,
     })
     .returning();
@@ -98,7 +99,7 @@ export async function createTestUser(data: {
       fullname: data.fullname || `Test User ${Date.now()}`,
       email: data.email || `test${Date.now()}@example.com`,
       telephone: data.telephone || `+233${Math.floor(Math.random() * 1000000000)}`,
-      createdBy: data.createdBy || crypto.randomUUID(),
+      createdBy: data.createdBy || createId(),
       status: UserStatus.ACTIVE,
     })
     .returning();
@@ -117,7 +118,7 @@ export async function createTestProductCategory(data: {
       companyId: data.companyId,
       name: data.name || `Test Category ${Date.now()}`,
       description: data.description,
-      createdBy: data.createdBy || crypto.randomUUID(),
+      createdBy: data.createdBy || createId(),
       isDeleted: false,
     })
     .returning();
@@ -144,7 +145,7 @@ export async function createTestProduct(data: {
       description: data.description,
       unitOfMeasure: data.unitOfMeasure ?? UnitOfMeasure.PIECE,
       minStockLevel: data.minStockLevel ?? BigInt(10),
-      createdBy: data.createdBy || crypto.randomUUID(),
+      createdBy: data.createdBy || createId(),
       isDeleted: false,
     })
     .returning();
@@ -167,7 +168,7 @@ export async function createTestInventoryLocation(data: {
       name: data.name || `Test Location ${Date.now()}`,
       description: data.description,
       isDeleted: data.isDeleted ?? false,
-      createdBy: data.createdBy || crypto.randomUUID(),
+      createdBy: data.createdBy || createId(),
     })
     .returning();
   return location;
@@ -213,7 +214,7 @@ export async function createTestStockMovement(data: {
       referenceType: data.referenceType,
       referenceId: data.referenceId,
       notes: data.notes,
-      createdBy: data.createdBy || crypto.randomUUID(),
+      createdBy: data.createdBy || createId(),
     })
     .returning();
   return movement;
@@ -237,7 +238,7 @@ export async function createTestStockAdjustment(data: {
       reason: data.reason ?? StockAdjustmentReason.RECOUNT,
       quantityChange: data.quantityChange ?? BigInt(10),
       notes: data.notes,
-      createdBy: data.createdBy || crypto.randomUUID(),
+      createdBy: data.createdBy || createId(),
     })
     .returning();
   return adjustment;
@@ -263,7 +264,7 @@ export async function createTestStockTransfer(data: {
       quantity: data.quantity ?? BigInt(10),
       status: data.status ?? TransferStatus.PENDING,
       notes: data.notes,
-      createdBy: data.createdBy || crypto.randomUUID(),
+      createdBy: data.createdBy || createId(),
     })
     .returning();
   return transfer;

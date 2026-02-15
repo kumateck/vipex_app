@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia';
+import { HttpStatus } from '../../utils/http-status';
 
 import { createUserSvc, getUserSvc, listUsersSvc, updateUserSvc } from './service';
 import { decodeCursor, encodeCursor } from '@/server/utils/cursor';
@@ -50,7 +51,7 @@ export const usersRoutes = new Elysia({ name: 'users' })
     '/',
     async ({ body, set }) => {
       const res = await createUserSvc(body);
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {

@@ -1,4 +1,6 @@
 import { Elysia, t } from 'elysia';
+import { HttpStatus } from '../../utils/http-status';
+import { UUID } from '../../schemas/common';
 import {
   closeSessionCtrl,
   createSessionTypeCtrl,
@@ -18,7 +20,7 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
       const res = await createSessionTypeCtrl(
         body as { sessionType: string; startTime: string; endTime: string; createdBy: string },
       );
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {
@@ -26,7 +28,7 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
         sessionType: t.String({ minLength: 1, maxLength: 50 }),
         startTime: t.String({ minLength: 4, maxLength: 5 }), // "08:00"
         endTime: t.String({ minLength: 4, maxLength: 5 }),
-        createdBy: t.String({ format: 'uuid' }),
+        createdBy: UUID,
       }),
       detail: { tags: ['Cashiers'], summary: 'Create session type' },
     },
@@ -47,15 +49,15 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
       query: t.Object({
         limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
         after: t.Optional(t.String()),
-        cashierId: t.Optional(t.String({ format: 'uuid' })),
-        branchId: t.Optional(t.String({ format: 'uuid' })),
+        cashierId: t.Optional(UUID),
+        branchId: t.Optional(UUID),
         activeOnly: t.Optional(t.Boolean()),
       }),
       detail: { tags: ['Cashiers'], summary: 'List cashier sessions' },
     },
   )
   .get('/sessions/:id', async ({ params }) => getSessionByIdCtrl(params.id), {
-    params: t.Object({ id: t.String({ format: 'uuid' }) }),
+    params: t.Object({ id: UUID }),
     detail: { tags: ['Cashiers'], summary: 'Get session' },
   })
   .post(
@@ -70,14 +72,14 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
           openingBalanceCedis?: number | string | null;
         },
       );
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {
       body: t.Object({
-        cashierId: t.String({ format: 'uuid' }),
-        branchId: t.String({ format: 'uuid' }),
-        sessionTypeId: t.String({ format: 'uuid' }),
+        cashierId: UUID,
+        branchId: UUID,
+        sessionTypeId: UUID,
         startTime: t.String({ format: 'date-time' }),
         openingBalanceCedis: t.Optional(t.Union([t.Number(), t.String()])),
       }),
@@ -92,7 +94,7 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
         body as { endTime: string; closingBalanceCedis?: number | string | null },
       ),
     {
-      params: t.Object({ id: t.String({ format: 'uuid' }) }),
+      params: t.Object({ id: UUID }),
       body: t.Object({
         endTime: t.String({ format: 'date-time' }),
         closingBalanceCedis: t.Optional(t.Union([t.Number(), t.String()])),

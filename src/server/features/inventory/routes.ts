@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia';
+import { HttpStatus } from '../../utils/http-status';
 import { UUID, NonEmptyString255, PaginationQuery, SmallInt } from '@/server/schemas/common';
 import {
   listProductCategoriesCtrl,
@@ -52,7 +53,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     '/categories',
     async ({ body, set }) => {
       const res = await createProductCategoryCtrl(body);
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {
@@ -106,7 +107,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     '/products',
     async ({ body, set }) => {
       const res = await createProductCtrl(body);
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {
@@ -163,7 +164,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     '/locations',
     async ({ body, set }) => {
       const res = await createInventoryLocationCtrl(body);
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {
@@ -241,7 +242,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     '/stock-movements',
     async ({ body, set }) => {
       const res = await createStockMovementCtrl(body);
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {
@@ -284,7 +285,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     '/stock-adjustments',
     async ({ body, set }) => {
       const res = await createStockAdjustmentCtrl(body);
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {
@@ -329,7 +330,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     '/stock-transfers',
     async ({ body, set }) => {
       const res = await createStockTransferCtrl(body);
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {

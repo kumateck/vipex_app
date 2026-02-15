@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { randomUUID } from 'node:crypto';
+import { createId } from '@paralleldrive/cuid2';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../src/db/config';
 import { companies, branches, roles, users } from '@/db/schemas';
@@ -8,7 +8,7 @@ import { UserStatus } from '@/db/schemas/enums';
 
 async function main() {
   // Deterministic "sys" user id for cross-referencing created_by, even before user insert.
-  const sysUserId = randomUUID();
+  const sysUserId = createId();
 
   const COMPANY_NAME = 'Vipex Co. LTD';
   const COMPANY_CODE = 'VIPEX';
@@ -36,9 +36,9 @@ async function main() {
       .limit(1);
 
     if (existing.length) {
-      companyId = existing[0]?.id ?? randomUUID();
+      companyId = existing[0]?.id ?? createId();
     } else {
-      companyId = randomUUID();
+      companyId = createId();
       await db.insert(companies).values({
         id: companyId,
         name: COMPANY_NAME,
@@ -62,9 +62,9 @@ async function main() {
       .limit(1);
 
     if (existing.length) {
-      branchId = existing[0]?.id ?? randomUUID();
+      branchId = existing[0]?.id ?? createId();
     } else {
-      branchId = randomUUID();
+      branchId = createId();
       await db.insert(branches).values({
         id: branchId,
         name: BRANCH_NAME,
@@ -90,9 +90,9 @@ async function main() {
       .limit(1);
 
     if (existing.length) {
-      roleId = existing[0]?.id ?? randomUUID();
+      roleId = existing[0]?.id ?? createId();
     } else {
-      roleId = randomUUID();
+      roleId = createId();
       await db.insert(roles).values({
         id: roleId,
         companyId,
@@ -114,7 +114,7 @@ async function main() {
       .limit(1);
 
     if (existing.length) {
-      userId = existing[0]?.id ?? randomUUID();
+      userId = existing[0]?.id ?? createId();
       console.log(`User already exists: ${SYS_EMAIL} (${userId})`);
     } else {
       userId = sysUserId; // keep consistent with created_by references above

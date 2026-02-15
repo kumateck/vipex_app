@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia';
+import { HttpStatus } from '../../utils/http-status';
 
 import {
   createStatusSvc,
@@ -44,7 +45,7 @@ export const statusesRoutes = new Elysia({ name: 'statuses' })
     '/',
     async ({ body, set }) => {
       const res = await createStatusSvc(body);
-      set.status = 201;
+      set.status = HttpStatus.CREATED;
       return res;
     },
     {

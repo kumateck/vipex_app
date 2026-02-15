@@ -73,6 +73,12 @@ const EnvSchema = z.object({
   SMTP_DEBUG: z.coerce.boolean().default(false), // Log SMTP traffic (no credentials)
   // App URLs
   APP_BASE_URL: z.string().default(`http://localhost:${process.env.PORT || 3000}`),
+  // Redis / rate limiting
+  REDIS_URL: z.string().url().optional(),
+  RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
+  // PostGIS
+  POSTGIS_REQUIRED: z.coerce.boolean().default(false),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
+import { createId } from '@paralleldrive/cuid2';
 import { http, json } from '../utils/request';
 import { HttpStatus } from '../../src/server/utils/http-status';
 import {
@@ -20,7 +21,7 @@ describe('Stock Transfers API', () => {
   let testUserId: string;
 
   beforeAll(async () => {
-    testUserId = crypto.randomUUID();
+    testUserId = createId();
     testCompany = (await createTestCompany({ createdBy: testUserId }))!;
     testBranch = (await createTestBranch({ companyId: testCompany.id, createdBy: testUserId }))!;
     testProduct = (await createTestProduct({ companyId: testCompany.id, createdBy: testUserId }))!;

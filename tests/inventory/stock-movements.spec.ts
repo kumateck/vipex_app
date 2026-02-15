@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
+import { createId } from '@paralleldrive/cuid2';
 import { http, json } from '../utils/request';
 import { HttpStatus } from '../../src/server/utils/http-status';
 import {
@@ -19,7 +20,7 @@ describe('Stock Movements API', () => {
   let testUserId: string;
 
   beforeAll(async () => {
-    testUserId = crypto.randomUUID();
+    testUserId = createId();
     testCompany = (await createTestCompany({ createdBy: testUserId }))!;
     testBranch = (await createTestBranch({ companyId: testCompany.id, createdBy: testUserId }))!;
     testProduct = (await createTestProduct({ companyId: testCompany.id, createdBy: testUserId }))!;
@@ -152,7 +153,7 @@ describe('Stock Movements API', () => {
   });
 
   test('POST /v1/inventory/stock-movements - includes reference information', async () => {
-    const referenceId = crypto.randomUUID();
+    const referenceId = createId();
     const movementData = {
       productId: testProduct!.id,
       locationId: testLocation!.id,

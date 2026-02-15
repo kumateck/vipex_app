@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
+import { createId } from '@paralleldrive/cuid2';
 import { http, json } from '../utils/request';
 import { HttpStatus } from '../../src/server/utils/http-status';
 import {
@@ -16,7 +17,7 @@ describe('Inventory Reports API', () => {
   let testUserId: string;
 
   beforeAll(async () => {
-    testUserId = crypto.randomUUID();
+    testUserId = createId();
     const company = await createTestCompany({ createdBy: testUserId });
     if (!company) throw new Error('Failed to create test company');
     testCompany = company;

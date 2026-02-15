@@ -1,4 +1,5 @@
 import { t } from 'elysia';
+import { UUID } from '../../schemas/common';
 
 export const LoginBody = t.Object({
   email: t.String({ format: 'email', maxLength: 255 }),
@@ -13,13 +14,13 @@ export const TokenPair = t.Object({
 export const LoginResponse = t.Object({
   tokens: TokenPair,
   user: t.Object({
-    id: t.String({ format: 'uuid' }),
+    id: UUID,
     email: t.String({ format: 'email' }),
     fullname: t.String(),
     company: t.Optional(
       t.Union([
         t.Object({
-          id: t.String({ format: 'uuid' }),
+          id: UUID,
           name: t.String(),
         }),
         t.Null(),
@@ -28,7 +29,7 @@ export const LoginResponse = t.Object({
     branch: t.Optional(
       t.Union([
         t.Object({
-          id: t.String({ format: 'uuid' }),
+          id: UUID,
           name: t.String(),
         }),
         t.Null(),
@@ -37,7 +38,7 @@ export const LoginResponse = t.Object({
     role: t.Optional(
       t.Union([
         t.Object({
-          id: t.String({ format: 'uuid' }),
+          id: UUID,
           name: t.String(),
         }),
         t.Null(),

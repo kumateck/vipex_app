@@ -4,6 +4,7 @@ import {
   boolean,
   timestamp,
   smallint,
+  doublePrecision,
   index,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
@@ -41,6 +42,8 @@ export const branches = pgTable(
     telephone: varchar('telephone', { length: 255 }),
     address: varchar('address', { length: 255 }),
     email: varchar('email', { length: 255 }),
+    latitude: doublePrecision('latitude'),
+    longitude: doublePrecision('longitude'),
     isDeleted: boolean('is_deleted').notNull().default(false),
     createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),

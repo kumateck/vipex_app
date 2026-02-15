@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
+import { createId } from '@paralleldrive/cuid2';
 import { http, json } from '../utils/request';
 import { HttpStatus } from '../../src/server/utils/http-status';
 import {
@@ -15,7 +16,7 @@ describe('Product API', () => {
   let testUserId: string;
 
   beforeAll(async () => {
-    testUserId = crypto.randomUUID();
+    testUserId = createId();
     const company = await createTestCompany({ createdBy: testUserId });
     if (!company) throw new Error('Failed to create test company');
     testCompany = company;
@@ -176,7 +177,7 @@ describe('Product API', () => {
   });
 
   test('GET /v1/inventory/products/:id - returns 404 for non-existent product', async () => {
-    const fakeId = crypto.randomUUID();
+    const fakeId = createId();
     const res = await http('GET', `/v1/inventory/products/${fakeId}`);
 
     expect(res.status).toBe(HttpStatus.NOT_FOUND);
@@ -258,7 +259,7 @@ describe('Product API', () => {
   });
 
   test('DELETE /v1/inventory/products/:id - returns 404 for non-existent product', async () => {
-    const fakeId = crypto.randomUUID();
+    const fakeId = createId();
     const res = await http('DELETE', `/v1/inventory/products/${fakeId}`);
 
     expect(res.status).toBe(HttpStatus.NOT_FOUND);
