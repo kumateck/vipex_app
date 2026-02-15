@@ -357,12 +357,30 @@ ${routeLines.join('\n')}
 
 /* ---------------------------------- I/O ---------------------------------- */
 
+// async function ensureOutputDirExists(): Promise<void> {
+//   const outDir = dirnamePosix(OUTPUT_FILE);
+//   if (!outDir) return;
+
+//   // Bun-only: create directory via OS mkdir using Bun.spawn (macOS/Linux).
+//   const proc = Bun.spawn(['mkdir', '-p', outDir], {
+//     stdout: 'ignore',
+//     stderr: 'inherit',
+//   });
+
+//   const exitCode = await proc.exited;
+//   if (exitCode !== 0) throw new Error(`Failed to create directory: ${outDir}`);
+// }
+
 async function ensureOutputDirExists(): Promise<void> {
   const outDir = dirnamePosix(OUTPUT_FILE);
   if (!outDir) return;
 
-  // Bun-only: create directory via OS mkdir using Bun.spawn (macOS/Linux).
-  const proc = Bun.spawn(['mkdir', '-p', outDir], {
+  const isWindows = process.platform === 'win32';
+  const cmd = isWindows
+    ? ['cmd', '/c', 'mkdir', outDir.replace(/\//g, '\\')]
+    : ['mkdir', '-p', outDir];
+
+  const proc = Bun.spawn(cmd, {
     stdout: 'ignore',
     stderr: 'inherit',
   });
@@ -370,7 +388,6 @@ async function ensureOutputDirExists(): Promise<void> {
   const exitCode = await proc.exited;
   if (exitCode !== 0) throw new Error(`Failed to create directory: ${outDir}`);
 }
-
 /**
  * Bun-only change detection:
  * Re-scan using Bun.Glob and compute a cheap signature for each discovered file.
