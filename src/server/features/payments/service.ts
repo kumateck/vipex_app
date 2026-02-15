@@ -50,13 +50,13 @@ export async function createPaymentSvc(input: {
     cashierType: input.cashierType,
     method: input.method,
     cashierUserId: input.cashierUserId,
-    grossAmountPsw: tax.principal,
-    netAmountPsw: tax.net,
-    vatPsw: tax.vat,
-    getfundPsw: tax.getfund,
-    nhilPsw: tax.nhil,
-    covidPsw: tax.covid,
-    taxTotalPsw: tax.totalTax,
+    grossAmountPsw: Number(tax.principal),
+    netAmountPsw: Number(tax.net),
+    vatPsw: Number(tax.vat),
+    getfundPsw: Number(tax.getfund),
+    nhilPsw: Number(tax.nhil),
+    covidPsw: Number(tax.covid),
+    taxTotalPsw: Number(tax.totalTax),
     receivedAt: input.receivedAt ? new Date(input.receivedAt) : new Date(),
     notes: input.notes ?? null,
     receiptNo: input.receiptNo ?? null,
@@ -79,6 +79,6 @@ export async function listPaymentsForParcelSvc(parcelId: string): Promise<Paymen
   return listPaymentsForParcelRepo(parcelId);
 }
 
-export async function sumPrincipalPaidForParcelSvc(parcelId: string): Promise<bigint> {
+export async function sumPrincipalPaidForParcelSvc(parcelId: string): Promise<number> {
   return sumPaymentsForParcelComponentRepo(parcelId, PaymentComponent.PRINCIPAL);
 }

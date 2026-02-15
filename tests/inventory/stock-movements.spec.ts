@@ -67,7 +67,7 @@ describe('Stock Movements API', () => {
       companyId: testCompany.id,
       productId: product!.id,
       locationId: testLocation.id,
-      quantity: BigInt(100),
+      quantity: 100,
     });
 
     const movementData = {
@@ -239,7 +239,7 @@ describe('Stock Movements API', () => {
       companyId: testCompany.id,
       productId: product!.id,
       locationId: testLocation.id,
-      quantity: BigInt(100),
+      quantity: 100,
     });
 
     // Create receipt

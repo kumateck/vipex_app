@@ -17,8 +17,23 @@ function createRedisClient(url: string): {
   incr(key: string): Promise<number>;
   expire(key: string, seconds: number): Promise<number>;
 } | null {
-  if (typeof Bun === 'undefined' || typeof Bun.Redis !== 'function') return null;
-  return new Bun.Redis(url);
+  if (typeof Bun === 'undefined') return null;
+  const bunWithRedis = Bun as typeof Bun & {
+    redis?: (connection: string) => {
+      get(key: string): Promise<string | null>;
+      set(
+        key: string,
+        value: string,
+        modeOrOptions?: 'EX' | { ex: number },
+        seconds?: number,
+      ): Promise<unknown>;
+      del(key: string): Promise<number>;
+      incr(key: string): Promise<number>;
+      expire(key: string, seconds: number): Promise<number>;
+    };
+  };
+  if (typeof bunWithRedis.redis !== 'function') return null;
+  return bunWithRedis.redis(url);
 }
 
 export function getCacheStore(): CacheStore {

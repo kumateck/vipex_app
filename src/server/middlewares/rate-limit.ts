@@ -15,7 +15,7 @@ function toClientKey(ipHeader: string | null, path: string): string {
   return `rl:${ip}:${path}`;
 }
 
-export function createRateLimitPlugin(options: RateLimitOptions): Elysia {
+export function createRateLimitPlugin(options: RateLimitOptions) {
   return new Elysia({ name: 'rate-limit' }).as('global').onRequest(async ({ request, set }) => {
     const path = new URL(request.url).pathname;
     if (path === '/health' || path.startsWith('/docs')) return;

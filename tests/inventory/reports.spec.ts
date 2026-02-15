@@ -44,7 +44,7 @@ describe('Inventory Reports API', () => {
       companyId: testCompany.id,
       sku: `LOW-${Date.now()}`,
       name: 'Low Stock Product',
-      minStockLevel: BigInt(50),
+      minStockLevel: 50,
       createdBy: testUserId,
     });
     if (!lowStockProduct) throw new Error('Failed to create low stock product');
@@ -52,7 +52,7 @@ describe('Inventory Reports API', () => {
     await createTestStockLevel({
       productId: lowStockProduct.id,
       locationId: location.id,
-      quantity: BigInt(30), // Below minStockLevel of 50
+      quantity: 30, // Below minStockLevel of 50
       companyId: testCompany.id,
     });
 
@@ -61,14 +61,14 @@ describe('Inventory Reports API', () => {
       companyId: testCompany.id,
       sku: `ADEQUATE-${Date.now()}`,
       name: 'Adequate Stock Product',
-      minStockLevel: BigInt(50),
+      minStockLevel: 50,
       createdBy: testUserId,
     });
 
     await createTestStockLevel({
       productId: adequateProduct!.id,
       locationId: location.id,
-      quantity: BigInt(100), // Above minStockLevel
+      quantity: 100, // Above minStockLevel
       companyId: testCompany.id,
     });
 
@@ -105,14 +105,14 @@ describe('Inventory Reports API', () => {
     const product = await createTestProduct({
       companyId: testCompany.id,
       sku: `BRANCH-FILTER-${Date.now()}`,
-      minStockLevel: BigInt(100),
+      minStockLevel: 100,
       createdBy: testUserId,
     });
 
     await createTestStockLevel({
       productId: product!.id,
       locationId: location2!.id,
-      quantity: BigInt(50), // Low stock
+      quantity: 50, // Low stock
       companyId: testCompany.id,
     });
 
@@ -137,14 +137,14 @@ describe('Inventory Reports API', () => {
     const product = await createTestProduct({
       companyId: testCompany.id,
       sku: `DEFICIT-${Date.now()}`,
-      minStockLevel: BigInt(200),
+      minStockLevel: 200,
       createdBy: testUserId,
     });
 
     await createTestStockLevel({
       productId: product!.id,
       locationId: location!.id,
-      quantity: BigInt(75),
+      quantity: 75,
       companyId: testCompany.id,
     });
 
@@ -178,16 +178,16 @@ describe('Inventory Reports API', () => {
     const product = await createTestProduct({
       companyId: testCompany.id,
       sku: `DELETED-${Date.now()}`,
-      minStockLevel: BigInt(100),
+      minStockLevel: 100,
       createdBy: testUserId,
     });
 
     await createTestStockLevel({
       productId: product!.id,
       locationId: location!.id,
-      quantity: BigInt(50),
+      quantity: 50,
       companyId: testCompany.id,
-      // quantityAvailable: BigInt(50),
+      // quantityAvailable: 50,
     });
 
     // Delete the product
@@ -233,7 +233,7 @@ describe('Inventory Reports API', () => {
     const product = await createTestProduct({
       companyId: testCompany.id,
       sku: `MULTI-LOC-${Date.now()}`,
-      minStockLevel: BigInt(100),
+      minStockLevel: 100,
       createdBy: testUserId,
     });
 
@@ -241,7 +241,7 @@ describe('Inventory Reports API', () => {
     await createTestStockLevel({
       productId: product!.id,
       locationId: location1!.id,
-      quantity: BigInt(30),
+      quantity: 30,
       companyId: testCompany.id,
     });
 
@@ -249,7 +249,7 @@ describe('Inventory Reports API', () => {
     await createTestStockLevel({
       productId: product!.id,
       locationId: location2!.id,
-      quantity: BigInt(150),
+      quantity: 150,
       companyId: testCompany.id,
     });
 
@@ -283,14 +283,14 @@ describe('Inventory Reports API', () => {
       companyId: testCompany.id,
       sku: `NAMED-${Date.now()}`,
       name: 'Named Product for Report',
-      minStockLevel: BigInt(50),
+      minStockLevel: 50,
       createdBy: testUserId,
     });
 
     await createTestStockLevel({
       productId: product!.id,
       locationId: location!.id,
-      quantity: BigInt(20),
+      quantity: 20,
       companyId: testCompany.id,
     });
 

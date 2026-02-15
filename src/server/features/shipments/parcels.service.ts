@@ -61,8 +61,8 @@ export async function createParcelSvc(input: {
     statusId: input.statusId,
     parcelDetails: input.parcelDetails,
     parcelContent: input.parcelContent,
-    parcelValuePsw,
-    plannedToBePaidPsw,
+    parcelValuePsw: Number(parcelValuePsw),
+    plannedToBePaidPsw: Number(plannedToBePaidPsw),
     method: input.method,
     createdBy: input.createdBy ?? null,
     cashierSessionId: input.cashierSessionId ?? null,
@@ -84,19 +84,19 @@ export async function updateParcelSvc(
 ): Promise<{ id: string }> {
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
-  const setPatch: Partial<typeof cur> & { parcelValuePsw?: bigint } = {};
+  const setPatch: Partial<typeof cur> & { parcelValuePsw?: number } = {};
   if (patch.statusId) setPatch.statusId = patch.statusId;
   if (patch.parcelDetails) setPatch.parcelDetails = patch.parcelDetails;
   if (patch.parcelContent) setPatch.parcelContent = patch.parcelContent;
   if (patch.parcelValueCedis !== undefined)
     setPatch.parcelValuePsw =
-      patch.parcelValueCedis != null ? toPesewas(patch.parcelValueCedis) : 0n;
+      patch.parcelValueCedis != null ? Number(toPesewas(patch.parcelValueCedis)) : 0;
   if (patch.pickupLocationId !== undefined) setPatch.pickupLocationId = patch.pickupLocationId;
   if (patch.method !== undefined) setPatch.method = patch.method;
   if (patch.taxReportConfirmation !== undefined)
     setPatch.taxReportConfirmation = patch.taxReportConfirmation;
 
-  const updated = await updateParcelRepo(id, setPatch as Partial<typeof cur>);
+  const updated = await updateParcelRepo(id, setPatch);
   if (!updated) throw NotFound('Parcel not found');
   return { id: updated.id };
 }
@@ -122,7 +122,7 @@ export async function setPlannedToBePaidSvc(id: string, plannedCedis: number | s
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
   const plannedToBePaidPsw = toPesewas(plannedCedis);
-  const updated = await updateParcelRepo(id, { plannedToBePaidPsw });
+  const updated = await updateParcelRepo(id, { plannedToBePaidPsw: Number(plannedToBePaidPsw) });
   if (!updated) throw NotFound('Parcel not found');
   return { id: updated.id, plannedToBePaidCedis: Number(plannedToBePaidPsw) / 100 };
 }

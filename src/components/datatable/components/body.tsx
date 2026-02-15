@@ -1,13 +1,16 @@
 import { type ColumnDef, type Table, flexRender } from '@tanstack/react-table';
 import { TableBody, TableCell, TableRow } from '@/components/ui/table';
 
-interface DataTableBodyProps<TData> {
+interface DataTableBodyProps<TData, TValue> {
   table: Table<TData>;
   isLoading: boolean;
-  columns: ColumnDef<TData, unknown>[];
+  columns: ColumnDef<TData, TValue>[];
 }
 
-export function DataTableBody<TData>({ table, isLoading }: DataTableBodyProps<TData>) {
+export function DataTableBody<TData, TValue>({
+  table,
+  isLoading,
+}: DataTableBodyProps<TData, TValue>) {
   const rows = table.getRowModel().rows;
 
   if (isLoading) {

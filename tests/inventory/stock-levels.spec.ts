@@ -42,7 +42,7 @@ describe('Stock Levels API', () => {
       companyId: testCompany.id,
       productId: testProduct.id,
       locationId: testLocation.id,
-      quantity: BigInt(100),
+      quantity: 100,
     });
 
     const res = await http('GET', `/v1/inventory/stock-levels?locationId=${testLocation.id}`);
@@ -70,7 +70,7 @@ describe('Stock Levels API', () => {
       companyId: testCompany.id,
       productId: product2!.id,
       locationId: location2!.id,
-      quantity: BigInt(50),
+      quantity: 50,
     });
 
     const res = await http('GET', `/v1/inventory/stock-levels?productId=${product2!.id}`);
@@ -104,13 +104,13 @@ describe('Stock Levels API', () => {
       companyId: testCompany.id,
       productId: product!.id,
       locationId: location1!.id,
-      quantity: BigInt(100),
+      quantity: 100,
     });
     await createTestStockLevel({
       companyId: testCompany.id,
       productId: product!.id,
       locationId: location2!.id,
-      quantity: BigInt(50),
+      quantity: 50,
     });
 
     const res = await http('GET', `/v1/inventory/products/${product!.id}/stock`);
@@ -221,7 +221,7 @@ describe('Stock Levels API', () => {
       companyId: testCompany.id,
       productId: product!.id,
       locationId: location!.id,
-      quantity: BigInt(50),
+      quantity: 50,
     });
 
     // Try to issue more than available
@@ -258,7 +258,7 @@ describe('Stock Levels API', () => {
       companyId: testCompany.id,
       productId: product!.id,
       locationId: location!.id,
-      quantity: BigInt(100),
+      quantity: 100,
     });
 
     const res = await http('GET', `/v1/inventory/products/${product!.id}/stock`);
@@ -290,7 +290,7 @@ describe('Stock Levels API', () => {
         companyId: testCompany.id,
         productId: product!.id,
         locationId: location!.id,
-        quantity: BigInt(10 * (i + 1)),
+        quantity: 10 * (i + 1),
       });
     }
 

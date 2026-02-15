@@ -13,6 +13,7 @@ import { pendingBookings } from './shipments';
 import { receiptTemplates, generatedReceipts } from './receipts';
 import { customers, cards, customerCards } from './customers';
 import { cashierSessionTypes, cashierSessions } from './shifts';
+import { shiftTypes } from './shifts';
 import { bookings, parcels, consignments, consignmentItems } from './shipments';
 import { deliveries } from './deliveries';
 import { payments } from './payments';
@@ -95,9 +96,9 @@ export const cashierSessionTypesRelations = relations(cashierSessionTypes, ({ ma
 export const cashierSessionsRelations = relations(cashierSessions, ({ one }) => ({
   cashier: one(users, { fields: [cashierSessions.cashierId], references: [users.id] }),
   branch: one(branches, { fields: [cashierSessions.branchId], references: [branches.id] }),
-  sessionType: one(cashierSessionTypes, {
-    fields: [cashierSessions.sessionTypeId],
-    references: [cashierSessionTypes.id],
+  shiftType: one(shiftTypes, {
+    fields: [cashierSessions.shiftTypeId],
+    references: [shiftTypes.id],
   }),
 }));
 

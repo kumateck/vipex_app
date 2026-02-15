@@ -132,7 +132,7 @@ export async function createTestProduct(data: {
   name?: string;
   description?: string;
   unitOfMeasure?: number;
-  minStockLevel?: bigint;
+  minStockLevel?: number;
   createdBy?: string;
 }) {
   const [product] = await db
@@ -144,7 +144,7 @@ export async function createTestProduct(data: {
       name: data.name || `Test Product ${Date.now()}`,
       description: data.description,
       unitOfMeasure: data.unitOfMeasure ?? UnitOfMeasure.PIECE,
-      minStockLevel: data.minStockLevel ?? BigInt(10),
+      minStockLevel: data.minStockLevel ?? 10,
       createdBy: data.createdBy || createId(),
       isDeleted: false,
     })
@@ -178,7 +178,7 @@ export async function createTestStockLevel(data: {
   companyId: string;
   productId: string;
   locationId: string;
-  quantity?: bigint;
+  quantity?: number;
 }) {
   const [stockLevel] = await db
     .insert(stockLevels)
@@ -186,7 +186,7 @@ export async function createTestStockLevel(data: {
       companyId: data.companyId,
       productId: data.productId,
       locationId: data.locationId,
-      quantity: data.quantity ?? BigInt(100),
+      quantity: data.quantity ?? 100,
     })
     .returning();
   return stockLevel;
@@ -197,7 +197,7 @@ export async function createTestStockMovement(data: {
   productId: string;
   locationId: string;
   movementType?: number;
-  quantity?: bigint;
+  quantity?: number;
   referenceType?: string;
   referenceId?: string;
   notes?: string;
@@ -210,7 +210,7 @@ export async function createTestStockMovement(data: {
       productId: data.productId,
       locationId: data.locationId,
       movementType: data.movementType ?? StockMovementType.RECEIPT,
-      quantity: data.quantity ?? BigInt(10),
+      quantity: data.quantity ?? 10,
       referenceType: data.referenceType,
       referenceId: data.referenceId,
       notes: data.notes,
@@ -225,7 +225,7 @@ export async function createTestStockAdjustment(data: {
   productId: string;
   locationId: string;
   reason?: number;
-  quantityChange?: bigint;
+  quantityChange?: number;
   notes?: string;
   createdBy?: string;
 }) {
@@ -236,7 +236,7 @@ export async function createTestStockAdjustment(data: {
       productId: data.productId,
       locationId: data.locationId,
       reason: data.reason ?? StockAdjustmentReason.RECOUNT,
-      quantityChange: data.quantityChange ?? BigInt(10),
+      quantityChange: data.quantityChange ?? 10,
       notes: data.notes,
       createdBy: data.createdBy || createId(),
     })
@@ -249,7 +249,7 @@ export async function createTestStockTransfer(data: {
   productId: string;
   fromLocationId: string;
   toLocationId: string;
-  quantity?: bigint;
+  quantity?: number;
   status?: number;
   notes?: string;
   createdBy?: string;
@@ -261,7 +261,7 @@ export async function createTestStockTransfer(data: {
       productId: data.productId,
       fromLocationId: data.fromLocationId,
       toLocationId: data.toLocationId,
-      quantity: data.quantity ?? BigInt(10),
+      quantity: data.quantity ?? 10,
       status: data.status ?? TransferStatus.PENDING,
       notes: data.notes,
       createdBy: data.createdBy || createId(),

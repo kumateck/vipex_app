@@ -29,7 +29,7 @@ export async function listSessionsCtrl(q: {
   const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
   const after = q.after
     ? (JSON.parse(Buffer.from(q.after, 'base64url').toString('utf8')) as {
-        startTime: string;
+        scheduledStartTime: string;
         id: string;
       })
     : null;
@@ -43,8 +43,8 @@ export async function listSessionsCtrl(q: {
   return {
     data: data.map((s) => ({
       ...s,
-      startTime: s.startTime.toISOString(),
-      endTime: s.endTime ? s.endTime.toISOString() : null,
+      scheduledStartTime: s.scheduledStartTime.toISOString(),
+      actualEndTime: s.actualEndTime ? s.actualEndTime.toISOString() : null,
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
     })),

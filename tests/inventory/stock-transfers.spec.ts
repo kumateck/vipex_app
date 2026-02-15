@@ -192,7 +192,7 @@ describe('Stock Transfers API', () => {
       companyId: testCompany.id,
       productId: product!.id,
       locationId: testLocation1.id,
-      quantity: BigInt(100),
+      quantity: 100,
     });
 
     // Create transfer
@@ -323,7 +323,7 @@ describe('Stock Transfers API', () => {
       companyId: testCompany.id,
       productId: product!.id,
       locationId: testLocation1.id,
-      quantity: BigInt(10),
+      quantity: 10,
     });
 
     // Create transfer requesting more than available

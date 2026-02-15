@@ -42,11 +42,11 @@ export type SessionRow = {
   id: string;
   cashierId: string;
   branchId: string;
-  sessionTypeId: string;
-  startTime: Date;
-  endTime: Date | null;
-  openingBalancePsw: bigint;
-  closingBalancePsw: bigint | null;
+  shiftTypeId: string | null;
+  scheduledStartTime: Date;
+  actualEndTime: Date | null;
+  openingBalancePsw: number;
+  closingBalancePsw: number | null;
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -54,7 +54,7 @@ export type SessionRow = {
 
 export type ListSessionsParams = {
   limit: number;
-  after?: { startTime: string; id: string } | null;
+  after?: { scheduledStartTime: string; id: string } | null;
   cashierId?: string | null;
   branchId?: string | null;
   activeOnly?: boolean | null;
@@ -62,7 +62,7 @@ export type ListSessionsParams = {
 
 export async function listSessionsRepo(
   p: ListSessionsParams,
-): Promise<{ data: SessionRow[]; nextCursor: { startTime: string; id: string } | null }> {
+): Promise<{ data: SessionRow[]; nextCursor: { scheduledStartTime: string; id: string } | null }> {
   const where: (ReturnType<typeof eq> | ReturnType<typeof and> | ReturnType<typeof or>)[] = [];
   if (p.cashierId) where.push(eq(cashierSessions.cashierId, p.cashierId));
   if (p.branchId) where.push(eq(cashierSessions.branchId, p.branchId));
@@ -70,9 +70,9 @@ export async function listSessionsRepo(
   if (p.after) {
     where.push(
       or(
-        gt(cashierSessions.startTime, new Date(p.after.startTime)),
+        gt(cashierSessions.scheduledStartTime, new Date(p.after.scheduledStartTime)),
         and(
-          eq(cashierSessions.startTime, new Date(p.after.startTime)),
+          eq(cashierSessions.scheduledStartTime, new Date(p.after.scheduledStartTime)),
           gt(cashierSessions.id, p.after.id),
         ),
       ),
@@ -84,9 +84,9 @@ export async function listSessionsRepo(
       id: cashierSessions.id,
       cashierId: cashierSessions.cashierId,
       branchId: cashierSessions.branchId,
-      sessionTypeId: cashierSessions.sessionTypeId,
-      startTime: cashierSessions.startTime,
-      endTime: cashierSessions.endTime,
+      shiftTypeId: cashierSessions.shiftTypeId,
+      scheduledStartTime: cashierSessions.scheduledStartTime,
+      actualEndTime: cashierSessions.actualEndTime,
       openingBalancePsw: cashierSessions.openingBalancePsw,
       closingBalancePsw: cashierSessions.closingBalancePsw,
       status: cashierSessions.status,
@@ -95,13 +95,16 @@ export async function listSessionsRepo(
     })
     .from(cashierSessions)
     .where(where.length ? and(...where) : undefined)
-    .orderBy(asc(cashierSessions.startTime), asc(cashierSessions.id))
+    .orderBy(asc(cashierSessions.scheduledStartTime), asc(cashierSessions.id))
     .limit(p.limit + 1);
 
   const hasMore = rows.length > p.limit;
   const data = hasMore ? rows.slice(0, p.limit) : rows;
   const nextCursor = hasMore
-    ? { startTime: data[data.length - 1]!.startTime.toISOString(), id: data[data.length - 1]!.id }
+    ? {
+        scheduledStartTime: data[data.length - 1]!.scheduledStartTime.toISOString(),
+        id: data[data.length - 1]!.id,
+      }
     : null;
 
   return { data, nextCursor };
@@ -119,7 +122,7 @@ export async function openSessionRepo(
 
 export async function closeSessionRepo(
   id: string,
-  patch: Pick<typeof cashierSessions.$inferInsert, 'endTime' | 'closingBalancePsw' | 'status'>,
+  patch: Pick<typeof cashierSessions.$inferInsert, 'actualEndTime' | 'closingBalancePsw' | 'status'>,
 ): Promise<{ id: string } | null> {
   const [row] = await db
     .update(cashierSessions)
@@ -135,9 +138,9 @@ export async function getSessionRepo(id: string): Promise<SessionRow | null> {
       id: cashierSessions.id,
       cashierId: cashierSessions.cashierId,
       branchId: cashierSessions.branchId,
-      sessionTypeId: cashierSessions.sessionTypeId,
-      startTime: cashierSessions.startTime,
-      endTime: cashierSessions.endTime,
+      shiftTypeId: cashierSessions.shiftTypeId,
+      scheduledStartTime: cashierSessions.scheduledStartTime,
+      actualEndTime: cashierSessions.actualEndTime,
       openingBalancePsw: cashierSessions.openingBalancePsw,
       closingBalancePsw: cashierSessions.closingBalancePsw,
       status: cashierSessions.status,

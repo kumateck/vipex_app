@@ -14,8 +14,8 @@ export type DeliveryRow = {
   riderUserId: string | null;
   receiverCalledConfirmedBy: string | null;
   receiverCalledConfirmedAt: Date | null;
-  chargePsw: bigint;
-  amountPaidPsw: bigint;
+  chargePsw: number;
+  amountPaidPsw: number;
   isDeleted: boolean;
   deliveredAt: Date | null;
   confirmedBy: string | null;

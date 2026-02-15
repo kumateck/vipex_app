@@ -11,7 +11,7 @@ export const shiftManagementRoutes = new Elysia({ name: 'shift-management' })
         sessionId: params.sessionId,
         openingBalancePsw: body.openingBalancePsw,
         notes: body.notes,
-        actualStartTime: body.actualStartTime,
+        actualStartTime: body.actualStartTime ? new Date(body.actualStartTime) : undefined,
       }),
     {
       params: t.Object({ sessionId: UUID }),
@@ -37,7 +37,7 @@ export const shiftManagementRoutes = new Elysia({ name: 'shift-management' })
         closingBalancePsw: body.closingBalancePsw,
         handoverToCashierId: body.handoverToCashierId,
         handoverNotes: body.handoverNotes,
-        actualEndTime: body.actualEndTime,
+        actualEndTime: body.actualEndTime ? new Date(body.actualEndTime) : undefined,
         varianceReason: body.varianceReason,
       }),
     {
@@ -76,58 +76,6 @@ export const shiftManagementRoutes = new Elysia({ name: 'shift-management' })
         tags: ['Shift Management', 'Analytics'],
         summary: 'Get comprehensive shift analytics and metrics',
         operationId: 'getShiftAnalytics',
-      },
-    },
-  )
-
-  // Get active shift
-  .get(
-    '/active/:branchId',
-    async ({ params }) => {
-      const activeShift = await db
-        .select({
-          id: cashierSessions.id,
-          status: cashierSessions.status,
-          actualStartTime: cashierSessions.actualStartTime,
-          shiftTypeId: cashierSessions.shiftTypeId,
-        })
-        .from(cashierSessions)
-        .where(
-          and(eq(cashierSessions.branchId, params.branchId), eq(cashierSessions.status, 'ACTIVE')),
-        )
-        .limit(1);
-
-      if (!activeShift) {
-        throw new Error('No active shift found');
-      }
-
-      // Get shift type details
-      const [shiftType] = await db
-        .select({
-          name: cashierSessions.shiftTypes.name,
-          allowCrossDay: cashierSessions.shiftTypes.allowCrossDay,
-        })
-        .from(cashierSessions.shiftTypes)
-        .where(eq(cashierSessions.shiftTypes.id, activeShift.shiftTypeId))
-        .limit(1);
-
-      return {
-        sessionId: activeShift.id,
-        status: activeShift.status,
-        actualStartTime: activeShift.actualStartTime,
-        shiftType: {
-          name: shiftType?.name || 'Unknown',
-          allowCrossDay: shiftType?.allowCrossDay || false,
-          standardDurationHours: shiftType?.standardDurationHours || 8,
-        },
-      };
-    },
-    {
-      params: t.Object({ branchId: UUID }),
-      detail: {
-        tags: ['Shift Management'],
-        summary: 'Get currently active shift for a branch',
-        operationId: 'getActiveShift',
       },
     },
   );

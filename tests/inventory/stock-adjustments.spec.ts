@@ -54,7 +54,7 @@ describe('Stock Adjustments API', () => {
       companyId: testCompany.id,
       productId: product!.id,
       locationId: testLocation.id,
-      quantity: BigInt(50),
+      quantity: 50,
     });
 
     const adjustmentData = {

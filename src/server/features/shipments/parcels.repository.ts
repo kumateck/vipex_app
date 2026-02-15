@@ -17,13 +17,13 @@ export type ParcelRow = {
   statusId: string;
   parcelDetails: string;
   parcelContent: string;
-  parcelValuePsw: bigint;
+  parcelValuePsw: number;
   cardId: string | null;
   cardNumber: string | null;
   secondCardId: string | null;
   secondCardNumber: string | null;
   pickupLocationId: string | null;
-  plannedToBePaidPsw: bigint;
+  plannedToBePaidPsw: number;
   method: number;
   taxReportConfirmation: boolean;
   isDeleted: boolean;
