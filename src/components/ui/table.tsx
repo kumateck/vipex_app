@@ -6,13 +6,14 @@ import { cn } from '@/lib/utils';
 
 function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
-      <table
-        data-slot="table"
-        className={cn('w-full caption-bottom text-sm', className)}
-        {...props}
-      />
-    </div>
+    <table
+      data-slot="table"
+      className={cn(
+        'relative w-full overflow-x-auto rounded-md bg-white text-black dark:bg-gray-900 dark:text-white caption-bottom text-sm',
+        className,
+      )}
+      {...props}
+    />
   );
 }
 
@@ -58,7 +59,7 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
     <th
       data-slot="table-head"
       className={cn(
-        'text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0',
+        'h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-inherit [&:has([role=checkbox])]:pr-0',
         className,
       )}
       {...props}
@@ -70,7 +71,7 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   return (
     <td
       data-slot="table-cell"
-      className={cn('p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0', className)}
+      className={cn('p-2 align-middle whitespace-nowrap text-inherit [&:has([role=checkbox])]:pr-0', className)}
       {...props}
     />
   );
