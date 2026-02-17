@@ -1,6 +1,6 @@
 /**
  * Branch List View: fetches and displays all branches from GET /v1/branches/,
- * with loading skeleton, error state with retry, and optional associated locations.
+ * with loading skeleton and error state with retry.
  */
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -16,9 +16,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth-store';
 
-/** Location shape returned by the API for each branch. */
-type BranchLocation = { id: string; name: string };
-
 /** Branch row shape matching GET /v1/branches/ list response. */
 type BranchRow = {
   id: string;
@@ -27,13 +24,12 @@ type BranchRow = {
   telephone: string | null;
   address: string | null;
   email: string | null;
-  locations?: BranchLocation[];
 };
 
 /** Number of skeleton rows to show while loading. */
 const SKELETON_ROWS = 5;
 /** Number of table columns (must match header cells). */
-const COLUMN_COUNT = 5;
+const COLUMN_COUNT = 4;
 
 const Branches = () => {
   const [branches, setBranches] = useState<BranchRow[]>([]);
@@ -91,7 +87,6 @@ const Branches = () => {
               <TableHead>Type</TableHead>
               <TableHead>Address</TableHead>
               <TableHead>Contact</TableHead>
-              <TableHead>Location</TableHead>
               <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -108,18 +103,13 @@ const Branches = () => {
                 </TableRow>
               ))
             ) : (
-              /* Data: one row per branch; Location column shows names when returned by API. */
+              /* Data: one row per branch. */
               branches.map((branch) => (
                 <TableRow key={branch.id}>
                   <TableCell>{branch.name}</TableCell>
                   <TableCell>{branch.type}</TableCell>
                   <TableCell>{branch.address ?? '—'}</TableCell>
                   <TableCell>{branch.telephone ?? branch.email ?? '—'}</TableCell>
-                  <TableCell>
-                    {branch.locations?.length
-                      ? branch.locations.map((loc) => loc.name).join(', ')
-                      : '—'}
-                  </TableCell>
                   <TableCell>
                     <Button variant="outline" size="sm" asChild>
                       <Link to={`/branches/edit/${branch.id}`}>Edit</Link>

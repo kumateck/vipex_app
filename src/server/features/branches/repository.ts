@@ -1,6 +1,6 @@
-import { and, asc, eq, gt, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { branches, locations } from '@/db/schemas';
+import { branches } from '@/db/schemas';
 
 export type ListBranchParams = {
   limit: number;
@@ -44,41 +44,7 @@ export async function listBranchesRepo(p: ListBranchParams) {
     ? { createdAt: data[data.length - 1]!.createdAt!.toISOString(), id: data[data.length - 1]!.id }
     : null;
 
-  // Fetch associated locations for all branches in this page (non-deleted only).
-  const branchIds = data.map((b) => b.id);
-  const locationRows =
-    branchIds.length > 0
-      ? await db
-          .select({
-            id: locations.id,
-            name: locations.name,
-            branchId: locations.branchId,
-          })
-          .from(locations)
-          .where(
-            and(inArray(locations.branchId, branchIds), eq(locations.isDeleted, false)),
-          )
-          .orderBy(asc(locations.name))
-      : [];
-
-  // Group locations by branchId so we can attach them to each branch.
-  const locationsByBranchId = locationRows.reduce(
-    (acc, loc) => {
-      const bid = loc.branchId;
-      if (!acc[bid]) acc[bid] = [];
-      acc[bid].push({ id: loc.id, name: loc.name });
-      return acc;
-    },
-    {} as Record<string, { id: string; name: string }[]>,
-  );
-
-  // Return branch rows with a `locations` array each (empty if none).
-  const dataWithLocations = data.map((b) => ({
-    ...b,
-    locations: locationsByBranchId[b.id] ?? [],
-  }));
-
-  return { data: dataWithLocations, nextCursor };
+  return { data, nextCursor };
 }
 
 export async function getBranchRepo(id: string) {
