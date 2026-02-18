@@ -1,7 +1,6 @@
 import { and, asc, eq, gt, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { branches } from '@/db/schemas';
-
 export type ListBranchParams = {
   limit: number;
   after?: { createdAt: string; id: string } | null;
