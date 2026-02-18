@@ -1,6 +1,5 @@
 /**
- * Create Branch: form to add a new branch via POST /v1/branches/.
- * Validates required inputs, shows success toast, redirects to list after creation.
+ * Create branch: uses branches API (useCreateBranchMutation).
  */
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,41 +11,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui';
-import { useAuthStore } from '@/stores/auth-store';
+import { useCreateBranchMutation } from '@/features/branches/api';
 
 const toOptional = (v: string | undefined) => (v?.trim() ? v.trim() : undefined);
 
-/** Action: submit create branch form (POST /v1/branches/). */
-async function createBranchAction(data: CreateBranchSchema): Promise<{ id: string }> {
-  const user = useAuthStore.getState().user;
-  if (!user?.company?.id || !user?.id) throw new Error('Not authenticated');
-  const body = {
-    companyId: user.company.id,
-    name: data.name.trim(),
-    type: data.type.trim(),
-    telephone: toOptional(data.telephone) ?? null,
-    address: toOptional(data.address) ?? null,
-    email: toOptional(data.email) ?? null,
-    createdBy: user.id,
-  };
-  const res = await fetch('/v1/branches/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(typeof err.message === 'string' ? err.message : 'Failed to create branch');
-  }
-  return res.json();
-}
-
 const CreateBranchPage = () => {
   const navigate = useNavigate();
+  const [createBranch, { isLoading: isSubmitting }] = useCreateBranchMutation();
+
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<CreateBranchSchema>({
     resolver: zodResolver(createBranchSchema),
     defaultValues: { name: '', type: '', telephone: '', address: '', email: '' },
@@ -55,7 +31,13 @@ const CreateBranchPage = () => {
 
   const onSubmit = async (data: CreateBranchSchema) => {
     try {
-      await createBranchAction(data);
+      await createBranch({
+        name: data.name.trim(),
+        type: data.type.trim(),
+        telephone: toOptional(data.telephone) ?? null,
+        address: toOptional(data.address) ?? null,
+        email: toOptional(data.email) ?? null,
+      }).unwrap();
       toast.success('Branch created successfully');
       navigate('/branches', { replace: true });
     } catch (e) {
