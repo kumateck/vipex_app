@@ -1,8 +1,7 @@
 /**
- * Edit Branch: form to update a branch via PATCH /v1/branches/:id.
- * Prefills from GET /v1/branches/:id, submit updates, shows success/error toast.
+ * Edit branch: uses branches API hooks. Error and loading are separate components.
  */
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -12,52 +11,24 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui';
-
-type BranchDto = {
-  id: string;
-  name: string;
-  type: string;
-  telephone: string | null;
-  address: string | null;
-  email: string | null;
-};
+import { useGetBranchQuery, useUpdateBranchMutation } from '@/features/branches/api';
+import { BranchLoadError } from '@/features/branches/BranchLoadError';
+import { BranchFormSkeleton } from '@/features/branches/BranchFormSkeleton';
 
 const toOptional = (v: string | null | undefined) => (v?.trim() ? v.trim() : undefined);
-
-/** Action: submit update branch form (PATCH /v1/branches/:id). */
-async function updateBranchAction(id: string, data: EditBranchSchema): Promise<{ id: string }> {
-  const body = {
-    name: data.name.trim(),
-    type: data.type.trim(),
-    telephone: toOptional(data.telephone) ?? null,
-    address: toOptional(data.address) ?? null,
-    email: toOptional(data.email) ?? null,
-  };
-  const res = await fetch(`/v1/branches/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(typeof err.message === 'string' ? err.message : 'Failed to update branch');
-  }
-  return res.json();
-}
 
 const EditBranchPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [branch, setBranch] = useState<BranchDto | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { data: branch, isLoading, isError, error } = useGetBranchQuery(id ?? '', { skip: !id });
+  const [updateBranch, { isLoading: isSubmitting }] = useUpdateBranchMutation();
 
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<EditBranchSchema>({
     resolver: zodResolver(editBranchSchema),
     defaultValues: { name: '', type: '', telephone: '', address: '', email: '' },
@@ -65,31 +36,29 @@ const EditBranchPage = () => {
   });
 
   useEffect(() => {
-    if (!id) return;
-    setLoadError(null);
-    fetch(`/v1/branches/${id}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Branch not found');
-        return res.json();
-      })
-      .then((data: BranchDto) => {
-        setBranch(data);
-        reset({
-          name: data.name ?? '',
-          type: data.type ?? '',
-          telephone: data.telephone ?? '',
-          address: data.address ?? '',
-          email: data.email ?? '',
-        });
-      })
-      .catch(() => setLoadError('Failed to load branch'))
-      .finally(() => {});
-  }, [id, reset]);
+    if (!branch) return;
+    reset({
+      name: branch.name ?? '',
+      type: branch.type ?? '',
+      telephone: branch.telephone ?? '',
+      address: branch.address ?? '',
+      email: branch.email ?? '',
+    });
+  }, [branch, reset]);
 
   const onSubmit = async (data: EditBranchSchema) => {
     if (!id) return;
     try {
-      await updateBranchAction(id, data);
+      await updateBranch({
+        id,
+        body: {
+          name: data.name.trim(),
+          type: data.type.trim(),
+          telephone: toOptional(data.telephone) ?? null,
+          address: toOptional(data.address) ?? null,
+          email: toOptional(data.email) ?? null,
+        },
+      }).unwrap();
       toast.success('Branch updated successfully');
       navigate('/branches', { replace: true });
     } catch (e) {
@@ -97,26 +66,22 @@ const EditBranchPage = () => {
     }
   };
 
-  if (loadError) {
-    return (
-      <div className="w-full max-w-lg mx-auto p-4 space-y-4">
-        <p className="text-destructive">{loadError}</p>
-        <Button variant="outline" onClick={() => navigate('/branches')}>
-          Back to list
-        </Button>
-      </div>
-    );
+  const handleBack = () => navigate('/branches');
+
+  if (!id) {
+    return <BranchLoadError message="Invalid branch id" onBack={handleBack} />;
   }
 
-  if (!branch) {
-    return (
-      <div className="w-full max-w-lg mx-auto p-4 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-      </div>
-    );
+  if (isError) {
+    const message =
+      error && typeof (error as { data?: { message?: string } }).data?.message === 'string'
+        ? (error as { data: { message: string } }).data.message
+        : 'Failed to load branch';
+    return <BranchLoadError message={message} onBack={handleBack} />;
+  }
+
+  if (isLoading || !branch) {
+    return <BranchFormSkeleton />;
   }
 
   return (
@@ -194,11 +159,7 @@ const EditBranchPage = () => {
                   {isSubmitting && <Spinner />}
                   {isSubmitting ? 'Saving...' : 'Save changes'}
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/branches')}
-                >
+                <Button type="button" variant="outline" onClick={handleBack}>
                   Cancel
                 </Button>
               </div>
