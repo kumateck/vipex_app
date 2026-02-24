@@ -11,10 +11,9 @@ export const createLocationSchema = z.object({
 
 export type CreateLocationSchema = z.infer<typeof createLocationSchema>;
 
-/** Schema for Edit Location form (PATCH). All fields optional; name required for UX. */
+/** Schema for Edit Location form (PATCH). Only name is supported by API. */
 export const editLocationSchema = z.object({
   name: nonEmpty255,
-  branchId: nonEmpty255.optional(),
 });
 
 export type EditLocationSchema = z.infer<typeof editLocationSchema>;

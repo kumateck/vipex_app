@@ -7,8 +7,6 @@ import { type CreateLocationSchema } from '../schema';
 import { useCreateLocationMutation } from '@/features/locations/api';
 import { LocationForm } from '@/features/locations/LocationForm';
 
-const toOptional = (v: string | undefined) => (v?.trim() ? v.trim() : undefined);
-
 const CreateLocationPage = () => {
   const navigate = useNavigate();
   const [createLocation, { isLoading: isSubmitting }] = useCreateLocationMutation();

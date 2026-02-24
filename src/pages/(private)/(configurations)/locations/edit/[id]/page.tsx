@@ -8,8 +8,6 @@ import { useGetLocationQuery, useUpdateLocationMutation } from '@/features/locat
 import { LoadError, FormSkeleton } from '@/components/ui';
 import { LocationForm } from '@/features/locations/LocationForm';
 
-const toOptional = (v: string | null | undefined) => (v?.trim() ? v.trim() : undefined);
-
 const EditLocationPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();

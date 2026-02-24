@@ -15,16 +15,29 @@ interface Location {
   branchId: string;
 }
 
-interface LocationFormProps {
-  mode: 'create' | 'edit';
+interface LocationFormBaseProps {
   initialData?: Partial<Location>;
-  onSubmit: (data: CreateLocationSchema | EditLocationSchema) => Promise<void>;
   isSubmitting: boolean;
   title: string;
   submitButtonText: string;
 }
 
-const toOptional = (v: string | undefined) => (v?.trim() ? v.trim() : undefined);
+interface CreateLocationFormProps extends LocationFormBaseProps {
+  mode: 'create';
+  onSubmit: (data: CreateLocationSchema) => Promise<void>;
+}
+
+interface EditLocationFormProps extends LocationFormBaseProps {
+  mode: 'edit';
+  onSubmit: (data: EditLocationSchema) => Promise<void>;
+}
+
+type LocationFormProps = CreateLocationFormProps | EditLocationFormProps;
+
+type LocationFormValues = {
+  name: string;
+  branchId?: string;
+};
 
 export const LocationForm: React.FC<LocationFormProps> = ({
   mode,
@@ -42,12 +55,11 @@ export const LocationForm: React.FC<LocationFormProps> = ({
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<CreateLocationSchema | EditLocationSchema>({
+  } = useForm<LocationFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      name: '',
-      branchId: mode === 'create' ? '' : undefined,
-    },
+    defaultValues: mode === 'create' 
+      ? { name: '', branchId: '' }
+      : { name: '' },
     mode: 'onSubmit',
   });
 
@@ -64,8 +76,18 @@ export const LocationForm: React.FC<LocationFormProps> = ({
     }
   }, [initialData, mode, reset]);
 
-  const handleFormSubmit = async (data: CreateLocationSchema | EditLocationSchema) => {
-    await onSubmit(data);
+  const handleFormSubmit = async (data: LocationFormValues) => {
+    if (mode === 'create') {
+      await onSubmit({
+        name: data.name,
+        branchId: data.branchId ?? '',
+      });
+      return;
+    }
+
+    await onSubmit({
+      name: data.name,
+    });
   };
 
   return (
