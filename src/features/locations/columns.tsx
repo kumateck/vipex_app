@@ -3,14 +3,18 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import type { Location } from './api';
 
-export const locationsColumns: ColumnDef<Location>[] = [
+export interface LocationRow extends Location {
+  branchName: string;
+}
+
+export const locationsColumns: ColumnDef<LocationRow>[] = [
   {
     accessorKey: 'name',
     header: 'Name',
   },
   {
-    accessorKey: 'branchId',
-    header: 'Branch ID',
+    accessorKey: 'branchName',
+    header: 'Branch',
   },
   {
     id: 'actions',

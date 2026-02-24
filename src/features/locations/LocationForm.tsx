@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { createLocationSchema, editLocationSchema, type CreateLocationSchema, type EditLocationSchema } from '../../pages/(private)/(configurations)/locations/schema';
@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useListBranchesQuery } from '@/features/branches/api';
 import { Spinner } from '@/components/ui';
 
 interface Location {
@@ -49,8 +51,14 @@ export const LocationForm: React.FC<LocationFormProps> = ({
 }) => {
   const navigate = useNavigate();
   const schema = mode === 'create' ? createLocationSchema : editLocationSchema;
+  const { data: branchesData, isLoading: isLoadingBranches } = useListBranchesQuery(
+    { limit: 50 },
+    { skip: mode !== 'create' },
+  );
+  const branchOptions = branchesData?.data ?? [];
 
   const {
+    control,
     register,
     handleSubmit,
     reset,
@@ -113,12 +121,24 @@ export const LocationForm: React.FC<LocationFormProps> = ({
               </Field>
               {mode === 'create' && (
                 <Field>
-                  <FieldLabel htmlFor="branchId">Branch ID</FieldLabel>
-                  <Input
-                    id="branchId"
-                    placeholder="Branch ID"
-                    aria-invalid={!!errors.branchId}
-                    {...register('branchId')}
+                  <FieldLabel htmlFor="branchId">Branch</FieldLabel>
+                  <Controller
+                    control={control}
+                    name="branchId"
+                    render={({ field }) => (
+                      <Select value={field.value ?? ''} onValueChange={field.onChange}>
+                        <SelectTrigger id="branchId" aria-invalid={!!errors.branchId} disabled={isLoadingBranches}>
+                          <SelectValue placeholder={isLoadingBranches ? 'Loading branches...' : 'Select branch'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {branchOptions.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>
+                              {branch.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   />
                   {errors.branchId?.message && (
                     <p className="text-sm text-destructive">{errors.branchId.message}</p>
