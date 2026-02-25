@@ -1,32 +1,35 @@
 import * as React from 'react';
-import { type DataTableProps, type TableSize } from './types';
+import type { DataTableProps, TableSize } from './types';
 import { useDataTable } from './useDataTable';
 import {
-  DataTableHeader,
   DataTableBody,
-  DataTableVirtualBody,
+  DataTableHeader,
   DataTablePagination,
-  DataTableToolbar,
   DataTableSkeleton,
+  DataTableToolbar,
+  DataTableVirtualBody,
 } from './components';
 
 import { Table as UiTable } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
-export function DataTable<TData, TValue>(props: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue, TFilters = Record<string, unknown>>(
+  props: DataTableProps<TData, TValue, TFilters>,
+) {
   const {
     tableSize: initialTableSize = 'medium',
     enableVirtualization = false,
     stickyHeader = false,
     loading = false,
     className,
-    paginationMode,
+    emptyMessage = 'No results.',
+    searchColumn,
+    searchPlaceholder,
+    pageSizeOptions,
   } = props;
 
-  // Toolbar controls this (density selector)
   const [tableSize, setTableSize] = React.useState<TableSize>(initialTableSize);
-
-  const table = useDataTable(props);
+  const { table, state } = useDataTable(props);
   const parentRef = React.useRef<HTMLDivElement | null>(null);
 
   return (
@@ -35,8 +38,10 @@ export function DataTable<TData, TValue>(props: DataTableProps<TData, TValue>) {
         table={table}
         tableSize={tableSize}
         setTableSize={setTableSize}
-        // Optionally allow this to be configured via props later:
-        // searchColumn={props.searchColumn}
+        globalFilter={state.globalFilter}
+        setGlobalFilter={state.onGlobalFilterChange}
+        searchColumn={searchColumn}
+        searchPlaceholder={searchPlaceholder}
       />
 
       <div
@@ -44,33 +49,41 @@ export function DataTable<TData, TValue>(props: DataTableProps<TData, TValue>) {
         className={cn(
           'relative rounded-md border',
           enableVirtualization ? 'h-[600px] overflow-auto' : 'overflow-hidden',
-          stickyHeader && 'relative',
         )}
       >
         <UiTable
-          className={cn(tableSize === 'small' ? 'text-sm' : tableSize === 'large' ? 'text-lg' : '')}
+          className={cn(
+            tableSize === 'small' ? 'text-sm' : tableSize === 'large' ? 'text-lg' : '',
+            stickyHeader && 'relative',
+          )}
         >
           <DataTableHeader table={table} sticky={stickyHeader} />
 
           {loading ? (
             <DataTableSkeleton columnCount={props.columns.length} rowCount={10} />
           ) : enableVirtualization ? (
-            <DataTableVirtualBody
-              table={table}
-              parentRef={parentRef}
-              rows={props.data}
-              isLoading={loading}
-              tableSize={tableSize}
-            />
+            <DataTableVirtualBody table={table} parentRef={parentRef} tableSize={tableSize} />
           ) : (
-            <DataTableBody table={table} isLoading={loading} columns={props.columns} />
+            <DataTableBody
+              table={table}
+              isLoading={loading}
+              columns={props.columns}
+              emptyMessage={emptyMessage}
+            />
           )}
         </UiTable>
       </div>
 
-      {paginationMode !== 'none' && (
-        <DataTablePagination table={table} paginationMode={paginationMode} />
-      )}
+      <DataTablePagination
+        table={table}
+        mode={props.mode}
+        meta={props.mode === 'server' ? props.meta : undefined}
+        pageSizeOptions={pageSizeOptions}
+      />
     </div>
   );
 }
+
+export * from './types';
+export * from './useDataTable';
+export * from './server';

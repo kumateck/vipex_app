@@ -18,10 +18,9 @@ interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   tableSize: TableSize;
   setTableSize: (size: TableSize) => void;
-  /**
-   * The column ID to use for the main search input.
-   * If not provided, the input will be hidden or you can implement global filtering.
-   */
+  globalFilter: string;
+  setGlobalFilter: (value: string) => void;
+  searchPlaceholder?: string;
   searchColumn?: string;
 }
 
@@ -29,26 +28,43 @@ export function DataTableToolbar<TData>({
   table,
   tableSize,
   setTableSize,
+  globalFilter,
+  setGlobalFilter,
+  searchPlaceholder,
   searchColumn,
 }: DataTableToolbarProps<TData>) {
-  const isFiltered = table.getState().columnFilters.length > 0;
+  const isFiltered = table.getState().columnFilters.length > 0 || globalFilter.length > 0;
+  const useColumnSearch = Boolean(searchColumn) && !table.options.manualFiltering;
+  const canSearch = Boolean(searchColumn) || table.getAllLeafColumns().length > 0;
 
   return (
     <div className="flex items-center justify-between py-4">
       <div className="flex flex-1 items-center space-x-2">
-        {searchColumn && (
-          <Input
-            placeholder={`Filter ${searchColumn}...`}
-            value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ''}
-            onChange={(event) => table.getColumn(searchColumn)?.setFilterValue(event.target.value)}
-            className="h-8 w-[150px] lg:w-[250px]"
-          />
-        )}
+        {canSearch ? (
+          useColumnSearch ? (
+            <Input
+              placeholder={searchPlaceholder ?? `Filter ${searchColumn}...`}
+              value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ''}
+              onChange={(event) => table.getColumn(searchColumn)?.setFilterValue(event.target.value)}
+              className="h-8 w-[150px] lg:w-[250px]"
+            />
+          ) : (
+            <Input
+              placeholder={searchPlaceholder ?? 'Search...'}
+              value={globalFilter}
+              onChange={(event) => setGlobalFilter(event.target.value)}
+              className="h-8 w-[150px] lg:w-[250px]"
+            />
+          )
+        ) : null}
 
         {isFiltered && (
           <Button
             variant="ghost"
-            onClick={() => table.resetColumnFilters()}
+            onClick={() => {
+              table.resetColumnFilters();
+              setGlobalFilter('');
+            }}
             className="h-8 px-2 lg:px-3"
           >
             Reset

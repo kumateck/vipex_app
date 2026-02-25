@@ -5,11 +5,13 @@ interface DataTableBodyProps<TData, TValue> {
   table: Table<TData>;
   isLoading: boolean;
   columns: ColumnDef<TData, TValue>[];
+  emptyMessage?: string;
 }
 
 export function DataTableBody<TData, TValue>({
   table,
   isLoading,
+  emptyMessage = 'No results.',
 }: DataTableBodyProps<TData, TValue>) {
   const rows = table.getRowModel().rows;
 
@@ -30,7 +32,7 @@ export function DataTableBody<TData, TValue>({
       <TableBody>
         <TableRow>
           <TableCell colSpan={table.getAllColumns().length} className="h-24 text-center">
-            No results.
+            {emptyMessage}
           </TableCell>
         </TableRow>
       </TableBody>

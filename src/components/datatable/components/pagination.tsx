@@ -9,37 +9,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import type { PaginationMeta } from '@/server/types/pagination.types';
 
 interface DataTablePaginationProps<TData> {
   table: Table<TData>;
-  paginationMode: 'client' | 'server' | 'none';
+  mode: 'client' | 'server' | 'grid';
+  meta?: PaginationMeta;
   pageSizeOptions?: number[];
 }
 
 export function DataTablePagination<TData>({
   table,
-  paginationMode,
+  mode,
+  meta,
   pageSizeOptions = [10, 20, 30, 40, 50],
 }: DataTablePaginationProps<TData>) {
-  if (paginationMode === 'none') return null;
+  if (mode === 'grid') return null;
+
+  const state = table.getState().pagination;
+  const pageIndex = mode === 'server' ? Math.max((meta?.page ?? 1) - 1, 0) : state.pageIndex;
+  const pageSize = mode === 'server' ? (meta?.pageSize ?? state.pageSize) : state.pageSize;
+  const pageCount = mode === 'server' ? (meta?.totalPages ?? table.getPageCount()) : table.getPageCount();
+  const totalRows = mode === 'server' ? (meta?.totalRecords ?? 0) : table.getFilteredRowModel().rows.length;
 
   return (
     <div className="flex items-center justify-between px-2 py-4">
       <div className="flex-1 text-sm text-muted-foreground">
-        {table.getFilteredSelectedRowModel().rows.length} of{' '}
-        {table.getFilteredRowModel().rows.length} row(s) selected.
+        {table.getFilteredSelectedRowModel().rows.length} of {totalRows} row(s) selected.
       </div>
       <div className="flex items-center space-x-6 lg:space-x-8">
         <div className="flex items-center space-x-2">
           <p className="text-sm font-medium">Rows per page</p>
           <Select
-            value={`${table.getState().pagination.pageSize}`}
+            value={`${pageSize}`}
             onValueChange={(value) => {
               table.setPageSize(Number(value));
             }}
           >
             <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue placeholder={table.getState().pagination.pageSize} />
+              <SelectValue placeholder={pageSize} />
             </SelectTrigger>
             <SelectContent side="top">
               {pageSizeOptions.map((pageSize) => (
@@ -51,7 +59,7 @@ export function DataTablePagination<TData>({
           </Select>
         </div>
         <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+          Page {pageIndex + 1} of {pageCount}
         </div>
         <div className="flex items-center space-x-2">
           <Button

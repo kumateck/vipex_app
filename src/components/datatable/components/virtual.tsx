@@ -7,15 +7,12 @@ import { type TableSize } from '../types';
 interface DataTableVirtualBodyProps<TData> {
   table: Table<TData>;
   parentRef: React.RefObject<HTMLDivElement | null>;
-  rows: TData[]; // Raw data or table.getRowModel().rows
-  isLoading: boolean;
   tableSize: TableSize;
 }
 
 export function DataTableVirtualBody<TData>({
   table,
   parentRef,
-  // isLoading,
   tableSize,
 }: DataTableVirtualBodyProps<TData>) {
   const { rows } = table.getRowModel();
