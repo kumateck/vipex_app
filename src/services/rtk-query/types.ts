@@ -9,7 +9,10 @@ export type ResourceTag =
   | 'Inventory'
   | 'Branches'
   | 'Locations'
-  | 'Statuses';
+  | 'Statuses'
+  | 'Users'
+  | 'Cashiers'
+  | 'RBAC';
 
 export type ServerListQuery<TFilters = Record<string, unknown>> = PaginationRequestDto<TFilters>;
 export type ServerListResponse<TItem> = PaginatedResponseDto<TItem>;

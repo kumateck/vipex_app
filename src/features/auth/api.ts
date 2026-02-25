@@ -21,8 +21,10 @@ export interface RefreshTokenRequest {
 }
 
 export interface RefreshTokenResponse {
-  accessToken: string;
-  refreshToken: string;
+  tokens: {
+    accessToken: string;
+    refreshToken: string;
+  };
 }
 
 export interface ForgotPasswordRequest {
@@ -57,6 +59,14 @@ export interface LogoutRequest {
 
 export interface LogoutResponse {
   message: string;
+}
+
+export interface CurrentUserPermissionsResponse {
+  permissions: string[];
+}
+
+export interface CurrentUserReadOnlyPermissionsResponse {
+  readOnlyPermissions: string[];
 }
 
 export const authApi = api.injectEndpoints({
@@ -118,8 +128,8 @@ export const authApi = api.injectEndpoints({
           if (currentAuth.user) {
             currentAuth.setAuth({
               user: currentAuth.user,
-              accessToken: data.accessToken,
-              refreshToken: data.refreshToken,
+              accessToken: data.tokens.accessToken,
+              refreshToken: data.tokens.refreshToken,
             });
           }
         } catch (_err) {
@@ -153,6 +163,20 @@ export const authApi = api.injectEndpoints({
       }),
       invalidatesTags: ['Auth'],
     }),
+
+    getCurrentUserPermissions: builder.query<CurrentUserPermissionsResponse, void>({
+      query: () => ({
+        url: '/auth/me/permissions',
+      }),
+      providesTags: ['Auth'],
+    }),
+
+    getCurrentUserReadOnlyPermissions: builder.query<CurrentUserReadOnlyPermissionsResponse, void>({
+      query: () => ({
+        url: '/auth/me/permissions/read-only',
+      }),
+      providesTags: ['Auth'],
+    }),
   }),
 });
 
@@ -163,4 +187,6 @@ export const {
   useForgotPasswordMutation,
   useResetPasswordMutation,
   useChangePasswordMutation,
+  useGetCurrentUserPermissionsQuery,
+  useGetCurrentUserReadOnlyPermissionsQuery,
 } = authApi;

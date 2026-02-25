@@ -135,3 +135,39 @@ export async function softDeleteCustomerRepo(id: string): Promise<number> {
     .returning({ id: customers.id });
   return rows.length;
 }
+
+export async function findCustomersByTelephoneRepo(input: {
+  companyId: string;
+  telephone: string;
+  limit?: number;
+}): Promise<CustomerRow[]> {
+  const term = input.telephone.trim();
+  const limit = input.limit ?? 10;
+
+  if (!term) return [];
+
+  return db
+    .select({
+      id: customers.id,
+      companyId: customers.companyId,
+      fullname: customers.fullname,
+      telephone: customers.telephone,
+      telephone2: customers.telephone2,
+      address: customers.address,
+      email: customers.email,
+      isDeleted: customers.isDeleted,
+      createdBy: customers.createdBy,
+      createdAt: customers.createdAt,
+      updatedAt: customers.updatedAt,
+    })
+    .from(customers)
+    .where(
+      and(
+        eq(customers.companyId, input.companyId),
+        eq(customers.isDeleted, false),
+        or(eq(customers.telephone, term), eq(customers.telephone2, term), ilike(customers.telephone, `%${term}%`)),
+      ),
+    )
+    .orderBy(asc(customers.fullname), asc(customers.id))
+    .limit(limit);
+}

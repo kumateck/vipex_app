@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, lt, or } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { cashierSessionTypes, cashierSessions } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
@@ -37,6 +37,15 @@ export async function createSessionTypeRepo(
     .values(values)
     .returning({ id: cashierSessionTypes.id });
   return row!;
+}
+
+export async function getSessionTypeRepo(id: string): Promise<{ id: string } | null> {
+  const [row] = await db
+    .select({ id: cashierSessionTypes.id })
+    .from(cashierSessionTypes)
+    .where(eq(cashierSessionTypes.id, id))
+    .limit(1);
+  return row ?? null;
 }
 
 export type SessionRow = {
@@ -156,4 +165,62 @@ export async function getSessionRepo(id: string): Promise<SessionRow | null> {
     .where(eq(cashierSessions.id, id))
     .limit(1);
   return row ?? null;
+}
+
+export async function findActiveSessionRepo(input: {
+  cashierId: string;
+  branchId?: string | null;
+}): Promise<SessionRow | null> {
+  const where = [eq(cashierSessions.cashierId, input.cashierId), eq(cashierSessions.status, 'ACTIVE')];
+  if (input.branchId) {
+    where.push(eq(cashierSessions.branchId, input.branchId));
+  }
+
+  const [row] = await db
+    .select({
+      id: cashierSessions.id,
+      cashierId: cashierSessions.cashierId,
+      branchId: cashierSessions.branchId,
+      shiftTypeId: cashierSessions.shiftTypeId,
+      scheduledStartTime: cashierSessions.scheduledStartTime,
+      actualEndTime: cashierSessions.actualEndTime,
+      openingBalancePsw: cashierSessions.openingBalancePsw,
+      closingBalancePsw: cashierSessions.closingBalancePsw,
+      status: cashierSessions.status,
+      createdAt: cashierSessions.createdAt,
+      updatedAt: cashierSessions.updatedAt,
+    })
+    .from(cashierSessions)
+    .where(and(...where))
+    .orderBy(desc(cashierSessions.scheduledStartTime), desc(cashierSessions.id))
+    .limit(1);
+
+  return row ?? null;
+}
+
+export async function hasSameDayCompletedSessionRepo(input: {
+  cashierId: string;
+  branchId: string;
+  day: Date;
+}): Promise<boolean> {
+  const dayStart = new Date(input.day);
+  dayStart.setHours(0, 0, 0, 0);
+  const nextDayStart = new Date(dayStart);
+  nextDayStart.setDate(nextDayStart.getDate() + 1);
+
+  const [row] = await db
+    .select({ id: cashierSessions.id })
+    .from(cashierSessions)
+    .where(
+      and(
+        eq(cashierSessions.cashierId, input.cashierId),
+        eq(cashierSessions.branchId, input.branchId),
+        eq(cashierSessions.status, 'COMPLETED'),
+        gte(cashierSessions.scheduledStartTime, dayStart),
+        lt(cashierSessions.scheduledStartTime, nextDayStart),
+      ),
+    )
+    .limit(1);
+
+  return !!row;
 }

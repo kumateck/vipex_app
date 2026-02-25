@@ -8,6 +8,8 @@ import {
   type CreateBookingWithParcelsOutput,
 } from './booking-with-parcels.repository';
 import { PaymentMethod } from '@/db/schemas';
+import { assertActiveSessionSvc } from '../cashiers/service';
+import { recordAuditLog } from '../audit/logger';
 
 export type CreateBookingWithParcelsBody = {
   senderId: string;
@@ -44,13 +46,31 @@ export async function createBookingWithParcelsSvc(
     throw BadRequest('At least one parcel is required');
   }
 
+  const primaryParcel = body.parcels[0];
+  if (!primaryParcel?.cashierUserId || !primaryParcel?.branchId) {
+    throw BadRequest('Cashier user and branch are required for parcel booking');
+  }
+
+  const activeSession = await assertActiveSessionSvc({
+    cashierId: primaryParcel.cashierUserId,
+    branchId: primaryParcel.branchId,
+  });
+
+  const hasMixedCashierOrBranch = body.parcels.some(
+    (parcel) =>
+      parcel.cashierUserId !== primaryParcel.cashierUserId || parcel.branchId !== primaryParcel.branchId,
+  );
+  if (hasMixedCashierOrBranch) {
+    throw BadRequest('All parcels in one booking must belong to the same cashier and branch');
+  }
+
   const input: CreateBookingWithParcelsInput = {
     senderId: body.senderId,
     companyId: body.companyId,
     sourceId: body.sourceId,
     statusId: body.statusId,
     createdBy: body.createdBy,
-    cashierSessionId: body.cashierSessionId ?? null,
+    cashierSessionId: body.cashierSessionId ?? activeSession.id,
     // bookingCode: body.bookingCode ?? null,
     parcels: body.parcels.map((p) => ({
       destinationId: p.destinationId,
@@ -70,7 +90,7 @@ export async function createBookingWithParcelsSvc(
     })),
   };
 
-  return createBookingWithParcelsAndPaymentsRepo(input, (psw) => {
+  const created = await createBookingWithParcelsAndPaymentsRepo(input, (psw) => {
     const t = computeGhanaTaxesFromPesewas(BigInt(psw));
     return {
       principal: Number(t.principal),
@@ -82,4 +102,21 @@ export async function createBookingWithParcelsSvc(
       totalTax: Number(t.totalTax),
     };
   });
+
+  await recordAuditLog({
+    companyId: body.companyId,
+    actorUserId: body.createdBy,
+    entityType: 'booking',
+    entityId: created.bookingId,
+    action: 'BOOKING_WITH_PARCELS_CREATED',
+    message: 'Booking with parcels created',
+    metadata: {
+      senderId: body.senderId,
+      sourceId: body.sourceId,
+      parcelsCount: body.parcels.length,
+      paymentCount: created.payments.length,
+    },
+  });
+
+  return created;
 }

@@ -3,6 +3,7 @@ import { sentryPlugin } from './plugins/sentry';
 import { swaggerPlugin } from './plugins/swagger';
 import { requestId } from './middlewares/requestId';
 import { logger } from './middlewares/logger';
+import { auditTrail } from './middlewares/audit-trail';
 import { errorHandler } from './middlewares/error-handler';
 import { rateLimit } from './middlewares/rate-limit';
 import { health } from './routes/health';
@@ -45,6 +46,7 @@ export const app = new Elysia()
   .use(requestId)
   .use(rateLimit)
   .use(logger)
+  .use(auditTrail)
   .use(errorHandler)
   .use(health)
   // Mount dev routes BEFORE any catch-all

@@ -3,6 +3,7 @@ import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/
 import {
   createCustomerSvc,
   deleteCustomerSvc,
+  findCustomersByTelephoneSvc,
   getCustomerSvc,
   listCustomersSvc,
   updateCustomerSvc,
@@ -39,7 +40,20 @@ export async function listCustomersCtrl(
   };
 }
 
-export const getCustomerByIdCtrl = getCustomerSvc;
+export const getCustomerByIdCtrl = (id: string, companyId: string) => getCustomerSvc(id, companyId);
 export const createCustomerCtrl = createCustomerSvc;
-export const updateCustomerCtrl = updateCustomerSvc;
-export const deleteCustomerCtrl = deleteCustomerSvc;
+export const updateCustomerCtrl = (
+  id: string,
+  companyId: string,
+  patch: {
+    fullname?: string;
+    telephone?: string | null;
+    telephone2?: string | null;
+    address?: string | null;
+    email?: string | null;
+  },
+  actorUserId?: string | null,
+) => updateCustomerSvc(id, companyId, patch, actorUserId);
+export const deleteCustomerCtrl = (id: string, companyId: string, actorUserId?: string | null) =>
+  deleteCustomerSvc(id, companyId, actorUserId);
+export const findCustomersByTelephoneCtrl = findCustomersByTelephoneSvc;

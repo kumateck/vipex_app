@@ -11,6 +11,12 @@ export type ListStatusParams = {
   sort?: SortField[] | null;
 };
 
+export type StatusOptionRow = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 export async function listStatusesRepo(p: ListStatusParams) {
   const where = [];
   if (p.companyId) where.push(eq(statuses.companyId, p.companyId));
@@ -53,6 +59,27 @@ export async function listStatusesRepo(p: ListStatusParams) {
     .offset(p.offset);
 
   return { data: rows, totalRecords };
+}
+
+export async function listStatusOptionsRepo(p: {
+  companyId?: string | null;
+  search?: string | null;
+  includeDeleted?: boolean | null;
+}): Promise<StatusOptionRow[]> {
+  const where = [];
+  if (p.companyId) where.push(eq(statuses.companyId, p.companyId));
+  if (!p.includeDeleted) where.push(eq(statuses.isDeleted, false));
+  if (p.search) where.push(sql`${statuses.name} ILIKE ${`%${p.search}%`}`);
+
+  return db
+    .select({
+      id: statuses.id,
+      name: statuses.name,
+      color: statuses.color,
+    })
+    .from(statuses)
+    .where(where.length ? and(...where) : undefined)
+    .orderBy(asc(statuses.name), asc(statuses.id));
 }
 
 export async function getStatusRepo(id: string) {

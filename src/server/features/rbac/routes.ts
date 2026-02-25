@@ -1,129 +1,157 @@
 import { Elysia, t } from 'elysia';
-import { HttpStatus } from '../../utils/http-status';
-import { PaginationRequestQuery, UUID } from '@/server/schemas/common';
-
-const notImplemented = (scope: string) => ({
-  error: {
-    status: HttpStatus.NOT_IMPLEMENTED,
-    message: `${scope} is defined but not implemented yet.`,
-  },
-});
+import { HttpStatus } from '@/server/utils/http-status';
+import { authPlugin, requireAuth, requirePermissions } from '@/server/plugins/auth';
+import { PermissionKeys, type PermissionKey } from '@/shared/permissions/constants';
+import {
+  createRoleCtrl,
+  deleteRoleCtrl,
+  getRolePermissionsCtrl,
+  listPermissionsCtrl,
+  listRoleOptionsCtrl,
+  listRolesCtrl,
+  setRolePermissionsCtrl,
+  updateRoleCtrl,
+} from './controller';
+import {
+  CreateRoleBody,
+  CreateRoleResponse,
+  GetRolePermissionsResponse,
+  ListPermissionsResponse,
+  ListRolesQuery,
+  ListRolesResponse,
+  SetRolePermissionsBody,
+  SetRolePermissionsResponse,
+  UpdateRoleBody,
+} from './schemas';
 
 export const rbacRoutes = new Elysia({ name: 'rbac' })
+  .use(authPlugin)
   .get(
-    '/roles',
-    async ({ set }) => {
-      set.status = HttpStatus.NOT_IMPLEMENTED;
-      return notImplemented('List roles');
+    '/roles/options',
+    async ({ query, user }) => {
+      const companyId = query.companyId ?? user!.companyId;
+      return listRoleOptionsCtrl({
+        companyId: companyId!,
+        search: query.search ?? null,
+        includeDeleted: query.includeDeleted ?? null,
+      });
     },
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          companyId: UUID,
-          search: t.Optional(t.String()),
-        }),
-      ]),
+      query: t.Object({
+        companyId: t.Optional(t.String({ minLength: 1, maxLength: 25 })),
+        search: t.Optional(t.String()),
+        includeDeleted: t.Optional(t.Boolean()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadRoles)],
+      detail: { tags: ['RBAC'], summary: 'List role options', operationId: 'listRoleOptions' },
+    },
+  )
+  .get(
+    '/roles',
+    async ({ query, user }) => {
+      const companyId = query.companyId ?? user!.companyId;
+      return listRolesCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: companyId!,
+          includeDeleted: query.includeDeleted ?? null,
+        },
+      });
+    },
+    {
+      query: ListRolesQuery,
+      response: ListRolesResponse,
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadRoles)],
       detail: { tags: ['RBAC'], summary: 'List roles', operationId: 'listRoles' },
     },
   )
   .post(
     '/roles',
-    async ({ set }) => {
-      set.status = HttpStatus.NOT_IMPLEMENTED;
-      return notImplemented('Create role');
+    async ({ body, user, set }) => {
+      const res = await createRoleCtrl({
+        companyId: user!.companyId!,
+        createdBy: user!.sub,
+        name: body.name,
+        permissionKeys: (body.permissionKeys ?? []) as PermissionKey[],
+      });
+      set.status = HttpStatus.CREATED;
+      return res;
     },
     {
-      body: t.Object({
-        companyId: UUID,
-        name: t.String({ minLength: 1, maxLength: 120 }),
-        description: t.Optional(t.String()),
-        createdBy: UUID,
-      }),
+      body: CreateRoleBody,
+      response: CreateRoleResponse,
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateRoles)],
       detail: { tags: ['RBAC'], summary: 'Create role', operationId: 'createRole' },
     },
   )
   .patch(
     '/roles/:id',
-    async ({ set }) => {
-      set.status = HttpStatus.NOT_IMPLEMENTED;
-      return notImplemented('Update role');
+    async ({ params, body, user }) => {
+      return updateRoleCtrl(params.id, user!.companyId!, body, user!.sub);
     },
     {
-      params: t.Object({ id: UUID }),
-      body: t.Object({
-        name: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
-        description: t.Optional(t.Union([t.String(), t.Null()])),
-      }),
-      detail: { tags: ['RBAC'], summary: 'Update role', operationId: 'updateRole' },
+      params: t.Object({ id: t.String({ minLength: 1, maxLength: 25 }) }),
+      body: UpdateRoleBody,
+      response: CreateRoleResponse,
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateRoles)],
+      detail: { tags: ['RBAC'], summary: 'Update role name', operationId: 'updateRole' },
     },
   )
   .delete(
     '/roles/:id',
-    async ({ set }) => {
-      set.status = HttpStatus.NOT_IMPLEMENTED;
-      return notImplemented('Delete role');
+    async ({ params, user }) => {
+      return deleteRoleCtrl(params.id, user!.companyId!, user!.sub);
     },
     {
-      params: t.Object({ id: UUID }),
+      params: t.Object({ id: t.String({ minLength: 1, maxLength: 25 }) }),
+      response: t.Object({ success: t.Boolean() }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanDeleteRoles)],
       detail: { tags: ['RBAC'], summary: 'Delete role', operationId: 'deleteRole' },
     },
   )
   .get(
     '/permissions',
-    async ({ set }) => {
-      set.status = HttpStatus.NOT_IMPLEMENTED;
-      return notImplemented('List permissions');
+    async ({ user }) => {
+      return listPermissionsCtrl(user!.companyId!, user!.sub);
     },
     {
-      detail: { tags: ['RBAC'], summary: 'List permissions', operationId: 'listPermissions' },
+      response: ListPermissionsResponse,
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadPermissions)],
+      detail: { tags: ['RBAC'], summary: 'List permission constants', operationId: 'listPermissions' },
+    },
+  )
+  .get(
+    '/roles/:id/permissions',
+    async ({ params, user }) => {
+      return getRolePermissionsCtrl(params.id, user!.companyId!);
+    },
+    {
+      params: t.Object({ id: t.String({ minLength: 1, maxLength: 25 }) }),
+      response: GetRolePermissionsResponse,
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadRoles)],
+      detail: { tags: ['RBAC'], summary: 'Get role permissions', operationId: 'getRolePermissions' },
     },
   )
   .put(
     '/roles/:id/permissions',
-    async ({ set }) => {
-      set.status = HttpStatus.NOT_IMPLEMENTED;
-      return notImplemented('Set role permissions');
+    async ({ params, body, user }) => {
+      return setRolePermissionsCtrl({
+        roleId: params.id,
+        companyId: user!.companyId!,
+        createdBy: user!.sub,
+        permissionKeys: body.permissionKeys as PermissionKey[],
+      });
     },
     {
-      params: t.Object({ id: UUID }),
-      body: t.Object({
-        permissionKeys: t.Array(t.String({ minLength: 1, maxLength: 120 })),
-        updatedBy: UUID,
-      }),
-      detail: {
-        tags: ['RBAC'],
-        summary: 'Set role permissions',
-        operationId: 'setRolePermissions',
-      },
-    },
-  )
-  .post(
-    '/users/:userId/roles',
-    async ({ set }) => {
-      set.status = HttpStatus.NOT_IMPLEMENTED;
-      return notImplemented('Assign user role');
-    },
-    {
-      params: t.Object({ userId: UUID }),
-      body: t.Object({
-        roleId: UUID,
-        assignedBy: UUID,
-      }),
-      detail: { tags: ['RBAC'], summary: 'Assign user role', operationId: 'assignUserRole' },
-    },
-  )
-  .delete(
-    '/users/:userId/roles/:roleId',
-    async ({ set }) => {
-      set.status = HttpStatus.NOT_IMPLEMENTED;
-      return notImplemented('Remove user role');
-    },
-    {
-      params: t.Object({ userId: UUID, roleId: UUID }),
-      query: t.Object({
-        removedBy: UUID,
-      }),
-      detail: { tags: ['RBAC'], summary: 'Remove user role', operationId: 'removeUserRole' },
+      params: t.Object({ id: t.String({ minLength: 1, maxLength: 25 }) }),
+      body: SetRolePermissionsBody,
+      response: SetRolePermissionsResponse,
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanManageRolePermissions)],
+      detail: { tags: ['RBAC'], summary: 'Set role permissions', operationId: 'setRolePermissions' },
     },
   );

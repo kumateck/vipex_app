@@ -1,6 +1,7 @@
 import type { Elysia } from 'elysia';
 import { verifyAccessToken } from '../utils/jwt';
 import { Unauthorized as UnauthorizedError } from '../utils/http-error';
+import { Forbidden } from '../utils/http-error';
 
 export type AuthUser = {
   sub: string;
@@ -8,6 +9,7 @@ export type AuthUser = {
   roleId?: string | null;
   companyId?: string | null;
   branchId?: string | null;
+  permissions?: string[];
   iat?: number;
   exp?: number;
 };
@@ -31,5 +33,14 @@ export const authPlugin = (app: Elysia) =>
 export function requireAuth() {
   return ({ user }: { user: AuthUser | null }) => {
     if (!user) throw UnauthorizedError();
+  };
+}
+
+export function requirePermissions(...required: string[]) {
+  return ({ user }: { user: AuthUser | null }) => {
+    if (!user) throw UnauthorizedError();
+    const granted = new Set(user.permissions ?? []);
+    const ok = required.every((permission) => granted.has(permission));
+    if (!ok) throw Forbidden();
   };
 }

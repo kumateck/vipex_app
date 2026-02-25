@@ -14,6 +14,12 @@ export type ListUserParams = {
   sort?: SortField[] | null;
 };
 
+export type UserOptionRow = {
+  id: string;
+  fullname: string;
+  email: string;
+};
+
 export async function listUsersRepo(p: ListUserParams) {
   const where = [];
   if (p.companyId) where.push(eq(users.companyId, p.companyId));
@@ -104,6 +110,35 @@ export async function listUsersRepo(p: ListUserParams) {
   const rows = await q;
 
   return { data: rows, totalRecords };
+}
+
+export async function listUserOptionsRepo(p: {
+  companyId?: string | null;
+  branchId?: string | null;
+  roleId?: string | null;
+  status?: number | null;
+  search?: string | null;
+}): Promise<UserOptionRow[]> {
+  const where = [];
+  if (p.companyId) where.push(eq(users.companyId, p.companyId));
+  if (p.branchId) where.push(eq(users.branchId, p.branchId));
+  if (p.roleId) where.push(eq(users.roleId, p.roleId));
+  if (p.status !== null && p.status !== undefined) where.push(eq(users.status, p.status));
+  if (p.search) {
+    where.push(
+      or(ilike(users.fullname, `%${p.search}%`), ilike(users.email, `%${p.search}%`), ilike(users.telephone, `%${p.search}%`)),
+    );
+  }
+
+  return db
+    .select({
+      id: users.id,
+      fullname: users.fullname,
+      email: users.email,
+    })
+    .from(users)
+    .where(where.length ? and(...where) : undefined)
+    .orderBy(asc(users.fullname), asc(users.id));
 }
 
 export async function getUserRepo(id: string) {

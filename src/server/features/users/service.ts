@@ -2,6 +2,7 @@ import { BadRequest, NotFound } from '../../utils/http-error';
 import {
   createUserRepo,
   getUserRepo,
+  listUserOptionsRepo,
   listUsersRepo,
   updateUserRepo,
   type ListUserParams,
@@ -9,6 +10,15 @@ import {
 
 export async function listUsersSvc(p: ListUserParams) {
   return listUsersRepo(p);
+}
+export async function listUserOptionsSvc(p: {
+  companyId?: string | null;
+  branchId?: string | null;
+  roleId?: string | null;
+  status?: number | null;
+  search?: string | null;
+}) {
+  return listUserOptionsRepo(p);
 }
 export async function getUserSvc(id: string) {
   const u = await getUserRepo(id);

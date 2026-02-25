@@ -585,6 +585,18 @@ CREATE TABLE "shift_types" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "audit_logs" (
+	"id" varchar(25) PRIMARY KEY NOT NULL,
+	"company_id" varchar(25) NOT NULL,
+	"actor_user_id" varchar(25),
+	"entity_type" varchar(100) NOT NULL,
+	"entity_id" varchar(25),
+	"action" varchar(120) NOT NULL,
+	"message" varchar(1000),
+	"metadata" json,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 ALTER TABLE "branches" ADD CONSTRAINT "branches_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "locations" ADD CONSTRAINT "locations_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "locations" ADD CONSTRAINT "locations_branch_id_branches_id_fk" FOREIGN KEY ("branch_id") REFERENCES "public"."branches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -682,6 +694,8 @@ ALTER TABLE "shift_templates" ADD CONSTRAINT "shift_templates_company_id_compani
 ALTER TABLE "shift_templates" ADD CONSTRAINT "shift_templates_branch_id_branches_id_fk" FOREIGN KEY ("branch_id") REFERENCES "public"."branches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "shift_templates" ADD CONSTRAINT "shift_templates_shift_type_id_shift_types_id_fk" FOREIGN KEY ("shift_type_id") REFERENCES "public"."shift_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "shift_types" ADD CONSTRAINT "shift_types_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_actor_user_id_users_id_fk" FOREIGN KEY ("actor_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "branches_company_idx" ON "branches" USING btree ("company_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "branches_company_lower_name_uq" ON "branches" USING btree ("company_id",lower("name"));--> statement-breakpoint
 CREATE INDEX "locations_company_idx" ON "locations" USING btree ("company_id");--> statement-breakpoint
@@ -790,4 +804,9 @@ CREATE INDEX "shift_templates_branch_idx" ON "shift_templates" USING btree ("bra
 CREATE INDEX "shift_templates_shift_type_idx" ON "shift_templates" USING btree ("shift_type_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "shift_templates_company_branch_name_uq" ON "shift_templates" USING btree ("company_id","branch_id","name");--> statement-breakpoint
 CREATE INDEX "shift_types_company_idx" ON "shift_types" USING btree ("company_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "shift_types_company_name_uq" ON "shift_types" USING btree ("company_id","name");
+CREATE UNIQUE INDEX "shift_types_company_name_uq" ON "shift_types" USING btree ("company_id","name");--> statement-breakpoint
+CREATE INDEX "audit_logs_company_idx" ON "audit_logs" USING btree ("company_id");--> statement-breakpoint
+CREATE INDEX "audit_logs_actor_idx" ON "audit_logs" USING btree ("actor_user_id");--> statement-breakpoint
+CREATE INDEX "audit_logs_entity_idx" ON "audit_logs" USING btree ("entity_type","entity_id");--> statement-breakpoint
+CREATE INDEX "audit_logs_action_idx" ON "audit_logs" USING btree ("action");--> statement-breakpoint
+CREATE INDEX "audit_logs_created_idx" ON "audit_logs" USING btree ("created_at");

@@ -15,6 +15,12 @@ import type {
 } from '../types/branch.types';
 import { toCreateBranchPayload, toUpdateBranchPayload } from '../utils/branch-payload';
 
+export interface BranchOption {
+  id: string;
+  name: string;
+  type: string;
+}
+
 export const branchesApi = api.injectEndpoints({
   endpoints: (builder) => ({
     listBranches: builder.query<ServerListResponse<Branch>, BranchListQuery | void>({
@@ -28,6 +34,17 @@ export const branchesApi = api.injectEndpoints({
     getBranch: builder.query<Branch, string>({
       query: (id) => ({ url: `/branches/${id}` }),
       providesTags: (_result, _err, id) => [{ type: 'Branches', id }],
+    }),
+
+    listBranchOptions: builder.query<
+      BranchOption[],
+      { companyId?: string | null; search?: string; includeDeleted?: boolean } | void
+    >({
+      query: (params) => ({
+        url: '/branches/options',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'Branches', id: 'OPTIONS' }],
     }),
 
     updateBranch: builder.mutation<{ id: string }, { id: string; body: BranchMutationInput }>({
@@ -75,6 +92,7 @@ export const branchesApi = api.injectEndpoints({
 export const {
   useListBranchesQuery,
   useGetBranchQuery,
+  useListBranchOptionsQuery,
   useUpdateBranchMutation,
   useCreateBranchMutation,
   useDeleteBranchMutation,

@@ -1,7 +1,3 @@
-import React from 'react';
+import { ParcelPage } from '@/features/operations/parcel';
 
-const Page = () => {
-  return <div>Page</div>;
-};
-
-export default Page;
+export default ParcelPage;

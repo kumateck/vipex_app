@@ -8,7 +8,8 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui';
-import { useListBranchesQuery } from '@/features/branches';
+import { useAuthStore } from '@/stores/auth-store';
+import { useListBranchOptionsQuery } from '@/features/branches';
 import {
   createLocationSchema,
   editLocationSchema,
@@ -47,8 +48,9 @@ export function LocationForm({
 }: LocationFormProps) {
   const navigate = useNavigate();
   const schema = mode === 'create' ? createLocationSchema : editLocationSchema;
-  const { data: branchesData, isLoading: isLoadingBranches } = useListBranchesQuery(
-    { page: 1, pageSize: 100 },
+  const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
+  const { data: branchesData, isLoading: isLoadingBranches } = useListBranchOptionsQuery(
+    { companyId },
     { skip: mode !== 'create' },
   );
 
@@ -112,7 +114,7 @@ export function LocationForm({
                           />
                         </SelectTrigger>
                         <SelectContent>
-                          {(branchesData?.data ?? []).map((branch) => (
+                          {(branchesData ?? []).map((branch) => (
                             <SelectItem key={branch.id} value={branch.id}>
                               {branch.name}
                             </SelectItem>

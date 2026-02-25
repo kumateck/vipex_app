@@ -15,6 +15,12 @@ import type {
 } from '../types/status.types';
 import { toCreateStatusPayload, toUpdateStatusPayload } from '../utils/status-payload';
 
+export interface StatusOption {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export const statusesApi = api.injectEndpoints({
   endpoints: (builder) => ({
     listStatuses: builder.query<ServerListResponse<Status>, StatusListQuery | void>({
@@ -28,6 +34,17 @@ export const statusesApi = api.injectEndpoints({
     getStatus: builder.query<Status, string>({
       query: (id) => ({ url: `/statuses/${id}` }),
       providesTags: (_result, _err, id) => [{ type: 'Statuses', id }],
+    }),
+
+    listStatusOptions: builder.query<
+      StatusOption[],
+      { companyId?: string | null; search?: string; includeDeleted?: boolean } | void
+    >({
+      query: (params) => ({
+        url: '/statuses/options',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'Statuses', id: 'OPTIONS' }],
     }),
 
     updateStatus: builder.mutation<{ id: string }, { id: string; body: StatusMutationInput }>({
@@ -75,6 +92,7 @@ export const statusesApi = api.injectEndpoints({
 export const {
   useListStatusesQuery,
   useGetStatusQuery,
+  useListStatusOptionsQuery,
   useUpdateStatusMutation,
   useCreateStatusMutation,
   useDeleteStatusMutation,

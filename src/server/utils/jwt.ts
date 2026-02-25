@@ -12,6 +12,7 @@ export type JwtPayload = {
   roleId?: string | null;
   companyId?: string | null;
   branchId?: string | null;
+  permissions?: string[];
 };
 
 export async function signAccessToken(payload: JwtPayload) {

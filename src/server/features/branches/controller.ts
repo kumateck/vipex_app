@@ -4,6 +4,7 @@ import {
   createBranchSvc,
   deleteBranchSvc,
   getBranchSvc,
+  listBranchOptionsSvc,
   listBranchesSvc,
   updateBranchSvc,
 } from './service';
@@ -68,6 +69,19 @@ export async function listBranchesCtrl(
 export async function getBranchByIdCtrl(id: string) {
   const b = await getBranchSvc(id);
   return toBranchDto(b);
+}
+
+export async function listBranchOptionsCtrl(filters: {
+  companyId?: string | null;
+  search?: string | null;
+  includeDeleted?: boolean | null;
+}) {
+  const rows = await listBranchOptionsSvc(filters);
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    type: row.type,
+  }));
 }
 
 export async function createBranchCtrl(input: {

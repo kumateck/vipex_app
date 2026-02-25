@@ -1,6 +1,15 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '../../../db/config';
-import { branches, companies, passwordResets, refreshTokens, roles, users } from '@/db/schemas';
+import {
+  branches,
+  companies,
+  passwordResets,
+  permissions,
+  refreshTokens,
+  rolePermissions,
+  roles,
+  users,
+} from '@/db/schemas';
 
 // export async function getUserByEmailRepo(email: string) {
 //   const [u] = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -29,6 +38,19 @@ export async function getUserByEmailRepo(email: string) {
     company: row.company?.id ? row.company : null,
     role: row.role?.id ? row.role : null,
   };
+}
+
+export async function listRolePermissionKeysRepo(
+  roleId?: string | null,
+  companyId?: string | null,
+): Promise<string[]> {
+  if (!roleId || !companyId) return [];
+  const rows = await db
+    .select({ key: permissions.permission })
+    .from(rolePermissions)
+    .innerJoin(permissions, eq(permissions.id, rolePermissions.permissionId))
+    .where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.companyId, companyId)));
+  return rows.map((row) => row.key);
 }
 
 export async function getUserByIdRepo(id: string) {

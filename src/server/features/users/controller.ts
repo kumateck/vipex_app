@@ -1,6 +1,6 @@
 import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
-import { createUserSvc, getUserSvc, listUsersSvc, updateUserSvc } from './service';
+import { createUserSvc, getUserSvc, listUserOptionsSvc, listUsersSvc, updateUserSvc } from './service';
 
 // Normalize DB row to API DTO
 function toUserDto(u: {
@@ -77,6 +77,16 @@ export async function listUsersCtrl(
 export async function getUserByIdCtrl(id: string) {
   const u = await getUserSvc(id);
   return toUserDto(u);
+}
+
+export async function listUserOptionsCtrl(filters: {
+  companyId?: string | null;
+  branchId?: string | null;
+  roleId?: string | null;
+  status?: number | null;
+  search?: string | null;
+}) {
+  return listUserOptionsSvc(filters);
 }
 
 export async function createUserCtrl(input: {

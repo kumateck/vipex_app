@@ -44,6 +44,7 @@ export const LoginResponse = t.Object({
         t.Null(),
       ]),
     ),
+    permissions: t.Optional(t.Array(t.String())),
   }),
 });
 
@@ -65,4 +66,12 @@ export const ResetPasswordBody = t.Object({
 export const ChangePasswordBody = t.Object({
   oldPassword: t.String({ minLength: 8, maxLength: 128 }),
   newPassword: t.String({ minLength: 8, maxLength: 128 }),
+});
+
+export const CurrentUserPermissionsResponse = t.Object({
+  permissions: t.Array(t.String()),
+});
+
+export const CurrentUserReadOnlyPermissionsResponse = t.Object({
+  readOnlyPermissions: t.Array(t.String()),
 });

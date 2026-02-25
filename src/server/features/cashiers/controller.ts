@@ -7,6 +7,7 @@ import {
   listSessionsSvc,
   openSessionSvc,
   closeSessionSvc,
+  getCurrentActiveSessionSvc,
 } from './service';
 
 export async function listSessionTypesCtrl() {
@@ -55,3 +56,18 @@ export async function listSessionsCtrl(
 export const getSessionByIdCtrl = getSessionSvc;
 export const openSessionCtrl = openSessionSvc;
 export const closeSessionCtrl = closeSessionSvc;
+
+export async function getCurrentActiveSessionCtrl(input: {
+  cashierId: string;
+  branchId?: string | null;
+}) {
+  const session = await getCurrentActiveSessionSvc(input);
+  if (!session) return null;
+  return {
+    ...session,
+    scheduledStartTime: session.scheduledStartTime.toISOString(),
+    actualEndTime: session.actualEndTime ? session.actualEndTime.toISOString() : null,
+    createdAt: session.createdAt.toISOString(),
+    updatedAt: session.updatedAt.toISOString(),
+  };
+}

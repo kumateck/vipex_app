@@ -5,13 +5,14 @@ export interface AuthUser {
   id: string;
   fullname: string;
   email: string;
-  telephone: string;
+  telephone?: string;
   company: {
     id: string;
     name: string;
-  };
-  branch: { id: string; name: string };
-  role: { id: string; name: string };
+  } | null;
+  branch: { id: string; name: string } | null;
+  role: { id: string; name: string } | null;
+  permissions: string[];
   locationId?: string;
   locationName?: string;
 }

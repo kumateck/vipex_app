@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import { useAuthStore } from '@/stores/auth-store';
+import { TheAduseiErrorResponse } from '@/lib/TheAduseiErrorResponse';
 
 const baseQuery = fetchBaseQuery({
   baseUrl: '/v1',
@@ -37,14 +38,18 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 
       if (refreshResult.data) {
         // Successfully refreshed - update auth state
-        const data = refreshResult.data as { accessToken: string; refreshToken: string };
+        const data = refreshResult.data as
+          | { tokens: { accessToken: string; refreshToken: string } }
+          | { accessToken: string; refreshToken: string };
+        const nextAccessToken = 'tokens' in data ? data.tokens.accessToken : data.accessToken;
+        const nextRefreshToken = 'tokens' in data ? data.tokens.refreshToken : data.refreshToken;
         const currentUser = useAuthStore.getState().user;
 
         if (currentUser) {
           useAuthStore.getState().setAuth({
             user: currentUser,
-            accessToken: data.accessToken,
-            refreshToken: data.refreshToken,
+            accessToken: nextAccessToken,
+            refreshToken: nextRefreshToken,
           });
 
           // Retry the original request with new token
@@ -53,11 +58,17 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
       } else {
         // Refresh failed - logout user
         useAuthStore.getState().logout();
+        TheAduseiErrorResponse(refreshResult.error ?? 'Session expired');
       }
     } else {
       // No refresh token available - logout user
       useAuthStore.getState().logout();
+      TheAduseiErrorResponse('Your session has expired. Please log in again.');
     }
+  }
+
+  if (result.error && result.error.status !== 401) {
+    TheAduseiErrorResponse(result.error);
   }
 
   return result;
@@ -66,7 +77,18 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Auth', 'Bookings', 'Customers', 'Inventory', 'Branches', 'Locations', 'Statuses'],
+  tagTypes: [
+    'Auth',
+    'Bookings',
+    'Customers',
+    'Inventory',
+    'Branches',
+    'Locations',
+    'Statuses',
+    'Users',
+    'Cashiers',
+    'RBAC',
+  ],
   endpoints: () => ({}),
 });
 

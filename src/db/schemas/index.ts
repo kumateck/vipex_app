@@ -11,5 +11,6 @@ export * from './enums';
 export * from './receipts';
 export * from './payments-rules';
 export * from './shifts';
+export * from './audit';
 // export * from './shifts';
 // export * from './shifts';

@@ -9,6 +9,8 @@ import {
 } from './repository';
 import { toPesewas } from '@/server/utils/gh-money';
 import { computeGhanaTaxesFromPesewas } from '@/server/utils/tax/ghana';
+import { assertActiveSessionSvc } from '../cashiers/service';
+import { recordAuditLog } from '../audit/logger';
 
 export async function createPaymentSvc(input: {
   companyId: string;
@@ -25,6 +27,14 @@ export async function createPaymentSvc(input: {
   receiptNo?: string | null;
 }) {
   if (!input.amountCedis && input.amountCedis !== 0) throw BadRequest('Amount is required');
+  if (!input.companyId || !input.branchId || !input.cashierUserId) {
+    throw BadRequest('Authenticated company, branch and cashier context are required');
+  }
+  await assertActiveSessionSvc({
+    cashierId: input.cashierUserId,
+    branchId: input.branchId,
+  });
+
   const grossPsw = toPesewas(input.amountCedis);
 
   const tax =
@@ -60,6 +70,23 @@ export async function createPaymentSvc(input: {
     receivedAt: input.receivedAt ? new Date(input.receivedAt) : new Date(),
     notes: input.notes ?? null,
     receiptNo: input.receiptNo ?? null,
+  });
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.cashierUserId,
+    entityType: 'payment',
+    entityId: created.id,
+    action: 'PAYMENT_CREATED',
+    message: 'Payment captured',
+    metadata: {
+      parcelId: input.parcelId,
+      component: input.component,
+      payer: input.payer,
+      cashierType: input.cashierType,
+      method: input.method,
+      amountCedis: input.amountCedis,
+      branchId: input.branchId,
+    },
   });
   return {
     id: created.id,
