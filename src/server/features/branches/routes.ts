@@ -1,38 +1,30 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
 
+import { createBranchSvc, deleteBranchSvc, getBranchSvc, updateBranchSvc } from './service';
+import { listBranchesCtrl } from './controller';
 import {
-  createBranchSvc,
-  deleteBranchSvc,
-  getBranchSvc,
-  listBranchesSvc,
-  updateBranchSvc,
-} from './service';
-import { decodeCursor, encodeCursor } from '@/server/utils/cursor';
-import { NonEmpty255, NonEmptyString255, PaginationQuery, UUID } from '@/server/schemas/common';
+  NonEmpty255,
+  NonEmptyString255,
+  PaginationRequestQuery,
+  UUID,
+} from '@/server/schemas/common';
 
 export const branchesRoutes = new Elysia({ name: 'branches' })
   .get(
     '/',
-    async ({ query }) => {
-      const limit = query.limit ? Math.min(Math.max(query.limit, 1), 100) : 25;
-      const after = decodeCursor<{ createdAt: string; id: string }>(query.after || null);
-      const { data, nextCursor } = await listBranchesSvc({
-        limit,
-        after,
-        companyId: query.companyId ?? null,
-      });
-      return {
-        data: data.map((b) => ({
-          ...b,
-          createdAt: b.createdAt?.toISOString?.() ?? b.createdAt,
-          updatedAt: b.updatedAt?.toISOString?.() ?? b.updatedAt,
-        })),
-        nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
-      };
-    },
+    async ({ query }) =>
+      listBranchesCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: { companyId: query.companyId ?? null },
+      }),
     {
-      query: t.Intersect([PaginationQuery, t.Object({ companyId: t.Optional(UUID) })]),
+      query: t.Intersect([PaginationRequestQuery, t.Object({ companyId: t.Optional(UUID) })]),
       detail: { tags: ['Branches'], summary: 'List branches', operationId: 'listBranches' },
     },
   )

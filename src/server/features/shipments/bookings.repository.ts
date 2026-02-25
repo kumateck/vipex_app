@@ -1,7 +1,7 @@
-import { and, asc, count, eq, gt, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, or } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { bookings, parcels } from '@/db/schemas';
-import { type CursorKey } from '@/server/utils/cursor';
+import type { SortField } from '@/server/types/pagination.types';
 
 export type BookingRow = {
   id: string;
@@ -17,27 +17,37 @@ export type BookingRow = {
 
 export type ListBookingsParams = {
   limit: number;
-  after?: CursorKey | null;
+  offset: number;
   companyId?: string | null;
   senderId?: string | null;
   sourceId?: string | null;
+  sort?: SortField[] | null;
 };
 
 export async function listBookingsRepo(
   p: ListBookingsParams,
-): Promise<{ data: BookingRow[]; nextCursor: CursorKey | null }> {
+): Promise<{ data: BookingRow[]; totalRecords: number }> {
   const whereParts: (ReturnType<typeof eq> | ReturnType<typeof and> | ReturnType<typeof or>)[] = [];
   if (p.companyId) whereParts.push(eq(bookings.companyId, p.companyId));
   if (p.senderId) whereParts.push(eq(bookings.senderId, p.senderId));
   if (p.sourceId) whereParts.push(eq(bookings.sourceId, p.sourceId));
-  if (p.after) {
-    whereParts.push(
-      or(
-        gt(bookings.createdAt, new Date(p.after.createdAt)),
-        and(eq(bookings.createdAt, new Date(p.after.createdAt)), gt(bookings.id, p.after.id)),
-      ),
-    );
-  }
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'createdAt')
+            return s.direction === 'desc' ? desc(bookings.createdAt) : asc(bookings.createdAt);
+          if (s.field === 'id') return s.direction === 'desc' ? desc(bookings.id) : asc(bookings.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [asc(bookings.createdAt), asc(bookings.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(bookings)
+    .where(whereParts.length ? and(...whereParts) : undefined);
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
 
   const rows = await db
     .select({
@@ -53,15 +63,11 @@ export async function listBookingsRepo(
     })
     .from(bookings)
     .where(whereParts.length ? and(...whereParts) : undefined)
-    .orderBy(asc(bookings.createdAt), asc(bookings.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function getBookingRepo(id: string): Promise<BookingRow | null> {

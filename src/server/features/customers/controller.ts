@@ -1,4 +1,5 @@
-import { decodeCursor, encodeCursor, type CursorKey } from '@/server/utils/cursor';
+import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
+import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import {
   createCustomerSvc,
   deleteCustomerSvc,
@@ -7,23 +8,22 @@ import {
   updateCustomerSvc,
 } from './service';
 
-export type ListCustomersQuery = {
-  limit?: number;
-  after?: string | null;
+export type ListCustomersQuery = PaginationRequestDto<{
   companyId: string;
-  search?: string | null;
   includeDeleted?: boolean | null;
-};
+}>;
 
-export async function listCustomersCtrl(q: ListCustomersQuery) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<CursorKey>(q.after || null);
-  const { data, nextCursor } = await listCustomersSvc({
-    limit,
-    after,
-    companyId: q.companyId,
-    search: q.search ?? null,
-    includeDeleted: q.includeDeleted ?? null,
+export async function listCustomersCtrl(
+  q: ListCustomersQuery,
+): Promise<PaginatedResponseDto<unknown>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listCustomersSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? '',
+    search: pagination.search ?? null,
+    includeDeleted: q.filters?.includeDeleted ?? null,
+    sort: pagination.sort ?? null,
   });
   return {
     data: data.map((c) => ({
@@ -31,7 +31,11 @@ export async function listCustomersCtrl(q: ListCustomersQuery) {
       createdAt: c.createdAt.toISOString(),
       updatedAt: c.updatedAt.toISOString(),
     })),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 

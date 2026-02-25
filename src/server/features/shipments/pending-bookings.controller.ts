@@ -8,27 +8,29 @@ import {
   type CreatePendingBookingInput,
   type ConfirmPendingBookingInput,
 } from './pending-bookings.service';
+import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
+import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 
-export interface ListPendingBookingsQuery {
+export type ListPendingBookingsQuery = PaginationRequestDto<{
   branchId: string;
   status?: number;
   attendantId?: string;
-  limit?: number;
-  after?: string;
-}
+}>;
 
-export async function listPendingBookingsCtrl(query: ListPendingBookingsQuery) {
-  const limit = query.limit ? Math.min(Math.max(query.limit, 1), 100) : 25;
+export async function listPendingBookingsCtrl(
+  query: ListPendingBookingsQuery,
+): Promise<PaginatedResponseDto<unknown>> {
+  const pagination = normalizePagination(query, { pageSize: 20 });
 
-  const pendingBookings = await getPendingBookings(query.branchId, {
-    status: query.status as any,
-    attendantId: query.attendantId,
-    limit,
-    after: query.after,
+  const { data, totalRecords } = await getPendingBookings(query.filters?.branchId ?? '', {
+    status: query.filters?.status as any,
+    attendantId: query.filters?.attendantId,
+    limit: pagination.pageSize,
+    offset: pagination.offset,
   });
 
   return {
-    data: pendingBookings.map((pb) => ({
+    data: data.map((pb) => ({
       id: pb.id,
       companyId: pb.companyId,
       branchId: pb.branchId,
@@ -44,10 +46,11 @@ export async function listPendingBookingsCtrl(query: ListPendingBookingsQuery) {
       expiresAt: pb.expiresAt,
       confirmedAt: pb.confirmedAt,
     })),
-    pagination: {
-      limit,
-      hasMore: pendingBookings.length === limit,
-    },
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 

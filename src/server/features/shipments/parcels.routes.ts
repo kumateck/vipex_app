@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { UUID } from '../../schemas/common';
+import { PaginationRequestQuery, UUID } from '../../schemas/common';
 import {
   createParcelCtrl,
   getParcelByIdCtrl,
@@ -14,31 +14,35 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
   .get(
     '/',
     async ({ query }) =>
-      listParcelsCtrl(
-        query as {
-          limit?: number;
-          after?: string | null;
-          companyId?: string | null;
-          sourceId?: string | null;
-          destinationId?: string | null;
-          statusId?: string | null;
-          search?: string | null;
-          received?: boolean | null;
-          includeDeleted?: boolean | null;
+      listParcelsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: query.companyId ?? null,
+          sourceId: query.sourceId ?? null,
+          destinationId: query.destinationId ?? null,
+          statusId: query.statusId ?? null,
+          received: query.received ?? null,
+          includeDeleted: query.includeDeleted ?? null,
         },
-      ),
-    {
-      query: t.Object({
-        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
-        after: t.Optional(t.String()),
-        companyId: t.Optional(UUID),
-        sourceId: t.Optional(UUID),
-        destinationId: t.Optional(UUID),
-        statusId: t.Optional(UUID),
-        search: t.Optional(t.String()),
-        received: t.Optional(t.Boolean()),
-        includeDeleted: t.Optional(t.Boolean()),
       }),
+    {
+      query: t.Intersect([
+        PaginationRequestQuery,
+        t.Object({
+          companyId: t.Optional(UUID),
+          sourceId: t.Optional(UUID),
+          destinationId: t.Optional(UUID),
+          statusId: t.Optional(UUID),
+          search: t.Optional(t.String()),
+          received: t.Optional(t.Boolean()),
+          includeDeleted: t.Optional(t.Boolean()),
+        }),
+      ]),
       detail: { tags: ['Shipments'], summary: 'List/search parcels' },
     },
   )

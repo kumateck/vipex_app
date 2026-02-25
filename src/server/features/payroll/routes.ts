@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { PaginationQuery, UUID } from '@/server/schemas/common';
+import { PaginationRequestQuery, UUID } from '@/server/schemas/common';
 
 const notImplemented = (scope: string) => ({
   error: {
@@ -18,7 +18,7 @@ export const payrollRoutes = new Elysia({ name: 'payroll' })
     },
     {
       query: t.Intersect([
-        PaginationQuery,
+        PaginationRequestQuery,
         t.Object({
           companyId: UUID,
           branchId: t.Optional(UUID),
@@ -84,7 +84,7 @@ export const payrollRoutes = new Elysia({ name: 'payroll' })
     {
       params: t.Object({ id: UUID }),
       query: t.Intersect([
-        PaginationQuery,
+        PaginationRequestQuery,
         t.Object({
           employeeId: t.Optional(UUID),
         }),

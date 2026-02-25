@@ -1,8 +1,8 @@
 import { t } from 'elysia';
-import { UUID, NonEmptyString255, PaginationQuery } from '../../schemas/common';
+import { UUID, NonEmptyString255, PaginationMetaSchema, PaginationRequestQuery } from '../../schemas/common';
 
 export const ListBranchesQuery = t.Intersect([
-  PaginationQuery,
+  PaginationRequestQuery,
   t.Object({
     companyId: t.Optional(UUID), // optional filter
   }),
@@ -36,7 +36,7 @@ export const BranchDto = t.Object({
 
 export const ListBranchesResponse = t.Object({
   data: t.Array(BranchDto),
-  nextCursor: t.Union([t.String(), t.Null()]),
+  meta: PaginationMetaSchema,
 });
 
 export const CreateBranchResponse = t.Object({

@@ -1,41 +1,30 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { decodeCursor, encodeCursor } from '@/server/utils/cursor';
-import { PaginationQuery, NonEmpty255, UUID } from '@/server/schemas/common';
+import { PaginationRequestQuery, NonEmpty255, UUID } from '@/server/schemas/common';
+import { listLocationsCtrl } from './controller';
 
-import {
-  createLocationSvc,
-  deleteLocationSvc,
-  getLocationSvc,
-  listLocationsSvc,
-  updateLocationSvc,
-} from './service';
+import { createLocationSvc, deleteLocationSvc, getLocationSvc, updateLocationSvc } from './service';
 
 export const locationsRoutes = new Elysia({ name: 'locations' })
   .get(
     '/',
-    async ({ query }) => {
-      const limit = query.limit ? Math.min(Math.max(query.limit, 1), 100) : 25;
-      const after = decodeCursor<{ createdAt: string; id: string }>(query.after || null);
-      const { data, nextCursor } = await listLocationsSvc({
-        limit,
-        after,
-        companyId: query.companyId ?? null,
-        branchId: query.branchId ?? null,
-        includeDeleted: query.includeDeleted ?? null,
-      });
-      return {
-        data: data.map((l) => ({
-          ...l,
-          createdAt: l.createdAt?.toISOString?.() ?? l.createdAt,
-          updatedAt: l.updatedAt?.toISOString?.() ?? l.updatedAt,
-        })),
-        nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
-      };
-    },
+    async ({ query }) =>
+      listLocationsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: query.companyId ?? null,
+          branchId: query.branchId ?? null,
+          includeDeleted: query.includeDeleted ?? null,
+        },
+      }),
     {
       query: t.Intersect([
-        PaginationQuery,
+        PaginationRequestQuery,
         t.Object({
           companyId: t.Optional(UUID),
           branchId: t.Optional(UUID),

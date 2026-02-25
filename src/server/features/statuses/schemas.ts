@@ -1,5 +1,5 @@
 import { t } from 'elysia';
-import { UUID, NonEmptyString255, PaginationQuery } from '../../schemas/common';
+import { UUID, NonEmptyString255, PaginationMetaSchema, PaginationRequestQuery } from '../../schemas/common';
 
 export const StatusDto = t.Object({
   id: UUID,
@@ -13,7 +13,7 @@ export const StatusDto = t.Object({
 });
 
 export const ListStatusesQuery = t.Intersect([
-  PaginationQuery,
+  PaginationRequestQuery,
   t.Object({
     companyId: t.Optional(UUID),
     includeDeleted: t.Optional(t.Boolean()),
@@ -38,7 +38,7 @@ export const UpdateStatusBody = t.Object({
 
 export const ListStatusesResponse = t.Object({
   data: t.Array(StatusDto),
-  nextCursor: t.Union([t.String(), t.Null()]),
+  meta: PaginationMetaSchema,
 });
 
 export const CreateStatusResponse = t.Object({

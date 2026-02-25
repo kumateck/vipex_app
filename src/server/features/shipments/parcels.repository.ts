@@ -1,8 +1,8 @@
-import { and, asc, eq, gt, ilike, isNull, isNotNull, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, isNull, isNotNull, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
 import { parcels, bookings, customers } from '@/db/schemas';
-import { type CursorKey } from '@/server/utils/cursor';
+import type { SortField } from '@/server/types/pagination.types';
 export type ParcelRow = {
   id: string;
   companyId: string;
@@ -39,7 +39,7 @@ export type ParcelRow = {
 
 export type ListParcelsParams = {
   limit: number;
-  after?: CursorKey | null;
+  offset: number;
   companyId?: string | null;
   sourceId?: string | null;
   destinationId?: string | null;
@@ -47,6 +47,7 @@ export type ListParcelsParams = {
   search?: string | null; // bookingCode/trackingCode/sender/receiver names/phones
   received?: boolean | null;
   includeDeleted?: boolean | null;
+  sort?: SortField[] | null;
 };
 
 export async function listParcelsRepo(p: ListParcelsParams): Promise<{
@@ -57,7 +58,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     receiverName: string | null;
     receiverPhone: string | null;
   })[];
-  nextCursor: CursorKey | null;
+  totalRecords: number;
 }> {
   const whereParts: (
     | ReturnType<typeof eq>
@@ -73,16 +74,51 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   if (p.statusId) whereParts.push(eq(parcels.statusId, p.statusId));
   if (p.received === true) whereParts.push(isNotNull(parcels.receivedAt));
   if (p.received === false) whereParts.push(isNull(parcels.receivedAt));
-  if (p.after) {
-    whereParts.push(
-      or(
-        gt(parcels.createdAt, new Date(p.after.createdAt)),
-        and(eq(parcels.createdAt, new Date(p.after.createdAt)), gt(parcels.id, p.after.id)),
-      ),
-    );
-  }
   const s = alias(customers, 's');
   const r = alias(customers, 'r');
+
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((srt) => {
+          if (srt.field === 'createdAt')
+            return srt.direction === 'desc' ? desc(parcels.createdAt) : asc(parcels.createdAt);
+          if (srt.field === 'trackingCode')
+            return srt.direction === 'desc' ? desc(parcels.trackingCode) : asc(parcels.trackingCode);
+          if (srt.field === 'bookingCode')
+            return srt.direction === 'desc' ? desc(parcels.bookingCode) : asc(parcels.bookingCode);
+          if (srt.field === 'id') return srt.direction === 'desc' ? desc(parcels.id) : asc(parcels.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [asc(parcels.createdAt), asc(parcels.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(parcels)
+    .leftJoin(bookings, eq(parcels.bookingId, bookings.id))
+    .leftJoin(s, eq(parcels.senderId, s.id))
+    .leftJoin(r, eq(parcels.receiverId, r.id))
+    .where(
+      whereParts.length || p.search
+        ? and(
+            ...(whereParts as [(typeof whereParts)[number], ...(typeof whereParts)[number][]]),
+            ...(p.search
+              ? [
+                  or(
+                    ilike(parcels.bookingCode, `%${p.search}%`),
+                    ilike(parcels.trackingCode, `%${p.search}%`),
+                    ilike(s.fullname, `%${p.search}%`),
+                    ilike(s.telephone, `%${p.search}%`),
+                    ilike(r.fullname, `%${p.search}%`),
+                    ilike(r.telephone, `%${p.search}%`),
+                  ),
+                ]
+              : []),
+          )
+        : undefined,
+    );
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
 
   const rows = await db
     .select({
@@ -146,15 +182,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
           )
         : undefined,
     )
-    .orderBy(asc(parcels.createdAt), asc(parcels.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function getParcelRepo(id: string): Promise<ParcelRow | null> {

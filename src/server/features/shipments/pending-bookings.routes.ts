@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { UUID, NonEmptyString255, PaginationQuery, SmallInt } from '../../schemas/common';
+import { UUID, NonEmptyString255, PaginationRequestQuery, SmallInt } from '../../schemas/common';
 import {
   listPendingBookingsCtrl,
   getPendingBookingCtrl,
@@ -12,20 +12,38 @@ import {
 
 export const pendingBookingsRoutes = new Elysia({ name: 'pending-bookings' })
   // List pending bookings for a branch
-  .get('/', async ({ query }) => listPendingBookingsCtrl(query as any), {
-    query: t.Object({
-      branchId: UUID,
-      status: t.Optional(SmallInt),
-      attendantId: t.Optional(UUID),
-      limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
-      after: t.Optional(t.String()),
-    }),
-    detail: {
-      tags: ['Shipments'],
-      summary: 'List pending bookings',
-      operationId: 'listPendingBookings',
+  .get(
+    '/',
+    async ({ query }) =>
+      listPendingBookingsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          branchId: query.branchId,
+          status: query.status,
+          attendantId: query.attendantId,
+        },
+      }),
+    {
+      query: t.Intersect([
+        PaginationRequestQuery,
+        t.Object({
+          branchId: UUID,
+          status: t.Optional(SmallInt),
+          attendantId: t.Optional(UUID),
+        }),
+      ]),
+      detail: {
+        tags: ['Shipments'],
+        summary: 'List pending bookings',
+        operationId: 'listPendingBookings',
+      },
     },
-  })
+  )
 
   // Get single pending booking
   .get('/:id', async ({ params }) => getPendingBookingCtrl(params.id), {

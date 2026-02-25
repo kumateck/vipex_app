@@ -1,40 +1,29 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
 
-import {
-  createStatusSvc,
-  deleteStatusSvc,
-  getStatusSvc,
-  listStatusesSvc,
-  updateStatusSvc,
-} from './service';
-import { decodeCursor, encodeCursor } from '@/server/utils/cursor';
-import { PaginationQuery, NonEmpty255, UUID } from '@/server/schemas/common';
+import { createStatusSvc, deleteStatusSvc, getStatusSvc, updateStatusSvc } from './service';
+import { listStatusesCtrl } from './controller';
+import { PaginationRequestQuery, NonEmpty255, UUID } from '@/server/schemas/common';
 
 export const statusesRoutes = new Elysia({ name: 'statuses' })
   .get(
     '/',
-    async ({ query }) => {
-      const limit = query.limit ? Math.min(Math.max(query.limit, 1), 100) : 25;
-      const after = decodeCursor<{ createdAt: string; id: string }>(query.after || null);
-      const { data, nextCursor } = await listStatusesSvc({
-        limit,
-        after,
-        companyId: query.companyId ?? null,
-        includeDeleted: query.includeDeleted ?? null,
-      });
-      return {
-        data: data.map((s) => ({
-          ...s,
-          createdAt: s.createdAt?.toISOString?.() ?? s.createdAt,
-          updatedAt: s.updatedAt?.toISOString?.() ?? s.updatedAt,
-        })),
-        nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
-      };
-    },
+    async ({ query }) =>
+      listStatusesCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: query.companyId ?? null,
+          includeDeleted: query.includeDeleted ?? null,
+        },
+      }),
     {
       query: t.Intersect([
-        PaginationQuery,
+        PaginationRequestQuery,
         t.Object({ companyId: t.Optional(UUID), includeDeleted: t.Optional(t.Boolean()) }),
       ]),
       detail: { tags: ['Statuses'], summary: 'List statuses', operationId: 'listStatuses' },

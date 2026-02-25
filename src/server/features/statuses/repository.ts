@@ -1,26 +1,40 @@
-import { and, asc, eq, gt, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { statuses } from '@/db/schemas';
+import type { SortField } from '@/server/types/pagination.types';
 
 export type ListStatusParams = {
   limit: number;
-  after?: { createdAt: string; id: string } | null;
+  offset: number;
   companyId?: string | null;
   includeDeleted?: boolean | null;
+  sort?: SortField[] | null;
 };
 
 export async function listStatusesRepo(p: ListStatusParams) {
   const where = [];
   if (p.companyId) where.push(eq(statuses.companyId, p.companyId));
   if (!p.includeDeleted) where.push(eq(statuses.isDeleted, false));
-  if (p.after) {
-    where.push(
-      or(
-        gt(statuses.createdAt, new Date(p.after.createdAt)),
-        and(eq(statuses.createdAt, new Date(p.after.createdAt)), gt(statuses.id, p.after.id)),
-      ),
-    );
-  }
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'createdAt')
+            return s.direction === 'desc' ? desc(statuses.createdAt) : asc(statuses.createdAt);
+          if (s.field === 'name')
+            return s.direction === 'desc' ? desc(statuses.name) : asc(statuses.name);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(statuses.id) : asc(statuses.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [asc(statuses.createdAt), asc(statuses.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(statuses)
+    .where(where.length ? and(...where) : undefined);
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
   const rows = await db
     .select({
       id: statuses.id,
@@ -34,16 +48,11 @@ export async function listStatusesRepo(p: ListStatusParams) {
     })
     .from(statuses)
     .where(where.length ? and(...where) : undefined)
-    .orderBy(asc(statuses.createdAt), asc(statuses.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt!.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function getStatusRepo(id: string) {

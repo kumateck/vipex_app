@@ -1,4 +1,5 @@
-import { decodeCursor, encodeCursor } from '@/server/utils/cursor';
+import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
+import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import {
   listProductCategoriesSvc,
   getProductCategorySvc,
@@ -30,18 +31,15 @@ import {
 } from './service';
 
 // Product Categories
-export async function listProductCategoriesCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  companyId?: string | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<{ createdAt: string; id: string }>(q.after || null);
-
-  const { data, nextCursor } = await listProductCategoriesSvc({
-    limit,
-    after,
-    companyId: q.companyId ?? null,
+export async function listProductCategoriesCtrl(
+  q: PaginationRequestDto<{ companyId?: string | null }>,
+): Promise<PaginatedResponseDto<unknown>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listProductCategoriesSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? null,
+    sort: pagination.sort ?? null,
   });
 
   return {
@@ -50,7 +48,11 @@ export async function listProductCategoriesCtrl(q: {
       createdAt: c.createdAt?.toISOString?.() ?? c.createdAt,
       updatedAt: c.updatedAt?.toISOString?.() ?? c.updatedAt,
     })),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 
@@ -79,20 +81,16 @@ export async function deleteProductCategoryCtrl(id: string) {
 }
 
 // Products
-export async function listProductsCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  companyId?: string | null;
-  categoryId?: string | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<{ createdAt: string; id: string }>(q.after || null);
-
-  const { data, nextCursor } = await listProductsSvc({
-    limit,
-    after,
-    companyId: q.companyId ?? null,
-    categoryId: q.categoryId ?? null,
+export async function listProductsCtrl(
+  q: PaginationRequestDto<{ companyId?: string | null; categoryId?: string | null }>,
+): Promise<PaginatedResponseDto<unknown>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listProductsSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? null,
+    categoryId: q.filters?.categoryId ?? null,
+    sort: pagination.sort ?? null,
   });
 
   return {
@@ -102,7 +100,11 @@ export async function listProductsCtrl(q: {
       createdAt: p.createdAt?.toISOString?.() ?? p.createdAt,
       updatedAt: p.updatedAt?.toISOString?.() ?? p.updatedAt,
     })),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 
@@ -151,20 +153,16 @@ export async function deleteProductCtrl(id: string) {
 }
 
 // Inventory Locations
-export async function listInventoryLocationsCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  companyId?: string | null;
-  branchId?: string | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<{ createdAt: string; id: string }>(q.after || null);
-
-  const { data, nextCursor } = await listInventoryLocationsSvc({
-    limit,
-    after,
-    companyId: q.companyId ?? null,
-    branchId: q.branchId ?? null,
+export async function listInventoryLocationsCtrl(
+  q: PaginationRequestDto<{ companyId?: string | null; branchId?: string | null }>,
+): Promise<PaginatedResponseDto<unknown>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listInventoryLocationsSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? null,
+    branchId: q.filters?.branchId ?? null,
+    sort: pagination.sort ?? null,
   });
 
   return {
@@ -173,7 +171,11 @@ export async function listInventoryLocationsCtrl(q: {
       createdAt: l.createdAt?.toISOString?.() ?? l.createdAt,
       updatedAt: l.updatedAt?.toISOString?.() ?? l.updatedAt,
     })),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 
@@ -203,22 +205,21 @@ export async function deleteInventoryLocationCtrl(id: string) {
 }
 
 // Stock Levels
-export async function listStockLevelsCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  companyId?: string | null;
-  productId?: string | null;
-  locationId?: string | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<{ updatedAt: string; id: string }>(q.after || null);
-
-  const { data, nextCursor } = await listStockLevelsSvc({
-    limit,
-    after,
-    companyId: q.companyId ?? null,
-    productId: q.productId ?? null,
-    locationId: q.locationId ?? null,
+export async function listStockLevelsCtrl(
+  q: PaginationRequestDto<{
+    companyId?: string | null;
+    productId?: string | null;
+    locationId?: string | null;
+  }>,
+): Promise<PaginatedResponseDto<unknown>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listStockLevelsSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? null,
+    productId: q.filters?.productId ?? null,
+    locationId: q.filters?.locationId ?? null,
+    sort: pagination.sort ?? null,
   });
 
   return {
@@ -227,7 +228,11 @@ export async function listStockLevelsCtrl(q: {
       quantity: l.quantity.toString(),
       updatedAt: l.updatedAt?.toISOString?.() ?? l.updatedAt,
     })),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 
@@ -240,24 +245,23 @@ export async function getStockLevelCtrl(productId: string, locationId: string) {
 }
 
 // Stock Movements
-export async function listStockMovementsCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  companyId?: string | null;
-  productId?: string | null;
-  locationId?: string | null;
-  movementType?: number | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<{ createdAt: string; id: string }>(q.after || null);
-
-  const { data, nextCursor } = await listStockMovementsSvc({
-    limit,
-    after,
-    companyId: q.companyId ?? null,
-    productId: q.productId ?? null,
-    locationId: q.locationId ?? null,
-    movementType: q.movementType ?? null,
+export async function listStockMovementsCtrl(
+  q: PaginationRequestDto<{
+    companyId?: string | null;
+    productId?: string | null;
+    locationId?: string | null;
+    movementType?: number | null;
+  }>,
+): Promise<PaginatedResponseDto<unknown>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listStockMovementsSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? null,
+    productId: q.filters?.productId ?? null,
+    locationId: q.filters?.locationId ?? null,
+    movementType: q.filters?.movementType ?? null,
+    sort: pagination.sort ?? null,
   });
 
   return {
@@ -266,7 +270,11 @@ export async function listStockMovementsCtrl(q: {
       quantity: m.quantity.toString(),
       createdAt: m.createdAt?.toISOString?.() ?? m.createdAt,
     })),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 
@@ -288,22 +296,21 @@ export async function createStockMovementCtrl(input: {
 }
 
 // Stock Adjustments
-export async function listStockAdjustmentsCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  companyId?: string | null;
-  productId?: string | null;
-  locationId?: string | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<{ createdAt: string; id: string }>(q.after || null);
-
-  const { data, nextCursor } = await listStockAdjustmentsSvc({
-    limit,
-    after,
-    companyId: q.companyId ?? null,
-    productId: q.productId ?? null,
-    locationId: q.locationId ?? null,
+export async function listStockAdjustmentsCtrl(
+  q: PaginationRequestDto<{
+    companyId?: string | null;
+    productId?: string | null;
+    locationId?: string | null;
+  }>,
+): Promise<PaginatedResponseDto<unknown>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listStockAdjustmentsSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? null,
+    productId: q.filters?.productId ?? null,
+    locationId: q.filters?.locationId ?? null,
+    sort: pagination.sort ?? null,
   });
 
   return {
@@ -312,7 +319,11 @@ export async function listStockAdjustmentsCtrl(q: {
       quantityChange: a.quantityChange.toString(),
       createdAt: a.createdAt?.toISOString?.() ?? a.createdAt,
     })),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 
@@ -332,22 +343,21 @@ export async function createStockAdjustmentCtrl(input: {
 }
 
 // Stock Transfers
-export async function listStockTransfersCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  companyId?: string | null;
-  productId?: string | null;
-  status?: number | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<{ createdAt: string; id: string }>(q.after || null);
-
-  const { data, nextCursor } = await listStockTransfersSvc({
-    limit,
-    after,
-    companyId: q.companyId ?? null,
-    productId: q.productId ?? null,
-    status: q.status ?? null,
+export async function listStockTransfersCtrl(
+  q: PaginationRequestDto<{
+    companyId?: string | null;
+    productId?: string | null;
+    status?: number | null;
+  }>,
+): Promise<PaginatedResponseDto<unknown>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listStockTransfersSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? null,
+    productId: q.filters?.productId ?? null,
+    status: q.filters?.status ?? null,
+    sort: pagination.sort ?? null,
   });
 
   return {
@@ -358,7 +368,11 @@ export async function listStockTransfersCtrl(q: {
       completedAt: t.completedAt?.toISOString?.() ?? t.completedAt,
       updatedAt: t.updatedAt?.toISOString?.() ?? t.updatedAt,
     })),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 
@@ -404,26 +418,25 @@ export async function getLowStockReportCtrl(companyId: string, locationId?: stri
   };
 }
 
-export async function getMovementHistoryCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  companyId: string;
-  productId?: string | null;
-  locationId?: string | null;
-  startDate?: string | null;
-  endDate?: string | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<{ createdAt: string; id: string }>(q.after || null);
-
-  const { data, nextCursor } = await getMovementHistorySvc({
-    limit,
-    after,
-    companyId: q.companyId,
-    productId: q.productId ?? null,
-    locationId: q.locationId ?? null,
-    startDate: q.startDate ? new Date(q.startDate) : null,
-    endDate: q.endDate ? new Date(q.endDate) : null,
+export async function getMovementHistoryCtrl(
+  q: PaginationRequestDto<{
+    companyId: string;
+    productId?: string | null;
+    locationId?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+  }>,
+): Promise<PaginatedResponseDto<unknown>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await getMovementHistorySvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? '',
+    productId: q.filters?.productId ?? null,
+    locationId: q.filters?.locationId ?? null,
+    startDate: q.filters?.startDate ? new Date(q.filters.startDate) : null,
+    endDate: q.filters?.endDate ? new Date(q.filters.endDate) : null,
+    sort: pagination.sort ?? null,
   });
 
   return {
@@ -432,6 +445,10 @@ export async function getMovementHistoryCtrl(q: {
       quantity: m.quantity.toString(),
       createdAt: m.createdAt?.toISOString?.() ?? m.createdAt,
     })),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }

@@ -1,29 +1,34 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { UUID } from '../../schemas/common';
+import { PaginationRequestQuery, UUID } from '../../schemas/common';
 import { createBookingCtrl, getBookingByIdCtrl, listBookingsCtrl } from './bookings.controller';
 
 export const bookingsRoutes = new Elysia({ name: 'bookings' })
   .get(
     '/',
     async ({ query }) =>
-      listBookingsCtrl(
-        query as {
-          limit?: number;
-          after?: string | null;
-          companyId?: string | null;
-          senderId?: string | null;
-          sourceId?: string | null;
+      listBookingsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: query.companyId ?? null,
+          senderId: query.senderId ?? null,
+          sourceId: query.sourceId ?? null,
         },
-      ),
-    {
-      query: t.Object({
-        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
-        after: t.Optional(t.String()),
-        companyId: t.Optional(UUID),
-        senderId: t.Optional(UUID),
-        sourceId: t.Optional(UUID),
       }),
+    {
+      query: t.Intersect([
+        PaginationRequestQuery,
+        t.Object({
+          companyId: t.Optional(UUID),
+          senderId: t.Optional(UUID),
+          sourceId: t.Optional(UUID),
+        }),
+      ]),
       detail: { tags: ['Shipments'], summary: 'List bookings' },
     },
   )

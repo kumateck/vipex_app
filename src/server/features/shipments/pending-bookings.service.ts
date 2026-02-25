@@ -99,10 +99,10 @@ export async function getPendingBookings(
     status?: PendingBookingStatus;
     attendantId?: string;
     limit?: number;
-    after?: string;
+    offset?: number;
   } = {},
 ) {
-  const { status, attendantId, limit = 25 } = options;
+  const { status, attendantId, limit = 25, offset = 0 } = options;
 
   const conditions = [
     eq(pendingBookings.branchId, branchId),
@@ -113,12 +113,21 @@ export async function getPendingBookings(
     conditions.push(eq(pendingBookings.attendantId, attendantId));
   }
 
-  return await db
+  const [countRow] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(pendingBookings)
+    .where(and(...conditions));
+  const totalRecords = Number(countRow?.c ?? 0);
+
+  const data = await db
     .select()
     .from(pendingBookings)
     .where(and(...conditions))
     .orderBy(pendingBookings.createdAt)
-    .limit(limit);
+    .limit(limit)
+    .offset(offset);
+
+  return { data, totalRecords };
 }
 
 /**

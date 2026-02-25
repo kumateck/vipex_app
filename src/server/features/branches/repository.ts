@@ -1,24 +1,40 @@
-import { and, asc, eq, gt, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { branches } from '@/db/schemas';
+import type { SortField } from '@/server/types/pagination.types';
 
 export type ListBranchParams = {
   limit: number;
-  after?: { createdAt: string; id: string } | null;
+  offset: number;
   companyId?: string | null;
+  sort?: SortField[] | null;
 };
 
 export async function listBranchesRepo(p: ListBranchParams) {
   const where = [];
   if (p.companyId) where.push(eq(branches.companyId, p.companyId));
-  if (p.after) {
-    where.push(
-      or(
-        gt(branches.createdAt, new Date(p.after.createdAt)),
-        and(eq(branches.createdAt, new Date(p.after.createdAt)), gt(branches.id, p.after.id)),
-      ),
-    );
-  }
+
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'createdAt')
+            return s.direction === 'desc' ? desc(branches.createdAt) : asc(branches.createdAt);
+          if (s.field === 'name')
+            return s.direction === 'desc' ? desc(branches.name) : asc(branches.name);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(branches.id) : asc(branches.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [asc(branches.createdAt), asc(branches.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(branches)
+    .where(where.length ? and(...where) : undefined);
+
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
   const rows = await db
     .select({
       id: branches.id,
@@ -35,15 +51,11 @@ export async function listBranchesRepo(p: ListBranchParams) {
     })
     .from(branches)
     .where(where.length ? and(...where) : undefined)
-    .orderBy(asc(branches.createdAt), asc(branches.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt!.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function getBranchRepo(id: string) {

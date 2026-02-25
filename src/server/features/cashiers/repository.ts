@@ -1,6 +1,7 @@
-import { and, asc, eq, gt, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, or } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { cashierSessionTypes, cashierSessions } from '@/db/schemas';
+import type { SortField } from '@/server/types/pagination.types';
 
 export type SessionTypeRow = {
   id: string;
@@ -54,30 +55,42 @@ export type SessionRow = {
 
 export type ListSessionsParams = {
   limit: number;
-  after?: { scheduledStartTime: string; id: string } | null;
+  offset: number;
   cashierId?: string | null;
   branchId?: string | null;
   activeOnly?: boolean | null;
+  sort?: SortField[] | null;
 };
 
 export async function listSessionsRepo(
   p: ListSessionsParams,
-): Promise<{ data: SessionRow[]; nextCursor: { scheduledStartTime: string; id: string } | null }> {
+): Promise<{ data: SessionRow[]; totalRecords: number }> {
   const where: (ReturnType<typeof eq> | ReturnType<typeof and> | ReturnType<typeof or>)[] = [];
   if (p.cashierId) where.push(eq(cashierSessions.cashierId, p.cashierId));
   if (p.branchId) where.push(eq(cashierSessions.branchId, p.branchId));
   if (p.activeOnly) where.push(eq(cashierSessions.status, 'ACTIVE'));
-  if (p.after) {
-    where.push(
-      or(
-        gt(cashierSessions.scheduledStartTime, new Date(p.after.scheduledStartTime)),
-        and(
-          eq(cashierSessions.scheduledStartTime, new Date(p.after.scheduledStartTime)),
-          gt(cashierSessions.id, p.after.id),
-        ),
-      ),
-    );
-  }
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'scheduledStartTime')
+            return s.direction === 'desc'
+              ? desc(cashierSessions.scheduledStartTime)
+              : asc(cashierSessions.scheduledStartTime);
+          if (s.field === 'createdAt')
+            return s.direction === 'desc' ? desc(cashierSessions.createdAt) : asc(cashierSessions.createdAt);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(cashierSessions.id) : asc(cashierSessions.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [asc(cashierSessions.scheduledStartTime), asc(cashierSessions.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(cashierSessions)
+    .where(where.length ? and(...where) : undefined);
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
 
   const rows = await db
     .select({
@@ -95,19 +108,11 @@ export async function listSessionsRepo(
     })
     .from(cashierSessions)
     .where(where.length ? and(...where) : undefined)
-    .orderBy(asc(cashierSessions.scheduledStartTime), asc(cashierSessions.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? {
-        scheduledStartTime: data[data.length - 1]!.scheduledStartTime.toISOString(),
-        id: data[data.length - 1]!.id,
-      }
-    : null;
-
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function openSessionRepo(

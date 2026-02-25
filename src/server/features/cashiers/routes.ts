@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { UUID } from '../../schemas/common';
+import { PaginationRequestQuery, UUID } from '../../schemas/common';
 import {
   closeSessionCtrl,
   createSessionTypeCtrl,
@@ -36,23 +36,28 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
   .get(
     '/sessions',
     async ({ query }) =>
-      listSessionsCtrl(
-        query as {
-          limit?: number;
-          after?: string | null;
-          cashierId?: string | null;
-          branchId?: string | null;
-          activeOnly?: boolean | null;
+      listSessionsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          cashierId: query.cashierId ?? null,
+          branchId: query.branchId ?? null,
+          activeOnly: query.activeOnly ?? null,
         },
-      ),
-    {
-      query: t.Object({
-        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
-        after: t.Optional(t.String()),
-        cashierId: t.Optional(UUID),
-        branchId: t.Optional(UUID),
-        activeOnly: t.Optional(t.Boolean()),
       }),
+    {
+      query: t.Intersect([
+        PaginationRequestQuery,
+        t.Object({
+          cashierId: t.Optional(UUID),
+          branchId: t.Optional(UUID),
+          activeOnly: t.Optional(t.Boolean()),
+        }),
+      ]),
       detail: { tags: ['Cashiers'], summary: 'List cashier sessions' },
     },
   )

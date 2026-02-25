@@ -1,13 +1,15 @@
-import { and, asc, eq, gt, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { locations } from '@/db/schemas';
+import type { SortField } from '@/server/types/pagination.types';
 
 export type ListLocationParams = {
   limit: number;
-  after?: { createdAt: string; id: string } | null;
+  offset: number;
   companyId?: string | null;
   branchId?: string | null;
   includeDeleted?: boolean | null;
+  sort?: SortField[] | null;
 };
 
 export async function listLocationsRepo(p: ListLocationParams) {
@@ -15,14 +17,26 @@ export async function listLocationsRepo(p: ListLocationParams) {
   if (p.companyId) where.push(eq(locations.companyId, p.companyId));
   if (p.branchId) where.push(eq(locations.branchId, p.branchId));
   if (!p.includeDeleted) where.push(eq(locations.isDeleted, false));
-  if (p.after) {
-    where.push(
-      or(
-        gt(locations.createdAt, new Date(p.after.createdAt)),
-        and(eq(locations.createdAt, new Date(p.after.createdAt)), gt(locations.id, p.after.id)),
-      ),
-    );
-  }
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'createdAt')
+            return s.direction === 'desc' ? desc(locations.createdAt) : asc(locations.createdAt);
+          if (s.field === 'name')
+            return s.direction === 'desc' ? desc(locations.name) : asc(locations.name);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(locations.id) : asc(locations.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [asc(locations.createdAt), asc(locations.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(locations)
+    .where(where.length ? and(...where) : undefined);
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
   const rows = await db
     .select({
       id: locations.id,
@@ -36,16 +50,11 @@ export async function listLocationsRepo(p: ListLocationParams) {
     })
     .from(locations)
     .where(where.length ? and(...where) : undefined)
-    .orderBy(asc(locations.createdAt), asc(locations.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt!.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function getLocationRepo(id: string) {

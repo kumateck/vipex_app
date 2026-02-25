@@ -1,4 +1,5 @@
-import { decodeCursor, encodeCursor } from '@/server/utils/cursor';
+import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
+import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import { createUserSvc, getUserSvc, listUsersSvc, updateUserSvc } from './service';
 
 // Normalize DB row to API DTO
@@ -42,31 +43,34 @@ function toUserDto(u: {
   };
 }
 
-export async function listUsersCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  companyId?: string | null;
-  branchId?: string | null;
-  roleId?: string | null;
-  status?: number | null;
-  search?: string | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<{ createdAt: string; id: string }>(q.after || null);
+export async function listUsersCtrl(
+  q: PaginationRequestDto<{
+    companyId?: string | null;
+    branchId?: string | null;
+    roleId?: string | null;
+    status?: number | null;
+  }>,
+): Promise<PaginatedResponseDto<ReturnType<typeof toUserDto>>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
 
-  const { data, nextCursor } = await listUsersSvc({
-    limit,
-    after,
-    companyId: q.companyId ?? null,
-    branchId: q.branchId ?? null,
-    roleId: q.roleId ?? null,
-    status: q.status ?? null,
-    search: q.search ?? null,
+  const { data, totalRecords } = await listUsersSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? null,
+    branchId: q.filters?.branchId ?? null,
+    roleId: q.filters?.roleId ?? null,
+    status: q.filters?.status ?? null,
+    search: pagination.search ?? null,
+    sort: pagination.sort ?? null,
   });
 
   return {
     data: data.map(toUserDto),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 

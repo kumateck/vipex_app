@@ -4,12 +4,13 @@ import {
   Email,
   Telephone,
   NonEmptyString255,
-  PaginationQuery,
+  PaginationMetaSchema,
+  PaginationRequestQuery,
   SmallInt,
 } from '../../schemas/common';
 
 // Request schemas
-export const ListUsersQuery = PaginationQuery;
+export const ListUsersQuery = PaginationRequestQuery;
 
 export const GetUserParams = t.Object({
   id: UUID,
@@ -44,7 +45,7 @@ export const UserDto = t.Object({
 
 export const ListUsersResponse = t.Object({
   data: t.Array(UserDto),
-  nextCursor: t.Union([t.String(), t.Null()]),
+  meta: PaginationMetaSchema,
 });
 
 export const CreateUserResponse = t.Object({

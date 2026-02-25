@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { PaginationQuery, UUID } from '@/server/schemas/common';
+import { PaginationRequestQuery, UUID } from '@/server/schemas/common';
 
 const notImplemented = (scope: string) => ({
   error: {
@@ -18,7 +18,7 @@ export const rbacRoutes = new Elysia({ name: 'rbac' })
     },
     {
       query: t.Intersect([
-        PaginationQuery,
+        PaginationRequestQuery,
         t.Object({
           companyId: UUID,
           search: t.Optional(t.String()),

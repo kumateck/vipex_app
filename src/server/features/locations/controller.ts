@@ -1,4 +1,5 @@
-import { decodeCursor, encodeCursor } from '@/server/utils/cursor';
+import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
+import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import {
   createLocationSvc,
   deleteLocationSvc,
@@ -36,27 +37,31 @@ function toLocationDto(l: {
   };
 }
 
-export async function listLocationsCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  companyId?: string | null;
-  branchId?: string | null;
-  includeDeleted?: boolean | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<{ createdAt: string; id: string }>(q.after || null);
+export async function listLocationsCtrl(
+  q: PaginationRequestDto<{
+    companyId?: string | null;
+    branchId?: string | null;
+    includeDeleted?: boolean | null;
+  }>,
+): Promise<PaginatedResponseDto<ReturnType<typeof toLocationDto>>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
 
-  const { data, nextCursor } = await listLocationsSvc({
-    limit,
-    after,
-    companyId: q.companyId ?? null,
-    branchId: q.branchId ?? null,
-    includeDeleted: q.includeDeleted ?? null,
+  const { data, totalRecords } = await listLocationsSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? null,
+    branchId: q.filters?.branchId ?? null,
+    includeDeleted: q.filters?.includeDeleted ?? null,
+    sort: pagination.sort ?? null,
   });
 
   return {
     data: data.map(toLocationDto),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 

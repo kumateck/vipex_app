@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { UUID, NonEmptyString255, PaginationQuery, SmallInt } from '@/server/schemas/common';
+import { UUID, NonEmptyString255, PaginationRequestQuery, SmallInt } from '@/server/schemas/common';
 import {
   listProductCategoriesCtrl,
   getProductCategoryCtrl,
@@ -33,14 +33,27 @@ import {
 
 export const inventoryRoutes = new Elysia({ name: 'inventory' })
   // Product Categories
-  .get('/categories', async ({ query }) => listProductCategoriesCtrl(query), {
-    query: t.Intersect([PaginationQuery, t.Object({ companyId: t.Optional(UUID) })]),
-    detail: {
-      tags: ['Inventory'],
-      summary: 'List product categories',
-      operationId: 'listProductCategories',
+  .get(
+    '/categories',
+    async ({ query }) =>
+      listProductCategoriesCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: { companyId: query.companyId ?? null },
+      }),
+    {
+      query: t.Intersect([PaginationRequestQuery, t.Object({ companyId: t.Optional(UUID) })]),
+      detail: {
+        tags: ['Inventory'],
+        summary: 'List product categories',
+        operationId: 'listProductCategories',
+      },
     },
-  })
+  )
   .get('/categories/:id', async ({ params }) => getProductCategoryCtrl(params.id), {
     params: t.Object({ id: UUID }),
     detail: {
@@ -92,13 +105,26 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   })
 
   // Products
-  .get('/products', async ({ query }) => listProductsCtrl(query), {
-    query: t.Intersect([
-      PaginationQuery,
-      t.Object({ companyId: t.Optional(UUID), categoryId: t.Optional(UUID) }),
-    ]),
-    detail: { tags: ['Inventory'], summary: 'List products', operationId: 'listProducts' },
-  })
+  .get(
+    '/products',
+    async ({ query }) =>
+      listProductsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: { companyId: query.companyId ?? null, categoryId: query.categoryId ?? null },
+      }),
+    {
+      query: t.Intersect([
+        PaginationRequestQuery,
+        t.Object({ companyId: t.Optional(UUID), categoryId: t.Optional(UUID) }),
+      ]),
+      detail: { tags: ['Inventory'], summary: 'List products', operationId: 'listProducts' },
+    },
+  )
   .get('/products/:id', async ({ params }) => getProductCtrl(params.id), {
     params: t.Object({ id: UUID }),
     detail: { tags: ['Inventory'], summary: 'Get product', operationId: 'getProduct' },
@@ -141,17 +167,30 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   })
 
   // Inventory Locations
-  .get('/locations', async ({ query }) => listInventoryLocationsCtrl(query), {
-    query: t.Intersect([
-      PaginationQuery,
-      t.Object({ companyId: t.Optional(UUID), branchId: t.Optional(UUID) }),
-    ]),
-    detail: {
-      tags: ['Inventory'],
-      summary: 'List inventory locations',
-      operationId: 'listInventoryLocations',
+  .get(
+    '/locations',
+    async ({ query }) =>
+      listInventoryLocationsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: { companyId: query.companyId ?? null, branchId: query.branchId ?? null },
+      }),
+    {
+      query: t.Intersect([
+        PaginationRequestQuery,
+        t.Object({ companyId: t.Optional(UUID), branchId: t.Optional(UUID) }),
+      ]),
+      detail: {
+        tags: ['Inventory'],
+        summary: 'List inventory locations',
+        operationId: 'listInventoryLocations',
+      },
     },
-  })
+  )
   .get('/locations/:id', async ({ params }) => getInventoryLocationCtrl(params.id), {
     params: t.Object({ id: UUID }),
     detail: {
@@ -204,17 +243,34 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   })
 
   // Stock Levels
-  .get('/stock-levels', async ({ query }) => listStockLevelsCtrl(query), {
-    query: t.Intersect([
-      PaginationQuery,
-      t.Object({
-        companyId: t.Optional(UUID),
-        productId: t.Optional(UUID),
-        locationId: t.Optional(UUID),
+  .get(
+    '/stock-levels',
+    async ({ query }) =>
+      listStockLevelsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: query.companyId ?? null,
+          productId: query.productId ?? null,
+          locationId: query.locationId ?? null,
+        },
       }),
-    ]),
-    detail: { tags: ['Inventory'], summary: 'List stock levels', operationId: 'listStockLevels' },
-  })
+    {
+      query: t.Intersect([
+        PaginationRequestQuery,
+        t.Object({
+          companyId: t.Optional(UUID),
+          productId: t.Optional(UUID),
+          locationId: t.Optional(UUID),
+        }),
+      ]),
+      detail: { tags: ['Inventory'], summary: 'List stock levels', operationId: 'listStockLevels' },
+    },
+  )
   .get('/stock-levels/:productId/:locationId', async ({ params }) =>
     getStockLevelCtrl(params.productId, params.locationId), {
     params: t.Object({ productId: UUID, locationId: UUID }),
@@ -222,22 +278,40 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   })
 
   // Stock Movements
-  .get('/stock-movements', async ({ query }) => listStockMovementsCtrl(query), {
-    query: t.Intersect([
-      PaginationQuery,
-      t.Object({
-        companyId: t.Optional(UUID),
-        productId: t.Optional(UUID),
-        locationId: t.Optional(UUID),
-        movementType: t.Optional(SmallInt),
+  .get(
+    '/stock-movements',
+    async ({ query }) =>
+      listStockMovementsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: query.companyId ?? null,
+          productId: query.productId ?? null,
+          locationId: query.locationId ?? null,
+          movementType: query.movementType ?? null,
+        },
       }),
-    ]),
-    detail: {
-      tags: ['Inventory'],
-      summary: 'List stock movements',
-      operationId: 'listStockMovements',
+    {
+      query: t.Intersect([
+        PaginationRequestQuery,
+        t.Object({
+          companyId: t.Optional(UUID),
+          productId: t.Optional(UUID),
+          locationId: t.Optional(UUID),
+          movementType: t.Optional(SmallInt),
+        }),
+      ]),
+      detail: {
+        tags: ['Inventory'],
+        summary: 'List stock movements',
+        operationId: 'listStockMovements',
+      },
     },
-  })
+  )
   .post(
     '/stock-movements',
     async ({ body, set }) => {
@@ -266,21 +340,38 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
 
   // Stock Adjustments
-  .get('/stock-adjustments', async ({ query }) => listStockAdjustmentsCtrl(query), {
-    query: t.Intersect([
-      PaginationQuery,
-      t.Object({
-        companyId: t.Optional(UUID),
-        productId: t.Optional(UUID),
-        locationId: t.Optional(UUID),
+  .get(
+    '/stock-adjustments',
+    async ({ query }) =>
+      listStockAdjustmentsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: query.companyId ?? null,
+          productId: query.productId ?? null,
+          locationId: query.locationId ?? null,
+        },
       }),
-    ]),
-    detail: {
-      tags: ['Inventory'],
-      summary: 'List stock adjustments',
-      operationId: 'listStockAdjustments',
+    {
+      query: t.Intersect([
+        PaginationRequestQuery,
+        t.Object({
+          companyId: t.Optional(UUID),
+          productId: t.Optional(UUID),
+          locationId: t.Optional(UUID),
+        }),
+      ]),
+      detail: {
+        tags: ['Inventory'],
+        summary: 'List stock adjustments',
+        operationId: 'listStockAdjustments',
+      },
     },
-  })
+  )
   .post(
     '/stock-adjustments',
     async ({ body, set }) => {
@@ -307,21 +398,38 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
 
   // Stock Transfers
-  .get('/stock-transfers', async ({ query }) => listStockTransfersCtrl(query), {
-    query: t.Intersect([
-      PaginationQuery,
-      t.Object({
-        companyId: t.Optional(UUID),
-        productId: t.Optional(UUID),
-        status: t.Optional(SmallInt),
+  .get(
+    '/stock-transfers',
+    async ({ query }) =>
+      listStockTransfersCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: query.companyId ?? null,
+          productId: query.productId ?? null,
+          status: query.status ?? null,
+        },
       }),
-    ]),
-    detail: {
-      tags: ['Inventory'],
-      summary: 'List stock transfers',
-      operationId: 'listStockTransfers',
+    {
+      query: t.Intersect([
+        PaginationRequestQuery,
+        t.Object({
+          companyId: t.Optional(UUID),
+          productId: t.Optional(UUID),
+          status: t.Optional(SmallInt),
+        }),
+      ]),
+      detail: {
+        tags: ['Inventory'],
+        summary: 'List stock transfers',
+        operationId: 'listStockTransfers',
+      },
     },
-  })
+  )
   .get('/stock-transfers/:id', async ({ params }) => getStockTransferCtrl(params.id), {
     params: t.Object({ id: UUID }),
     detail: { tags: ['Inventory'], summary: 'Get stock transfer', operationId: 'getStockTransfer' },
@@ -375,20 +483,39 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
       operationId: 'getLowStockReport',
     },
   })
-  .get('/reports/movements', async ({ query }) => getMovementHistoryCtrl(query), {
-    query: t.Intersect([
-      PaginationQuery,
-      t.Object({
-        companyId: UUID,
-        productId: t.Optional(UUID),
-        locationId: t.Optional(UUID),
-        startDate: t.Optional(t.String({ format: 'date-time' })),
-        endDate: t.Optional(t.String({ format: 'date-time' })),
+  .get(
+    '/reports/movements',
+    async ({ query }) =>
+      getMovementHistoryCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: query.companyId,
+          productId: query.productId ?? null,
+          locationId: query.locationId ?? null,
+          startDate: query.startDate ?? null,
+          endDate: query.endDate ?? null,
+        },
       }),
-    ]),
-    detail: {
-      tags: ['Inventory'],
-      summary: 'Get movement history report',
-      operationId: 'getMovementHistory',
+    {
+      query: t.Intersect([
+        PaginationRequestQuery,
+        t.Object({
+          companyId: UUID,
+          productId: t.Optional(UUID),
+          locationId: t.Optional(UUID),
+          startDate: t.Optional(t.String({ format: 'date-time' })),
+          endDate: t.Optional(t.String({ format: 'date-time' })),
+        }),
+      ]),
+      detail: {
+        tags: ['Inventory'],
+        summary: 'Get movement history report',
+        operationId: 'getMovementHistory',
+      },
     },
-  });
+  );

@@ -1,4 +1,5 @@
-import { decodeCursor, encodeCursor } from '@/server/utils/cursor';
+import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
+import type { PaginationRequestDto, PaginatedResponseDto } from '@/server/types/pagination.types';
 import {
   createBranchSvc,
   deleteBranchSvc,
@@ -42,23 +43,25 @@ function toBranchDto(b: {
   };
 }
 
-export async function listBranchesCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  companyId?: string | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<{ createdAt: string; id: string }>(q.after || null);
+export async function listBranchesCtrl(
+  q: PaginationRequestDto<{ companyId?: string | null }>,
+): Promise<PaginatedResponseDto<ReturnType<typeof toBranchDto>>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
 
-  const { data, nextCursor } = await listBranchesSvc({
-    limit,
-    after,
-    companyId: q.companyId ?? null,
+  const { data, totalRecords } = await listBranchesSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? null,
+    sort: pagination.sort ?? null,
   });
 
   return {
     data: data.map(toBranchDto),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 

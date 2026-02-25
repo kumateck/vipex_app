@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, or, sql, desc, gte, lte, lt } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, gte, lte, lt, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
   productCategories,
@@ -9,12 +9,14 @@ import {
   stockAdjustments,
   stockTransfers,
 } from '@/db/schemas';
+import type { SortField } from '@/server/types/pagination.types';
 
 // Product Categories
 export type ListProductCategoriesParams = {
   limit: number;
-  after?: { createdAt: string; id: string } | null;
+  offset: number;
   companyId?: string | null;
+  sort?: SortField[] | null;
 };
 
 export async function listProductCategoriesRepo(p: ListProductCategoriesParams) {
@@ -22,30 +24,38 @@ export async function listProductCategoriesRepo(p: ListProductCategoriesParams) 
     eq(productCategories.isDeleted, false),
   ];
   if (p.companyId) where.push(eq(productCategories.companyId, p.companyId));
-  if (p.after) {
-    where.push(
-      or(
-        gt(productCategories.createdAt, new Date(p.after.createdAt)),
-        and(
-          eq(productCategories.createdAt, new Date(p.after.createdAt)),
-          gt(productCategories.id, p.after.id),
-        ),
-      ),
-    );
-  }
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'createdAt')
+            return s.direction === 'desc'
+              ? desc(productCategories.createdAt)
+              : asc(productCategories.createdAt);
+          if (s.field === 'name')
+            return s.direction === 'desc' ? desc(productCategories.name) : asc(productCategories.name);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(productCategories.id) : asc(productCategories.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [asc(productCategories.createdAt), asc(productCategories.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(productCategories)
+    .where(and(...where));
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
+
   const rows = await db
     .select()
     .from(productCategories)
     .where(and(...where))
-    .orderBy(asc(productCategories.createdAt), asc(productCategories.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt!.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function getProductCategoryRepo(id: string) {
@@ -104,36 +114,43 @@ export async function softDeleteProductCategoryRepo(id: string) {
 // Products
 export type ListProductsParams = {
   limit: number;
-  after?: { createdAt: string; id: string } | null;
+  offset: number;
   companyId?: string | null;
   categoryId?: string | null;
+  sort?: SortField[] | null;
 };
 
 export async function listProductsRepo(p: ListProductsParams) {
   const where = [eq(products.isDeleted, false)];
   if (p.companyId) where.push(eq(products.companyId, p.companyId));
   if (p.categoryId) where.push(eq(products.categoryId, p.categoryId));
-  if (p.after) {
-    where.push(
-      or(
-        gt(products.createdAt, new Date(p.after.createdAt)),
-        and(eq(products.createdAt, new Date(p.after.createdAt)), gt(products.id, p.after.id)),
-      )!,
-    );
-  }
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'createdAt')
+            return s.direction === 'desc' ? desc(products.createdAt) : asc(products.createdAt);
+          if (s.field === 'name')
+            return s.direction === 'desc' ? desc(products.name) : asc(products.name);
+          if (s.field === 'sku')
+            return s.direction === 'desc' ? desc(products.sku) : asc(products.sku);
+          if (s.field === 'id') return s.direction === 'desc' ? desc(products.id) : asc(products.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [asc(products.createdAt), asc(products.id)];
+
+  const [countRow] = await db.select({ c: count() }).from(products).where(and(...where));
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
   const rows = await db
     .select()
     .from(products)
     .where(and(...where))
-    .orderBy(asc(products.createdAt), asc(products.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt!.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function getProductRepo(id: string) {
@@ -186,9 +203,10 @@ export async function softDeleteProductRepo(id: string) {
 // Inventory Locations
 export type ListInventoryLocationsParams = {
   limit: number;
-  after?: { createdAt: string; id: string } | null;
+  offset: number;
   companyId?: string | null;
   branchId?: string | null;
+  sort?: SortField[] | null;
 };
 
 export async function listInventoryLocationsRepo(p: ListInventoryLocationsParams) {
@@ -197,30 +215,39 @@ export async function listInventoryLocationsRepo(p: ListInventoryLocationsParams
   ];
   if (p.companyId) where.push(eq(inventoryLocations.companyId, p.companyId));
   if (p.branchId) where.push(eq(inventoryLocations.branchId, p.branchId));
-  if (p.after) {
-    where.push(
-      or(
-        gt(inventoryLocations.createdAt, new Date(p.after.createdAt)),
-        and(
-          eq(inventoryLocations.createdAt, new Date(p.after.createdAt)),
-          gt(inventoryLocations.id, p.after.id),
-        ),
-      )!,
-    );
-  }
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'createdAt')
+            return s.direction === 'desc'
+              ? desc(inventoryLocations.createdAt)
+              : asc(inventoryLocations.createdAt);
+          if (s.field === 'name')
+            return s.direction === 'desc'
+              ? desc(inventoryLocations.name)
+              : asc(inventoryLocations.name);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(inventoryLocations.id) : asc(inventoryLocations.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [asc(inventoryLocations.createdAt), asc(inventoryLocations.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(inventoryLocations)
+    .where(and(...where));
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
   const rows = await db
     .select()
     .from(inventoryLocations)
     .where(and(...where))
-    .orderBy(asc(inventoryLocations.createdAt), asc(inventoryLocations.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt!.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function getInventoryLocationRepo(id: string) {
@@ -279,10 +306,11 @@ export async function softDeleteInventoryLocationRepo(id: string) {
 // Stock Levels
 export type ListStockLevelsParams = {
   limit: number;
-  after?: { updatedAt: string; id: string } | null;
+  offset: number;
   companyId?: string | null;
   productId?: string | null;
   locationId?: string | null;
+  sort?: SortField[] | null;
 };
 
 export async function listStockLevelsRepo(p: ListStockLevelsParams) {
@@ -290,27 +318,33 @@ export async function listStockLevelsRepo(p: ListStockLevelsParams) {
   if (p.companyId) where.push(eq(stockLevels.companyId, p.companyId));
   if (p.productId) where.push(eq(stockLevels.productId, p.productId));
   if (p.locationId) where.push(eq(stockLevels.locationId, p.locationId));
-  if (p.after) {
-    where.push(
-      or(
-        gt(stockLevels.updatedAt, new Date(p.after.updatedAt)),
-        and(eq(stockLevels.updatedAt, new Date(p.after.updatedAt)), gt(stockLevels.id, p.after.id)),
-      ),
-    );
-  }
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'updatedAt')
+            return s.direction === 'desc' ? desc(stockLevels.updatedAt) : asc(stockLevels.updatedAt);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(stockLevels.id) : asc(stockLevels.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [asc(stockLevels.updatedAt), asc(stockLevels.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(stockLevels)
+    .where(where.length ? and(...where) : undefined);
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
   const rows = await db
     .select()
     .from(stockLevels)
     .where(where.length ? and(...where) : undefined)
-    .orderBy(asc(stockLevels.updatedAt), asc(stockLevels.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { updatedAt: data[data.length - 1]!.updatedAt!.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function getStockLevelRepo(productId: string, locationId: string) {
@@ -337,11 +371,12 @@ export async function upsertStockLevelRepo(values: typeof stockLevels.$inferInse
 // Stock Movements
 export type ListStockMovementsParams = {
   limit: number;
-  after?: { createdAt: string; id: string } | null;
+  offset: number;
   companyId?: string | null;
   productId?: string | null;
   locationId?: string | null;
   movementType?: number | null;
+  sort?: SortField[] | null;
 };
 
 export async function listStockMovementsRepo(p: ListStockMovementsParams) {
@@ -351,30 +386,35 @@ export async function listStockMovementsRepo(p: ListStockMovementsParams) {
   if (p.locationId) where.push(eq(stockMovements.locationId, p.locationId));
   if (p.movementType !== undefined && p.movementType !== null)
     where.push(eq(stockMovements.movementType, p.movementType));
-  if (p.after) {
-    where.push(
-      or(
-        lt(stockMovements.createdAt, new Date(p.after.createdAt)),
-        and(
-          eq(stockMovements.createdAt, new Date(p.after.createdAt)),
-          gt(stockMovements.id, p.after.id),
-        ),
-      ),
-    );
-  }
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'createdAt')
+            return s.direction === 'desc'
+              ? desc(stockMovements.createdAt)
+              : asc(stockMovements.createdAt);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(stockMovements.id) : asc(stockMovements.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [desc(stockMovements.createdAt), asc(stockMovements.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(stockMovements)
+    .where(where.length ? and(...where) : undefined);
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
   const rows = await db
     .select()
     .from(stockMovements)
     .where(where.length ? and(...where) : undefined)
-    .orderBy(desc(stockMovements.createdAt), asc(stockMovements.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt!.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function createStockMovementRepo(values: typeof stockMovements.$inferInsert) {
@@ -385,10 +425,11 @@ export async function createStockMovementRepo(values: typeof stockMovements.$inf
 // Stock Adjustments
 export type ListStockAdjustmentsParams = {
   limit: number;
-  after?: { createdAt: string; id: string } | null;
+  offset: number;
   companyId?: string | null;
   productId?: string | null;
   locationId?: string | null;
+  sort?: SortField[] | null;
 };
 
 export async function listStockAdjustmentsRepo(p: ListStockAdjustmentsParams) {
@@ -396,30 +437,35 @@ export async function listStockAdjustmentsRepo(p: ListStockAdjustmentsParams) {
   if (p.companyId) where.push(eq(stockAdjustments.companyId, p.companyId));
   if (p.productId) where.push(eq(stockAdjustments.productId, p.productId));
   if (p.locationId) where.push(eq(stockAdjustments.locationId, p.locationId));
-  if (p.after) {
-    where.push(
-      or(
-        lt(stockAdjustments.createdAt, new Date(p.after.createdAt)),
-        and(
-          eq(stockAdjustments.createdAt, new Date(p.after.createdAt)),
-          gt(stockAdjustments.id, p.after.id),
-        ),
-      ),
-    );
-  }
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'createdAt')
+            return s.direction === 'desc'
+              ? desc(stockAdjustments.createdAt)
+              : asc(stockAdjustments.createdAt);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(stockAdjustments.id) : asc(stockAdjustments.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [desc(stockAdjustments.createdAt), asc(stockAdjustments.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(stockAdjustments)
+    .where(where.length ? and(...where) : undefined);
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
   const rows = await db
     .select()
     .from(stockAdjustments)
     .where(where.length ? and(...where) : undefined)
-    .orderBy(desc(stockAdjustments.createdAt), asc(stockAdjustments.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt!.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function createStockAdjustmentRepo(values: typeof stockAdjustments.$inferInsert) {
@@ -433,10 +479,11 @@ export async function createStockAdjustmentRepo(values: typeof stockAdjustments.
 // Stock Transfers
 export type ListStockTransfersParams = {
   limit: number;
-  after?: { createdAt: string; id: string } | null;
+  offset: number;
   companyId?: string | null;
   productId?: string | null;
   status?: number | null;
+  sort?: SortField[] | null;
 };
 
 export async function listStockTransfersRepo(p: ListStockTransfersParams) {
@@ -444,30 +491,35 @@ export async function listStockTransfersRepo(p: ListStockTransfersParams) {
   if (p.companyId) where.push(eq(stockTransfers.companyId, p.companyId));
   if (p.productId) where.push(eq(stockTransfers.productId, p.productId));
   if (p.status !== undefined && p.status !== null) where.push(eq(stockTransfers.status, p.status));
-  if (p.after) {
-    where.push(
-      or(
-        lt(stockTransfers.createdAt, new Date(p.after.createdAt)),
-        and(
-          eq(stockTransfers.createdAt, new Date(p.after.createdAt)),
-          gt(stockTransfers.id, p.after.id),
-        ),
-      ),
-    );
-  }
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'createdAt')
+            return s.direction === 'desc'
+              ? desc(stockTransfers.createdAt)
+              : asc(stockTransfers.createdAt);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(stockTransfers.id) : asc(stockTransfers.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [desc(stockTransfers.createdAt), asc(stockTransfers.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(stockTransfers)
+    .where(where.length ? and(...where) : undefined);
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
   const rows = await db
     .select()
     .from(stockTransfers)
     .where(where.length ? and(...where) : undefined)
-    .orderBy(desc(stockTransfers.createdAt), asc(stockTransfers.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt!.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function getStockTransferRepo(id: string) {
@@ -516,12 +568,13 @@ export async function getLowStockProductsRepo(companyId: string, locationId?: st
 
 export type MovementHistoryParams = {
   limit: number;
-  after?: { createdAt: string; id: string } | null;
+  offset: number;
   companyId: string;
   productId?: string | null;
   locationId?: string | null;
   startDate?: Date | null;
   endDate?: Date | null;
+  sort?: SortField[] | null;
 };
 
 export async function getMovementHistoryRepo(p: MovementHistoryParams) {
@@ -530,28 +583,34 @@ export async function getMovementHistoryRepo(p: MovementHistoryParams) {
   if (p.locationId) where.push(eq(stockMovements.locationId, p.locationId));
   if (p.startDate) where.push(gte(stockMovements.createdAt, p.startDate));
   if (p.endDate) where.push(lte(stockMovements.createdAt, p.endDate));
-  if (p.after) {
-    const afterCondition = or(
-      lt(stockMovements.createdAt, new Date(p.after.createdAt)),
-      and(
-        eq(stockMovements.createdAt, new Date(p.after.createdAt)),
-        gt(stockMovements.id, p.after.id),
-      ),
-    );
-    if (afterCondition) where.push(afterCondition);
-  }
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'createdAt')
+            return s.direction === 'desc'
+              ? desc(stockMovements.createdAt)
+              : asc(stockMovements.createdAt);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(stockMovements.id) : asc(stockMovements.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [desc(stockMovements.createdAt), asc(stockMovements.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(stockMovements)
+    .where(and(...where));
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
 
   const rows = await db
     .select()
     .from(stockMovements)
     .where(and(...where))
-    .orderBy(desc(stockMovements.createdAt), asc(stockMovements.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt!.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }

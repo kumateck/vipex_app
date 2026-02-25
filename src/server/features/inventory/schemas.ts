@@ -1,9 +1,9 @@
 import { t } from 'elysia';
-import { UUID, NonEmptyString255, PaginationQuery, SmallInt } from '../../schemas/common';
+import { UUID, NonEmptyString255, PaginationRequestQuery, SmallInt } from '../../schemas/common';
 
 // Product Category schemas
 export const ListProductCategoriesQuery = t.Intersect([
-  PaginationQuery,
+  PaginationRequestQuery,
   t.Object({
     companyId: t.Optional(UUID),
   }),
@@ -23,7 +23,7 @@ export const UpdateProductCategoryBody = t.Object({
 
 // Product schemas
 export const ListProductsQuery = t.Intersect([
-  PaginationQuery,
+  PaginationRequestQuery,
   t.Object({
     companyId: t.Optional(UUID),
     categoryId: t.Optional(UUID),
@@ -51,7 +51,7 @@ export const UpdateProductBody = t.Object({
 
 // Inventory Location schemas
 export const ListInventoryLocationsQuery = t.Intersect([
-  PaginationQuery,
+  PaginationRequestQuery,
   t.Object({
     companyId: t.Optional(UUID),
     branchId: t.Optional(UUID),
@@ -73,7 +73,7 @@ export const UpdateInventoryLocationBody = t.Object({
 
 // Stock Level schemas
 export const ListStockLevelsQuery = t.Intersect([
-  PaginationQuery,
+  PaginationRequestQuery,
   t.Object({
     companyId: t.Optional(UUID),
     productId: t.Optional(UUID),
@@ -87,7 +87,7 @@ export const UpdateStockLevelBody = t.Object({
 
 // Stock Movement schemas
 export const ListStockMovementsQuery = t.Intersect([
-  PaginationQuery,
+  PaginationRequestQuery,
   t.Object({
     companyId: t.Optional(UUID),
     productId: t.Optional(UUID),
@@ -110,7 +110,7 @@ export const CreateStockMovementBody = t.Object({
 
 // Stock Adjustment schemas
 export const ListStockAdjustmentsQuery = t.Intersect([
-  PaginationQuery,
+  PaginationRequestQuery,
   t.Object({
     companyId: t.Optional(UUID),
     productId: t.Optional(UUID),
@@ -130,7 +130,7 @@ export const CreateStockAdjustmentBody = t.Object({
 
 // Stock Transfer schemas
 export const ListStockTransfersQuery = t.Intersect([
-  PaginationQuery,
+  PaginationRequestQuery,
   t.Object({
     companyId: t.Optional(UUID),
     productId: t.Optional(UUID),
@@ -160,7 +160,7 @@ export const LowStockReportQuery = t.Object({
 });
 
 export const MovementHistoryQuery = t.Intersect([
-  PaginationQuery,
+  PaginationRequestQuery,
   t.Object({
     companyId: UUID,
     productId: t.Optional(UUID),

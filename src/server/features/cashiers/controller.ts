@@ -1,4 +1,5 @@
-import { encodeCursor } from '@/server/utils/cursor';
+import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
+import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import {
   createSessionTypeSvc,
   getSessionSvc,
@@ -19,26 +20,21 @@ export async function listSessionTypesCtrl() {
 
 export const createSessionTypeCtrl = createSessionTypeSvc;
 
-export async function listSessionsCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  cashierId?: string | null;
-  branchId?: string | null;
-  activeOnly?: boolean | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = q.after
-    ? (JSON.parse(Buffer.from(q.after, 'base64url').toString('utf8')) as {
-        scheduledStartTime: string;
-        id: string;
-      })
-    : null;
-  const { data, nextCursor } = await listSessionsSvc({
-    limit,
-    after,
-    cashierId: q.cashierId ?? null,
-    branchId: q.branchId ?? null,
-    activeOnly: q.activeOnly ?? null,
+export async function listSessionsCtrl(
+  q: PaginationRequestDto<{
+    cashierId?: string | null;
+    branchId?: string | null;
+    activeOnly?: boolean | null;
+  }>,
+): Promise<PaginatedResponseDto<unknown>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listSessionsSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    cashierId: q.filters?.cashierId ?? null,
+    branchId: q.filters?.branchId ?? null,
+    activeOnly: q.filters?.activeOnly ?? null,
+    sort: pagination.sort ?? null,
   });
   return {
     data: data.map((s) => ({
@@ -48,7 +44,11 @@ export async function listSessionsCtrl(q: {
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
     })),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 

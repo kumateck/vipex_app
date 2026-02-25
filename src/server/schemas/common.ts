@@ -15,10 +15,36 @@ export const PaginationQuery = t.Object({
   after: t.Optional(t.String()),
 });
 
+export const DateTimeStr = t.String({ format: 'date-time' });
+
+export const PaginationRequestQuery = t.Object({
+  page: t.Optional(t.Number({ minimum: 1 })),
+  pageSize: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+  search: t.Optional(t.String()),
+  sort: t.Optional(
+    t.Array(
+      t.Object({
+        field: t.String({ minLength: 1, maxLength: 100 }),
+        direction: t.Union([t.Literal('asc'), t.Literal('desc')]),
+      }),
+      { minItems: 1 },
+    ),
+  ),
+  dateFrom: t.Optional(DateTimeStr),
+  dateTo: t.Optional(DateTimeStr),
+});
+
+export const PaginationMetaSchema = t.Object({
+  totalRecords: t.Number({ minimum: 0 }),
+  totalPages: t.Number({ minimum: 1 }),
+  page: t.Number({ minimum: 1 }),
+  pageSize: t.Number({ minimum: 1 }),
+  hasNextPage: t.Boolean(),
+  hasPreviousPage: t.Boolean(),
+});
+
 export const NonEmpty255 = t.String({ minLength: 1, maxLength: 255 });
 export const OptionalNonEmpty255 = t.Optional(NonEmpty255);
-
-export const DateTimeStr = t.String({ format: 'date-time' });
 // Pagination query: limit (string to keep it URL-friendly), after cursor
 // export const PaginationQuery = t.Object({
 //   limit: t.Optional(t.String()), // parse to number in handler, clamp 1..100

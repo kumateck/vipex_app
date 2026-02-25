@@ -1,15 +1,17 @@
-import { and, asc, eq, gt, ilike, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { users, roles, branches, companies } from '@/db/schemas';
+import type { SortField } from '@/server/types/pagination.types';
 
 export type ListUserParams = {
   limit: number;
-  after?: { createdAt: string; id: string } | null;
+  offset: number;
   companyId?: string | null;
   branchId?: string | null;
   roleId?: string | null;
   status?: number | null;
   search?: string | null;
+  sort?: SortField[] | null;
 };
 
 export async function listUsersRepo(p: ListUserParams) {
@@ -19,14 +21,44 @@ export async function listUsersRepo(p: ListUserParams) {
   if (p.roleId) where.push(eq(users.roleId, p.roleId));
   if (p.status !== null && p.status !== undefined) where.push(eq(users.status, p.status));
 
-  if (p.after) {
-    where.push(
-      or(
-        gt(users.createdAt, new Date(p.after.createdAt)),
-        and(eq(users.createdAt, new Date(p.after.createdAt)), gt(users.id, p.after.id)),
-      ),
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'createdAt')
+            return s.direction === 'desc' ? desc(users.createdAt) : asc(users.createdAt);
+          if (s.field === 'fullname')
+            return s.direction === 'desc' ? desc(users.fullname) : asc(users.fullname);
+          if (s.field === 'email')
+            return s.direction === 'desc' ? desc(users.email) : asc(users.email);
+          if (s.field === 'id') return s.direction === 'desc' ? desc(users.id) : asc(users.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [asc(users.createdAt), asc(users.id)];
+
+  const countQuery = db
+    .select({ c: count() })
+    .from(users)
+    .where(
+      where.length || p.search
+        ? and(
+            ...where,
+            ...(p.search
+              ? [
+                  or(
+                    ilike(users.fullname, `%${p.search}%`),
+                    ilike(users.email, `%${p.search}%`),
+                    ilike(users.telephone, `%${p.search}%`),
+                  ),
+                ]
+              : []),
+          )
+        : undefined,
     );
-  }
+
+  const [countRow] = await countQuery;
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
 
   const q = db
     .select({
@@ -65,17 +97,13 @@ export async function listUsersRepo(p: ListUserParams) {
           )
         : undefined,
     )
-    .orderBy(asc(users.createdAt), asc(users.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
   const rows = await q;
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt!.toISOString(), id: data[data.length - 1]!.id }
-    : null;
 
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function getUserRepo(id: string) {

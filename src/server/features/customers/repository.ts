@@ -1,7 +1,7 @@
-import { and, asc, eq, gt, ilike, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { customers } from '@/db/schemas';
-import type { CursorKey } from '@/server/utils/cursor';
+import type { SortField } from '@/server/types/pagination.types';
 
 export type CustomerRow = {
   id: string;
@@ -19,15 +19,16 @@ export type CustomerRow = {
 
 export type ListCustomerParams = {
   limit: number;
-  after?: CursorKey | null;
+  offset: number;
   companyId: string;
   search?: string | null;
   includeDeleted?: boolean | null;
+  sort?: SortField[] | null;
 };
 
 export async function listCustomersRepo(
   p: ListCustomerParams,
-): Promise<{ data: CustomerRow[]; nextCursor: CursorKey | null }> {
+): Promise<{ data: CustomerRow[]; totalRecords: number }> {
   const whereParts: (ReturnType<typeof eq> | ReturnType<typeof and> | ReturnType<typeof or>)[] = [
     eq(customers.companyId, p.companyId),
   ];
@@ -41,14 +42,27 @@ export async function listCustomersRepo(
       ),
     );
   }
-  if (p.after) {
-    whereParts.push(
-      or(
-        gt(customers.createdAt, new Date(p.after.createdAt)),
-        and(eq(customers.createdAt, new Date(p.after.createdAt)), gt(customers.id, p.after.id)),
-      ),
-    );
-  }
+  const sort = (p.sort ?? []).filter(Boolean);
+  const orderBy = sort.length
+    ? sort
+        .map((s) => {
+          if (s.field === 'createdAt')
+            return s.direction === 'desc' ? desc(customers.createdAt) : asc(customers.createdAt);
+          if (s.field === 'fullname')
+            return s.direction === 'desc' ? desc(customers.fullname) : asc(customers.fullname);
+          if (s.field === 'email')
+            return s.direction === 'desc' ? desc(customers.email) : asc(customers.email);
+          if (s.field === 'id') return s.direction === 'desc' ? desc(customers.id) : asc(customers.id);
+          return null;
+        })
+        .filter(Boolean)
+    : [asc(customers.createdAt), asc(customers.id)];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(customers)
+    .where(and(...whereParts));
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
 
   const rows = await db
     .select({
@@ -66,15 +80,11 @@ export async function listCustomersRepo(
     })
     .from(customers)
     .where(and(...whereParts))
-    .orderBy(asc(customers.createdAt), asc(customers.id))
-    .limit(p.limit + 1);
+    .orderBy(...orderBy)
+    .limit(p.limit)
+    .offset(p.offset);
 
-  const hasMore = rows.length > p.limit;
-  const data = hasMore ? rows.slice(0, p.limit) : rows;
-  const nextCursor = hasMore
-    ? { createdAt: data[data.length - 1]!.createdAt.toISOString(), id: data[data.length - 1]!.id }
-    : null;
-  return { data, nextCursor };
+  return { data: rows, totalRecords };
 }
 
 export async function getCustomerRepo(id: string): Promise<CustomerRow | null> {

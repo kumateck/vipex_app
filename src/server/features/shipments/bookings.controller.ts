@@ -1,21 +1,22 @@
-import { decodeCursor, encodeCursor, type CursorKey } from '@/server/utils/cursor';
+import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
+import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import { createBookingSvc, getBookingSvc, listBookingsSvc } from './bookings.service';
 
-export async function listBookingsCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  companyId?: string | null;
-  senderId?: string | null;
-  sourceId?: string | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<CursorKey>(q.after || null);
-  const { data, nextCursor } = await listBookingsSvc({
-    limit,
-    after,
-    companyId: q.companyId ?? null,
-    senderId: q.senderId ?? null,
-    sourceId: q.sourceId ?? null,
+export async function listBookingsCtrl(
+  q: PaginationRequestDto<{
+    companyId?: string | null;
+    senderId?: string | null;
+    sourceId?: string | null;
+  }>,
+): Promise<PaginatedResponseDto<unknown>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listBookingsSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? null,
+    senderId: q.filters?.senderId ?? null,
+    sourceId: q.filters?.sourceId ?? null,
+    sort: pagination.sort ?? null,
   });
   return {
     data: data.map((b) => ({
@@ -23,7 +24,11 @@ export async function listBookingsCtrl(q: {
       createdAt: b.createdAt.toISOString(),
       updatedAt: b.updatedAt.toISOString(),
     })),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 

@@ -1,4 +1,5 @@
-import { decodeCursor, encodeCursor, type CursorKey } from '@/server/utils/cursor';
+import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
+import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import {
   createParcelSvc,
   getParcelSvc,
@@ -8,29 +9,28 @@ import {
   updateParcelSvc,
 } from './parcels.service';
 
-export async function listParcelsCtrl(q: {
-  limit?: number;
-  after?: string | null;
-  companyId?: string | null;
-  sourceId?: string | null;
-  destinationId?: string | null;
-  statusId?: string | null;
-  search?: string | null;
-  received?: boolean | null;
-  includeDeleted?: boolean | null;
-}) {
-  const limit = q.limit ? Math.min(Math.max(q.limit, 1), 100) : 25;
-  const after = decodeCursor<CursorKey>(q.after || null);
-  const { data, nextCursor } = await listParcelsSvc({
-    limit,
-    after,
-    companyId: q.companyId ?? null,
-    sourceId: q.sourceId ?? null,
-    destinationId: q.destinationId ?? null,
-    statusId: q.statusId ?? null,
-    search: q.search ?? null,
-    received: q.received ?? null,
-    includeDeleted: q.includeDeleted ?? null,
+export async function listParcelsCtrl(
+  q: PaginationRequestDto<{
+    companyId?: string | null;
+    sourceId?: string | null;
+    destinationId?: string | null;
+    statusId?: string | null;
+    received?: boolean | null;
+    includeDeleted?: boolean | null;
+  }>,
+): Promise<PaginatedResponseDto<unknown>> {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listParcelsSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters?.companyId ?? null,
+    sourceId: q.filters?.sourceId ?? null,
+    destinationId: q.filters?.destinationId ?? null,
+    statusId: q.filters?.statusId ?? null,
+    search: pagination.search ?? null,
+    received: q.filters?.received ?? null,
+    includeDeleted: q.filters?.includeDeleted ?? null,
+    sort: pagination.sort ?? null,
   });
   return {
     data: data.map((p) => ({
@@ -41,7 +41,11 @@ export async function listParcelsCtrl(q: {
       confirmedAt: p.confirmedAt ? p.confirmedAt.toISOString() : null,
       bookingCreatedAt: p.bookingCreatedAt ? p.bookingCreatedAt.toISOString() : null,
     })),
-    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
   };
 }
 
