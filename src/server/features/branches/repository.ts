@@ -1,7 +1,6 @@
 import { and, asc, eq, gt, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { branches } from '@/db/schemas';
-
 export type ListBranchParams = {
   limit: number;
   after?: { createdAt: string; id: string } | null;
@@ -43,6 +42,7 @@ export async function listBranchesRepo(p: ListBranchParams) {
   const nextCursor = hasMore
     ? { createdAt: data[data.length - 1]!.createdAt!.toISOString(), id: data[data.length - 1]!.id }
     : null;
+
   return { data, nextCursor };
 }
 
