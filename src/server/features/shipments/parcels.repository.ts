@@ -77,7 +77,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   const s = alias(customers, 's');
   const r = alias(customers, 'r');
 
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((srt) => {
@@ -90,7 +90,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
           if (srt.field === 'id') return srt.direction === 'desc' ? desc(parcels.id) : asc(parcels.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(parcels.createdAt), asc(parcels.id)];
 
   const [countRow] = await db

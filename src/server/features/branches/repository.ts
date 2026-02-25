@@ -14,7 +14,7 @@ export async function listBranchesRepo(p: ListBranchParams) {
   const where = [];
   if (p.companyId) where.push(eq(branches.companyId, p.companyId));
 
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -26,7 +26,7 @@ export async function listBranchesRepo(p: ListBranchParams) {
             return s.direction === 'desc' ? desc(branches.id) : asc(branches.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(branches.createdAt), asc(branches.id)];
 
   const [countRow] = await db

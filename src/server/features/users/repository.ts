@@ -21,7 +21,7 @@ export async function listUsersRepo(p: ListUserParams) {
   if (p.roleId) where.push(eq(users.roleId, p.roleId));
   if (p.status !== null && p.status !== undefined) where.push(eq(users.status, p.status));
 
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -34,7 +34,7 @@ export async function listUsersRepo(p: ListUserParams) {
           if (s.field === 'id') return s.direction === 'desc' ? desc(users.id) : asc(users.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(users.createdAt), asc(users.id)];
 
   const countQuery = db

@@ -42,7 +42,7 @@ export async function listCustomersRepo(
       ),
     );
   }
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -55,7 +55,7 @@ export async function listCustomersRepo(
           if (s.field === 'id') return s.direction === 'desc' ? desc(customers.id) : asc(customers.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(customers.createdAt), asc(customers.id)];
 
   const [countRow] = await db

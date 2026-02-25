@@ -31,7 +31,7 @@ export async function listBookingsRepo(
   if (p.companyId) whereParts.push(eq(bookings.companyId, p.companyId));
   if (p.senderId) whereParts.push(eq(bookings.senderId, p.senderId));
   if (p.sourceId) whereParts.push(eq(bookings.sourceId, p.sourceId));
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -40,7 +40,7 @@ export async function listBookingsRepo(
           if (s.field === 'id') return s.direction === 'desc' ? desc(bookings.id) : asc(bookings.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(bookings.createdAt), asc(bookings.id)];
 
   const [countRow] = await db

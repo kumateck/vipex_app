@@ -17,7 +17,7 @@ export async function listLocationsRepo(p: ListLocationParams) {
   if (p.companyId) where.push(eq(locations.companyId, p.companyId));
   if (p.branchId) where.push(eq(locations.branchId, p.branchId));
   if (!p.includeDeleted) where.push(eq(locations.isDeleted, false));
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -29,7 +29,7 @@ export async function listLocationsRepo(p: ListLocationParams) {
             return s.direction === 'desc' ? desc(locations.id) : asc(locations.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(locations.createdAt), asc(locations.id)];
 
   const [countRow] = await db

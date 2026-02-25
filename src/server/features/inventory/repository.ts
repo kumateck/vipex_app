@@ -24,7 +24,7 @@ export async function listProductCategoriesRepo(p: ListProductCategoriesParams) 
     eq(productCategories.isDeleted, false),
   ];
   if (p.companyId) where.push(eq(productCategories.companyId, p.companyId));
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -38,7 +38,7 @@ export async function listProductCategoriesRepo(p: ListProductCategoriesParams) 
             return s.direction === 'desc' ? desc(productCategories.id) : asc(productCategories.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(productCategories.createdAt), asc(productCategories.id)];
 
   const [countRow] = await db
@@ -124,7 +124,7 @@ export async function listProductsRepo(p: ListProductsParams) {
   const where = [eq(products.isDeleted, false)];
   if (p.companyId) where.push(eq(products.companyId, p.companyId));
   if (p.categoryId) where.push(eq(products.categoryId, p.categoryId));
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -137,7 +137,7 @@ export async function listProductsRepo(p: ListProductsParams) {
           if (s.field === 'id') return s.direction === 'desc' ? desc(products.id) : asc(products.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(products.createdAt), asc(products.id)];
 
   const [countRow] = await db.select({ c: count() }).from(products).where(and(...where));
@@ -215,7 +215,7 @@ export async function listInventoryLocationsRepo(p: ListInventoryLocationsParams
   ];
   if (p.companyId) where.push(eq(inventoryLocations.companyId, p.companyId));
   if (p.branchId) where.push(eq(inventoryLocations.branchId, p.branchId));
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -231,7 +231,7 @@ export async function listInventoryLocationsRepo(p: ListInventoryLocationsParams
             return s.direction === 'desc' ? desc(inventoryLocations.id) : asc(inventoryLocations.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(inventoryLocations.createdAt), asc(inventoryLocations.id)];
 
   const [countRow] = await db
@@ -318,7 +318,7 @@ export async function listStockLevelsRepo(p: ListStockLevelsParams) {
   if (p.companyId) where.push(eq(stockLevels.companyId, p.companyId));
   if (p.productId) where.push(eq(stockLevels.productId, p.productId));
   if (p.locationId) where.push(eq(stockLevels.locationId, p.locationId));
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -328,7 +328,7 @@ export async function listStockLevelsRepo(p: ListStockLevelsParams) {
             return s.direction === 'desc' ? desc(stockLevels.id) : asc(stockLevels.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(stockLevels.updatedAt), asc(stockLevels.id)];
 
   const [countRow] = await db
@@ -386,7 +386,7 @@ export async function listStockMovementsRepo(p: ListStockMovementsParams) {
   if (p.locationId) where.push(eq(stockMovements.locationId, p.locationId));
   if (p.movementType !== undefined && p.movementType !== null)
     where.push(eq(stockMovements.movementType, p.movementType));
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -398,7 +398,7 @@ export async function listStockMovementsRepo(p: ListStockMovementsParams) {
             return s.direction === 'desc' ? desc(stockMovements.id) : asc(stockMovements.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [desc(stockMovements.createdAt), asc(stockMovements.id)];
 
   const [countRow] = await db
@@ -437,7 +437,7 @@ export async function listStockAdjustmentsRepo(p: ListStockAdjustmentsParams) {
   if (p.companyId) where.push(eq(stockAdjustments.companyId, p.companyId));
   if (p.productId) where.push(eq(stockAdjustments.productId, p.productId));
   if (p.locationId) where.push(eq(stockAdjustments.locationId, p.locationId));
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -449,7 +449,7 @@ export async function listStockAdjustmentsRepo(p: ListStockAdjustmentsParams) {
             return s.direction === 'desc' ? desc(stockAdjustments.id) : asc(stockAdjustments.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [desc(stockAdjustments.createdAt), asc(stockAdjustments.id)];
 
   const [countRow] = await db
@@ -491,7 +491,7 @@ export async function listStockTransfersRepo(p: ListStockTransfersParams) {
   if (p.companyId) where.push(eq(stockTransfers.companyId, p.companyId));
   if (p.productId) where.push(eq(stockTransfers.productId, p.productId));
   if (p.status !== undefined && p.status !== null) where.push(eq(stockTransfers.status, p.status));
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -503,7 +503,7 @@ export async function listStockTransfersRepo(p: ListStockTransfersParams) {
             return s.direction === 'desc' ? desc(stockTransfers.id) : asc(stockTransfers.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [desc(stockTransfers.createdAt), asc(stockTransfers.id)];
 
   const [countRow] = await db
@@ -583,7 +583,7 @@ export async function getMovementHistoryRepo(p: MovementHistoryParams) {
   if (p.locationId) where.push(eq(stockMovements.locationId, p.locationId));
   if (p.startDate) where.push(gte(stockMovements.createdAt, p.startDate));
   if (p.endDate) where.push(lte(stockMovements.createdAt, p.endDate));
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -595,7 +595,7 @@ export async function getMovementHistoryRepo(p: MovementHistoryParams) {
             return s.direction === 'desc' ? desc(stockMovements.id) : asc(stockMovements.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [desc(stockMovements.createdAt), asc(stockMovements.id)];
 
   const [countRow] = await db

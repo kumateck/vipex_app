@@ -41,7 +41,7 @@ export function DataTableToolbar<TData>({
     <div className="flex items-center justify-between py-4">
       <div className="flex flex-1 items-center space-x-2">
         {canSearch ? (
-          useColumnSearch ? (
+          useColumnSearch && searchColumn ? (
             <Input
               placeholder={searchPlaceholder ?? `Filter ${searchColumn}...`}
               value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ''}

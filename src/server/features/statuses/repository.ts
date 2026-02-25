@@ -15,7 +15,7 @@ export async function listStatusesRepo(p: ListStatusParams) {
   const where = [];
   if (p.companyId) where.push(eq(statuses.companyId, p.companyId));
   if (!p.includeDeleted) where.push(eq(statuses.isDeleted, false));
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -27,7 +27,7 @@ export async function listStatusesRepo(p: ListStatusParams) {
             return s.direction === 'desc' ? desc(statuses.id) : asc(statuses.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(statuses.createdAt), asc(statuses.id)];
 
   const [countRow] = await db

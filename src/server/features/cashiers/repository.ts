@@ -69,7 +69,7 @@ export async function listSessionsRepo(
   if (p.cashierId) where.push(eq(cashierSessions.cashierId, p.cashierId));
   if (p.branchId) where.push(eq(cashierSessions.branchId, p.branchId));
   if (p.activeOnly) where.push(eq(cashierSessions.status, 'ACTIVE'));
-  const sort = (p.sort ?? []).filter(Boolean);
+  const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
         .map((s) => {
@@ -83,7 +83,7 @@ export async function listSessionsRepo(
             return s.direction === 'desc' ? desc(cashierSessions.id) : asc(cashierSessions.id);
           return null;
         })
-        .filter(Boolean)
+        .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(cashierSessions.scheduledStartTime), asc(cashierSessions.id)];
 
   const [countRow] = await db
