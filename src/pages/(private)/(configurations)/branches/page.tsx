@@ -35,7 +35,7 @@ const Branches = () => {
       <DataTable<Branch, unknown>
         data={data?.data ?? []}
         columns={branchesColumns}
-        paginationMode="client"
+        mode="client"
         loading={isLoading}
       />
     </div>
