@@ -1,0 +1,81 @@
+import { api } from '@/services/api';
+import {
+  buildServerPaginationParams,
+  invalidateEntityListTag,
+  provideEntityListTags,
+  type ServerListResponse,
+} from '@/services/rtk-query';
+import { useAuthStore } from '@/stores/auth-store';
+import type {
+  Branch,
+  BranchCreatePayload,
+  BranchListQuery,
+  BranchMutationInput,
+  BranchUpdatePayload,
+} from '../types/branch.types';
+import { toCreateBranchPayload, toUpdateBranchPayload } from '../utils/branch-payload';
+
+export const branchesApi = api.injectEndpoints({
+  endpoints: (builder) => ({
+    listBranches: builder.query<ServerListResponse<Branch>, BranchListQuery | void>({
+      query: (query) => ({
+        url: '/branches/',
+        params: buildServerPaginationParams(query),
+      }),
+      providesTags: (result) => provideEntityListTags('Branches', result),
+    }),
+
+    getBranch: builder.query<Branch, string>({
+      query: (id) => ({ url: `/branches/${id}` }),
+      providesTags: (_result, _err, id) => [{ type: 'Branches', id }],
+    }),
+
+    updateBranch: builder.mutation<{ id: string }, { id: string; body: BranchMutationInput }>({
+      query: ({ id, body }) => ({
+        url: `/branches/${id}`,
+        method: 'PATCH',
+        body: toUpdateBranchPayload(body) satisfies BranchUpdatePayload,
+      }),
+      invalidatesTags: (_result, _err, { id }) => [
+        { type: 'Branches', id },
+        ...invalidateEntityListTag('Branches'),
+      ],
+    }),
+
+    createBranch: builder.mutation<{ id: string }, BranchMutationInput>({
+      query: (body) => {
+        const user = useAuthStore.getState().user;
+        if (!user?.company?.id || !user?.id) throw new Error('Not authenticated');
+
+        return {
+          url: '/branches/',
+          method: 'POST',
+          body: toCreateBranchPayload(body, {
+            companyId: user.company.id,
+            createdBy: user.id,
+          }) satisfies BranchCreatePayload,
+        };
+      },
+      invalidatesTags: invalidateEntityListTag('Branches'),
+    }),
+
+    deleteBranch: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `/branches/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_result, _err, id) => [
+        { type: 'Branches', id },
+        ...invalidateEntityListTag('Branches'),
+      ],
+    }),
+  }),
+});
+
+export const {
+  useListBranchesQuery,
+  useGetBranchQuery,
+  useUpdateBranchMutation,
+  useCreateBranchMutation,
+  useDeleteBranchMutation,
+} = branchesApi;

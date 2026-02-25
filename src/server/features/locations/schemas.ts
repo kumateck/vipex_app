@@ -6,6 +6,7 @@ export const ListLocationsQuery = t.Intersect([
   t.Object({
     companyId: t.Optional(UUID),
     branchId: t.Optional(UUID),
+    includeDeleted: t.Optional(t.Boolean()),
   }),
 ]);
 
@@ -34,9 +35,17 @@ export const LocationDto = t.Object({
   name: NonEmptyString255,
   companyId: UUID,
   branchId: UUID,
-  address: t.Optional(t.String({ maxLength: 500 })),
-  telephone: t.Optional(t.String({ maxLength: 30 })),
+  branch: t.Union([
+    t.Object({
+      id: UUID,
+      name: NonEmptyString255,
+    }),
+    t.Null(),
+  ]),
+  isDeleted: t.Boolean(),
+  createdBy: UUID,
   createdAt: t.Union([t.String({ format: 'date-time' }), t.Null()]),
+  updatedAt: t.Union([t.String({ format: 'date-time' }), t.Null()]),
 });
 
 export const ListLocationsResponse = t.Object({

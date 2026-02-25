@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { locations } from '@/db/schemas';
+import { branches, locations } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
 
 export type ListLocationParams = {
@@ -42,6 +42,10 @@ export async function listLocationsRepo(p: ListLocationParams) {
       id: locations.id,
       companyId: locations.companyId,
       branchId: locations.branchId,
+      branch: {
+        id: branches.id,
+        name: branches.name,
+      },
       name: locations.name,
       isDeleted: locations.isDeleted,
       createdBy: locations.createdBy,
@@ -49,6 +53,7 @@ export async function listLocationsRepo(p: ListLocationParams) {
       updatedAt: locations.updatedAt,
     })
     .from(locations)
+    .leftJoin(branches, eq(locations.branchId, branches.id))
     .where(where.length ? and(...where) : undefined)
     .orderBy(...orderBy)
     .limit(p.limit)
@@ -63,6 +68,10 @@ export async function getLocationRepo(id: string) {
       id: locations.id,
       companyId: locations.companyId,
       branchId: locations.branchId,
+      branch: {
+        id: branches.id,
+        name: branches.name,
+      },
       name: locations.name,
       isDeleted: locations.isDeleted,
       createdBy: locations.createdBy,
@@ -70,6 +79,7 @@ export async function getLocationRepo(id: string) {
       updatedAt: locations.updatedAt,
     })
     .from(locations)
+    .leftJoin(branches, eq(locations.branchId, branches.id))
     .where(eq(locations.id, id))
     .limit(1);
   return row ?? null;

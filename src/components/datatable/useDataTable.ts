@@ -24,6 +24,23 @@ type UseDataTableReturn<TData, TFilters> = {
   serverRequest?: PaginationRequestDto<TFilters>;
 };
 
+function isSameRequest<TFilters>(
+  prev: PaginationRequestDto<TFilters> | null,
+  next: PaginationRequestDto<TFilters>,
+) {
+  if (!prev) return false;
+
+  return (
+    prev.page === next.page &&
+    prev.pageSize === next.pageSize &&
+    prev.search === next.search &&
+    prev.dateFrom === next.dateFrom &&
+    prev.dateTo === next.dateTo &&
+    JSON.stringify(prev.sort ?? []) === JSON.stringify(next.sort ?? []) &&
+    JSON.stringify(prev.filters ?? {}) === JSON.stringify(next.filters ?? {})
+  );
+}
+
 export function useDataTable<TData, TValue, TFilters = Record<string, unknown>>(
   props: DataTableProps<TData, TValue, TFilters>,
 ): UseDataTableReturn<TData, TFilters> {
@@ -75,15 +92,21 @@ export function useDataTable<TData, TValue, TFilters = Record<string, unknown>>(
     } satisfies PaginationRequestDto<TFilters>;
   }, [globalFilter, isServer, pagination.pageIndex, pagination.pageSize, serverFilters, sorting]);
 
+  const lastRequestRef = React.useRef<PaginationRequestDto<TFilters> | null>(null);
+
   React.useEffect(() => {
     if (!isServer) return;
-    onServerRequestChange?.({
+    const nextRequest: PaginationRequestDto<TFilters> = {
       page: pagination.pageIndex + 1,
       pageSize: pagination.pageSize,
       search: globalFilter || undefined,
       sort: toSortFields(sorting),
       filters: serverFilters,
-    });
+    };
+
+    if (isSameRequest(lastRequestRef.current, nextRequest)) return;
+    lastRequestRef.current = nextRequest;
+    onServerRequestChange?.(nextRequest);
   }, [globalFilter, isServer, onServerRequestChange, pagination.pageIndex, pagination.pageSize, serverFilters, sorting]);
 
   const table = useReactTable({

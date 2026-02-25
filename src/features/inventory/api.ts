@@ -1,4 +1,10 @@
 import { api } from '@/services/api';
+import {
+  buildServerPaginationParams,
+  provideEntityListTags,
+  type ServerListQuery,
+  type ServerListResponse,
+} from '@/services/rtk-query';
 
 export interface InventoryCategory {
   id: string;
@@ -31,17 +37,28 @@ export interface StockLevel {
   updatedAt: string;
 }
 
+export interface InventoryProductFilters {
+  companyId?: string | null;
+  categoryId?: string | null;
+}
+
+export interface StockLevelFilters {
+  companyId?: string | null;
+  productId?: string | null;
+  locationId?: string | null;
+}
+
 export const inventoryApi = api.injectEndpoints({
   endpoints: (builder) => ({
     listProducts: builder.query<
-      { data: InventoryProduct[] },
-      { companyId?: string; search?: string }
+      ServerListResponse<InventoryProduct>,
+      ServerListQuery<InventoryProductFilters> | void
     >({
-      query: (params) => ({ url: '/inventory/products', params }),
-      providesTags: (result) =>
-        result?.data
-          ? [...result.data.map((p) => ({ type: 'Inventory' as const, id: p.id })), 'Inventory']
-          : ['Inventory'],
+      query: (query) => ({
+        url: '/inventory/products',
+        params: buildServerPaginationParams(query),
+      }),
+      providesTags: (result) => provideEntityListTags('Inventory', result),
     }),
     getProduct: builder.query<InventoryProduct, string>({
       query: (id) => ({ url: `/inventory/products/${id}` }),
@@ -55,11 +72,14 @@ export const inventoryApi = api.injectEndpoints({
       invalidatesTags: ['Inventory'],
     }),
     listStockLevels: builder.query<
-      { data: StockLevel[] },
-      { companyId?: string; productId?: string; locationId?: string }
+      ServerListResponse<StockLevel>,
+      ServerListQuery<StockLevelFilters> | void
     >({
-      query: (params) => ({ url: '/inventory/stock-levels', params }),
-      providesTags: ['Inventory'],
+      query: (query) => ({
+        url: '/inventory/stock-levels',
+        params: buildServerPaginationParams(query),
+      }),
+      providesTags: (result) => provideEntityListTags('Inventory', result),
     }),
   }),
 });

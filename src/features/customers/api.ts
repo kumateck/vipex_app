@@ -1,4 +1,10 @@
 import { api } from '@/services/api';
+import {
+  buildServerPaginationParams,
+  provideEntityListTags,
+  type ServerListQuery,
+  type ServerListResponse,
+} from '@/services/rtk-query';
 
 export interface Customer {
   id: string;
@@ -9,11 +15,19 @@ export interface Customer {
   createdAt: string;
 }
 
+export interface CustomerFilters {
+  companyId?: string;
+  includeDeleted?: boolean | null;
+}
+
 export const customersApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    listCustomers: builder.query<{ data: Customer[] }, { companyId?: string; search?: string }>({
-      query: (params) => ({ url: '/customers', params }),
-      providesTags: ['Customers'],
+    listCustomers: builder.query<ServerListResponse<Customer>, ServerListQuery<CustomerFilters> | void>({
+      query: (query) => ({
+        url: '/customers',
+        params: buildServerPaginationParams(query),
+      }),
+      providesTags: (result) => provideEntityListTags('Customers', result),
     }),
   }),
 });

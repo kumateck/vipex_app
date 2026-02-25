@@ -13,6 +13,7 @@ function toLocationDto(l: {
   id: string;
   companyId: string;
   branchId: string;
+  branch: { id: string | null; name: string | null } | null;
   name: string;
   isDeleted: boolean;
   createdBy: string;
@@ -23,6 +24,7 @@ function toLocationDto(l: {
     id: l.id,
     companyId: l.companyId,
     branchId: l.branchId,
+    branch: l.branch?.id && l.branch?.name ? { id: l.branch.id, name: l.branch.name } : null,
     name: l.name,
     isDeleted: !!l.isDeleted,
     createdBy: l.createdBy,

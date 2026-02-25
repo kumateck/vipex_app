@@ -2,20 +2,20 @@ import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
-import { createLocationSchema, editLocationSchema, type CreateLocationSchema, type EditLocationSchema } from '../../pages/(private)/(configurations)/locations/schema';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useListBranchesQuery } from '@/features/branches/api';
 import { Spinner } from '@/components/ui';
-
-interface Location {
-  id: string;
-  name: string;
-  branchId: string;
-}
+import { useListBranchesQuery } from '@/features/branches';
+import {
+  createLocationSchema,
+  editLocationSchema,
+  type CreateLocationFormValues,
+  type EditLocationFormValues,
+} from '../schemas/location-form.schema';
+import type { Location } from '../types/location.types';
 
 interface LocationFormBaseProps {
   initialData?: Partial<Location>;
@@ -26,36 +26,31 @@ interface LocationFormBaseProps {
 
 interface CreateLocationFormProps extends LocationFormBaseProps {
   mode: 'create';
-  onSubmit: (data: CreateLocationSchema) => Promise<void>;
+  onSubmit: (data: CreateLocationFormValues) => Promise<void>;
 }
 
 interface EditLocationFormProps extends LocationFormBaseProps {
   mode: 'edit';
-  onSubmit: (data: EditLocationSchema) => Promise<void>;
+  onSubmit: (data: EditLocationFormValues) => Promise<void>;
 }
 
 type LocationFormProps = CreateLocationFormProps | EditLocationFormProps;
+type LocationFormValues = { name: string; branchId?: string };
 
-type LocationFormValues = {
-  name: string;
-  branchId?: string;
-};
-
-export const LocationForm: React.FC<LocationFormProps> = ({
+export function LocationForm({
   mode,
   initialData,
   onSubmit,
   isSubmitting,
   title,
   submitButtonText,
-}) => {
+}: LocationFormProps) {
   const navigate = useNavigate();
   const schema = mode === 'create' ? createLocationSchema : editLocationSchema;
   const { data: branchesData, isLoading: isLoadingBranches } = useListBranchesQuery(
-    { limit: 50 },
+    { page: 1, pageSize: 100 },
     { skip: mode !== 'create' },
   );
-  const branchOptions = branchesData?.data ?? [];
 
   const {
     control,
@@ -65,37 +60,24 @@ export const LocationForm: React.FC<LocationFormProps> = ({
     formState: { errors },
   } = useForm<LocationFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: mode === 'create' 
-      ? { name: '', branchId: '' }
-      : { name: '' },
+    defaultValues: mode === 'create' ? { name: '', branchId: '' } : { name: '' },
     mode: 'onSubmit',
   });
 
   useEffect(() => {
     if (mode === 'edit' && initialData) {
-      reset({
-        name: initialData.name ?? '',
-      });
-    } else if (mode === 'create') {
-      reset({
-        name: '',
-        branchId: '',
-      });
-    }
-  }, [initialData, mode, reset]);
-
-  const handleFormSubmit = async (data: LocationFormValues) => {
-    if (mode === 'create') {
-      await onSubmit({
-        name: data.name,
-        branchId: data.branchId ?? '',
-      });
+      reset({ name: initialData.name ?? '' });
       return;
     }
+    reset({ name: '', branchId: '' });
+  }, [initialData, mode, reset]);
 
-    await onSubmit({
-      name: data.name,
-    });
+  const submit = async (values: LocationFormValues) => {
+    if (mode === 'create') {
+      await onSubmit({ name: values.name, branchId: values.branchId ?? '' });
+      return;
+    }
+    await onSubmit({ name: values.name });
   };
 
   return (
@@ -105,21 +87,14 @@ export const LocationForm: React.FC<LocationFormProps> = ({
           <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(submit)} className="space-y-4">
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="name">Name</FieldLabel>
-                <Input
-                  id="name"
-                  placeholder="Location name"
-                  aria-invalid={!!errors.name}
-                  {...register('name')}
-                />
-                {errors.name?.message && (
-                  <p className="text-sm text-destructive">{errors.name.message}</p>
-                )}
+                <Input id="name" placeholder="Location name" aria-invalid={!!errors.name} {...register('name')} />
+                {errors.name?.message ? <p className="text-sm text-destructive">{errors.name.message}</p> : null}
               </Field>
-              {mode === 'create' && (
+              {mode === 'create' ? (
                 <Field>
                   <FieldLabel htmlFor="branchId">Branch</FieldLabel>
                   <Controller
@@ -127,11 +102,17 @@ export const LocationForm: React.FC<LocationFormProps> = ({
                     name="branchId"
                     render={({ field }) => (
                       <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                        <SelectTrigger id="branchId" aria-invalid={!!errors.branchId} disabled={isLoadingBranches}>
-                          <SelectValue placeholder={isLoadingBranches ? 'Loading branches...' : 'Select branch'} />
+                        <SelectTrigger
+                          id="branchId"
+                          aria-invalid={!!errors.branchId}
+                          disabled={isLoadingBranches}
+                        >
+                          <SelectValue
+                            placeholder={isLoadingBranches ? 'Loading branches...' : 'Select branch'}
+                          />
                         </SelectTrigger>
                         <SelectContent>
-                          {branchOptions.map((branch) => (
+                          {(branchesData?.data ?? []).map((branch) => (
                             <SelectItem key={branch.id} value={branch.id}>
                               {branch.name}
                             </SelectItem>
@@ -140,21 +121,17 @@ export const LocationForm: React.FC<LocationFormProps> = ({
                       </Select>
                     )}
                   />
-                  {errors.branchId?.message && (
+                  {errors.branchId?.message ? (
                     <p className="text-sm text-destructive">{errors.branchId.message}</p>
-                  )}
+                  ) : null}
                 </Field>
-              )}
+              ) : null}
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting && <Spinner />}
+                  {isSubmitting ? <Spinner /> : null}
                   {isSubmitting ? `${mode === 'create' ? 'Creating...' : 'Saving...'}` : submitButtonText}
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/locations')}
-                >
+                <Button type="button" variant="outline" onClick={() => navigate('/locations')}>
                   Cancel
                 </Button>
               </div>
@@ -164,4 +141,4 @@ export const LocationForm: React.FC<LocationFormProps> = ({
       </Card>
     </div>
   );
-};
+}

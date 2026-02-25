@@ -1,9 +1,9 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
 import { PaginationRequestQuery, NonEmpty255, UUID } from '@/server/schemas/common';
-import { listLocationsCtrl } from './controller';
+import { getLocationByIdCtrl, listLocationsCtrl } from './controller';
 
-import { createLocationSvc, deleteLocationSvc, getLocationSvc, updateLocationSvc } from './service';
+import { createLocationSvc, deleteLocationSvc, updateLocationSvc } from './service';
 
 export const locationsRoutes = new Elysia({ name: 'locations' })
   .get(
@@ -34,7 +34,9 @@ export const locationsRoutes = new Elysia({ name: 'locations' })
       detail: { tags: ['Locations'], summary: 'List locations', operationId: 'listLocations' },
     },
   )
-  .get('/:id', async ({ params }) => getLocationSvc(params.id), { params: t.Object({ id: UUID }) })
+  .get('/:id', async ({ params }) => getLocationByIdCtrl(params.id), {
+    params: t.Object({ id: UUID }),
+  })
   .post(
     '/',
     async ({ body, set }) => {
