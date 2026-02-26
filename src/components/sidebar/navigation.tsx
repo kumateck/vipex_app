@@ -76,6 +76,17 @@ export const ROUTES: Route[] = [
         icon: 'Settings',
         items: [{ title: 'Manage Statuses', url: '/statuses', permissionKey: 'CanReadStatuses' }],
       },
+      {
+        title: 'Inventory',
+        icon: 'Boxes',
+        items: [
+          {
+            title: 'Product Categories',
+            url: '/inventory/categories',
+            permissionKey: 'CanListProductCategories',
+          },
+        ],
+      },
     ],
   },
   {
