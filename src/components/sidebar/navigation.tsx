@@ -285,11 +285,12 @@ export const ROUTES: Route[] = [
         items: [
           {
             title: 'All Inventory',
-            url: '/inventory',
+            url: '/inventory/products',
+            permissionKey: 'CanListProducts',
           },
           {
             title: 'Add Inventory',
-            url: '/inventory/create',
+            url: '/inventory/products/new',
           },
           {
             title: 'Stock Levels',
