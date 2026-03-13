@@ -1,3 +1,5 @@
+
+
 import { type LucideIconProps } from '@/components/ui';
 
 // Define the sub-item structure for nested menu items.
@@ -5,8 +7,8 @@ interface SubItem {
   title: string;
   url?: string;
   icon?: LucideIconProps;
+  permissionKey?: string;
   children?: SubItem[];
-  permissionKey?: string
 }
 
 // Define the main menu item structure.
@@ -15,7 +17,7 @@ export interface MenuItem {
   url?: string;
   icon: LucideIconProps;
   isActive?: boolean;
-  permissionKey?: string
+  permissionKey?: string;
   items?: SubItem[]; // Optional array of sub-items.
 }
 
@@ -285,12 +287,11 @@ export const ROUTES: Route[] = [
         items: [
           {
             title: 'All Inventory',
-            url: '/inventory/products',
-            permissionKey: 'CanListProducts',
+            url: '/inventory',
           },
           {
             title: 'Add Inventory',
-            url: '/inventory/products/new',
+            url: '/inventory/create',
           },
           {
             title: 'Stock Levels',
@@ -573,3 +574,5 @@ export const ROUTES: Route[] = [
     ],
   },
 ];
+
+

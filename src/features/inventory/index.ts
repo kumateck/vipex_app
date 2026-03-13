@@ -1,2 +1,1 @@
-// export * from './locations';
-export * from './products';
+export * from './categories';
