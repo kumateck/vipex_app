@@ -23,6 +23,7 @@ const public_forgot_page_tsx = lazy(() => import('../pages/(public)/forgot/page.
 const public_login_page_tsx = lazy(() => import('../pages/(public)/login/page.tsx'));
 const public_reset_page_tsx = lazy(() => import('../pages/(public)/reset/page.tsx'));
 const private_configurations_branches_page_tsx = lazy(() => import('../pages/(private)/(configurations)/branches/page.tsx'));
+const private_configurations_inventory_page_tsx = lazy(() => import('../pages/(private)/(configurations)/inventory/page.tsx'));
 const private_configurations_locations_page_tsx = lazy(() => import('../pages/(private)/(configurations)/locations/page.tsx'));
 const private_configurations_statuses_page_tsx = lazy(() => import('../pages/(private)/(configurations)/statuses/page.tsx'));
 const private_operations_parcel_page_tsx = lazy(() => import('../pages/(private)/operations/parcel/page.tsx'));
