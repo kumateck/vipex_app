@@ -286,6 +286,11 @@ export const ROUTES: Route[] = [
         icon: 'Package2',
         items: [
           {
+            title: 'Product Locations',
+            url: '/inventory/locations',
+            permissionKey: 'CanListProductLocations',
+          },
+          {
             title: 'All Inventory',
             url: '/inventory',
           },
