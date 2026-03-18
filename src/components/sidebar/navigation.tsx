@@ -291,6 +291,11 @@ export const ROUTES: Route[] = [
             permissionKey: 'CanListProductCategories',
           },
           {
+            title: 'Product Locations',
+            url: '/inventory/locations',
+            permissionKey: 'CanListProductLocations',
+          },
+          {
             title: 'All Inventory',
             url: '/inventory',
           },
