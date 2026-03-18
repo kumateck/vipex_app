@@ -285,7 +285,7 @@ export const ROUTES: Route[] = [
         title: 'Inventory Management',
         icon: 'Package2',
         items: [
-             {
+          {
             title: 'Product Locations',
             url: '/inventory/locations',
             permissionKey: 'CanListProductLocations',

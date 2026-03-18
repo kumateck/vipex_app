@@ -1,4 +1,4 @@
 //revire this import to be more specific to inventory locations instead of categories
-import {InventoryCategoriesCreatePage as InventoryLocationsCreatePage } from '@/features/inventory';
+import { InventoryLocationsCreatePage } from '@/features/inventory/locations/pages/inventory-locations-create-page.tsx';
 
 export default InventoryLocationsCreatePage;
