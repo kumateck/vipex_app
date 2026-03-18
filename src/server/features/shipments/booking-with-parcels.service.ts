@@ -15,17 +15,18 @@ export type CreateBookingWithParcelsBody = {
   senderId: string;
   companyId: string;
   sourceId: string;
-  statusId: string;
+  status: number;
   createdBy: string;
   cashierSessionId?: string | null;
   bookingCode?: string | null;
   parcels: Array<{
     destinationId: string;
     receiverId: string;
-    statusId: string;
+    status: number;
     parcelDetails: string;
     parcelContent: string;
     parcelValueCedis?: number | string | null;
+    chargeCedis?: number | string | null;
     plannedToBePaidCedis?: number | string | null;
     method: PaymentMethod;
     trackingCode?: string | null;
@@ -39,7 +40,7 @@ export type CreateBookingWithParcelsBody = {
 export async function createBookingWithParcelsSvc(
   body: CreateBookingWithParcelsBody,
 ): Promise<CreateBookingWithParcelsOutput> {
-  if (!body.senderId || !body.companyId || !body.sourceId || !body.statusId || !body.createdBy) {
+  if (!body.senderId || !body.companyId || !body.sourceId || body.status == null || !body.createdBy) {
     throw BadRequest('Missing required booking fields');
   }
   if (!Array.isArray(body.parcels) || body.parcels.length === 0) {
@@ -68,17 +69,24 @@ export async function createBookingWithParcelsSvc(
     senderId: body.senderId,
     companyId: body.companyId,
     sourceId: body.sourceId,
-    statusId: body.statusId,
+    status: body.status,
     createdBy: body.createdBy,
     cashierSessionId: body.cashierSessionId ?? activeSession.id,
     // bookingCode: body.bookingCode ?? null,
     parcels: body.parcels.map((p) => ({
       destinationId: p.destinationId,
       receiverId: p.receiverId,
-      statusId: p.statusId,
+      status: p.status,
       parcelDetails: p.parcelDetails,
       parcelContent: p.parcelContent,
       parcelValuePsw: p.parcelValueCedis != null ? Number(toPesewas(p.parcelValueCedis)) : 0,
+      chargePsw:
+        p.chargeCedis != null
+          ? Number(toPesewas(p.chargeCedis))
+          : Number(
+              (p.senderPaymentCedis != null ? toPesewas(p.senderPaymentCedis) : 0n) +
+                (p.plannedToBePaidCedis != null ? toPesewas(p.plannedToBePaidCedis) : 0n),
+            ),
       plannedToBePaidPsw:
         p.plannedToBePaidCedis != null ? Number(toPesewas(p.plannedToBePaidCedis)) : 0,
       method: p.method,

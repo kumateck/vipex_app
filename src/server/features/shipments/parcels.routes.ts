@@ -21,14 +21,14 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         sort: query.sort,
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
-        filters: {
-          companyId: query.companyId ?? null,
-          sourceId: query.sourceId ?? null,
-          destinationId: query.destinationId ?? null,
-          statusId: query.statusId ?? null,
-          received: query.received ?? null,
-          includeDeleted: query.includeDeleted ?? null,
-        },
+          filters: {
+            companyId: query.companyId ?? null,
+            sourceId: query.sourceId ?? null,
+            destinationId: query.destinationId ?? null,
+            status: query.status ?? null,
+            received: query.received ?? null,
+            includeDeleted: query.includeDeleted ?? null,
+          },
       }),
     {
       query: t.Intersect([
@@ -37,7 +37,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           companyId: t.Optional(UUID),
           sourceId: t.Optional(UUID),
           destinationId: t.Optional(UUID),
-          statusId: t.Optional(UUID),
+          status: t.Optional(t.Number()),
           search: t.Optional(t.String()),
           received: t.Optional(t.Boolean()),
           includeDeleted: t.Optional(t.Boolean()),
@@ -63,10 +63,11 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           trackingCode: string;
           senderId: string;
           receiverId: string;
-          statusId: string;
+          status: number;
           parcelDetails: string;
           parcelContent: string;
           parcelValueCedis?: number | string | null;
+          chargeCedis?: number | string | null;
           plannedToBePaidCedis?: number | string | null;
           method: number;
           createdBy?: string | null;
@@ -86,10 +87,11 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         trackingCode: t.String(),
         senderId: UUID,
         receiverId: UUID,
-        statusId: UUID,
+        status: t.Number(),
         parcelDetails: t.String({ minLength: 1, maxLength: 255 }),
         parcelContent: t.String({ minLength: 1, maxLength: 255 }),
         parcelValueCedis: t.Optional(t.Union([t.Number(), t.String()])),
+        chargeCedis: t.Optional(t.Union([t.Number(), t.String()])),
         plannedToBePaidCedis: t.Optional(t.Union([t.Number(), t.String()])),
         method: t.Number(),
         createdBy: t.Optional(UUID),
@@ -104,10 +106,11 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       updateParcelCtrl(
         params.id,
         body as {
-          statusId?: string;
+          status?: number;
           parcelDetails?: string;
           parcelContent?: string;
           parcelValueCedis?: number | string | null;
+          chargeCedis?: number | string | null;
           pickupLocationId?: string | null;
           method?: number;
           taxReportConfirmation?: boolean;
@@ -116,10 +119,11 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
     {
       params: t.Object({ id: UUID }),
       body: t.Object({
-        statusId: t.Optional(UUID),
+        status: t.Optional(t.Number()),
         parcelDetails: t.Optional(t.String()),
         parcelContent: t.Optional(t.String()),
         parcelValueCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
+        chargeCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
         pickupLocationId: t.Optional(t.Union([UUID, t.Null()])),
         method: t.Optional(t.Number()),
         taxReportConfirmation: t.Optional(t.Boolean()),
@@ -132,14 +136,14 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
     async ({ params, body }) =>
       markParcelReceivedCtrl(
         params.id,
-        body as { receivedBy: string; receivedAt?: string; statusId?: string },
+        body as { receivedBy: string; receivedAt?: string; status?: number },
       ),
     {
       params: t.Object({ id: UUID }),
       body: t.Object({
         receivedBy: UUID,
         receivedAt: t.Optional(t.String({ format: 'date-time' })),
-        statusId: t.Optional(UUID),
+        status: t.Optional(t.Number()),
       }),
       detail: { tags: ['Shipments'], summary: 'Mark parcel received' },
     },

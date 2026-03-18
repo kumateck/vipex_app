@@ -14,10 +14,11 @@ export type ParcelRow = {
   senderId: string;
   receiverId: string;
   secondReceiverId: string | null;
-  statusId: string;
+  status: number;
   parcelDetails: string;
   parcelContent: string;
   parcelValuePsw: number;
+  chargePsw: number;
   cardId: string | null;
   cardNumber: string | null;
   secondCardId: string | null;
@@ -43,7 +44,7 @@ export type ListParcelsParams = {
   companyId?: string | null;
   sourceId?: string | null;
   destinationId?: string | null;
-  statusId?: string | null;
+  status?: number | null;
   search?: string | null; // bookingCode/trackingCode/sender/receiver names/phones
   received?: boolean | null;
   includeDeleted?: boolean | null;
@@ -71,7 +72,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   if (p.companyId) whereParts.push(eq(parcels.companyId, p.companyId));
   if (p.sourceId) whereParts.push(eq(parcels.sourceId, p.sourceId));
   if (p.destinationId) whereParts.push(eq(parcels.destinationId, p.destinationId));
-  if (p.statusId) whereParts.push(eq(parcels.statusId, p.statusId));
+  if (p.status != null) whereParts.push(eq(parcels.status, p.status));
   if (p.received === true) whereParts.push(isNotNull(parcels.receivedAt));
   if (p.received === false) whereParts.push(isNull(parcels.receivedAt));
   const s = alias(customers, 's');
@@ -132,10 +133,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       senderId: parcels.senderId,
       receiverId: parcels.receiverId,
       secondReceiverId: parcels.secondReceiverId,
-      statusId: parcels.statusId,
+      status: parcels.status,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
       parcelValuePsw: parcels.parcelValuePsw,
+      chargePsw: parcels.chargePsw,
       cardId: parcels.cardId,
       cardNumber: parcels.cardNumber,
       secondCardId: parcels.secondCardId,
@@ -202,10 +204,11 @@ export async function getParcelRepo(id: string): Promise<ParcelRow | null> {
       senderId: parcels.senderId,
       receiverId: parcels.receiverId,
       secondReceiverId: parcels.secondReceiverId,
-      statusId: parcels.statusId,
+      status: parcels.status,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
       parcelValuePsw: parcels.parcelValuePsw,
+      chargePsw: parcels.chargePsw,
       cardId: parcels.cardId,
       cardNumber: parcels.cardNumber,
       secondCardId: parcels.secondCardId,

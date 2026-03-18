@@ -14,7 +14,7 @@ export async function listParcelsCtrl(
     companyId?: string | null;
     sourceId?: string | null;
     destinationId?: string | null;
-    statusId?: string | null;
+    status?: number | null;
     received?: boolean | null;
     includeDeleted?: boolean | null;
   }>,
@@ -26,7 +26,7 @@ export async function listParcelsCtrl(
     companyId: q.filters?.companyId ?? null,
     sourceId: q.filters?.sourceId ?? null,
     destinationId: q.filters?.destinationId ?? null,
-    statusId: q.filters?.statusId ?? null,
+    status: q.filters?.status ?? null,
     search: pagination.search ?? null,
     received: q.filters?.received ?? null,
     includeDeleted: q.filters?.includeDeleted ?? null,

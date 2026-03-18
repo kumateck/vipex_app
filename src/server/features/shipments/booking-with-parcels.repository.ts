@@ -22,7 +22,7 @@ export type CreateBookingWithParcelsInput = {
   senderId: string;
   companyId: string;
   sourceId: string;
-  statusId: string;
+  status: number;
   createdBy: string;
   cashierSessionId?: string | null;
 
@@ -31,10 +31,11 @@ export type CreateBookingWithParcelsInput = {
   parcels: Array<{
     destinationId: string;
     receiverId: string;
-    statusId: string; // initial parcel status
+    status: number; // initial parcel status
     parcelDetails: string;
     parcelContent: string;
     parcelValuePsw?: number; // pre-converted pesewas; optional
+    chargePsw?: number; // pre-converted pesewas; optional
     plannedToBePaidPsw?: number; // pre-converted pesewas; optional
     method: PaymentMethod; // the method captured for this parcel context
     trackingCode?: string | null; // if absent, will be generated
@@ -139,7 +140,7 @@ export async function createBookingWithParcelsAndPaymentsRepo(
         senderId: input.senderId,
         companyId: input.companyId,
         sourceId: input.sourceId,
-        statusId: input.statusId,
+        status: input.status,
         createdBy: input.createdBy,
         cashierSessionId: input.cashierSessionId ?? null,
         // createdAt/updatedAt default at DB
@@ -165,10 +166,11 @@ export async function createBookingWithParcelsAndPaymentsRepo(
           trackingCode: tracking,
           senderId: input.senderId,
           receiverId: p.receiverId,
-          statusId: p.statusId,
+          status: p.status,
           parcelDetails: p.parcelDetails,
           parcelContent: p.parcelContent,
           parcelValuePsw: p.parcelValuePsw ?? 0,
+          chargePsw: p.chargePsw ?? 0,
           plannedToBePaidPsw: p.plannedToBePaidPsw ?? 0,
           method: p.method,
           createdBy: input.createdBy,

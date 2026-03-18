@@ -11,7 +11,7 @@ export interface Booking {
   senderId: string;
   companyId: string;
   sourceId: string;
-  statusId: string;
+  status: number;
   createdAt: string;
   updatedAt?: string;
 }

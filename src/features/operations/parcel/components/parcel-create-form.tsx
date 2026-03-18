@@ -1,21 +1,62 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { useFieldArray, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Form } from '@/components/ui/form';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Spinner } from '@/components/ui/spinner';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useGetCurrentActiveSessionQuery } from '@/features/cashiers/api/cashiers.api';
 import { useCreateCustomerMutation } from '@/features/customers/api';
-import { useListStatusOptionsQuery } from '@/features/statuses/api/statuses.api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useCreateBookingWithParcelsMutation } from '../api/parcel.api';
-import { CustomerPhoneLookupField } from './customer-phone-lookup-field';
-import { ParcelReceiptActions } from './parcel-receipt-actions';
+import { CustomerLookupSection } from './parcel-create/customer-lookup-section';
+import { ParcelCard } from './parcel-create/parcel-card';
+import { ParcelReceipts } from './parcel-create/parcel-receipts';
+import { PARCEL_STATUS_OPTIONS } from './parcel-create/parcel-status-options';
+import type {
+  ParcelBookingFormValues,
+  ParcelFormValues,
+  ReceiptSummary,
+} from './parcel-create/parcel-form.types';
+import { Plus } from 'lucide-react';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
-type PaymentResponsibility = 'SENDER' | 'RECEIVER';
+const createEmptyParcel = (): ParcelFormValues => ({
+  destinationBranchId: '',
+  destinationLocationId: '',
+  parcelDetails: '',
+  parcelContent: '',
+  parcelValue: '',
+  charge: '',
+  paymentResponsibility: 'SENDER',
+  receiver: {
+    telephone: '',
+    customerId: '',
+    fullname: '',
+  },
+});
+
+const parseAmount = (value: string, label: string) => {
+  const normalized = String(value ?? '')
+    .replace(/,/g, '')
+    .trim();
+  if (!normalized) return 0;
+  const amount = Number(normalized);
+  if (Number.isNaN(amount) || amount < 0) {
+    throw new Error(`Enter a valid ${label} amount`);
+  }
+  return amount;
+};
 
 export function ParcelCreateForm() {
   const user = useAuthStore((state) => state.user);
@@ -23,248 +64,246 @@ export function ParcelCreateForm() {
   const userBranchId = user?.branch?.id ?? '';
   const userId = user?.id ?? '';
 
-  const [senderPhone, setSenderPhone] = useState('');
-  const [senderId, setSenderId] = useState('');
-  const [senderFullname, setSenderFullname] = useState('');
-
-  const [receiverPhone, setReceiverPhone] = useState('');
-  const [receiverId, setReceiverId] = useState('');
-  const [receiverFullname, setReceiverFullname] = useState('');
-
-  const [destinationId, setDestinationId] = useState('');
-  const [statusId, setStatusId] = useState('');
-  const [parcelDetails, setParcelDetails] = useState('');
-  const [parcelContent, setParcelContent] = useState('');
-  const [amountCedis, setAmountCedis] = useState('0');
-  const [paymentResponsibility, setPaymentResponsibility] = useState<PaymentResponsibility>('SENDER');
-  const [latestReceipt, setLatestReceipt] = useState<{
-    bookingId: string;
-    trackingCode: string;
-    paymentResponsibility: PaymentResponsibility;
-    amountCedis: number;
-  } | null>(null);
+  const [latestReceipt, setLatestReceipt] = useState<ReceiptSummary | null>(null);
 
   const { data: activeSession } = useGetCurrentActiveSessionQuery();
-
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
-    { companyId },
-    { skip: !companyId },
-  );
-  const { data: statusOptions = [] } = useListStatusOptionsQuery(
     { companyId },
     { skip: !companyId },
   );
 
   const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
-  const [createBookingWithParcels, { isLoading: isSubmitting }] = useCreateBookingWithParcelsMutation();
+  const [createBookingWithParcels, { isLoading: isSubmitting }] =
+    useCreateBookingWithParcelsMutation();
 
-  const sourceBranchName = useMemo(
-    () => branchOptions.find((branch) => branch.id === userBranchId)?.name ?? 'Current branch',
-    [branchOptions, userBranchId],
-  );
+  const form = useForm<ParcelBookingFormValues>({
+    defaultValues: {
+      sender: {
+        telephone: '',
+        customerId: '',
+        fullname: '',
+      },
+      status: PARCEL_STATUS_OPTIONS[0]?.value ?? 0,
+      parcels: [createEmptyParcel()],
+    },
+    mode: 'onSubmit',
+  });
 
-  const submitDisabled = !companyId || !userId || !activeSession || isSubmitting || isCreatingCustomer;
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'parcels',
+  });
 
-  const resolveCustomerId = async (params: {
-    customerId: string;
-    fullname: string;
-    telephone: string;
-  }): Promise<string> => {
+  const sourceBranchName =
+    branchOptions.find((branch) => branch.id === userBranchId)?.name ?? 'Current branch';
+
+  const submitDisabled =
+    !companyId ||
+    !userId ||
+    !activeSession ||
+    isSubmitting ||
+    isCreatingCustomer ||
+    form.formState.isSubmitting;
+  const isSaving = isSubmitting || isCreatingCustomer || form.formState.isSubmitting;
+
+  const resolveCustomerId = async (
+    params: { customerId: string; fullname: string; telephone: string; label: string },
+    cache: Map<string, string>,
+  ) => {
     if (params.customerId) return params.customerId;
-
-    const name = params.fullname.trim();
     const phone = params.telephone.trim();
-    if (!name || !phone) {
-      throw new Error('Please provide telephone and fullname for customers not in records');
+    const name = params.fullname.trim();
+
+    if (!phone || !name) {
+      throw new Error(`${params.label} telephone and fullname are required`);
     }
 
+    const cachedId = cache.get(phone);
+    if (cachedId) return cachedId;
+
     const created = await createCustomer({ fullname: name, telephone: phone }).unwrap();
+    cache.set(phone, created.id);
     return created.id;
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
+  const onSubmit = async (values: ParcelBookingFormValues) => {
     if (!companyId || !userId || !userBranchId) {
       toast.error('Authenticated user context is incomplete');
       return;
     }
+
     if (!activeSession) {
       toast.error('An active cashier session is required');
       return;
     }
-    if (!destinationId || !statusId) {
-      toast.error('Destination and status are required');
-      return;
-    }
 
-    const numericAmount = Number(amountCedis);
-    if (Number.isNaN(numericAmount) || numericAmount < 0) {
-      toast.error('Enter a valid amount');
+    if (values.status == null) {
+      toast.error('Please select a parcel status');
       return;
     }
 
     try {
-      const resolvedSenderId = await resolveCustomerId({
-        customerId: senderId,
-        fullname: senderFullname,
-        telephone: senderPhone,
-      });
-      const resolvedReceiverId = await resolveCustomerId({
-        customerId: receiverId,
-        fullname: receiverFullname,
-        telephone: receiverPhone,
-      });
+      const customerCache = new Map<string, string>();
+      const [resolvedSenderId, receiverIds] = await Promise.all([
+        resolveCustomerId(
+          {
+            customerId: values.sender.customerId,
+            fullname: values.sender.fullname,
+            telephone: values.sender.telephone,
+            label: 'Sender',
+          },
+          customerCache,
+        ),
+        Promise.all(
+          values.parcels.map((parcel, index) =>
+            resolveCustomerId(
+              {
+                customerId: parcel.receiver.customerId,
+                fullname: parcel.receiver.fullname,
+                telephone: parcel.receiver.telephone,
+                label: `Recipient for parcel ${index + 1}`,
+              },
+              customerCache,
+            ),
+          ),
+        ),
+      ]);
+
+      const amounts =
+        values.parcels.map((parcel, index) => ({
+          charge: parseAmount(parcel.charge, `charge for parcel ${index + 1}`),
+          value: parseAmount(parcel.parcelValue, `parcel value for parcel ${index + 1}`),
+        })) || [];
 
       const response = await createBookingWithParcels({
         senderId: resolvedSenderId,
-        statusId,
+        status: values.status,
         cashierSessionId: activeSession.id,
-        parcels: [
-          {
-            destinationId,
-            receiverId: resolvedReceiverId,
-            statusId,
-            parcelDetails,
-            parcelContent,
-            method: 0,
-            senderPaymentCedis: paymentResponsibility === 'SENDER' ? numericAmount : 0,
-            plannedToBePaidCedis: paymentResponsibility === 'RECEIVER' ? numericAmount : 0,
-          },
-        ],
+        parcels: values.parcels.map((parcel, index) => ({
+          destinationId: parcel.destinationBranchId,
+          receiverId: receiverIds[index],
+          status: values.status,
+          parcelDetails: parcel.parcelDetails,
+          parcelContent: parcel.parcelContent,
+          method: 0,
+          parcelValueCedis: amounts[index]?.value,
+          chargeCedis: amounts[index]?.charge,
+          senderPaymentCedis:
+            parcel.paymentResponsibility === 'SENDER' ? amounts[index]?.charge : 0,
+          plannedToBePaidCedis:
+            parcel.paymentResponsibility === 'RECEIVER' ? amounts[index]?.charge : 0,
+        })),
       }).unwrap();
 
-      const firstParcel = response.parcels[0];
       setLatestReceipt({
         bookingId: response.bookingId,
-        trackingCode: firstParcel?.trackingCode ?? '-',
-        paymentResponsibility,
-        amountCedis: numericAmount,
+        parcels: response.parcels.map((parcel, index) => ({
+          trackingCode: parcel.trackingCode ?? '-',
+          paymentResponsibility: values.parcels[index]?.paymentResponsibility ?? 'SENDER',
+          amountCedis: amounts[index]?.charge ?? 0,
+        })),
       });
+
       toast.success('Parcel transaction created successfully');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create parcel transaction');
     }
   };
 
+  const handleCancel = () => {
+    form.reset();
+    setLatestReceipt(null);
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create Parcel Transaction</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <CustomerPhoneLookupField
-              label="Sender"
-              phone={senderPhone}
-              selectedCustomerId={senderId}
-              fallbackName={senderFullname}
-              onPhoneChange={setSenderPhone}
-              onSelectedCustomerIdChange={setSenderId}
-              onFallbackNameChange={setSenderFullname}
-            />
-            <CustomerPhoneLookupField
-              label="Receiver"
-              phone={receiverPhone}
-              selectedCustomerId={receiverId}
-              fallbackName={receiverFullname}
-              onPhoneChange={setReceiverPhone}
-              onSelectedCustomerIdChange={setReceiverId}
-              onFallbackNameChange={setReceiverFullname}
-            />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Source Branch</Label>
-              <Input value={sourceBranchName} disabled />
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold">Create Parcel Booking</h2>
+              <p className="text-sm text-muted-foreground">
+                Confirm the source branch and default parcel status for this booking.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label>Destination Branch</Label>
-              <Select value={destinationId} onValueChange={setDestinationId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select destination" />
-                </SelectTrigger>
-                <SelectContent>
-                  {branchOptions.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex flex-wrap gap-2 md:justify-end">
+              <Button type="button" variant="outline" onClick={handleCancel} disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitDisabled} className="gap-2">
+                {isSaving ? <Spinner /> : null}
+                {isSaving ? 'Saving...' : 'Save Booking'}
+              </Button>
             </div>
           </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Parcel Status</Label>
-              <Select value={statusId} onValueChange={setStatusId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status.id} value={status.id}>
-                      {status.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <ScrollableWrapper>
+            <div className="grid gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sender</CardTitle>
+                  <CardDescription>
+                    Search by phone to reuse existing customer records.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <CustomerLookupSection
+                      label="Sender"
+                      phoneName="sender.telephone"
+                      customerIdName="sender.customerId"
+                      fullnameName="sender.fullname"
+                      helperText="Lookup starts after 3 seconds when 10+ digits are entered."
+                      layout="split"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-            <div className="space-y-2">
-              <Label>Charge (GHS)</Label>
-              <Input value={amountCedis} onChange={(event) => setAmountCedis(event.target.value)} inputMode="decimal" />
-            </div>
-          </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Parcel Details</Label>
-              <Textarea value={parcelDetails} onChange={(event) => setParcelDetails(event.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Parcel Content</Label>
-              <Textarea value={parcelContent} onChange={(event) => setParcelContent(event.target.value)} />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Payment Responsibility</Label>
-            <Select
-              value={paymentResponsibility}
-              onValueChange={(value) => setPaymentResponsibility(value as PaymentResponsibility)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="SENDER">Sender pays now</SelectItem>
-                <SelectItem value="RECEIVER">Receiver pays on pickup</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">
-              Payment creation is blocked when no active session exists.
-            </p>
-            <Button type="submit" disabled={submitDisabled}>
-              {isSubmitting || isCreatingCustomer ? 'Saving...' : 'Create Transaction'}
-            </Button>
-          </div>
-
-          {latestReceipt ? (
-            <ParcelReceiptActions
-              bookingId={latestReceipt.bookingId}
-              trackingCode={latestReceipt.trackingCode}
-              paymentResponsibility={latestReceipt.paymentResponsibility}
-              amountCedis={latestReceipt.amountCedis}
-            />
-          ) : null}
+            <Card>
+              <CardHeader>
+                <CardTitle>Parcels</CardTitle>
+                <CardDescription>
+                  Each parcel can have its own recipient, destination branch, and pickup location.
+                </CardDescription>
+                <CardAction>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append(createEmptyParcel())}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Parcel
+                  </Button>
+                </CardAction>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ScrollArea className="max-h-[520px] pr-2">
+                  <div className="space-y-4 pr-2">
+                    {fields.map((field, index) => (
+                      <ParcelCard
+                        key={field.id}
+                        index={index}
+                        canRemove={fields.length > 1}
+                        onRemove={() => remove(index)}
+                        companyId={companyId}
+                        branchOptions={branchOptions}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
+                <p className="text-xs text-muted-foreground">
+                  All parcels will be saved under a single booking. Ensure a cashier session is
+                  active before saving.
+                </p>
+              </CardContent>
+            </Card>
+          </ScrollableWrapper>
         </form>
-      </CardContent>
-    </Card>
+      </Form>
+
+      <ParcelReceipts receipt={latestReceipt} />
+    </div>
   );
 }

@@ -21,7 +21,7 @@ export async function createBookingSvc(input: {
   senderId: string;
   companyId: string;
   sourceId: string;
-  statusId: string;
+  status: number;
   createdBy: string;
   cashierSessionId?: string | null;
 }) {
@@ -29,7 +29,7 @@ export async function createBookingSvc(input: {
     !input.senderId ||
     !input.companyId ||
     !input.sourceId ||
-    !input.statusId ||
+    input.status == null ||
     !input.createdBy
   ) {
     throw BadRequest('Missing required fields');
@@ -38,7 +38,7 @@ export async function createBookingSvc(input: {
     senderId: input.senderId,
     companyId: input.companyId,
     sourceId: input.sourceId,
-    statusId: input.statusId,
+    status: input.status,
     createdBy: input.createdBy,
     cashierSessionId: input.cashierSessionId ?? null,
   });

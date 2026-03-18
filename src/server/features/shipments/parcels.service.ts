@@ -27,10 +27,11 @@ export async function createParcelSvc(input: {
   trackingCode: string;
   senderId: string;
   receiverId: string;
-  statusId: string;
+  status: number;
   parcelDetails: string;
   parcelContent: string;
   parcelValueCedis?: number | string | null;
+  chargeCedis?: number | string | null;
   plannedToBePaidCedis?: number | string | null;
   method: number;
   createdBy?: string | null;
@@ -49,6 +50,8 @@ export async function createParcelSvc(input: {
   const parcelValuePsw = input.parcelValueCedis != null ? toPesewas(input.parcelValueCedis) : 0n;
   const plannedToBePaidPsw =
     input.plannedToBePaidCedis != null ? toPesewas(input.plannedToBePaidCedis) : 0n;
+  const chargePsw =
+    input.chargeCedis != null ? toPesewas(input.chargeCedis) : plannedToBePaidPsw;
   const created = await createParcelRepo({
     companyId: input.companyId,
     sourceId: input.sourceId,
@@ -58,10 +61,11 @@ export async function createParcelSvc(input: {
     trackingCode: input.trackingCode,
     senderId: input.senderId,
     receiverId: input.receiverId,
-    statusId: input.statusId,
+    status: input.status,
     parcelDetails: input.parcelDetails,
     parcelContent: input.parcelContent,
     parcelValuePsw: Number(parcelValuePsw),
+    chargePsw: Number(chargePsw),
     plannedToBePaidPsw: Number(plannedToBePaidPsw),
     method: input.method,
     createdBy: input.createdBy ?? null,
@@ -73,10 +77,11 @@ export async function createParcelSvc(input: {
 export async function updateParcelSvc(
   id: string,
   patch: {
-    statusId?: string;
+    status?: number;
     parcelDetails?: string;
     parcelContent?: string;
     parcelValueCedis?: number | string | null;
+    chargeCedis?: number | string | null;
     pickupLocationId?: string | null;
     method?: number;
     taxReportConfirmation?: boolean;
@@ -85,12 +90,15 @@ export async function updateParcelSvc(
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
   const setPatch: Partial<typeof cur> & { parcelValuePsw?: number } = {};
-  if (patch.statusId) setPatch.statusId = patch.statusId;
+  if (patch.status !== undefined) setPatch.status = patch.status;
   if (patch.parcelDetails) setPatch.parcelDetails = patch.parcelDetails;
   if (patch.parcelContent) setPatch.parcelContent = patch.parcelContent;
   if (patch.parcelValueCedis !== undefined)
     setPatch.parcelValuePsw =
       patch.parcelValueCedis != null ? Number(toPesewas(patch.parcelValueCedis)) : 0;
+  if (patch.chargeCedis !== undefined)
+    setPatch.chargePsw =
+      patch.chargeCedis != null ? Number(toPesewas(patch.chargeCedis)) : 0;
   if (patch.pickupLocationId !== undefined) setPatch.pickupLocationId = patch.pickupLocationId;
   if (patch.method !== undefined) setPatch.method = patch.method;
   if (patch.taxReportConfirmation !== undefined)
@@ -103,7 +111,7 @@ export async function updateParcelSvc(
 
 export async function markParcelReceivedSvc(
   id: string,
-  input: { receivedBy: string; receivedAt?: string; statusId?: string },
+  input: { receivedBy: string; receivedAt?: string; status?: number },
 ) {
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
@@ -112,7 +120,7 @@ export async function markParcelReceivedSvc(
     receivedBy: input.receivedBy,
     receivedAt: input.receivedAt ? new Date(input.receivedAt) : new Date(),
   };
-  if (input.statusId) patch.statusId = input.statusId;
+  if (input.status !== undefined) patch.status = input.status;
   const updated = await updateParcelRepo(id, patch);
   if (!updated) throw NotFound('Parcel not found');
   return { id: updated.id, receivedAt: (patch.receivedAt as Date).toISOString() };

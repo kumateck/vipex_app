@@ -99,7 +99,23 @@ export enum SplitPaymentType {
   FIXED = 1,
   WEIGHTED = 2,
 }
-
+export enum ParcelStatus {
+  CREATED = 0, // Parcel info recorded by agent
+  PROCESSED = 1, // Cashier processed payment / confirmed shipment
+  IN_TRANSIT = 2, // Parcel on intercity transport
+  ARRIVED_AT_DESTINATION = 3, // Parcel arrived at destination city/branch
+  CUSTOMER_CONTACTED = 4, // Customer contacted for info or collection
+  AWAITING_PICKUP = 5, // Parcel ready for customer pickup at branch
+  DELIVERED_BY_OFFICE = 6, // Parcel handed over to customer at office/branch
+  HOME_DELIVERY_REQUESTED = 7, // Customer requested home delivery
+  ADDRESS_COLLECTED = 8, // Delivery address collected by agent
+  PARCEL_GROUPED = 9, // Parcel grouped with others for dispatch
+  DISPATCHED = 10, // Parcel dispatched to delivery agent
+  DELIVERED_AT_HOME = 11, // Parcel delivered to customer's home
+  RETURNED_TO_OFFICE = 12, // Parcel returned to branch office
+  RETURNED_TO_SENDER = 13, // Parcel returned to sender/source
+  CANCELLED = 14, // Parcel order cancelled
+}
 export enum DeliveryFeeBasis {
   DISTANCE = 0,
   WEIGHT = 1,

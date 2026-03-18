@@ -13,16 +13,17 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
       const authUser = user as AuthUser;
       const payload = body as {
         senderId: string;
-        statusId: string;
+        status: number;
         cashierSessionId?: string | null;
         bookingCode?: string | null;
         parcels: Array<{
           destinationId: string;
           receiverId: string;
-          statusId: string;
+          status: number;
           parcelDetails: string;
           parcelContent: string;
           parcelValueCedis?: number | string | null;
+          chargeCedis?: number | string | null;
           plannedToBePaidCedis?: number | string | null;
           method: number;
           trackingCode?: string | null;
@@ -35,7 +36,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
           senderId: payload.senderId,
           companyId: authUser.companyId ?? '',
           sourceId: authUser.branchId ?? '',
-          statusId: payload.statusId,
+          status: payload.status,
           createdBy: authUser.sub,
           cashierSessionId: payload.cashierSessionId ?? null,
           bookingCode: payload.bookingCode ?? null,
@@ -52,17 +53,18 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
     {
       body: t.Object({
         senderId: UUID,
-        statusId: UUID,
+        status: t.Number(),
         cashierSessionId: t.Optional(UUID),
         bookingCode: t.Optional(t.String()),
         parcels: t.Array(
           t.Object({
             destinationId: UUID,
             receiverId: UUID,
-            statusId: UUID,
+            status: t.Number(),
             parcelDetails: t.String({ minLength: 1, maxLength: 255 }),
             parcelContent: t.String({ minLength: 1, maxLength: 255 }),
             parcelValueCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
+            chargeCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
             plannedToBePaidCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
             method: t.Number(), // PaymentMethod enum value
             trackingCode: t.Optional(t.Union([t.String(), t.Null()])),

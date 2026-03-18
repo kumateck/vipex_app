@@ -18,7 +18,7 @@ export * from './FormSkeleton';
 // export * from "./calendar"
 export * from './checkbox';
 export * from './collapsible';
-// export * from "./scroll-area"
+export * from './scroll-area';
 export * from './separator';
 // export * from "./switch"
 // export * from "./table"

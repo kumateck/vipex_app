@@ -44,7 +44,7 @@ export const bookingsRoutes = new Elysia({ name: 'bookings' })
           senderId: string;
           companyId: string;
           sourceId: string;
-          statusId: string;
+          status: number;
           createdBy: string;
           cashierSessionId?: string | null;
         },
@@ -57,7 +57,7 @@ export const bookingsRoutes = new Elysia({ name: 'bookings' })
         senderId: UUID,
         companyId: UUID,
         sourceId: UUID,
-        statusId: UUID,
+        status: t.Number(),
         createdBy: UUID,
         cashierSessionId: t.Optional(UUID),
       }),

@@ -1,14 +1,5 @@
 import { relations } from 'drizzle-orm';
-import {
-  companies,
-  branches,
-  locations,
-  statuses,
-  roles,
-  permissions,
-  rolePermissions,
-  users,
-} from './core';
+import { companies, branches, locations, roles, permissions, rolePermissions, users } from './core';
 import { pendingBookings } from './shipments';
 import { receiptTemplates, generatedReceipts } from './receipts';
 import { customers, cards, customerCards } from './customers';
@@ -106,7 +97,6 @@ export const cashierSessionsRelations = relations(cashierSessions, ({ one }) => 
 export const bookingsRelations = relations(bookings, ({ one }) => ({
   company: one(companies, { fields: [bookings.companyId], references: [companies.id] }),
   source: one(branches, { fields: [bookings.sourceId], references: [branches.id] }),
-  status: one(statuses, { fields: [bookings.statusId], references: [statuses.id] }),
   creator: one(users, { fields: [bookings.createdBy], references: [users.id] }),
 }));
 
@@ -117,7 +107,6 @@ export const parcelsRelations = relations(parcels, ({ one }) => ({
   booking: one(bookings, { fields: [parcels.bookingId], references: [bookings.id] }),
   sender: one(customers, { fields: [parcels.senderId], references: [customers.id] }),
   receiver: one(customers, { fields: [parcels.receiverId], references: [customers.id] }),
-  status: one(statuses, { fields: [parcels.statusId], references: [statuses.id] }),
 }));
 
 export const consignmentsRelations = relations(consignments, ({ one, many }) => ({

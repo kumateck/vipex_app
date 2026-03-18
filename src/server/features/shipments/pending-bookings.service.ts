@@ -5,12 +5,32 @@ import {
   bookings,
   parcels,
   generatedReceipts,
-  statuses,
+  ParcelStatus,
   customers,
   PendingBookingStatus,
   ReceiptType,
 } from '../../../db/schemas';
 import type { PaymentResponsibility as PaymentResponsibilityType } from '../../../db/schemas/enums';
+
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+type PendingBookingReceipts = {
+  paymentReceipt: {
+    receiptNumber: string;
+    content: string;
+    receiptData: { amount: string; method: number };
+  };
+  trackingSticker: {
+    trackingCode: string;
+    qrCode: string;
+    content: string;
+    stickerData: {
+      trackingCode: string;
+      sender: CreatePendingBookingInput['bookingData']['senderInfo'];
+      receiver: CreatePendingBookingInput['bookingData']['receiverInfo'];
+    };
+  };
+};
 
 export interface CreatePendingBookingInput {
   companyId: string;
@@ -149,7 +169,7 @@ export async function getPendingBooking(id: string) {
 export async function confirmPendingBooking(input: ConfirmPendingBookingInput): Promise<{
   bookingId: string;
   parcelId: string;
-  receipts: any;
+  receipts: PendingBookingReceipts;
 }> {
   const { pendingBookingId, cashierId, paymentMethod, receivedAmount, cashierSessionId } = input;
 
@@ -182,7 +202,7 @@ export async function confirmPendingBooking(input: ConfirmPendingBookingInput): 
   const branchId = pendingBooking.branchId;
 
   // Start transaction
-  return await db.transaction(async (tx: any) => {
+  return await db.transaction(async (tx: DbTransaction) => {
     // 1. Get or create sender customer
     const [sender] = await tx
       .insert(customers)
@@ -231,21 +251,7 @@ export async function confirmPendingBooking(input: ConfirmPendingBookingInput): 
       })
       .returning();
 
-    // 3. Get default status for parcels
-    const [defaultStatus] = await tx
-      .select()
-      .from(statuses)
-      .where(
-        and(
-          eq(statuses.companyId, companyId),
-          eq(statuses.name, 'Pending'), // Assuming there's a "Pending" status
-        ),
-      )
-      .limit(1);
-
-    if (!defaultStatus) {
-      throw new Error('Default parcel status not found');
-    }
+    const defaultStatus = ParcelStatus.CREATED;
 
     // 4. Create booking
     const [booking] = await tx
@@ -254,7 +260,7 @@ export async function confirmPendingBooking(input: ConfirmPendingBookingInput): 
         companyId,
         senderId: sender.id,
         sourceId: branchId,
-        statusId: defaultStatus.id,
+        status: defaultStatus,
         createdBy: cashierId,
         cashierSessionId,
       })
@@ -263,6 +269,8 @@ export async function confirmPendingBooking(input: ConfirmPendingBookingInput): 
     // 5. Create parcel
     const trackingCode = await generateTrackingCode(companyId);
     const bookingCode = await generateBookingCode(tx, companyId);
+    const chargePsw =
+      Number(pendingBooking.senderAmountPsw ?? 0) + Number(pendingBooking.recipientAmountPsw ?? 0);
 
     const [parcel] = await tx
       .insert(parcels)
@@ -275,10 +283,12 @@ export async function confirmPendingBooking(input: ConfirmPendingBookingInput): 
         trackingCode,
         senderId: sender.id,
         receiverId: receiver.id,
-        statusId: defaultStatus.id,
+        status: defaultStatus,
         parcelDetails: bookingData.parcelDetails.details,
         parcelContent: bookingData.parcelDetails.content,
         parcelValuePsw: parseFloat(bookingData.parcelDetails.value) * 100,
+        chargePsw,
+        plannedToBePaidPsw: Number(pendingBooking.recipientAmountPsw ?? 0),
         method: paymentMethod,
         createdBy: cashierId,
         cashierSessionId,
@@ -390,7 +400,7 @@ async function generateTrackingCode(companyId: string): Promise<string> {
   return `VIP${companyId.slice(0, 4)}${timestamp}${random}`;
 }
 
-async function generateBookingCode(tx: any, companyId: string): Promise<string> {
+async function generateBookingCode(tx: DbTransaction, companyId: string): Promise<string> {
   // Generate booking code like B20240115001
   const date = new Date();
   const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');

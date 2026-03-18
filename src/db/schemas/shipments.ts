@@ -1,6 +1,5 @@
 import {
   pgTable,
-  uuid,
   varchar,
   boolean,
   timestamp,
@@ -12,10 +11,15 @@ import {
   json,
   text,
 } from 'drizzle-orm/pg-core';
-import { companies, branches, users, statuses, locations } from './core';
+import { companies, branches, users, locations } from './core';
 import { customers, cards } from './customers';
 import { sql } from 'drizzle-orm';
-import { PaymentMethod, PaymentResponsibility, PendingBookingStatus } from './enums';
+import {
+  ParcelStatus,
+  PaymentMethod,
+  PaymentResponsibility,
+  PendingBookingStatus,
+} from './enums';
 import { createId } from '@paralleldrive/cuid2';
 
 // Bookings: pure header (no destinationId, invoice, paymentMode, actionType)
@@ -35,9 +39,7 @@ export const bookings = pgTable(
     sourceId: varchar('source_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
-    statusId: varchar('status_id', { length: 25 })
-      .notNull()
-      .references(() => statuses.id),
+    status: smallint('status').notNull().default(ParcelStatus.CREATED),
     createdBy: varchar('created_by', { length: 25 })
       .notNull()
       .references(() => users.id),
@@ -81,9 +83,7 @@ export const parcels = pgTable(
       .references(() => customers.id),
     secondReceiverId: varchar('second_receiver_id', { length: 25 }).references(() => customers.id),
 
-    statusId: varchar('status_id', { length: 25 })
-      .notNull()
-      .references(() => statuses.id),
+    status: smallint('status').notNull().default(ParcelStatus.CREATED),
     parcelDetails: varchar('parcel_details', { length: 255 }).notNull(),
     parcelContent: varchar('parcel_content', { length: 255 }).notNull(),
 
@@ -91,6 +91,7 @@ export const parcels = pgTable(
     parcelValuePsw: bigint('parcel_value_psw', { mode: 'number' })
       .notNull()
       .default(sql`0`),
+    chargePsw: bigint('charge_psw', { mode: 'number' }).notNull().default(sql`0`),
 
     cardId: varchar('card_id', { length: 25 }).references(() => cards.id),
     cardNumber: varchar('card_number', { length: 255 }),
@@ -126,7 +127,7 @@ export const parcels = pgTable(
     ),
     bySender: index('parcels_sender_idx').on(t.senderId),
     byReceiver: index('parcels_receiver_idx').on(t.receiverId),
-    byStatus: index('parcels_status_idx').on(t.statusId),
+    byStatus: index('parcels_status_idx').on(t.status),
   }),
 );
 export const consignments = pgTable(

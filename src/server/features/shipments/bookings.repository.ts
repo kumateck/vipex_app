@@ -8,7 +8,7 @@ export type BookingRow = {
   senderId: string;
   companyId: string;
   sourceId: string;
-  statusId: string;
+  status: number;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -55,7 +55,7 @@ export async function listBookingsRepo(
       senderId: bookings.senderId,
       companyId: bookings.companyId,
       sourceId: bookings.sourceId,
-      statusId: bookings.statusId,
+      status: bookings.status,
       createdBy: bookings.createdBy,
       createdAt: bookings.createdAt,
       updatedAt: bookings.updatedAt,
@@ -77,7 +77,7 @@ export async function getBookingRepo(id: string): Promise<BookingRow | null> {
       senderId: bookings.senderId,
       companyId: bookings.companyId,
       sourceId: bookings.sourceId,
-      statusId: bookings.statusId,
+      status: bookings.status,
       createdBy: bookings.createdBy,
       createdAt: bookings.createdAt,
       updatedAt: bookings.updatedAt,

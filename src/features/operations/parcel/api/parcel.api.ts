@@ -2,16 +2,17 @@ import { api } from '@/services/api';
 
 export type CreateBookingWithParcelsInput = {
   senderId: string;
-  statusId: string;
+  status: number;
   cashierSessionId?: string | null;
   parcels: Array<{
     destinationId: string;
     receiverId: string;
-    statusId: string;
+    status: number;
     parcelDetails: string;
     parcelContent: string;
     method: number;
     parcelValueCedis?: number;
+    chargeCedis?: number;
     plannedToBePaidCedis?: number;
     senderPaymentCedis?: number;
     senderPaymentMethod?: number;
