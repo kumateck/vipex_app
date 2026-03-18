@@ -7,8 +7,8 @@ interface SubItem {
   title: string;
   url?: string;
   icon?: LucideIconProps;
+  permissionKey?: string;
   children?: SubItem[];
-  permissionKey?: string; // Optional permission key for access control.
 }
 
 // Define the main menu item structure.
@@ -17,7 +17,7 @@ export interface MenuItem {
   url?: string;
   icon: LucideIconProps;
   isActive?: boolean;
-  permissionKey?: string; // Optional permission key for access control.
+  permissionKey?: string;
   items?: SubItem[]; // Optional array of sub-items.
 }
 
