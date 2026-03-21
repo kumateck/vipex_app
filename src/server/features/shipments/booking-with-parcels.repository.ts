@@ -137,10 +137,8 @@ export async function createBookingWithParcelsAndPaymentsRepo(
     const [b] = await tx
       .insert(bookings)
       .values({
-        senderId: input.senderId,
         companyId: input.companyId,
         sourceId: input.sourceId,
-        status: input.status,
         createdBy: input.createdBy,
         cashierSessionId: input.cashierSessionId ?? null,
         // createdAt/updatedAt default at DB

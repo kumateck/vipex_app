@@ -16,7 +16,6 @@ export const bookingsRoutes = new Elysia({ name: 'bookings' })
         dateTo: query.dateTo,
         filters: {
           companyId: query.companyId ?? null,
-          senderId: query.senderId ?? null,
           sourceId: query.sourceId ?? null,
         },
       }),
@@ -24,7 +23,6 @@ export const bookingsRoutes = new Elysia({ name: 'bookings' })
       query: t.Object({
         ...PaginationRequestQueryProps,
         companyId: t.Optional(UUID),
-        senderId: t.Optional(UUID),
         sourceId: t.Optional(UUID),
       }),
       detail: { tags: ['Shipments'], summary: 'List bookings' },
@@ -39,10 +37,8 @@ export const bookingsRoutes = new Elysia({ name: 'bookings' })
     async ({ body, set }) => {
       const res = await createBookingCtrl(
         body as {
-          senderId: string;
           companyId: string;
           sourceId: string;
-          status: number;
           createdBy: string;
           cashierSessionId?: string | null;
         },
@@ -52,10 +48,8 @@ export const bookingsRoutes = new Elysia({ name: 'bookings' })
     },
     {
       body: t.Object({
-        senderId: UUID,
         companyId: UUID,
         sourceId: UUID,
-        status: t.Number(),
         createdBy: UUID,
         cashierSessionId: t.Optional(UUID),
       }),

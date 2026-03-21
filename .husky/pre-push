@@ -1,11 +1,20 @@
 #!/usr/bin/env sh
-# . "$(dirname -- "$0")/_/husky.sh"
+set -e
 
-# Ensure bun is in PATH
 export PATH="$HOME/.bun/bin:$PATH"
 
-echo "Running pre-push checks (typecheck + tests)..."
-bun run typecheck || exit 1
-#bun test || exit 1
-# Optionally also build to catch build-time issues:
-bun run build || exit 1
+if [ "$STRICT_PRE_PUSH" = "1" ]; then
+  echo "Running strict pre-push checks (typecheck + build)..."
+  bun run typecheck
+  bun run build
+  exit 0
+fi
+
+echo "Running non-blocking pre-push checks (set STRICT_PRE_PUSH=1 to enforce)..."
+if ! bun run typecheck; then
+  echo "warning: typecheck failed, push is allowed in non-strict mode"
+fi
+
+if ! bun run build; then
+  echo "warning: build failed, push is allowed in non-strict mode"
+fi

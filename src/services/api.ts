@@ -1,9 +1,15 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
+import type {
+  BaseQueryFn,
+  FetchArgs,
+  FetchBaseQueryError,
+  QueryReturnValue,
+} from '@reduxjs/toolkit/query';
 import { useAuthStore } from '@/stores/auth-store';
 import { TheAduseiErrorResponse } from '@/lib/TheAduseiErrorResponse';
 
-type QueryResult = { data?: unknown; error?: FetchBaseQueryError };
+type QueryMeta = Record<string, never>;
+type QueryResult = QueryReturnValue<unknown, FetchBaseQueryError, QueryMeta>;
 
 const inFlightRequests = new Map<string, Promise<QueryResult>>();
 
@@ -106,7 +112,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
       TheAduseiErrorResponse(result.error);
     }
 
-    return result;
+    return result as QueryReturnValue<unknown, FetchBaseQueryError, QueryMeta>;
   };
 
   const shouldDedupe = import.meta.env.DEV;

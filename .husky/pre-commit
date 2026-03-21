@@ -1,1 +1,5 @@
-# bunx --bun lint-staged
+#!/usr/bin/env sh
+set -e
+
+export PATH="$HOME/.bun/bin:$PATH"
+bunx --bun lint-staged

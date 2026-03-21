@@ -1,17 +1,30 @@
 import { useEffect } from 'react';
-import { useFormContext, useWatch, type FieldPath } from 'react-hook-form';
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useFormContext, useWatch, type FieldPathByValue } from 'react-hook-form';
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useFindCustomersByTelephoneQuery } from '@/features/customers/api';
 import { useDebouncedValue } from '../../hooks/use-debounced-value';
 import type { ParcelBookingFormValues } from './parcel-form.types';
 
 type CustomerLookupSectionProps = {
   label: string;
-  phoneName: FieldPath<ParcelBookingFormValues>;
-  customerIdName: FieldPath<ParcelBookingFormValues>;
-  fullnameName: FieldPath<ParcelBookingFormValues>;
+  phoneName: FieldPathByValue<ParcelBookingFormValues, string>;
+  customerIdName: FieldPathByValue<ParcelBookingFormValues, string>;
+  fullnameName: FieldPathByValue<ParcelBookingFormValues, string>;
   helperText?: string;
   layout?: 'stacked' | 'split';
 };
@@ -27,8 +40,8 @@ export function CustomerLookupSection({
   layout = 'stacked',
 }: CustomerLookupSectionProps) {
   const { control, setValue } = useFormContext<ParcelBookingFormValues>();
-  const phone = useWatch({ control, name: phoneName }) ?? '';
-  const selectedCustomerId = useWatch({ control, name: customerIdName }) ?? '';
+  const phone = String(useWatch({ control, name: phoneName }) ?? '');
+  const selectedCustomerId = String(useWatch({ control, name: customerIdName }) ?? '');
 
   const debouncedPhone = useDebouncedValue(phone, PHONE_LOOKUP_DELAY_MS);
   const canLookup = debouncedPhone.trim().length >= 10;
@@ -84,8 +97,7 @@ export function CustomerLookupSection({
 
   const nameDisabled = isExistingCustomer || !shouldEnableName;
 
-  const fieldLayoutClass =
-    layout === 'split' ? 'grid gap-4 md:grid-cols-2' : 'flex flex-col gap-4';
+  const fieldLayoutClass = layout === 'split' ? 'grid gap-4 md:grid-cols-2' : 'flex flex-col gap-4';
 
   return (
     <div className="space-y-4">
@@ -104,7 +116,11 @@ export function CustomerLookupSection({
               <FormLabel>{label} Telephone</FormLabel>
               <FormControl>
                 <Input
-                  {...field}
+                  name={field.name}
+                  ref={field.ref}
+                  onBlur={field.onBlur}
+                  onChange={field.onChange}
+                  value={String(field.value ?? '')}
                   placeholder="0240000000"
                   inputMode="numeric"
                   autoComplete="tel"
@@ -124,9 +140,7 @@ export function CustomerLookupSection({
           rules={{
             validate: (value) => {
               if (!shouldEnableName && !isExistingCustomer) return true;
-              return String(value ?? '').trim().length
-                ? true
-                : `${label} fullname is required`;
+              return String(value ?? '').trim().length ? true : `${label} fullname is required`;
             },
           }}
           render={({ field }) => (
@@ -134,7 +148,11 @@ export function CustomerLookupSection({
               <FormLabel>{label} Fullname</FormLabel>
               <FormControl>
                 <Input
-                  {...field}
+                  name={field.name}
+                  ref={field.ref}
+                  onBlur={field.onBlur}
+                  onChange={field.onChange}
+                  value={String(field.value ?? '')}
                   disabled={nameDisabled}
                   placeholder={`Enter ${label.toLowerCase()} fullname`}
                 />
@@ -158,7 +176,7 @@ export function CustomerLookupSection({
             <FormItem>
               <FormLabel>{label} Customer</FormLabel>
               <Select
-                value={field.value ?? ''}
+                value={String(field.value ?? '')}
                 onValueChange={(value) => {
                   field.onChange(value);
                   const matched = customers.find((customer) => customer.id === value);

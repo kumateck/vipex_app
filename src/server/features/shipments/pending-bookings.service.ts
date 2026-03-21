@@ -251,6 +251,10 @@ export async function confirmPendingBooking(input: ConfirmPendingBookingInput): 
       })
       .returning();
 
+    if (!sender || !receiver) {
+      throw new Error('Failed to resolve sender/receiver customers');
+    }
+
     const defaultStatus = ParcelStatus.CREATED;
 
     // 4. Create booking
@@ -258,13 +262,15 @@ export async function confirmPendingBooking(input: ConfirmPendingBookingInput): 
       .insert(bookings)
       .values({
         companyId,
-        senderId: sender.id,
         sourceId: branchId,
-        status: defaultStatus,
         createdBy: cashierId,
         cashierSessionId,
       })
       .returning();
+
+    if (!booking) {
+      throw new Error('Failed to create booking');
+    }
 
     // 5. Create parcel
     const trackingCode = await generateTrackingCode(companyId);
@@ -294,6 +300,10 @@ export async function confirmPendingBooking(input: ConfirmPendingBookingInput): 
         cashierSessionId,
       })
       .returning();
+
+    if (!parcel) {
+      throw new Error('Failed to create parcel');
+    }
 
     // 6. Generate receipts (simplified for now)
     const receiptNumber = await generateReceiptNumber(companyId, 'PAYMENT');

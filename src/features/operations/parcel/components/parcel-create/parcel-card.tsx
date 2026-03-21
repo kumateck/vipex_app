@@ -1,12 +1,25 @@
 import { useEffect, useRef } from 'react';
-import { useFormContext, useWatch, type FieldPath } from 'react-hook-form';
+import { useFormContext, useWatch, type FieldPathByValue } from 'react-hook-form';
 import { Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
 import { CustomerLookupSection } from './customer-lookup-section';
@@ -20,10 +33,27 @@ type ParcelCardProps = {
   branchOptions: Array<{ id: string; name: string }>;
 };
 
-export function ParcelCard({ index, canRemove, onRemove, companyId, branchOptions }: ParcelCardProps) {
+export function ParcelCard({
+  index,
+  canRemove,
+  onRemove,
+  companyId,
+  branchOptions,
+}: ParcelCardProps) {
   const { control, setValue } = useFormContext<ParcelBookingFormValues>();
-  const parcelFieldName = (field: string) =>
-    `parcels.${index}.${field}` as FieldPath<ParcelBookingFormValues>;
+  const parcelFieldName = (
+    field:
+      | 'destinationBranchId'
+      | 'destinationLocationId'
+      | 'parcelDetails'
+      | 'parcelContent'
+      | 'parcelValue'
+      | 'charge'
+      | 'paymentResponsibility'
+      | 'receiver.telephone'
+      | 'receiver.customerId'
+      | 'receiver.fullname',
+  ) => `parcels.${index}.${field}` as FieldPathByValue<ParcelBookingFormValues, string>;
   const destinationBranchName = parcelFieldName('destinationBranchId');
   const destinationLocationName = parcelFieldName('destinationLocationId');
   const parcelDetailsName = parcelFieldName('parcelDetails');
@@ -39,9 +69,7 @@ export function ParcelCard({ index, canRemove, onRemove, companyId, branchOption
   const previousBranchId = useRef(destinationBranchId);
 
   const { data: locationOptions = [], isLoading: isLoadingLocations } = useListLocationOptionsQuery(
-    destinationBranchId && companyId
-      ? { companyId, branchId: destinationBranchId }
-      : undefined,
+    destinationBranchId && companyId ? { companyId, branchId: destinationBranchId } : undefined,
     { skip: !destinationBranchId || !companyId },
   );
 
@@ -105,7 +133,7 @@ export function ParcelCard({ index, canRemove, onRemove, companyId, branchOption
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Destination Branch</FormLabel>
-                    <Select value={field.value ?? ''} onValueChange={field.onChange}>
+                    <Select value={String(field.value ?? '')} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select destination" />
@@ -132,7 +160,7 @@ export function ParcelCard({ index, canRemove, onRemove, companyId, branchOption
                   <FormItem>
                     <FormLabel>Pickup Location</FormLabel>
                     <Select
-                      value={field.value ?? ''}
+                      value={String(field.value ?? '')}
                       onValueChange={field.onChange}
                       disabled={!destinationBranchId || isLoadingLocations}
                     >
@@ -159,7 +187,9 @@ export function ParcelCard({ index, canRemove, onRemove, companyId, branchOption
           <Card size="sm" className="border-muted/50 bg-muted/20 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Recipient</CardTitle>
-              <CardDescription className="text-xs">Search by phone or create a new recipient.</CardDescription>
+              <CardDescription className="text-xs">
+                Search by phone or create a new recipient.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <CustomerLookupSection
@@ -193,7 +223,14 @@ export function ParcelCard({ index, canRemove, onRemove, companyId, branchOption
                   <FormItem>
                     <FormLabel>Parcel Details</FormLabel>
                     <FormControl>
-                      <Textarea {...field} placeholder="e.g. fragile electronics" />
+                      <Textarea
+                        name={field.name}
+                        ref={field.ref}
+                        onBlur={field.onBlur}
+                        onChange={field.onChange}
+                        value={String(field.value ?? '')}
+                        placeholder="e.g. fragile electronics"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -212,7 +249,14 @@ export function ParcelCard({ index, canRemove, onRemove, companyId, branchOption
                   <FormItem>
                     <FormLabel>Parcel Content</FormLabel>
                     <FormControl>
-                      <Textarea {...field} placeholder="e.g. phone, charger" />
+                      <Textarea
+                        name={field.name}
+                        ref={field.ref}
+                        onBlur={field.onBlur}
+                        onChange={field.onChange}
+                        value={String(field.value ?? '')}
+                        placeholder="e.g. phone, charger"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -225,18 +269,26 @@ export function ParcelCard({ index, canRemove, onRemove, companyId, branchOption
                 rules={{
                   required: 'Parcel value is required',
                   validate: (value) => {
-                    const normalized = String(value ?? '').replace(/,/g, '').trim();
+                    const normalized = String(value ?? '')
+                      .replace(/,/g, '')
+                      .trim();
                     if (!normalized) return 'Parcel value is required';
-                    return Number.isNaN(Number(normalized))
-                      ? 'Enter a valid parcel value'
-                      : true;
+                    return Number.isNaN(Number(normalized)) ? 'Enter a valid parcel value' : true;
                   },
                 }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Parcel Value (GHS)</FormLabel>
                     <FormControl>
-                      <Input {...field} inputMode="decimal" placeholder="0.00" />
+                      <Input
+                        name={field.name}
+                        ref={field.ref}
+                        onBlur={field.onBlur}
+                        onChange={field.onChange}
+                        value={String(field.value ?? '')}
+                        inputMode="decimal"
+                        placeholder="0.00"
+                      />
                     </FormControl>
                     <FormDescription>Declared value for insurance and reporting.</FormDescription>
                     <FormMessage />
@@ -249,7 +301,9 @@ export function ParcelCard({ index, canRemove, onRemove, companyId, branchOption
           <Card size="sm" className="border-muted/50 bg-muted/20 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Charge</CardTitle>
-              <CardDescription className="text-xs">Set how much is paid and by whom.</CardDescription>
+              <CardDescription className="text-xs">
+                Set how much is paid and by whom.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <FormField
@@ -258,7 +312,9 @@ export function ParcelCard({ index, canRemove, onRemove, companyId, branchOption
                 rules={{
                   required: 'Charge is required',
                   validate: (value) => {
-                    const normalized = String(value ?? '').replace(/,/g, '').trim();
+                    const normalized = String(value ?? '')
+                      .replace(/,/g, '')
+                      .trim();
                     if (!normalized) return 'Charge is required';
                     return Number.isNaN(Number(normalized)) ? 'Enter a valid charge' : true;
                   },
@@ -267,7 +323,15 @@ export function ParcelCard({ index, canRemove, onRemove, companyId, branchOption
                   <FormItem>
                     <FormLabel>Charge (GHS)</FormLabel>
                     <FormControl>
-                      <Input {...field} inputMode="decimal" placeholder="0.00" />
+                      <Input
+                        name={field.name}
+                        ref={field.ref}
+                        onBlur={field.onBlur}
+                        onChange={field.onChange}
+                        value={String(field.value ?? '')}
+                        inputMode="decimal"
+                        placeholder="0.00"
+                      />
                     </FormControl>
                     <FormDescription>Charge amount for this parcel.</FormDescription>
                     <FormMessage />
@@ -281,7 +345,7 @@ export function ParcelCard({ index, canRemove, onRemove, companyId, branchOption
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Payment Responsibility</FormLabel>
-                    <Select value={field.value ?? 'SENDER'} onValueChange={field.onChange}>
+                    <Select value={String(field.value ?? 'SENDER')} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select payer" />
