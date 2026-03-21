@@ -285,6 +285,21 @@ export const ROUTES: Route[] = [
         title: 'Inventory Management',
         icon: 'Package2',
         items: [
+            {
+            title: 'Product Categories',
+            url: '/inventory/categories',
+            permissionKey: 'CanListProductCategories',
+          },
+          {
+            title: 'Product Locations',
+            url: '/inventory/locations',
+            permissionKey: 'CanListProductLocations',
+          },
+          {
+            title: 'Product Locations',
+            url: '/inventory/locations',
+            permissionKey: 'CanListProductLocations',
+          },
           {
             title: 'All Inventory',
             url: '/inventory',
@@ -296,6 +311,7 @@ export const ROUTES: Route[] = [
           {
             title: 'Stock Levels',
             url: '/inventory/stock-levels',
+            permissionKey: 'CanListStockLevels',
           },
           {
             title: 'Low Stock Alerts',
@@ -308,17 +324,37 @@ export const ROUTES: Route[] = [
         icon: 'ArrowLeftRight',
         items: [
           {
-            title: 'All Transactions',
-            url: '/inventory/transactions',
+            title: 'Stock Movements',
+            url: '/inventory/stock-movements',
+            permissionKey: 'CanListStockMovements',
           },
           {
-            title: 'Stock In',
-            url: '/inventory/transactions/in',
+            title: 'Stock Adjustments',
+            url: '/inventory/stock-adjustments',
+            permissionKey: 'CanListStockAdjustments',
           },
           {
-            title: 'Stock Out',
-            url: '/inventory/transactions/out',
+            title: 'Stock Transfers',
+            url: '/inventory/stock-transfers',
+            permissionKey: 'CanListStockTransfers',
           },
+          // { 
+          //   title: 'All Transactions',
+          //   url: '/inventory/transactions',
+          //   permissionKey: 'CanListStockTransfers',
+          // },
+          // { 
+          //   title: 'Stock In',
+          //   url: '/inventory/transactions/in',
+          //   permissionKey: 'CanListStockTransfers',
+          // },  
+          // { 
+          //   title: 'Stock Out',
+          //   url: '/inventory/transactions/out',
+          //   permissionKey: 'CanListStockTransfers',
+          // },
+            
+
         ],
       },
     ],
