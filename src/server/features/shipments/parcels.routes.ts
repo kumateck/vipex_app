@@ -11,6 +11,23 @@ import {
   updateParcelCtrl,
 } from './parcels.controller';
 
+function parseStatuses(value: string | number[] | undefined): number[] | null {
+  if (Array.isArray(value)) {
+    const parsed = value.map((entry) => Number(entry)).filter((entry) => Number.isFinite(entry));
+    return parsed.length ? parsed : null;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = value
+      .split(',')
+      .map((entry) => Number(entry.trim()))
+      .filter((entry) => Number.isFinite(entry));
+    return parsed.length ? parsed : null;
+  }
+
+  return null;
+}
+
 export const parcelsRoutes = new Elysia({ name: 'parcels' })
   .get(
     '/',
@@ -22,19 +39,21 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         sort: query.sort,
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
-          filters: {
-            companyId: query.companyId ?? null,
-            sourceId: query.sourceId ?? null,
-            destinationId: query.destinationId ?? null,
-            status: query.status ?? null,
-            received: query.received ?? null,
-            includeDeleted: query.includeDeleted ?? null,
-          },
+        filters: {
+          companyId: query.companyId ?? null,
+          sourceId: query.sourceId ?? null,
+          destinationId: query.destinationId ?? null,
+          status: query.status ?? null,
+          statuses: parseStatuses(query.statuses),
+          senderPaid: query.senderPaid ?? null,
+          received: query.received ?? null,
+          includeDeleted: query.includeDeleted ?? null,
+        },
       }),
     {
       query: t.Object({
         page: t.Optional(t.Number({ minimum: 1 })),
-        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+        pageSize: t.Optional(t.Number({ minimum: 1 })),
         search: t.Optional(t.String()),
         sort: t.Optional(
           t.Array(
@@ -51,6 +70,8 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         sourceId: t.Optional(UUID),
         destinationId: t.Optional(UUID),
         status: t.Optional(t.Number()),
+        statuses: t.Optional(t.Union([t.Array(t.Number()), t.String()])),
+        senderPaid: t.Optional(t.Boolean()),
         received: t.Optional(t.Boolean()),
         includeDeleted: t.Optional(t.Boolean()),
       }),
@@ -63,7 +84,10 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
   })
   .get('/:id/details', async ({ params }) => getParcelDetailsCtrl(params.id), {
     params: t.Object({ id: UUID }),
-    detail: { tags: ['Shipments'], summary: 'Get parcel full details (payments, delivery, consignments)' },
+    detail: {
+      tags: ['Shipments'],
+      summary: 'Get parcel full details (payments, delivery, consignments)',
+    },
   })
   .post(
     '/',
@@ -125,6 +149,12 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           parcelDetails?: string;
           parcelContent?: string;
           secondReceiverId?: string | null;
+          cardId?: string | null;
+          cardNumber?: string | null;
+          secondCardId?: string | null;
+          secondCardNumber?: string | null;
+          confirmedBy?: string | null;
+          confirmedAt?: string | null;
           parcelValueCedis?: number | string | null;
           chargeCedis?: number | string | null;
           pickupLocationId?: string | null;
@@ -139,6 +169,12 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         parcelDetails: t.Optional(t.String()),
         parcelContent: t.Optional(t.String()),
         secondReceiverId: t.Optional(t.Union([UUID, t.Null()])),
+        cardId: t.Optional(t.Union([UUID, t.Null()])),
+        cardNumber: t.Optional(t.Union([t.String(), t.Null()])),
+        secondCardId: t.Optional(t.Union([UUID, t.Null()])),
+        secondCardNumber: t.Optional(t.Union([t.String(), t.Null()])),
+        confirmedBy: t.Optional(t.Union([UUID, t.Null()])),
+        confirmedAt: t.Optional(t.Union([t.String({ format: 'date-time' }), t.Null()])),
         parcelValueCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
         chargeCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
         pickupLocationId: t.Optional(t.Union([UUID, t.Null()])),

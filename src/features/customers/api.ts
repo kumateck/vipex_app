@@ -40,9 +40,26 @@ export interface UpdateCustomerInput {
   telephone?: string | null;
 }
 
+export interface CustomerCardOption {
+  id: string;
+  name: string;
+}
+
+export interface CustomerCardRecord {
+  id: string;
+  customerId: string;
+  cardId: string;
+  cardName: string;
+  cardNumber: string;
+  createdAt: string;
+}
+
 export const customersApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    listCustomers: builder.query<ServerListResponse<Customer>, ServerListQuery<CustomerFilters> | void>({
+    listCustomers: builder.query<
+      ServerListResponse<Customer>,
+      ServerListQuery<CustomerFilters> | void
+    >({
       query: (query) => ({
         url: '/customers',
         params: buildServerPaginationParams(query),
@@ -77,6 +94,33 @@ export const customersApi = api.injectEndpoints({
       }),
       invalidatesTags: invalidateEntityListTag('Customers'),
     }),
+    listCardOptions: builder.query<CustomerCardOption[], void>({
+      query: () => ({
+        url: '/customers/cards/options',
+      }),
+      providesTags: [{ type: 'Customers', id: 'CARD_OPTIONS' }],
+    }),
+    listCustomerCards: builder.query<CustomerCardRecord[], { customerId: string }>({
+      query: ({ customerId }) => ({
+        url: `/customers/${customerId}/cards`,
+      }),
+      providesTags: (_result, _error, { customerId }) => [
+        { type: 'Customers', id: `CARDS:${customerId}` },
+      ],
+    }),
+    addCustomerCard: builder.mutation<
+      { id: string },
+      { customerId: string; cardId: string; cardNumber: string }
+    >({
+      query: ({ customerId, ...body }) => ({
+        url: `/customers/${customerId}/cards`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { customerId }) => [
+        { type: 'Customers', id: `CARDS:${customerId}` },
+      ],
+    }),
   }),
 });
 
@@ -85,4 +129,7 @@ export const {
   useFindCustomersByTelephoneQuery,
   useCreateCustomerMutation,
   useUpdateCustomerMutation,
+  useListCardOptionsQuery,
+  useListCustomerCardsQuery,
+  useAddCustomerCardMutation,
 } = customersApi;

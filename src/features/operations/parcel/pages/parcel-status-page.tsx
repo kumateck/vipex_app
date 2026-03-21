@@ -4,7 +4,13 @@ import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ParcelStatus } from '@/db/schemas/enums';
@@ -51,7 +57,7 @@ export function ParcelStatusPage() {
   const baseQuery = useMemo(
     () => ({
       page: 1,
-      pageSize: 200,
+      pageSize: 100,
       search: submittedSearch.trim().length > 0 ? submittedSearch.trim() : undefined,
     }),
     [submittedSearch],
@@ -63,34 +69,22 @@ export function ParcelStatusPage() {
       filters: {
         companyId,
         destinationId: branchId,
-        status: ParcelStatus.ARRIVED_AT_DESTINATION,
-      },
-    },
-    { skip: !companyId || !branchId },
-  );
-
-  const contactedQuery = useSearchParcelsQuery(
-    {
-      ...baseQuery,
-      filters: {
-        companyId,
-        destinationId: branchId,
-        status: ParcelStatus.CUSTOMER_CONTACTED,
+        statuses: [ParcelStatus.ARRIVED_AT_DESTINATION, ParcelStatus.CUSTOMER_CONTACTED],
       },
     },
     { skip: !companyId || !branchId },
   );
 
   const rows = useMemo(() => {
-    const merged = [...(arrivedQuery.data?.data ?? []), ...(contactedQuery.data?.data ?? [])];
-    return merged.toSorted((a, b) => {
+    const source = arrivedQuery.data?.data ?? [];
+    return source.toSorted((a, b) => {
       const aTime = new Date(a.createdAt).getTime();
       const bTime = new Date(b.createdAt).getTime();
       return bTime - aTime;
     });
-  }, [arrivedQuery.data?.data, contactedQuery.data?.data]);
+  }, [arrivedQuery.data?.data]);
 
-  const loading = arrivedQuery.isLoading || contactedQuery.isLoading;
+  const loading = arrivedQuery.isLoading;
   const isSaving = isUpdatingParcel || isCreatingCustomer;
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
@@ -139,7 +133,7 @@ export function ParcelStatusPage() {
   );
 
   async function refreshQueues() {
-    await Promise.all([arrivedQuery.refetch(), contactedQuery.refetch()]);
+    await arrivedQuery.refetch();
   }
 
   async function handleSaveOutcome() {
@@ -216,7 +210,10 @@ export function ParcelStatusPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={Boolean(selectedParcel)} onOpenChange={(open) => (!open ? setSelectedParcel(null) : null)}>
+      <Dialog
+        open={Boolean(selectedParcel)}
+        onOpenChange={(open) => (!open ? setSelectedParcel(null) : null)}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Call Outcome</DialogTitle>
@@ -229,16 +226,32 @@ export function ParcelStatusPage() {
             <div className="space-y-2">
               <Label>Outcome</Label>
               <div className="grid grid-cols-1 gap-2">
-                <Button type="button" variant={outcome === 'contacted' ? 'default' : 'outline'} onClick={() => setOutcome('contacted')}>
+                <Button
+                  type="button"
+                  variant={outcome === 'contacted' ? 'default' : 'outline'}
+                  onClick={() => setOutcome('contacted')}
+                >
                   Picked call / SMS sent (Contacted)
                 </Button>
-                <Button type="button" variant={outcome === 'pickup' ? 'default' : 'outline'} onClick={() => setOutcome('pickup')}>
+                <Button
+                  type="button"
+                  variant={outcome === 'pickup' ? 'default' : 'outline'}
+                  onClick={() => setOutcome('pickup')}
+                >
                   Customer will come (Awaiting Pickup)
                 </Button>
-                <Button type="button" variant={outcome === 'delivery' ? 'default' : 'outline'} onClick={() => setOutcome('delivery')}>
+                <Button
+                  type="button"
+                  variant={outcome === 'delivery' ? 'default' : 'outline'}
+                  onClick={() => setOutcome('delivery')}
+                >
                   Customer wants delivery
                 </Button>
-                <Button type="button" variant={outcome === 'follow_up' ? 'default' : 'outline'} onClick={() => setOutcome('follow_up')}>
+                <Button
+                  type="button"
+                  variant={outcome === 'follow_up' ? 'default' : 'outline'}
+                  onClick={() => setOutcome('follow_up')}
+                >
                   Customer will get back
                 </Button>
               </div>
@@ -280,7 +293,12 @@ export function ParcelStatusPage() {
             ) : null}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setSelectedParcel(null)} disabled={isSaving}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSelectedParcel(null)}
+              disabled={isSaving}
+            >
               Cancel
             </Button>
             <Button

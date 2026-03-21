@@ -16,6 +16,8 @@ export async function listParcelsCtrl(
     sourceId?: string | null;
     destinationId?: string | null;
     status?: number | null;
+    statuses?: number[] | null;
+    senderPaid?: boolean | null;
     received?: boolean | null;
     includeDeleted?: boolean | null;
   }>,
@@ -28,6 +30,8 @@ export async function listParcelsCtrl(
     sourceId: q.filters?.sourceId ?? null,
     destinationId: q.filters?.destinationId ?? null,
     status: q.filters?.status ?? null,
+    statuses: q.filters?.statuses ?? null,
+    senderPaid: q.filters?.senderPaid ?? null,
     search: pagination.search ?? null,
     received: q.filters?.received ?? null,
     includeDeleted: q.filters?.includeDeleted ?? null,
@@ -73,8 +77,12 @@ export async function getParcelDetailsCtrl(id: string) {
           receiverCalledConfirmedAt: result.delivery.receiverCalledConfirmedAt
             ? result.delivery.receiverCalledConfirmedAt.toISOString()
             : null,
-          deliveredAt: result.delivery.deliveredAt ? result.delivery.deliveredAt.toISOString() : null,
-          confirmedAt: result.delivery.confirmedAt ? result.delivery.confirmedAt.toISOString() : null,
+          deliveredAt: result.delivery.deliveredAt
+            ? result.delivery.deliveredAt.toISOString()
+            : null,
+          confirmedAt: result.delivery.confirmedAt
+            ? result.delivery.confirmedAt.toISOString()
+            : null,
           createdAt: result.delivery.createdAt.toISOString(),
           updatedAt: result.delivery.updatedAt.toISOString(),
         }

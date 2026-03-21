@@ -1,10 +1,13 @@
 import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import {
+  addCustomerCardSvc,
   createCustomerSvc,
   deleteCustomerSvc,
   findCustomersByTelephoneSvc,
   getCustomerSvc,
+  listCardOptionsSvc,
+  listCustomerCardsSvc,
   listCustomersSvc,
   updateCustomerSvc,
 } from './service';
@@ -59,3 +62,6 @@ export const updateCustomerCtrl = (
 export const deleteCustomerCtrl = (id: string, companyId: string, actorUserId?: string | null) =>
   deleteCustomerSvc(id, companyId, actorUserId);
 export const findCustomersByTelephoneCtrl = findCustomersByTelephoneSvc;
+export const listCustomerCardsCtrl = listCustomerCardsSvc;
+export const listCardOptionsCtrl = listCardOptionsSvc;
+export const addCustomerCardCtrl = addCustomerCardSvc;

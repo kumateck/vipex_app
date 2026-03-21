@@ -1,12 +1,18 @@
 import { BadRequest, NotFound } from '../../utils/http-error';
 import { recordAuditLog } from '../audit/logger';
 import {
+  createCustomerCardRepo,
   createCustomerRepo,
+  findCustomerCardByTypeAndNumberRepo,
   findCustomersByTelephoneRepo,
   getCustomerRepo,
+  listCardOptionsRepo,
+  listCustomerCardsRepo,
   listCustomersRepo,
   softDeleteCustomerRepo,
   updateCustomerRepo,
+  type CardOptionRow,
+  type CustomerCardRow,
   type ListCustomerParams,
   type CustomerRow,
 } from './repository';
@@ -110,4 +116,44 @@ export async function findCustomersByTelephoneSvc(input: {
     throw BadRequest('Telephone should be at least 6 characters');
   }
   return findCustomersByTelephoneRepo(input);
+}
+
+export async function listCustomerCardsSvc(input: {
+  customerId: string;
+  companyId: string;
+}): Promise<CustomerCardRow[]> {
+  const customer = await getCustomerRepo(input.customerId);
+  if (!customer || customer.companyId !== input.companyId) throw NotFound('Customer not found');
+  return listCustomerCardsRepo(input);
+}
+
+export async function listCardOptionsSvc(companyId: string): Promise<CardOptionRow[]> {
+  if (!companyId) throw BadRequest('Company is required');
+  return listCardOptionsRepo(companyId);
+}
+
+export async function addCustomerCardSvc(input: {
+  customerId: string;
+  companyId: string;
+  cardId: string;
+  cardNumber: string;
+}): Promise<{ id: string }> {
+  const customer = await getCustomerRepo(input.customerId);
+  if (!customer || customer.companyId !== input.companyId) throw NotFound('Customer not found');
+
+  const cardNumber = input.cardNumber.trim();
+  if (!cardNumber) throw BadRequest('Card number is required');
+
+  const existing = await findCustomerCardByTypeAndNumberRepo({
+    customerId: input.customerId,
+    cardId: input.cardId,
+    cardNumber,
+  });
+  if (existing) return existing;
+
+  return createCustomerCardRepo({
+    customerId: input.customerId,
+    cardId: input.cardId,
+    cardNumber,
+  });
 }

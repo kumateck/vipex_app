@@ -55,8 +55,7 @@ export async function createParcelSvc(input: {
   const parcelValuePsw = input.parcelValueCedis != null ? toPesewas(input.parcelValueCedis) : 0n;
   const plannedToBePaidPsw =
     input.plannedToBePaidCedis != null ? toPesewas(input.plannedToBePaidCedis) : 0n;
-  const chargePsw =
-    input.chargeCedis != null ? toPesewas(input.chargeCedis) : plannedToBePaidPsw;
+  const chargePsw = input.chargeCedis != null ? toPesewas(input.chargeCedis) : plannedToBePaidPsw;
   const created = await createParcelRepo({
     companyId: input.companyId,
     sourceId: input.sourceId,
@@ -86,6 +85,12 @@ export async function updateParcelSvc(
     parcelDetails?: string;
     parcelContent?: string;
     secondReceiverId?: string | null;
+    cardId?: string | null;
+    cardNumber?: string | null;
+    secondCardId?: string | null;
+    secondCardNumber?: string | null;
+    confirmedBy?: string | null;
+    confirmedAt?: string | null;
     parcelValueCedis?: number | string | null;
     chargeCedis?: number | string | null;
     pickupLocationId?: string | null;
@@ -103,12 +108,21 @@ export async function updateParcelSvc(
   if (patch.parcelDetails) setPatch.parcelDetails = patch.parcelDetails;
   if (patch.parcelContent) setPatch.parcelContent = patch.parcelContent;
   if (patch.secondReceiverId !== undefined) setPatch.secondReceiverId = patch.secondReceiverId;
+  if (patch.cardId !== undefined) setPatch.cardId = patch.cardId;
+  if (patch.cardNumber !== undefined) setPatch.cardNumber = patch.cardNumber;
+  if (patch.secondCardId !== undefined) setPatch.secondCardId = patch.secondCardId;
+  if (patch.secondCardNumber !== undefined) setPatch.secondCardNumber = patch.secondCardNumber;
+  if (patch.confirmedBy !== undefined) setPatch.confirmedBy = patch.confirmedBy;
+  if (patch.confirmedAt !== undefined) {
+    setPatch.confirmedAt = patch.confirmedAt ? new Date(patch.confirmedAt) : null;
+  } else if (patch.status === ParcelStatus.DELIVERED_BY_OFFICE && !cur.confirmedAt) {
+    setPatch.confirmedAt = new Date();
+  }
   if (patch.parcelValueCedis !== undefined)
     setPatch.parcelValuePsw =
       patch.parcelValueCedis != null ? Number(toPesewas(patch.parcelValueCedis)) : 0;
   if (patch.chargeCedis !== undefined)
-    setPatch.chargePsw =
-      patch.chargeCedis != null ? Number(toPesewas(patch.chargeCedis)) : 0;
+    setPatch.chargePsw = patch.chargeCedis != null ? Number(toPesewas(patch.chargeCedis)) : 0;
   if (patch.pickupLocationId !== undefined) setPatch.pickupLocationId = patch.pickupLocationId;
   if (patch.method !== undefined) setPatch.method = patch.method;
   if (patch.taxReportConfirmation !== undefined)

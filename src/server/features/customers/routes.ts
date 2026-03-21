@@ -4,10 +4,13 @@ import { PaginationRequestQueryProps, UUID } from '../../schemas/common';
 import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import {
+  addCustomerCardCtrl,
   createCustomerCtrl,
   deleteCustomerCtrl,
   findCustomersByTelephoneCtrl,
   getCustomerByIdCtrl,
+  listCardOptionsCtrl,
+  listCustomerCardsCtrl,
   listCustomersCtrl,
   updateCustomerCtrl,
 } from './controller';
@@ -61,24 +64,47 @@ export const customersRoutes = new Elysia({ name: 'customers' })
     beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
     detail: { tags: ['Customers'], summary: 'Get customer' },
   })
-.post(
+  .get(
+    '/:id/cards',
+    async ({ params, user }) =>
+      listCustomerCardsCtrl({ customerId: params.id, companyId: user!.companyId! }),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+      detail: { tags: ['Customers'], summary: 'List customer cards' },
+    },
+  )
+  .post(
+    '/:id/cards',
+    async ({ params, body, user, set }) => {
+      const result = await addCustomerCardCtrl({
+        customerId: params.id,
+        companyId: user!.companyId!,
+        cardId: (body as { cardId: string }).cardId,
+        cardNumber: (body as { cardNumber: string }).cardNumber,
+      });
+      set.status = HttpStatus.CREATED;
+      return result;
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        cardId: UUID,
+        cardNumber: t.String({ minLength: 1, maxLength: 255 }),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateCustomers)],
+      detail: { tags: ['Customers'], summary: 'Add customer card' },
+    },
+  )
+  .get('/cards/options', async ({ user }) => listCardOptionsCtrl(user!.companyId!), {
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+    detail: { tags: ['Customers'], summary: 'List card type options' },
+  })
+  .post(
     '/',
     async ({ body, set, user }) => {
-      const res = await createCustomerCtrl(
-        {
-          ...(body as unknown as {
-            fullname: string;
-            telephone?: string | null;
-            telephone2?: string | null;
-            address?: string | null;
-            email?: string | null;
-            isNiaVerified?: boolean;
-            loggedToGovernment?: boolean;
-          }),
-          companyId: user!.companyId!,
-          createdBy: user!.sub,
-        } as {
-          companyId: string;
+      const res = await createCustomerCtrl({
+        ...(body as unknown as {
           fullname: string;
           telephone?: string | null;
           telephone2?: string | null;
@@ -86,9 +112,20 @@ export const customersRoutes = new Elysia({ name: 'customers' })
           email?: string | null;
           isNiaVerified?: boolean;
           loggedToGovernment?: boolean;
-          createdBy: string;
-        },
-      );
+        }),
+        companyId: user!.companyId!,
+        createdBy: user!.sub,
+      } as {
+        companyId: string;
+        fullname: string;
+        telephone?: string | null;
+        telephone2?: string | null;
+        address?: string | null;
+        email?: string | null;
+        isNiaVerified?: boolean;
+        loggedToGovernment?: boolean;
+        createdBy: string;
+      });
       set.status = HttpStatus.CREATED;
       return res;
     },
@@ -138,8 +175,12 @@ export const customersRoutes = new Elysia({ name: 'customers' })
       detail: { tags: ['Customers'], summary: 'Update customer' },
     },
   )
-  .delete('/:id', async ({ params, user }) => deleteCustomerCtrl(params.id, user!.companyId!, user!.sub), {
-    params: t.Object({ id: UUID }),
-    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanDeleteCustomers)],
-    detail: { tags: ['Customers'], summary: 'Soft delete customer' },
-  });
+  .delete(
+    '/:id',
+    async ({ params, user }) => deleteCustomerCtrl(params.id, user!.companyId!, user!.sub),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanDeleteCustomers)],
+      detail: { tags: ['Customers'], summary: 'Soft delete customer' },
+    },
+  );

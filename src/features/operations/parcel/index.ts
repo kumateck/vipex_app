@@ -5,3 +5,4 @@ export { ParcelProcessedConsignmentPage } from './pages/parcel-processed-consign
 export { ParcelInTransitPage } from './pages/parcel-in-transit-page';
 export { ParcelReceivePage } from './pages/parcel-receive-page';
 export { ParcelStatusPage } from './pages/parcel-status-page';
+export { ParcelWaitingPickupPage } from './pages/parcel-waiting-pickup-page';

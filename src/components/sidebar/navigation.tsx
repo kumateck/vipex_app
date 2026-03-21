@@ -1,5 +1,3 @@
-
-
 import { type LucideIconProps } from '@/components/ui';
 
 // Define the sub-item structure for nested menu items.
@@ -87,6 +85,10 @@ export const ROUTES: Route[] = [
           {
             title: 'Parcel Status',
             url: '/parcels/status',
+          },
+          {
+            title: 'Waiting for Pickup',
+            url: '/parcels/waiting-pickup',
           },
         ],
       },
@@ -305,7 +307,7 @@ export const ROUTES: Route[] = [
         title: 'Inventory Management',
         icon: 'Package2',
         items: [
-            {
+          {
             title: 'Product Categories',
             url: '/inventory/categories',
             permissionKey: 'CanListProductCategories',
@@ -358,23 +360,21 @@ export const ROUTES: Route[] = [
             url: '/inventory/stock-transfers',
             permissionKey: 'CanListStockTransfers',
           },
-          // { 
+          // {
           //   title: 'All Transactions',
           //   url: '/inventory/transactions',
           //   permissionKey: 'CanListStockTransfers',
           // },
-          // { 
+          // {
           //   title: 'Stock In',
           //   url: '/inventory/transactions/in',
           //   permissionKey: 'CanListStockTransfers',
-          // },  
-          // { 
+          // },
+          // {
           //   title: 'Stock Out',
           //   url: '/inventory/transactions/out',
           //   permissionKey: 'CanListStockTransfers',
           // },
-            
-
         ],
       },
     ],

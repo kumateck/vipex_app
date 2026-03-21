@@ -1,5 +1,9 @@
 import { api } from '@/services/api';
-import { buildServerPaginationParams, type ServerListQuery, type ServerListResponse } from '@/services/rtk-query';
+import {
+  buildServerPaginationParams,
+  type ServerListQuery,
+  type ServerListResponse,
+} from '@/services/rtk-query';
 
 export type CreateBookingWithParcelsInput = {
   senderId: string;
@@ -197,6 +201,8 @@ export type ParcelSearchFilters = {
   sourceId?: string | null;
   destinationId?: string | null;
   status?: number | null;
+  statuses?: number[] | null;
+  senderPaid?: boolean | null;
   includeDeleted?: boolean | null;
 };
 
@@ -332,6 +338,12 @@ export const parcelApi = api.injectEndpoints({
         parcelContent?: string;
         status?: number;
         secondReceiverId?: string | null;
+        cardId?: string | null;
+        cardNumber?: string | null;
+        secondCardId?: string | null;
+        secondCardNumber?: string | null;
+        confirmedBy?: string | null;
+        confirmedAt?: string | null;
       }
     >({
       query: ({ id, ...body }) => ({

@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, ilike, or } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { customers } from '@/db/schemas';
+import { cards, customerCards, customers } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
 
 export type CustomerRow = {
@@ -54,7 +54,8 @@ export async function listCustomersRepo(
             return s.direction === 'desc' ? desc(customers.fullname) : asc(customers.fullname);
           if (s.field === 'email')
             return s.direction === 'desc' ? desc(customers.email) : asc(customers.email);
-          if (s.field === 'id') return s.direction === 'desc' ? desc(customers.id) : asc(customers.id);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(customers.id) : asc(customers.id);
           return null;
         })
         .filter((value): value is ReturnType<typeof asc> => value !== null)
@@ -173,9 +174,95 @@ export async function findCustomersByTelephoneRepo(input: {
       and(
         eq(customers.companyId, input.companyId),
         eq(customers.isDeleted, false),
-        or(eq(customers.telephone, term), eq(customers.telephone2, term), ilike(customers.telephone, `%${term}%`)),
+        or(
+          eq(customers.telephone, term),
+          eq(customers.telephone2, term),
+          ilike(customers.telephone, `%${term}%`),
+        ),
       ),
     )
     .orderBy(asc(customers.fullname), asc(customers.id))
     .limit(limit);
+}
+
+export type CustomerCardRow = {
+  id: string;
+  customerId: string;
+  cardId: string;
+  cardName: string;
+  cardNumber: string;
+  createdAt: Date;
+};
+
+export type CardOptionRow = {
+  id: string;
+  name: string;
+};
+
+export async function listCustomerCardsRepo(input: {
+  customerId: string;
+  companyId: string;
+}): Promise<CustomerCardRow[]> {
+  return db
+    .select({
+      id: customerCards.id,
+      customerId: customerCards.customerId,
+      cardId: customerCards.cardId,
+      cardName: cards.name,
+      cardNumber: customerCards.cardNumber,
+      createdAt: customerCards.createdAt,
+    })
+    .from(customerCards)
+    .innerJoin(cards, eq(cards.id, customerCards.cardId))
+    .innerJoin(customers, eq(customers.id, customerCards.customerId))
+    .where(
+      and(eq(customerCards.customerId, input.customerId), eq(customers.companyId, input.companyId)),
+    )
+    .orderBy(desc(customerCards.createdAt), asc(customerCards.id));
+}
+
+export async function listCardOptionsRepo(companyId: string): Promise<CardOptionRow[]> {
+  return db
+    .select({
+      id: cards.id,
+      name: cards.name,
+    })
+    .from(cards)
+    .where(and(eq(cards.companyId, companyId), eq(cards.isDeleted, false)))
+    .orderBy(asc(cards.name), asc(cards.id));
+}
+
+export async function findCustomerCardByTypeAndNumberRepo(input: {
+  customerId: string;
+  cardId: string;
+  cardNumber: string;
+}): Promise<{ id: string } | null> {
+  const [row] = await db
+    .select({ id: customerCards.id })
+    .from(customerCards)
+    .where(
+      and(
+        eq(customerCards.customerId, input.customerId),
+        eq(customerCards.cardId, input.cardId),
+        eq(customerCards.cardNumber, input.cardNumber),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+export async function createCustomerCardRepo(input: {
+  customerId: string;
+  cardId: string;
+  cardNumber: string;
+}): Promise<{ id: string }> {
+  const [row] = await db
+    .insert(customerCards)
+    .values({
+      customerId: input.customerId,
+      cardId: input.cardId,
+      cardNumber: input.cardNumber,
+    })
+    .returning({ id: customerCards.id });
+  return row!;
 }

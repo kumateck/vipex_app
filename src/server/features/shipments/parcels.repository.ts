@@ -1,7 +1,27 @@
-import { and, asc, count, desc, eq, ilike, inArray, isNull, isNotNull, or } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  ilike,
+  inArray,
+  isNull,
+  isNotNull,
+  lte,
+  or,
+} from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
-import { parcels, bookings, branches, customers, consignmentItems, consignments } from '@/db/schemas';
+import {
+  parcels,
+  bookings,
+  branches,
+  customers,
+  consignmentItems,
+  consignments,
+} from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
 export type ParcelRow = {
   id: string;
@@ -45,6 +65,8 @@ export type ListParcelsParams = {
   sourceId?: string | null;
   destinationId?: string | null;
   status?: number | null;
+  statuses?: number[] | null;
+  senderPaid?: boolean | null;
   search?: string | null; // bookingCode/trackingCode/sender/receiver names/phones
   received?: boolean | null;
   includeDeleted?: boolean | null;
@@ -76,9 +98,15 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   if (p.companyId) whereParts.push(eq(parcels.companyId, p.companyId));
   if (p.sourceId) whereParts.push(eq(parcels.sourceId, p.sourceId));
   if (p.destinationId) whereParts.push(eq(parcels.destinationId, p.destinationId));
-  if (p.status != null) whereParts.push(eq(parcels.status, p.status));
+  if (p.statuses && p.statuses.length > 0) {
+    whereParts.push(inArray(parcels.status, p.statuses));
+  } else if (p.status != null) {
+    whereParts.push(eq(parcels.status, p.status));
+  }
   if (p.received === true) whereParts.push(isNotNull(parcels.receivedAt));
   if (p.received === false) whereParts.push(isNull(parcels.receivedAt));
+  if (p.senderPaid === true) whereParts.push(lte(parcels.plannedToBePaidPsw, 0));
+  if (p.senderPaid === false) whereParts.push(gt(parcels.plannedToBePaidPsw, 0));
   const s = alias(customers, 's');
   const r = alias(customers, 'r');
   const d = alias(branches, 'd');
@@ -92,10 +120,13 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
           if (srt.field === 'createdAt')
             return srt.direction === 'desc' ? desc(parcels.createdAt) : asc(parcels.createdAt);
           if (srt.field === 'trackingCode')
-            return srt.direction === 'desc' ? desc(parcels.trackingCode) : asc(parcels.trackingCode);
+            return srt.direction === 'desc'
+              ? desc(parcels.trackingCode)
+              : asc(parcels.trackingCode);
           if (srt.field === 'bookingCode')
             return srt.direction === 'desc' ? desc(parcels.bookingCode) : asc(parcels.bookingCode);
-          if (srt.field === 'id') return srt.direction === 'desc' ? desc(parcels.id) : asc(parcels.id);
+          if (srt.field === 'id')
+            return srt.direction === 'desc' ? desc(parcels.id) : asc(parcels.id);
           return null;
         })
         .filter((value): value is ReturnType<typeof asc> => value !== null)
@@ -267,7 +298,10 @@ export async function updateParcelRepo(
   return row ?? null;
 }
 
-export async function updateParcelsStatusRepo(parcelIds: string[], status: number): Promise<number> {
+export async function updateParcelsStatusRepo(
+  parcelIds: string[],
+  status: number,
+): Promise<number> {
   if (parcelIds.length === 0) return 0;
 
   const rows = await db
