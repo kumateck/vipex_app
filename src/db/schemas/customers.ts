@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, boolean, timestamp, index } from 'drizzle-orm/pg-core';
 import { companies } from './core';
 import { createId } from '@paralleldrive/cuid2';
 
@@ -17,6 +17,8 @@ export const customers = pgTable(
     telephone2: varchar('telephone2', { length: 255 }),
     address: varchar('address', { length: 255 }),
     email: varchar('email', { length: 255 }),
+    isNiaVerified: boolean('is_nia_verified').notNull().default(false),
+    loggedToGovernment: boolean('logged_to_government').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
     createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),

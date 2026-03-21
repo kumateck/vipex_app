@@ -1,6 +1,6 @@
-import { and, asc, count, desc, eq, gte, lt, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, lt, lte, or, sql, isNull, inArray } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { cashierSessionTypes, cashierSessions } from '@/db/schemas';
+import { cashierSessionTypes, cashierSessions, parcels, payments, users, CashierType, PaymentComponent } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
 
 export type SessionTypeRow = {
@@ -51,11 +51,14 @@ export async function getSessionTypeRepo(id: string): Promise<{ id: string } | n
 export type SessionRow = {
   id: string;
   cashierId: string;
+  cashierName: string | null;
   branchId: string;
   shiftTypeId: string | null;
   scheduledStartTime: Date;
   actualEndTime: Date | null;
   openingBalancePsw: number;
+  totalReceivedPsw: number;
+  currentBalancePsw: number;
   closingBalancePsw: number | null;
   status: string;
   createdAt: Date;
@@ -68,6 +71,8 @@ export type ListSessionsParams = {
   cashierId?: string | null;
   branchId?: string | null;
   activeOnly?: boolean | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
   sort?: SortField[] | null;
 };
 
@@ -78,6 +83,8 @@ export async function listSessionsRepo(
   if (p.cashierId) where.push(eq(cashierSessions.cashierId, p.cashierId));
   if (p.branchId) where.push(eq(cashierSessions.branchId, p.branchId));
   if (p.activeOnly) where.push(eq(cashierSessions.status, 'ACTIVE'));
+  if (p.dateFrom) where.push(gte(cashierSessions.scheduledStartTime, new Date(p.dateFrom)));
+  if (p.dateTo) where.push(lte(cashierSessions.scheduledStartTime, new Date(p.dateTo)));
   const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
@@ -105,23 +112,60 @@ export async function listSessionsRepo(
     .select({
       id: cashierSessions.id,
       cashierId: cashierSessions.cashierId,
+      cashierName: users.fullname,
       branchId: cashierSessions.branchId,
       shiftTypeId: cashierSessions.shiftTypeId,
       scheduledStartTime: cashierSessions.scheduledStartTime,
       actualEndTime: cashierSessions.actualEndTime,
       openingBalancePsw: cashierSessions.openingBalancePsw,
+      totalReceivedPsw: sql<number>`0`,
+      currentBalancePsw: sql<number>`0`,
       closingBalancePsw: cashierSessions.closingBalancePsw,
       status: cashierSessions.status,
       createdAt: cashierSessions.createdAt,
       updatedAt: cashierSessions.updatedAt,
     })
     .from(cashierSessions)
+    .leftJoin(users, eq(users.id, cashierSessions.cashierId))
     .where(where.length ? and(...where) : undefined)
     .orderBy(...orderBy)
     .limit(p.limit)
     .offset(p.offset);
 
-  return { data: rows, totalRecords };
+  const sessionIds = rows.map((row) => row.id);
+  const receivedBySession = new Map<string, number>();
+  if (sessionIds.length) {
+    const totals = await db
+      .select({
+        sessionId: parcels.cashierSessionId,
+        totalReceivedPsw: sql<number>`coalesce(sum(${payments.grossAmountPsw}), 0)`,
+      })
+      .from(payments)
+      .innerJoin(parcels, eq(parcels.id, payments.parcelId))
+      .where(and(inArray(parcels.cashierSessionId, sessionIds), isNull(payments.voidedAt)))
+      .groupBy(parcels.cashierSessionId);
+
+    for (const item of totals) {
+      if (!item.sessionId) continue;
+      receivedBySession.set(item.sessionId, Number(item.totalReceivedPsw ?? 0));
+    }
+  }
+
+  const data = rows.map((row) => {
+    const totalReceivedPsw = receivedBySession.get(row.id) ?? 0;
+    const currentBalancePsw =
+      row.status === 'ACTIVE'
+        ? Number(row.openingBalancePsw ?? 0) + totalReceivedPsw
+        : Number(row.closingBalancePsw ?? row.openingBalancePsw ?? 0);
+
+    return {
+      ...row,
+      totalReceivedPsw,
+      currentBalancePsw,
+    };
+  });
+
+  return { data, totalRecords };
 }
 
 export async function openSessionRepo(
@@ -151,17 +195,21 @@ export async function getSessionRepo(id: string): Promise<SessionRow | null> {
     .select({
       id: cashierSessions.id,
       cashierId: cashierSessions.cashierId,
+      cashierName: users.fullname,
       branchId: cashierSessions.branchId,
       shiftTypeId: cashierSessions.shiftTypeId,
       scheduledStartTime: cashierSessions.scheduledStartTime,
       actualEndTime: cashierSessions.actualEndTime,
       openingBalancePsw: cashierSessions.openingBalancePsw,
+      totalReceivedPsw: sql<number>`0`,
+      currentBalancePsw: sql<number>`0`,
       closingBalancePsw: cashierSessions.closingBalancePsw,
       status: cashierSessions.status,
       createdAt: cashierSessions.createdAt,
       updatedAt: cashierSessions.updatedAt,
     })
     .from(cashierSessions)
+    .leftJoin(users, eq(users.id, cashierSessions.cashierId))
     .where(eq(cashierSessions.id, id))
     .limit(1);
   return row ?? null;
@@ -180,17 +228,21 @@ export async function findActiveSessionRepo(input: {
     .select({
       id: cashierSessions.id,
       cashierId: cashierSessions.cashierId,
+      cashierName: users.fullname,
       branchId: cashierSessions.branchId,
       shiftTypeId: cashierSessions.shiftTypeId,
       scheduledStartTime: cashierSessions.scheduledStartTime,
       actualEndTime: cashierSessions.actualEndTime,
       openingBalancePsw: cashierSessions.openingBalancePsw,
+      totalReceivedPsw: sql<number>`0`,
+      currentBalancePsw: sql<number>`0`,
       closingBalancePsw: cashierSessions.closingBalancePsw,
       status: cashierSessions.status,
       createdAt: cashierSessions.createdAt,
       updatedAt: cashierSessions.updatedAt,
     })
     .from(cashierSessions)
+    .leftJoin(users, eq(users.id, cashierSessions.cashierId))
     .where(and(...where))
     .orderBy(desc(cashierSessions.scheduledStartTime), desc(cashierSessions.id))
     .limit(1);
@@ -223,4 +275,81 @@ export async function hasSameDayCompletedSessionRepo(input: {
     .limit(1);
 
   return !!row;
+}
+
+export async function getSessionAmountPaidPswRepo(input: {
+  sessionId: string;
+  cashierId: string;
+}): Promise<number> {
+  const [row] = await db
+    .select({
+      total: sql<number>`coalesce(sum(${payments.grossAmountPsw}), 0)`,
+    })
+    .from(payments)
+    .innerJoin(parcels, eq(parcels.id, payments.parcelId))
+    .where(
+      and(
+        eq(parcels.cashierSessionId, input.sessionId),
+        eq(payments.cashierUserId, input.cashierId),
+        eq(payments.cashierType, CashierType.SENDING),
+        isNull(payments.voidedAt),
+      ),
+    );
+
+  return Number(row?.total ?? 0);
+}
+
+export async function getSessionToBePaidCollectedPswRepo(input: {
+  sessionId: string;
+  cashierId: string;
+}): Promise<number> {
+  const [row] = await db
+    .select({
+      total: sql<number>`coalesce(sum(${payments.grossAmountPsw}), 0)`,
+    })
+    .from(payments)
+    .innerJoin(parcels, eq(parcels.id, payments.parcelId))
+    .where(
+      and(
+        eq(parcels.cashierSessionId, input.sessionId),
+        eq(payments.cashierUserId, input.cashierId),
+        eq(payments.cashierType, CashierType.TOBEPAID),
+        isNull(payments.voidedAt),
+      ),
+    );
+
+  return Number(row?.total ?? 0);
+}
+
+export async function getSessionDeliveryFeeCollectedPswRepo(input: {
+  sessionId: string;
+  cashierId: string;
+}): Promise<number> {
+  const [row] = await db
+    .select({
+      total: sql<number>`coalesce(sum(${payments.grossAmountPsw}), 0)`,
+    })
+    .from(payments)
+    .innerJoin(parcels, eq(parcels.id, payments.parcelId))
+    .where(
+      and(
+        eq(parcels.cashierSessionId, input.sessionId),
+        eq(payments.cashierUserId, input.cashierId),
+        eq(payments.component, PaymentComponent.DELIVERY_FEE),
+        isNull(payments.voidedAt),
+      ),
+    );
+
+  return Number(row?.total ?? 0);
+}
+
+export async function getSessionCreditCreatedPswRepo(sessionId: string): Promise<number> {
+  const [row] = await db
+    .select({
+      total: sql<number>`coalesce(sum(${parcels.plannedToBePaidPsw}), 0)`,
+    })
+    .from(parcels)
+    .where(and(eq(parcels.cashierSessionId, sessionId), eq(parcels.isDeleted, false)));
+
+  return Number(row?.total ?? 0);
 }

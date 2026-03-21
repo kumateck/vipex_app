@@ -51,6 +51,8 @@ export const updateCustomerCtrl = (
     telephone2?: string | null;
     address?: string | null;
     email?: string | null;
+    isNiaVerified?: boolean;
+    loggedToGovernment?: boolean;
   },
   actorUserId?: string | null,
 ) => updateCustomerSvc(id, companyId, patch, actorUserId);

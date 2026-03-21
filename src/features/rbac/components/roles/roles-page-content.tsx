@@ -1,16 +1,19 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BranchType } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   type Role,
+  useGetRolePermissionsQuery,
   useCreateRoleMutation,
   useDeleteRoleMutation,
   useListPermissionCatalogQuery,
+  useListRoleOptionsQuery,
   useListRolesQuery,
   useSetRolePermissionsMutation,
   useUpdateRoleMutation,
@@ -31,7 +34,9 @@ const EMPTY_META: PaginationMeta = {
 };
 
 export function RolesPageContent() {
-  const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
+  const authUser = useAuthStore((state) => state.user);
+  const companyId = authUser?.company?.id ?? null;
+  const canManageRoles = authUser?.branch?.type === BranchType.HEADOFFICE;
   const [query, setQuery] = useState<ServerListQuery<{ companyId: string | null }>>({
     page: 1,
     pageSize: 20,
@@ -49,11 +54,21 @@ export function RolesPageContent() {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [roleNameInput, setRoleNameInput] = useState('');
   const [selectedPermissionKeys, setSelectedPermissionKeys] = useState<string[]>([]);
+  const [createMode, setCreateMode] = useState<'blank' | 'duplicate'>('blank');
+  const [duplicateRoleId, setDuplicateRoleId] = useState('');
 
   const { data: rolesData, isLoading: isLoadingRoles } = useListRolesQuery(query, { skip: !companyId });
+  const { data: roleOptionsData, isLoading: isLoadingRoleOptions } = useListRoleOptionsQuery(
+    { companyId, includeDeleted: false },
+    { skip: !companyId },
+  );
   const { data: permissionCatalogData, isLoading: isLoadingPermissions } = useListPermissionCatalogQuery(undefined, {
     skip: !companyId,
   });
+  const { data: duplicateRolePermissionsData, isFetching: isLoadingDuplicatePermissions } = useGetRolePermissionsQuery(
+    duplicateRoleId,
+    { skip: createMode !== 'duplicate' || !duplicateRoleId },
+  );
 
   const allPermissionKeys = useMemo(
     () => (permissionCatalogData?.data ?? []).map((permission) => permission.key),
@@ -63,6 +78,11 @@ export function RolesPageContent() {
     () => groupPermissions(permissionCatalogData?.data ?? []),
     [permissionCatalogData],
   );
+  const roleOptions = roleOptionsData ?? [];
+  const duplicateRoleName = useMemo(
+    () => roleOptions.find((role) => role.id === duplicateRoleId)?.name ?? '',
+    [duplicateRoleId, roleOptions],
+  );
 
   const handleRequestChange = useCallback((request: ServerListQuery<{ companyId: string | null }>) => {
     setQuery(request);
@@ -70,10 +90,32 @@ export function RolesPageContent() {
 
   const openCreateDialog = () => {
     setSelectedRole(null);
+    setCreateMode('blank');
+    setDuplicateRoleId('');
     setRoleNameInput('');
     setSelectedPermissionKeys([]);
     setIsCreateOpen(true);
   };
+
+  useEffect(() => {
+    if (!isCreateOpen) return;
+    if (createMode === 'blank') {
+      setSelectedPermissionKeys([]);
+      return;
+    }
+    if (!duplicateRoleId) {
+      setSelectedPermissionKeys([]);
+      return;
+    }
+    if (!duplicateRolePermissionsData) return;
+    setSelectedPermissionKeys(duplicateRolePermissionsData.permissionKeys);
+  }, [createMode, duplicateRoleId, duplicateRolePermissionsData, isCreateOpen]);
+
+  useEffect(() => {
+    if (createMode !== 'duplicate') return;
+    if (!duplicateRoleName) return;
+    setRoleNameInput((current) => (current.trim().length ? current : `${duplicateRoleName} copy`));
+  }, [createMode, duplicateRoleName]);
 
   const openRenameDialog = (role: Role) => {
     setSelectedRole(role);
@@ -147,8 +189,9 @@ export function RolesPageContent() {
         onRename: openRenameDialog,
         onManagePermissions: openPermissionsDialog,
         onDelete: handleDeleteRole,
+        canManage: canManageRoles,
       }),
-    [],
+    [canManageRoles],
   );
 
   return (
@@ -156,7 +199,7 @@ export function RolesPageContent() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Roles</CardTitle>
-          <Button onClick={openCreateDialog}>New role</Button>
+          {canManageRoles ? <Button onClick={openCreateDialog}>New role</Button> : null}
         </CardHeader>
         <CardContent>
           <DataTable
@@ -176,6 +219,13 @@ export function RolesPageContent() {
       <RoleCreateDialog
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
+        createMode={createMode}
+        onCreateModeChange={setCreateMode}
+        duplicateRoleId={duplicateRoleId}
+        onDuplicateRoleIdChange={setDuplicateRoleId}
+        roleOptions={roleOptions}
+        loadingRoleOptions={isLoadingRoleOptions}
+        loadingDuplicatePermissions={isLoadingDuplicatePermissions}
         roleName={roleNameInput}
         onRoleNameChange={setRoleNameInput}
         selectedPermissionKeys={selectedPermissionKeys}

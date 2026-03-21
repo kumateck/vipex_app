@@ -4,6 +4,7 @@ import {
   createLocationSvc,
   deleteLocationSvc,
   getLocationSvc,
+  listLocationOptionsSvc,
   listLocationsSvc,
   updateLocationSvc,
 } from './service';
@@ -70,6 +71,20 @@ export async function listLocationsCtrl(
 export async function getLocationByIdCtrl(id: string) {
   const l = await getLocationSvc(id);
   return toLocationDto(l);
+}
+
+export async function listLocationOptionsCtrl(filters: {
+  companyId?: string | null;
+  branchId?: string | null;
+  search?: string | null;
+  includeDeleted?: boolean | null;
+}) {
+  const rows = await listLocationOptionsSvc(filters);
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    branchId: row.branchId,
+  }));
 }
 
 export async function createLocationCtrl(input: {

@@ -61,6 +61,26 @@ export const ROUTES: Route[] = [
             url: '/parcels',
           },
           {
+            title: 'Sender Payments',
+            url: '/parcels/sender-payments',
+          },
+          {
+            title: 'Processed Consignments',
+            url: '/parcels/processed',
+          },
+          {
+            title: 'In Transit (Sent)',
+            url: '/parcels/in-transit/outgoing',
+          },
+          {
+            title: 'In Transit (Incoming)',
+            url: '/parcels/in-transit/incoming',
+          },
+          {
+            title: 'Scan to Receive',
+            url: '/parcels/receive',
+          },
+          {
             title: 'Track Parcel',
             url: '/parcels/track',
           },
@@ -382,6 +402,10 @@ export const ROUTES: Route[] = [
             title: 'Active Users',
             url: '/users/active',
           },
+          {
+            title: 'Inactive Users',
+            url: '/users/inactive',
+          },
         ],
       },
       {
@@ -610,5 +634,3 @@ export const ROUTES: Route[] = [
     ],
   },
 ];
-
-

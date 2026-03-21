@@ -12,6 +12,12 @@ export type ListLocationParams = {
   sort?: SortField[] | null;
 };
 
+export type LocationOptionRow = {
+  id: string;
+  name: string;
+  branchId: string;
+};
+
 export async function listLocationsRepo(p: ListLocationParams) {
   const where = [];
   if (p.companyId) where.push(eq(locations.companyId, p.companyId));
@@ -83,6 +89,29 @@ export async function getLocationRepo(id: string) {
     .where(eq(locations.id, id))
     .limit(1);
   return row ?? null;
+}
+
+export async function listLocationOptionsRepo(p: {
+  companyId?: string | null;
+  branchId?: string | null;
+  search?: string | null;
+  includeDeleted?: boolean | null;
+}): Promise<LocationOptionRow[]> {
+  const where = [];
+  if (p.companyId) where.push(eq(locations.companyId, p.companyId));
+  if (p.branchId) where.push(eq(locations.branchId, p.branchId));
+  if (!p.includeDeleted) where.push(eq(locations.isDeleted, false));
+  if (p.search) where.push(sql`${locations.name} ILIKE ${`%${p.search}%`}`);
+
+  return db
+    .select({
+      id: locations.id,
+      name: locations.name,
+      branchId: locations.branchId,
+    })
+    .from(locations)
+    .where(where.length ? and(...where) : undefined)
+    .orderBy(asc(locations.name), asc(locations.id));
 }
 
 export async function findLocationByNameRepo(branchId: string, name: string) {

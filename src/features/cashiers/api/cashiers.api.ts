@@ -9,6 +9,7 @@ import type {
   CashierSession,
   CashierSessionListQuery,
   CashierSessionType,
+  CashierSessionSummary,
   CloseCashierSessionInput,
   OpenCashierSessionInput,
 } from '../types/cashier.types';
@@ -31,6 +32,13 @@ export const cashiersApi = api.injectEndpoints({
       query: () => ({ url: '/cashiers/sessions/active/current' }),
       providesTags: [{ type: 'Cashiers', id: 'ACTIVE_SESSION' }],
     }),
+    getCurrentActiveSessionSummary: builder.query<
+      CashierSessionSummary | null,
+      { mode: 'sender' | 'receiver' | 'delivery' }
+    >({
+      query: (params) => ({ url: '/cashiers/sessions/active/current/summary', params }),
+      providesTags: [{ type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' }],
+    }),
 
     openSession: builder.mutation<{ id: string }, OpenCashierSessionInput>({
       query: (body) => ({
@@ -38,7 +46,11 @@ export const cashiersApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: invalidateEntityListTag('Cashiers'),
+      invalidatesTags: [
+        ...invalidateEntityListTag('Cashiers'),
+        { type: 'Cashiers', id: 'ACTIVE_SESSION' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
+      ],
     }),
 
     closeSession: builder.mutation<{ id: string }, { id: string; body: CloseCashierSessionInput }>({
@@ -47,11 +59,21 @@ export const cashiersApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: (_result, _err, { id }) => [{ type: 'Cashiers', id }, ...invalidateEntityListTag('Cashiers')],
+      invalidatesTags: (_result, _err, { id }) => [
+        { type: 'Cashiers', id },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
+        ...invalidateEntityListTag('Cashiers'),
+      ],
     }),
   }),
 });
 
-export const { useListSessionTypesQuery, useListSessionsQuery, useOpenSessionMutation, useCloseSessionMutation } =
-  cashiersApi;
-export const { useGetCurrentActiveSessionQuery } = cashiersApi;
+export const {
+  useListSessionTypesQuery,
+  useListSessionsQuery,
+  useOpenSessionMutation,
+  useCloseSessionMutation,
+  useGetCurrentActiveSessionQuery,
+  useGetCurrentActiveSessionSummaryQuery,
+} = cashiersApi;

@@ -26,8 +26,18 @@ export type ParcelBookingFormValues = {
 export type ReceiptSummary = {
   bookingId: string;
   parcels: Array<{
+    bookingCode: string;
     trackingCode: string;
-    paymentResponsibility: PaymentResponsibility;
-    amountCedis: number;
+    parcelDetails: string;
+    senderName: string;
+    senderTelephone: string;
+    receiverName: string;
+    receiverTelephone: string;
+    destinationBranchName: string;
+    destinationLocationName: string;
+    totalChargeCedis: number;
+    senderPaidCedis: number;
+    receiverToPayCedis: number;
+    issuedAt: string;
   }>;
 };

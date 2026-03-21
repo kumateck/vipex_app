@@ -1,15 +1,18 @@
 import { t } from 'elysia';
-import { NonEmptyString255, PaginationMetaSchema, PaginationRequestQuery, UUID } from '@/server/schemas/common';
+import {
+  NonEmptyString255,
+  PaginationMetaSchema,
+  PaginationRequestQueryProps,
+  UUID,
+} from '@/server/schemas/common';
 
 const PermissionKey = t.String({ minLength: 3, maxLength: 120, pattern: '^Can[A-Za-z0-9]+$' });
 
-export const ListRolesQuery = t.Intersect([
-  PaginationRequestQuery,
-  t.Object({
-    companyId: t.Optional(UUID),
-    includeDeleted: t.Optional(t.Boolean()),
-  }),
-]);
+export const ListRolesQuery = t.Object({
+  ...PaginationRequestQueryProps,
+  companyId: t.Optional(UUID),
+  includeDeleted: t.Optional(t.Boolean()),
+});
 
 export const RoleDto = t.Object({
   id: UUID,

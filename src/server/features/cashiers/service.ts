@@ -12,6 +12,10 @@ import {
   getSessionTypeRepo,
   findActiveSessionRepo,
   hasSameDayCompletedSessionRepo,
+  getSessionAmountPaidPswRepo,
+  getSessionToBePaidCollectedPswRepo,
+  getSessionDeliveryFeeCollectedPswRepo,
+  getSessionCreditCreatedPswRepo,
   type SessionRow,
   type ListSessionsParams,
 } from './repository';
@@ -56,9 +60,9 @@ export async function openSessionSvc(input: {
     throw BadRequest('Invalid start time');
   }
 
-  const active = await findActiveSessionRepo({ cashierId: input.cashierId, branchId: input.branchId });
+  const active = await findActiveSessionRepo({ cashierId: input.cashierId });
   if (active) {
-    throw BadRequest('Cashier already has an active session in this branch');
+    throw BadRequest('Cashier already has an active session. Close it before opening another.');
   }
 
   const hadCompletedToday = await hasSameDayCompletedSessionRepo({
@@ -118,6 +122,12 @@ export async function closeSessionSvc(
     actorUserId?: string | null;
   },
 ) {
+  const existing = await getSessionRepo(id);
+  if (!existing) throw NotFound('Session not found');
+  if (existing.status !== 'ACTIVE') {
+    throw BadRequest('Only active sessions can be closed');
+  }
+
   const patch = {
     actualEndTime: new Date(input.endTime),
     closingBalancePsw:
@@ -157,4 +167,52 @@ export async function assertActiveSessionSvc(input: {
     throw Forbidden('An active cashier session is required to perform this action');
   }
   return session;
+}
+
+export async function getCurrentActiveSessionSummarySvc(input: {
+  cashierId: string;
+  branchId?: string | null;
+  mode?: 'sender' | 'receiver' | 'delivery';
+}) {
+  const session = await findActiveSessionRepo(input);
+  if (!session) {
+    return null;
+  }
+
+  const [totalSenderSalesPsw, totalToBePaidCollectedPsw, totalDeliveryFeeCollectedPsw, totalCreditCreatedPsw] =
+    await Promise.all([
+    getSessionAmountPaidPswRepo({ sessionId: session.id, cashierId: input.cashierId }),
+    getSessionToBePaidCollectedPswRepo({ sessionId: session.id, cashierId: input.cashierId }),
+    getSessionDeliveryFeeCollectedPswRepo({ sessionId: session.id, cashierId: input.cashierId }),
+    getSessionCreditCreatedPswRepo(session.id),
+  ]);
+
+  const mode = input.mode ?? 'sender';
+
+  const amountPaidPsw =
+    mode === 'receiver'
+      ? totalToBePaidCollectedPsw
+      : mode === 'delivery'
+        ? totalDeliveryFeeCollectedPsw + totalToBePaidCollectedPsw
+        : totalSenderSalesPsw;
+
+  const totalSalesPsw =
+    mode === 'receiver'
+      ? totalToBePaidCollectedPsw
+      : mode === 'delivery'
+        ? totalDeliveryFeeCollectedPsw + totalToBePaidCollectedPsw
+        : totalSenderSalesPsw;
+
+  const toBePaidPsw = mode === 'sender' ? totalCreditCreatedPsw : totalToBePaidCollectedPsw;
+
+  return {
+    sessionId: session.id,
+    amountPaidPsw,
+    toBePaidPsw,
+    totalSalesPsw,
+    totalCreditCreatedPsw,
+    totalToBePaidCollectedPsw,
+    totalDeliveryFeeCollectedPsw,
+    mode,
+  };
 }

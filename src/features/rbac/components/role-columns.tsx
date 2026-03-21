@@ -6,17 +6,21 @@ interface RoleColumnsOptions {
   onRename: (role: Role) => void;
   onManagePermissions: (role: Role) => void;
   onDelete: (role: Role) => void;
+  canManage: boolean;
 }
 
 export function createRoleColumns(options: RoleColumnsOptions): ColumnDef<Role>[] {
-  return [
+  const columns: ColumnDef<Role>[] = [
     { accessorKey: 'name', header: 'Role name' },
     {
       accessorFn: (row) => row.permissions.length,
       id: 'permissionsCount',
       header: 'Permissions',
     },
-    {
+  ];
+
+  if (options.canManage) {
+    columns.push({
       id: 'actions',
       header: 'Actions',
       size: 280,
@@ -34,6 +38,8 @@ export function createRoleColumns(options: RoleColumnsOptions): ColumnDef<Role>[
           </Button>
         </div>
       ),
-    },
-  ];
+    });
+  }
+
+  return columns;
 }

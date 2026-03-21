@@ -19,8 +19,19 @@ import { toCreateInventoryProductPayload, toUpdateInventoryProductPayload } from
 type InventoryProductCategoryOptionsParams = {
   companyId?: string | null;
   search?: string;
-  pageSize?: number;
 };
+
+type InventoryProductOptionsParams = {
+  companyId?: string | null;
+  categoryId?: string | null;
+  search?: string;
+};
+
+export interface InventoryProductOption {
+  id: string;
+  name: string;
+  sku: string;
+}
 
 export const inventoryProductsApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -40,16 +51,24 @@ export const inventoryProductsApi = api.injectEndpoints({
       InventoryProductCategoryOptionsParams | void
     >({
       query: (params) => ({
-        url: '/inventory/categories',
-        params: buildServerPaginationParams({
-          page: 1,
-          pageSize: Math.min(params?.pageSize ?? 100, 100),
+        url: '/inventory/categories/options',
+        params: {
+          companyId: params?.companyId ?? null,
           search: params?.search,
-          filters: { companyId: params?.companyId ?? null },
-        }),
+        },
       }),
-      transformResponse: (response: ServerListResponse<InventoryProductCategoryOption>) => response.data ?? [],
       providesTags: [{ type: 'Inventory', id: 'CATEGORY_OPTIONS' }],
+    }),
+    listInventoryProductOptions: builder.query<InventoryProductOption[], InventoryProductOptionsParams | void>({
+      query: (params) => ({
+        url: '/inventory/products/options',
+        params: {
+          companyId: params?.companyId ?? null,
+          categoryId: params?.categoryId ?? null,
+          search: params?.search,
+        },
+      }),
+      providesTags: [{ type: 'Inventory', id: 'PRODUCT_OPTIONS' }],
     }),
     createInventoryProduct: builder.mutation<{ id: string }, InventoryProductMutationInput>({
       query: (body) => {
@@ -95,6 +114,7 @@ export const {
   useListInventoryProductsQuery,
   useGetInventoryProductQuery,
   useListInventoryProductCategoryOptionsQuery,
+  useListInventoryProductOptionsQuery,
   useCreateInventoryProductMutation,
   useUpdateInventoryProductMutation,
   useDeleteInventoryProductMutation,

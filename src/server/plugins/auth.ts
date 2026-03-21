@@ -1,4 +1,5 @@
 import type { Elysia } from 'elysia';
+import { BranchType } from '@/db/schemas/enums';
 import { verifyAccessToken } from '../utils/jwt';
 import { Unauthorized as UnauthorizedError } from '../utils/http-error';
 import { Forbidden } from '../utils/http-error';
@@ -9,6 +10,9 @@ export type AuthUser = {
   roleId?: string | null;
   companyId?: string | null;
   branchId?: string | null;
+  branchType?: number | null;
+  locationId?: string | null;
+  userType?: number | null;
   permissions?: string[];
   iat?: number;
   exp?: number;
@@ -42,5 +46,12 @@ export function requirePermissions(...required: string[]) {
     const granted = new Set(user.permissions ?? []);
     const ok = required.every((permission) => granted.has(permission));
     if (!ok) throw Forbidden();
+  };
+}
+
+export function requireHeadOffice(message = 'Only head office users can perform this action') {
+  return ({ user }: { user: AuthUser | null }) => {
+    if (!user) throw UnauthorizedError();
+    if (user.branchType !== BranchType.HEADOFFICE) throw Forbidden(message);
   };
 }

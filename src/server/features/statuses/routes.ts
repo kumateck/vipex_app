@@ -5,7 +5,7 @@ import { PermissionKeys } from '@/shared/permissions/constants';
 
 import { createStatusSvc, deleteStatusSvc, getStatusSvc, updateStatusSvc } from './service';
 import { listStatusOptionsCtrl, listStatusesCtrl } from './controller';
-import { PaginationRequestQuery, NonEmpty255, UUID } from '@/server/schemas/common';
+import { PaginationRequestQueryProps, NonEmpty255, UUID } from '@/server/schemas/common';
 
 export const statusesRoutes = new Elysia({ name: 'statuses' })
   .use(authPlugin)
@@ -43,10 +43,11 @@ export const statusesRoutes = new Elysia({ name: 'statuses' })
         },
       }),
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({ companyId: t.Optional(UUID), includeDeleted: t.Optional(t.Boolean()) }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        companyId: t.Optional(UUID),
+        includeDeleted: t.Optional(t.Boolean()),
+      }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStatuses)],
       detail: { tags: ['Statuses'], summary: 'List statuses', operationId: 'listStatuses' },
     },

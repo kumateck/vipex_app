@@ -1,9 +1,11 @@
 import type { UserCreatePayload, UserMutationInput } from '../types/user.types';
 
-export function toCreateUserPayload(
-  input: UserMutationInput,
-  context: { companyId: string; createdBy: string },
-): UserCreatePayload {
+function toOptionalString(value?: string | null) {
+  const trimmed = String(value ?? '').trim();
+  return trimmed ? trimmed : null;
+}
+
+export function toCreateUserPayload(input: UserMutationInput): UserCreatePayload {
   return {
     fullname: input.fullname.trim(),
     telephone: input.telephone.trim(),
@@ -11,8 +13,9 @@ export function toCreateUserPayload(
     status: input.status,
     roleId: input.roleId.trim(),
     branchId: input.branchId.trim(),
-    companyId: context.companyId,
-    createdBy: context.createdBy,
+    locationId: toOptionalString(input.locationId),
+    userType: input.userType,
+    sendInvite: input.sendInvite ?? true,
   };
 }
 
@@ -24,5 +27,7 @@ export function toUpdateUserPayload(input: UserMutationInput): UserMutationInput
     status: input.status,
     roleId: input.roleId.trim(),
     branchId: input.branchId.trim(),
+    locationId: toOptionalString(input.locationId),
+    userType: input.userType,
   };
 }

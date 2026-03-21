@@ -1,12 +1,16 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui';
+import { BRANCH_TYPE_LABELS, BRANCH_TYPES } from '@/shared/access/constants';
+import { BranchType } from '@/db/schemas/enums';
+import { normalizeOptionalFields } from '@/lib/optional-fields';
 import { branchFormSchema, type BranchFormValues } from '../schemas/branch-form.schema';
 import type { Branch } from '../types/branch.types';
 
@@ -30,6 +34,7 @@ export function BranchForm({
   const navigate = useNavigate();
 
   const {
+    control,
     register,
     handleSubmit,
     reset,
@@ -38,7 +43,7 @@ export function BranchForm({
     resolver: zodResolver(branchFormSchema),
     defaultValues: {
       name: '',
-      type: '',
+      type: BranchType.AGENCY,
       telephone: '',
       address: '',
       email: '',
@@ -50,7 +55,7 @@ export function BranchForm({
     if (mode === 'edit' && initialData) {
       reset({
         name: initialData.name ?? '',
-        type: initialData.type ?? '',
+        type: (initialData.type as BranchFormValues['type']) ?? BranchType.AGENCY,
         telephone: initialData.telephone ?? '',
         address: initialData.address ?? '',
         email: initialData.email ?? '',
@@ -60,12 +65,16 @@ export function BranchForm({
 
     reset({
       name: '',
-      type: '',
+      type: BranchType.AGENCY,
       telephone: '',
       address: '',
       email: '',
     });
   }, [initialData, mode, reset]);
+
+  const submit = async (values: BranchFormValues) => {
+    await onSubmit(normalizeOptionalFields(values, ['telephone', 'address', 'email'] as const));
+  };
 
   return (
     <div className="w-full max-w-lg mx-auto p-4">
@@ -74,22 +83,46 @@ export function BranchForm({
           <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(submit)} className="space-y-4">
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="name">Name</FieldLabel>
-                <Input id="name" placeholder="Branch name" aria-invalid={!!errors.name} {...register('name')} />
-                {errors.name?.message ? <p className="text-sm text-destructive">{errors.name.message}</p> : null}
+                <Input
+                  id="name"
+                  placeholder="Branch name"
+                  aria-invalid={!!errors.name}
+                  {...register('name')}
+                />
+                {errors.name?.message ? (
+                  <p className="text-sm text-destructive">{errors.name.message}</p>
+                ) : null}
               </Field>
               <Field>
                 <FieldLabel htmlFor="type">Type</FieldLabel>
-                <Input
-                  id="type"
-                  placeholder="e.g. Warehouse, Office"
-                  aria-invalid={!!errors.type}
-                  {...register('type')}
+                <Controller
+                  control={control}
+                  name="type"
+                  render={({ field }) => (
+                    <Select
+                      value={String(field.value)}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                    >
+                      <SelectTrigger id="type" aria-invalid={!!errors.type}>
+                        <SelectValue placeholder="Select branch type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BRANCH_TYPES.map((type) => (
+                          <SelectItem key={type} value={String(type)}>
+                            {BRANCH_TYPE_LABELS[type]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 />
-                {errors.type?.message ? <p className="text-sm text-destructive">{errors.type.message}</p> : null}
+                {errors.type?.message ? (
+                  <p className="text-sm text-destructive">{errors.type.message}</p>
+                ) : null}
               </Field>
               <Field>
                 <FieldLabel htmlFor="telephone">Telephone</FieldLabel>
@@ -105,7 +138,12 @@ export function BranchForm({
               </Field>
               <Field>
                 <FieldLabel htmlFor="address">Address</FieldLabel>
-                <Input id="address" placeholder="Optional" aria-invalid={!!errors.address} {...register('address')} />
+                <Input
+                  id="address"
+                  placeholder="Optional"
+                  aria-invalid={!!errors.address}
+                  {...register('address')}
+                />
                 {errors.address?.message ? (
                   <p className="text-sm text-destructive">{errors.address.message}</p>
                 ) : null}
@@ -119,12 +157,16 @@ export function BranchForm({
                   aria-invalid={!!errors.email}
                   {...register('email')}
                 />
-                {errors.email?.message ? <p className="text-sm text-destructive">{errors.email.message}</p> : null}
+                {errors.email?.message ? (
+                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                ) : null}
               </Field>
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? <Spinner /> : null}
-                  {isSubmitting ? `${mode === 'create' ? 'Creating...' : 'Saving...'}` : submitButtonText}
+                  {isSubmitting
+                    ? `${mode === 'create' ? 'Creating...' : 'Saving...'}`
+                    : submitButtonText}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => navigate('/branches')}>
                   Cancel

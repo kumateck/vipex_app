@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import type { BranchType, UserType } from '@/shared/access/constants';
+
 export interface AuthUser {
   id: string;
   fullname: string;
@@ -10,9 +12,11 @@ export interface AuthUser {
     id: string;
     name: string;
   } | null;
-  branch: { id: string; name: string } | null;
+  branch: { id: string; name: string; type?: BranchType } | null;
   role: { id: string; name: string } | null;
   permissions: string[];
+  userType?: UserType;
+  location?: { id: string; name: string } | null;
   locationId?: string;
   locationName?: string;
 }

@@ -11,7 +11,7 @@ export function useCreateUserAction() {
   const onSubmit = async (values: UserFormValues) => {
     try {
       await createUser(values).unwrap();
-      toast.success('User created successfully');
+      toast.success('User created and invitation sent successfully');
       navigate('/users', { replace: true });
     } catch (error) {
       toast.error(getUserErrorMessage(error));

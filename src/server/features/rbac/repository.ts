@@ -1,6 +1,6 @@
 import { and, asc, count, eq, ilike, inArray } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { permissions, rolePermissions, roles } from '@/db/schemas';
+import { rolePermissions, roles } from '@/db/schemas';
 import { PermissionCatalog, type PermissionKey } from '@/shared/permissions/constants';
 
 export type ListRolesParams = {
@@ -51,10 +51,9 @@ export async function listRolesRepo(p: ListRolesParams) {
   const grants = await db
     .select({
       roleId: rolePermissions.roleId,
-      key: permissions.permission,
+      key: rolePermissions.permission,
     })
     .from(rolePermissions)
-    .innerJoin(permissions, eq(permissions.id, rolePermissions.permissionId))
     .where(and(eq(rolePermissions.companyId, p.companyId), inArray(rolePermissions.roleId, roleIds)));
 
   const permissionsByRole = new Map<string, string[]>();
@@ -137,76 +136,36 @@ export async function findRoleByNameRepo(companyId: string, name: string) {
   return row ?? null;
 }
 
-export async function ensurePermissionCatalogRepo(companyId: string, createdBy: string) {
-  const keys = PermissionCatalog.map((p) => p.key);
-  const existing = await db
-    .select({ id: permissions.id, key: permissions.permission })
-    .from(permissions)
-    .where(and(eq(permissions.companyId, companyId), inArray(permissions.permission, keys)));
-
-  const existingByKey = new Map(existing.map((row) => [row.key, row.id]));
-  const missing = PermissionCatalog.filter((entry) => !existingByKey.has(entry.key));
-
-  if (missing.length) {
-    const inserted = await db
-      .insert(permissions)
-      .values(
-        missing.map((entry) => ({
-          companyId,
-          permission: entry.key,
-          description: entry.description,
-          permType: entry.group,
-          permParent: entry.group,
-          createdBy,
-          isDeleted: false,
-        })),
-      )
-      .returning({ id: permissions.id, key: permissions.permission });
-
-    for (const row of inserted) existingByKey.set(row.key, row.id);
-  }
-
-  return existingByKey;
-}
-
-export async function setRolePermissionsRepo(roleId: string, companyId: string, permissionIds: string[]) {
+export async function setRolePermissionsRepo(
+  roleId: string,
+  companyId: string,
+  permissionKeys: PermissionKey[],
+) {
   await db.transaction(async (tx) => {
     await tx
       .delete(rolePermissions)
       .where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.companyId, companyId)));
 
-    if (!permissionIds.length) return;
+    if (!permissionKeys.length) return;
 
     await tx.insert(rolePermissions).values(
-      permissionIds.map((permissionId) => ({
+      permissionKeys.map((permission) => ({
         roleId,
         companyId,
-        permissionId,
+        permission,
       })),
     );
   });
 }
 
-export async function listPermissionCatalogForCompanyRepo(companyId: string) {
-  const rows = await db
-    .select({
-      id: permissions.id,
-      key: permissions.permission,
-      description: permissions.description,
-      group: permissions.permType,
-    })
-    .from(permissions)
-    .where(and(eq(permissions.companyId, companyId), eq(permissions.isDeleted, false)))
-    .orderBy(asc(permissions.permType), asc(permissions.permission));
-
-  return rows;
+export async function listPermissionCatalogForCompanyRepo(_companyId: string) {
+  return PermissionCatalog;
 }
 
 export async function listRolePermissionKeysRepo(roleId: string, companyId: string): Promise<PermissionKey[]> {
   const rows = await db
-    .select({ key: permissions.permission })
+    .select({ key: rolePermissions.permission })
     .from(rolePermissions)
-    .innerJoin(permissions, eq(permissions.id, rolePermissions.permissionId))
     .where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.companyId, companyId)));
 
   return rows.map((row) => row.key as PermissionKey);

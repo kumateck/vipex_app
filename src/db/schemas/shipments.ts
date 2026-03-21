@@ -14,12 +14,7 @@ import {
 import { companies, branches, users, locations } from './core';
 import { customers, cards } from './customers';
 import { sql } from 'drizzle-orm';
-import {
-  ParcelStatus,
-  PaymentMethod,
-  PaymentResponsibility,
-  PendingBookingStatus,
-} from './enums';
+import { ParcelStatus, PaymentMethod, PaymentResponsibility, PendingBookingStatus } from './enums';
 import { createId } from '@paralleldrive/cuid2';
 
 // Bookings: pure header (no destinationId, invoice, paymentMode, actionType)
@@ -30,16 +25,12 @@ export const bookings = pgTable(
     id: varchar('id', { length: 25 })
       .primaryKey()
       .$defaultFn(() => createId()),
-    senderId: varchar('sender_id', { length: 25 })
-      .notNull()
-      .references(() => customers.id),
     companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
     sourceId: varchar('source_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
-    status: smallint('status').notNull().default(ParcelStatus.CREATED),
     createdBy: varchar('created_by', { length: 25 })
       .notNull()
       .references(() => users.id),
@@ -47,10 +38,7 @@ export const bookings = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
     cashierSessionId: varchar('cashier_session_id', { length: 25 }),
   },
-  (t) => ({
-    bySender: index('bookings_sender_idx').on(t.senderId),
-    byCreated: index('bookings_created_idx').on(t.createdAt),
-  }),
+  (t) => ({ byCreated: index('bookings_created_idx').on(t.createdAt) }),
 );
 // Parcels: trackingCode (QR) + bookingCode (human visible); payment method stored as smallint
 export const parcels = pgTable(
@@ -91,7 +79,9 @@ export const parcels = pgTable(
     parcelValuePsw: bigint('parcel_value_psw', { mode: 'number' })
       .notNull()
       .default(sql`0`),
-    chargePsw: bigint('charge_psw', { mode: 'number' }).notNull().default(sql`0`),
+    chargePsw: bigint('charge_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
 
     cardId: varchar('card_id', { length: 25 }).references(() => cards.id),
     cardNumber: varchar('card_number', { length: 255 }),

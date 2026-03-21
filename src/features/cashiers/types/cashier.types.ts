@@ -13,11 +13,14 @@ export interface CashierSessionType {
 export interface CashierSession {
   id: string;
   cashierId: string;
+  cashierName: string | null;
   branchId: string;
   shiftTypeId: string | null;
   scheduledStartTime: string;
   actualEndTime: string | null;
   openingBalancePsw: number;
+  totalReceivedPsw: number;
+  currentBalancePsw: number;
   closingBalancePsw: number | null;
   status: string;
   createdAt: string;
@@ -41,4 +44,15 @@ export interface OpenCashierSessionInput {
 export interface CloseCashierSessionInput {
   endTime: string;
   closingBalanceCedis?: number;
+}
+
+export interface CashierSessionSummary {
+  sessionId: string;
+  amountPaidPsw: number;
+  toBePaidPsw: number;
+  totalSalesPsw: number;
+  totalCreditCreatedPsw: number;
+  totalToBePaidCollectedPsw: number;
+  totalDeliveryFeeCollectedPsw: number;
+  mode: 'sender' | 'receiver' | 'delivery';
 }

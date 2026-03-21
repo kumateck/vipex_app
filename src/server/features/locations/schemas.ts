@@ -1,14 +1,17 @@
 import { t } from 'elysia';
-import { UUID, NonEmptyString255, PaginationMetaSchema, PaginationRequestQuery } from '../../schemas/common';
+import {
+  UUID,
+  NonEmptyString255,
+  PaginationMetaSchema,
+  PaginationRequestQueryProps,
+} from '../../schemas/common';
 
-export const ListLocationsQuery = t.Intersect([
-  PaginationRequestQuery,
-  t.Object({
-    companyId: t.Optional(UUID),
-    branchId: t.Optional(UUID),
-    includeDeleted: t.Optional(t.Boolean()),
-  }),
-]);
+export const ListLocationsQuery = t.Object({
+  ...PaginationRequestQueryProps,
+  companyId: t.Optional(UUID),
+  branchId: t.Optional(UUID),
+  includeDeleted: t.Optional(t.Boolean()),
+});
 
 export const GetLocationParams = t.Object({
   id: UUID,

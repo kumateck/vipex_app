@@ -12,6 +12,9 @@ export type JwtPayload = {
   roleId?: string | null;
   companyId?: string | null;
   branchId?: string | null;
+  branchType?: number | null;
+  locationId?: string | null;
+  userType?: number | null;
   permissions?: string[];
 };
 

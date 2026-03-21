@@ -1,6 +1,9 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
 import { UUID } from '@/server/schemas/common';
+import { authPlugin, requireAuth, requirePermissions } from '@/server/plugins/auth';
+import { PermissionKeys } from '@/shared/permissions/constants';
+import { getCashierDaySessionsReportSvc } from './service';
 
 const notImplemented = (scope: string) => ({
   error: {
@@ -10,23 +13,29 @@ const notImplemented = (scope: string) => ({
 });
 
 export const reportingRoutes = new Elysia({ name: 'reporting' })
+  .use(authPlugin)
   .get(
     '/cashier-performance',
-    async ({ set }) => {
-      set.status = HttpStatus.NOT_IMPLEMENTED;
-      return notImplemented('Cashier performance report');
+    async ({ user, query }) => {
+      return getCashierDaySessionsReportSvc({
+        companyId: user!.companyId!,
+        cashierId: query.cashierId,
+        branchId: query.branchId ?? null,
+        date: query.date,
+        includeTransactions: query.includeTransactions ?? true,
+      });
     },
     {
       query: t.Object({
-        companyId: UUID,
+        cashierId: UUID,
         branchId: t.Optional(UUID),
-        locationId: t.Optional(UUID),
-        from: t.String({ format: 'date-time' }),
-        to: t.String({ format: 'date-time' }),
+        date: t.String({ format: 'date' }),
+        includeTransactions: t.Optional(t.Boolean()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanGetCashierPerformanceReport)],
       detail: {
         tags: ['Reporting'],
-        summary: 'Cashier performance report',
+        summary: 'Cashier day sessions with transaction details',
         operationId: 'getCashierPerformanceReport',
       },
     },

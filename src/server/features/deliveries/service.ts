@@ -3,6 +3,7 @@ import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 import { DeliveryMode, PaymentComponent, Payer, CashierType, PaymentMethod } from '@/db/schemas';
 import { createPaymentSvc, sumPrincipalPaidForParcelSvc } from '../payments/service';
 import { getParcelRepo } from '../shipments/parcels.repository';
+import { assertParcelFullyPaid } from '../shipments/parcel-payment-settlement';
 import { createDeliveryRepo, getDeliveryByParcelRepo, updateDeliveryRepo } from './repository';
 import { toPesewas } from '@/server/utils/gh-money';
 
@@ -57,6 +58,8 @@ export async function markOfficePickupCompleteSvc(input: {
     parcel.plannedToBePaidPsw > principalPaid ? parcel.plannedToBePaidPsw - principalPaid : 0;
   if (outstanding > 0)
     throw Conflict('Outstanding to-be-paid principal exists; collect before release');
+
+  await assertParcelFullyPaid(input.parcelId);
 
   const updated = await updateDeliveryRepo(delivery.id, {
     status: 'DELIVERED',
@@ -149,6 +152,8 @@ export async function doorToDoorCompleteSvc(input: {
 
   const delivery = await getDeliveryByParcelRepo(input.parcelId);
   if (!delivery) throw NotFound('Delivery not found');
+
+  await assertParcelFullyPaid(input.parcelId);
 
   const updated = await updateDeliveryRepo(delivery.id, {
     status: 'DELIVERED',

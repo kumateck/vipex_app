@@ -2,6 +2,7 @@ import { buildPaginationMeta, normalizePagination } from '@/server/utils/paginat
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import {
   createParcelSvc,
+  getParcelFullDetailsSvc,
   getParcelSvc,
   listParcelsSvc,
   markParcelReceivedSvc,
@@ -50,6 +51,42 @@ export async function listParcelsCtrl(
 }
 
 export const getParcelByIdCtrl = getParcelSvc;
+export async function getParcelDetailsCtrl(id: string) {
+  const result = await getParcelFullDetailsSvc(id);
+  return {
+    parcel: {
+      ...result.parcel,
+      createdAt: result.parcel.createdAt.toISOString(),
+      updatedAt: result.parcel.updatedAt.toISOString(),
+      receivedAt: result.parcel.receivedAt ? result.parcel.receivedAt.toISOString() : null,
+      confirmedAt: result.parcel.confirmedAt ? result.parcel.confirmedAt.toISOString() : null,
+    },
+    payments: result.payments.map((payment) => ({
+      ...payment,
+      receivedAt: payment.receivedAt.toISOString(),
+      createdAt: payment.createdAt.toISOString(),
+      voidedAt: payment.voidedAt ? payment.voidedAt.toISOString() : null,
+    })),
+    delivery: result.delivery
+      ? {
+          ...result.delivery,
+          receiverCalledConfirmedAt: result.delivery.receiverCalledConfirmedAt
+            ? result.delivery.receiverCalledConfirmedAt.toISOString()
+            : null,
+          deliveredAt: result.delivery.deliveredAt ? result.delivery.deliveredAt.toISOString() : null,
+          confirmedAt: result.delivery.confirmedAt ? result.delivery.confirmedAt.toISOString() : null,
+          createdAt: result.delivery.createdAt.toISOString(),
+          updatedAt: result.delivery.updatedAt.toISOString(),
+        }
+      : null,
+    consignments: result.consignments.map((consignment) => ({
+      ...consignment,
+      consignmentDate: consignment.consignmentDate.toISOString(),
+      addedAt: consignment.addedAt.toISOString(),
+      removedAt: consignment.removedAt ? consignment.removedAt.toISOString() : null,
+    })),
+  };
+}
 export const createParcelCtrl = createParcelSvc;
 export const updateParcelCtrl = updateParcelSvc;
 export const markParcelReceivedCtrl = markParcelReceivedSvc;

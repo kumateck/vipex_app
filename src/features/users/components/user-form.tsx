@@ -11,6 +11,9 @@ import { Spinner } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches';
 import { useListRoleOptionsQuery } from '@/features/rbac';
+import { useListLocationOptionsQuery } from '@/features/locations';
+import { BRANCH_TYPE_LABELS, USER_TYPE_LABELS, USER_TYPES } from '@/shared/access/constants';
+import { BranchType, UserType } from '@/db/schemas/enums';
 import { userFormSchema, type UserFormValues } from '../schemas/user-form.schema';
 import type { User } from '../types/user.types';
 import { userStatusOptions } from './user-columns';
@@ -33,7 +36,14 @@ export function UserForm({
   submitButtonText,
 }: UserFormProps) {
   const navigate = useNavigate();
-  const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
+  const authUser = useAuthStore((state) => state.user);
+  const companyId = authUser?.company?.id ?? null;
+  const actorBranchId = authUser?.branch?.id ?? null;
+  const actorBranchType = authUser?.branch?.type ?? null;
+  const actorLocationId = authUser?.locationId ?? null;
+  const isHeadOfficeActor = actorBranchType === BranchType.HEADOFFICE;
+  const isLocationManagerActor = !isHeadOfficeActor && !!actorLocationId;
+  const isBranchManagerActor = !isHeadOfficeActor && !actorLocationId;
 
   const { data: branchesData, isLoading: isLoadingBranches } = useListBranchOptionsQuery(
     { companyId },
@@ -48,6 +58,8 @@ export function UserForm({
     control,
     register,
     handleSubmit,
+    watch,
+    setValue,
     reset,
     formState: { errors },
   } = useForm<UserFormValues>({
@@ -59,8 +71,30 @@ export function UserForm({
       status: 1,
       roleId: '',
       branchId: '',
+      locationId: '',
+      userType: UserType.STAFF,
     },
     mode: 'onSubmit',
+  });
+
+  const selectedBranchId = watch('branchId');
+  const selectedLocationId = watch('locationId');
+  const effectiveBranchId = selectedBranchId || actorBranchId || '';
+  const {
+    data: locationOptions = [],
+    isLoading: isLoadingLocations,
+    isFetching: isFetchingLocations,
+  } = useListLocationOptionsQuery(
+    {
+      companyId,
+      branchId: effectiveBranchId || null,
+    },
+    { skip: !companyId || !effectiveBranchId },
+  );
+
+  const branchOptions = (branchesData ?? []).filter((branch) => {
+    if (isHeadOfficeActor) return true;
+    return branch.id === actorBranchId;
   });
 
   useEffect(() => {
@@ -72,6 +106,8 @@ export function UserForm({
         status: initialData.status ?? 1,
         roleId: initialData.roleId ?? '',
         branchId: initialData.branchId ?? '',
+        locationId: initialData.locationId ?? '',
+        userType: initialData.userType ?? UserType.STAFF,
       });
       return;
     }
@@ -81,9 +117,49 @@ export function UserForm({
       email: '',
       status: 1,
       roleId: '',
-      branchId: '',
+      branchId: isHeadOfficeActor ? '' : (actorBranchId ?? ''),
+      locationId: isLocationManagerActor ? (actorLocationId ?? '') : '',
+      userType: UserType.STAFF,
     });
-  }, [initialData, mode, reset]);
+  }, [
+    actorBranchId,
+    actorLocationId,
+    initialData,
+    isHeadOfficeActor,
+    isLocationManagerActor,
+    mode,
+    reset,
+  ]);
+
+  useEffect(() => {
+    if (!selectedBranchId) return;
+    if (isLocationManagerActor) {
+      setValue('locationId', actorLocationId ?? '', { shouldValidate: true });
+      return;
+    }
+    const isHydratingEditLocation =
+      mode === 'edit' &&
+      !!selectedLocationId &&
+      locationOptions.length === 0 &&
+      (isLoadingLocations || isFetchingLocations);
+    if (isHydratingEditLocation) {
+      return;
+    }
+    const hasCurrentLocation = locationOptions.some((location) => location.id === selectedLocationId);
+    if (!hasCurrentLocation) {
+      setValue('locationId', '', { shouldValidate: false });
+    }
+  }, [
+    actorLocationId,
+    isFetchingLocations,
+    isLoadingLocations,
+    isLocationManagerActor,
+    locationOptions,
+    mode,
+    selectedBranchId,
+    selectedLocationId,
+    setValue,
+  ]);
 
   return (
     <div className="w-full max-w-lg mx-auto p-4">
@@ -160,13 +236,75 @@ export function UserForm({
                   name="branchId"
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="branchId" aria-invalid={!!errors.branchId} disabled={isLoadingBranches}>
+                      <SelectTrigger
+                        id="branchId"
+                        aria-invalid={!!errors.branchId}
+                        disabled={isLoadingBranches || isBranchManagerActor || isLocationManagerActor}
+                      >
                         <SelectValue placeholder={isLoadingBranches ? 'Loading branches...' : 'Select branch'} />
                       </SelectTrigger>
                       <SelectContent>
-                        {(branchesData ?? []).map((branch) => (
+                        {branchOptions.map((branch) => (
                           <SelectItem key={branch.id} value={branch.id}>
                             {branch.name}
+                            {branch.type !== null && branch.type !== undefined
+                              ? ` (${BRANCH_TYPE_LABELS[branch.type] ?? branch.type})`
+                              : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="locationId">Location</FieldLabel>
+                <Controller
+                  control={control}
+                  name="locationId"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value ?? ''}
+                      onValueChange={(value) => field.onChange(value === '__any__' ? '' : value)}
+                    >
+                      <SelectTrigger
+                        id="locationId"
+                        aria-invalid={!!errors.locationId}
+                        disabled={!effectiveBranchId || isLocationManagerActor}
+                      >
+                        <SelectValue placeholder={!effectiveBranchId ? 'Select branch first' : 'Any location'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {isLocationManagerActor ? null : (
+                          <SelectItem value="__any__">Any location</SelectItem>
+                        )}
+                        {locationOptions.map((location) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="userType">User type</FieldLabel>
+                <Controller
+                  control={control}
+                  name="userType"
+                  render={({ field }) => (
+                    <Select
+                      value={String(field.value)}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                    >
+                      <SelectTrigger id="userType" aria-invalid={!!errors.userType}>
+                        <SelectValue placeholder="Select user type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {USER_TYPES.map((type) => (
+                          <SelectItem key={type} value={String(type)}>
+                            {USER_TYPE_LABELS[type]}
                           </SelectItem>
                         ))}
                       </SelectContent>

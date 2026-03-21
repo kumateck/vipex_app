@@ -15,6 +15,12 @@ import type {
 } from '../types/location.types';
 import { toCreateLocationPayload, toUpdateLocationPayload } from '../utils/location-payload';
 
+export interface LocationOption {
+  id: string;
+  name: string;
+  branchId: string;
+}
+
 export const locationsApi = api.injectEndpoints({
   endpoints: (builder) => ({
     listLocations: builder.query<ServerListResponse<Location>, LocationListQuery | void>({
@@ -28,6 +34,22 @@ export const locationsApi = api.injectEndpoints({
     getLocation: builder.query<Location, string>({
       query: (id) => ({ url: `/locations/${id}` }),
       providesTags: (_result, _err, id) => [{ type: 'Locations', id }],
+    }),
+
+    listLocationOptions: builder.query<
+      LocationOption[],
+      {
+        companyId?: string | null;
+        branchId?: string | null;
+        search?: string;
+        includeDeleted?: boolean;
+      } | void
+    >({
+      query: (params) => ({
+        url: '/locations/options',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'Locations', id: 'OPTIONS' }],
     }),
 
     updateLocation: builder.mutation<{ id: string }, { id: string; body: LocationMutationInput }>({
@@ -74,6 +96,7 @@ export const locationsApi = api.injectEndpoints({
 export const {
   useListLocationsQuery,
   useGetLocationQuery,
+  useListLocationOptionsQuery,
   useUpdateLocationMutation,
   useCreateLocationMutation,
   useDeleteLocationMutation,

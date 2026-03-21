@@ -42,6 +42,7 @@ export function DataTable<TData, TValue, TFilters = Record<string, unknown>>(
         setGlobalFilter={state.onGlobalFilterChange}
         searchColumn={searchColumn}
         searchPlaceholder={searchPlaceholder}
+        showSearch={props.showSearch}
       />
 
       <div

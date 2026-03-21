@@ -10,3 +10,6 @@ export * from './hooks/use-user-actions';
 export * from './pages/users-list-page';
 export * from './pages/users-create-page';
 export * from './pages/users-edit-page';
+export * from './pages/users-invites-page';
+export * from './pages/users-active-page';
+export * from './pages/users-inactive-page';

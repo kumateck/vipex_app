@@ -8,7 +8,7 @@ import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessa
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useListLocationsQuery } from '@/features/locations/api/locations.api';
+import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
 import { CustomerLookupSection } from './customer-lookup-section';
 import type { ParcelBookingFormValues } from './parcel-form.types';
 
@@ -35,21 +35,15 @@ export function ParcelCard({ index, canRemove, onRemove, companyId, branchOption
   const receiverCustomerName = parcelFieldName('receiver.customerId');
   const receiverFullnameName = parcelFieldName('receiver.fullname');
 
-  const destinationBranchId = useWatch({ control, name: destinationBranchName }) ?? '';
+  const destinationBranchId = String(useWatch({ control, name: destinationBranchName }) ?? '');
   const previousBranchId = useRef(destinationBranchId);
 
-  const { data: locationsData, isLoading: isLoadingLocations } = useListLocationsQuery(
+  const { data: locationOptions = [], isLoading: isLoadingLocations } = useListLocationOptionsQuery(
     destinationBranchId && companyId
-      ? {
-          page: 1,
-          pageSize: 100,
-          filters: { companyId, branchId: destinationBranchId },
-        }
+      ? { companyId, branchId: destinationBranchId }
       : undefined,
     { skip: !destinationBranchId || !companyId },
   );
-
-  const locationOptions = locationsData?.data ?? [];
 
   useEffect(() => {
     if (previousBranchId.current === destinationBranchId) return;

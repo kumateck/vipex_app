@@ -14,7 +14,7 @@ function toBranchDto(b: {
   id: string;
   companyId: string;
   name: string;
-  type: string;
+  type: number;
   telephone: string | null;
   address: string | null;
   email: string | null;
@@ -87,7 +87,7 @@ export async function listBranchOptionsCtrl(filters: {
 export async function createBranchCtrl(input: {
   companyId: string;
   name: string;
-  type: string;
+  type: number;
   telephone?: string | null;
   address?: string | null;
   email?: string | null;
@@ -100,7 +100,7 @@ export async function updateBranchCtrl(
   id: string,
   patch: {
     name?: string;
-    type?: string;
+    type?: number;
     telephone?: string | null;
     address?: string | null;
     email?: string | null;

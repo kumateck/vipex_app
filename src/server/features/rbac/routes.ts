@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '@/server/utils/http-status';
-import { authPlugin, requireAuth, requirePermissions } from '@/server/plugins/auth';
+import { authPlugin, requireAuth, requireHeadOffice, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys, type PermissionKey } from '@/shared/permissions/constants';
 import {
   createRoleCtrl,
@@ -85,7 +85,7 @@ export const rbacRoutes = new Elysia({ name: 'rbac' })
     {
       body: CreateRoleBody,
       response: CreateRoleResponse,
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateRoles)],
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateRoles), requireHeadOffice()],
       detail: { tags: ['RBAC'], summary: 'Create role', operationId: 'createRole' },
     },
   )
@@ -98,7 +98,7 @@ export const rbacRoutes = new Elysia({ name: 'rbac' })
       params: t.Object({ id: t.String({ minLength: 1, maxLength: 25 }) }),
       body: UpdateRoleBody,
       response: CreateRoleResponse,
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateRoles)],
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateRoles), requireHeadOffice()],
       detail: { tags: ['RBAC'], summary: 'Update role name', operationId: 'updateRole' },
     },
   )
@@ -110,7 +110,7 @@ export const rbacRoutes = new Elysia({ name: 'rbac' })
     {
       params: t.Object({ id: t.String({ minLength: 1, maxLength: 25 }) }),
       response: t.Object({ success: t.Boolean() }),
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanDeleteRoles)],
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanDeleteRoles), requireHeadOffice()],
       detail: { tags: ['RBAC'], summary: 'Delete role', operationId: 'deleteRole' },
     },
   )
@@ -151,7 +151,7 @@ export const rbacRoutes = new Elysia({ name: 'rbac' })
       params: t.Object({ id: t.String({ minLength: 1, maxLength: 25 }) }),
       body: SetRolePermissionsBody,
       response: SetRolePermissionsResponse,
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanManageRolePermissions)],
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanManageRolePermissions), requireHeadOffice()],
       detail: { tags: ['RBAC'], summary: 'Set role permissions', operationId: 'setRolePermissions' },
     },
   );

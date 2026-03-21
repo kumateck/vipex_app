@@ -3,6 +3,7 @@ import {
   createLocationRepo,
   findLocationByNameRepo,
   getLocationRepo,
+  listLocationOptionsRepo,
   listLocationsRepo,
   softDeleteLocationRepo,
   updateLocationRepo,
@@ -11,6 +12,14 @@ import {
 
 export async function listLocationsSvc(p: ListLocationParams) {
   return listLocationsRepo(p);
+}
+export async function listLocationOptionsSvc(p: {
+  companyId?: string | null;
+  branchId?: string | null;
+  search?: string | null;
+  includeDeleted?: boolean | null;
+}) {
+  return listLocationOptionsRepo(p);
 }
 export async function getLocationSvc(id: string) {
   const l = await getLocationRepo(id);

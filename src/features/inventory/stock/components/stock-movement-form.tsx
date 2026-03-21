@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
@@ -10,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/auth-store';
-import { useListInventoryLocationsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
-import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { STOCK_MOVEMENT_TYPE_OPTIONS } from '../constants/stock-options';
 import { createStockMovementSchema, type CreateStockMovementFormValues } from '../schemas/stock-forms.schema';
 
@@ -22,30 +21,17 @@ interface StockMovementFormProps {
   submitButtonText: string;
 }
 
-const OPTIONS_PAGE_SIZE = 100;
-
 export function StockMovementForm({ onSubmit, isSubmitting, title, submitButtonText }: StockMovementFormProps) {
   const navigate = useNavigate();
   const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
-
-  const productQuery = useMemo(
-    () => ({ page: 1, pageSize: OPTIONS_PAGE_SIZE, filters: { companyId } }),
-    [companyId],
+  const { data: products = [], isLoading: isLoadingProducts } = useListInventoryProductOptionsQuery(
+    { companyId },
+    { skip: !companyId },
   );
-  const locationQuery = useMemo(
-    () => ({ page: 1, pageSize: OPTIONS_PAGE_SIZE, filters: { companyId } }),
-    [companyId],
+  const { data: locations = [], isLoading: isLoadingLocations } = useListInventoryLocationOptionsQuery(
+    { companyId },
+    { skip: !companyId },
   );
-
-  const { data: productsData, isLoading: isLoadingProducts } = useListInventoryProductsQuery(productQuery, {
-    skip: !companyId,
-  });
-  const { data: locationsData, isLoading: isLoadingLocations } = useListInventoryLocationsQuery(locationQuery, {
-    skip: !companyId,
-  });
-
-  const products = productsData?.data ?? [];
-  const locations = locationsData?.data ?? [];
 
   const {
     control,

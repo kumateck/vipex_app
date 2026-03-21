@@ -25,17 +25,15 @@ export function ParcelReceipts({ receipt }: ParcelReceiptsProps) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-sm font-medium">Parcel {index + 1}</p>
-                <p className="text-xs text-muted-foreground">Tracking: {parcel.trackingCode}</p>
+                <p className="text-xs text-muted-foreground">Booking: {parcel.bookingCode}</p>
               </div>
               <Badge variant="outline">
-                {parcel.paymentResponsibility === 'SENDER' ? 'Paid' : 'Pay on pickup'}
+                {parcel.receiverToPayCedis > 0 ? 'Receiver to pay' : 'Sender paid'}
               </Badge>
             </div>
             <ParcelReceiptActions
-              bookingId={receipt.bookingId}
-              trackingCode={parcel.trackingCode}
-              paymentResponsibility={parcel.paymentResponsibility}
-              amountCedis={parcel.amountCedis}
+              data={parcel}
+              triggerLabel="Print Sticker + Invoice"
             />
           </div>
         ))}

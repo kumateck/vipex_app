@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { UUID, NonEmptyString255, PaginationRequestQuery, SmallInt } from '../../schemas/common';
+import { UUID, NonEmptyString255, PaginationRequestQueryProps, SmallInt } from '../../schemas/common';
 import {
   listPendingBookingsCtrl,
   getPendingBookingCtrl,
@@ -29,14 +29,12 @@ export const pendingBookingsRoutes = new Elysia({ name: 'pending-bookings' })
         },
       }),
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          branchId: UUID,
-          status: t.Optional(SmallInt),
-          attendantId: t.Optional(UUID),
-        }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        branchId: UUID,
+        status: t.Optional(SmallInt),
+        attendantId: t.Optional(UUID),
+      }),
       detail: {
         tags: ['Shipments'],
         summary: 'List pending bookings',

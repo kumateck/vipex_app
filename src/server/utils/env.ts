@@ -36,6 +36,16 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
+const toBoolean = z.preprocess((value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+  }
+  return value;
+}, z.boolean());
+
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
@@ -59,18 +69,18 @@ const EnvSchema = z.object({
   // SMTP (optional)
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().default(587),
-  SMTP_SECURE: z.coerce.boolean().default(false), // true for 465
+  SMTP_SECURE: toBoolean.default(false), // true for 465
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(), // e.g. 'Vipex <no-reply@domain.com>'
-  SMTP_REQUIRE_TLS: z.coerce.boolean().default(true), // Enforce STARTTLS if not using port 465
-  SMTP_TLS_REJECT_UNAUTHORIZED: z.coerce.boolean().default(true), // Reject invalid TLS certs
-  SMTP_POOL: z.coerce.boolean().default(true), // Use pooled connections
+  SMTP_REQUIRE_TLS: toBoolean.default(true), // Enforce STARTTLS if not using port 465
+  SMTP_TLS_REJECT_UNAUTHORIZED: toBoolean.default(true), // Reject invalid TLS certs
+  SMTP_POOL: toBoolean.default(true), // Use pooled connections
   SMTP_MAX_CONNECTIONS: z.coerce.number().int().positive().default(5),
   SMTP_MAX_MESSAGES: z.coerce.number().int().positive().default(100),
   SMTP_CONNECTION_TIMEOUT: z.coerce.number().int().positive().default(10000), // ms
   SMTP_GREETING_TIMEOUT: z.coerce.number().int().positive().default(5000), // ms
-  SMTP_DEBUG: z.coerce.boolean().default(false), // Log SMTP traffic (no credentials)
+  SMTP_DEBUG: toBoolean.default(false), // Log SMTP traffic (no credentials)
   // App URLs
   APP_BASE_URL: z.string().default(`http://localhost:${process.env.PORT || 3000}`),
   // Redis / rate limiting
@@ -78,7 +88,7 @@ const EnvSchema = z.object({
   RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
   // PostGIS
-  POSTGIS_REQUIRED: z.coerce.boolean().default(false),
+  POSTGIS_REQUIRED: toBoolean.default(false),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

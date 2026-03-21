@@ -2,7 +2,7 @@ CREATE TABLE "branches" (
 	"id" varchar(25) PRIMARY KEY NOT NULL,
 	"company_id" varchar(25) NOT NULL,
 	"name" varchar(255) NOT NULL,
-	"type" varchar(255) NOT NULL,
+	"type" smallint DEFAULT 1 NOT NULL,
 	"telephone" varchar(255),
 	"address" varchar(255),
 	"email" varchar(255),
@@ -37,25 +37,11 @@ CREATE TABLE "locations" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "permissions" (
-	"id" varchar(25) PRIMARY KEY NOT NULL,
-	"company_id" varchar(25) NOT NULL,
-	"permission" varchar(255) NOT NULL,
-	"description" varchar(255) NOT NULL,
-	"perm_type" varchar(255) NOT NULL,
-	"perm_icon" varchar(255),
-	"perm_parent" varchar(255),
-	"is_deleted" boolean DEFAULT false NOT NULL,
-	"created_by" varchar(25) NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "role_permissions" (
 	"id" varchar(25) PRIMARY KEY NOT NULL,
 	"role_id" varchar(25) NOT NULL,
 	"company_id" varchar(25) NOT NULL,
-	"permission_id" varchar(25) NOT NULL,
+	"permission" varchar(255) NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -92,6 +78,8 @@ CREATE TABLE "users" (
 	"role_id" varchar(25) NOT NULL,
 	"company_id" varchar(25) NOT NULL,
 	"branch_id" varchar(25) NOT NULL,
+	"location_id" varchar(25),
+	"user_type" smallint DEFAULT 0 NOT NULL,
 	"created_by" varchar(25) NOT NULL,
 	"tax_report_confirmation" boolean DEFAULT false NOT NULL,
 	"reset_token" varchar(255),
@@ -135,10 +123,8 @@ CREATE TABLE "customers" (
 --> statement-breakpoint
 CREATE TABLE "bookings" (
 	"id" varchar(25) PRIMARY KEY NOT NULL,
-	"sender_id" varchar(25) NOT NULL,
 	"company_id" varchar(25) NOT NULL,
 	"source_id" varchar(25) NOT NULL,
-	"status_id" varchar(25) NOT NULL,
 	"created_by" varchar(25) NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -176,10 +162,11 @@ CREATE TABLE "parcels" (
 	"sender_id" varchar(25) NOT NULL,
 	"receiver_id" varchar(25) NOT NULL,
 	"second_receiver_id" varchar(25),
-	"status_id" varchar(25) NOT NULL,
+	"status" smallint DEFAULT 0 NOT NULL,
 	"parcel_details" varchar(255) NOT NULL,
 	"parcel_content" varchar(255) NOT NULL,
 	"parcel_value_psw" bigint DEFAULT 0 NOT NULL,
+	"charge_psw" bigint DEFAULT 0 NOT NULL,
 	"card_id" varchar(25),
 	"card_number" varchar(255),
 	"second_card_id" varchar(25),
@@ -597,26 +584,101 @@ CREATE TABLE "audit_logs" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "consignment_configs" (
+	"id" varchar(25) PRIMARY KEY NOT NULL,
+	"company_id" varchar(25) NOT NULL,
+	"auto_grouping_mode" smallint DEFAULT 0 NOT NULL,
+	"min_parcel_count" integer DEFAULT 5 NOT NULL,
+	"max_parcel_count" integer DEFAULT 50 NOT NULL,
+	"max_weight_kg" smallint DEFAULT 100 NOT NULL,
+	"grouping_schedule" json,
+	"max_wait_minutes" integer DEFAULT 120 NOT NULL,
+	"source_branch_id" varchar(25),
+	"destination_branch_id" varchar(25),
+	"preferred_shipping_time" varchar(10),
+	"max_transit_time_hours" integer DEFAULT 48 NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"created_by" varchar(25) NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "consignment_manifests" (
+	"id" varchar(25) PRIMARY KEY NOT NULL,
+	"consignment_id" varchar(25) NOT NULL,
+	"manifest_number" varchar(255) NOT NULL,
+	"total_parcels" integer NOT NULL,
+	"total_weight" smallint,
+	"total_value_psw" bigint NOT NULL,
+	"carrier_name" varchar(255),
+	"vehicle_number" varchar(50),
+	"driver_name" varchar(255),
+	"driver_contact" varchar(50),
+	"route_description" varchar(500),
+	"estimated_departure_time" timestamp,
+	"estimated_arrival_time" timestamp,
+	"actual_departure_time" timestamp,
+	"actual_arrival_time" timestamp,
+	"status" smallint DEFAULT 0 NOT NULL,
+	"quality_checked_by" varchar(25),
+	"quality_checked_at" timestamp,
+	"quality_notes" varchar(1000),
+	"created_by" varchar(25) NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "consignment_suggestions" (
+	"id" varchar(25) PRIMARY KEY NOT NULL,
+	"company_id" varchar(25) NOT NULL,
+	"source_branch_id" varchar(25) NOT NULL,
+	"destination_branch_id" varchar(25) NOT NULL,
+	"parcel_ids" json NOT NULL,
+	"suggested_groupings" json NOT NULL,
+	"total_value_psw" bigint NOT NULL,
+	"total_weight" smallint,
+	"parcel_count" integer NOT NULL,
+	"efficiency_score" smallint,
+	"status" varchar(20) DEFAULT 'PENDING',
+	"reviewed_by" varchar(25),
+	"reviewed_at" timestamp,
+	"notes" varchar(1000),
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"expires_at" timestamp
+);
+--> statement-breakpoint
+CREATE TABLE "consignment_tracking_events" (
+	"id" varchar(25) PRIMARY KEY NOT NULL,
+	"consignment_id" varchar(25) NOT NULL,
+	"event_type" varchar(50) NOT NULL,
+	"event_location" varchar(255),
+	"event_description" varchar(1000),
+	"latitude" varchar(20),
+	"longitude" varchar(20),
+	"photo_url" varchar(500),
+	"document_url" varchar(500),
+	"event_time" timestamp NOT NULL,
+	"recorded_by" varchar(25),
+	"metadata" json
+);
+--> statement-breakpoint
 ALTER TABLE "branches" ADD CONSTRAINT "branches_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "locations" ADD CONSTRAINT "locations_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "locations" ADD CONSTRAINT "locations_branch_id_branches_id_fk" FOREIGN KEY ("branch_id") REFERENCES "public"."branches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "permissions" ADD CONSTRAINT "permissions_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_permission_id_permissions_id_fk" FOREIGN KEY ("permission_id") REFERENCES "public"."permissions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "roles" ADD CONSTRAINT "roles_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "statuses" ADD CONSTRAINT "statuses_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_branch_id_branches_id_fk" FOREIGN KEY ("branch_id") REFERENCES "public"."branches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "users" ADD CONSTRAINT "users_location_id_locations_id_fk" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "cards" ADD CONSTRAINT "cards_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "customer_cards" ADD CONSTRAINT "customer_cards_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "customer_cards" ADD CONSTRAINT "customer_cards_card_id_cards_id_fk" FOREIGN KEY ("card_id") REFERENCES "public"."cards"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "customers" ADD CONSTRAINT "customers_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "bookings" ADD CONSTRAINT "bookings_sender_id_customers_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."customers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bookings" ADD CONSTRAINT "bookings_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bookings" ADD CONSTRAINT "bookings_source_id_branches_id_fk" FOREIGN KEY ("source_id") REFERENCES "public"."branches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "bookings" ADD CONSTRAINT "bookings_status_id_statuses_id_fk" FOREIGN KEY ("status_id") REFERENCES "public"."statuses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bookings" ADD CONSTRAINT "bookings_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "consignment_items" ADD CONSTRAINT "consignment_items_consignment_id_consignments_id_fk" FOREIGN KEY ("consignment_id") REFERENCES "public"."consignments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "consignment_items" ADD CONSTRAINT "consignment_items_parcel_id_parcels_id_fk" FOREIGN KEY ("parcel_id") REFERENCES "public"."parcels"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -631,7 +693,6 @@ ALTER TABLE "parcels" ADD CONSTRAINT "parcels_booking_id_bookings_id_fk" FOREIGN
 ALTER TABLE "parcels" ADD CONSTRAINT "parcels_sender_id_customers_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."customers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "parcels" ADD CONSTRAINT "parcels_receiver_id_customers_id_fk" FOREIGN KEY ("receiver_id") REFERENCES "public"."customers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "parcels" ADD CONSTRAINT "parcels_second_receiver_id_customers_id_fk" FOREIGN KEY ("second_receiver_id") REFERENCES "public"."customers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "parcels" ADD CONSTRAINT "parcels_status_id_statuses_id_fk" FOREIGN KEY ("status_id") REFERENCES "public"."statuses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "parcels" ADD CONSTRAINT "parcels_card_id_cards_id_fk" FOREIGN KEY ("card_id") REFERENCES "public"."cards"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "parcels" ADD CONSTRAINT "parcels_second_card_id_cards_id_fk" FOREIGN KEY ("second_card_id") REFERENCES "public"."cards"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "parcels" ADD CONSTRAINT "parcels_pickup_location_id_locations_id_fk" FOREIGN KEY ("pickup_location_id") REFERENCES "public"."locations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -696,19 +757,25 @@ ALTER TABLE "shift_templates" ADD CONSTRAINT "shift_templates_shift_type_id_shif
 ALTER TABLE "shift_types" ADD CONSTRAINT "shift_types_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_actor_user_id_users_id_fk" FOREIGN KEY ("actor_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "consignment_configs" ADD CONSTRAINT "consignment_configs_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "consignment_configs" ADD CONSTRAINT "consignment_configs_source_branch_id_branches_id_fk" FOREIGN KEY ("source_branch_id") REFERENCES "public"."branches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "consignment_configs" ADD CONSTRAINT "consignment_configs_destination_branch_id_branches_id_fk" FOREIGN KEY ("destination_branch_id") REFERENCES "public"."branches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "consignment_manifests" ADD CONSTRAINT "consignment_manifests_consignment_id_consignments_id_fk" FOREIGN KEY ("consignment_id") REFERENCES "public"."consignments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "consignment_manifests" ADD CONSTRAINT "consignment_manifests_quality_checked_by_users_id_fk" FOREIGN KEY ("quality_checked_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "consignment_suggestions" ADD CONSTRAINT "consignment_suggestions_reviewed_by_users_id_fk" FOREIGN KEY ("reviewed_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "consignment_tracking_events" ADD CONSTRAINT "consignment_tracking_events_consignment_id_consignments_id_fk" FOREIGN KEY ("consignment_id") REFERENCES "public"."consignments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "consignment_tracking_events" ADD CONSTRAINT "consignment_tracking_events_recorded_by_users_id_fk" FOREIGN KEY ("recorded_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "branches_company_idx" ON "branches" USING btree ("company_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "branches_company_lower_name_uq" ON "branches" USING btree ("company_id",lower("name"));--> statement-breakpoint
 CREATE INDEX "locations_company_idx" ON "locations" USING btree ("company_id");--> statement-breakpoint
 CREATE INDEX "locations_branch_idx" ON "locations" USING btree ("branch_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "locations_branch_lower_name_uq" ON "locations" USING btree ("branch_id",lower("name"));--> statement-breakpoint
-CREATE INDEX "permissions_company_idx" ON "permissions" USING btree ("company_id");--> statement-breakpoint
 CREATE INDEX "roles_company_idx" ON "roles" USING btree ("company_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "roles_company_lower_name_uq" ON "roles" USING btree ("company_id",lower("name"));--> statement-breakpoint
 CREATE INDEX "statuses_company_idx" ON "statuses" USING btree ("company_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "statuses_company_lower_name_uq" ON "statuses" USING btree ("company_id",lower("name"));--> statement-breakpoint
 CREATE INDEX "customers_fullname_idx" ON "customers" USING btree ("fullname");--> statement-breakpoint
 CREATE INDEX "customers_telephone_idx" ON "customers" USING btree ("telephone");--> statement-breakpoint
-CREATE INDEX "bookings_sender_idx" ON "bookings" USING btree ("sender_id");--> statement-breakpoint
 CREATE INDEX "bookings_created_idx" ON "bookings" USING btree ("created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "consignment_items_uq" ON "consignment_items" USING btree ("consignment_id","parcel_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "consignment_items_parcel_active_uq" ON "consignment_items" USING btree ("parcel_id") WHERE "consignment_items"."removed_at" IS NULL;--> statement-breakpoint
@@ -719,7 +786,7 @@ CREATE INDEX "parcels_booking_code_idx" ON "parcels" USING btree ("booking_code"
 CREATE UNIQUE INDEX "parcels_company_tracking_uq" ON "parcels" USING btree ("company_id","tracking_code");--> statement-breakpoint
 CREATE INDEX "parcels_sender_idx" ON "parcels" USING btree ("sender_id");--> statement-breakpoint
 CREATE INDEX "parcels_receiver_idx" ON "parcels" USING btree ("receiver_id");--> statement-breakpoint
-CREATE INDEX "parcels_status_idx" ON "parcels" USING btree ("status_id");--> statement-breakpoint
+CREATE INDEX "parcels_status_idx" ON "parcels" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "pending_bookings_company_idx" ON "pending_bookings" USING btree ("company_id");--> statement-breakpoint
 CREATE INDEX "pending_bookings_branch_idx" ON "pending_bookings" USING btree ("branch_id");--> statement-breakpoint
 CREATE INDEX "pending_bookings_attendant_idx" ON "pending_bookings" USING btree ("attendant_id");--> statement-breakpoint
@@ -809,4 +876,70 @@ CREATE INDEX "audit_logs_company_idx" ON "audit_logs" USING btree ("company_id")
 CREATE INDEX "audit_logs_actor_idx" ON "audit_logs" USING btree ("actor_user_id");--> statement-breakpoint
 CREATE INDEX "audit_logs_entity_idx" ON "audit_logs" USING btree ("entity_type","entity_id");--> statement-breakpoint
 CREATE INDEX "audit_logs_action_idx" ON "audit_logs" USING btree ("action");--> statement-breakpoint
-CREATE INDEX "audit_logs_created_idx" ON "audit_logs" USING btree ("created_at");
+CREATE INDEX "audit_logs_created_idx" ON "audit_logs" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "consignment_configs_company_idx" ON "consignment_configs" USING btree ("company_id");--> statement-breakpoint
+CREATE INDEX "consignment_configs_route_idx" ON "consignment_configs" USING btree ("source_branch_id","destination_branch_id");--> statement-breakpoint
+CREATE INDEX "consignment_configs_mode_idx" ON "consignment_configs" USING btree ("auto_grouping_mode");--> statement-breakpoint
+CREATE UNIQUE INDEX "consignment_configs_company_route_uq" ON "consignment_configs" USING btree ("company_id","source_branch_id","destination_branch_id");--> statement-breakpoint
+CREATE INDEX "consignment_manifests_consignment_idx" ON "consignment_manifests" USING btree ("consignment_id");--> statement-breakpoint
+CREATE INDEX "consignment_manifests_status_idx" ON "consignment_manifests" USING btree ("status");--> statement-breakpoint
+CREATE UNIQUE INDEX "consignment_manifests_manifest_number_uq" ON "consignment_manifests" USING btree ("manifest_number");--> statement-breakpoint
+CREATE INDEX "consignment_suggestions_source_branch_idx" ON "consignment_suggestions" USING btree ("source_branch_id");--> statement-breakpoint
+CREATE INDEX "consignment_suggestions_destination_branch_idx" ON "consignment_suggestions" USING btree ("destination_branch_id");--> statement-breakpoint
+CREATE INDEX "consignment_suggestions_status_idx" ON "consignment_suggestions" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "consignment_suggestions_efficiency_idx" ON "consignment_suggestions" USING btree ("efficiency_score");--> statement-breakpoint
+CREATE INDEX "consignment_tracking_events_consignment_idx" ON "consignment_tracking_events" USING btree ("consignment_id");--> statement-breakpoint
+CREATE INDEX "consignment_tracking_events_event_type_idx" ON "consignment_tracking_events" USING btree ("event_type");--> statement-breakpoint
+CREATE INDEX "consignment_tracking_events_event_time_idx" ON "consignment_tracking_events" USING btree ("event_time");
+
+--> statement-breakpoint
+-- Source: scripts/enable_pgcrypto.sql
+-- Enable pgcrypto for gen_random_uuid()
+create extension if not exists pgcrypto;
+
+
+--> statement-breakpoint
+-- Source: scripts/updated_at_triggers.sql
+-- Suppress NOTICE messages like "does not exist, skipping"
+set client_min_messages = warning;
+
+-- Function and triggers to auto-update "updated_at" on row UPDATEs
+create or replace function set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+-- Create/replace triggers for every base table that has an "updated_at" column
+do $$
+declare
+  row_rec record;
+begin
+  for row_rec in
+    select c.table_schema, c.table_name
+    from information_schema.columns c
+    join information_schema.tables tbl
+      on tbl.table_schema = c.table_schema
+     and tbl.table_name = c.table_name
+    where c.table_schema = 'public'
+      and c.column_name = 'updated_at'
+      and tbl.table_type = 'BASE TABLE'
+    order by c.table_name
+  loop
+    execute format(
+      'drop trigger if exists trg_%I_updated_at on %I.%I;',
+      row_rec.table_name,
+      row_rec.table_schema,
+      row_rec.table_name
+    );
+
+    execute format(
+      'create trigger trg_%I_updated_at before update on %I.%I for each row execute function set_updated_at();',
+      row_rec.table_name,
+      row_rec.table_schema,
+      row_rec.table_name
+    );
+  end loop;
+end $$;

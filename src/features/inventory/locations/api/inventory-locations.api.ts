@@ -18,6 +18,12 @@ import {
   toUpdateInventoryLocationPayload,
 } from '../utils/inventory-location-payload';
 
+export interface InventoryLocationOption {
+  id: string;
+  name: string;
+  branchId: string;
+}
+
 export const inventoryLocationsApi = api.injectEndpoints({
   endpoints: (builder) => ({
     listInventoryLocations: builder.query<
@@ -34,6 +40,17 @@ export const inventoryLocationsApi = api.injectEndpoints({
     getInventoryLocation: builder.query<InventoryLocation, string>({
       query: (id) => ({ url: `/inventory/locations/${id}` }),
       providesTags: (_result, _err, id) => [{ type: 'Inventory', id }],
+    }),
+
+    listInventoryLocationOptions: builder.query<
+      InventoryLocationOption[],
+      { companyId?: string | null; branchId?: string | null; search?: string } | void
+    >({
+      query: (params) => ({
+        url: '/inventory/locations/options',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'Inventory', id: 'LOCATION_OPTIONS' }],
     }),
 
     updateInventoryLocation: builder.mutation<
@@ -83,6 +100,7 @@ export const inventoryLocationsApi = api.injectEndpoints({
 export const {
   useListInventoryLocationsQuery,
   useGetInventoryLocationQuery,
+  useListInventoryLocationOptionsQuery,
   useUpdateInventoryLocationMutation,
   useCreateInventoryLocationMutation,
   useDeleteInventoryLocationMutation,

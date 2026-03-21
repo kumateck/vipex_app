@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { companies, branches, locations, roles, permissions, rolePermissions, users } from './core';
+import { companies, branches, locations, roles, rolePermissions, users } from './core';
 import { pendingBookings } from './shipments';
 import { receiptTemplates, generatedReceipts } from './receipts';
 import { customers, cards, customerCards } from './customers';
@@ -23,7 +23,6 @@ export const companiesRelations = relations(companies, ({ many }) => ({
   branches: many(branches),
   users: many(users),
   roles: many(roles),
-  permissions: many(permissions),
 }));
 
 export const branchesRelations = relations(branches, ({ one, many }) => ({
@@ -45,21 +44,14 @@ export const rolesRelations = relations(roles, ({ one, many }) => ({
 export const usersRelations = relations(users, ({ one, many }) => ({
   role: one(roles, { fields: [users.roleId], references: [roles.id] }),
   branch: one(branches, { fields: [users.branchId], references: [branches.id] }),
+  location: one(locations, { fields: [users.locationId], references: [locations.id] }),
   company: one(companies, { fields: [users.companyId], references: [companies.id] }),
   cashierSessions: many(cashierSessions),
-}));
-
-export const permissionsRelations = relations(permissions, ({ one }) => ({
-  company: one(companies, { fields: [permissions.companyId], references: [companies.id] }),
 }));
 
 export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
   role: one(roles, { fields: [rolePermissions.roleId], references: [roles.id] }),
   company: one(companies, { fields: [rolePermissions.companyId], references: [companies.id] }),
-  permission: one(permissions, {
-    fields: [rolePermissions.permissionId],
-    references: [permissions.id],
-  }),
 }));
 
 // Customers (company-scoped; no branch relation)

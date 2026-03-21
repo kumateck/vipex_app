@@ -26,10 +26,17 @@ export async function createCustomerSvc(input: {
   telephone2?: string | null;
   address?: string | null;
   email?: string | null;
+  isNiaVerified?: boolean;
+  loggedToGovernment?: boolean;
   createdBy: string;
 }): Promise<{ id: string }> {
   if (!input.companyId || !input.fullname) throw BadRequest('Missing required fields');
-  const created = await createCustomerRepo({ ...input, isDeleted: false });
+  const created = await createCustomerRepo({
+    ...input,
+    isNiaVerified: input.isNiaVerified ?? false,
+    loggedToGovernment: input.loggedToGovernment ?? false,
+    isDeleted: false,
+  });
   await recordAuditLog({
     companyId: input.companyId,
     actorUserId: input.createdBy,
@@ -53,6 +60,8 @@ export async function updateCustomerSvc(
     telephone2?: string | null;
     address?: string | null;
     email?: string | null;
+    isNiaVerified?: boolean;
+    loggedToGovernment?: boolean;
   },
   actorUserId?: string | null,
 ): Promise<{ id: string }> {

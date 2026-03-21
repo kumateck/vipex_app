@@ -31,10 +31,23 @@ export const LoginResponse = t.Object({
         t.Object({
           id: UUID,
           name: t.String(),
+          type: t.Number(),
         }),
         t.Null(),
       ]),
     ),
+    location: t.Optional(
+      t.Union([
+        t.Object({
+          id: UUID,
+          name: t.String(),
+        }),
+        t.Null(),
+      ]),
+    ),
+    locationId: t.Optional(t.Union([UUID, t.Null()])),
+    locationName: t.Optional(t.Union([t.String(), t.Null()])),
+    userType: t.Optional(t.Number()),
     role: t.Optional(
       t.Union([
         t.Object({

@@ -1,3 +1,3 @@
-import { ParcelPage } from '@/features/operations/parcel';
+import { ParcelCreatePage } from '@/features/operations/parcel';
 
-export default ParcelPage;
+export default ParcelCreatePage;

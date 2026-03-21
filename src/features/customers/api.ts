@@ -14,6 +14,8 @@ export interface Customer {
   fullname: string;
   telephone?: string;
   email?: string;
+  isNiaVerified: boolean;
+  loggedToGovernment: boolean;
   createdAt: string;
 }
 
@@ -28,6 +30,14 @@ export interface CreateCustomerInput {
   telephone2?: string | null;
   address?: string | null;
   email?: string | null;
+  isNiaVerified?: boolean;
+  loggedToGovernment?: boolean;
+}
+
+export interface UpdateCustomerInput {
+  id: string;
+  fullname?: string;
+  telephone?: string | null;
 }
 
 export const customersApi = api.injectEndpoints({
@@ -59,7 +69,20 @@ export const customersApi = api.injectEndpoints({
       },
       invalidatesTags: invalidateEntityListTag('Customers'),
     }),
+    updateCustomer: builder.mutation<{ id: string }, UpdateCustomerInput>({
+      query: ({ id, ...body }) => ({
+        url: `/customers/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: invalidateEntityListTag('Customers'),
+    }),
   }),
 });
 
-export const { useListCustomersQuery, useFindCustomersByTelephoneQuery, useCreateCustomerMutation } = customersApi;
+export const {
+  useListCustomersQuery,
+  useFindCustomersByTelephoneQuery,
+  useCreateCustomerMutation,
+  useUpdateCustomerMutation,
+} = customersApi;

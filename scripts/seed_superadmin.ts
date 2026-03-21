@@ -3,7 +3,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../src/db/config';
 import { companies, branches, roles, users } from '@/db/schemas';
-import { UserStatus } from '@/db/schemas/enums';
+import { BranchType, UserStatus, UserType } from '@/db/schemas/enums';
 import { hashPassword } from '../src/server/utils/password';
 
 // Superadmin credentials
@@ -40,7 +40,7 @@ async function main() {
   // 2) Find existing branch by company + name
   console.log('🏢 Looking up existing branch...');
   const [branch] = await db
-    .select({ id: branches.id, name: branches.name })
+    .select({ id: branches.id, name: branches.name, type: branches.type })
     .from(branches)
     .where(and(eq(branches.companyId, company.id), eq(branches.name, BRANCH_NAME)))
     .limit(1);
@@ -49,6 +49,9 @@ async function main() {
     throw new Error(
       `Branch '${BRANCH_NAME}' not found in company ${company.id}. Please check BRANCH_NAME.`,
     );
+  }
+  if (branch.type !== BranchType.HEADOFFICE) {
+    throw new Error(`Branch '${BRANCH_NAME}' is not configured as HEAD OFFICE.`);
   }
   console.log(`   ✓ Found branch: ${branch.name} (${branch.id})`);
 
@@ -92,6 +95,8 @@ async function main() {
         roleId: role.id,
         companyId: company.id,
         branchId: branch.id,
+        locationId: null,
+        userType: UserType.STAFF,
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId));
@@ -108,6 +113,8 @@ async function main() {
       roleId: role.id,
       companyId: company.id,
       branchId: branch.id,
+      locationId: null,
+      userType: UserType.STAFF,
       createdBy: userId, // self-created
       taxReportConfirmation: false,
     });

@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { PaginationRequestQuery, UUID } from '../../schemas/common';
+import { PaginationRequestQueryProps, UUID } from '../../schemas/common';
 import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import {
@@ -30,13 +30,11 @@ export const customersRoutes = new Elysia({ name: 'customers' })
         },
       }),
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          companyId: t.Optional(UUID),
-          includeDeleted: t.Optional(t.Boolean()),
-        }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        companyId: t.Optional(UUID),
+        includeDeleted: t.Optional(t.Boolean()),
+      }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
       detail: { tags: ['Customers'], summary: 'List/search customers' },
     },
@@ -74,6 +72,8 @@ export const customersRoutes = new Elysia({ name: 'customers' })
             telephone2?: string | null;
             address?: string | null;
             email?: string | null;
+            isNiaVerified?: boolean;
+            loggedToGovernment?: boolean;
           }),
           companyId: user!.companyId!,
           createdBy: user!.sub,
@@ -84,6 +84,8 @@ export const customersRoutes = new Elysia({ name: 'customers' })
           telephone2?: string | null;
           address?: string | null;
           email?: string | null;
+          isNiaVerified?: boolean;
+          loggedToGovernment?: boolean;
           createdBy: string;
         },
       );
@@ -97,6 +99,8 @@ export const customersRoutes = new Elysia({ name: 'customers' })
         telephone2: t.Optional(t.String()),
         address: t.Optional(t.String()),
         email: t.Optional(t.String()),
+        isNiaVerified: t.Optional(t.Boolean()),
+        loggedToGovernment: t.Optional(t.Boolean()),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateCustomers)],
       detail: { tags: ['Customers'], summary: 'Create customer' },
@@ -114,6 +118,8 @@ export const customersRoutes = new Elysia({ name: 'customers' })
           telephone2?: string | null;
           address?: string | null;
           email?: string | null;
+          isNiaVerified?: boolean;
+          loggedToGovernment?: boolean;
         },
         user!.sub,
       ),
@@ -125,6 +131,8 @@ export const customersRoutes = new Elysia({ name: 'customers' })
         telephone2: t.Optional(t.Union([t.String(), t.Null()])),
         address: t.Optional(t.Union([t.String(), t.Null()])),
         email: t.Optional(t.Union([t.String(), t.Null()])),
+        isNiaVerified: t.Optional(t.Boolean()),
+        loggedToGovernment: t.Optional(t.Boolean()),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateCustomers)],
       detail: { tags: ['Customers'], summary: 'Update customer' },

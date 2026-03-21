@@ -1,5 +1,8 @@
 // Shared smallint-backed enums used in schema and app
-
+export enum BranchType {
+  HEADOFFICE = 0,
+  AGENCY = 1,
+}
 export enum Payer {
   SENDER = 0,
   RECIPIENT = 1,
@@ -40,6 +43,11 @@ export enum UserStatus {
   PENDING = 6,
 }
 
+export enum UserType {
+  STAFF = 0,
+  CASHIER = 1,
+  RIDER = 2,
+}
 // Inventory enums
 export enum StockMovementType {
   RECEIPT = 0,

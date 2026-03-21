@@ -8,6 +8,7 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui';
+import { normalizeOptionalFields } from '@/lib/optional-fields';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches';
 import {
@@ -62,7 +63,10 @@ export function InventoryLocationForm({
     formState: { errors },
   } = useForm<InventoryLocationFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: mode === 'create' ? { name: '', branchId: '', description: '' } : { name: '', description: '' },
+    defaultValues:
+      mode === 'create'
+        ? { name: '', branchId: '', description: '' }
+        : { name: '', description: '' },
     mode: 'onSubmit',
   });
 
@@ -78,17 +82,19 @@ export function InventoryLocationForm({
   }, [initialData, mode, reset]);
 
   const submit = async (values: InventoryLocationFormValues) => {
+    const normalized = normalizeOptionalFields(values, ['branchId', 'description'] as const);
+
     if (mode === 'create') {
       await onSubmit({
-        name: values.name,
-        branchId: values.branchId ?? '',
-        description: values.description ?? '',
+        name: normalized.name,
+        branchId: normalized.branchId as string,
+        description: normalized.description,
       });
       return;
     }
     await onSubmit({
-      name: values.name,
-      description: values.description ?? '',
+      name: normalized.name,
+      description: normalized.description,
     });
   };
 

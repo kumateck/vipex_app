@@ -1,9 +1,10 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { PaginationRequestQuery, UUID } from '../../schemas/common';
+import { UUID } from '../../schemas/common';
 import {
   createParcelCtrl,
   getParcelByIdCtrl,
+  getParcelDetailsCtrl,
   listParcelsCtrl,
   markParcelReceivedCtrl,
   setPlannedToBePaidCtrl,
@@ -31,24 +32,38 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           },
       }),
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          companyId: t.Optional(UUID),
-          sourceId: t.Optional(UUID),
-          destinationId: t.Optional(UUID),
-          status: t.Optional(t.Number()),
-          search: t.Optional(t.String()),
-          received: t.Optional(t.Boolean()),
-          includeDeleted: t.Optional(t.Boolean()),
-        }),
-      ]),
+      query: t.Object({
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+        search: t.Optional(t.String()),
+        sort: t.Optional(
+          t.Array(
+            t.Object({
+              field: t.String({ minLength: 1, maxLength: 100 }),
+              direction: t.Union([t.Literal('asc'), t.Literal('desc')]),
+            }),
+            { minItems: 1 },
+          ),
+        ),
+        dateFrom: t.Optional(t.String({ format: 'date-time' })),
+        dateTo: t.Optional(t.String({ format: 'date-time' })),
+        companyId: t.Optional(UUID),
+        sourceId: t.Optional(UUID),
+        destinationId: t.Optional(UUID),
+        status: t.Optional(t.Number()),
+        received: t.Optional(t.Boolean()),
+        includeDeleted: t.Optional(t.Boolean()),
+      }),
       detail: { tags: ['Shipments'], summary: 'List/search parcels' },
     },
   )
   .get('/:id', async ({ params }) => getParcelByIdCtrl(params.id), {
     params: t.Object({ id: UUID }),
     detail: { tags: ['Shipments'], summary: 'Get parcel' },
+  })
+  .get('/:id/details', async ({ params }) => getParcelDetailsCtrl(params.id), {
+    params: t.Object({ id: UUID }),
+    detail: { tags: ['Shipments'], summary: 'Get parcel full details (payments, delivery, consignments)' },
   })
   .post(
     '/',
@@ -109,6 +124,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           status?: number;
           parcelDetails?: string;
           parcelContent?: string;
+          secondReceiverId?: string | null;
           parcelValueCedis?: number | string | null;
           chargeCedis?: number | string | null;
           pickupLocationId?: string | null;
@@ -122,6 +138,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         status: t.Optional(t.Number()),
         parcelDetails: t.Optional(t.String()),
         parcelContent: t.Optional(t.String()),
+        secondReceiverId: t.Optional(t.Union([UUID, t.Null()])),
         parcelValueCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
         chargeCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
         pickupLocationId: t.Optional(t.Union([UUID, t.Null()])),

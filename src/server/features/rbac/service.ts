@@ -1,9 +1,8 @@
 import { Conflict, NotFound } from '@/server/utils/http-error';
-import { PermissionCatalog, PermissionKeySet, type PermissionKey } from '@/shared/permissions/constants';
+import { PermissionKeySet, type PermissionKey } from '@/shared/permissions/constants';
 import { recordAuditLog } from '../audit/logger';
 import {
   createRoleRepo,
-  ensurePermissionCatalogRepo,
   findRoleByNameRepo,
   getRoleRepo,
   listRoleOptionsRepo,
@@ -115,15 +114,9 @@ export async function deleteRoleSvc(id: string, companyId: string, actorUserId?:
 }
 
 export async function listPermissionCatalogSvc(companyId: string, createdBy: string) {
-  await ensurePermissionCatalogRepo(companyId, createdBy);
-  const rows = await listPermissionCatalogForCompanyRepo(companyId);
-  const byKey = new Map(rows.map((row) => [row.key, row]));
-
-  return PermissionCatalog.map((entry) => ({
-    key: entry.key,
-    description: byKey.get(entry.key)?.description ?? entry.description,
-    group: entry.group,
-  }));
+  const _createdBy = createdBy;
+  void _createdBy;
+  return listPermissionCatalogForCompanyRepo(companyId);
 }
 
 export async function setRolePermissionsSvc(input: {
@@ -138,12 +131,7 @@ export async function setRolePermissionsSvc(input: {
   const validKeys = input.permissionKeys.filter((key) => PermissionKeySet.has(key)) as PermissionKey[];
   if (validKeys.length !== input.permissionKeys.length) throw Conflict('Unknown permission key(s)');
 
-  const permissionMap = await ensurePermissionCatalogRepo(input.companyId, input.createdBy);
-  const permissionIds = validKeys
-    .map((key) => permissionMap.get(key))
-    .filter((id): id is string => Boolean(id));
-
-  await setRolePermissionsRepo(input.roleId, input.companyId, permissionIds);
+  await setRolePermissionsRepo(input.roleId, input.companyId, validKeys);
   await recordAuditLog({
     companyId: input.companyId,
     actorUserId: input.createdBy,

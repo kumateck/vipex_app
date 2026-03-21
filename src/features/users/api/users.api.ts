@@ -5,9 +5,9 @@ import {
   provideEntityListTags,
   type ServerListResponse,
 } from '@/services/rtk-query';
-import { useAuthStore } from '@/stores/auth-store';
 import type { User, UserCreatePayload, UserListQuery, UserMutationInput } from '../types/user.types';
 import { toCreateUserPayload, toUpdateUserPayload } from '../utils/user-payload';
+import type { UserType } from '@/shared/access/constants';
 
 export interface UserOption {
   id: string;
@@ -32,7 +32,15 @@ export const usersApi = api.injectEndpoints({
 
     listUserOptions: builder.query<
       UserOption[],
-      { companyId?: string | null; branchId?: string | null; roleId?: string | null; status?: number; search?: string } | void
+      {
+        companyId?: string | null;
+        branchId?: string | null;
+        locationId?: string | null;
+        roleId?: string | null;
+        userType?: UserType | null;
+        status?: number;
+        search?: string;
+      } | void
     >({
       query: (params) => ({
         url: '/users/options',
@@ -42,19 +50,11 @@ export const usersApi = api.injectEndpoints({
     }),
 
     createUser: builder.mutation<{ id: string }, UserMutationInput>({
-      query: (body) => {
-        const user = useAuthStore.getState().user;
-        if (!user?.company?.id || !user?.id) throw new Error('Not authenticated');
-
-        return {
-          url: '/users/',
-          method: 'POST',
-          body: toCreateUserPayload(body, {
-            companyId: user.company.id,
-            createdBy: user.id,
-          }) satisfies UserCreatePayload,
-        };
-      },
+      query: (body) => ({
+        url: '/users/',
+        method: 'POST',
+        body: toCreateUserPayload(body) satisfies UserCreatePayload,
+      }),
       invalidatesTags: invalidateEntityListTag('Users'),
     }),
 
@@ -63,6 +63,23 @@ export const usersApi = api.injectEndpoints({
         url: `/users/${id}`,
         method: 'PATCH',
         body: toUpdateUserPayload(body),
+      }),
+      invalidatesTags: (_result, _err, { id }) => [{ type: 'Users', id }, ...invalidateEntityListTag('Users')],
+    }),
+    updateUserStatus: builder.mutation<{ id: string }, { id: string; status: number }>({
+      query: ({ id, status }) => ({
+        url: `/users/${id}`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      invalidatesTags: (_result, _err, { id }) => [{ type: 'Users', id }, ...invalidateEntityListTag('Users')],
+    }),
+
+    resendSetupInvite: builder.mutation<{ ok: boolean; expiresAt: string }, { id: string; force?: boolean }>({
+      query: ({ id, force = true }) => ({
+        url: `/users/auth/resend-setup/${id}`,
+        method: 'POST',
+        body: { force },
       }),
       invalidatesTags: (_result, _err, { id }) => [{ type: 'Users', id }, ...invalidateEntityListTag('Users')],
     }),
@@ -75,4 +92,6 @@ export const {
   useListUserOptionsQuery,
   useCreateUserMutation,
   useUpdateUserMutation,
+  useUpdateUserStatusMutation,
+  useResendSetupInviteMutation,
 } = usersApi;

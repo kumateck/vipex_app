@@ -1,5 +1,5 @@
 {
-  "id": "3b3e19ff-4024-4189-8740-6e19728915b0",
+  "id": "0b022e31-031a-4b8a-9f59-cd42b9e6d519",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -28,9 +28,10 @@
         },
         "type": {
           "name": "type",
-          "type": "varchar(255)",
+          "type": "smallint",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": 1
         },
         "telephone": {
           "name": "telephone",
@@ -362,118 +363,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.permissions": {
-      "name": "permissions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(25)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "company_id": {
-          "name": "company_id",
-          "type": "varchar(25)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "permission": {
-          "name": "permission",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "perm_type": {
-          "name": "perm_type",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "perm_icon": {
-          "name": "perm_icon",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "perm_parent": {
-          "name": "perm_parent",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_deleted": {
-          "name": "is_deleted",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "varchar(25)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "permissions_company_idx": {
-          "name": "permissions_company_idx",
-          "columns": [
-            {
-              "expression": "company_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "permissions_company_id_companies_id_fk": {
-          "name": "permissions_company_id_companies_id_fk",
-          "tableFrom": "permissions",
-          "tableTo": "companies",
-          "columnsFrom": [
-            "company_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.role_permissions": {
       "name": "role_permissions",
       "schema": "",
@@ -496,9 +385,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "permission_id": {
-          "name": "permission_id",
-          "type": "varchar(25)",
+        "permission": {
+          "name": "permission",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
@@ -538,19 +427,6 @@
           "tableTo": "companies",
           "columnsFrom": [
             "company_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "role_permissions_permission_id_permissions_id_fk": {
-          "name": "role_permissions_permission_id_permissions_id_fk",
-          "tableFrom": "role_permissions",
-          "tableTo": "permissions",
-          "columnsFrom": [
-            "permission_id"
           ],
           "columnsTo": [
             "id"
@@ -855,6 +731,19 @@
           "primaryKey": false,
           "notNull": true
         },
+        "location_id": {
+          "name": "location_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_type": {
+          "name": "user_type",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "created_by": {
           "name": "created_by",
           "type": "varchar(25)",
@@ -929,6 +818,19 @@
           "tableTo": "branches",
           "columnsFrom": [
             "branch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "users_location_id_locations_id_fk": {
+          "name": "users_location_id_locations_id_fk",
+          "tableFrom": "users",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "location_id"
           ],
           "columnsTo": [
             "id"
@@ -1230,12 +1132,6 @@
           "primaryKey": true,
           "notNull": true
         },
-        "sender_id": {
-          "name": "sender_id",
-          "type": "varchar(25)",
-          "primaryKey": false,
-          "notNull": true
-        },
         "company_id": {
           "name": "company_id",
           "type": "varchar(25)",
@@ -1244,12 +1140,6 @@
         },
         "source_id": {
           "name": "source_id",
-          "type": "varchar(25)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status_id": {
-          "name": "status_id",
           "type": "varchar(25)",
           "primaryKey": false,
           "notNull": true
@@ -1282,21 +1172,6 @@
         }
       },
       "indexes": {
-        "bookings_sender_idx": {
-          "name": "bookings_sender_idx",
-          "columns": [
-            {
-              "expression": "sender_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "bookings_created_idx": {
           "name": "bookings_created_idx",
           "columns": [
@@ -1314,19 +1189,6 @@
         }
       },
       "foreignKeys": {
-        "bookings_sender_id_customers_id_fk": {
-          "name": "bookings_sender_id_customers_id_fk",
-          "tableFrom": "bookings",
-          "tableTo": "customers",
-          "columnsFrom": [
-            "sender_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "bookings_company_id_companies_id_fk": {
           "name": "bookings_company_id_companies_id_fk",
           "tableFrom": "bookings",
@@ -1346,19 +1208,6 @@
           "tableTo": "branches",
           "columnsFrom": [
             "source_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "bookings_status_id_statuses_id_fk": {
-          "name": "bookings_status_id_statuses_id_fk",
-          "tableFrom": "bookings",
-          "tableTo": "statuses",
-          "columnsFrom": [
-            "status_id"
           ],
           "columnsTo": [
             "id"
@@ -1736,11 +1585,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "status_id": {
-          "name": "status_id",
-          "type": "varchar(25)",
+        "status": {
+          "name": "status",
+          "type": "smallint",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": 0
         },
         "parcel_details": {
           "name": "parcel_details",
@@ -1756,6 +1606,13 @@
         },
         "parcel_value_psw": {
           "name": "parcel_value_psw",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "charge_psw": {
+          "name": "charge_psw",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,
@@ -1956,7 +1813,7 @@
           "name": "parcels_status_idx",
           "columns": [
             {
-              "expression": "status_id",
+              "expression": "status",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2053,19 +1910,6 @@
           "tableTo": "customers",
           "columnsFrom": [
             "second_receiver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "parcels_status_id_statuses_id_fk": {
-          "name": "parcels_status_id_statuses_id_fk",
-          "tableFrom": "parcels",
-          "tableTo": "statuses",
-          "columnsFrom": [
-            "status_id"
           ],
           "columnsTo": [
             "id"
@@ -6750,6 +6594,808 @@
           "tableTo": "users",
           "columnsFrom": [
             "actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.consignment_configs": {
+      "name": "consignment_configs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(25)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auto_grouping_mode": {
+          "name": "auto_grouping_mode",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "min_parcel_count": {
+          "name": "min_parcel_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 5
+        },
+        "max_parcel_count": {
+          "name": "max_parcel_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 50
+        },
+        "max_weight_kg": {
+          "name": "max_weight_kg",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 100
+        },
+        "grouping_schedule": {
+          "name": "grouping_schedule",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "max_wait_minutes": {
+          "name": "max_wait_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 120
+        },
+        "source_branch_id": {
+          "name": "source_branch_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "destination_branch_id": {
+          "name": "destination_branch_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "preferred_shipping_time": {
+          "name": "preferred_shipping_time",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "max_transit_time_hours": {
+          "name": "max_transit_time_hours",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 48
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "consignment_configs_company_idx": {
+          "name": "consignment_configs_company_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "consignment_configs_route_idx": {
+          "name": "consignment_configs_route_idx",
+          "columns": [
+            {
+              "expression": "source_branch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "destination_branch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "consignment_configs_mode_idx": {
+          "name": "consignment_configs_mode_idx",
+          "columns": [
+            {
+              "expression": "auto_grouping_mode",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "consignment_configs_company_route_uq": {
+          "name": "consignment_configs_company_route_uq",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_branch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "destination_branch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "consignment_configs_company_id_companies_id_fk": {
+          "name": "consignment_configs_company_id_companies_id_fk",
+          "tableFrom": "consignment_configs",
+          "tableTo": "companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "consignment_configs_source_branch_id_branches_id_fk": {
+          "name": "consignment_configs_source_branch_id_branches_id_fk",
+          "tableFrom": "consignment_configs",
+          "tableTo": "branches",
+          "columnsFrom": [
+            "source_branch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "consignment_configs_destination_branch_id_branches_id_fk": {
+          "name": "consignment_configs_destination_branch_id_branches_id_fk",
+          "tableFrom": "consignment_configs",
+          "tableTo": "branches",
+          "columnsFrom": [
+            "destination_branch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.consignment_manifests": {
+      "name": "consignment_manifests",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(25)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "consignment_id": {
+          "name": "consignment_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "manifest_number": {
+          "name": "manifest_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_parcels": {
+          "name": "total_parcels",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_weight": {
+          "name": "total_weight",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_value_psw": {
+          "name": "total_value_psw",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "carrier_name": {
+          "name": "carrier_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vehicle_number": {
+          "name": "vehicle_number",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "driver_name": {
+          "name": "driver_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "driver_contact": {
+          "name": "driver_contact",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "route_description": {
+          "name": "route_description",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estimated_departure_time": {
+          "name": "estimated_departure_time",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estimated_arrival_time": {
+          "name": "estimated_arrival_time",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actual_departure_time": {
+          "name": "actual_departure_time",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actual_arrival_time": {
+          "name": "actual_arrival_time",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "quality_checked_by": {
+          "name": "quality_checked_by",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quality_checked_at": {
+          "name": "quality_checked_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quality_notes": {
+          "name": "quality_notes",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "consignment_manifests_consignment_idx": {
+          "name": "consignment_manifests_consignment_idx",
+          "columns": [
+            {
+              "expression": "consignment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "consignment_manifests_status_idx": {
+          "name": "consignment_manifests_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "consignment_manifests_manifest_number_uq": {
+          "name": "consignment_manifests_manifest_number_uq",
+          "columns": [
+            {
+              "expression": "manifest_number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "consignment_manifests_consignment_id_consignments_id_fk": {
+          "name": "consignment_manifests_consignment_id_consignments_id_fk",
+          "tableFrom": "consignment_manifests",
+          "tableTo": "consignments",
+          "columnsFrom": [
+            "consignment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "consignment_manifests_quality_checked_by_users_id_fk": {
+          "name": "consignment_manifests_quality_checked_by_users_id_fk",
+          "tableFrom": "consignment_manifests",
+          "tableTo": "users",
+          "columnsFrom": [
+            "quality_checked_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.consignment_suggestions": {
+      "name": "consignment_suggestions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(25)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_branch_id": {
+          "name": "source_branch_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_branch_id": {
+          "name": "destination_branch_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parcel_ids": {
+          "name": "parcel_ids",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "suggested_groupings": {
+          "name": "suggested_groupings",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_value_psw": {
+          "name": "total_value_psw",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_weight": {
+          "name": "total_weight",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parcel_count": {
+          "name": "parcel_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "efficiency_score": {
+          "name": "efficiency_score",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'PENDING'"
+        },
+        "reviewed_by": {
+          "name": "reviewed_by",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "consignment_suggestions_source_branch_idx": {
+          "name": "consignment_suggestions_source_branch_idx",
+          "columns": [
+            {
+              "expression": "source_branch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "consignment_suggestions_destination_branch_idx": {
+          "name": "consignment_suggestions_destination_branch_idx",
+          "columns": [
+            {
+              "expression": "destination_branch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "consignment_suggestions_status_idx": {
+          "name": "consignment_suggestions_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "consignment_suggestions_efficiency_idx": {
+          "name": "consignment_suggestions_efficiency_idx",
+          "columns": [
+            {
+              "expression": "efficiency_score",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "consignment_suggestions_reviewed_by_users_id_fk": {
+          "name": "consignment_suggestions_reviewed_by_users_id_fk",
+          "tableFrom": "consignment_suggestions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "reviewed_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.consignment_tracking_events": {
+      "name": "consignment_tracking_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(25)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "consignment_id": {
+          "name": "consignment_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_location": {
+          "name": "event_location",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "event_description": {
+          "name": "event_description",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "photo_url": {
+          "name": "photo_url",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "document_url": {
+          "name": "document_url",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "event_time": {
+          "name": "event_time",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recorded_by": {
+          "name": "recorded_by",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "consignment_tracking_events_consignment_idx": {
+          "name": "consignment_tracking_events_consignment_idx",
+          "columns": [
+            {
+              "expression": "consignment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "consignment_tracking_events_event_type_idx": {
+          "name": "consignment_tracking_events_event_type_idx",
+          "columns": [
+            {
+              "expression": "event_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "consignment_tracking_events_event_time_idx": {
+          "name": "consignment_tracking_events_event_time_idx",
+          "columns": [
+            {
+              "expression": "event_time",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "consignment_tracking_events_consignment_id_consignments_id_fk": {
+          "name": "consignment_tracking_events_consignment_id_consignments_id_fk",
+          "tableFrom": "consignment_tracking_events",
+          "tableTo": "consignments",
+          "columnsFrom": [
+            "consignment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "consignment_tracking_events_recorded_by_users_id_fk": {
+          "name": "consignment_tracking_events_recorded_by_users_id_fk",
+          "tableFrom": "consignment_tracking_events",
+          "tableTo": "users",
+          "columnsFrom": [
+            "recorded_by"
           ],
           "columnsTo": [
             "id"

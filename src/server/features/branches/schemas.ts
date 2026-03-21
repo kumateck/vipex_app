@@ -1,12 +1,10 @@
 import { t } from 'elysia';
-import { UUID, NonEmptyString255, PaginationMetaSchema, PaginationRequestQuery } from '../../schemas/common';
+import { UUID, NonEmptyString255, PaginationMetaSchema, PaginationRequestQueryProps } from '../../schemas/common';
 
-export const ListBranchesQuery = t.Intersect([
-  PaginationRequestQuery,
-  t.Object({
-    companyId: t.Optional(UUID), // optional filter
-  }),
-]);
+export const ListBranchesQuery = t.Object({
+  ...PaginationRequestQueryProps,
+  companyId: t.Optional(UUID), // optional filter
+});
 
 export const GetBranchParams = t.Object({
   id: UUID,

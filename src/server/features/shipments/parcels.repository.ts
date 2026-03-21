@@ -1,7 +1,7 @@
-import { and, asc, count, desc, eq, ilike, isNull, isNotNull, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNull, isNotNull, or } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
-import { parcels, bookings, customers } from '@/db/schemas';
+import { parcels, bookings, branches, customers, consignmentItems, consignments } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
 export type ParcelRow = {
   id: string;
@@ -54,6 +54,10 @@ export type ListParcelsParams = {
 export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   data: (ParcelRow & {
     bookingCreatedAt: Date | null;
+    destinationName: string | null;
+    consignmentId: string | null;
+    consignmentCode: string | null;
+    consignmentSerialForDay: number | null;
     senderName: string | null;
     senderPhone: string | null;
     receiverName: string | null;
@@ -77,6 +81,9 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   if (p.received === false) whereParts.push(isNull(parcels.receivedAt));
   const s = alias(customers, 's');
   const r = alias(customers, 'r');
+  const d = alias(branches, 'd');
+  const ci = alias(consignmentItems, 'ci');
+  const cg = alias(consignments, 'cg');
 
   const sort = p.sort ?? [];
   const orderBy = sort.length
@@ -100,6 +107,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(bookings, eq(parcels.bookingId, bookings.id))
     .leftJoin(s, eq(parcels.senderId, s.id))
     .leftJoin(r, eq(parcels.receiverId, r.id))
+    .leftJoin(d, eq(parcels.destinationId, d.id))
     .where(
       whereParts.length || p.search
         ? and(
@@ -156,6 +164,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       updatedAt: parcels.updatedAt,
       cashierSessionId: parcels.cashierSessionId,
       bookingCreatedAt: bookings.createdAt,
+      destinationName: d.name,
+      consignmentId: cg.id,
+      consignmentCode: cg.code,
+      consignmentSerialForDay: cg.serialForDay,
       senderName: s.fullname,
       senderPhone: s.telephone,
       receiverName: r.fullname,
@@ -165,6 +177,9 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(bookings, eq(parcels.bookingId, bookings.id))
     .leftJoin(s, eq(parcels.senderId, s.id))
     .leftJoin(r, eq(parcels.receiverId, r.id))
+    .leftJoin(d, eq(parcels.destinationId, d.id))
+    .leftJoin(ci, and(eq(ci.parcelId, parcels.id), isNull(ci.removedAt)))
+    .leftJoin(cg, eq(cg.id, ci.consignmentId))
     .where(
       whereParts.length || p.search
         ? and(
@@ -250,4 +265,16 @@ export async function updateParcelRepo(
     .where(eq(parcels.id, id))
     .returning({ id: parcels.id });
   return row ?? null;
+}
+
+export async function updateParcelsStatusRepo(parcelIds: string[], status: number): Promise<number> {
+  if (parcelIds.length === 0) return 0;
+
+  const rows = await db
+    .update(parcels)
+    .set({ status })
+    .where(inArray(parcels.id, parcelIds))
+    .returning({ id: parcels.id });
+
+  return rows.length;
 }

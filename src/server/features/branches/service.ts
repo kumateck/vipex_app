@@ -29,7 +29,7 @@ export async function getBranchSvc(id: string) {
 export async function createBranchSvc(input: {
   companyId: string;
   name: string;
-  type: string;
+  type: number;
   telephone?: string | null;
   address?: string | null;
   email?: string | null;
@@ -90,7 +90,7 @@ export async function updateBranchSvc(
   id: string,
   patch: {
     name?: string;
-    type?: string;
+    type?: number;
     telephone?: string | null;
     address?: string | null;
     email?: string | null;

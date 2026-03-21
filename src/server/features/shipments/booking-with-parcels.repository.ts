@@ -14,7 +14,7 @@ import {
 import { sanitizeString } from '@/lib/utils';
 import { generateBookingCode, generateTrackingCode } from '@/server/utils/codegen';
 
-export type CreatedParcelRef = { id: string; trackingCode: string };
+export type CreatedParcelRef = { id: string; trackingCode: string; bookingCode: string };
 export type CreatedPaymentRef = { id: string };
 
 export type CreateBookingWithParcelsInput = {
@@ -181,6 +181,7 @@ export async function createBookingWithParcelsAndPaymentsRepo(
       createdParcels.push({
         id: sanitizeString(parcelRow?.id),
         trackingCode: sanitizeString(parcelRow?.trackingCode),
+        bookingCode: code,
       });
 
       if (p.senderPaymentPsw && p.senderPaymentPsw > 0) {

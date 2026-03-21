@@ -12,5 +12,6 @@ export * from './receipts';
 export * from './payments-rules';
 export * from './shifts';
 export * from './audit';
+export * from './consignments-enhanced';
 // export * from './shifts';
 // export * from './shifts';

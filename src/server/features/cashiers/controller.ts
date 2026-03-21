@@ -8,6 +8,7 @@ import {
   openSessionSvc,
   closeSessionSvc,
   getCurrentActiveSessionSvc,
+  getCurrentActiveSessionSummarySvc,
 } from './service';
 
 export async function listSessionTypesCtrl() {
@@ -35,6 +36,8 @@ export async function listSessionsCtrl(
     cashierId: q.filters?.cashierId ?? null,
     branchId: q.filters?.branchId ?? null,
     activeOnly: q.filters?.activeOnly ?? null,
+    dateFrom: q.dateFrom ?? null,
+    dateTo: q.dateTo ?? null,
     sort: pagination.sort ?? null,
   });
   return {
@@ -70,4 +73,12 @@ export async function getCurrentActiveSessionCtrl(input: {
     createdAt: session.createdAt.toISOString(),
     updatedAt: session.updatedAt.toISOString(),
   };
+}
+
+export async function getCurrentActiveSessionSummaryCtrl(input: {
+  cashierId: string;
+  branchId?: string | null;
+  mode?: 'sender' | 'receiver' | 'delivery';
+}) {
+  return getCurrentActiveSessionSummarySvc(input);
 }

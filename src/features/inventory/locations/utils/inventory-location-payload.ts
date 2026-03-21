@@ -3,6 +3,7 @@ import type {
   InventoryLocationMutationInput,
   InventoryLocationUpdatePayload,
 } from '../types/inventory-location.types';
+import { toOptionalString } from '@/lib/optional-fields';
 
 const toNullable = (value: string | null | undefined) => (value?.trim() ? value.trim() : null);
 
@@ -20,9 +21,14 @@ export function toCreateInventoryLocationPayload(
   context: { companyId: string; createdBy: string },
 ): InventoryLocationCreatePayload {
   const sanitized = sanitizeInventoryLocationMutationInput(input);
+  const branchId = toOptionalString(input.branchId);
+  if (!branchId) {
+    throw new Error('Branch is required to create an inventory location');
+  }
+
   return {
     name: sanitized.name,
-    branchId: (input.branchId ?? '').trim(),
+    branchId,
     ...(sanitized.description ? { description: sanitized.description } : {}),
     companyId: context.companyId,
     createdBy: context.createdBy,

@@ -101,8 +101,13 @@ export async function deleteRoleCtrl(id: string, companyId: string, actorUserId?
 }
 
 export async function listPermissionsCtrl(companyId: string, createdBy: string) {
+  const rows = await listPermissionCatalogSvc(companyId, createdBy);
   return {
-    data: await listPermissionCatalogSvc(companyId, createdBy),
+    data: rows.map((row) => ({
+      key: row.key,
+      description: row.description,
+      group: row.group,
+    })),
   };
 }
 

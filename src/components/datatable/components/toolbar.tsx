@@ -22,6 +22,7 @@ interface DataTableToolbarProps<TData> {
   setGlobalFilter: (value: string) => void;
   searchPlaceholder?: string;
   searchColumn?: string;
+  showSearch?: boolean;
 }
 
 export function DataTableToolbar<TData>({
@@ -32,10 +33,11 @@ export function DataTableToolbar<TData>({
   setGlobalFilter,
   searchPlaceholder,
   searchColumn,
+  showSearch = true,
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0 || globalFilter.length > 0;
   const useColumnSearch = Boolean(searchColumn) && !table.options.manualFiltering;
-  const canSearch = Boolean(searchColumn) || table.getAllLeafColumns().length > 0;
+  const canSearch = showSearch && (Boolean(searchColumn) || table.getAllLeafColumns().length > 0);
 
   return (
     <div className="flex items-center justify-between py-4">

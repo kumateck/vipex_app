@@ -4,6 +4,11 @@ import type { CashierSession } from '../types/cashier.types';
 
 export function createCashierSessionColumns(onClose: (sessionId: string) => void): ColumnDef<CashierSession>[] {
   return [
+    {
+      accessorFn: (row) => row.cashierName ?? row.cashierId,
+      id: 'cashier',
+      header: 'Cashier',
+    },
     { accessorKey: 'status', header: 'Status' },
     {
       accessorFn: (row) => new Date(row.scheduledStartTime).toLocaleString(),
@@ -24,6 +29,11 @@ export function createCashierSessionColumns(onClose: (sessionId: string) => void
       accessorFn: (row) => (row.closingBalancePsw != null ? (row.closingBalancePsw / 100).toFixed(2) : '-'),
       id: 'closingBalance',
       header: 'Closing',
+    },
+    {
+      accessorFn: (row) => (row.currentBalancePsw / 100).toFixed(2),
+      id: 'currentBalance',
+      header: 'Current Balance',
     },
     {
       id: 'actions',

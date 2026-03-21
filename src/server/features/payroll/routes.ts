@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { PaginationRequestQuery, UUID } from '@/server/schemas/common';
+import { PaginationRequestQueryProps, UUID } from '@/server/schemas/common';
 
 const notImplemented = (scope: string) => ({
   error: {
@@ -17,16 +17,14 @@ export const payrollRoutes = new Elysia({ name: 'payroll' })
       return notImplemented('List payroll cycles');
     },
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          companyId: UUID,
-          branchId: t.Optional(UUID),
-          status: t.Optional(t.String()),
-          month: t.Optional(t.Number({ minimum: 1, maximum: 12 })),
-          year: t.Optional(t.Number({ minimum: 2020, maximum: 2100 })),
-        }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        companyId: UUID,
+        branchId: t.Optional(UUID),
+        status: t.Optional(t.String()),
+        month: t.Optional(t.Number({ minimum: 1, maximum: 12 })),
+        year: t.Optional(t.Number({ minimum: 2020, maximum: 2100 })),
+      }),
       detail: { tags: ['Payroll'], summary: 'List payroll cycles', operationId: 'listPayrollCycles' },
     },
   )
@@ -83,12 +81,10 @@ export const payrollRoutes = new Elysia({ name: 'payroll' })
     },
     {
       params: t.Object({ id: UUID }),
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          employeeId: t.Optional(UUID),
-        }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        employeeId: t.Optional(UUID),
+      }),
       detail: { tags: ['Payroll'], summary: 'List payslips', operationId: 'listPayslips' },
     },
   )

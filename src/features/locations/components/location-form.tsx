@@ -8,6 +8,7 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui';
+import { normalizeOptionalFields } from '@/lib/optional-fields';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches';
 import {
@@ -76,7 +77,8 @@ export function LocationForm({
 
   const submit = async (values: LocationFormValues) => {
     if (mode === 'create') {
-      await onSubmit({ name: values.name, branchId: values.branchId ?? '' });
+      const normalized = normalizeOptionalFields(values, ['branchId'] as const);
+      await onSubmit({ name: normalized.name, branchId: normalized.branchId as string });
       return;
     }
     await onSubmit({ name: values.name });

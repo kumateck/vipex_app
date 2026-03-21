@@ -2,6 +2,7 @@ import { Conflict, NotFound, BadRequest } from '../../utils/http-error';
 import { StockMovementType, TransferStatus } from '@/db/schemas/enums';
 import {
   createProductCategoryRepo,
+  listProductCategoryOptionsRepo,
   findProductCategoryByNameRepo,
   getProductCategoryRepo,
   listProductCategoriesRepo,
@@ -9,6 +10,7 @@ import {
   updateProductCategoryRepo,
   type ListProductCategoriesParams,
   createProductRepo,
+  listProductOptionsRepo,
   findProductBySkuRepo,
   getProductRepo,
   listProductsRepo,
@@ -16,6 +18,7 @@ import {
   updateProductRepo,
   type ListProductsParams,
   createInventoryLocationRepo,
+  listInventoryLocationOptionsRepo,
   findInventoryLocationByNameRepo,
   getInventoryLocationRepo,
   listInventoryLocationsRepo,
@@ -45,6 +48,12 @@ import {
 // Product Categories
 export async function listProductCategoriesSvc(p: ListProductCategoriesParams) {
   return listProductCategoriesRepo(p);
+}
+export async function listProductCategoryOptionsSvc(p: {
+  companyId?: string | null;
+  search?: string | null;
+}) {
+  return listProductCategoryOptionsRepo(p);
 }
 
 export async function getProductCategorySvc(id: string) {
@@ -93,6 +102,13 @@ export async function deleteProductCategorySvc(id: string) {
 export async function listProductsSvc(p: ListProductsParams) {
   return listProductsRepo(p);
 }
+export async function listProductOptionsSvc(p: {
+  companyId?: string | null;
+  categoryId?: string | null;
+  search?: string | null;
+}) {
+  return listProductOptionsRepo(p);
+}
 
 export async function getProductSvc(id: string) {
   const product = await getProductRepo(id);
@@ -140,6 +156,13 @@ export async function deleteProductSvc(id: string) {
 // Inventory Locations
 export async function listInventoryLocationsSvc(p: ListInventoryLocationsParams) {
   return listInventoryLocationsRepo(p);
+}
+export async function listInventoryLocationOptionsSvc(p: {
+  companyId?: string | null;
+  branchId?: string | null;
+  search?: string | null;
+}) {
+  return listInventoryLocationOptionsRepo(p);
 }
 
 export async function getInventoryLocationSvc(id: string) {

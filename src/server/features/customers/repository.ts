@@ -11,6 +11,8 @@ export type CustomerRow = {
   telephone2: string | null;
   address: string | null;
   email: string | null;
+  isNiaVerified: boolean;
+  loggedToGovernment: boolean;
   isDeleted: boolean;
   createdBy: string;
   createdAt: Date;
@@ -73,6 +75,8 @@ export async function listCustomersRepo(
       telephone2: customers.telephone2,
       address: customers.address,
       email: customers.email,
+      isNiaVerified: customers.isNiaVerified,
+      loggedToGovernment: customers.loggedToGovernment,
       isDeleted: customers.isDeleted,
       createdBy: customers.createdBy,
       createdAt: customers.createdAt,
@@ -97,6 +101,8 @@ export async function getCustomerRepo(id: string): Promise<CustomerRow | null> {
       telephone2: customers.telephone2,
       address: customers.address,
       email: customers.email,
+      isNiaVerified: customers.isNiaVerified,
+      loggedToGovernment: customers.loggedToGovernment,
       isDeleted: customers.isDeleted,
       createdBy: customers.createdBy,
       createdAt: customers.createdAt,
@@ -155,6 +161,8 @@ export async function findCustomersByTelephoneRepo(input: {
       telephone2: customers.telephone2,
       address: customers.address,
       email: customers.email,
+      isNiaVerified: customers.isNiaVerified,
+      loggedToGovernment: customers.loggedToGovernment,
       isDeleted: customers.isDeleted,
       createdBy: customers.createdBy,
       createdAt: customers.createdAt,

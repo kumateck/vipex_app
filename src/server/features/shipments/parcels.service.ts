@@ -1,5 +1,9 @@
 import { toPesewas } from '@/server/utils/gh-money';
+import { ParcelStatus } from '@/db/schemas';
 import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
+import { listPaymentsForParcelRepo } from '../payments/repository';
+import { getDeliveryByParcelRepo } from '../deliveries/repository';
+import { listConsignmentsForParcelRepo } from './consignments.repository';
 
 import {
   createParcelRepo,
@@ -9,6 +13,7 @@ import {
   type ListParcelsParams,
   type ParcelRow,
 } from './parcels.repository';
+import { assertParcelFullyPaid } from './parcel-payment-settlement';
 
 export async function listParcelsSvc(p: ListParcelsParams) {
   return listParcelsRepo(p);
@@ -80,6 +85,7 @@ export async function updateParcelSvc(
     status?: number;
     parcelDetails?: string;
     parcelContent?: string;
+    secondReceiverId?: string | null;
     parcelValueCedis?: number | string | null;
     chargeCedis?: number | string | null;
     pickupLocationId?: string | null;
@@ -89,10 +95,14 @@ export async function updateParcelSvc(
 ): Promise<{ id: string }> {
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
+  if (patch.status === ParcelStatus.DELIVERED_BY_OFFICE) {
+    await assertParcelFullyPaid(id);
+  }
   const setPatch: Partial<typeof cur> & { parcelValuePsw?: number } = {};
   if (patch.status !== undefined) setPatch.status = patch.status;
   if (patch.parcelDetails) setPatch.parcelDetails = patch.parcelDetails;
   if (patch.parcelContent) setPatch.parcelContent = patch.parcelContent;
+  if (patch.secondReceiverId !== undefined) setPatch.secondReceiverId = patch.secondReceiverId;
   if (patch.parcelValueCedis !== undefined)
     setPatch.parcelValuePsw =
       patch.parcelValueCedis != null ? Number(toPesewas(patch.parcelValueCedis)) : 0;
@@ -133,4 +143,20 @@ export async function setPlannedToBePaidSvc(id: string, plannedCedis: number | s
   const updated = await updateParcelRepo(id, { plannedToBePaidPsw: Number(plannedToBePaidPsw) });
   if (!updated) throw NotFound('Parcel not found');
   return { id: updated.id, plannedToBePaidCedis: Number(plannedToBePaidPsw) / 100 };
+}
+
+export async function getParcelFullDetailsSvc(id: string) {
+  const parcel = await getParcelSvc(id);
+  const [payments, delivery, consignments] = await Promise.all([
+    listPaymentsForParcelRepo(id),
+    getDeliveryByParcelRepo(id),
+    listConsignmentsForParcelRepo(id),
+  ]);
+
+  return {
+    parcel,
+    payments,
+    delivery,
+    consignments,
+  };
 }

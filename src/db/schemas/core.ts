@@ -9,7 +9,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { CashierType, UserStatus } from './enums';
+import { BranchType, CashierType, UserStatus, UserType } from './enums';
 import { createId } from '@paralleldrive/cuid2';
 
 // Companies
@@ -38,7 +38,7 @@ export const branches = pgTable(
       .notNull()
       .references(() => companies.id),
     name: varchar('name', { length: 255 }).notNull(),
-    type: varchar('type', { length: 255 }).notNull(),
+    type: smallint('type').notNull().default(BranchType.AGENCY),
     telephone: varchar('telephone', { length: 255 }),
     address: varchar('address', { length: 255 }),
     email: varchar('email', { length: 255 }),
@@ -139,31 +139,6 @@ export const roles = pgTable(
   }),
 );
 
-// Permissions
-export const permissions = pgTable(
-  'permissions',
-  {
-    id: varchar('id', { length: 25 })
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    companyId: varchar('company_id', { length: 25 })
-      .notNull()
-      .references(() => companies.id),
-    permission: varchar('permission', { length: 255 }).notNull(),
-    description: varchar('description', { length: 255 }).notNull(),
-    permType: varchar('perm_type', { length: 255 }).notNull(),
-    permIcon: varchar('perm_icon', { length: 255 }),
-    permParent: varchar('perm_parent', { length: 255 }),
-    isDeleted: boolean('is_deleted').notNull().default(false),
-    createdBy: varchar('created_by', { length: 25 }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
-  },
-  (t) => ({
-    byCompany: index('permissions_company_idx').on(t.companyId),
-  }),
-);
-
 // Role Permissions
 export const rolePermissions = pgTable('role_permissions', {
   id: varchar('id', { length: 25 })
@@ -175,9 +150,7 @@ export const rolePermissions = pgTable('role_permissions', {
   companyId: varchar('company_id', { length: 25 })
     .notNull()
     .references(() => companies.id),
-  permissionId: varchar('permission_id', { length: 25 })
-    .notNull()
-    .references(() => permissions.id),
+  permission: varchar('permission', { length: 255 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
 });
@@ -201,6 +174,8 @@ export const users = pgTable('users', {
   branchId: varchar('branch_id', { length: 25 })
     .notNull()
     .references(() => branches.id),
+  locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
+  userType: smallint('user_type').notNull().default(UserType.STAFF),
   createdBy: varchar('created_by', { length: 25 }).notNull(),
   taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
   resetToken: varchar('reset_token', { length: 255 }),

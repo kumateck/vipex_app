@@ -4,6 +4,8 @@ import { UUID } from '../../schemas/common';
 import { createBookingWithParcelsCtrl } from './booking-with-parcels.controller';
 import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { Forbidden } from '@/server/utils/http-error';
+import { BranchType } from '@/db/schemas/enums';
 
 export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-parcels' })
   .use(authPlugin)
@@ -11,6 +13,9 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
     '/create-with-parcels',
     async ({ body, set, user }) => {
       const authUser = user as AuthUser;
+      if (authUser.branchType === BranchType.HEADOFFICE) {
+        throw Forbidden('Head office users cannot create parcel bookings');
+      }
       const payload = body as {
         senderId: string;
         status: number;

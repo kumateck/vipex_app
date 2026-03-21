@@ -51,6 +51,9 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
     roleId: user.roleId ?? null,
     companyId: user.companyId ?? null,
     branchId: user.branchId ?? null,
+    branchType: user.branch?.type ?? null,
+    locationId: user.locationId ?? null,
+    userType: user.userType ?? null,
     permissions: resolvedPermissionKeys,
   };
   const accessToken = await signAccessToken(payload);
@@ -75,6 +78,10 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
       role: user.role ?? null,
       company: user.company ?? null,
       branch: user.branch ?? null,
+      location: user.location ?? null,
+      locationId: user.locationId ?? null,
+      locationName: user.location?.name ?? null,
+      userType: user.userType ?? null,
       permissions: resolvedPermissionKeys,
     },
   };
@@ -107,6 +114,9 @@ export async function refreshSvc(refreshToken: string) {
     roleId: user.roleId ?? null,
     companyId: user.companyId ?? null,
     branchId: user.branchId ?? null,
+    branchType: user.branch?.type ?? null,
+    locationId: user.locationId ?? null,
+    userType: user.userType ?? null,
     permissions: resolvedPermissionKeys,
   });
 

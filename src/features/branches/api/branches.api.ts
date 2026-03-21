@@ -6,6 +6,7 @@ import {
   type ServerListResponse,
 } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
+import type { BranchType } from '@/shared/access/constants';
 import type {
   Branch,
   BranchCreatePayload,
@@ -18,7 +19,7 @@ import { toCreateBranchPayload, toUpdateBranchPayload } from '../utils/branch-pa
 export interface BranchOption {
   id: string;
   name: string;
-  type: string;
+  type: BranchType;
 }
 
 export const branchesApi = api.injectEndpoints({

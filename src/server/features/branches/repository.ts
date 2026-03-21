@@ -13,7 +13,7 @@ export type ListBranchParams = {
 export type BranchOptionRow = {
   id: string;
   name: string;
-  type: string;
+  type: number;
 };
 
 export async function listBranchesRepo(p: ListBranchParams) {

@@ -8,6 +8,25 @@
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 
+async function cleanupDevServiceWorkers() {
+  if (!import.meta.env.DEV || typeof window === 'undefined') return;
+  if (!('serviceWorker' in navigator)) return;
+
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((registration) => registration.unregister()));
+
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+    }
+  } catch (error) {
+    console.warn('Failed to clean up service workers in development mode.', error);
+  }
+}
+
+void cleanupDevServiceWorkers();
+
 const elem = document.getElementById('root')!;
 const app = <App />;
 

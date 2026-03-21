@@ -3,7 +3,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../src/db/config';
 import { companies, branches, roles, users } from '@/db/schemas';
-import { UserStatus } from '@/db/schemas/enums';
+import { BranchType, UserStatus, UserType } from '@/db/schemas/enums';
 // import { companies, branches, roles, users } from '../src/db/schema';
 
 async function main() {
@@ -16,7 +16,7 @@ async function main() {
   const COMPANY_TIN = 'GHA-VX-001234'; // generated
 
   const BRANCH_NAME = 'Head Office';
-  const BRANCH_TYPE = 'HEAD_OFFICE';
+  const BRANCH_TYPE = BranchType.HEADOFFICE;
 
   const ROLE_NAME = 'System Admin';
 
@@ -131,6 +131,8 @@ async function main() {
         roleId,
         companyId,
         branchId,
+        locationId: null,
+        userType: UserType.STAFF,
         createdBy: userId, // self-created
         taxReportConfirmation: false,
       });

@@ -35,6 +35,7 @@ export interface DataTableCommonProps<TData, TValue> {
   pageSizeOptions?: number[];
   searchPlaceholder?: string;
   searchColumn?: string;
+  showSearch?: boolean;
 }
 
 export interface DataTableServerProps<TData, TValue, TFilters = Record<string, unknown>>

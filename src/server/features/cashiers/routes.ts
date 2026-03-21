@@ -1,12 +1,13 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { PaginationRequestQuery, UUID } from '../../schemas/common';
+import { PaginationRequestQueryProps, UUID } from '../../schemas/common';
 import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import {
   closeSessionCtrl,
   createSessionTypeCtrl,
   getCurrentActiveSessionCtrl,
+  getCurrentActiveSessionSummaryCtrl,
   getSessionByIdCtrl,
   listSessionTypesCtrl,
   listSessionsCtrl,
@@ -58,14 +59,12 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
         },
       }),
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          cashierId: t.Optional(UUID),
-          branchId: t.Optional(UUID),
-          activeOnly: t.Optional(t.Boolean()),
-        }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        cashierId: t.Optional(UUID),
+        branchId: t.Optional(UUID),
+        activeOnly: t.Optional(t.Boolean()),
+      }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCashierSessions)],
       detail: { tags: ['Cashiers'], summary: 'List cashier sessions' },
     },
@@ -85,6 +84,35 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
     {
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCashierSessions)],
       detail: { tags: ['Cashiers'], summary: 'Get current cashier active session' },
+    },
+  )
+  .get(
+    '/sessions/active/current/summary',
+    async ({ user, query }) =>
+      getCurrentActiveSessionSummaryCtrl({
+        cashierId: (user as AuthUser).sub,
+        branchId: (user as AuthUser).branchId ?? null,
+        mode: query.mode ?? 'sender',
+      }),
+    {
+      query: t.Object({
+        mode: t.Optional(t.Union([t.Literal('sender'), t.Literal('receiver'), t.Literal('delivery')])),
+      }),
+      response: t.Union([
+        t.Null(),
+        t.Object({
+          sessionId: UUID,
+          amountPaidPsw: t.Number(),
+          toBePaidPsw: t.Number(),
+          totalSalesPsw: t.Number(),
+          totalCreditCreatedPsw: t.Number(),
+          totalToBePaidCollectedPsw: t.Number(),
+          totalDeliveryFeeCollectedPsw: t.Number(),
+          mode: t.Union([t.Literal('sender'), t.Literal('receiver'), t.Literal('delivery')]),
+        }),
+      ]),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCashierSessions)],
+      detail: { tags: ['Cashiers'], summary: 'Get active session financial summary' },
     },
   )
   .post(

@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { PaginationRequestQuery, UUID } from '@/server/schemas/common';
+import { PaginationRequestQueryProps, UUID } from '@/server/schemas/common';
 
 const notImplemented = (scope: string) => ({
   error: {
@@ -17,16 +17,14 @@ export const hrRoutes = new Elysia({ name: 'hr' })
       return notImplemented('List employees');
     },
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          companyId: UUID,
-          branchId: t.Optional(UUID),
-          roleId: t.Optional(UUID),
-          status: t.Optional(t.String()),
-          search: t.Optional(t.String()),
-        }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        companyId: UUID,
+        branchId: t.Optional(UUID),
+        roleId: t.Optional(UUID),
+        status: t.Optional(t.String()),
+        search: t.Optional(t.String()),
+      }),
       detail: { tags: ['HR'], summary: 'List employees', operationId: 'listEmployees' },
     },
   )
@@ -124,15 +122,13 @@ export const hrRoutes = new Elysia({ name: 'hr' })
       return notImplemented('Attendance report');
     },
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          employeeId: t.Optional(UUID),
-          branchId: t.Optional(UUID),
-          from: t.String({ format: 'date' }),
-          to: t.String({ format: 'date' }),
-        }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        employeeId: t.Optional(UUID),
+        branchId: t.Optional(UUID),
+        from: t.String({ format: 'date' }),
+        to: t.String({ format: 'date' }),
+      }),
       detail: { tags: ['HR'], summary: 'Attendance report', operationId: 'listAttendance' },
     },
   );

@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import { PaginationRequestQuery, UUID } from '@/server/schemas/common';
+import { PaginationRequestQueryProps, UUID } from '@/server/schemas/common';
 import { authPlugin, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import {
@@ -33,17 +33,15 @@ export const auditRoutes = new Elysia({ name: 'audit' })
       });
     },
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          actorUserId: t.Optional(UUID),
-          entityType: t.Optional(t.String()),
-          entityId: t.Optional(UUID),
-          action: t.Optional(t.String()),
-          from: t.Optional(t.String({ format: 'date-time' })),
-          to: t.Optional(t.String({ format: 'date-time' })),
-        }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        actorUserId: t.Optional(UUID),
+        entityType: t.Optional(t.String()),
+        entityId: t.Optional(UUID),
+        action: t.Optional(t.String()),
+        from: t.Optional(t.String({ format: 'date-time' })),
+        to: t.Optional(t.String({ format: 'date-time' })),
+      }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanListAuditLogs)],
       detail: { tags: ['Audit'], summary: 'List audit logs', operationId: 'listAuditLogs' },
     },

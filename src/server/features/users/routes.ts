@@ -1,29 +1,40 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { authPlugin, requireAuth, requirePermissions } from '@/server/plugins/auth';
+import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { BRANCH_TYPES, USER_TYPES } from '@/shared/access/constants';
+import { BranchType } from '@/db/schemas/enums';
+import { Forbidden } from '@/server/utils/http-error';
 
 import { createUserSvc, getUserSvc, updateUserSvc } from './service';
 import { listUserOptionsCtrl, listUsersCtrl } from './controller';
-import { PaginationRequestQuery, NonEmpty255, UUID } from '@/server/schemas/common';
+import { PaginationRequestQueryProps, NonEmpty255, UUID } from '@/server/schemas/common';
 
 export const usersRoutes = new Elysia({ name: 'users' })
   .use(authPlugin)
   .get(
     '/options',
-    async ({ query }) =>
-      listUserOptionsCtrl({
-        companyId: query.companyId ?? null,
-        branchId: query.branchId ?? null,
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      const isHeadOffice = authUser.branchType === BranchType.HEADOFFICE;
+
+      return listUserOptionsCtrl({
+        companyId: authUser.companyId ?? null,
+        branchId: isHeadOffice ? (query.branchId ?? null) : (authUser.branchId ?? null),
+        locationId: authUser.locationId ?? null,
         roleId: query.roleId ?? null,
+        userType: query.userType ?? null,
         status: query.status ?? null,
         search: query.search ?? null,
-      }),
+      });
+    },
     {
       query: t.Object({
         companyId: t.Optional(UUID),
         branchId: t.Optional(UUID),
+        locationId: t.Optional(UUID),
         roleId: t.Optional(UUID),
+        userType: t.Optional(t.Union(USER_TYPES.map((value) => t.Literal(value)))),
         status: t.Optional(t.Number()),
         search: t.Optional(t.String()),
       }),
@@ -33,8 +44,11 @@ export const usersRoutes = new Elysia({ name: 'users' })
   )
   .get(
     '/',
-    async ({ query }) =>
-      listUsersCtrl({
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      const isHeadOffice = authUser.branchType === BranchType.HEADOFFICE;
+
+      return listUsersCtrl({
         page: query.page,
         pageSize: query.pageSize,
         search: query.search,
@@ -42,23 +56,28 @@ export const usersRoutes = new Elysia({ name: 'users' })
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
         filters: {
-          companyId: query.companyId ?? null,
-          branchId: query.branchId ?? null,
+          companyId: authUser.companyId ?? null,
+          branchId: isHeadOffice ? (query.branchId ?? null) : (authUser.branchId ?? null),
+          locationId: authUser.locationId ?? null,
           roleId: query.roleId ?? null,
+          userType: query.userType ?? null,
           status: query.status ?? null,
+          statuses: query.statuses ?? null,
         },
-      }),
+      });
+    },
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          companyId: t.Optional(UUID),
-          branchId: t.Optional(UUID),
-          roleId: t.Optional(UUID),
-          status: t.Optional(t.Number()),
-          search: t.Optional(t.String()),
-        }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        companyId: t.Optional(UUID),
+        branchId: t.Optional(UUID),
+        locationId: t.Optional(UUID),
+        roleId: t.Optional(UUID),
+        userType: t.Optional(t.Union(USER_TYPES.map((value) => t.Literal(value)))),
+        status: t.Optional(t.Number()),
+        statuses: t.Optional(t.String()),
+        search: t.Optional(t.String()),
+      }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadUsers)],
       detail: { tags: ['Users'], summary: 'List users', operationId: 'listUsers' },
     },
@@ -70,8 +89,50 @@ export const usersRoutes = new Elysia({ name: 'users' })
   })
   .post(
     '/',
-    async ({ body, set }) => {
-      const res = await createUserSvc(body);
+    async ({ body, set, user }) => {
+      const authUser = user as AuthUser;
+      if (!authUser.companyId || !authUser.sub) {
+        throw Forbidden('Authenticated actor context is incomplete');
+      }
+      if (
+        authUser.branchType === null ||
+        authUser.branchType === undefined ||
+        !BRANCH_TYPES.includes(authUser.branchType as (typeof BRANCH_TYPES)[number])
+      ) {
+        throw Forbidden('Authenticated actor branch type is invalid');
+      }
+
+      const payload = body as {
+        fullname: string;
+        telephone: string;
+        email: string;
+        status?: number;
+        roleId: string;
+        branchId: string;
+        locationId?: string | null;
+        userType: number;
+        sendInvite?: boolean;
+      };
+
+      const res = await createUserSvc({
+        fullname: payload.fullname,
+        telephone: payload.telephone,
+        email: payload.email,
+        status: payload.status,
+        roleId: payload.roleId,
+        companyId: authUser.companyId,
+        branchId: payload.branchId,
+        locationId: payload.locationId ?? null,
+        userType: payload.userType,
+        createdBy: authUser.sub,
+        sendInvite: payload.sendInvite,
+        actor: {
+          companyId: authUser.companyId ?? null,
+          branchId: authUser.branchId ?? null,
+          branchType: authUser.branchType ?? null,
+          locationId: authUser.locationId ?? null,
+        },
+      });
       set.status = HttpStatus.CREATED;
       return res;
     },
@@ -82,9 +143,10 @@ export const usersRoutes = new Elysia({ name: 'users' })
         email: NonEmpty255,
         status: t.Optional(t.Number()),
         roleId: UUID,
-        companyId: UUID,
         branchId: UUID,
-        createdBy: UUID,
+        locationId: t.Optional(t.Union([UUID, t.Null()])),
+        userType: t.Union(USER_TYPES.map((value) => t.Literal(value))),
+        sendInvite: t.Optional(t.Boolean()),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateUsers)],
       detail: { tags: ['Users'], summary: 'Create user', operationId: 'createUser' },
@@ -99,6 +161,8 @@ export const usersRoutes = new Elysia({ name: 'users' })
       status: t.Optional(t.Number()),
       roleId: t.Optional(UUID),
       branchId: t.Optional(UUID),
+      locationId: t.Optional(t.Union([UUID, t.Null()])),
+      userType: t.Optional(t.Union(USER_TYPES.map((value) => t.Literal(value)))),
     }),
     beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateUsers)],
     detail: { tags: ['Users'], summary: 'Update user', operationId: 'updateUser' },

@@ -12,12 +12,12 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Spinner } from '@/components/ui/spinner';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useGetCurrentActiveSessionQuery } from '@/features/cashiers/api/cashiers.api';
 import { useCreateCustomerMutation } from '@/features/customers/api';
 import { useAuthStore } from '@/stores/auth-store';
+import { BranchType } from '@/db/schemas/enums';
 import { useCreateBookingWithParcelsMutation } from '../api/parcel.api';
 import { CustomerLookupSection } from './parcel-create/customer-lookup-section';
 import { ParcelCard } from './parcel-create/parcel-card';
@@ -46,6 +46,16 @@ const createEmptyParcel = (): ParcelFormValues => ({
   },
 });
 
+const createInitialFormValues = (): ParcelBookingFormValues => ({
+  sender: {
+    telephone: '',
+    customerId: '',
+    fullname: '',
+  },
+  status: PARCEL_STATUS_OPTIONS[0]?.value ?? 0,
+  parcels: [createEmptyParcel()],
+});
+
 const parseAmount = (value: string, label: string) => {
   const normalized = String(value ?? '')
     .replace(/,/g, '')
@@ -62,6 +72,7 @@ export function ParcelCreateForm() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const userBranchId = user?.branch?.id ?? '';
+  const userBranchType = user?.branch?.type ?? null;
   const userId = user?.id ?? '';
 
   const [latestReceipt, setLatestReceipt] = useState<ReceiptSummary | null>(null);
@@ -71,21 +82,16 @@ export function ParcelCreateForm() {
     { companyId },
     { skip: !companyId },
   );
+  const destinationBranchOptions = branchOptions.filter(
+    (branch) => branch.id !== userBranchId && branch.type !== BranchType.HEADOFFICE,
+  );
 
   const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
   const [createBookingWithParcels, { isLoading: isSubmitting }] =
     useCreateBookingWithParcelsMutation();
 
   const form = useForm<ParcelBookingFormValues>({
-    defaultValues: {
-      sender: {
-        telephone: '',
-        customerId: '',
-        fullname: '',
-      },
-      status: PARCEL_STATUS_OPTIONS[0]?.value ?? 0,
-      parcels: [createEmptyParcel()],
-    },
+    defaultValues: createInitialFormValues(),
     mode: 'onSubmit',
   });
 
@@ -94,10 +100,8 @@ export function ParcelCreateForm() {
     name: 'parcels',
   });
 
-  const sourceBranchName =
-    branchOptions.find((branch) => branch.id === userBranchId)?.name ?? 'Current branch';
-
   const submitDisabled =
+    userBranchType === BranchType.HEADOFFICE ||
     !companyId ||
     !userId ||
     !activeSession ||
@@ -127,6 +131,11 @@ export function ParcelCreateForm() {
   };
 
   const onSubmit = async (values: ParcelBookingFormValues) => {
+    if (userBranchType === BranchType.HEADOFFICE) {
+      toast.error('Head office users cannot create parcel bookings');
+      return;
+    }
+
     if (!companyId || !userId || !userBranchId) {
       toast.error('Authenticated user context is incomplete');
       return;
@@ -139,6 +148,22 @@ export function ParcelCreateForm() {
 
     if (values.status == null) {
       toast.error('Please select a parcel status');
+      return;
+    }
+
+    const hasSameDestinationAsSource = values.parcels.some((parcel) => parcel.destinationBranchId === userBranchId);
+    if (hasSameDestinationAsSource) {
+      toast.error('Destination branch cannot be your current branch');
+      return;
+    }
+
+    const destinationBranchById = new Map(branchOptions.map((branch) => [branch.id, branch]));
+    const hasHeadOfficeDestination = values.parcels.some((parcel) => {
+      const destinationBranch = destinationBranchById.get(parcel.destinationBranchId);
+      return destinationBranch?.type === BranchType.HEADOFFICE;
+    });
+    if (hasHeadOfficeDestination) {
+      toast.error('Head office cannot be selected as destination branch');
       return;
     }
 
@@ -175,35 +200,60 @@ export function ParcelCreateForm() {
           value: parseAmount(parcel.parcelValue, `parcel value for parcel ${index + 1}`),
         })) || [];
 
+      const status = Number(values.status);
       const response = await createBookingWithParcels({
         senderId: resolvedSenderId,
-        status: values.status,
+        status,
         cashierSessionId: activeSession.id,
-        parcels: values.parcels.map((parcel, index) => ({
-          destinationId: parcel.destinationBranchId,
-          receiverId: receiverIds[index],
-          status: values.status,
-          parcelDetails: parcel.parcelDetails,
-          parcelContent: parcel.parcelContent,
-          method: 0,
-          parcelValueCedis: amounts[index]?.value,
-          chargeCedis: amounts[index]?.charge,
-          senderPaymentCedis:
-            parcel.paymentResponsibility === 'SENDER' ? amounts[index]?.charge : 0,
-          plannedToBePaidCedis:
-            parcel.paymentResponsibility === 'RECEIVER' ? amounts[index]?.charge : 0,
-        })),
+        parcels: values.parcels.map((parcel, index) => {
+          const receiverId = receiverIds[index];
+          if (!receiverId) {
+            throw new Error(`Recipient for parcel ${index + 1} is required`);
+          }
+          return {
+            destinationId: parcel.destinationBranchId,
+            receiverId,
+            status,
+            parcelDetails: parcel.parcelDetails,
+            parcelContent: parcel.parcelContent,
+            method: 0,
+            parcelValueCedis: amounts[index]?.value,
+            chargeCedis: amounts[index]?.charge,
+            senderPaymentCedis:
+              parcel.paymentResponsibility === 'SENDER' ? amounts[index]?.charge : 0,
+            plannedToBePaidCedis:
+              parcel.paymentResponsibility === 'RECEIVER' ? amounts[index]?.charge : 0,
+          };
+        }),
       }).unwrap();
 
       setLatestReceipt({
         bookingId: response.bookingId,
         parcels: response.parcels.map((parcel, index) => ({
+          bookingCode: parcel.bookingCode ?? response.bookingId,
           trackingCode: parcel.trackingCode ?? '-',
-          paymentResponsibility: values.parcels[index]?.paymentResponsibility ?? 'SENDER',
-          amountCedis: amounts[index]?.charge ?? 0,
+          parcelDetails: values.parcels[index]?.parcelDetails ?? '-',
+          senderName: values.sender.fullname,
+          senderTelephone: values.sender.telephone,
+          receiverName: values.parcels[index]?.receiver.fullname ?? '-',
+          receiverTelephone: values.parcels[index]?.receiver.telephone ?? '-',
+          destinationBranchName:
+            branchOptions.find((branch) => branch.id === values.parcels[index]?.destinationBranchId)?.name ?? '-',
+          destinationLocationName: values.parcels[index]?.destinationLocationId ?? '-',
+          totalChargeCedis: amounts[index]?.charge ?? 0,
+          senderPaidCedis:
+            values.parcels[index]?.paymentResponsibility === 'SENDER'
+              ? (amounts[index]?.charge ?? 0)
+              : 0,
+          receiverToPayCedis:
+            values.parcels[index]?.paymentResponsibility === 'RECEIVER'
+              ? (amounts[index]?.charge ?? 0)
+              : 0,
+          issuedAt: new Date().toISOString(),
         })),
       });
 
+      form.reset(createInitialFormValues());
       toast.success('Parcel transaction created successfully');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create parcel transaction');
@@ -211,7 +261,7 @@ export function ParcelCreateForm() {
   };
 
   const handleCancel = () => {
-    form.reset();
+    form.reset(createInitialFormValues());
     setLatestReceipt(null);
   };
 
@@ -237,49 +287,49 @@ export function ParcelCreateForm() {
             </div>
           </div>
           <ScrollableWrapper>
-            <div className="grid gap-4">
+            <div className="space-y-5">
+              <div className="grid gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Sender</CardTitle>
+                    <CardDescription>
+                      Search by phone to reuse existing customer records.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <CustomerLookupSection
+                        label="Sender"
+                        phoneName="sender.telephone"
+                        customerIdName="sender.customerId"
+                        fullnameName="sender.fullname"
+                        helperText="Lookup starts after 3 seconds when 10+ digits are entered."
+                        layout="split"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
               <Card>
                 <CardHeader>
-                  <CardTitle>Sender</CardTitle>
+                  <CardTitle>Parcels</CardTitle>
                   <CardDescription>
-                    Search by phone to reuse existing customer records.
+                    Each parcel can have its own recipient, destination branch, and pickup location.
                   </CardDescription>
+                  <CardAction>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => append(createEmptyParcel())}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Parcel
+                    </Button>
+                  </CardAction>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <CustomerLookupSection
-                      label="Sender"
-                      phoneName="sender.telephone"
-                      customerIdName="sender.customerId"
-                      fullnameName="sender.fullname"
-                      helperText="Lookup starts after 3 seconds when 10+ digits are entered."
-                      layout="split"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Parcels</CardTitle>
-                <CardDescription>
-                  Each parcel can have its own recipient, destination branch, and pickup location.
-                </CardDescription>
-                <CardAction>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => append(createEmptyParcel())}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Parcel
-                  </Button>
-                </CardAction>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ScrollArea className="max-h-[520px] pr-2">
+                <CardContent className="space-y-4">
                   <div className="space-y-4 pr-2">
                     {fields.map((field, index) => (
                       <ParcelCard
@@ -288,17 +338,23 @@ export function ParcelCreateForm() {
                         canRemove={fields.length > 1}
                         onRemove={() => remove(index)}
                         companyId={companyId}
-                        branchOptions={branchOptions}
+                        branchOptions={destinationBranchOptions}
                       />
                     ))}
                   </div>
-                </ScrollArea>
-                <p className="text-xs text-muted-foreground">
-                  All parcels will be saved under a single booking. Ensure a cashier session is
-                  active before saving.
-                </p>
-              </CardContent>
-            </Card>
+
+                  <p className="text-xs text-muted-foreground">
+                    All parcels will be saved under a single booking. Ensure a cashier session is
+                    active before saving.
+                  </p>
+                  {userBranchType === BranchType.HEADOFFICE ? (
+                    <p className="text-xs text-destructive">
+                      Parcel creation is disabled for head office branches.
+                    </p>
+                  ) : null}
+                </CardContent>
+              </Card>
+            </div>
           </ScrollableWrapper>
         </form>
       </Form>

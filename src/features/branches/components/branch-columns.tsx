@@ -1,6 +1,7 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { BRANCH_TYPE_LABELS } from '@/shared/access/constants';
 import type { Branch } from '../types/branch.types';
 
 export function createBranchColumns(): ColumnDef<Branch>[] {
@@ -12,6 +13,7 @@ export function createBranchColumns(): ColumnDef<Branch>[] {
     {
       accessorKey: 'type',
       header: 'Type',
+      cell: ({ row }) => BRANCH_TYPE_LABELS[row.original.type] ?? String(row.original.type),
     },
     {
       accessorKey: 'address',

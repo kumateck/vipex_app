@@ -8,6 +8,7 @@ import {
   PaginationRequestQuery,
   SmallInt,
 } from '../../schemas/common';
+import { USER_TYPES } from '@/shared/access/constants';
 
 // Request schemas
 export const ListUsersQuery = PaginationRequestQuery;
@@ -21,11 +22,10 @@ export const CreateUserBody = t.Object({
   email: Email,
   telephone: Telephone,
   // password: t.String({ minLength: 8, maxLength: 128 }),
-  companyId: UUID,
   branchId: UUID,
+  locationId: t.Optional(t.Union([UUID, t.Null()])),
   roleId: UUID,
-  // In real auth, createdBy comes from auth context; for now accept it in body
-  createdBy: UUID,
+  userType: t.Union(USER_TYPES.map((value) => t.Literal(value))),
   // No password here – invites will handle password setup
   // Optional flag to control emailing (defaults true)
   sendInvite: t.Optional(t.Boolean()),
@@ -40,6 +40,8 @@ export const UserDto = t.Object({
   status: SmallInt,
   companyId: UUID,
   branchId: UUID,
+  locationId: t.Optional(t.Union([UUID, t.Null()])),
+  userType: t.Union(USER_TYPES.map((value) => t.Literal(value))),
   createdAt: t.Union([t.String({ format: 'date-time' }), t.Null()]),
 });
 

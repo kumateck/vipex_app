@@ -16,7 +16,6 @@ import { corsPlugin } from './plugins/cors';
 import { usersInviteRoutes } from './features/auth/routes.invite-resend';
 import { branchesRoutes } from './features/branches/routes';
 import { locationsRoutes } from './features/locations/routes';
-import { statusesRoutes } from './features/statuses/routes';
 import { usersRoutes } from './features/users/routes';
 import { customersRoutes } from './features/customers/routes';
 import { bookingsRoutes } from './features/shipments/bookings.routes';
@@ -56,7 +55,6 @@ export const app = new Elysia()
       .use(api)
       .group('/users', (r) => r.use(usersRoutes).use(usersInviteRoutes))
       .group('/branches', (r) => r.use(branchesRoutes))
-      .group('/statuses', (r) => r.use(statusesRoutes))
       .group('/locations', (r) => r.use(locationsRoutes))
       .group('/customers', (r) => r.use(customersRoutes))
       .group('/cashiers', (r) => r.use(cashiersRoutes))
