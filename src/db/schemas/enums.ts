@@ -107,6 +107,17 @@ export enum SplitPaymentType {
   FIXED = 1,
   WEIGHTED = 2,
 }
+export enum IdentificationType {
+  PASSPORT = 0,
+  DRIVER_LICENSE = 1,
+  NHIS_CARD = 2,
+  VOTERS_ID_CARD = 3,
+  BIOMETRIC_SSNIT_CARD = 4,
+  NATIONAL_IDENTIFICATION_CARD = 5,
+  STUDENT_ID = 6,
+  ECOWAS_IDENTITY_CARD = 7,
+  NO_ID = 8,
+}
 export enum ParcelStatus {
   CREATED = 0, // Parcel info recorded by agent
   PROCESSED = 1, // Cashier processed payment / confirmed shipment
@@ -117,8 +128,8 @@ export enum ParcelStatus {
   DELIVERED_BY_OFFICE = 6, // Parcel handed over to customer at office/branch
   HOME_DELIVERY_REQUESTED = 7, // Customer requested home delivery
   ADDRESS_COLLECTED = 8, // Delivery address collected by agent
-  PARCEL_GROUPED = 9, // Parcel grouped with others for dispatch
-  DISPATCHED = 10, // Parcel dispatched to delivery agent
+  DISPATCHED = 9, // Parcel dispatched to delivery agent
+  RIDER_GIVEN_PARCEL_TO_CUSTOMER = 10, //  Rider successfully delivered parcel to customer and got confirmation (e.g. photo, OTP, signature)
   DELIVERED_AT_HOME = 11, // Parcel delivered to customer's home
   RETURNED_TO_OFFICE = 12, // Parcel returned to branch office
   RETURNED_TO_SENDER = 13, // Parcel returned to sender/source

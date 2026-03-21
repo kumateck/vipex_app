@@ -232,6 +232,23 @@ export async function listCardOptionsRepo(companyId: string): Promise<CardOption
     .orderBy(asc(cards.name), asc(cards.id));
 }
 
+export async function getCardOptionByIdRepo(input: {
+  id: string;
+  companyId: string;
+}): Promise<CardOptionRow | null> {
+  const [row] = await db
+    .select({
+      id: cards.id,
+      name: cards.name,
+    })
+    .from(cards)
+    .where(
+      and(eq(cards.id, input.id), eq(cards.companyId, input.companyId), eq(cards.isDeleted, false)),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
 export async function findCustomerCardByTypeAndNumberRepo(input: {
   customerId: string;
   cardId: string;

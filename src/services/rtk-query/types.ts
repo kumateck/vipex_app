@@ -5,6 +5,7 @@ export const LIST_TAG_ID = 'LIST' as const;
 export type ResourceTag =
   | 'Auth'
   | 'Bookings'
+  | 'Cards'
   | 'Customers'
   | 'Inventory'
   | 'Branches'

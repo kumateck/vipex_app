@@ -1,8 +1,20 @@
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { PermissionCatalogItem, RoleOption } from '../../api/rbac.api';
 
 interface RoleCreateDialogProps {
@@ -54,7 +66,10 @@ export function RoleCreateDialog({
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
               <p className="text-sm font-medium">How to start</p>
-              <Select value={createMode} onValueChange={(value) => onCreateModeChange(value as 'blank' | 'duplicate')}>
+              <Select
+                value={createMode}
+                onValueChange={(value) => onCreateModeChange(value as 'blank' | 'duplicate')}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose mode" />
                 </SelectTrigger>
@@ -68,10 +83,15 @@ export function RoleCreateDialog({
             {createMode === 'duplicate' ? (
               <div className="space-y-2">
                 <p className="text-sm font-medium">Source role</p>
-                <Select value={duplicateRoleId || undefined} onValueChange={onDuplicateRoleIdChange}>
+                <Select
+                  value={duplicateRoleId || undefined}
+                  onValueChange={onDuplicateRoleIdChange}
+                >
                   <SelectTrigger>
                     <SelectValue
-                      placeholder={loadingRoleOptions ? 'Loading roles...' : 'Select role to duplicate'}
+                      placeholder={
+                        loadingRoleOptions ? 'Loading roles...' : 'Select role to duplicate'
+                      }
                     />
                   </SelectTrigger>
                   <SelectContent>
@@ -86,7 +106,11 @@ export function RoleCreateDialog({
             ) : null}
           </div>
 
-          <Input placeholder="Role name" value={roleName} onChange={(event) => onRoleNameChange(event.target.value)} />
+          <Input
+            placeholder="Role name"
+            value={roleName}
+            onChange={(event) => onRoleNameChange(event.target.value)}
+          />
           {createMode === 'duplicate' && duplicateRoleId ? (
             <p className="text-xs text-muted-foreground">
               {loadingDuplicatePermissions
@@ -121,7 +145,7 @@ export function RoleCreateDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button onClick={onSubmit} disabled={submitting}>

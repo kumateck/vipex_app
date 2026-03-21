@@ -140,6 +140,7 @@ export const api = createApi({
   tagTypes: [
     'Auth',
     'Bookings',
+    'Cards',
     'Customers',
     'Inventory',
     'Branches',

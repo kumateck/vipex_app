@@ -130,6 +130,14 @@ export function ParcelWaitingPickupPage() {
     { skip: !selectedParcel?.secondReceiverId },
   );
 
+  useEffect(() => {
+    if (!selectedParcel) return;
+    if (mainReceiverCards.length === 0) {
+      setMainCardMode('new');
+      setMainExistingCardRecordId('');
+    }
+  }, [mainReceiverCards.length, selectedParcel]);
+
   const isSaving = isUpdatingParcel || isAddingCard || isCreatingCustomer;
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
@@ -385,7 +393,9 @@ export function ParcelWaitingPickupPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="existing">Use existing card</SelectItem>
+                    <SelectItem value="existing" disabled={mainReceiverCards.length === 0}>
+                      Use existing card
+                    </SelectItem>
                     <SelectItem value="new">Add new card</SelectItem>
                   </SelectContent>
                 </Select>
@@ -472,7 +482,9 @@ export function ParcelWaitingPickupPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="existing">Use existing card</SelectItem>
+                        <SelectItem value="existing" disabled={secondReceiverCards.length === 0}>
+                          Use existing card
+                        </SelectItem>
                         <SelectItem value="new">Add new card</SelectItem>
                       </SelectContent>
                     </Select>
@@ -531,7 +543,12 @@ export function ParcelWaitingPickupPage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedParcel(null)} disabled={isSaving}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setSelectedParcel(null)}
+              disabled={isSaving}
+            >
               Cancel
             </Button>
             <Button

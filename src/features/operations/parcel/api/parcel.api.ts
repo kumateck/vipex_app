@@ -163,6 +163,7 @@ export type ParcelFullDetails = {
     frontDeskUserId: string | null;
     deliveryUserId: string | null;
     riderUserId: string | null;
+    signatureImage: string | null;
     receiverCalledConfirmedBy: string | null;
     receiverCalledConfirmedAt: string | null;
     chargePsw: number;
@@ -186,6 +187,41 @@ export type ParcelFullDetails = {
     addedAt: string;
     removedAt: string | null;
   }>;
+};
+
+export type RiderDoorstepRecord = {
+  deliveryId: string;
+  parcelId: string;
+  riderUserId: string | null;
+  deliveryStatus: string;
+  signatureImage: string | null;
+  dropoffAddress: string | null;
+  deliveryFeePsw: number;
+  amountPaidPsw: number;
+  trackingCode: string;
+  bookingCode: string;
+  parcelStatus: number;
+  parcelDetails: string;
+  parcelContent: string;
+  plannedToBePaidPsw: number;
+  chargePsw: number;
+  destinationId: string;
+  destinationName: string | null;
+  receiverId: string;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  secondReceiverId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RiderDoorstepResponse = {
+  rows: RiderDoorstepRecord[];
+  totals: {
+    expectedDeliveryFeePsw: number;
+    expectedToBePaidPsw: number;
+    expectedTotalPsw: number;
+  };
 };
 
 export type SenderCashierParcelFilters = {
@@ -289,7 +325,11 @@ export const parcelApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
+      ],
     }),
     createConsignment: builder.mutation<
       { id: string; code: string; serialForDay: number },
@@ -353,6 +393,97 @@ export const parcelApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    collectDoorstepAddress: builder.mutation<
+      { id: string },
+      {
+        parcelId: string;
+        userId: string;
+        dropoffAddress: string;
+        deliveryFeeCedis: number | string;
+      }
+    >({
+      query: ({ parcelId, ...body }) => ({
+        url: `/deliveries/dd/${parcelId}/address-collected`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    dispatchDoorstepParcels: builder.mutation<
+      { updated: number },
+      { parcelIds: string[]; riderUserId: string; userId: string }
+    >({
+      query: (body) => ({
+        url: '/deliveries/dd/dispatch/bulk',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    listRiderDoorstepParcels: builder.query<
+      RiderDoorstepResponse,
+      { riderUserId: string; mode?: 'current' | 'history' }
+    >({
+      query: ({ riderUserId, mode = 'current' }) => ({
+        url: `/deliveries/dd/rider/${riderUserId}`,
+        params: { mode },
+      }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    riderGivenParcelToCustomer: builder.mutation<
+      { id: string },
+      {
+        parcelId: string;
+        riderUserId: string;
+        signatureImage: string;
+        secondReceiverId?: string | null;
+        cardId?: string | null;
+        cardNumber?: string | null;
+        secondCardId?: string | null;
+        secondCardNumber?: string | null;
+      }
+    >({
+      query: ({ parcelId, ...body }) => ({
+        url: `/deliveries/dd/${parcelId}/rider-given`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    riderReturnParcelToOffice: builder.mutation<
+      { id: string },
+      { parcelId: string; riderUserId: string }
+    >({
+      query: ({ parcelId, riderUserId }) => ({
+        url: `/deliveries/dd/${parcelId}/returned`,
+        method: 'POST',
+        body: { riderUserId },
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    finalizeDoorstepAtOffice: builder.mutation<
+      { id: string },
+      {
+        parcelId: string;
+        cashierUserId: string;
+        branchId: string;
+        companyId: string;
+        principalAmountCedis?: number | string | null;
+        deliveryFeeAmountCedis?: number | string | null;
+        method: number;
+      }
+    >({
+      query: ({ parcelId, ...body }) => ({
+        url: `/deliveries/dd/${parcelId}/finalize-at-office`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
+      ],
+    }),
   }),
 });
 
@@ -368,4 +499,10 @@ export const {
   useAddConsignmentItemsMutation,
   useUpdateParcelStatusMutation,
   useUpdateParcelMutation,
+  useCollectDoorstepAddressMutation,
+  useDispatchDoorstepParcelsMutation,
+  useListRiderDoorstepParcelsQuery,
+  useRiderGivenParcelToCustomerMutation,
+  useRiderReturnParcelToOfficeMutation,
+  useFinalizeDoorstepAtOfficeMutation,
 } = parcelApi;

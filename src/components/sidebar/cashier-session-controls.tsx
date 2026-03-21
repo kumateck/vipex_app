@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +13,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   useCloseSessionMutation,
   useGetCurrentActiveSessionQuery,
@@ -35,6 +42,7 @@ function formatCedisFromPsw(valuePsw: number): string {
 
 export function CashierSessionControls() {
   const authUser = useAuthStore((state) => state.user);
+  const location = useLocation();
   const [isOpenDialog, setIsOpenDialog] = useState(false);
   const [sessionTypeId, setSessionTypeId] = useState('');
   const [openingBalance, setOpeningBalance] = useState('');
@@ -45,23 +53,34 @@ export function CashierSessionControls() {
   const canReadSessions = permissions.has(PermissionKeys.CanReadCashierSessions);
   const canOpenSessions = permissions.has(PermissionKeys.CanOpenCashierSessions);
   const canCloseSessions = permissions.has(PermissionKeys.CanCloseCashierSessions);
-  const cashierMode: 'sender' | 'receiver' | 'delivery' = permissions.has(
-    PermissionKeys.CanCompleteDoorstepDelivery,
-  )
-    ? 'delivery'
-    : permissions.has(PermissionKeys.CanCompleteOfficePickup)
+  const roleName = authUser?.role?.name?.toLowerCase() ?? '';
+  const isReceiverRoute = location.pathname.startsWith('/parcels/receiver-cashier');
+  const cashierMode: 'sender' | 'receiver' | 'delivery' = isReceiverRoute
+    ? 'receiver'
+    : roleName.includes('receiver')
       ? 'receiver'
-      : 'sender';
+      : permissions.has(PermissionKeys.CanCompleteDoorstepDelivery)
+        ? 'delivery'
+        : permissions.has(PermissionKeys.CanCompleteOfficePickup)
+          ? 'receiver'
+          : 'sender';
 
-  const { data: activeSession, isLoading: isLoadingActiveSession } = useGetCurrentActiveSessionQuery(undefined, {
-    skip: !isCashierUser || !canReadSessions,
-  });
-  const { data: summary } = useGetCurrentActiveSessionSummaryQuery({ mode: cashierMode }, {
-    skip: !isCashierUser || !canReadSessions,
-  });
-  const { data: sessionTypes, isLoading: isLoadingSessionTypes } = useListSessionTypesQuery(undefined, {
-    skip: !isCashierUser || !canOpenSessions || !!activeSession,
-  });
+  const { data: activeSession, isLoading: isLoadingActiveSession } =
+    useGetCurrentActiveSessionQuery(undefined, {
+      skip: !isCashierUser || !canReadSessions,
+    });
+  const { data: summary } = useGetCurrentActiveSessionSummaryQuery(
+    { mode: cashierMode },
+    {
+      skip: !isCashierUser || !canReadSessions,
+    },
+  );
+  const { data: sessionTypes, isLoading: isLoadingSessionTypes } = useListSessionTypesQuery(
+    undefined,
+    {
+      skip: !isCashierUser || !canOpenSessions || !!activeSession,
+    },
+  );
 
   const [openSession, { isLoading: isOpeningSession }] = useOpenSessionMutation();
   const [closeSession, { isLoading: isClosingSession }] = useCloseSessionMutation();
@@ -139,7 +158,9 @@ export function CashierSessionControls() {
                 <Label>Session Type</Label>
                 <Select value={sessionTypeId} onValueChange={setSessionTypeId}>
                   <SelectTrigger disabled={isLoadingSessionTypes}>
-                    <SelectValue placeholder={isLoadingSessionTypes ? 'Loading...' : 'Select type'} />
+                    <SelectValue
+                      placeholder={isLoadingSessionTypes ? 'Loading...' : 'Select type'}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {(sessionTypes ?? []).map((sessionType) => (
@@ -162,7 +183,7 @@ export function CashierSessionControls() {
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsOpenDialog(false)}>
+              <Button variant="outline" type="button" onClick={() => setIsOpenDialog(false)}>
                 Cancel
               </Button>
               <Button onClick={handleOpenSession} disabled={isOpeningSession}>
@@ -178,15 +199,26 @@ export function CashierSessionControls() {
   return (
     <div className="flex items-center gap-2">
       {cashierMode === 'receiver' ? (
-        <Badge variant="secondary">Total To Be Paid Paid: {formatCedisFromPsw(summary?.amountPaidPsw ?? 0)}</Badge>
+        <Badge variant="secondary">
+          Receiver Payments: {formatCedisFromPsw(summary?.totalToBePaidCollectedPsw ?? 0)}
+        </Badge>
       ) : (
         <>
-          <Badge variant="secondary">Amount Paid: {formatCedisFromPsw(summary?.amountPaidPsw ?? 0)}</Badge>
-          <Badge variant="outline">To Be Paid: {formatCedisFromPsw(summary?.toBePaidPsw ?? 0)}</Badge>
+          <Badge variant="secondary">
+            Amount Paid: {formatCedisFromPsw(summary?.amountPaidPsw ?? 0)}
+          </Badge>
+          <Badge variant="outline">
+            To Be Paid: {formatCedisFromPsw(summary?.toBePaidPsw ?? 0)}
+          </Badge>
         </>
       )}
       {canCloseSessions ? (
-        <Button size="sm" variant="destructive" onClick={handleCloseSession} disabled={isClosingSession}>
+        <Button
+          size="sm"
+          variant="destructive"
+          onClick={handleCloseSession}
+          disabled={isClosingSession}
+        >
           {isClosingSession ? 'Closing...' : 'Close Session'}
         </Button>
       ) : null}

@@ -5,6 +5,7 @@ import {
   createCustomerRepo,
   findCustomerCardByTypeAndNumberRepo,
   findCustomersByTelephoneRepo,
+  getCardOptionByIdRepo,
   getCustomerRepo,
   listCardOptionsRepo,
   listCustomerCardsRepo,
@@ -140,6 +141,8 @@ export async function addCustomerCardSvc(input: {
 }): Promise<{ id: string }> {
   const customer = await getCustomerRepo(input.customerId);
   if (!customer || customer.companyId !== input.companyId) throw NotFound('Customer not found');
+  const card = await getCardOptionByIdRepo({ id: input.cardId, companyId: input.companyId });
+  if (!card) throw NotFound('Card type not found');
 
   const cardNumber = input.cardNumber.trim();
   if (!cardNumber) throw BadRequest('Card number is required');

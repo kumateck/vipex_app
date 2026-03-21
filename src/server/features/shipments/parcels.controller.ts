@@ -74,6 +74,7 @@ export async function getParcelDetailsCtrl(id: string) {
     delivery: result.delivery
       ? {
           ...result.delivery,
+          signatureImage: result.delivery.signatureImage ?? null,
           receiverCalledConfirmedAt: result.delivery.receiverCalledConfirmedAt
             ? result.delivery.receiverCalledConfirmedAt.toISOString()
             : null,

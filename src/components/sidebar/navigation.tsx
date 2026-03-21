@@ -90,6 +90,10 @@ export const ROUTES: Route[] = [
             title: 'Waiting for Pickup',
             url: '/parcels/waiting-pickup',
           },
+          {
+            title: 'Receiver Cashier',
+            url: '/parcels/receiver-cashier',
+          },
         ],
       },
       {
@@ -99,6 +103,18 @@ export const ROUTES: Route[] = [
           {
             title: 'Office Pickup',
             url: '/deliveries/office-pickup',
+          },
+          {
+            title: 'Address Collection',
+            url: '/parcels/home-delivery/address',
+          },
+          {
+            title: 'Dispatch Parcels',
+            url: '/parcels/home-delivery/dispatch',
+          },
+          {
+            title: 'Delivery Cashier',
+            url: '/parcels/delivery-cashier',
           },
           {
             title: 'Door-to-Door',
@@ -115,6 +131,14 @@ export const ROUTES: Route[] = [
           {
             title: 'Delivery History',
             url: '/deliveries/history',
+          },
+          {
+            title: 'Rider Current',
+            url: '/parcels/rider/current',
+          },
+          {
+            title: 'Rider History',
+            url: '/parcels/rider/history',
           },
         ],
       },
@@ -467,6 +491,10 @@ export const ROUTES: Route[] = [
         title: 'Service Configuration',
         icon: 'Settings',
         items: [
+          {
+            title: 'Cards',
+            url: '/settings/cards',
+          },
           {
             title: 'Parcel Types',
             url: '/settings/parcel-types',

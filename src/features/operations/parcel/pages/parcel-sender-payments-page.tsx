@@ -4,11 +4,29 @@ import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CashierType, ParcelStatus, PaymentComponent, PaymentMethod, Payer } from '@/db/schemas/enums';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  CashierType,
+  ParcelStatus,
+  PaymentComponent,
+  PaymentMethod,
+  Payer,
+} from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
@@ -56,7 +74,9 @@ export function ParcelSenderPaymentsPage() {
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
 
-  const [query, setQuery] = useState<ServerListQuery<{ companyId?: string | null; sourceId?: string | null; status?: number | null }>>({
+  const [query, setQuery] = useState<
+    ServerListQuery<{ companyId?: string | null; sourceId?: string | null; status?: number | null }>
+  >({
     page: 1,
     pageSize: 20,
     filters: {
@@ -70,7 +90,10 @@ export function ParcelSenderPaymentsPage() {
   const [lastPrintedReceipt, setLastPrintedReceipt] = useState<ReceiptPrintData | null>(null);
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<string>(String(PaymentMethod.CASH));
-  const { data: branchOptions = [] } = useListBranchOptionsQuery({ companyId }, { skip: !companyId });
+  const { data: branchOptions = [] } = useListBranchOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
   const { data: pickupLocation } = useGetLocationQuery(selectedParcel?.pickupLocationId ?? '', {
     skip: !selectedParcel?.pickupLocationId,
   });
@@ -100,12 +123,14 @@ export function ParcelSenderPaymentsPage() {
       {
         id: 'sender',
         header: 'Sender',
-        accessorFn: (row) => `${row.senderName ?? '-'}${row.senderPhone ? ` (${row.senderPhone})` : ''}`,
+        accessorFn: (row) =>
+          `${row.senderName ?? '-'}${row.senderPhone ? ` (${row.senderPhone})` : ''}`,
       },
       {
         id: 'receiver',
         header: 'Receiver',
-        accessorFn: (row) => `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        accessorFn: (row) =>
+          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
       },
       {
         id: 'charge',
@@ -166,7 +191,9 @@ export function ParcelSenderPaymentsPage() {
           return;
         }
         if (Math.abs(amountValue - senderDueCedis) > 0.00001) {
-          toast.error(`Sender cashier can only collect GHS ${senderDueCedis.toFixed(2)} for this parcel`);
+          toast.error(
+            `Sender cashier can only collect GHS ${senderDueCedis.toFixed(2)} for this parcel`,
+          );
           return;
         }
 
@@ -183,8 +210,10 @@ export function ParcelSenderPaymentsPage() {
       await updateParcelStatus({ id: selectedParcel.id, status: ParcelStatus.PROCESSED }).unwrap();
 
       const destinationBranchName =
-        branchOptions.find((branch) => branch.id === selectedParcel.destinationId)?.name ?? selectedParcel.destinationId;
-      const destinationLocationName = pickupLocation?.name ?? selectedParcel.pickupLocationId ?? '-';
+        branchOptions.find((branch) => branch.id === selectedParcel.destinationId)?.name ??
+        selectedParcel.destinationId;
+      const destinationLocationName =
+        pickupLocation?.name ?? selectedParcel.pickupLocationId ?? '-';
       setLastPrintedReceipt({
         bookingCode: selectedParcel.bookingCode,
         trackingCode: selectedParcel.trackingCode,
@@ -210,7 +239,9 @@ export function ParcelSenderPaymentsPage() {
           : undefined,
       });
 
-      toast.success(senderDueCedis > 0 ? 'Payment collected successfully' : 'Receipts generated successfully');
+      toast.success(
+        senderDueCedis > 0 ? 'Payment collected successfully' : 'Receipts generated successfully',
+      );
       setSelectedParcel(null);
       await refetch();
     } catch (error) {
@@ -245,7 +276,10 @@ export function ParcelSenderPaymentsPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={Boolean(selectedParcel)} onOpenChange={(open) => (!open ? setSelectedParcel(null) : null)}>
+        <Dialog
+          open={Boolean(selectedParcel)}
+          onOpenChange={(open) => (!open ? setSelectedParcel(null) : null)}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Collect Sender Payment</DialogTitle>
@@ -258,7 +292,9 @@ export function ParcelSenderPaymentsPage() {
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Expected Charge</p>
-                <p className="font-medium">{selectedParcel ? formatCurrency(selectedParcel.chargePsw) : '-'}</p>
+                <p className="font-medium">
+                  {selectedParcel ? formatCurrency(selectedParcel.chargePsw) : '-'}
+                </p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Sender Should Pay</p>
@@ -300,7 +336,7 @@ export function ParcelSenderPaymentsPage() {
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedParcel(null)}>
+              <Button variant="outline" type="button" onClick={() => setSelectedParcel(null)}>
                 Cancel
               </Button>
               <Button onClick={handleCollectPayment} disabled={isSubmitting}>

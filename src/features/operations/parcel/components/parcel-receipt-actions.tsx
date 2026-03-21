@@ -17,6 +17,7 @@ export type ReceiptPrintData = {
   totalChargeCedis: number;
   senderPaidCedis: number;
   receiverToPayCedis: number;
+  amountPaidCedis?: number;
   issuedAt: string;
   taxBreakdown?: {
     vatCedis: number;
@@ -46,10 +47,39 @@ function formatDate(isoDate: string) {
 
 function toWordsUnderThousand(n: number): string {
   const under20 = [
-    'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
-    'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen',
+    'zero',
+    'one',
+    'two',
+    'three',
+    'four',
+    'five',
+    'six',
+    'seven',
+    'eight',
+    'nine',
+    'ten',
+    'eleven',
+    'twelve',
+    'thirteen',
+    'fourteen',
+    'fifteen',
+    'sixteen',
+    'seventeen',
+    'eighteen',
+    'nineteen',
   ];
-  const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+  const tens = [
+    '',
+    '',
+    'twenty',
+    'thirty',
+    'forty',
+    'fifty',
+    'sixty',
+    'seventy',
+    'eighty',
+    'ninety',
+  ];
 
   if (n < 20) return under20[n] ?? '';
   if (n < 100) {
@@ -108,10 +138,11 @@ export function ParcelReceiptActions({
   );
 
   const tax = useMemo(() => {
+    const amountPaid = data.amountPaidCedis ?? data.senderPaidCedis;
     if (data.taxBreakdown) {
       return {
-        principal: data.senderPaidCedis,
-        net: data.senderPaidCedis - data.taxBreakdown.taxTotalCedis,
+        principal: amountPaid,
+        net: amountPaid - data.taxBreakdown.taxTotalCedis,
         vat: data.taxBreakdown.vatCedis,
         getfund: data.taxBreakdown.getfundCedis,
         nhil: data.taxBreakdown.nhilCedis,
@@ -120,8 +151,8 @@ export function ParcelReceiptActions({
         residual: 0,
       };
     }
-    return computeGhanaTaxesFromPrincipal(data.senderPaidCedis);
-  }, [data.senderPaidCedis, data.taxBreakdown]);
+    return computeGhanaTaxesFromPrincipal(amountPaid);
+  }, [data.amountPaidCedis, data.senderPaidCedis, data.taxBreakdown]);
 
   const printInvoice = useReactToPrint({
     contentRef: invoiceRef,
@@ -154,10 +185,16 @@ export function ParcelReceiptActions({
     handlePrintBoth();
   }, [autoPrint]);
 
+  const amountPaidCedis = data.amountPaidCedis ?? data.senderPaidCedis;
+
   return (
     <>
       <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '80mm' }}>
-        <div ref={stickerRef} className="bg-white text-black" style={{ width: '76mm', padding: '2mm', fontFamily: 'Arial, sans-serif' }}>
+        <div
+          ref={stickerRef}
+          className="bg-white text-black"
+          style={{ width: '76mm', padding: '2mm', fontFamily: 'Arial, sans-serif' }}
+        >
           <style>
             {`@media print { @page { size: 80mm auto; margin: 2mm; } body { margin: 0; } }`}
           </style>
@@ -168,11 +205,21 @@ export function ParcelReceiptActions({
           </div>
 
           <div style={{ fontSize: '11px', lineHeight: 1.35 }}>
-            <div><strong>Booking:</strong> {data.bookingCode}</div>
-            <div><strong>Receiver:</strong> {data.receiverName}</div>
-            <div><strong>Phone:</strong> {data.receiverTelephone || '-'}</div>
-            <div><strong>Destination:</strong> {data.destinationBranchName}</div>
-            <div><strong>Location:</strong> {data.destinationLocationName}</div>
+            <div>
+              <strong>Booking:</strong> {data.bookingCode}
+            </div>
+            <div>
+              <strong>Receiver:</strong> {data.receiverName}
+            </div>
+            <div>
+              <strong>Phone:</strong> {data.receiverTelephone || '-'}
+            </div>
+            <div>
+              <strong>Destination:</strong> {data.destinationBranchName}
+            </div>
+            <div>
+              <strong>Location:</strong> {data.destinationLocationName}
+            </div>
             {data.receiverToPayCedis > 0 ? (
               <div style={{ marginTop: '2mm', fontWeight: 700 }}>
                 TO PAY: {formatMoney(data.receiverToPayCedis)}
@@ -183,29 +230,68 @@ export function ParcelReceiptActions({
       </div>
 
       <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '148mm' }}>
-        <div ref={invoiceRef} className="bg-white text-black" style={{ width: '148mm', minHeight: '210mm', padding: '10mm', fontFamily: 'Arial, sans-serif' }}>
+        <div
+          ref={invoiceRef}
+          className="bg-white text-black"
+          style={{
+            width: '148mm',
+            minHeight: '210mm',
+            padding: '10mm',
+            fontFamily: 'Arial, sans-serif',
+          }}
+        >
           <style>
             {`@media print { @page { size: A5 portrait; margin: 8mm; } body { margin: 0; } }`}
           </style>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8mm' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '8mm',
+            }}
+          >
             <div>
               <h1 style={{ margin: 0, fontSize: '18px' }}>Invoice Receipt</h1>
-              <div style={{ fontSize: '12px', marginTop: '2mm' }}>Issued: {formatDate(data.issuedAt)}</div>
+              <div style={{ fontSize: '12px', marginTop: '2mm' }}>
+                Issued: {formatDate(data.issuedAt)}
+              </div>
             </div>
             <QRCode value={qrUrl} size={88} quietZone={2} ecLevel="M" />
           </div>
 
           <div style={{ fontSize: '12px', lineHeight: 1.5, marginBottom: '6mm' }}>
-            <div><strong>Booking Code:</strong> {data.bookingCode}</div>
-            <div><strong>Parcel Details:</strong> {data.parcelDetails}</div>
-            <div><strong>Destination Branch:</strong> {data.destinationBranchName}</div>
-            <div><strong>Sender:</strong> {data.senderName}</div>
-            <div><strong>Sender Phone:</strong> {data.senderTelephone || '-'}</div>
-            <div><strong>Payment Mode:</strong> {getPaymentModeLabel(data.senderPaidCedis, data.receiverToPayCedis)}</div>
+            <div>
+              <strong>Booking Code:</strong> {data.bookingCode}
+            </div>
+            <div>
+              <strong>Parcel Details:</strong> {data.parcelDetails}
+            </div>
+            <div>
+              <strong>Destination Branch:</strong> {data.destinationBranchName}
+            </div>
+            <div>
+              <strong>Sender:</strong> {data.senderName}
+            </div>
+            <div>
+              <strong>Sender Phone:</strong> {data.senderTelephone || '-'}
+            </div>
+            <div>
+              <strong>Payment Mode:</strong>{' '}
+              {getPaymentModeLabel(data.senderPaidCedis, data.receiverToPayCedis)}
+            </div>
           </div>
 
-          <div style={{ borderTop: '1px solid #111', borderBottom: '1px solid #111', padding: '4mm 0', marginBottom: '6mm', fontSize: '12px' }}>
+          <div
+            style={{
+              borderTop: '1px solid #111',
+              borderBottom: '1px solid #111',
+              padding: '4mm 0',
+              marginBottom: '6mm',
+              fontSize: '12px',
+            }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Total Charge</span>
               <strong>{formatMoney(data.totalChargeCedis)}</strong>
@@ -218,13 +304,19 @@ export function ParcelReceiptActions({
               <span>Receiver To Pay</span>
               <strong>{formatMoney(data.receiverToPayCedis)}</strong>
             </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Amount Received</span>
+              <strong>{formatMoney(amountPaidCedis)}</strong>
+            </div>
             <div style={{ marginTop: '2mm', fontStyle: 'italic' }}>
-              Amount in words: {toAmountWords(data.senderPaidCedis)}
+              Amount in words: {toAmountWords(amountPaidCedis)}
             </div>
           </div>
 
           <div style={{ fontSize: '12px' }}>
-            <div style={{ fontWeight: 700, marginBottom: '2mm' }}>Tax Breakdown (Sender Paid)</div>
+            <div style={{ fontWeight: 700, marginBottom: '2mm' }}>
+              Tax Breakdown (Amount Received)
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>VAT</span>
               <span>{formatMoney(tax.vat)}</span>
@@ -241,7 +333,15 @@ export function ParcelReceiptActions({
               <span>COVID Levy</span>
               <span>{formatMoney(tax.covid)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #777', marginTop: '2mm', paddingTop: '2mm' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                borderTop: '1px dashed #777',
+                marginTop: '2mm',
+                paddingTop: '2mm',
+              }}
+            >
               <strong>Total Tax</strong>
               <strong>{formatMoney(tax.totalTax)}</strong>
             </div>

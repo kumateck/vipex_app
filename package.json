@@ -73,6 +73,7 @@
     "react": "^19",
     "react-dom": "^19",
     "react-hook-form": "^7.66.0",
+    "react-minimal-signature": "^0.1.1",
     "react-qrcode-logo": "^4.0.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.11.0",

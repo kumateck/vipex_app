@@ -1,5 +1,11 @@
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
 interface RoleRenameDialogProps {
@@ -25,9 +31,13 @@ export function RoleRenameDialog({
         <DialogHeader>
           <DialogTitle>Rename role</DialogTitle>
         </DialogHeader>
-        <Input placeholder="Role name" value={roleName} onChange={(event) => onRoleNameChange(event.target.value)} />
+        <Input
+          placeholder="Role name"
+          value={roleName}
+          onChange={(event) => onRoleNameChange(event.target.value)}
+        />
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button onClick={onSubmit} disabled={submitting}>

@@ -59,6 +59,10 @@ export const customersRoutes = new Elysia({ name: 'customers' })
       detail: { tags: ['Customers'], summary: 'Find customers by telephone' },
     },
   )
+  .get('/cards/options', async ({ user }) => listCardOptionsCtrl(user!.companyId!), {
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+    detail: { tags: ['Customers'], summary: 'List card type options' },
+  })
   .get('/:id', async ({ params, user }) => getCustomerByIdCtrl(params.id, user!.companyId!), {
     params: t.Object({ id: UUID }),
     beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
@@ -96,10 +100,6 @@ export const customersRoutes = new Elysia({ name: 'customers' })
       detail: { tags: ['Customers'], summary: 'Add customer card' },
     },
   )
-  .get('/cards/options', async ({ user }) => listCardOptionsCtrl(user!.companyId!), {
-    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
-    detail: { tags: ['Customers'], summary: 'List card type options' },
-  })
   .post(
     '/',
     async ({ body, set, user }) => {

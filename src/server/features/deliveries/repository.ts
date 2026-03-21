@@ -1,6 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { deliveries } from '@/db/schemas';
+import { and, asc, desc, inArray } from 'drizzle-orm';
+import { deliveries, parcels, customers, branches } from '@/db/schemas';
+import { alias } from 'drizzle-orm/pg-core';
 
 export type DeliveryRow = {
   id: string;
@@ -12,6 +14,7 @@ export type DeliveryRow = {
   frontDeskUserId: string | null;
   deliveryUserId: string | null;
   riderUserId: string | null;
+  signatureImage: string | null;
   receiverCalledConfirmedBy: string | null;
   receiverCalledConfirmedAt: Date | null;
   chargePsw: number;
@@ -48,6 +51,7 @@ export async function getDeliveryByParcelRepo(parcelId: string): Promise<Deliver
       frontDeskUserId: deliveries.frontDeskUserId,
       deliveryUserId: deliveries.deliveryUserId,
       riderUserId: deliveries.riderUserId,
+      signatureImage: deliveries.signatureImage,
       receiverCalledConfirmedBy: deliveries.receiverCalledConfirmedBy,
       receiverCalledConfirmedAt: deliveries.receiverCalledConfirmedAt,
       chargePsw: deliveries.chargePsw,
@@ -77,4 +81,75 @@ export async function updateDeliveryRepo(
     .where(eq(deliveries.id, id))
     .returning({ id: deliveries.id });
   return row ?? null;
+}
+
+export type RiderDeliveryRow = {
+  deliveryId: string;
+  parcelId: string;
+  riderUserId: string | null;
+  deliveryStatus: string;
+  signatureImage: string | null;
+  dropoffAddress: string | null;
+  deliveryFeePsw: number;
+  amountPaidPsw: number;
+  trackingCode: string;
+  bookingCode: string;
+  parcelStatus: number;
+  parcelDetails: string;
+  parcelContent: string;
+  plannedToBePaidPsw: number;
+  chargePsw: number;
+  destinationId: string;
+  destinationName: string | null;
+  receiverId: string;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  secondReceiverId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export async function listDoorstepByRiderRepo(input: {
+  riderUserId: string;
+  parcelStatuses?: number[] | null;
+}): Promise<RiderDeliveryRow[]> {
+  const r = alias(customers, 'r');
+  const d = alias(branches, 'd');
+  const where = [eq(deliveries.riderUserId, input.riderUserId), eq(deliveries.isDeleted, false)];
+  if (input.parcelStatuses && input.parcelStatuses.length > 0) {
+    where.push(inArray(parcels.status, input.parcelStatuses));
+  }
+
+  return db
+    .select({
+      deliveryId: deliveries.id,
+      parcelId: deliveries.parcelId,
+      riderUserId: deliveries.riderUserId,
+      deliveryStatus: deliveries.status,
+      signatureImage: deliveries.signatureImage,
+      dropoffAddress: deliveries.dropoffAddress,
+      deliveryFeePsw: deliveries.chargePsw,
+      amountPaidPsw: deliveries.amountPaidPsw,
+      trackingCode: parcels.trackingCode,
+      bookingCode: parcels.bookingCode,
+      parcelStatus: parcels.status,
+      parcelDetails: parcels.parcelDetails,
+      parcelContent: parcels.parcelContent,
+      plannedToBePaidPsw: parcels.plannedToBePaidPsw,
+      chargePsw: parcels.chargePsw,
+      destinationId: parcels.destinationId,
+      destinationName: d.name,
+      receiverId: parcels.receiverId,
+      receiverName: r.fullname,
+      receiverPhone: r.telephone,
+      secondReceiverId: parcels.secondReceiverId,
+      createdAt: deliveries.createdAt,
+      updatedAt: deliveries.updatedAt,
+    })
+    .from(deliveries)
+    .innerJoin(parcels, eq(parcels.id, deliveries.parcelId))
+    .leftJoin(r, eq(r.id, parcels.receiverId))
+    .leftJoin(d, eq(d.id, parcels.destinationId))
+    .where(and(...where))
+    .orderBy(desc(deliveries.updatedAt), asc(deliveries.id));
 }

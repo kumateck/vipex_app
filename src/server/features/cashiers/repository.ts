@@ -1,6 +1,14 @@
 import { and, asc, count, desc, eq, gte, lt, lte, or, sql, isNull, inArray } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { cashierSessionTypes, cashierSessions, parcels, payments, users, CashierType, PaymentComponent } from '@/db/schemas';
+import {
+  cashierSessionTypes,
+  cashierSessions,
+  parcels,
+  payments,
+  users,
+  CashierType,
+  PaymentComponent,
+} from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
 
 export type SessionTypeRow = {
@@ -94,7 +102,9 @@ export async function listSessionsRepo(
               ? desc(cashierSessions.scheduledStartTime)
               : asc(cashierSessions.scheduledStartTime);
           if (s.field === 'createdAt')
-            return s.direction === 'desc' ? desc(cashierSessions.createdAt) : asc(cashierSessions.createdAt);
+            return s.direction === 'desc'
+              ? desc(cashierSessions.createdAt)
+              : asc(cashierSessions.createdAt);
           if (s.field === 'id')
             return s.direction === 'desc' ? desc(cashierSessions.id) : asc(cashierSessions.id);
           return null;
@@ -180,7 +190,10 @@ export async function openSessionRepo(
 
 export async function closeSessionRepo(
   id: string,
-  patch: Pick<typeof cashierSessions.$inferInsert, 'actualEndTime' | 'closingBalancePsw' | 'status'>,
+  patch: Pick<
+    typeof cashierSessions.$inferInsert,
+    'actualEndTime' | 'closingBalancePsw' | 'status'
+  >,
 ): Promise<{ id: string } | null> {
   const [row] = await db
     .update(cashierSessions)
@@ -219,7 +232,10 @@ export async function findActiveSessionRepo(input: {
   cashierId: string;
   branchId?: string | null;
 }): Promise<SessionRow | null> {
-  const where = [eq(cashierSessions.cashierId, input.cashierId), eq(cashierSessions.status, 'ACTIVE')];
+  const where = [
+    eq(cashierSessions.cashierId, input.cashierId),
+    eq(cashierSessions.status, 'ACTIVE'),
+  ];
   if (input.branchId) {
     where.push(eq(cashierSessions.branchId, input.branchId));
   }
@@ -286,12 +302,17 @@ export async function getSessionAmountPaidPswRepo(input: {
       total: sql<number>`coalesce(sum(${payments.grossAmountPsw}), 0)`,
     })
     .from(payments)
-    .innerJoin(parcels, eq(parcels.id, payments.parcelId))
+    .innerJoin(cashierSessions, eq(cashierSessions.id, input.sessionId))
     .where(
       and(
-        eq(parcels.cashierSessionId, input.sessionId),
         eq(payments.cashierUserId, input.cashierId),
+        eq(payments.branchId, cashierSessions.branchId),
         eq(payments.cashierType, CashierType.SENDING),
+        gte(payments.receivedAt, cashierSessions.scheduledStartTime),
+        or(
+          isNull(cashierSessions.actualEndTime),
+          lte(payments.receivedAt, cashierSessions.actualEndTime),
+        ),
         isNull(payments.voidedAt),
       ),
     );
@@ -308,12 +329,17 @@ export async function getSessionToBePaidCollectedPswRepo(input: {
       total: sql<number>`coalesce(sum(${payments.grossAmountPsw}), 0)`,
     })
     .from(payments)
-    .innerJoin(parcels, eq(parcels.id, payments.parcelId))
+    .innerJoin(cashierSessions, eq(cashierSessions.id, input.sessionId))
     .where(
       and(
-        eq(parcels.cashierSessionId, input.sessionId),
         eq(payments.cashierUserId, input.cashierId),
+        eq(payments.branchId, cashierSessions.branchId),
         eq(payments.cashierType, CashierType.TOBEPAID),
+        gte(payments.receivedAt, cashierSessions.scheduledStartTime),
+        or(
+          isNull(cashierSessions.actualEndTime),
+          lte(payments.receivedAt, cashierSessions.actualEndTime),
+        ),
         isNull(payments.voidedAt),
       ),
     );
@@ -330,12 +356,17 @@ export async function getSessionDeliveryFeeCollectedPswRepo(input: {
       total: sql<number>`coalesce(sum(${payments.grossAmountPsw}), 0)`,
     })
     .from(payments)
-    .innerJoin(parcels, eq(parcels.id, payments.parcelId))
+    .innerJoin(cashierSessions, eq(cashierSessions.id, input.sessionId))
     .where(
       and(
-        eq(parcels.cashierSessionId, input.sessionId),
         eq(payments.cashierUserId, input.cashierId),
+        eq(payments.branchId, cashierSessions.branchId),
         eq(payments.component, PaymentComponent.DELIVERY_FEE),
+        gte(payments.receivedAt, cashierSessions.scheduledStartTime),
+        or(
+          isNull(cashierSessions.actualEndTime),
+          lte(payments.receivedAt, cashierSessions.actualEndTime),
+        ),
         isNull(payments.voidedAt),
       ),
     );

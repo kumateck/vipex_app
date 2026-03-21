@@ -13,7 +13,7 @@ const catalog = [
   ['CanGetRolePermissions', 'Get role permissions', 'RBAC'],
   ['CanSetRolePermissions', 'Set role permissions', 'RBAC'],
 
-  // Branches / Locations / Statuses / Customers
+  // Branches / Locations / Statuses / Customers / Cards
   ['CanReadBranches', 'List and view branches', 'Branches'],
   ['CanCreateBranches', 'Create branches', 'Branches'],
   ['CanUpdateBranches', 'Update branches', 'Branches'],
@@ -30,6 +30,10 @@ const catalog = [
   ['CanCreateCustomers', 'Create customers', 'Customers'],
   ['CanUpdateCustomers', 'Update customers', 'Customers'],
   ['CanDeleteCustomers', 'Delete customers', 'Customers'],
+  ['CanReadCards', 'List and view cards', 'Cards'],
+  ['CanCreateCards', 'Create cards', 'Cards'],
+  ['CanUpdateCards', 'Update cards', 'Cards'],
+  ['CanDeleteCards', 'Delete cards', 'Cards'],
 
   // Shipments / Parcels / Consignments / Grouping
   ['CanReadShipments', 'List shipments', 'Shipments'],
