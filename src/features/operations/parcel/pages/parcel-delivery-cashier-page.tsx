@@ -2,6 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -50,6 +60,7 @@ export function ParcelDeliveryCashierPage() {
   const cashierUserId = user?.id ?? '';
   const [searchInput, setSearchInput] = useState('');
   const [selectedParcel, setSelectedParcel] = useState<ParcelSearchRow | null>(null);
+  const [isFinalizeConfirmOpen, setIsFinalizeConfirmOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>(String(PaymentMethod.CASH));
   const [principalAmount, setPrincipalAmount] = useState('');
   const [deliveryFeeAmount, setDeliveryFeeAmount] = useState('');
@@ -142,6 +153,7 @@ export function ParcelDeliveryCashierPage() {
         method: Number(paymentMethod),
       }).unwrap();
       toast.success('Delivery finalized and marked DELIVERED_AT_HOME');
+      setIsFinalizeConfirmOpen(false);
       setSelectedParcel(null);
       await listQuery.refetch();
     } catch (error) {
@@ -206,7 +218,11 @@ export function ParcelDeliveryCashierPage() {
 
         <Dialog
           open={Boolean(selectedParcel)}
-          onOpenChange={(open) => (!open ? setSelectedParcel(null) : null)}
+          onOpenChange={(open) => {
+            if (open) return;
+            setIsFinalizeConfirmOpen(false);
+            setSelectedParcel(null);
+          }}
         >
           <DialogContent>
             <DialogHeader>
@@ -257,10 +273,27 @@ export function ParcelDeliveryCashierPage() {
               <Button variant="outline" onClick={() => setSelectedParcel(null)}>
                 Cancel
               </Button>
-              <Button onClick={onFinalize} disabled={isFinalizing}>
+              <Button onClick={() => setIsFinalizeConfirmOpen(true)} disabled={isFinalizing}>
                 {isFinalizing ? 'Finalizing...' : 'Confirm Delivered At Home'}
               </Button>
             </DialogFooter>
+            <AlertDialog open={isFinalizeConfirmOpen} onOpenChange={setIsFinalizeConfirmOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Finalize delivery?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will mark {selectedParcel?.trackingCode ?? 'this parcel'} as delivered at
+                    home with the entered payment values.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isFinalizing}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction disabled={isFinalizing} onClick={() => void onFinalize()}>
+                    {isFinalizing ? 'Finalizing...' : 'Finalize Delivery'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </DialogContent>
         </Dialog>
       </ParcelSessionGuard>

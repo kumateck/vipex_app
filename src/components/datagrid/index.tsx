@@ -109,7 +109,7 @@ export function DataGrid<TData extends { id: string | number }, TValue>({
   // Columns Setup
   // --------------------------------------------------------------------------
   const columns = useMemo(() => {
-    let cols = [...userColumns];
+    const cols = [...userColumns];
 
     if (enableSelection) {
       const selectionColumn: ColumnDef<TData> = {
@@ -197,13 +197,13 @@ export function DataGrid<TData extends { id: string | number }, TValue>({
     [onDeleteRow],
   );
   const defaultEditableCell = useMemo(() => {
-    return (ctx: CellContext<TData, unknown>) => <EditableCell {...(ctx as any)} />;
+    return (ctx: CellContext<TData, unknown>) => <EditableCell {...ctx} />;
   }, []);
 
   const table = useReactTable({
     data,
     columns,
-    getRowId: getRowId || ((row: any) => String(row.id)),
+    getRowId: getRowId ?? ((row: TData) => String(row.id)),
     state: {
       sorting,
       rowSelection,
@@ -353,7 +353,7 @@ export function DataGrid<TData extends { id: string | number }, TValue>({
         <div className="flex gap-4">
           <span className="flex items-center gap-2">
             <div
-              className={`w-2 h-2 rounded-full ${Object.keys(rowSelection).length > 0 ? 'bg-primary' : 'bg-green-500'}`}
+              className={`h-2 w-2 rounded-full ${Object.keys(rowSelection).length > 0 ? 'bg-primary' : 'bg-muted-foreground'}`}
             ></div>
             {Object.keys(rowSelection).length > 0
               ? `${Object.keys(rowSelection).length} selected`

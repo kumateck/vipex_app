@@ -18,10 +18,7 @@ export function ReactSignature({ className, onChange }: ReactSignatureProps) {
           });
         }}
         classNames={{
-          control: cn(
-            '!bg-white h-48 !rounded-xl !border !border-neutral-input !border-solid',
-            className,
-          ),
+          control: cn('!bg-card h-48 !rounded-xl !border !border-input !border-solid', className),
         }}
       />
     </div>

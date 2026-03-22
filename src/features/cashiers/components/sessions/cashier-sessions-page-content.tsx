@@ -2,10 +2,24 @@ import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';
 import { BranchType } from '@/db/schemas/enums';
-import { useCloseSessionMutation, useListSessionsQuery, useListSessionTypesQuery, useOpenSessionMutation } from '../../api/cashiers.api';
+import {
+  useCloseSessionMutation,
+  useListSessionsQuery,
+  useListSessionTypesQuery,
+  useOpenSessionMutation,
+} from '../../api/cashiers.api';
 import type { CashierSessionListQuery } from '../../types/cashier.types';
 import { CashierOpenSessionCard } from './cashier-open-session-card';
 import { CashierSessionsTable } from './cashier-sessions-table';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -32,10 +46,12 @@ export function CashierSessionsPageContent({ view = 'all' }: CashierSessionsPage
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const { dateFrom, dateTo } = getDateRange(selectedDate);
   const activeOnly = view === 'active' || view === 'close' ? true : null;
-  const scopedBranchId = isHeadOffice ? null : (branchId || null);
+  const scopedBranchId = isHeadOffice ? null : branchId || null;
 
   const [sessionTypeId, setSessionTypeId] = useState('');
   const [openingBalance, setOpeningBalance] = useState('');
+  const [sessionIdToClose, setSessionIdToClose] = useState<string | null>(null);
+  const [closingBalance, setClosingBalance] = useState('0');
   const [query, setQuery] = useState<CashierSessionListQuery>({
     page: 1,
     pageSize: 20,
@@ -92,31 +108,29 @@ export function CashierSessionsPageContent({ view = 'all' }: CashierSessionsPage
     }
   };
 
-  const handleCloseSession = useCallback(
-    async (sessionId: string) => {
-      const value = window.prompt('Closing balance (cedis)', '0');
-      if (value == null) return;
-      const closingBalanceCedis = Number(value);
-      if (Number.isNaN(closingBalanceCedis)) {
-        toast.error('Invalid balance value');
-        return;
-      }
+  const handleCloseSession = useCallback(async () => {
+    if (!sessionIdToClose) return;
+    const closingBalanceCedis = Number(closingBalance);
+    if (Number.isNaN(closingBalanceCedis)) {
+      toast.error('Invalid balance value');
+      return;
+    }
 
-      try {
-        await closeSession({
-          id: sessionId,
-          body: {
-            endTime: new Date().toISOString(),
-            closingBalanceCedis,
-          },
-        }).unwrap();
-        toast.success('Session closed');
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to close session');
-      }
-    },
-    [closeSession],
-  );
+    try {
+      await closeSession({
+        id: sessionIdToClose,
+        body: {
+          endTime: new Date().toISOString(),
+          closingBalanceCedis,
+        },
+      }).unwrap();
+      toast.success('Session closed');
+      setSessionIdToClose(null);
+      setClosingBalance('0');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to close session');
+    }
+  }, [closeSession, closingBalance, sessionIdToClose]);
 
   return (
     <div className="w-full p-4 space-y-4">
@@ -153,8 +167,50 @@ export function CashierSessionsPageContent({ view = 'all' }: CashierSessionsPage
         loading={isLoading}
         branchId={scopedBranchId}
         onRequestChange={handleRequestChange}
-        onCloseSession={handleCloseSession}
+        onCloseSession={(sessionId) => setSessionIdToClose(sessionId)}
       />
+      <Dialog
+        open={Boolean(sessionIdToClose)}
+        onOpenChange={(open) => {
+          if (open) return;
+          setSessionIdToClose(null);
+          setClosingBalance('0');
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Close Cashier Session</DialogTitle>
+            <DialogDescription>
+              Enter the closing balance to confirm session closure.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="sessions-page-closing-balance">Closing Balance (GHS)</Label>
+            <Input
+              id="sessions-page-closing-balance"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={closingBalance}
+              onChange={(event) => setClosingBalance(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setSessionIdToClose(null);
+                setClosingBalance('0');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleCloseSession} disabled={isClosing}>
+              {isClosing ? 'Closing...' : 'Close Session'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

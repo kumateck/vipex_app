@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BranchType } from '@/db/schemas/enums';
@@ -52,23 +62,27 @@ export function RolesPageContent() {
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
   const [roleNameInput, setRoleNameInput] = useState('');
   const [selectedPermissionKeys, setSelectedPermissionKeys] = useState<string[]>([]);
   const [createMode, setCreateMode] = useState<'blank' | 'duplicate'>('blank');
   const [duplicateRoleId, setDuplicateRoleId] = useState('');
 
-  const { data: rolesData, isLoading: isLoadingRoles } = useListRolesQuery(query, { skip: !companyId });
+  const { data: rolesData, isLoading: isLoadingRoles } = useListRolesQuery(query, {
+    skip: !companyId,
+  });
   const { data: roleOptionsData, isLoading: isLoadingRoleOptions } = useListRoleOptionsQuery(
     { companyId, includeDeleted: false },
     { skip: !companyId },
   );
-  const { data: permissionCatalogData, isLoading: isLoadingPermissions } = useListPermissionCatalogQuery(undefined, {
-    skip: !companyId,
-  });
-  const { data: duplicateRolePermissionsData, isFetching: isLoadingDuplicatePermissions } = useGetRolePermissionsQuery(
-    duplicateRoleId,
-    { skip: createMode !== 'duplicate' || !duplicateRoleId },
-  );
+  const { data: permissionCatalogData, isLoading: isLoadingPermissions } =
+    useListPermissionCatalogQuery(undefined, {
+      skip: !companyId,
+    });
+  const { data: duplicateRolePermissionsData, isFetching: isLoadingDuplicatePermissions } =
+    useGetRolePermissionsQuery(duplicateRoleId, {
+      skip: createMode !== 'duplicate' || !duplicateRoleId,
+    });
 
   const allPermissionKeys = useMemo(
     () => (permissionCatalogData?.data ?? []).map((permission) => permission.key),
@@ -84,9 +98,12 @@ export function RolesPageContent() {
     [duplicateRoleId, roleOptions],
   );
 
-  const handleRequestChange = useCallback((request: ServerListQuery<{ companyId: string | null }>) => {
-    setQuery(request);
-  }, []);
+  const handleRequestChange = useCallback(
+    (request: ServerListQuery<{ companyId: string | null }>) => {
+      setQuery(request);
+    },
+    [],
+  );
 
   const openCreateDialog = () => {
     setSelectedRole(null);
@@ -131,7 +148,11 @@ export function RolesPageContent() {
 
   const handleTogglePermission = (key: string, checked: boolean) => {
     setSelectedPermissionKeys((current) =>
-      checked ? (current.includes(key) ? current : [...current, key]) : current.filter((value) => value !== key),
+      checked
+        ? current.includes(key)
+          ? current
+          : [...current, key]
+        : current.filter((value) => value !== key),
     );
   };
 
@@ -163,10 +184,10 @@ export function RolesPageContent() {
   };
 
   const handleDeleteRole = async (role: Role) => {
-    if (!window.confirm(`Delete role "${role.name}"?`)) return;
     try {
       await deleteRole(role.id).unwrap();
       toast.success('Role deleted');
+      setRoleToDelete(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete role');
     }
@@ -175,7 +196,10 @@ export function RolesPageContent() {
   const handleSavePermissions = async () => {
     if (!selectedRole) return;
     try {
-      await setRolePermissions({ roleId: selectedRole.id, permissionKeys: selectedPermissionKeys }).unwrap();
+      await setRolePermissions({
+        roleId: selectedRole.id,
+        permissionKeys: selectedPermissionKeys,
+      }).unwrap();
       toast.success('Role permissions updated');
       setIsPermissionsOpen(false);
     } catch (error) {
@@ -188,7 +212,7 @@ export function RolesPageContent() {
       createRoleColumns({
         onRename: openRenameDialog,
         onManagePermissions: openPermissionsDialog,
-        onDelete: handleDeleteRole,
+        onDelete: setRoleToDelete,
         canManage: canManageRoles,
       }),
     [canManageRoles],
@@ -258,6 +282,33 @@ export function RolesPageContent() {
         submitting={isSavingPermissions}
         onSubmit={handleSavePermissions}
       />
+
+      <AlertDialog
+        open={Boolean(roleToDelete)}
+        onOpenChange={(open) => (!open ? setRoleToDelete(null) : null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete role?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove {roleToDelete ? `"${roleToDelete.name}"` : 'this role'}.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (!roleToDelete) return;
+                void handleDeleteRole(roleToDelete);
+              }}
+            >
+              Delete role
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

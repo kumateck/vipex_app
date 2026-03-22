@@ -532,6 +532,10 @@ export const ROUTES: Route[] = [
         icon: 'Cog',
         items: [
           {
+            title: 'Appearance',
+            url: '/settings/appearance',
+          },
+          {
             title: 'General Settings',
             url: '/settings/general',
           },

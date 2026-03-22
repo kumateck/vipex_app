@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   MoreVertical,
   CreditCard,
@@ -7,6 +8,16 @@ import {
   GraduationCap,
   Globe,
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListCardsQuery } from '../api/cards.api';
@@ -155,6 +166,7 @@ function CardItem({
 
   const style = getCardStyle(card.name);
   const Icon = style.icon;
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   return (
     <div
@@ -196,7 +208,7 @@ function CardItem({
               <DropdownMenuItem onClick={() => onEdit(card)}>Edit Card</DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
-                onClick={() => onDelete(card.id)}
+                onClick={() => setIsDeleteDialogOpen(true)}
                 disabled={isDeleting}
               >
                 Delete Card
@@ -220,6 +232,29 @@ function CardItem({
           </div>
         </div>
       </div>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete card?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove "{card.name}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={() => {
+                onDelete(card.id);
+                setIsDeleteDialogOpen(false);
+              }}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Card'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

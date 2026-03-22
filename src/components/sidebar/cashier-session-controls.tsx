@@ -44,8 +44,10 @@ export function CashierSessionControls() {
   const authUser = useAuthStore((state) => state.user);
   const location = useLocation();
   const [isOpenDialog, setIsOpenDialog] = useState(false);
+  const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
   const [sessionTypeId, setSessionTypeId] = useState('');
   const [openingBalance, setOpeningBalance] = useState('');
+  const [closingBalance, setClosingBalance] = useState('0');
 
   const permissions = useMemo(() => new Set(authUser?.permissions ?? []), [authUser?.permissions]);
   const isCashierUser = authUser?.userType === UserType.CASHIER;
@@ -111,9 +113,7 @@ export function CashierSessionControls() {
   const handleCloseSession = async () => {
     if (!activeSession?.id) return;
 
-    const value = window.prompt('Closing balance (cedis)', '0');
-    if (value == null) return;
-    const closingBalanceCedis = Number(value);
+    const closingBalanceCedis = Number(closingBalance);
     if (Number.isNaN(closingBalanceCedis)) {
       toast.error('Invalid balance value');
       return;
@@ -128,6 +128,8 @@ export function CashierSessionControls() {
         },
       }).unwrap();
       toast.success('Session closed');
+      setIsCloseDialogOpen(false);
+      setClosingBalance('0');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to close session');
     }
@@ -213,14 +215,54 @@ export function CashierSessionControls() {
         </>
       )}
       {canCloseSessions ? (
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={handleCloseSession}
-          disabled={isClosingSession}
-        >
-          {isClosingSession ? 'Closing...' : 'Close Session'}
-        </Button>
+        <>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => setIsCloseDialogOpen(true)}
+            disabled={isClosingSession}
+          >
+            {isClosingSession ? 'Closing...' : 'Close Session'}
+          </Button>
+          <Dialog
+            open={isCloseDialogOpen}
+            onOpenChange={(open) => {
+              setIsCloseDialogOpen(open);
+              if (!open) setClosingBalance('0');
+            }}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Close Cashier Session</DialogTitle>
+                <DialogDescription>
+                  Confirm closing balance before ending the session.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2">
+                <Label htmlFor="sidebar-closing-balance">Closing Balance (GHS)</Label>
+                <Input
+                  id="sidebar-closing-balance"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={closingBalance}
+                  onChange={(event) => setClosingBalance(event.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" type="button" onClick={() => setIsCloseDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleCloseSession}
+                  disabled={isClosingSession}
+                >
+                  {isClosingSession ? 'Closing...' : 'Close Session'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
       ) : null}
     </div>
   );

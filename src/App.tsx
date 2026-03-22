@@ -14,7 +14,7 @@ export function App() {
 
   return (
     <ClientProvider>
-      <ThemeProvider defaultTheme="system" storageKey="vipex-ui-theme">
+      <ThemeProvider>
         <MainRoutes />
         <Toaster richColors closeButton />
       </ThemeProvider>
