@@ -1,6 +1,6 @@
 import { relations } from 'drizzle-orm';
 import { companies, branches, locations, roles, rolePermissions, users } from './core';
-import { pendingBookings } from './shipments';
+import { pendingBookings, pickupQueues } from './shipments';
 import { receiptTemplates, generatedReceipts } from './receipts';
 import {
   customers,
@@ -35,6 +35,7 @@ export const branchesRelations = relations(branches, ({ one, many }) => ({
   company: one(companies, { fields: [branches.companyId], references: [companies.id] }),
   locations: many(locations),
   users: many(users),
+  pickupQueues: many(pickupQueues),
 }));
 
 export const locationsRelations = relations(locations, ({ one }) => ({
@@ -143,6 +144,7 @@ export const parcelsRelations = relations(parcels, ({ one }) => ({
   booking: one(bookings, { fields: [parcels.bookingId], references: [bookings.id] }),
   sender: one(customers, { fields: [parcels.senderId], references: [customers.id] }),
   receiver: one(customers, { fields: [parcels.receiverId], references: [customers.id] }),
+  pickupQueue: one(pickupQueues, { fields: [parcels.id], references: [pickupQueues.parcelId] }),
 }));
 
 export const consignmentsRelations = relations(consignments, ({ one, many }) => ({
@@ -250,6 +252,16 @@ export const pendingBookingsRelations = relations(pendingBookings, ({ one }) => 
   company: one(companies, { fields: [pendingBookings.companyId], references: [companies.id] }),
   branch: one(branches, { fields: [pendingBookings.branchId], references: [branches.id] }),
   attendant: one(users, { fields: [pendingBookings.attendantId], references: [users.id] }),
+}));
+
+export const pickupQueuesRelations = relations(pickupQueues, ({ one }) => ({
+  company: one(companies, { fields: [pickupQueues.companyId], references: [companies.id] }),
+  branch: one(branches, { fields: [pickupQueues.branchId], references: [branches.id] }),
+  parcel: one(parcels, { fields: [pickupQueues.parcelId], references: [parcels.id] }),
+  pickerStaff: one(users, { fields: [pickupQueues.pickerStaffId], references: [users.id] }),
+  queuedByUser: one(users, { fields: [pickupQueues.queuedBy], references: [users.id] }),
+  endedByUser: one(users, { fields: [pickupQueues.endedBy], references: [users.id] }),
+  idCardType: one(cards, { fields: [pickupQueues.idCardTypeId], references: [cards.id] }),
 }));
 
 export const receiptTemplatesRelations = relations(receiptTemplates, ({ one }) => ({

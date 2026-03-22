@@ -4,7 +4,10 @@ import { db } from '@/db/config';
 import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 import { listPaymentsForParcelRepo } from '../payments/repository';
 import { getDeliveryByParcelRepo } from '../deliveries/repository';
+import { recordAuditLog } from '../audit/logger';
 import { listConsignmentsForParcelRepo } from './consignments.repository';
+import { getPickupQueueByParcelRepo } from '../pickup-queues/repository';
+import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
 
 import {
   createParcelRepo,
@@ -148,6 +151,13 @@ export async function updateParcelSvc(
 
   const updated = await updateParcelRepo(id, setPatch);
   if (!updated) throw NotFound('Parcel not found');
+  const shouldEndPickupQueue =
+    cur.status === ParcelStatus.AWAITING_PICKUP &&
+    patch.status !== undefined &&
+    patch.status !== ParcelStatus.AWAITING_PICKUP;
+  if (shouldEndPickupQueue) {
+    await endPickupQueueForParcelSvc({ parcelId: id, endedBy: patch.confirmedBy ?? null });
+  }
   return { id: updated.id };
 }
 
@@ -179,7 +189,7 @@ export async function setPlannedToBePaidSvc(id: string, plannedCedis: number | s
 
 export async function getParcelFullDetailsSvc(id: string) {
   const parcel = await getParcelSvc(id);
-  const [payments, delivery, consignments] = await Promise.all([
+  const [payments, delivery, consignments, pickupQueue] = await Promise.all([
     (async () => {
       try {
         return await listPaymentsForParcelRepo(id);
@@ -204,6 +214,14 @@ export async function getParcelFullDetailsSvc(id: string) {
         throw error;
       }
     })(),
+    (async () => {
+      try {
+        return await getPickupQueueByParcelRepo(id);
+      } catch (error) {
+        if (isSchemaCompatibilityError(error)) return null;
+        throw error;
+      }
+    })(),
   ]);
 
   return {
@@ -211,5 +229,44 @@ export async function getParcelFullDetailsSvc(id: string) {
     payments,
     delivery,
     consignments,
+    pickupQueue,
   };
+}
+
+export async function logParcelDiscrepancySvc(input: {
+  companyId: string;
+  actorUserId?: string | null;
+  parcelId?: string | null;
+  trackingCode?: string | null;
+  bookingCode?: string | null;
+  discrepancyType: 'record_not_physical' | 'physical_missing_in_system';
+  notes?: string | null;
+  branchId?: string | null;
+}) {
+  const parcel = input.parcelId ? await getParcelRepo(input.parcelId) : null;
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'parcel_discrepancy',
+    entityId: input.parcelId ?? null,
+    action: 'PARCEL_DISCREPANCY_LOGGED',
+    message:
+      input.discrepancyType === 'record_not_physical'
+        ? 'Incoming in-transit parcel exists in system but is not physical'
+        : 'Incoming in-transit parcel is physical but missing in the system',
+    metadata: {
+      branchId: input.branchId ?? parcel?.destinationId ?? null,
+      parcelId: input.parcelId ?? null,
+      trackingCode: input.trackingCode ?? parcel?.trackingCode ?? null,
+      bookingCode: input.bookingCode ?? parcel?.bookingCode ?? null,
+      discrepancyType: input.discrepancyType,
+      notes: input.notes?.trim() || null,
+      parcelStatus: parcel?.status ?? null,
+      destinationId: parcel?.destinationId ?? null,
+      sourceId: parcel?.sourceId ?? null,
+    },
+  });
+
+  return { success: true };
 }

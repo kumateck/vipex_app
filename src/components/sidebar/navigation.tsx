@@ -87,6 +87,18 @@ export const ROUTES: Route[] = [
             url: '/parcels/status',
           },
           {
+            title: 'Pickup Queue',
+            url: '/parcels/pickup-queue',
+          },
+          {
+            title: 'Queue Board (Sender Paid)',
+            url: '/parcels/pickup-queue/sender',
+          },
+          {
+            title: 'Queue Board (Receiver Pays)',
+            url: '/parcels/pickup-queue/receiver',
+          },
+          {
             title: 'Waiting for Pickup',
             url: '/parcels/waiting-pickup',
           },

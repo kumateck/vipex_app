@@ -18,6 +18,7 @@ function toBranchDto(b: {
   telephone: string | null;
   address: string | null;
   email: string | null;
+  usePickupQueue: boolean;
   isDeleted: boolean;
   createdBy: string;
   createdAt: Date | string | null;
@@ -31,6 +32,7 @@ function toBranchDto(b: {
     telephone: b.telephone ?? null,
     address: b.address ?? null,
     email: b.email ?? null,
+    usePickupQueue: !!b.usePickupQueue,
     isDeleted: !!b.isDeleted,
     createdBy: b.createdBy,
     createdAt:
@@ -91,6 +93,7 @@ export async function createBranchCtrl(input: {
   telephone?: string | null;
   address?: string | null;
   email?: string | null;
+  usePickupQueue?: boolean;
   createdBy: string;
 }) {
   return createBranchSvc(input);
@@ -104,6 +107,7 @@ export async function updateBranchCtrl(
     telephone?: string | null;
     address?: string | null;
     email?: string | null;
+    usePickupQueue?: boolean;
   },
 ) {
   return updateBranchSvc(id, patch);

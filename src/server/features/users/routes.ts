@@ -10,6 +10,12 @@ import { createUserSvc, getUserSvc, updateUserSvc } from './service';
 import { listUserOptionsCtrl, listUsersCtrl } from './controller';
 import { PaginationRequestQueryProps, NonEmpty255, UUID } from '@/server/schemas/common';
 
+function parseOptionalUserType(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export const usersRoutes = new Elysia({ name: 'users' })
   .use(authPlugin)
   .get(
@@ -23,7 +29,7 @@ export const usersRoutes = new Elysia({ name: 'users' })
         branchId: isHeadOffice ? (query.branchId ?? null) : (authUser.branchId ?? null),
         locationId: authUser.locationId ?? null,
         roleId: query.roleId ?? null,
-        userType: query.userType ?? null,
+        userType: parseOptionalUserType(query.userType),
         status: query.status ?? null,
         search: query.search ?? null,
       });
@@ -34,7 +40,7 @@ export const usersRoutes = new Elysia({ name: 'users' })
         branchId: t.Optional(UUID),
         locationId: t.Optional(UUID),
         roleId: t.Optional(UUID),
-        userType: t.Optional(t.Union(USER_TYPES.map((value) => t.Literal(value)))),
+        userType: t.Optional(t.Union([...USER_TYPES.map((value) => t.Literal(value)), t.String()])),
         status: t.Optional(t.Number()),
         search: t.Optional(t.String()),
       }),
@@ -60,7 +66,7 @@ export const usersRoutes = new Elysia({ name: 'users' })
           branchId: isHeadOffice ? (query.branchId ?? null) : (authUser.branchId ?? null),
           locationId: authUser.locationId ?? null,
           roleId: query.roleId ?? null,
-          userType: query.userType ?? null,
+          userType: parseOptionalUserType(query.userType),
           status: query.status ?? null,
           statuses: query.statuses ?? null,
         },
@@ -73,7 +79,7 @@ export const usersRoutes = new Elysia({ name: 'users' })
         branchId: t.Optional(UUID),
         locationId: t.Optional(UUID),
         roleId: t.Optional(UUID),
-        userType: t.Optional(t.Union(USER_TYPES.map((value) => t.Literal(value)))),
+        userType: t.Optional(t.Union([...USER_TYPES.map((value) => t.Literal(value)), t.String()])),
         status: t.Optional(t.Number()),
         statuses: t.Optional(t.String()),
         search: t.Optional(t.String()),

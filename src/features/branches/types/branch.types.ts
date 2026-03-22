@@ -8,6 +8,7 @@ export interface Branch {
   telephone: string | null;
   address: string | null;
   email: string | null;
+  usePickupQueue: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -24,6 +25,7 @@ export interface BranchMutationInput {
   telephone?: string | null;
   address?: string | null;
   email?: string | null;
+  usePickupQueue?: boolean;
 }
 
 export interface BranchCreatePayload extends BranchMutationInput {
@@ -31,4 +33,4 @@ export interface BranchCreatePayload extends BranchMutationInput {
   createdBy: string;
 }
 
-export interface BranchUpdatePayload extends BranchMutationInput {}
+export type BranchUpdatePayload = BranchMutationInput;

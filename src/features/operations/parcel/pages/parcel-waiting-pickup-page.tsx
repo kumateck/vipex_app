@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ParcelStatus } from '@/db/schemas/enums';
+import { useGetBranchQuery } from '@/features/branches/api/branches.api';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import {
@@ -42,6 +43,13 @@ function formatCurrency(amountPsw: number) {
   return `GHS ${(amountPsw / 100).toFixed(2)}`;
 }
 
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString();
+}
+
 type CardMode = 'existing' | 'new';
 type HandoverTarget = 'main' | 'second';
 const EMPTY_META: PaginationMeta = {
@@ -57,6 +65,8 @@ export function ParcelWaitingPickupPage() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
+  const { data: currentBranch } = useGetBranchQuery(branchId ?? '', { skip: !branchId });
+  const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
 
   const [searchInput, setSearchInput] = useState('');
   const [query, setQuery] = useState<
@@ -139,9 +149,26 @@ export function ParcelWaitingPickupPage() {
   }, [mainReceiverCards.length, selectedParcel]);
 
   const isSaving = isUpdatingParcel || isAddingCard || isCreatingCustomer;
+  const hasPickupQueue = Boolean(parcelDetails?.pickupQueue);
 
-  const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
-    () => [
+  function openParcelDialog(parcel: ParcelSearchRow) {
+    setSelectedParcel(parcel);
+    setHandoverTarget(parcel.secondReceiverId ? 'second' : 'main');
+    setPickerStaffId('');
+    setMainCardMode('existing');
+    setMainExistingCardRecordId('');
+    setMainNewCardTypeId('');
+    setMainNewCardNumber('');
+    setSecondCardMode('new');
+    setSecondExistingCardRecordId('');
+    setSecondNewCardTypeId('');
+    setSecondNewCardNumber('');
+    setSecondNewName('');
+    setSecondNewPhone('');
+  }
+
+  const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(() => {
+    const baseColumns: ColumnDef<ParcelSearchRow>[] = [
       { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
@@ -156,36 +183,55 @@ export function ParcelWaitingPickupPage() {
         header: 'Charge',
         accessorFn: (row) => formatCurrency(row.chargePsw),
       },
-      {
-        id: 'action',
-        header: 'Action',
-        enableSorting: false,
-        cell: ({ row }) => (
-          <Button
-            size="sm"
-            onClick={() => {
-              setSelectedParcel(row.original);
-              setHandoverTarget(row.original.secondReceiverId ? 'second' : 'main');
-              setPickerStaffId('');
-              setMainCardMode('existing');
-              setMainExistingCardRecordId('');
-              setMainNewCardTypeId('');
-              setMainNewCardNumber('');
-              setSecondCardMode('new');
-              setSecondExistingCardRecordId('');
-              setSecondNewCardTypeId('');
-              setSecondNewCardNumber('');
-              setSecondNewName('');
-              setSecondNewPhone('');
-            }}
-          >
+    ];
+
+    if (isPickupQueueEnabled) {
+      baseColumns.push({
+        id: 'pickupQueue',
+        header: 'Queue',
+        accessorFn: (row) =>
+          row.pickupQueueCode
+            ? `${row.pickupQueueCode}${row.pickupQueuedAt ? ` • ${formatDateTime(row.pickupQueuedAt)}` : ''}`
+            : 'Not queued',
+      });
+    }
+
+    baseColumns.push({
+      id: 'action',
+      header: 'Action',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => openParcelDialog(row.original)}>
             View Details
           </Button>
-        ),
-      },
-    ],
-    [],
-  );
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              try {
+                await updateParcel({
+                  id: row.original.id,
+                  status: ParcelStatus.HOME_DELIVERY_REQUESTED,
+                }).unwrap();
+                toast.success('Parcel moved to Home Delivery Requested');
+                await listQuery.refetch();
+              } catch (error) {
+                toast.error(
+                  error instanceof Error ? error.message : 'Failed to move parcel to home delivery',
+                );
+              }
+            }}
+            disabled={isSaving}
+          >
+            Request Delivery
+          </Button>
+        </div>
+      ),
+    });
+
+    return baseColumns;
+  }, [isPickupQueueEnabled, isSaving, listQuery, updateParcel]);
 
   async function resolveCardForCustomer(input: {
     customerId: string;
@@ -271,6 +317,19 @@ export function ParcelWaitingPickupPage() {
     await listQuery.refetch();
   }
 
+  async function handleMoveToHomeDelivery() {
+    if (!selectedParcel) return;
+
+    await updateParcel({
+      id: selectedParcel.id,
+      status: ParcelStatus.HOME_DELIVERY_REQUESTED,
+    }).unwrap();
+
+    toast.success('Parcel moved to Home Delivery Requested');
+    setSelectedParcel(null);
+    await listQuery.refetch();
+  }
+
   return (
     <div className="w-full p-4 space-y-4">
       <Card>
@@ -302,7 +361,7 @@ export function ParcelWaitingPickupPage() {
             <Input
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search by tracking, booking, receiver"
+              placeholder="Search by tracking, booking, telephone, or receiver name"
             />
             <Button type="submit">Search</Button>
           </form>
@@ -382,6 +441,37 @@ export function ParcelWaitingPickupPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {isPickupQueueEnabled ? (
+                <div className="space-y-3 rounded-md border p-3">
+                  <div>
+                    <Label>Pickup Queue</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Queue tickets are created from the Pickup Queue page before final handover.
+                    </p>
+                  </div>
+
+                  {hasPickupQueue ? (
+                    <div className="rounded-md bg-muted/40 p-3 text-sm">
+                      <p>
+                        <strong>Queue Code:</strong> {parcelDetails?.pickupQueue?.queueCode}
+                      </p>
+                      <p>
+                        <strong>Queue Number:</strong> {parcelDetails?.pickupQueue?.queueNumber}
+                      </p>
+                      <p>
+                        <strong>Queued At:</strong>{' '}
+                        {formatDateTime(parcelDetails?.pickupQueue?.queuedAt ?? null)}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                      No queue ticket found yet. Create it from the shared Pickup Queue page, then
+                      return here to complete handover.
+                    </div>
+                  )}
+                </div>
+              ) : null}
 
               <div className="space-y-2 rounded-md border p-3">
                 <Label>Main Receiver ID Card (required)</Label>
@@ -552,6 +642,23 @@ export function ParcelWaitingPickupPage() {
               Cancel
             </Button>
             <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  await handleMoveToHomeDelivery();
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : 'Failed to move parcel to home delivery',
+                  );
+                }
+              }}
+              disabled={isSaving}
+            >
+              Request Home Delivery
+            </Button>
+            <Button
               onClick={async () => {
                 try {
                   await handleConfirmDelivered();
@@ -561,7 +668,7 @@ export function ParcelWaitingPickupPage() {
                   );
                 }
               }}
-              disabled={isSaving}
+              disabled={isSaving || (isPickupQueueEnabled && !hasPickupQueue)}
             >
               Confirm Delivered
             </Button>

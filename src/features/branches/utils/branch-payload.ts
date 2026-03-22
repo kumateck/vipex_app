@@ -14,6 +14,7 @@ export function sanitizeBranchMutationInput(input: BranchMutationInput): BranchM
     telephone: toNullable(input.telephone),
     address: toNullable(input.address),
     email: toNullable(input.email),
+    usePickupQueue: Boolean(input.usePickupQueue),
   };
 }
 
@@ -39,6 +40,7 @@ export function toCreateBranchPayload(
     ...(telephone ? { telephone } : {}),
     ...(address ? { address } : {}),
     ...(email ? { email } : {}),
+    usePickupQueue: Boolean(input.usePickupQueue),
     companyId: context.companyId,
     createdBy: context.createdBy,
   };

@@ -236,3 +236,47 @@ export const pendingBookings = pgTable(
     byCreated: index('pending_bookings_created_idx').on(t.createdAt),
   }),
 );
+
+export const pickupQueues = pgTable(
+  'pickup_queues',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    branchId: varchar('branch_id', { length: 25 })
+      .notNull()
+      .references(() => branches.id),
+    parcelId: varchar('parcel_id', { length: 25 })
+      .notNull()
+      .references(() => parcels.id),
+    paymentBucket: varchar('payment_bucket', { length: 2 }).notNull(),
+    queueDate: timestamp('queue_date', { mode: 'date' }).notNull(),
+    queueNumber: integer('queue_number').notNull(),
+    queueCode: varchar('queue_code', { length: 32 }).notNull(),
+    pickerStaffId: varchar('picker_staff_id', { length: 25 }).references(() => users.id),
+    idCardTypeId: varchar('id_card_type_id', { length: 25 }).references(() => cards.id),
+    idCardNumber: varchar('id_card_number', { length: 255 }),
+    queuedBy: varchar('queued_by', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+    queuedAt: timestamp('queued_at', { withTimezone: false }).notNull().defaultNow(),
+    endedAt: timestamp('ended_at', { withTimezone: false }),
+    endedBy: varchar('ended_by', { length: 25 }).references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uqPickupQueueParcel: uniqueIndex('pickup_queues_parcel_uq').on(t.parcelId),
+    uqPickupQueueDailyCode: uniqueIndex('pickup_queues_daily_code_uq').on(
+      t.branchId,
+      t.queueDate,
+      t.paymentBucket,
+      t.queueNumber,
+    ),
+    byBranchQueuedAt: index('pickup_queues_branch_queued_at_idx').on(t.branchId, t.queuedAt),
+    byQueueCode: uniqueIndex('pickup_queues_code_uq').on(t.queueCode),
+  }),
+);

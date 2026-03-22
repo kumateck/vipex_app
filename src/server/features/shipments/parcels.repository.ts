@@ -21,6 +21,8 @@ import {
   customers,
   consignmentItems,
   consignments,
+  deliveries,
+  pickupQueues,
 } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
@@ -85,6 +87,13 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     senderPhone: string | null;
     receiverName: string | null;
     receiverPhone: string | null;
+    dropoffAddress: string | null;
+    deliveryFeePsw: number | null;
+    pickupQueueId: string | null;
+    pickupQueueCode: string | null;
+    pickupQueueNumber: number | null;
+    pickupQueuedAt: Date | null;
+    pickupQueueEndedAt: Date | null;
   })[];
   totalRecords: number;
 }> {
@@ -140,6 +149,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(s, eq(parcels.senderId, s.id))
     .leftJoin(r, eq(parcels.receiverId, r.id))
     .leftJoin(d, eq(parcels.destinationId, d.id))
+    .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
     .where(
       whereParts.length || p.search
         ? and(
@@ -204,6 +214,13 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       senderPhone: s.telephone,
       receiverName: r.fullname,
       receiverPhone: r.telephone,
+      dropoffAddress: deliveries.dropoffAddress,
+      deliveryFeePsw: deliveries.chargePsw,
+      pickupQueueId: pickupQueues.id,
+      pickupQueueCode: pickupQueues.queueCode,
+      pickupQueueNumber: pickupQueues.queueNumber,
+      pickupQueuedAt: pickupQueues.queuedAt,
+      pickupQueueEndedAt: pickupQueues.endedAt,
     })
     .from(parcels)
     .leftJoin(bookings, eq(parcels.bookingId, bookings.id))
@@ -212,6 +229,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(d, eq(parcels.destinationId, d.id))
     .leftJoin(ci, and(eq(ci.parcelId, parcels.id), isNull(ci.removedAt)))
     .leftJoin(cg, eq(cg.id, ci.consignmentId))
+    .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
+    .leftJoin(pickupQueues, eq(pickupQueues.parcelId, parcels.id))
     .where(
       whereParts.length || p.search
         ? and(

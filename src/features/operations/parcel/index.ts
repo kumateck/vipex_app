@@ -5,6 +5,8 @@ export { ParcelProcessedConsignmentPage } from './pages/parcel-processed-consign
 export { ParcelInTransitPage } from './pages/parcel-in-transit-page';
 export { ParcelReceivePage } from './pages/parcel-receive-page';
 export { ParcelStatusPage } from './pages/parcel-status-page';
+export { ParcelPickupQueuePage } from './pages/parcel-pickup-queue-page';
+export { ParcelPickupQueueBoardPage } from './pages/parcel-pickup-queue-board-page';
 export { ParcelWaitingPickupPage } from './pages/parcel-waiting-pickup-page';
 export { ParcelReceiverCashierPage } from './pages/parcel-receiver-cashier-page';
 export { ParcelHomeDeliveryAddressPage } from './pages/parcel-home-delivery-address-page';

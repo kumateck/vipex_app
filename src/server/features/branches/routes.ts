@@ -31,7 +31,11 @@ export const branchesRoutes = new Elysia({ name: 'branches' })
         includeDeleted: t.Optional(t.Boolean()),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadBranches)],
-      detail: { tags: ['Branches'], summary: 'List branch options', operationId: 'listBranchOptions' },
+      detail: {
+        tags: ['Branches'],
+        summary: 'List branch options',
+        operationId: 'listBranchOptions',
+      },
     },
   )
   .get(
@@ -70,6 +74,7 @@ export const branchesRoutes = new Elysia({ name: 'branches' })
           telephone?: string;
           address?: string;
           email?: string;
+          usePickupQueue?: boolean;
         }),
         companyId: authUser.companyId,
         createdBy: authUser.sub,
@@ -84,23 +89,29 @@ export const branchesRoutes = new Elysia({ name: 'branches' })
         telephone: t.Optional(t.String()),
         address: t.Optional(t.String()),
         email: t.Optional(t.String()),
+        usePickupQueue: t.Optional(t.Boolean()),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateBranches)],
       detail: { tags: ['Branches'], summary: 'Create branch', operationId: 'createBranch' },
     },
   )
-  .patch('/:id', async ({ params, body, user }) => updateBranchSvc(params.id, body, (user as AuthUser).sub), {
-    params: t.Object({ id: UUID }),
-    body: t.Object({
-      name: t.Optional(NonEmpty255),
-      type: t.Optional(t.Union(BRANCH_TYPES.map((value) => t.Literal(value)))),
-      telephone: t.Optional(t.Union([t.String(), t.Null()])),
-      address: t.Optional(t.Union([t.String(), t.Null()])),
-      email: t.Optional(t.Union([t.String(), t.Null()])),
-    }),
-    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateBranches)],
-    detail: { tags: ['Branches'], summary: 'Update branch', operationId: 'updateBranch' },
-  })
+  .patch(
+    '/:id',
+    async ({ params, body, user }) => updateBranchSvc(params.id, body, (user as AuthUser).sub),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        name: t.Optional(NonEmpty255),
+        type: t.Optional(t.Union(BRANCH_TYPES.map((value) => t.Literal(value)))),
+        telephone: t.Optional(t.Union([t.String(), t.Null()])),
+        address: t.Optional(t.Union([t.String(), t.Null()])),
+        email: t.Optional(t.Union([t.String(), t.Null()])),
+        usePickupQueue: t.Optional(t.Boolean()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateBranches)],
+      detail: { tags: ['Branches'], summary: 'Update branch', operationId: 'updateBranch' },
+    },
+  )
   .delete('/:id', async ({ params, user }) => deleteBranchSvc(params.id, (user as AuthUser).sub), {
     params: t.Object({ id: UUID }),
     beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanDeleteBranches)],

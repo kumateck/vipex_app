@@ -6,12 +6,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui';
+import { Checkbox } from '@/components/ui/checkbox';
 import { BRANCH_TYPE_LABELS, BRANCH_TYPES } from '@/shared/access/constants';
 import { BranchType } from '@/db/schemas/enums';
 import { normalizeOptionalFields } from '@/lib/optional-fields';
-import { branchFormSchema, type BranchFormValues } from '../schemas/branch-form.schema';
+import {
+  branchFormSchema,
+  type BranchFormInput,
+  type BranchFormValues,
+} from '../schemas/branch-form.schema';
 import type { Branch } from '../types/branch.types';
 
 interface BranchFormProps {
@@ -39,7 +50,7 @@ export function BranchForm({
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<BranchFormValues>({
+  } = useForm<BranchFormInput, unknown, BranchFormValues>({
     resolver: zodResolver(branchFormSchema),
     defaultValues: {
       name: '',
@@ -47,6 +58,7 @@ export function BranchForm({
       telephone: '',
       address: '',
       email: '',
+      usePickupQueue: false,
     },
     mode: 'onSubmit',
   });
@@ -59,6 +71,7 @@ export function BranchForm({
         telephone: initialData.telephone ?? '',
         address: initialData.address ?? '',
         email: initialData.email ?? '',
+        usePickupQueue: initialData.usePickupQueue ?? false,
       });
       return;
     }
@@ -69,6 +82,7 @@ export function BranchForm({
       telephone: '',
       address: '',
       email: '',
+      usePickupQueue: false,
     });
   }, [initialData, mode, reset]);
 
@@ -160,6 +174,30 @@ export function BranchForm({
                 {errors.email?.message ? (
                   <p className="text-sm text-destructive">{errors.email.message}</p>
                 ) : null}
+              </Field>
+              <Field>
+                <label
+                  htmlFor="use-pickup-queue"
+                  className="flex items-start gap-3 rounded-md border p-3"
+                >
+                  <Controller
+                    control={control}
+                    name="usePickupQueue"
+                    render={({ field }) => (
+                      <Checkbox
+                        id="use-pickup-queue"
+                        checked={field.value}
+                        onCheckedChange={(value) => field.onChange(value === true)}
+                      />
+                    )}
+                  />
+                  <span className="text-sm">
+                    <span className="block font-medium">Use pickup queue</span>
+                    <span className="text-muted-foreground">
+                      Require queue ticket generation before parcel handover at this branch.
+                    </span>
+                  </span>
+                </label>
               </Field>
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isSubmitting}>

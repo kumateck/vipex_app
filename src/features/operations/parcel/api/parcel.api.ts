@@ -92,6 +92,13 @@ export type ParcelSearchRow = {
   senderPhone: string | null;
   receiverName: string | null;
   receiverPhone: string | null;
+  dropoffAddress?: string | null;
+  deliveryFeePsw?: number | null;
+  pickupQueueId?: string | null;
+  pickupQueueCode?: string | null;
+  pickupQueueNumber?: number | null;
+  pickupQueuedAt?: string | null;
+  pickupQueueEndedAt?: string | null;
 };
 
 export type ParcelFullDetails = {
@@ -187,6 +194,55 @@ export type ParcelFullDetails = {
     addedAt: string;
     removedAt: string | null;
   }>;
+  pickupQueue: null | {
+    id: string;
+    companyId: string;
+    branchId: string;
+    parcelId: string;
+    paymentBucket: string;
+    queueDate: string;
+    queueNumber: number;
+    queueCode: string;
+    pickerStaffId: string | null;
+    idCardTypeId: string | null;
+    idCardNumber: string | null;
+    queuedBy: string;
+    queuedAt: string;
+    endedAt: string | null;
+    endedBy: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type PickupQueueRecord = {
+  id: string;
+  companyId: string;
+  branchId: string;
+  parcelId: string;
+  paymentBucket: string;
+  queueDate: string;
+  queueNumber: number;
+  queueCode: string;
+  pickerStaffId: string | null;
+  idCardTypeId: string | null;
+  idCardNumber: string | null;
+  queuedBy: string;
+  queuedAt: string;
+  endedAt: string | null;
+  endedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PickupQueueCard = PickupQueueRecord & {
+  trackingCode: string;
+  bookingCode: string;
+  parcelDetails: string;
+  plannedToBePaidPsw: number;
+  chargePsw: number;
+  receiverName: string | null;
+  receiverPhone: string | null;
 };
 
 export type RiderDoorstepRecord = {
@@ -482,6 +538,26 @@ export const parcelApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    logParcelDiscrepancy: builder.mutation<
+      { success: boolean },
+      {
+        companyId: string;
+        actorUserId?: string | null;
+        parcelId?: string | null;
+        trackingCode?: string | null;
+        bookingCode?: string | null;
+        discrepancyType: 'record_not_physical' | 'physical_missing_in_system';
+        notes?: string | null;
+        branchId?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcels/discrepancies',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
     collectDoorstepAddress: builder.mutation<
       { id: string },
       {
@@ -573,6 +649,32 @@ export const parcelApi = api.injectEndpoints({
         { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
       ],
     }),
+    createPickupQueue: builder.mutation<
+      PickupQueueRecord,
+      {
+        parcelId: string;
+        pickerStaffId?: string | null;
+        idCardTypeId?: string | null;
+        idCardNumber?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: '/pickup-queues',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    listPickupQueueCards: builder.query<
+      PickupQueueCard[],
+      { branchId: string; paymentBucket?: 'SP' | 'TP' }
+    >({
+      query: ({ branchId, paymentBucket }) => ({
+        url: `/pickup-queues/branch/${branchId}/cards`,
+        params: paymentBucket ? { paymentBucket } : undefined,
+      }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
   }),
 });
 
@@ -590,10 +692,13 @@ export const {
   useAddConsignmentItemsMutation,
   useUpdateParcelStatusMutation,
   useUpdateParcelMutation,
+  useLogParcelDiscrepancyMutation,
   useCollectDoorstepAddressMutation,
   useDispatchDoorstepParcelsMutation,
   useListRiderDoorstepParcelsQuery,
   useRiderGivenParcelToCustomerMutation,
   useRiderReturnParcelToOfficeMutation,
   useFinalizeDoorstepAtOfficeMutation,
+  useCreatePickupQueueMutation,
+  useListPickupQueueCardsQuery,
 } = parcelApi;

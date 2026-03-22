@@ -6,6 +6,7 @@ import {
   getParcelByIdCtrl,
   getParcelDetailsCtrl,
   listParcelsCtrl,
+  logParcelDiscrepancyCtrl,
   markParcelReceivedCtrl,
   setPlannedToBePaidCtrl,
   updateParcelCtrl,
@@ -182,6 +183,38 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         taxReportConfirmation: t.Optional(t.Boolean()),
       }),
       detail: { tags: ['Shipments'], summary: 'Update parcel' },
+    },
+  )
+  .post(
+    '/discrepancies',
+    async ({ body }) =>
+      logParcelDiscrepancyCtrl(
+        body as {
+          companyId: string;
+          actorUserId?: string | null;
+          parcelId?: string | null;
+          trackingCode?: string | null;
+          bookingCode?: string | null;
+          discrepancyType: 'record_not_physical' | 'physical_missing_in_system';
+          notes?: string | null;
+          branchId?: string | null;
+        },
+      ),
+    {
+      body: t.Object({
+        companyId: UUID,
+        actorUserId: t.Optional(t.Union([UUID, t.Null()])),
+        parcelId: t.Optional(t.Union([UUID, t.Null()])),
+        trackingCode: t.Optional(t.Union([t.String(), t.Null()])),
+        bookingCode: t.Optional(t.Union([t.String(), t.Null()])),
+        discrepancyType: t.Union([
+          t.Literal('record_not_physical'),
+          t.Literal('physical_missing_in_system'),
+        ]),
+        notes: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+        branchId: t.Optional(t.Union([UUID, t.Null()])),
+      }),
+      detail: { tags: ['Shipments'], summary: 'Log parcel discrepancy for incoming transit' },
     },
   )
   .post(

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import { useUpdateCustomerMutation } from '@/features/customers/api';
 import {
   type ParcelSearchRow,
   useGetParcelDetailsQuery,
+  useLogParcelDiscrepancyMutation,
   useSearchParcelsQuery,
   useUpdateParcelMutation,
   useUpdateParcelStatusMutation,
@@ -93,9 +95,15 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
   const [editParcelDetails, setEditParcelDetails] = useState('');
   const [editReceiverName, setEditReceiverName] = useState('');
   const [editReceiverPhone, setEditReceiverPhone] = useState('');
+  const [discrepancyDialogOpen, setDiscrepancyDialogOpen] = useState(false);
+  const [discrepancyParcel, setDiscrepancyParcel] = useState<ParcelSearchRow | null>(null);
+  const [missingTrackingCode, setMissingTrackingCode] = useState('');
+  const [missingBookingCode, setMissingBookingCode] = useState('');
+  const [discrepancyNotes, setDiscrepancyNotes] = useState('');
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [updateCustomer, { isLoading: isUpdatingCustomer }] = useUpdateCustomerMutation();
   const [updateParcelStatus, { isLoading: isUpdatingStatus }] = useUpdateParcelStatusMutation();
+  const [logDiscrepancy, { isLoading: isLoggingDiscrepancy }] = useLogParcelDiscrepancyMutation();
 
   useEffect(() => {
     setQuery((prev) => ({
@@ -234,6 +242,21 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
               {view === 'incoming' ? (
                 <Button
                   size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setDiscrepancyParcel(parcel);
+                    setDiscrepancyDialogOpen(true);
+                    setDiscrepancyNotes('');
+                    setMissingTrackingCode(parcel.trackingCode);
+                    setMissingBookingCode(parcel.bookingCode);
+                  }}
+                >
+                  Log Not Physical
+                </Button>
+              ) : null}
+              {view === 'incoming' ? (
+                <Button
+                  size="sm"
                   onClick={async () => {
                     try {
                       await handleMarkAsArrived(parcel);
@@ -323,6 +346,63 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
       ? 'Parcels in transit sent from your branch to destination branches.'
       : 'Parcels in transit coming to your branch from source branches.';
 
+  const handleLogDiscrepancy = useCallback(async () => {
+    if (!companyId || !branchId || !user?.id) {
+      toast.error('Missing company, branch, or user context');
+      return;
+    }
+
+    const notes = discrepancyNotes.trim();
+
+    if (discrepancyParcel) {
+      await logDiscrepancy({
+        companyId,
+        actorUserId: user.id,
+        branchId,
+        parcelId: discrepancyParcel.id,
+        trackingCode: discrepancyParcel.trackingCode,
+        bookingCode: discrepancyParcel.bookingCode,
+        discrepancyType: 'record_not_physical',
+        notes: notes.length > 0 ? notes : null,
+      }).unwrap();
+      toast.success(`Logged discrepancy for ${discrepancyParcel.trackingCode}`);
+    } else {
+      const trackingCode = missingTrackingCode.trim();
+      const bookingCode = missingBookingCode.trim();
+
+      if (trackingCode.length === 0 && bookingCode.length === 0) {
+        toast.error('Enter tracking code or booking code');
+        return;
+      }
+
+      await logDiscrepancy({
+        companyId,
+        actorUserId: user.id,
+        branchId,
+        trackingCode: trackingCode.length > 0 ? trackingCode : null,
+        bookingCode: bookingCode.length > 0 ? bookingCode : null,
+        discrepancyType: 'physical_missing_in_system',
+        notes: notes.length > 0 ? notes : null,
+      }).unwrap();
+      toast.success('Logged missing physical parcel discrepancy');
+    }
+
+    setDiscrepancyParcel(null);
+    setDiscrepancyDialogOpen(false);
+    setMissingTrackingCode('');
+    setMissingBookingCode('');
+    setDiscrepancyNotes('');
+  }, [
+    branchId,
+    companyId,
+    discrepancyNotes,
+    discrepancyParcel,
+    logDiscrepancy,
+    missingBookingCode,
+    missingTrackingCode,
+    user?.id,
+  ]);
+
   return (
     <div className="w-full p-4 space-y-4">
       <Card>
@@ -331,6 +411,23 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
           <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {view === 'incoming' ? (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDiscrepancyParcel(null);
+                  setDiscrepancyDialogOpen(true);
+                  setMissingTrackingCode('');
+                  setMissingBookingCode('');
+                  setDiscrepancyNotes('');
+                }}
+              >
+                Log Missing Physical Parcel
+              </Button>
+            </div>
+          ) : null}
           <form className="flex items-center gap-2" onSubmit={handleSearchSubmit}>
             <Input
               value={searchInput}
@@ -455,6 +552,108 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
               );
             })()
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={view === 'incoming' && discrepancyDialogOpen}
+        onOpenChange={(open) => {
+          setDiscrepancyDialogOpen(open);
+          if (open) return;
+          setDiscrepancyParcel(null);
+          setMissingTrackingCode('');
+          setMissingBookingCode('');
+          setDiscrepancyNotes('');
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {discrepancyParcel
+                ? 'Log Discrepancy: Record Not Physical'
+                : 'Log Discrepancy: Physical Parcel Missing In System'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {discrepancyParcel ? (
+              <div className="space-y-2 text-sm">
+                <p>
+                  <strong>Tracking:</strong> {discrepancyParcel.trackingCode}
+                </p>
+                <p>
+                  <strong>Booking:</strong> {discrepancyParcel.bookingCode}
+                </p>
+                <p className="text-muted-foreground">
+                  Use this when the parcel exists in the incoming in-transit list but the physical
+                  item is not available.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="missing-tracking-code">Tracking Code</Label>
+                  <Input
+                    id="missing-tracking-code"
+                    value={missingTrackingCode}
+                    onChange={(event) => setMissingTrackingCode(event.target.value)}
+                    placeholder="Enter scanned or printed tracking code"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="missing-booking-code">Booking Code</Label>
+                  <Input
+                    id="missing-booking-code"
+                    value={missingBookingCode}
+                    onChange={(event) => setMissingBookingCode(event.target.value)}
+                    placeholder="Optional booking code"
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Use this when the parcel is physically present but no matching in-transit record
+                  exists in the system.
+                </p>
+              </>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="discrepancy-notes">Notes</Label>
+              <Textarea
+                id="discrepancy-notes"
+                value={discrepancyNotes}
+                onChange={(event) => setDiscrepancyNotes(event.target.value)}
+                placeholder="Describe what was found, who checked, or any follow-up needed"
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setDiscrepancyParcel(null);
+                setDiscrepancyDialogOpen(false);
+                setMissingTrackingCode('');
+                setMissingBookingCode('');
+                setDiscrepancyNotes('');
+              }}
+              disabled={isLoggingDiscrepancy}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={async () => {
+                try {
+                  await handleLogDiscrepancy();
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : 'Failed to log discrepancy');
+                }
+              }}
+              disabled={isLoggingDiscrepancy}
+            >
+              {isLoggingDiscrepancy ? 'Saving...' : 'Save Discrepancy'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

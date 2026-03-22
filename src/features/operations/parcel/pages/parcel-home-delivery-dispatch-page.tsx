@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -21,6 +22,7 @@ import {
   type ParcelSearchRow,
   useDispatchDoorstepParcelsMutation,
   useSearchParcelsQuery,
+  useUpdateParcelMutation,
 } from '../api/parcel.api';
 
 const EMPTY_META: PaginationMeta = {
@@ -31,6 +33,10 @@ const EMPTY_META: PaginationMeta = {
   hasNextPage: false,
   hasPreviousPage: false,
 };
+
+function formatCurrency(amountPsw: number | null | undefined) {
+  return `GHS ${((amountPsw ?? 0) / 100).toFixed(2)}`;
+}
 
 export function ParcelHomeDeliveryDispatchPage() {
   const user = useAuthStore((state) => state.user);
@@ -57,6 +63,7 @@ export function ParcelHomeDeliveryDispatchPage() {
   });
   const listQuery = useSearchParcelsQuery(query, { skip: !companyId || !branchId });
   const [dispatchBulk, { isLoading: isDispatching }] = useDispatchDoorstepParcelsMutation();
+  const [updateParcel, { isLoading: isReturningToPickup }] = useUpdateParcelMutation();
 
   const { data: riderOptions = [] } = useListUserOptionsQuery(
     companyId && branchId ? { companyId, branchId, userType: 2 } : undefined,
@@ -111,8 +118,62 @@ export function ParcelHomeDeliveryDispatchPage() {
             ? 'Address Collected'
             : 'Returned To Office',
       },
+      {
+        id: 'addressCollection',
+        header: 'Address Collection',
+        cell: ({ row }) =>
+          row.original.dropoffAddress ? (
+            <div className="space-y-1">
+              <Badge variant="secondary">Collected</Badge>
+              <p className="max-w-xs text-xs text-muted-foreground">
+                {row.original.dropoffAddress}
+              </p>
+            </div>
+          ) : (
+            <Badge variant="outline">Pending</Badge>
+          ),
+      },
+      {
+        id: 'toBePaid',
+        header: 'To Be Paid',
+        accessorFn: (row) => formatCurrency(row.plannedToBePaidPsw),
+      },
+      {
+        id: 'deliveryFee',
+        header: 'Delivery Fee',
+        accessorFn: (row) => formatCurrency(row.deliveryFeePsw),
+      },
+      {
+        id: 'action',
+        header: 'Action',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              try {
+                await updateParcel({
+                  id: row.original.id,
+                  status: ParcelStatus.AWAITING_PICKUP,
+                }).unwrap();
+                toast.success('Parcel moved to Awaiting Pickup');
+                setSelectedIds((prev) => prev.filter((id) => id !== row.original.id));
+                await listQuery.refetch();
+              } catch (error) {
+                toast.error(
+                  error instanceof Error ? error.message : 'Failed to move parcel to pickup',
+                );
+              }
+            }}
+            disabled={isReturningToPickup}
+          >
+            Return to Pickup
+          </Button>
+        ),
+      },
     ],
-    [selectedIds],
+    [isReturningToPickup, listQuery, selectedIds, updateParcel],
   );
 
   const onDispatch = async () => {

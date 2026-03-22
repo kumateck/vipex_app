@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
+import { useGetBranchQuery } from '@/features/branches/api/branches.api';
 import {
   useAddCustomerCardMutation,
   useCreateCustomerMutation,
@@ -38,12 +39,20 @@ import {
   useCollectReceiverAndDeliverMutation,
   useGetParcelDetailsQuery,
   useSearchParcelsQuery,
+  useUpdateParcelMutation,
 } from '../api/parcel.api';
 import { ParcelReceiptActions, type ReceiptPrintData } from '../components/parcel-receipt-actions';
 import { ParcelSessionGuard } from '../components/parcel-session-guard';
 
 function formatCurrency(amountPsw: number) {
   return `GHS ${(amountPsw / 100).toFixed(2)}`;
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleString();
 }
 
 type CardMode = 'existing' | 'new';
@@ -68,6 +77,8 @@ export function ParcelReceiverCashierPage() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
+  const { data: currentBranch } = useGetBranchQuery(branchId ?? '', { skip: !branchId });
+  const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
 
   const [searchInput, setSearchInput] = useState('');
   const [query, setQuery] = useState<
@@ -110,6 +121,7 @@ export function ParcelReceiverCashierPage() {
   const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
   const [collectReceiverAndDeliver, { isLoading: isCollectingPayment }] =
     useCollectReceiverAndDeliverMutation();
+  const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
 
   const { data: cardOptions = [] } = useListCardOptionsQuery();
   const { data: staffOptions = [] } = useListUserOptionsQuery(
@@ -171,10 +183,29 @@ export function ParcelReceiverCashierPage() {
     }
   }, [mainReceiverCards.length, selectedParcel]);
 
-  const isSaving = isAddingCard || isCreatingCustomer || isCollectingPayment;
+  const isSaving = isAddingCard || isCreatingCustomer || isCollectingPayment || isUpdatingParcel;
+  const hasPickupQueue = Boolean(parcelDetails?.pickupQueue);
 
-  const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
-    () => [
+  function openParcelDialog(parcel: ParcelSearchRow) {
+    setSelectedParcel(parcel);
+    setHandoverTarget(parcel.secondReceiverId ? 'second' : 'main');
+    setPickerStaffId('');
+    setPaymentMethod(String(PaymentMethod.CASH));
+    setPaymentAmount((parcel.plannedToBePaidPsw / 100).toFixed(2));
+    setMainCardMode('existing');
+    setMainExistingCardRecordId('');
+    setMainNewCardTypeId('');
+    setMainNewCardNumber('');
+    setSecondCardMode('new');
+    setSecondExistingCardRecordId('');
+    setSecondNewCardTypeId('');
+    setSecondNewCardNumber('');
+    setSecondNewName('');
+    setSecondNewPhone('');
+  }
+
+  const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(() => {
+    const baseColumns: ColumnDef<ParcelSearchRow>[] = [
       { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
@@ -194,38 +225,55 @@ export function ParcelReceiverCashierPage() {
         header: 'Receiver Due',
         accessorFn: (row) => formatCurrency(row.plannedToBePaidPsw),
       },
-      {
-        id: 'action',
-        header: 'Action',
-        enableSorting: false,
-        cell: ({ row }) => (
-          <Button
-            size="sm"
-            onClick={() => {
-              setSelectedParcel(row.original);
-              setHandoverTarget(row.original.secondReceiverId ? 'second' : 'main');
-              setPickerStaffId('');
-              setPaymentMethod(String(PaymentMethod.CASH));
-              setPaymentAmount((row.original.plannedToBePaidPsw / 100).toFixed(2));
-              setMainCardMode('existing');
-              setMainExistingCardRecordId('');
-              setMainNewCardTypeId('');
-              setMainNewCardNumber('');
-              setSecondCardMode('new');
-              setSecondExistingCardRecordId('');
-              setSecondNewCardTypeId('');
-              setSecondNewCardNumber('');
-              setSecondNewName('');
-              setSecondNewPhone('');
-            }}
-          >
+    ];
+
+    if (isPickupQueueEnabled) {
+      baseColumns.push({
+        id: 'pickupQueue',
+        header: 'Queue',
+        accessorFn: (row) =>
+          row.pickupQueueCode
+            ? `${row.pickupQueueCode}${row.pickupQueuedAt ? ` • ${formatDateTime(row.pickupQueuedAt)}` : ''}`
+            : 'Not queued',
+      });
+    }
+
+    baseColumns.push({
+      id: 'action',
+      header: 'Action',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => openParcelDialog(row.original)}>
             Receive + Deliver
           </Button>
-        ),
-      },
-    ],
-    [],
-  );
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              try {
+                await updateParcel({
+                  id: row.original.id,
+                  status: ParcelStatus.HOME_DELIVERY_REQUESTED,
+                }).unwrap();
+                toast.success('Parcel moved to Home Delivery Requested');
+                await listQuery.refetch();
+              } catch (error) {
+                toast.error(
+                  error instanceof Error ? error.message : 'Failed to move parcel to home delivery',
+                );
+              }
+            }}
+            disabled={isSaving}
+          >
+            Request Delivery
+          </Button>
+        </div>
+      ),
+    });
+
+    return baseColumns;
+  }, [isPickupQueueEnabled, isSaving, listQuery, updateParcel]);
 
   async function resolveCardForCustomer(input: {
     customerId: string;
@@ -393,7 +441,7 @@ export function ParcelReceiverCashierPage() {
               <Input
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Search by tracking, booking, receiver"
+                placeholder="Search by tracking, booking, telephone, or receiver name"
               />
               <Button type="submit">Search</Button>
             </form>
@@ -502,6 +550,38 @@ export function ParcelReceiverCashierPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {isPickupQueueEnabled ? (
+                  <div className="space-y-3 rounded-md border p-3">
+                    <div>
+                      <Label>Pickup Queue</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Queue tickets are created from the Pickup Queue page before payment and
+                        handover.
+                      </p>
+                    </div>
+
+                    {hasPickupQueue ? (
+                      <div className="rounded-md bg-muted/40 p-3 text-sm">
+                        <p>
+                          <strong>Queue Code:</strong> {parcelDetails?.pickupQueue?.queueCode}
+                        </p>
+                        <p>
+                          <strong>Queue Number:</strong> {parcelDetails?.pickupQueue?.queueNumber}
+                        </p>
+                        <p>
+                          <strong>Queued At:</strong>{' '}
+                          {formatDateTime(parcelDetails?.pickupQueue?.queuedAt ?? null)}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                        No queue ticket found yet. Create it from the shared Pickup Queue page, then
+                        return here to collect payment and hand over the parcel.
+                      </div>
+                    )}
+                  </div>
+                ) : null}
 
                 <div className="space-y-2 rounded-md border p-3">
                   <Label>Main Receiver ID Card (required)</Label>
@@ -684,7 +764,7 @@ export function ParcelReceiverCashierPage() {
                     );
                   }
                 }}
-                disabled={isSaving}
+                disabled={isSaving || (isPickupQueueEnabled && !hasPickupQueue)}
               >
                 {isSaving ? 'Processing...' : 'Receive Payment + Deliver'}
               </Button>

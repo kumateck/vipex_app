@@ -1,5 +1,6 @@
 import { Conflict, NotFound } from '@/server/utils/http-error';
 import { DeliveryMode, PaymentComponent } from '@/db/schemas';
+import { ParcelStatus } from '@/db/schemas/enums';
 import { db } from '@/db/config';
 import { getDeliveryByParcelRepo } from '../deliveries/repository';
 import { listPaymentsForParcelRepo } from '../payments/repository';
@@ -30,8 +31,12 @@ export async function getParcelPaymentSettlement(
   ]);
 
   const requiredPrincipalPsw = Number(parcel.chargePsw ?? 0);
-  const requiredDeliveryFeePsw =
-    delivery && delivery.mode === DeliveryMode.DOORSTEP ? Number(delivery.chargePsw ?? 0) : 0;
+  const shouldRequireDoorstepFee =
+    delivery &&
+    delivery.mode === DeliveryMode.DOORSTEP &&
+    parcel.status !== ParcelStatus.AWAITING_PICKUP &&
+    parcel.status !== ParcelStatus.DELIVERED_BY_OFFICE;
+  const requiredDeliveryFeePsw = shouldRequireDoorstepFee ? Number(delivery?.chargePsw ?? 0) : 0;
   const requiredTotalPsw = requiredPrincipalPsw + requiredDeliveryFeePsw;
 
   const paidPrincipalPsw = payments

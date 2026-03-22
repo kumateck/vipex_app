@@ -125,7 +125,7 @@ export function ParcelRiderCurrentPage() {
               onClick={async () => {
                 try {
                   await riderReturned({ parcelId: row.original.parcelId, riderUserId }).unwrap();
-                  toast.success('Parcel marked returned to office');
+                  toast.success('Parcel returned to branch pickup');
                 } catch (error) {
                   toast.error(error instanceof Error ? error.message : 'Failed to return parcel');
                 }

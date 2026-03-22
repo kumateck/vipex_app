@@ -19,6 +19,7 @@ import {
   getParcelPaymentSettlement,
 } from '../shipments/parcel-payment-settlement';
 import { updateParcelRepo } from '../shipments/parcels.repository';
+import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 export type PaymentCreateInput = {
@@ -506,6 +507,10 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
           secondCardId: input.secondCardId ?? null,
           secondCardNumber: input.secondCardNumber ?? null,
         },
+        tx,
+      );
+      await endPickupQueueForParcelSvc(
+        { parcelId: input.parcelId, endedBy: input.cashierUserId },
         tx,
       );
 

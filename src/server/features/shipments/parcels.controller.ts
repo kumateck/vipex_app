@@ -5,6 +5,7 @@ import {
   getParcelFullDetailsSvc,
   getParcelSvc,
   listParcelsSvc,
+  logParcelDiscrepancySvc,
   markParcelReceivedSvc,
   setPlannedToBePaidSvc,
   updateParcelSvc,
@@ -45,6 +46,8 @@ export async function listParcelsCtrl(
       receivedAt: p.receivedAt ? p.receivedAt.toISOString() : null,
       confirmedAt: p.confirmedAt ? p.confirmedAt.toISOString() : null,
       bookingCreatedAt: p.bookingCreatedAt ? p.bookingCreatedAt.toISOString() : null,
+      pickupQueuedAt: p.pickupQueuedAt ? p.pickupQueuedAt.toISOString() : null,
+      pickupQueueEndedAt: p.pickupQueueEndedAt ? p.pickupQueueEndedAt.toISOString() : null,
     })),
     meta: buildPaginationMeta({
       totalRecords,
@@ -94,9 +97,20 @@ export async function getParcelDetailsCtrl(id: string) {
       addedAt: consignment.addedAt.toISOString(),
       removedAt: consignment.removedAt ? consignment.removedAt.toISOString() : null,
     })),
+    pickupQueue: result.pickupQueue
+      ? {
+          ...result.pickupQueue,
+          queueDate: result.pickupQueue.queueDate.toISOString(),
+          queuedAt: result.pickupQueue.queuedAt.toISOString(),
+          endedAt: result.pickupQueue.endedAt ? result.pickupQueue.endedAt.toISOString() : null,
+          createdAt: result.pickupQueue.createdAt.toISOString(),
+          updatedAt: result.pickupQueue.updatedAt.toISOString(),
+        }
+      : null,
   };
 }
 export const createParcelCtrl = createParcelSvc;
 export const updateParcelCtrl = updateParcelSvc;
 export const markParcelReceivedCtrl = markParcelReceivedSvc;
 export const setPlannedToBePaidCtrl = setPlannedToBePaidSvc;
+export const logParcelDiscrepancyCtrl = logParcelDiscrepancySvc;

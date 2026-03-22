@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
@@ -27,6 +28,8 @@ const STATUS_LABELS: Record<number, string> = {
   [ParcelStatus.CUSTOMER_CONTACTED]: 'Customer Contacted',
   [ParcelStatus.AWAITING_PICKUP]: 'Awaiting Pickup',
   [ParcelStatus.HOME_DELIVERY_REQUESTED]: 'Home Delivery Requested',
+  [ParcelStatus.ADDRESS_COLLECTED]: 'Address Collected',
+  [ParcelStatus.RETURNED_TO_OFFICE]: 'Returned to Office',
 };
 
 function formatDate(value: string | null | undefined) {
@@ -36,7 +39,19 @@ function formatDate(value: string | null | undefined) {
   return date.toLocaleString();
 }
 
+function formatCurrency(amountPsw: number) {
+  return `GHS ${(amountPsw / 100).toFixed(2)}`;
+}
+
 type ContactOutcome = 'contacted' | 'pickup' | 'delivery' | 'follow_up';
+
+function canReturnToPickup(status: number) {
+  return (
+    status === ParcelStatus.HOME_DELIVERY_REQUESTED ||
+    status === ParcelStatus.ADDRESS_COLLECTED ||
+    status === ParcelStatus.RETURNED_TO_OFFICE
+  );
+}
 
 export function ParcelStatusPage() {
   const user = useAuthStore((state) => state.user);
@@ -69,7 +84,14 @@ export function ParcelStatusPage() {
       filters: {
         companyId,
         destinationId: branchId,
-        statuses: [ParcelStatus.ARRIVED_AT_DESTINATION, ParcelStatus.CUSTOMER_CONTACTED],
+        statuses: [
+          ParcelStatus.ARRIVED_AT_DESTINATION,
+          ParcelStatus.CUSTOMER_CONTACTED,
+          ParcelStatus.AWAITING_PICKUP,
+          ParcelStatus.HOME_DELIVERY_REQUESTED,
+          ParcelStatus.ADDRESS_COLLECTED,
+          ParcelStatus.RETURNED_TO_OFFICE,
+        ],
       },
     },
     { skip: !companyId || !branchId },
@@ -105,6 +127,21 @@ export function ParcelStatusPage() {
         accessorFn: (row) => STATUS_LABELS[row.status] ?? String(row.status),
       },
       {
+        id: 'receiverPayment',
+        header: 'Receiver Pays',
+        cell: ({ row }) =>
+          row.original.plannedToBePaidPsw > 0 ? (
+            <div className="space-y-1">
+              <Badge variant="secondary">Yes</Badge>
+              <p className="text-xs text-muted-foreground">
+                {formatCurrency(row.original.plannedToBePaidPsw)}
+              </p>
+            </div>
+          ) : (
+            <Badge variant="outline">No</Badge>
+          ),
+      },
+      {
         id: 'createdAt',
         header: 'Created',
         accessorFn: (row) => formatDate(row.createdAt),
@@ -114,26 +151,56 @@ export function ParcelStatusPage() {
         header: 'Actions',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            onClick={() => {
-              setSelectedParcel(row.original);
-              setOutcome('contacted');
-              setUseSecondReceiver(false);
-              setSecondReceiverName('');
-              setSecondReceiverPhone('');
-            }}
-          >
-            Call Outcome
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                setSelectedParcel(row.original);
+                setOutcome('contacted');
+                setUseSecondReceiver(false);
+                setSecondReceiverName('');
+                setSecondReceiverPhone('');
+              }}
+            >
+              Call Outcome
+            </Button>
+            {canReturnToPickup(row.original.status) ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await handleReturnToPickup(row.original);
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : 'Failed to move parcel to pickup',
+                    );
+                  }
+                }}
+                disabled={isSaving}
+              >
+                Return to Pickup
+              </Button>
+            ) : null}
+          </div>
         ),
       },
     ],
-    [],
+    [isSaving],
   );
 
   async function refreshQueues() {
     await arrivedQuery.refetch();
+  }
+
+  async function handleReturnToPickup(parcel: ParcelSearchRow) {
+    await updateParcel({
+      id: parcel.id,
+      status: ParcelStatus.AWAITING_PICKUP,
+    }).unwrap();
+
+    toast.success('Parcel moved to Awaiting Pickup');
+    await refreshQueues();
   }
 
   async function handleSaveOutcome() {
@@ -177,7 +244,9 @@ export function ParcelStatusPage() {
         <CardHeader>
           <CardTitle>Parcel Status (Call Receivers)</CardTitle>
           <CardDescription>
-            Queue includes parcels that are Arrived at Destination and Customer Contacted.
+            Queue includes parcels at arrival, contacted, awaiting pickup, home delivery requested,
+            address collected, and returned to office so staff can switch between pickup and
+            delivery when needed.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

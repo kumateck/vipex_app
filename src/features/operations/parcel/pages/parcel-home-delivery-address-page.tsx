@@ -21,6 +21,7 @@ import {
   type ParcelSearchRow,
   useCollectDoorstepAddressMutation,
   useSearchParcelsQuery,
+  useUpdateParcelMutation,
 } from '../api/parcel.api';
 
 const EMPTY_META: PaginationMeta = {
@@ -55,6 +56,7 @@ export function ParcelHomeDeliveryAddressPage() {
   const [dropoffAddress, setDropoffAddress] = useState('');
   const [deliveryFee, setDeliveryFee] = useState('');
   const [collectAddress, { isLoading: isSaving }] = useCollectDoorstepAddressMutation();
+  const [updateParcel, { isLoading: isReturningToPickup }] = useUpdateParcelMutation();
   const listQuery = useSearchParcelsQuery(query, { skip: !companyId || !branchId });
 
   useEffect(() => {
@@ -85,20 +87,43 @@ export function ParcelHomeDeliveryAddressPage() {
         id: 'action',
         header: 'Action',
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            onClick={() => {
-              setSelectedParcel(row.original);
-              setDropoffAddress('');
-              setDeliveryFee('');
-            }}
-          >
-            Collect Address
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                setSelectedParcel(row.original);
+                setDropoffAddress('');
+                setDeliveryFee('');
+              }}
+            >
+              Collect Address
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                try {
+                  await updateParcel({
+                    id: row.original.id,
+                    status: ParcelStatus.AWAITING_PICKUP,
+                  }).unwrap();
+                  toast.success('Parcel moved to Awaiting Pickup');
+                  await listQuery.refetch();
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error ? error.message : 'Failed to move parcel to pickup',
+                  );
+                }
+              }}
+              disabled={isReturningToPickup}
+            >
+              Return to Pickup
+            </Button>
+          </div>
         ),
       },
     ],
-    [],
+    [isReturningToPickup, listQuery, updateParcel],
   );
 
   const onSubmit = async () => {

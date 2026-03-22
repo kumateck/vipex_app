@@ -395,10 +395,11 @@ export async function doorToDoorReturnToOfficeSvc(input: {
   }
 
   await updateParcelRepo(input.parcelId, {
-    status: ParcelStatus.RETURNED_TO_OFFICE,
+    status: ParcelStatus.AWAITING_PICKUP,
   });
   await updateDeliveryRepo(delivery.id, {
     status: 'RETURNED_TO_OFFICE',
+    chargePsw: 0,
     updatedAt: new Date(),
   });
   return { id: delivery.id };

@@ -33,6 +33,7 @@ export async function createBranchSvc(input: {
   telephone?: string | null;
   address?: string | null;
   email?: string | null;
+  usePickupQueue?: boolean;
   createdBy: string;
 }) {
   const dup = await findBranchByNameRepo(input.companyId, input.name);
@@ -46,6 +47,7 @@ export async function createBranchSvc(input: {
       telephone: input.telephone ?? null,
       address: input.address ?? null,
       email: input.email ?? null,
+      usePickupQueue: input.usePickupQueue ?? false,
       isDeleted: false,
       createdBy: input.createdBy,
     });
@@ -63,6 +65,7 @@ export async function createBranchSvc(input: {
         telephone: input.telephone ?? null,
         address: input.address ?? null,
         email: input.email ?? null,
+        usePickupQueue: input.usePickupQueue ?? false,
       },
     });
     return { id: restored?.id ?? dup.id };
@@ -82,6 +85,7 @@ export async function createBranchSvc(input: {
       telephone: input.telephone ?? null,
       address: input.address ?? null,
       email: input.email ?? null,
+      usePickupQueue: input.usePickupQueue ?? false,
     },
   });
   return { id: created?.id };
@@ -94,6 +98,7 @@ export async function updateBranchSvc(
     telephone?: string | null;
     address?: string | null;
     email?: string | null;
+    usePickupQueue?: boolean;
   },
   actorUserId?: string | null,
 ) {
@@ -125,6 +130,7 @@ export async function updateBranchSvc(
         telephone: existing.telephone ?? null,
         address: existing.address ?? null,
         email: existing.email ?? null,
+        usePickupQueue: existing.usePickupQueue,
         isDeleted: existing.isDeleted,
         createdBy: existing.createdBy,
       },
@@ -138,6 +144,7 @@ export async function updateBranchSvc(
             telephone: after.telephone ?? null,
             address: after.address ?? null,
             email: after.email ?? null,
+            usePickupQueue: after.usePickupQueue,
             isDeleted: after.isDeleted,
             createdBy: after.createdBy,
           }
@@ -167,6 +174,7 @@ export async function deleteBranchSvc(id: string, actorUserId?: string | null) {
         telephone: existing.telephone ?? null,
         address: existing.address ?? null,
         email: existing.email ?? null,
+        usePickupQueue: existing.usePickupQueue,
       },
     },
   });
