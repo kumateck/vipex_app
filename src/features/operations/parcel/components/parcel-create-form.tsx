@@ -105,7 +105,6 @@ export function ParcelCreateForm() {
     userBranchType === BranchType.HEADOFFICE ||
     !companyId ||
     !userId ||
-    !activeSession ||
     isSubmitting ||
     isCreatingCustomer ||
     form.formState.isSubmitting;
@@ -139,11 +138,6 @@ export function ParcelCreateForm() {
 
     if (!companyId || !userId || !userBranchId) {
       toast.error('Authenticated user context is incomplete');
-      return;
-    }
-
-    if (!activeSession) {
-      toast.error('An active cashier session is required');
       return;
     }
 
@@ -202,12 +196,20 @@ export function ParcelCreateForm() {
           charge: parseAmount(parcel.charge, `charge for parcel ${index + 1}`),
           value: parseAmount(parcel.parcelValue, `parcel value for parcel ${index + 1}`),
         })) || [];
+      const requiresSessionForPayNow = values.parcels.some(
+        (parcel) =>
+          parcel.paymentResponsibility === 'SENDER' && parcel.senderSettlementMode === 'PAY_NOW',
+      );
+      if (requiresSessionForPayNow && !activeSession) {
+        toast.error('An active cashier session is required when collecting sender payment now');
+        return;
+      }
 
       const status = Number(values.status);
       const response = await createBookingWithParcels({
         senderId: resolvedSenderId,
         status,
-        cashierSessionId: activeSession.id,
+        cashierSessionId: activeSession?.id ?? null,
         parcels: values.parcels.map((parcel, index) => {
           const receiverId = receiverIds[index];
           if (!receiverId) {
@@ -353,8 +355,8 @@ export function ParcelCreateForm() {
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    All parcels will be saved under a single booking. Ensure a cashier session is
-                    active before saving.
+                    All parcels will be saved under a single booking. Cashier session is only
+                    required when collecting sender payment now.
                   </p>
                   {userBranchType === BranchType.HEADOFFICE ? (
                     <p className="text-xs text-destructive">

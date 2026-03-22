@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, ilike, inArray, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, ne, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { users, roles, branches, companies, locations } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
@@ -143,7 +143,11 @@ export async function listUserOptionsRepo(p: {
   if (p.status !== null && p.status !== undefined) where.push(eq(users.status, p.status));
   if (p.search) {
     where.push(
-      or(ilike(users.fullname, `%${p.search}%`), ilike(users.email, `%${p.search}%`), ilike(users.telephone, `%${p.search}%`)),
+      or(
+        ilike(users.fullname, `%${p.search}%`),
+        ilike(users.email, `%${p.search}%`),
+        ilike(users.telephone, `%${p.search}%`),
+      ),
     );
   }
 
@@ -192,6 +196,33 @@ export async function updateUserRepo(id: string, patch: Partial<typeof users.$in
     .set(patch)
     .where(eq(users.id, id))
     .returning({ id: users.id });
+  return row ?? null;
+}
+
+export async function findUserByCompanyEmailRepo(input: {
+  companyId: string;
+  email: string;
+  excludeUserId?: string | null;
+}) {
+  const predicates = [
+    eq(users.companyId, input.companyId),
+    sql`lower(${users.email}) = ${input.email}`,
+  ];
+
+  if (input.excludeUserId) {
+    predicates.push(ne(users.id, input.excludeUserId));
+  }
+
+  const [row] = await db
+    .select({
+      id: users.id,
+      companyId: users.companyId,
+      email: users.email,
+    })
+    .from(users)
+    .where(and(...predicates))
+    .limit(1);
+
   return row ?? null;
 }
 

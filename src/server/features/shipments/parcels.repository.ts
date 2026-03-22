@@ -23,6 +23,7 @@ import {
   consignments,
 } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
+type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 export type ParcelRow = {
   id: string;
   companyId: string;
@@ -237,8 +238,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   return { data: rows, totalRecords };
 }
 
-export async function getParcelRepo(id: string): Promise<ParcelRow | null> {
-  const [row] = await db
+export async function getParcelRepo(
+  id: string,
+  executor: DbExecutor = db,
+): Promise<ParcelRow | null> {
+  const [row] = await executor
     .select({
       id: parcels.id,
       companyId: parcels.companyId,
@@ -281,16 +285,18 @@ export async function getParcelRepo(id: string): Promise<ParcelRow | null> {
 
 export async function createParcelRepo(
   values: typeof parcels.$inferInsert,
+  executor: DbExecutor = db,
 ): Promise<{ id: string }> {
-  const [row] = await db.insert(parcels).values(values).returning({ id: parcels.id });
+  const [row] = await executor.insert(parcels).values(values).returning({ id: parcels.id });
   return row ?? { id: '' };
 }
 
 export async function updateParcelRepo(
   id: string,
   patch: Partial<typeof parcels.$inferInsert>,
+  executor: DbExecutor = db,
 ): Promise<{ id: string } | null> {
-  const [row] = await db
+  const [row] = await executor
     .update(parcels)
     .set(patch)
     .where(eq(parcels.id, id))

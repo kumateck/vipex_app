@@ -29,6 +29,27 @@
       "when": 1774179600000,
       "tag": "0003_customer_credit_allocations",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1774202400000,
+      "tag": "0004_users_company_email_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1774209300000,
+      "tag": "0005_customers_company_telephone_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774210500000,
+      "tag": "0006_deliveries_signature_image_compat",
+      "breakpoints": true
     }
   ]
 }

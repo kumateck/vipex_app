@@ -52,7 +52,7 @@ export default function CustomerDetailsPage() {
   const [paymentsPage, setPaymentsPage] = useState(1);
   const [activeTab, setActiveTab] = useState<CustomerDetailsTabKey>('transactions');
   const [chartsOpen, setChartsOpen] = useState(false);
-  const [chartYear, setChartYear] = useState(new Date().getFullYear());
+  const [chartYear, setChartYear] = useState(() => new Date().getFullYear());
 
   const [txRange, setTxRange] = useState<DateRange | undefined>(() => createLast30DaysRange());
   const [paymentsRange, setPaymentsRange] = useState<DateRange | undefined>(() =>
@@ -70,19 +70,28 @@ export default function CustomerDetailsPage() {
   const [cardId, setCardId] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
+  const shouldLoadTransactions = activeTab === 'transactions';
+  const shouldLoadPayments = activeTab === 'payments';
+  const shouldLoadStatement = activeTab === 'statements';
+  const shouldLoadCredits = activeTab === 'credits';
+  const shouldLoadCards = activeTab === 'cards';
+  const shouldLoadPaymentOpenItems = activeTab === 'payments' || activeTab === 'credits';
+  const shouldLoadBranches = shouldLoadTransactions || Boolean(selectedParcelId);
 
   const { data: customer, isLoading: isLoadingCustomer } = useGetCustomerByIdQuery(id ?? '', {
     skip: !id,
   });
 
-  const { data: cardOptions = [] } = useListCardOptionsQuery();
+  const { data: cardOptions = [] } = useListCardOptionsQuery(undefined, {
+    skip: !shouldLoadCards,
+  });
   const { data: customerCards = [] } = useListCustomerCardsQuery(
     { customerId: id ?? '' },
-    { skip: !id },
+    { skip: !id || !shouldLoadCards },
   );
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
     { companyId: customer?.companyId },
-    { skip: !customer?.companyId },
+    { skip: !customer?.companyId || !shouldLoadBranches },
   );
 
   const { data: transactions, isLoading: isLoadingTransactions } = useListCustomerTransactionsQuery(
@@ -93,7 +102,7 @@ export default function CustomerDetailsPage() {
       dateFrom: txRange?.from?.toISOString(),
       dateTo: txRange?.to?.toISOString(),
     },
-    { skip: !id },
+    { skip: !id || !shouldLoadTransactions },
   );
 
   const { data: monthlyTransactions, isFetching: isFetchingMonthlyTransactions } =
@@ -113,7 +122,7 @@ export default function CustomerDetailsPage() {
       dateFrom: paymentsRange?.from?.toISOString(),
       dateTo: paymentsRange?.to?.toISOString(),
     },
-    { skip: !id },
+    { skip: !id || !shouldLoadPayments },
   );
 
   const { data: monthlyPayments, isFetching: isFetchingMonthlyPayments } =
@@ -131,12 +140,12 @@ export default function CustomerDetailsPage() {
       dateFrom: statementRange?.from?.toISOString(),
       dateTo: statementRange?.to?.toISOString(),
     },
-    { skip: !id },
+    { skip: !id || !shouldLoadStatement },
   );
 
   const { data: creditSummary } = useGetCustomerCreditSummaryQuery(
     { customerId: id ?? '' },
-    { skip: !id },
+    { skip: !id || !shouldLoadCredits },
   );
 
   const { data: creditTransactions = [] } = useListCustomerCreditTransactionsQuery(
@@ -146,7 +155,7 @@ export default function CustomerDetailsPage() {
       dateFrom: creditsRange?.from?.toISOString(),
       dateTo: creditsRange?.to?.toISOString(),
     },
-    { skip: !id },
+    { skip: !id || !shouldLoadCredits },
   );
 
   const { data: creditOpenItems = [] } = useListCustomerCreditOpenItemsQuery(
@@ -155,7 +164,7 @@ export default function CustomerDetailsPage() {
       dateFrom: creditsRange?.from?.toISOString(),
       dateTo: creditsRange?.to?.toISOString(),
     },
-    { skip: !id },
+    { skip: !id || !shouldLoadPaymentOpenItems },
   );
 
   const { data: selectedParcelDetails, isFetching: isLoadingParcelDetails } =

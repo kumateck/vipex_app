@@ -43,6 +43,12 @@ function buildRequestKey(args: string | FetchArgs): string {
   return `${method}|${url}|${params}|${body}`;
 }
 
+function shouldDedupeRequest(args: string | FetchArgs): boolean {
+  if (typeof args === 'string') return true;
+  const method = (args.method ?? 'GET').toUpperCase();
+  return method === 'GET';
+}
+
 const baseQuery = fetchBaseQuery({
   baseUrl: '/v1',
   prepareHeaders: (headers) => {
@@ -115,8 +121,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
     return result as QueryReturnValue<unknown, FetchBaseQueryError, QueryMeta>;
   };
 
-  const shouldDedupe = import.meta.env.DEV;
-  if (!shouldDedupe) {
+  if (!shouldDedupeRequest(args)) {
     return runRequest();
   }
 
@@ -137,6 +142,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
+  keepUnusedDataFor: 120,
   tagTypes: [
     'Auth',
     'Bookings',

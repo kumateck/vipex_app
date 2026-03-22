@@ -7,6 +7,7 @@ import {
   createCustomerCreditTransactionRepo,
   createCustomerRepo,
   findCustomerCardByTypeAndNumberRepo,
+  findCustomerByCompanyTelephonesRepo,
   findCustomersByTelephoneRepo,
   getCardOptionByIdRepo,
   getCustomerCreditBalancePswRepo,
@@ -67,6 +68,12 @@ function normalizePaymentTermsDays(value?: number | null): number {
   return Math.trunc(parsed);
 }
 
+function normalizeCustomerTelephone(value?: string | null): string | null {
+  if (value == null) return null;
+  const normalized = value.trim().replace(/[()\-\s]/g, '');
+  return normalized.length > 0 ? normalized : null;
+}
+
 function assertBusinessCreationContext(customerType: number, sourceContext?: 'crm' | 'default') {
   if (customerType !== CustomerType.BUSINESS) return;
   if ((sourceContext ?? 'default') !== 'crm') {
@@ -112,12 +119,26 @@ export async function createCustomerSvc(input: {
 
   const creditLimitPsw = normalizeCreditLimitPsw(input.creditLimitPsw);
   const paymentTermsDays = normalizePaymentTermsDays(input.paymentTermsDays);
+  const telephone = normalizeCustomerTelephone(input.telephone);
+  const telephone2 = normalizeCustomerTelephone(input.telephone2);
+
+  if (telephone && telephone2 && telephone === telephone2) {
+    throw BadRequest('Primary and secondary telephone cannot be the same');
+  }
+
+  const duplicateTelephone = await findCustomerByCompanyTelephonesRepo({
+    companyId: input.companyId,
+    telephones: [telephone, telephone2].filter((value): value is string => !!value),
+  });
+  if (duplicateTelephone) {
+    throw Conflict('A customer with this telephone already exists in this company');
+  }
 
   const created = await createCustomerRepo({
     companyId: input.companyId,
     fullname: input.fullname,
-    telephone: input.telephone ?? null,
-    telephone2: input.telephone2 ?? null,
+    telephone,
+    telephone2,
     address: input.address ?? null,
     email: input.email ?? null,
     customerType,
@@ -139,7 +160,7 @@ export async function createCustomerSvc(input: {
     message: 'Customer created',
     metadata: {
       fullname: input.fullname,
-      telephone: input.telephone ?? null,
+      telephone,
       customerType,
       creditEligible,
       creditLimitPsw,
@@ -198,8 +219,10 @@ export async function updateCustomerSvc(
     loggedToGovernment: boolean;
   }> = {
     fullname: patch.fullname,
-    telephone: patch.telephone,
-    telephone2: patch.telephone2,
+    telephone:
+      patch.telephone !== undefined ? normalizeCustomerTelephone(patch.telephone) : undefined,
+    telephone2:
+      patch.telephone2 !== undefined ? normalizeCustomerTelephone(patch.telephone2) : undefined,
     address: patch.address,
     email: patch.email,
     customerType: patch.customerType,
@@ -214,6 +237,22 @@ export async function updateCustomerSvc(
 
   if (patch.paymentTermsDays != null) {
     patchData.paymentTermsDays = normalizePaymentTermsDays(patch.paymentTermsDays);
+  }
+
+  const nextTelephone = patchData.telephone !== undefined ? patchData.telephone : cur.telephone;
+  const nextTelephone2 = patchData.telephone2 !== undefined ? patchData.telephone2 : cur.telephone2;
+
+  if (nextTelephone && nextTelephone2 && nextTelephone === nextTelephone2) {
+    throw BadRequest('Primary and secondary telephone cannot be the same');
+  }
+
+  const duplicateTelephone = await findCustomerByCompanyTelephonesRepo({
+    companyId,
+    telephones: [nextTelephone, nextTelephone2].filter((value): value is string => !!value),
+    excludeCustomerId: id,
+  });
+  if (duplicateTelephone) {
+    throw Conflict('A customer with this telephone already exists in this company');
   }
 
   const updated = await updateCustomerRepo(id, patchData);

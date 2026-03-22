@@ -1,5 +1,6 @@
 import { toPesewas } from '@/server/utils/gh-money';
 import { ParcelStatus } from '@/db/schemas';
+import { db } from '@/db/config';
 import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 import { listPaymentsForParcelRepo } from '../payments/repository';
 import { getDeliveryByParcelRepo } from '../deliveries/repository';
@@ -14,6 +15,7 @@ import {
   type ParcelRow,
 } from './parcels.repository';
 import { assertParcelFullyPaid } from './parcel-payment-settlement';
+type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 function getErrorCode(error: unknown): string | undefined {
   if (!error || typeof error !== 'object') return undefined;
@@ -34,8 +36,8 @@ function isSchemaCompatibilityError(error: unknown): boolean {
 export async function listParcelsSvc(p: ListParcelsParams) {
   return listParcelsRepo(p);
 }
-export async function getParcelSvc(id: string): Promise<ParcelRow> {
-  const row = await getParcelRepo(id);
+export async function getParcelSvc(id: string, executor: DbExecutor = db): Promise<ParcelRow> {
+  const row = await getParcelRepo(id, executor);
   if (!row) throw NotFound('Parcel not found');
   return row;
 }

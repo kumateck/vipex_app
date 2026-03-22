@@ -2,6 +2,8 @@ import { and, asc, eq, isNull } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { payments } from '@/db/schemas';
 
+type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
+
 export type PaymentRow = {
   id: string;
   companyId: string;
@@ -29,16 +31,20 @@ export type PaymentRow = {
 
 export async function createPaymentRepo(
   values: typeof payments.$inferInsert,
+  executor: DbExecutor = db,
 ): Promise<{ id: string }> {
-  const [row] = await db.insert(payments).values(values).returning({ id: payments.id });
+  const [row] = await executor.insert(payments).values(values).returning({ id: payments.id });
   if (!row) {
     throw new Error('Failed to create payment');
   }
   return row;
 }
 
-export async function listPaymentsForParcelRepo(parcelId: string): Promise<PaymentRow[]> {
-  const rows = await db
+export async function listPaymentsForParcelRepo(
+  parcelId: string,
+  executor: DbExecutor = db,
+): Promise<PaymentRow[]> {
+  const rows = await executor
     .select({
       id: payments.id,
       companyId: payments.companyId,
@@ -72,8 +78,9 @@ export async function listPaymentsForParcelRepo(parcelId: string): Promise<Payme
 export async function sumPaymentsForParcelComponentRepo(
   parcelId: string,
   component: number,
+  executor: DbExecutor = db,
 ): Promise<number> {
-  const rows = await listPaymentsForParcelRepo(parcelId);
+  const rows = await listPaymentsForParcelRepo(parcelId, executor);
   return rows
     .filter((r) => r.component === component)
     .reduce<number>((acc, r) => acc + r.grossAmountPsw, 0);

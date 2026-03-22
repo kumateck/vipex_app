@@ -85,18 +85,27 @@ export async function createBookingWithParcelsSvc(
     throw BadRequest('Cashier user and branch are required for parcel booking');
   }
 
-  const activeSession = await assertActiveSessionSvc({
-    cashierId: primaryParcel.cashierUserId,
-    branchId: primaryParcel.branchId,
-  });
-
-  const hasMixedCashierOrBranch = body.parcels.some(
-    (parcel) =>
-      parcel.cashierUserId !== primaryParcel.cashierUserId ||
-      parcel.branchId !== primaryParcel.branchId,
+  const hasImmediateSenderPayments = body.parcels.some(
+    (parcel) => Number(parcel.senderPaymentCedis ?? 0) > 0,
   );
-  if (hasMixedCashierOrBranch) {
-    throw BadRequest('All parcels in one booking must belong to the same cashier and branch');
+
+  let resolvedCashierSessionId: string | null = body.cashierSessionId ?? null;
+  if (hasImmediateSenderPayments) {
+    const activeSession = await assertActiveSessionSvc({
+      cashierId: primaryParcel.cashierUserId,
+      branchId: primaryParcel.branchId,
+    });
+
+    const hasMixedCashierOrBranch = body.parcels.some(
+      (parcel) =>
+        parcel.cashierUserId !== primaryParcel.cashierUserId ||
+        parcel.branchId !== primaryParcel.branchId,
+    );
+    if (hasMixedCashierOrBranch) {
+      throw BadRequest('All parcels in one booking must belong to the same cashier and branch');
+    }
+
+    resolvedCashierSessionId = body.cashierSessionId ?? activeSession.id;
   }
 
   const input: CreateBookingWithParcelsInput = {
@@ -105,7 +114,7 @@ export async function createBookingWithParcelsSvc(
     sourceId: body.sourceId,
     status: body.status,
     createdBy: body.createdBy,
-    cashierSessionId: body.cashierSessionId ?? activeSession.id,
+    cashierSessionId: resolvedCashierSessionId,
     // bookingCode: body.bookingCode ?? null,
     parcels: body.parcels.map((p) => ({
       destinationId: p.destinationId,

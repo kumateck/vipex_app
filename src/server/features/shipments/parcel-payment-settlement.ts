@@ -1,8 +1,10 @@
 import { Conflict, NotFound } from '@/server/utils/http-error';
 import { DeliveryMode, PaymentComponent } from '@/db/schemas';
+import { db } from '@/db/config';
 import { getDeliveryByParcelRepo } from '../deliveries/repository';
 import { listPaymentsForParcelRepo } from '../payments/repository';
 import { getParcelRepo } from './parcels.repository';
+type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 export type ParcelPaymentSettlement = {
   parcelId: string;
@@ -15,13 +17,16 @@ export type ParcelPaymentSettlement = {
   outstandingPsw: number;
 };
 
-export async function getParcelPaymentSettlement(parcelId: string): Promise<ParcelPaymentSettlement> {
-  const parcel = await getParcelRepo(parcelId);
+export async function getParcelPaymentSettlement(
+  parcelId: string,
+  executor: DbExecutor = db,
+): Promise<ParcelPaymentSettlement> {
+  const parcel = await getParcelRepo(parcelId, executor);
   if (!parcel) throw NotFound('Parcel not found');
 
   const [delivery, payments] = await Promise.all([
-    getDeliveryByParcelRepo(parcelId),
-    listPaymentsForParcelRepo(parcelId),
+    getDeliveryByParcelRepo(parcelId, executor),
+    listPaymentsForParcelRepo(parcelId, executor),
   ]);
 
   const requiredPrincipalPsw = Number(parcel.chargePsw ?? 0);
@@ -50,8 +55,11 @@ export async function getParcelPaymentSettlement(parcelId: string): Promise<Parc
   };
 }
 
-export async function assertParcelFullyPaid(parcelId: string): Promise<ParcelPaymentSettlement> {
-  const settlement = await getParcelPaymentSettlement(parcelId);
+export async function assertParcelFullyPaid(
+  parcelId: string,
+  executor: DbExecutor = db,
+): Promise<ParcelPaymentSettlement> {
+  const settlement = await getParcelPaymentSettlement(parcelId, executor);
 
   if (settlement.paidTotalPsw !== settlement.requiredTotalPsw) {
     if (settlement.outstandingPsw > 0) {

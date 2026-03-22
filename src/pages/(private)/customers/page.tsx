@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,19 @@ import { CustomerType, useListCustomersQuery } from '@/features/customers/api';
 const PAGE_SIZE = 30;
 
 export default function CustomersPage() {
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setSearch(searchInput);
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchInput]);
 
   const query = useMemo(
     () => ({
@@ -24,7 +35,7 @@ export default function CustomersPage() {
     [page, search],
   );
 
-  const { data, isLoading } = useListCustomersQuery(query);
+  const { data, isLoading, isFetching } = useListCustomersQuery(query);
   const customers = data?.data ?? [];
   const meta = data?.meta;
 
@@ -48,9 +59,9 @@ export default function CustomersPage() {
           <div className="border-b p-4">
             <Input
               placeholder="Search by name, phone, or email"
-              value={search}
+              value={searchInput}
               onChange={(event) => {
-                setSearch(event.target.value);
+                setSearchInput(event.target.value);
                 setPage(1);
               }}
             />
@@ -59,6 +70,8 @@ export default function CustomersPage() {
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
             {isLoading ? (
               <p className="text-sm text-muted-foreground">Loading customers...</p>
+            ) : isFetching ? (
+              <p className="text-sm text-muted-foreground">Updating customers...</p>
             ) : null}
             {!isLoading && customers.length === 0 ? (
               <p className="text-sm text-muted-foreground">No customers found.</p>

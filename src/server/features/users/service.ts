@@ -7,11 +7,16 @@ import {
   getBranchScopeRepo,
   getLocationScopeRepo,
   getUserRepo,
+  findUserByCompanyEmailRepo,
   listUserOptionsRepo,
   listUsersRepo,
   updateUserRepo,
   type ListUserParams,
 } from './repository';
+
+function normalizeUserEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
 
 export async function listUsersSvc(p: ListUserParams) {
   return listUsersRepo(p);
@@ -53,6 +58,8 @@ export async function createUserSvc(input: {
 }) {
   if (!input.fullname || !input.email || !input.telephone)
     throw BadRequest('Missing required fields');
+  const normalizedEmail = normalizeUserEmail(input.email);
+  if (!normalizedEmail) throw BadRequest('Email is required');
 
   if (!USER_TYPES.includes(input.userType as (typeof USER_TYPES)[number])) {
     throw BadRequest('Invalid user type');
@@ -106,12 +113,21 @@ export async function createUserSvc(input: {
     }
   }
 
+  const existingUser = await findUserByCompanyEmailRepo({
+    companyId: input.companyId,
+    email: normalizedEmail,
+  });
+  if (existingUser) {
+    throw BadRequest('A user with this email already exists in this company');
+  }
+
   const { sendInvite = true, actor: _actor, ...insertable } = input;
   const created = await createUserRepo({
     ...insertable,
+    email: normalizedEmail,
   });
   if (created?.id && sendInvite) {
-    await sendPasswordSetupInvite(created.id, input.email);
+    await sendPasswordSetupInvite(created.id, normalizedEmail);
   }
   return { id: created?.id };
 }
@@ -131,6 +147,8 @@ export async function updateUserSvc(
   const cur = await getUserRepo(id);
   if (!cur) throw NotFound('User not found');
   const nextPatch = { ...patch };
+  const normalizedEmail =
+    nextPatch.email !== undefined ? normalizeUserEmail(nextPatch.email) : undefined;
   if (
     nextPatch.userType !== null &&
     nextPatch.userType !== undefined &&
@@ -156,10 +174,7 @@ export async function updateUserSvc(
       if (!targetLocation) {
         throw BadRequest('Target location does not exist');
       }
-      if (
-        targetLocation.companyId !== cur.companyId ||
-        targetLocation.branchId !== nextBranchId
-      ) {
+      if (targetLocation.companyId !== cur.companyId || targetLocation.branchId !== nextBranchId) {
         throw Forbidden('Target location must belong to the selected branch');
       }
     }
@@ -168,6 +183,21 @@ export async function updateUserSvc(
     if (currentLocation && currentLocation.branchId !== nextBranchId) {
       nextPatch.locationId = null;
     }
+  }
+
+  if (normalizedEmail !== undefined) {
+    if (!normalizedEmail) {
+      throw BadRequest('Email is required');
+    }
+    const existingUser = await findUserByCompanyEmailRepo({
+      companyId: cur.companyId,
+      email: normalizedEmail,
+      excludeUserId: id,
+    });
+    if (existingUser) {
+      throw BadRequest('A user with this email already exists in this company');
+    }
+    nextPatch.email = normalizedEmail;
   }
 
   const updated = await updateUserRepo(id, nextPatch);

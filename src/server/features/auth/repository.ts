@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '../../../db/config';
 import {
   branches,
@@ -16,6 +16,7 @@ import {
 //   return u ?? null;
 // }
 export async function getUserByEmailRepo(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
   const [row] = await db
     .select({
       user: users,
@@ -29,7 +30,7 @@ export async function getUserByEmailRepo(email: string) {
     .leftJoin(locations, eq(locations.id, users.locationId))
     .leftJoin(companies, eq(companies.id, users.companyId))
     .leftJoin(roles, eq(roles.id, users.roleId))
-    .where(eq(users.email, email))
+    .where(sql`lower(${users.email}) = ${normalizedEmail}`)
     .limit(1);
 
   if (!row) return null;

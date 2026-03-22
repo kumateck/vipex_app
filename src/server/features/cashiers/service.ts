@@ -19,6 +19,9 @@ import {
   type SessionRow,
   type ListSessionsParams,
 } from './repository';
+import { db } from '@/db/config';
+
+type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 export async function listSessionTypesSvc() {
   return listSessionTypesRepo();
@@ -154,6 +157,7 @@ export async function closeSessionSvc(
 export async function getCurrentActiveSessionSvc(input: {
   cashierId: string;
   branchId?: string | null;
+  executor?: DbExecutor;
 }): Promise<SessionRow | null> {
   return findActiveSessionRepo(input);
 }
@@ -161,6 +165,7 @@ export async function getCurrentActiveSessionSvc(input: {
 export async function assertActiveSessionSvc(input: {
   cashierId: string;
   branchId?: string | null;
+  executor?: DbExecutor;
 }): Promise<SessionRow> {
   const session = await findActiveSessionRepo(input);
   if (!session) {
@@ -179,8 +184,12 @@ export async function getCurrentActiveSessionSummarySvc(input: {
     return null;
   }
 
-  const [totalSenderSalesPsw, totalToBePaidCollectedPsw, totalDeliveryFeeCollectedPsw, totalCreditCreatedPsw] =
-    await Promise.all([
+  const [
+    totalSenderSalesPsw,
+    totalToBePaidCollectedPsw,
+    totalDeliveryFeeCollectedPsw,
+    totalCreditCreatedPsw,
+  ] = await Promise.all([
     getSessionAmountPaidPswRepo({ sessionId: session.id, cashierId: input.cashierId }),
     getSessionToBePaidCollectedPswRepo({ sessionId: session.id, cashierId: input.cashierId }),
     getSessionDeliveryFeeCollectedPswRepo({ sessionId: session.id, cashierId: input.cashierId }),

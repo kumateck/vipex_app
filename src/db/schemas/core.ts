@@ -156,30 +156,40 @@ export const rolePermissions = pgTable('role_permissions', {
 });
 
 // Users (status is smallint; map in app with your enums)
-export const users = pgTable('users', {
-  id: varchar('id', { length: 25 })
-    .primaryKey()
-    .$defaultFn(() => createId()),
-  fullname: varchar('fullname', { length: 255 }).notNull(),
-  telephone: varchar('telephone', { length: 255 }).notNull(),
-  email: varchar('email', { length: 255 }).notNull(),
-  password: varchar('password', { length: 255 }),
-  status: smallint('status').notNull().default(UserStatus.INVITED), // INVITED default
-  roleId: varchar('role_id', { length: 25 })
-    .notNull()
-    .references(() => roles.id),
-  companyId: varchar('company_id', { length: 25 })
-    .notNull()
-    .references(() => companies.id),
-  branchId: varchar('branch_id', { length: 25 })
-    .notNull()
-    .references(() => branches.id),
-  locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
-  userType: smallint('user_type').notNull().default(UserType.STAFF),
-  createdBy: varchar('created_by', { length: 25 }).notNull(),
-  taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
-  resetToken: varchar('reset_token', { length: 255 }),
-  resetTokenExpires: timestamp('reset_token_expires', { withTimezone: false }),
-  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
-});
+export const users = pgTable(
+  'users',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    fullname: varchar('fullname', { length: 255 }).notNull(),
+    telephone: varchar('telephone', { length: 255 }).notNull(),
+    email: varchar('email', { length: 255 }).notNull(),
+    password: varchar('password', { length: 255 }),
+    status: smallint('status').notNull().default(UserStatus.INVITED), // INVITED default
+    roleId: varchar('role_id', { length: 25 })
+      .notNull()
+      .references(() => roles.id),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    branchId: varchar('branch_id', { length: 25 })
+      .notNull()
+      .references(() => branches.id),
+    locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
+    userType: smallint('user_type').notNull().default(UserType.STAFF),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
+    taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
+    resetToken: varchar('reset_token', { length: 255 }),
+    resetTokenExpires: timestamp('reset_token_expires', { withTimezone: false }),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompany: index('users_company_idx').on(t.companyId),
+    uqCompanyLowerEmail: uniqueIndex('users_company_lower_email_uq').on(
+      t.companyId,
+      sql`lower(${t.email})`,
+    ),
+  }),
+);

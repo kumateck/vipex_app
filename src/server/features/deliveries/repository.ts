@@ -3,6 +3,7 @@ import { db } from '@/db/config';
 import { and, asc, desc, inArray } from 'drizzle-orm';
 import { deliveries, parcels, customers, branches } from '@/db/schemas';
 import { alias } from 'drizzle-orm/pg-core';
+type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 export type DeliveryRow = {
   id: string;
@@ -31,44 +32,92 @@ export type DeliveryRow = {
 
 export async function createDeliveryRepo(
   values: typeof deliveries.$inferInsert,
+  executor: DbExecutor = db,
 ): Promise<{ id: string }> {
-  const [row] = await db.insert(deliveries).values(values).returning({ id: deliveries.id });
+  const [row] = await executor.insert(deliveries).values(values).returning({ id: deliveries.id });
   if (!row) {
     throw new Error('Failed to create delivery');
   }
   return row;
 }
 
-export async function getDeliveryByParcelRepo(parcelId: string): Promise<DeliveryRow | null> {
-  const [row] = await db
-    .select({
-      id: deliveries.id,
-      parcelId: deliveries.parcelId,
-      mode: deliveries.mode,
-      status: deliveries.status,
-      officeLocationId: deliveries.officeLocationId,
-      dropoffAddress: deliveries.dropoffAddress,
-      frontDeskUserId: deliveries.frontDeskUserId,
-      deliveryUserId: deliveries.deliveryUserId,
-      riderUserId: deliveries.riderUserId,
-      signatureImage: deliveries.signatureImage,
-      receiverCalledConfirmedBy: deliveries.receiverCalledConfirmedBy,
-      receiverCalledConfirmedAt: deliveries.receiverCalledConfirmedAt,
-      chargePsw: deliveries.chargePsw,
-      amountPaidPsw: deliveries.amountPaidPsw,
-      isDeleted: deliveries.isDeleted,
-      deliveredAt: deliveries.deliveredAt,
-      confirmedBy: deliveries.confirmedBy,
-      confirmedAt: deliveries.confirmedAt,
-      createdBy: deliveries.createdBy,
-      createdAt: deliveries.createdAt,
-      updatedAt: deliveries.updatedAt,
-      cashierSessionId: deliveries.cashierSessionId,
-    })
-    .from(deliveries)
-    .where(eq(deliveries.parcelId, parcelId))
-    .limit(1);
-  return row ?? null;
+export async function getDeliveryByParcelRepo(
+  parcelId: string,
+  executor: DbExecutor = db,
+): Promise<DeliveryRow | null> {
+  try {
+    const [row] = await executor
+      .select({
+        id: deliveries.id,
+        parcelId: deliveries.parcelId,
+        mode: deliveries.mode,
+        status: deliveries.status,
+        officeLocationId: deliveries.officeLocationId,
+        dropoffAddress: deliveries.dropoffAddress,
+        frontDeskUserId: deliveries.frontDeskUserId,
+        deliveryUserId: deliveries.deliveryUserId,
+        riderUserId: deliveries.riderUserId,
+        signatureImage: deliveries.signatureImage,
+        receiverCalledConfirmedBy: deliveries.receiverCalledConfirmedBy,
+        receiverCalledConfirmedAt: deliveries.receiverCalledConfirmedAt,
+        chargePsw: deliveries.chargePsw,
+        amountPaidPsw: deliveries.amountPaidPsw,
+        isDeleted: deliveries.isDeleted,
+        deliveredAt: deliveries.deliveredAt,
+        confirmedBy: deliveries.confirmedBy,
+        confirmedAt: deliveries.confirmedAt,
+        createdBy: deliveries.createdBy,
+        createdAt: deliveries.createdAt,
+        updatedAt: deliveries.updatedAt,
+        cashierSessionId: deliveries.cashierSessionId,
+      })
+      .from(deliveries)
+      .where(eq(deliveries.parcelId, parcelId))
+      .limit(1);
+    return row ?? null;
+  } catch (error) {
+    const code =
+      error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
+        ? error.code
+        : undefined;
+    const message =
+      error && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
+        ? error.message
+        : '';
+    const isMissingSignatureColumn = code === '42703' && message.includes('signature_image');
+    if (!isMissingSignatureColumn) throw error;
+
+    const [row] = await executor
+      .select({
+        id: deliveries.id,
+        parcelId: deliveries.parcelId,
+        mode: deliveries.mode,
+        status: deliveries.status,
+        officeLocationId: deliveries.officeLocationId,
+        dropoffAddress: deliveries.dropoffAddress,
+        frontDeskUserId: deliveries.frontDeskUserId,
+        deliveryUserId: deliveries.deliveryUserId,
+        riderUserId: deliveries.riderUserId,
+        receiverCalledConfirmedBy: deliveries.receiverCalledConfirmedBy,
+        receiverCalledConfirmedAt: deliveries.receiverCalledConfirmedAt,
+        chargePsw: deliveries.chargePsw,
+        amountPaidPsw: deliveries.amountPaidPsw,
+        isDeleted: deliveries.isDeleted,
+        deliveredAt: deliveries.deliveredAt,
+        confirmedBy: deliveries.confirmedBy,
+        confirmedAt: deliveries.confirmedAt,
+        createdBy: deliveries.createdBy,
+        createdAt: deliveries.createdAt,
+        updatedAt: deliveries.updatedAt,
+        cashierSessionId: deliveries.cashierSessionId,
+      })
+      .from(deliveries)
+      .where(eq(deliveries.parcelId, parcelId))
+      .limit(1);
+
+    if (!row) return null;
+    return { ...row, signatureImage: null };
+  }
 }
 
 export async function updateDeliveryRepo(

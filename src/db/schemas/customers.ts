@@ -9,6 +9,7 @@ import {
   integer,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { companies } from './core';
 import { CustomerCreditSourceType, CustomerCreditTransactionType, CustomerType } from './enums';
 import { createId } from '@paralleldrive/cuid2';
@@ -42,8 +43,12 @@ export const customers = pgTable(
   (t) => ({
     idxName: index('customers_fullname_idx').on(t.fullname),
     idxPhone: index('customers_telephone_idx').on(t.telephone),
-    // Optional: enforce unique phone per company (case-insensitive). Uncomment if desired.
-    // uqCompanyPhone: uniqueIndex('customers_company_phone_uq').on(t.companyId, sql`lower(${t.telephone})`),
+    uqCompanyTelephoneActive: uniqueIndex('customers_company_telephone_active_uq')
+      .on(t.companyId, t.telephone)
+      .where(sql`${t.isDeleted} = false AND ${t.telephone} IS NOT NULL`),
+    uqCompanyTelephone2Active: uniqueIndex('customers_company_telephone2_active_uq')
+      .on(t.companyId, t.telephone2)
+      .where(sql`${t.isDeleted} = false AND ${t.telephone2} IS NOT NULL`),
   }),
 );
 

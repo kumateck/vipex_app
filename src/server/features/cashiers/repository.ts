@@ -10,6 +10,7 @@ import {
   PaymentComponent,
 } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
+type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 export type SessionTypeRow = {
   id: string;
@@ -231,7 +232,9 @@ export async function getSessionRepo(id: string): Promise<SessionRow | null> {
 export async function findActiveSessionRepo(input: {
   cashierId: string;
   branchId?: string | null;
+  executor?: DbExecutor;
 }): Promise<SessionRow | null> {
+  const executor = input.executor ?? db;
   const where = [
     eq(cashierSessions.cashierId, input.cashierId),
     eq(cashierSessions.status, 'ACTIVE'),
@@ -240,7 +243,7 @@ export async function findActiveSessionRepo(input: {
     where.push(eq(cashierSessions.branchId, input.branchId));
   }
 
-  const [row] = await db
+  const [row] = await executor
     .select({
       id: cashierSessions.id,
       cashierId: cashierSessions.cashierId,

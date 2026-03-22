@@ -419,7 +419,7 @@ export const customersApi = api.injectEndpoints({
         { type: 'Customers', id: `CREDIT_OPEN:${customerId}` },
         { type: 'Customers', id: `STATEMENT:${customerId}` },
         { type: 'Customers', id: `PAYMENTS:${customerId}` },
-        { type: 'Customers', id: 'LIST' },
+        { type: 'Customers', id: `PAYMENTS_MONTHLY:${customerId}` },
       ],
     }),
   }),

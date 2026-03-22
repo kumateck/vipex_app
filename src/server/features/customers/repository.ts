@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, ilike, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, ilike, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
   cards,
@@ -141,6 +141,42 @@ export async function createCustomerRepo(
 ): Promise<{ id: string }> {
   const [row] = await db.insert(customers).values(values).returning({ id: customers.id });
   return row!;
+}
+
+export async function findCustomerByCompanyTelephonesRepo(input: {
+  companyId: string;
+  telephones: string[];
+  excludeCustomerId?: string | null;
+}): Promise<Pick<CustomerRow, 'id' | 'telephone' | 'telephone2'> | null> {
+  const normalized = Array.from(
+    new Set(input.telephones.map((value) => value.trim()).filter((value) => value.length > 0)),
+  );
+  if (normalized.length === 0) return null;
+
+  const phonePredicates = normalized.map((value) =>
+    or(eq(customers.telephone, value), eq(customers.telephone2, value)),
+  );
+  const whereParts = [
+    eq(customers.companyId, input.companyId),
+    eq(customers.isDeleted, false),
+    or(...phonePredicates),
+  ];
+
+  if (input.excludeCustomerId) {
+    whereParts.push(ne(customers.id, input.excludeCustomerId));
+  }
+
+  const [row] = await db
+    .select({
+      id: customers.id,
+      telephone: customers.telephone,
+      telephone2: customers.telephone2,
+    })
+    .from(customers)
+    .where(and(...whereParts))
+    .limit(1);
+
+  return row ?? null;
 }
 
 export async function updateCustomerRepo(
