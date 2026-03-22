@@ -331,6 +331,95 @@ export const parcelApi = api.injectEndpoints({
         { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
       ],
     }),
+    collectSenderAndProcess: builder.mutation<
+      {
+        parcelId: string;
+        status: number;
+        statusChanged: boolean;
+        message: string;
+        payment: null | {
+          id: string;
+          amounts: {
+            grossPsw: number;
+            netPsw: number;
+            vatPsw: number;
+            getfundPsw: number;
+            nhilPsw: number;
+            covidPsw: number;
+            taxTotalPsw: number;
+            grossCedis: number;
+            netCedis: number;
+            vatCedis: number;
+            getfundCedis: number;
+            nhilCedis: number;
+            covidCedis: number;
+            taxTotalCedis: number;
+          };
+          message?: string;
+        };
+      },
+      { parcelId: string; amountCedis?: number | null; method: number }
+    >({
+      query: (body) => ({
+        url: '/payments/collect-sender-and-process',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
+      ],
+    }),
+    collectReceiverAndDeliver: builder.mutation<
+      {
+        parcelId: string;
+        status: number;
+        message: string;
+        payment: null | {
+          id: string;
+          amounts: {
+            grossPsw: number;
+            netPsw: number;
+            vatPsw: number;
+            getfundPsw: number;
+            nhilPsw: number;
+            covidPsw: number;
+            taxTotalPsw: number;
+            grossCedis: number;
+            netCedis: number;
+            vatCedis: number;
+            getfundCedis: number;
+            nhilCedis: number;
+            covidCedis: number;
+            taxTotalCedis: number;
+          };
+          message?: string;
+        };
+      },
+      {
+        parcelId: string;
+        amountCedis?: number | null;
+        method: number;
+        confirmedBy: string;
+        secondReceiverId?: string | null;
+        cardId?: string | null;
+        cardNumber?: string | null;
+        secondCardId?: string | null;
+        secondCardNumber?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: '/payments/collect-receiver-and-deliver',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
+      ],
+    }),
     createConsignment: builder.mutation<
       { id: string; code: string; serialForDay: number },
       {
@@ -495,6 +584,8 @@ export const {
   useGetParcelDetailsQuery,
   useListProcessedParcelsForConsignmentQuery,
   useCollectSenderPaymentMutation,
+  useCollectSenderAndProcessMutation,
+  useCollectReceiverAndDeliverMutation,
   useCreateConsignmentMutation,
   useAddConsignmentItemsMutation,
   useUpdateParcelStatusMutation,

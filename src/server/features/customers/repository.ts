@@ -11,6 +11,7 @@ import {
 } from '@/db/schemas';
 import { CustomerCreditSourceType, CustomerCreditTransactionType, Payer } from '@/db/schemas/enums';
 import type { SortField } from '@/server/types/pagination.types';
+type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 export type CustomerRow = {
   id: string;
@@ -109,8 +110,11 @@ export async function listCustomersRepo(
   return { data: rows, totalRecords };
 }
 
-export async function getCustomerRepo(id: string): Promise<CustomerRow | null> {
-  const [row] = await db
+export async function getCustomerRepo(
+  id: string,
+  executor: DbExecutor = db,
+): Promise<CustomerRow | null> {
+  const [row] = await executor
     .select({
       id: customers.id,
       companyId: customers.companyId,
@@ -394,8 +398,9 @@ export async function listCustomerCreditTransactionsRepo(input: {
 export async function getCustomerCreditBalancePswRepo(input: {
   customerId: string;
   companyId: string;
+  executor?: DbExecutor;
 }): Promise<number> {
-  const [row] = await db
+  const [row] = await (input.executor ?? db)
     .select({
       balance: sql<number>`COALESCE(SUM(${customerCreditTransactions.signedAmountPsw}), 0)`,
     })
@@ -419,8 +424,9 @@ export async function createCustomerCreditTransactionRepo(input: {
   signedAmountPsw: number;
   notes?: string | null;
   createdBy: string;
+  executor?: DbExecutor;
 }): Promise<{ id: string }> {
-  const [row] = await db
+  const [row] = await (input.executor ?? db)
     .insert(customerCreditTransactions)
     .values({
       companyId: input.companyId,

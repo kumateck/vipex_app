@@ -123,8 +123,9 @@ export async function getDeliveryByParcelRepo(
 export async function updateDeliveryRepo(
   id: string,
   patch: Partial<typeof deliveries.$inferInsert>,
+  executor: DbExecutor = db,
 ): Promise<{ id: string } | null> {
-  const [row] = await db
+  const [row] = await executor
     .update(deliveries)
     .set(patch)
     .where(eq(deliveries.id, id))

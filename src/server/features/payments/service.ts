@@ -14,10 +14,50 @@ import { computeGhanaTaxesFromPesewas } from '@/server/utils/tax/ghana';
 import { assertActiveSessionSvc } from '../cashiers/service';
 import { recordAuditLog } from '../audit/logger';
 import { getParcelSvc } from '../shipments/parcels.service';
-import { getParcelPaymentSettlement } from '../shipments/parcel-payment-settlement';
+import {
+  assertParcelFullyPaid,
+  getParcelPaymentSettlement,
+} from '../shipments/parcel-payment-settlement';
 import { updateParcelRepo } from '../shipments/parcels.repository';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
+export type PaymentCreateInput = {
+  companyId: string;
+  branchId: string;
+  parcelId: string;
+  component: PaymentComponent;
+  payer: Payer;
+  cashierType: CashierType;
+  method: PaymentMethod;
+  cashierUserId: string;
+  amountCedis: number | string;
+  receivedAt?: string;
+  notes?: string | null;
+  receiptNo?: string | null;
+};
+
+type PaymentAmounts = {
+  grossPsw: number;
+  netPsw: number;
+  vatPsw: number;
+  getfundPsw: number;
+  nhilPsw: number;
+  covidPsw: number;
+  taxTotalPsw: number;
+  grossCedis: number;
+  netCedis: number;
+  vatCedis: number;
+  getfundCedis: number;
+  nhilCedis: number;
+  covidCedis: number;
+  taxTotalCedis: number;
+};
+
+export type PaymentCreateResponse = {
+  id: string;
+  amounts: PaymentAmounts;
+  message?: string;
+};
 
 function getErrorCode(error: unknown, depth = 0): string | undefined {
   if (!error || typeof error !== 'object' || depth > 6) return undefined;
@@ -89,239 +129,418 @@ async function markParcelProcessedIfPending(
   return Boolean(updated);
 }
 
-export async function createPaymentSvc(input: {
+function toPaymentAmounts(tax: {
+  principal: bigint;
+  net: bigint;
+  vat: bigint;
+  getfund: bigint;
+  nhil: bigint;
+  covid: bigint;
+  totalTax: bigint;
+}): PaymentAmounts {
+  return {
+    grossPsw: Number(tax.principal),
+    netPsw: Number(tax.net),
+    vatPsw: Number(tax.vat),
+    getfundPsw: Number(tax.getfund),
+    nhilPsw: Number(tax.nhil),
+    covidPsw: Number(tax.covid),
+    taxTotalPsw: Number(tax.totalTax),
+    grossCedis: Number(tax.principal) / 100,
+    netCedis: Number(tax.net) / 100,
+    vatCedis: Number(tax.vat) / 100,
+    getfundCedis: Number(tax.getfund) / 100,
+    nhilCedis: Number(tax.nhil) / 100,
+    covidCedis: Number(tax.covid) / 100,
+    taxTotalCedis: Number(tax.totalTax) / 100,
+  };
+}
+
+async function createPaymentCore(input: PaymentCreateInput, executor: DbExecutor) {
+  if (!input.amountCedis && input.amountCedis !== 0) throw BadRequest('Amount is required');
+  if (!input.companyId || !input.branchId || !input.cashierUserId) {
+    throw BadRequest('Authenticated company, branch and cashier context are required');
+  }
+
+  const parcel = await getParcelSvc(input.parcelId, executor);
+  if (parcel.companyId !== input.companyId) {
+    throw BadRequest('Parcel does not belong to the authenticated company');
+  }
+  if (parcel.isDeleted) {
+    throw BadRequest('Cannot collect payment for deleted parcel');
+  }
+  if (input.cashierType === CashierType.SENDING && parcel.sourceId !== input.branchId) {
+    throw Forbidden('Sender cashier can only collect payment for parcels created in their branch');
+  }
+
+  await assertActiveSessionSvc({
+    cashierId: input.cashierUserId,
+    branchId: input.branchId,
+    executor,
+  });
+
+  const grossPsw = toPesewas(input.amountCedis);
+  const amountPsw = Number(grossPsw);
+  if (amountPsw <= 0) {
+    throw BadRequest('Amount must be greater than 0');
+  }
+  const receivedAt = input.receivedAt ? new Date(input.receivedAt) : new Date();
+  if (Number.isNaN(receivedAt.getTime())) {
+    throw BadRequest('Invalid receivedAt datetime');
+  }
+
+  const settlement = await getParcelPaymentSettlement(input.parcelId, executor);
+  const parcelPayments = await listPaymentsForParcelRepo(input.parcelId, executor);
+  const parcelPrincipalPaidPsw = settlement.paidPrincipalPsw;
+  const parcelDeliveryFeePaidPsw = settlement.paidDeliveryFeePsw;
+  const parcelTotalPaidPsw = settlement.paidTotalPsw;
+  const parcelChargePsw = settlement.requiredPrincipalPsw;
+  const doorstepChargePsw = settlement.requiredDeliveryFeePsw;
+  const parcelAllowedTotalPsw = settlement.requiredTotalPsw;
+  const senderExpectedPsw = Math.max(
+    Number(parcel.chargePsw ?? 0) - Number(parcel.plannedToBePaidPsw ?? 0),
+    0,
+  );
+  const senderPaidAlreadyPsw = parcelPayments
+    .filter(
+      (payment) =>
+        payment.component === PaymentComponent.PRINCIPAL && payment.payer === Payer.SENDER,
+    )
+    .reduce((sum, payment) => sum + Number(payment.grossAmountPsw ?? 0), 0);
+
+  if (input.component === PaymentComponent.PRINCIPAL) {
+    if (input.cashierType === CashierType.SENDING) {
+      if (input.payer !== Payer.SENDER) {
+        throw BadRequest('Sender cashier can only collect sender payments');
+      }
+      const senderAfter = senderPaidAlreadyPsw + amountPsw;
+      if (senderAfter > senderExpectedPsw) {
+        const remainingSenderPsw = Math.max(senderExpectedPsw - senderPaidAlreadyPsw, 0);
+        const wasAutoProcessed =
+          remainingSenderPsw === 0
+            ? await markParcelProcessedIfPending(input.parcelId, parcel.status, executor)
+            : false;
+        if (wasAutoProcessed) {
+          return {
+            kind: 'autoProcessed' as const,
+            response: {
+              id: `auto-processed:${input.parcelId}`,
+              amounts: {
+                grossPsw: 0,
+                netPsw: 0,
+                vatPsw: 0,
+                getfundPsw: 0,
+                nhilPsw: 0,
+                covidPsw: 0,
+                taxTotalPsw: 0,
+                grossCedis: 0,
+                netCedis: 0,
+                vatCedis: 0,
+                getfundCedis: 0,
+                nhilCedis: 0,
+                covidCedis: 0,
+                taxTotalCedis: 0,
+              },
+              message:
+                'Sender allocation is already fully paid. Parcel has been marked as PROCESSED.',
+            },
+          };
+        }
+        throw BadRequest(
+          `Sender cashier cannot collect more than sender allocation. Remaining sender amount is ${(remainingSenderPsw / 100).toFixed(2)} GHS`,
+        );
+      }
+    }
+
+    const principalAfter = parcelPrincipalPaidPsw + amountPsw;
+    if (principalAfter > parcelChargePsw) {
+      const remainingPsw = Math.max(parcelChargePsw - parcelPrincipalPaidPsw, 0);
+      throw BadRequest(
+        `Principal payment exceeds parcel charge. Remaining principal is ${(remainingPsw / 100).toFixed(2)} GHS`,
+      );
+    }
+  }
+
+  if (input.component === PaymentComponent.DELIVERY_FEE) {
+    if (doorstepChargePsw <= 0) {
+      throw BadRequest(
+        'Delivery fee payment is allowed only for doorstep delivery with a configured charge',
+      );
+    }
+
+    const deliveryFeeAfter = parcelDeliveryFeePaidPsw + amountPsw;
+    if (deliveryFeeAfter > doorstepChargePsw) {
+      const remainingPsw = Math.max(doorstepChargePsw - parcelDeliveryFeePaidPsw, 0);
+      throw BadRequest(
+        `Delivery fee payment exceeds configured doorstep charge. Remaining delivery fee is ${(remainingPsw / 100).toFixed(2)} GHS`,
+      );
+    }
+  }
+
+  if (parcelTotalPaidPsw + amountPsw > parcelAllowedTotalPsw) {
+    const remainingPsw = Math.max(parcelAllowedTotalPsw - parcelTotalPaidPsw, 0);
+    throw BadRequest(
+      `Payment exceeds parcel total allowed amount. Remaining collectable amount is ${(remainingPsw / 100).toFixed(2)} GHS`,
+    );
+  }
+
+  const tax =
+    input.component === PaymentComponent.PRINCIPAL
+      ? computeGhanaTaxesFromPesewas(grossPsw)
+      : {
+          principal: grossPsw,
+          net: grossPsw,
+          vat: 0n,
+          getfund: 0n,
+          nhil: 0n,
+          covid: 0n,
+          totalTax: 0n,
+          residual: 0n,
+        };
+
+  const created = await createPaymentRepo(
+    {
+      companyId: input.companyId,
+      branchId: input.branchId,
+      parcelId: input.parcelId,
+      component: input.component,
+      payer: input.payer,
+      cashierType: input.cashierType,
+      method: input.method,
+      cashierUserId: input.cashierUserId,
+      grossAmountPsw: Number(tax.principal),
+      netAmountPsw: Number(tax.net),
+      vatPsw: Number(tax.vat),
+      getfundPsw: Number(tax.getfund),
+      nhilPsw: Number(tax.nhil),
+      covidPsw: Number(tax.covid),
+      taxTotalPsw: Number(tax.totalTax),
+      receivedAt,
+      notes: input.notes ?? null,
+      receiptNo: input.receiptNo ?? null,
+    },
+    executor,
+  );
+
+  return {
+    kind: 'paymentCreated' as const,
+    response: {
+      id: created.id,
+      amounts: toPaymentAmounts(tax),
+    },
+  };
+}
+
+async function auditPaymentCreated(input: PaymentCreateInput, paymentId: string) {
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.cashierUserId,
+    entityType: 'payment',
+    entityId: paymentId,
+    action: 'PAYMENT_CREATED',
+    message: 'Payment captured',
+    metadata: {
+      parcelId: input.parcelId,
+      component: input.component,
+      payer: input.payer,
+      cashierType: input.cashierType,
+      method: input.method,
+      amountCedis: input.amountCedis,
+      branchId: input.branchId,
+    },
+  });
+}
+
+export async function createPaymentWithExecutorSvc(
+  input: PaymentCreateInput,
+  executor: DbExecutor,
+): Promise<PaymentCreateResponse> {
+  const result = await createPaymentCore(input, executor);
+  if (result.kind === 'paymentCreated') {
+    await auditPaymentCreated(input, result.response.id);
+  }
+  return result.response;
+}
+
+export async function createPaymentSvc(input: PaymentCreateInput): Promise<PaymentCreateResponse> {
+  try {
+    return await db.transaction((tx) => createPaymentWithExecutorSvc(input, tx));
+  } catch (error) {
+    debugPaymentServiceError('createPaymentSvc', input as Record<string, unknown>, error);
+    throw error;
+  }
+}
+
+export async function collectSenderPaymentAndProcessSvc(input: {
   companyId: string;
   branchId: string;
   parcelId: string;
-  component: PaymentComponent; // PRINCIPAL (taxable) or DELIVERY_FEE (non-taxable)
-  payer: Payer;
-  cashierType: CashierType;
   method: PaymentMethod;
   cashierUserId: string;
-  amountCedis: number | string;
-  receivedAt?: string;
-  notes?: string | null;
-  receiptNo?: string | null;
+  amountCedis?: number | string | null;
 }) {
   try {
+    const hasAmount =
+      input.amountCedis !== undefined &&
+      input.amountCedis !== null &&
+      Number(input.amountCedis) > 0;
+
     const result = await db.transaction(async (tx) => {
-      if (!input.amountCedis && input.amountCedis !== 0) throw BadRequest('Amount is required');
-      if (!input.companyId || !input.branchId || !input.cashierUserId) {
-        throw BadRequest('Authenticated company, branch and cashier context are required');
+      let payment: PaymentCreateResponse | null = null;
+      if (hasAmount) {
+        const created = await createPaymentCore(
+          {
+            companyId: input.companyId,
+            branchId: input.branchId,
+            parcelId: input.parcelId,
+            component: PaymentComponent.PRINCIPAL,
+            payer: Payer.SENDER,
+            cashierType: CashierType.SENDING,
+            method: input.method,
+            cashierUserId: input.cashierUserId,
+            amountCedis: input.amountCedis as number | string,
+          },
+          tx,
+        );
+        payment = created.response;
       }
 
       const parcel = await getParcelSvc(input.parcelId, tx);
-      if (parcel.companyId !== input.companyId) {
-        throw BadRequest('Parcel does not belong to the authenticated company');
-      }
-      if (parcel.isDeleted) {
-        throw BadRequest('Cannot collect payment for deleted parcel');
-      }
-      if (input.cashierType === CashierType.SENDING && parcel.sourceId !== input.branchId) {
-        throw Forbidden(
-          'Sender cashier can only collect payment for parcels created in their branch',
+      let statusChanged = false;
+      if (parcel.status === ParcelStatus.CREATED) {
+        const updated = await updateParcelRepo(
+          input.parcelId,
+          { status: ParcelStatus.PROCESSED },
+          tx,
         );
+        statusChanged = Boolean(updated);
       }
 
-      await assertActiveSessionSvc({
-        cashierId: input.cashierUserId,
-        branchId: input.branchId,
-        executor: tx,
-      });
+      return { payment, statusChanged };
+    });
 
-      const grossPsw = toPesewas(input.amountCedis);
-      const amountPsw = Number(grossPsw);
-      if (amountPsw <= 0) {
-        throw BadRequest('Amount must be greater than 0');
-      }
-      const receivedAt = input.receivedAt ? new Date(input.receivedAt) : new Date();
-      if (Number.isNaN(receivedAt.getTime())) {
-        throw BadRequest('Invalid receivedAt datetime');
-      }
-
-      const settlement = await getParcelPaymentSettlement(input.parcelId, tx);
-      const parcelPayments = await listPaymentsForParcelRepo(input.parcelId, tx);
-      const parcelPrincipalPaidPsw = settlement.paidPrincipalPsw;
-      const parcelDeliveryFeePaidPsw = settlement.paidDeliveryFeePsw;
-      const parcelTotalPaidPsw = settlement.paidTotalPsw;
-      const parcelChargePsw = settlement.requiredPrincipalPsw;
-      const doorstepChargePsw = settlement.requiredDeliveryFeePsw;
-      const parcelAllowedTotalPsw = settlement.requiredTotalPsw;
-      const senderExpectedPsw = Math.max(
-        Number(parcel.chargePsw ?? 0) - Number(parcel.plannedToBePaidPsw ?? 0),
-        0,
-      );
-      const senderPaidAlreadyPsw = parcelPayments
-        .filter(
-          (payment) =>
-            payment.component === PaymentComponent.PRINCIPAL && payment.payer === Payer.SENDER,
-        )
-        .reduce((sum, payment) => sum + Number(payment.grossAmountPsw ?? 0), 0);
-
-      if (input.component === PaymentComponent.PRINCIPAL) {
-        if (input.cashierType === CashierType.SENDING) {
-          if (input.payer !== Payer.SENDER) {
-            throw BadRequest('Sender cashier can only collect sender payments');
-          }
-          const senderAfter = senderPaidAlreadyPsw + amountPsw;
-          if (senderAfter > senderExpectedPsw) {
-            const remainingSenderPsw = Math.max(senderExpectedPsw - senderPaidAlreadyPsw, 0);
-            const wasAutoProcessed =
-              remainingSenderPsw === 0
-                ? await markParcelProcessedIfPending(input.parcelId, parcel.status, tx)
-                : false;
-            if (wasAutoProcessed) {
-              return {
-                kind: 'autoProcessed' as const,
-                response: {
-                  id: `auto-processed:${input.parcelId}`,
-                  amounts: {
-                    grossPsw: 0,
-                    netPsw: 0,
-                    vatPsw: 0,
-                    getfundPsw: 0,
-                    nhilPsw: 0,
-                    covidPsw: 0,
-                    taxTotalPsw: 0,
-                    grossCedis: 0,
-                    netCedis: 0,
-                    vatCedis: 0,
-                    getfundCedis: 0,
-                    nhilCedis: 0,
-                    covidCedis: 0,
-                    taxTotalCedis: 0,
-                  },
-                  message:
-                    'Sender allocation is already fully paid. Parcel has been marked as PROCESSED.',
-                },
-              };
-            }
-            throw BadRequest(
-              `Sender cashier cannot collect more than sender allocation. Remaining sender amount is ${(remainingSenderPsw / 100).toFixed(2)} GHS`,
-            );
-          }
-        }
-
-        const principalAfter = parcelPrincipalPaidPsw + amountPsw;
-        if (principalAfter > parcelChargePsw) {
-          const remainingPsw = Math.max(parcelChargePsw - parcelPrincipalPaidPsw, 0);
-          throw BadRequest(
-            `Principal payment exceeds parcel charge. Remaining principal is ${(remainingPsw / 100).toFixed(2)} GHS`,
-          );
-        }
-      }
-
-      if (input.component === PaymentComponent.DELIVERY_FEE) {
-        if (doorstepChargePsw <= 0) {
-          throw BadRequest(
-            'Delivery fee payment is allowed only for doorstep delivery with a configured charge',
-          );
-        }
-
-        const deliveryFeeAfter = parcelDeliveryFeePaidPsw + amountPsw;
-        if (deliveryFeeAfter > doorstepChargePsw) {
-          const remainingPsw = Math.max(doorstepChargePsw - parcelDeliveryFeePaidPsw, 0);
-          throw BadRequest(
-            `Delivery fee payment exceeds configured doorstep charge. Remaining delivery fee is ${(remainingPsw / 100).toFixed(2)} GHS`,
-          );
-        }
-      }
-
-      if (parcelTotalPaidPsw + amountPsw > parcelAllowedTotalPsw) {
-        const remainingPsw = Math.max(parcelAllowedTotalPsw - parcelTotalPaidPsw, 0);
-        throw BadRequest(
-          `Payment exceeds parcel total allowed amount. Remaining collectable amount is ${(remainingPsw / 100).toFixed(2)} GHS`,
-        );
-      }
-
-      const tax =
-        input.component === PaymentComponent.PRINCIPAL
-          ? computeGhanaTaxesFromPesewas(grossPsw)
-          : {
-              principal: grossPsw,
-              net: grossPsw,
-              vat: 0n,
-              getfund: 0n,
-              nhil: 0n,
-              covid: 0n,
-              totalTax: 0n,
-              residual: 0n,
-            };
-
-      const created = await createPaymentRepo(
+    if (result.payment && !result.payment.id.startsWith('auto-processed:')) {
+      await auditPaymentCreated(
         {
           companyId: input.companyId,
           branchId: input.branchId,
           parcelId: input.parcelId,
-          component: input.component,
-          payer: input.payer,
-          cashierType: input.cashierType,
+          component: PaymentComponent.PRINCIPAL,
+          payer: Payer.SENDER,
+          cashierType: CashierType.SENDING,
           method: input.method,
           cashierUserId: input.cashierUserId,
-          grossAmountPsw: Number(tax.principal),
-          netAmountPsw: Number(tax.net),
-          vatPsw: Number(tax.vat),
-          getfundPsw: Number(tax.getfund),
-          nhilPsw: Number(tax.nhil),
-          covidPsw: Number(tax.covid),
-          taxTotalPsw: Number(tax.totalTax),
-          receivedAt,
-          notes: input.notes ?? null,
-          receiptNo: input.receiptNo ?? null,
+          amountCedis: input.amountCedis as number | string,
+        },
+        result.payment.id,
+      );
+    }
+
+    return {
+      parcelId: input.parcelId,
+      status: ParcelStatus.PROCESSED,
+      statusChanged: result.statusChanged,
+      payment: result.payment,
+      message: result.payment?.message ?? 'Sender payment flow completed.',
+    };
+  } catch (error) {
+    debugPaymentServiceError(
+      'collectSenderPaymentAndProcessSvc',
+      input as Record<string, unknown>,
+      error,
+    );
+    throw error;
+  }
+}
+
+export async function collectReceiverPaymentAndDeliverSvc(input: {
+  companyId: string;
+  branchId: string;
+  parcelId: string;
+  method: PaymentMethod;
+  cashierUserId: string;
+  confirmedBy: string;
+  secondReceiverId?: string | null;
+  cardId?: string | null;
+  cardNumber?: string | null;
+  secondCardId?: string | null;
+  secondCardNumber?: string | null;
+  amountCedis?: number | string | null;
+}) {
+  try {
+    const hasAmount =
+      input.amountCedis !== undefined &&
+      input.amountCedis !== null &&
+      Number(input.amountCedis) > 0;
+
+    const result = await db.transaction(async (tx) => {
+      let payment: PaymentCreateResponse | null = null;
+      if (hasAmount) {
+        const created = await createPaymentCore(
+          {
+            companyId: input.companyId,
+            branchId: input.branchId,
+            parcelId: input.parcelId,
+            component: PaymentComponent.PRINCIPAL,
+            payer: Payer.RECIPIENT,
+            cashierType: CashierType.TOBEPAID,
+            method: input.method,
+            cashierUserId: input.cashierUserId,
+            amountCedis: input.amountCedis as number | string,
+          },
+          tx,
+        );
+        payment = created.response;
+      }
+
+      await assertParcelFullyPaid(input.parcelId, tx);
+      await updateParcelRepo(
+        input.parcelId,
+        {
+          status: ParcelStatus.DELIVERED_BY_OFFICE,
+          confirmedBy: input.confirmedBy,
+          confirmedAt: new Date(),
+          secondReceiverId: input.secondReceiverId ?? null,
+          cardId: input.cardId ?? null,
+          cardNumber: input.cardNumber ?? null,
+          secondCardId: input.secondCardId ?? null,
+          secondCardNumber: input.secondCardNumber ?? null,
         },
         tx,
       );
 
-      return {
-        kind: 'paymentCreated' as const,
-        created,
-        tax,
-      };
+      return { payment };
     });
 
-    if (result.kind === 'autoProcessed') {
-      return result.response;
+    if (result.payment && !result.payment.id.startsWith('auto-processed:')) {
+      await auditPaymentCreated(
+        {
+          companyId: input.companyId,
+          branchId: input.branchId,
+          parcelId: input.parcelId,
+          component: PaymentComponent.PRINCIPAL,
+          payer: Payer.RECIPIENT,
+          cashierType: CashierType.TOBEPAID,
+          method: input.method,
+          cashierUserId: input.cashierUserId,
+          amountCedis: input.amountCedis as number | string,
+        },
+        result.payment.id,
+      );
     }
 
-    const { created, tax } = result;
-    await recordAuditLog({
-      companyId: input.companyId,
-      actorUserId: input.cashierUserId,
-      entityType: 'payment',
-      entityId: created.id,
-      action: 'PAYMENT_CREATED',
-      message: 'Payment captured',
-      metadata: {
-        parcelId: input.parcelId,
-        component: input.component,
-        payer: input.payer,
-        cashierType: input.cashierType,
-        method: input.method,
-        amountCedis: input.amountCedis,
-        branchId: input.branchId,
-      },
-    });
     return {
-      id: created.id,
-      amounts: {
-        grossPsw: Number(tax.principal),
-        netPsw: Number(tax.net),
-        vatPsw: Number(tax.vat),
-        getfundPsw: Number(tax.getfund),
-        nhilPsw: Number(tax.nhil),
-        covidPsw: Number(tax.covid),
-        taxTotalPsw: Number(tax.totalTax),
-        grossCedis: Number(tax.principal) / 100,
-        netCedis: Number(tax.net) / 100,
-        vatCedis: Number(tax.vat) / 100,
-        getfundCedis: Number(tax.getfund) / 100,
-        nhilCedis: Number(tax.nhil) / 100,
-        covidCedis: Number(tax.covid) / 100,
-        taxTotalCedis: Number(tax.totalTax) / 100,
-      },
+      parcelId: input.parcelId,
+      status: ParcelStatus.DELIVERED_BY_OFFICE,
+      payment: result.payment,
+      message: 'Receiver cashier flow completed.',
     };
   } catch (error) {
-    debugPaymentServiceError('createPaymentSvc', input as Record<string, unknown>, error);
+    debugPaymentServiceError(
+      'collectReceiverPaymentAndDeliverSvc',
+      input as Record<string, unknown>,
+      error,
+    );
     throw error;
   }
 }

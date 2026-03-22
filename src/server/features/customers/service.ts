@@ -1,4 +1,5 @@
 import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
+import { db } from '@/db/config';
 import { recordAuditLog } from '../audit/logger';
 import { toPesewas } from '@/server/utils/gh-money';
 import {
@@ -41,6 +42,7 @@ import {
   CustomerCreditTransactionType,
   CustomerType,
 } from '@/db/schemas/enums';
+type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 function parseCustomerType(value?: number): number {
   if (value == null) return CustomerType.INDIVIDUAL;
@@ -470,8 +472,10 @@ export async function postCustomerCreditChargeSvc(input: {
   referenceId?: string | null;
   notes?: string | null;
   createdBy: string;
+  executor?: DbExecutor;
 }): Promise<{ id: string }> {
-  const customer = await getCustomerRepo(input.customerId);
+  const executor = input.executor ?? db;
+  const customer = await getCustomerRepo(input.customerId, executor);
   if (!customer || customer.companyId !== input.companyId) throw NotFound('Customer not found');
 
   if (!customer.creditEligible) {
@@ -486,6 +490,7 @@ export async function postCustomerCreditChargeSvc(input: {
   const balancePsw = await getCustomerCreditBalancePswRepo({
     customerId: input.customerId,
     companyId: input.companyId,
+    executor,
   });
 
   const creditLimitPsw = Number(customer.creditLimitPsw ?? 0);
@@ -502,6 +507,7 @@ export async function postCustomerCreditChargeSvc(input: {
     signedAmountPsw: Math.abs(amountPsw),
     notes: input.notes ?? null,
     createdBy: input.createdBy,
+    executor,
   });
 }
 

@@ -20,13 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  CashierType,
-  ParcelStatus,
-  PaymentComponent,
-  PaymentMethod,
-  Payer,
-} from '@/db/schemas/enums';
+import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
@@ -34,9 +28,8 @@ import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api'
 import { useGetLocationQuery } from '@/features/locations/api/locations.api';
 import {
   type SenderCashierParcel,
-  useCollectSenderPaymentMutation,
+  useCollectSenderAndProcessMutation,
   useListSenderCashierParcelsQuery,
-  useUpdateParcelStatusMutation,
 } from '../api/parcel.api';
 import { ParcelReceiptActions, type ReceiptPrintData } from '../components/parcel-receipt-actions';
 import { ParcelSessionGuard } from '../components/parcel-session-guard';
@@ -113,8 +106,8 @@ export function ParcelSenderPaymentsPage() {
   const { data, isLoading, refetch } = useListSenderCashierParcelsQuery(query, {
     skip: !companyId || !branchId,
   });
-  const [collectSenderPayment, { isLoading: isCollecting }] = useCollectSenderPaymentMutation();
-  const [updateParcelStatus, { isLoading: isUpdatingStatus }] = useUpdateParcelStatusMutation();
+  const [collectSenderAndProcess, { isLoading: isCollecting }] =
+    useCollectSenderAndProcessMutation();
 
   const columns = useMemo<ColumnDef<SenderCashierParcel>[]>(
     () => [
@@ -197,17 +190,19 @@ export function ParcelSenderPaymentsPage() {
           return;
         }
 
-        payment = await collectSenderPayment({
+        const result = await collectSenderAndProcess({
           parcelId: selectedParcel.id,
           amountCedis: amountValue,
           method: Number(paymentMethod),
-          component: PaymentComponent.PRINCIPAL,
-          payer: Payer.SENDER,
-          cashierType: CashierType.SENDING,
+        }).unwrap();
+        payment = result.payment ?? undefined;
+      } else {
+        await collectSenderAndProcess({
+          parcelId: selectedParcel.id,
+          amountCedis: null,
+          method: Number(paymentMethod),
         }).unwrap();
       }
-
-      await updateParcelStatus({ id: selectedParcel.id, status: ParcelStatus.PROCESSED }).unwrap();
 
       const destinationBranchName =
         branchOptions.find((branch) => branch.id === selectedParcel.destinationId)?.name ??
@@ -249,7 +244,7 @@ export function ParcelSenderPaymentsPage() {
     }
   };
 
-  const isSubmitting = isCollecting || isUpdatingStatus;
+  const isSubmitting = isCollecting;
 
   return (
     <div className="w-full p-4 space-y-4">

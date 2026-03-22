@@ -29,22 +29,15 @@ import {
 } from '@/features/customers/api';
 import { useGetLocationQuery } from '@/features/locations/api/locations.api';
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
-import {
-  CashierType,
-  ParcelStatus,
-  Payer,
-  PaymentComponent,
-  PaymentMethod,
-} from '@/db/schemas/enums';
+import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   type ParcelSearchRow,
-  useCollectSenderPaymentMutation,
+  useCollectReceiverAndDeliverMutation,
   useGetParcelDetailsQuery,
   useSearchParcelsQuery,
-  useUpdateParcelMutation,
 } from '../api/parcel.api';
 import { ParcelReceiptActions, type ReceiptPrintData } from '../components/parcel-receipt-actions';
 import { ParcelSessionGuard } from '../components/parcel-session-guard';
@@ -113,11 +106,10 @@ export function ParcelReceiverCashierPage() {
   const [secondNewName, setSecondNewName] = useState('');
   const [secondNewPhone, setSecondNewPhone] = useState('');
 
-  const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [addCustomerCard, { isLoading: isAddingCard }] = useAddCustomerCardMutation();
   const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
-  const [collectReceiverPayment, { isLoading: isCollectingPayment }] =
-    useCollectSenderPaymentMutation();
+  const [collectReceiverAndDeliver, { isLoading: isCollectingPayment }] =
+    useCollectReceiverAndDeliverMutation();
 
   const { data: cardOptions = [] } = useListCardOptionsQuery();
   const { data: staffOptions = [] } = useListUserOptionsQuery(
@@ -179,7 +171,7 @@ export function ParcelReceiverCashierPage() {
     }
   }, [mainReceiverCards.length, selectedParcel]);
 
-  const isSaving = isUpdatingParcel || isAddingCard || isCreatingCustomer || isCollectingPayment;
+  const isSaving = isAddingCard || isCreatingCustomer || isCollectingPayment;
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
@@ -316,33 +308,11 @@ export function ParcelReceiverCashierPage() {
       });
     }
 
-    let payment:
-      | {
-          amounts: {
-            vatCedis: number;
-            getfundCedis: number;
-            nhilCedis: number;
-            covidCedis: number;
-            taxTotalCedis: number;
-          };
-        }
-      | undefined;
-
     const receiverDueBeforePsw = receiverDuePsw;
-    if (receiverDueBeforePsw > 0) {
-      payment = await collectReceiverPayment({
-        parcelId: selectedParcel.id,
-        amountCedis: Number(paymentAmount),
-        method: Number(paymentMethod),
-        component: PaymentComponent.PRINCIPAL,
-        payer: Payer.RECIPIENT,
-        cashierType: CashierType.TOBEPAID,
-      }).unwrap();
-    }
-
-    await updateParcel({
-      id: selectedParcel.id,
-      status: ParcelStatus.DELIVERED_BY_OFFICE,
+    const deliveryResult = await collectReceiverAndDeliver({
+      parcelId: selectedParcel.id,
+      amountCedis: receiverDueBeforePsw > 0 ? Number(paymentAmount) : null,
+      method: Number(paymentMethod),
       confirmedBy: pickerStaffId,
       cardId: mainCard.cardId,
       cardNumber: mainCard.cardNumber,
@@ -350,6 +320,7 @@ export function ParcelReceiverCashierPage() {
       secondCardId: secondCard?.cardId ?? null,
       secondCardNumber: secondCard?.cardNumber ?? null,
     }).unwrap();
+    const payment = deliveryResult.payment ?? undefined;
 
     const totalChargeCedis = selectedParcel.chargePsw / 100;
     const receiverPaidCedis = receiverDueBeforePsw / 100;
