@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/date-picker';
 
 type CashierSessionsView = 'all' | 'active' | 'history' | 'open' | 'close';
 
@@ -29,7 +30,7 @@ interface CashierSessionsPageContentProps {
   view?: CashierSessionsView;
 }
 
-function getDateRange(dateInput: string): { dateFrom: string; dateTo: string } {
+function getDateRange(dateInput: Date): { dateFrom: string; dateTo: string } {
   const date = new Date(dateInput);
   const start = new Date(date);
   start.setHours(0, 0, 0, 0);
@@ -43,7 +44,7 @@ export function CashierSessionsPageContent({ view = 'all' }: CashierSessionsPage
   const cashierId = authUser?.id ?? '';
   const branchId = authUser?.branch?.id ?? '';
   const isHeadOffice = authUser?.branch?.type === BranchType.HEADOFFICE;
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { dateFrom, dateTo } = getDateRange(selectedDate);
   const activeOnly = view === 'active' || view === 'close' ? true : null;
   const scopedBranchId = isHeadOffice ? null : branchId || null;
@@ -76,7 +77,8 @@ export function CashierSessionsPageContent({ view = 'all' }: CashierSessionsPage
     [activeOnly, dateFrom, dateTo, scopedBranchId],
   );
 
-  const handleDateChange = (nextDate: string) => {
+  const handleDateChange = (nextDate: Date | undefined) => {
+    if (!nextDate) return;
     setSelectedDate(nextDate);
     const range = getDateRange(nextDate);
     setQuery((prev) => ({
@@ -136,13 +138,8 @@ export function CashierSessionsPageContent({ view = 'all' }: CashierSessionsPage
     <div className="w-full p-4 space-y-4">
       <div className="flex items-end gap-3">
         <div className="space-y-1">
-          <Label htmlFor="cashier-session-date">Session Date</Label>
-          <Input
-            id="cashier-session-date"
-            type="date"
-            value={selectedDate}
-            onChange={(event) => handleDateChange(event.target.value)}
-          />
+          <Label>Session Date</Label>
+          <DatePicker date={selectedDate} onDateChange={handleDateChange} />
         </div>
       </div>
       {(view === 'all' || view === 'open') && (

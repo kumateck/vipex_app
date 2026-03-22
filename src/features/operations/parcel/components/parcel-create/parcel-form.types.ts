@@ -1,4 +1,5 @@
 export type PaymentResponsibility = 'SENDER' | 'RECEIVER';
+export type SenderSettlementMode = 'PAY_NOW' | 'CREDIT';
 
 export type CustomerFormValues = {
   telephone: string;
@@ -14,6 +15,7 @@ export type ParcelFormValues = {
   parcelValue: string;
   charge: string;
   paymentResponsibility: PaymentResponsibility;
+  senderSettlementMode: SenderSettlementMode;
   receiver: CustomerFormValues;
 };
 

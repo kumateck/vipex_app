@@ -15,6 +15,22 @@ import {
 } from './parcels.repository';
 import { assertParcelFullyPaid } from './parcel-payment-settlement';
 
+function getErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+  const err = error as { code?: unknown; cause?: unknown };
+  if (typeof err.code === 'string') return err.code;
+  if (err.cause && typeof err.cause === 'object') {
+    const cause = err.cause as { code?: unknown };
+    if (typeof cause.code === 'string') return cause.code;
+  }
+  return undefined;
+}
+
+function isSchemaCompatibilityError(error: unknown): boolean {
+  const code = getErrorCode(error);
+  return code === '42P01' || code === '42703';
+}
+
 export async function listParcelsSvc(p: ListParcelsParams) {
   return listParcelsRepo(p);
 }
@@ -162,9 +178,30 @@ export async function setPlannedToBePaidSvc(id: string, plannedCedis: number | s
 export async function getParcelFullDetailsSvc(id: string) {
   const parcel = await getParcelSvc(id);
   const [payments, delivery, consignments] = await Promise.all([
-    listPaymentsForParcelRepo(id),
-    getDeliveryByParcelRepo(id),
-    listConsignmentsForParcelRepo(id),
+    (async () => {
+      try {
+        return await listPaymentsForParcelRepo(id);
+      } catch (error) {
+        if (isSchemaCompatibilityError(error)) return [];
+        throw error;
+      }
+    })(),
+    (async () => {
+      try {
+        return await getDeliveryByParcelRepo(id);
+      } catch (error) {
+        if (isSchemaCompatibilityError(error)) return null;
+        throw error;
+      }
+    })(),
+    (async () => {
+      try {
+        return await listConsignmentsForParcelRepo(id);
+      } catch (error) {
+        if (isSchemaCompatibilityError(error)) return [];
+        throw error;
+      }
+    })(),
   ]);
 
   return {

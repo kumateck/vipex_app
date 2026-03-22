@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Card,
   CardContent,
@@ -12,39 +10,39 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Eye, EyeOff } from 'lucide-react';
+import { PasswordField } from '@/features/auth/components/password-field';
+import { useResetPasswordMutation } from '@/features/auth/api';
+import ThrowErrorMessage from '@/lib/throw-error';
+import { Spinner } from '@/components/ui';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const navigate = useNavigate();
+  const [resetPassword, { isLoading }] = useResetPasswordMutation();
 
   const [password, setPassword] = useState<string>('');
   const [confirm, setConfirm] = useState<string>('');
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [showConfirm, setShowConfirm] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!token) {
+      toast.error('Reset token is missing. Please request a new reset link.');
+      return;
+    }
+
     if (password !== confirm) {
       toast.error('Passwords do not match');
       return;
     }
-    setLoading(true);
+
     try {
-      const res = await fetch('/v1/auth/reset-password', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ token, password }),
-      });
-      if (!res.ok) throw new Error('Failed to reset password');
+      await resetPassword({ token, password }).unwrap();
       toast.success('Password reset successful. Please login.');
       navigate('/login');
     } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setLoading(false);
+      ThrowErrorMessage(err);
     }
   };
 
@@ -57,40 +55,29 @@ export default function ResetPassword() {
         </CardHeader>
         <form onSubmit={submit}>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <Button type="button" variant="outline" onClick={() => setShowPassword((s) => !s)}>
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm">Confirm Password</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="confirm"
-                  type={showConfirm ? 'text' : 'password'}
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  required
-                />
-                <Button type="button" variant="outline" onClick={() => setShowConfirm((s) => !s)}>
-                  {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
+            <PasswordField
+              id="password"
+              label="New Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={8}
+              autoComplete="new-password"
+              required
+            />
+            <PasswordField
+              id="confirm"
+              label="Confirm Password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              minLength={8}
+              autoComplete="new-password"
+              required
+            />
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Resetting...' : 'Reset Password'}
+            <Button type="submit" className="w-full flex gap-2" disabled={isLoading || !token}>
+              {isLoading && <Spinner />}
+              {isLoading ? 'Resetting...' : 'Reset Password'}
             </Button>
           </CardFooter>
         </form>

@@ -32,7 +32,7 @@ export interface ForgotPasswordRequest {
 }
 
 export interface ForgotPasswordResponse {
-  message: string;
+  success: boolean;
 }
 
 export interface ResetPasswordRequest {
@@ -41,16 +41,16 @@ export interface ResetPasswordRequest {
 }
 
 export interface ResetPasswordResponse {
-  message: string;
+  success: boolean;
 }
 
 export interface ChangePasswordRequest {
-  currentPassword: string;
+  oldPassword: string;
   newPassword: string;
 }
 
 export interface ChangePasswordResponse {
-  message: string;
+  success: boolean;
 }
 
 export interface LogoutRequest {

@@ -19,6 +19,24 @@ export enum PaymentMethod {
   MTN = 1,
   TELECEL = 2,
   AIRTEL = 3,
+  CREDIT = 4,
+}
+
+export enum CustomerType {
+  INDIVIDUAL = 0,
+  BUSINESS = 1,
+}
+
+export enum CustomerCreditSourceType {
+  PARCEL = 0,
+  DELIVERY = 1,
+  MANUAL = 2,
+}
+
+export enum CustomerCreditTransactionType {
+  CHARGE = 0,
+  PAYMENT = 1,
+  ADJUSTMENT = 2,
 }
 
 // What the payment covers (for tax and reporting separation)

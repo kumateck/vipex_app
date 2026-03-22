@@ -1,6 +1,13 @@
 import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 
-import { DeliveryMode, PaymentComponent, Payer, CashierType, PaymentMethod } from '@/db/schemas';
+import {
+  DeliveryMode,
+  PaymentComponent,
+  Payer,
+  CashierType,
+  PaymentMethod,
+  CustomerCreditSourceType,
+} from '@/db/schemas';
 import { createPaymentSvc, sumPrincipalPaidForParcelSvc } from '../payments/service';
 import { getParcelRepo } from '../shipments/parcels.repository';
 import { ParcelStatus } from '@/db/schemas/enums';
@@ -13,6 +20,7 @@ import {
 } from './repository';
 import { toPesewas } from '@/server/utils/gh-money';
 import { updateParcelRepo } from '../shipments/parcels.repository';
+import { postCustomerCreditChargeSvc } from '../customers/service';
 
 export async function createDeliverySvc(input: {
   parcelId: string;
@@ -145,32 +153,56 @@ export async function doorToDoorCompleteSvc(input: {
 
   // Collect principal (if provided)
   if (input.principalAmountCedis && Number(input.principalAmountCedis) > 0) {
-    await createPaymentSvc({
-      companyId: input.companyId,
-      branchId: input.branchId,
-      parcelId: input.parcelId,
-      component: PaymentComponent.PRINCIPAL,
-      payer: Payer.RECIPIENT,
-      cashierType: CashierType.DELIVERY,
-      method: input.method,
-      cashierUserId: input.cashierUserId,
-      amountCedis: input.principalAmountCedis,
-    });
+    if (input.method === PaymentMethod.CREDIT) {
+      await postCustomerCreditChargeSvc({
+        customerId: parcel.receiverId,
+        companyId: input.companyId,
+        amountPsw: Number(toPesewas(input.principalAmountCedis)),
+        sourceType: CustomerCreditSourceType.DELIVERY,
+        referenceId: input.parcelId,
+        notes: 'Delivery principal posted on customer credit',
+        createdBy: input.cashierUserId,
+      });
+    } else {
+      await createPaymentSvc({
+        companyId: input.companyId,
+        branchId: input.branchId,
+        parcelId: input.parcelId,
+        component: PaymentComponent.PRINCIPAL,
+        payer: Payer.RECIPIENT,
+        cashierType: CashierType.DELIVERY,
+        method: input.method,
+        cashierUserId: input.cashierUserId,
+        amountCedis: input.principalAmountCedis,
+      });
+    }
   }
 
   // Collect delivery fee (if provided)
   if (input.deliveryFeeAmountCedis && Number(input.deliveryFeeAmountCedis) > 0) {
-    await createPaymentSvc({
-      companyId: input.companyId,
-      branchId: input.branchId,
-      parcelId: input.parcelId,
-      component: PaymentComponent.DELIVERY_FEE,
-      payer: Payer.RECIPIENT,
-      cashierType: CashierType.DELIVERY,
-      method: input.method,
-      cashierUserId: input.cashierUserId,
-      amountCedis: input.deliveryFeeAmountCedis,
-    });
+    if (input.method === PaymentMethod.CREDIT) {
+      await postCustomerCreditChargeSvc({
+        customerId: parcel.receiverId,
+        companyId: input.companyId,
+        amountPsw: Number(toPesewas(input.deliveryFeeAmountCedis)),
+        sourceType: CustomerCreditSourceType.DELIVERY,
+        referenceId: input.parcelId,
+        notes: 'Delivery fee posted on customer credit',
+        createdBy: input.cashierUserId,
+      });
+    } else {
+      await createPaymentSvc({
+        companyId: input.companyId,
+        branchId: input.branchId,
+        parcelId: input.parcelId,
+        component: PaymentComponent.DELIVERY_FEE,
+        payer: Payer.RECIPIENT,
+        cashierType: CashierType.DELIVERY,
+        method: input.method,
+        cashierUserId: input.cashierUserId,
+        amountCedis: input.deliveryFeeAmountCedis,
+      });
+    }
   }
 
   const delivery = await getDeliveryByParcelRepo(input.parcelId);
@@ -378,33 +410,61 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
 
   let collectedPsw = 0;
   if (input.principalAmountCedis && Number(input.principalAmountCedis) > 0) {
-    const payment = await createPaymentSvc({
-      companyId: input.companyId,
-      branchId: input.branchId,
-      parcelId: input.parcelId,
-      component: PaymentComponent.PRINCIPAL,
-      payer: Payer.RECIPIENT,
-      cashierType: CashierType.DELIVERY,
-      method: input.method,
-      cashierUserId: input.cashierUserId,
-      amountCedis: input.principalAmountCedis,
-    });
-    collectedPsw += payment.amounts.grossPsw;
+    if (input.method === PaymentMethod.CREDIT) {
+      const amountPsw = Number(toPesewas(input.principalAmountCedis));
+      await postCustomerCreditChargeSvc({
+        customerId: parcel.receiverId,
+        companyId: input.companyId,
+        amountPsw,
+        sourceType: CustomerCreditSourceType.DELIVERY,
+        referenceId: input.parcelId,
+        notes: 'Finalized delivery principal posted on customer credit',
+        createdBy: input.cashierUserId,
+      });
+      collectedPsw += amountPsw;
+    } else {
+      const payment = await createPaymentSvc({
+        companyId: input.companyId,
+        branchId: input.branchId,
+        parcelId: input.parcelId,
+        component: PaymentComponent.PRINCIPAL,
+        payer: Payer.RECIPIENT,
+        cashierType: CashierType.DELIVERY,
+        method: input.method,
+        cashierUserId: input.cashierUserId,
+        amountCedis: input.principalAmountCedis,
+      });
+      collectedPsw += payment.amounts.grossPsw;
+    }
   }
 
   if (input.deliveryFeeAmountCedis && Number(input.deliveryFeeAmountCedis) > 0) {
-    const payment = await createPaymentSvc({
-      companyId: input.companyId,
-      branchId: input.branchId,
-      parcelId: input.parcelId,
-      component: PaymentComponent.DELIVERY_FEE,
-      payer: Payer.RECIPIENT,
-      cashierType: CashierType.DELIVERY,
-      method: input.method,
-      cashierUserId: input.cashierUserId,
-      amountCedis: input.deliveryFeeAmountCedis,
-    });
-    collectedPsw += payment.amounts.grossPsw;
+    if (input.method === PaymentMethod.CREDIT) {
+      const amountPsw = Number(toPesewas(input.deliveryFeeAmountCedis));
+      await postCustomerCreditChargeSvc({
+        customerId: parcel.receiverId,
+        companyId: input.companyId,
+        amountPsw,
+        sourceType: CustomerCreditSourceType.DELIVERY,
+        referenceId: input.parcelId,
+        notes: 'Finalized delivery fee posted on customer credit',
+        createdBy: input.cashierUserId,
+      });
+      collectedPsw += amountPsw;
+    } else {
+      const payment = await createPaymentSvc({
+        companyId: input.companyId,
+        branchId: input.branchId,
+        parcelId: input.parcelId,
+        component: PaymentComponent.DELIVERY_FEE,
+        payer: Payer.RECIPIENT,
+        cashierType: CashierType.DELIVERY,
+        method: input.method,
+        cashierUserId: input.cashierUserId,
+        amountCedis: input.deliveryFeeAmountCedis,
+      });
+      collectedPsw += payment.amounts.grossPsw;
+    }
   }
 
   await updateDeliveryRepo(delivery.id, {

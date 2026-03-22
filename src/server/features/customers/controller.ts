@@ -5,10 +5,19 @@ import {
   createCustomerSvc,
   deleteCustomerSvc,
   findCustomersByTelephoneSvc,
+  getCustomerPaymentsMonthlySvc,
+  getCustomerTransactionsMonthlySvc,
+  listCustomerCreditOpenItemsSvc,
+  getCustomerCreditSummarySvc,
+  listCustomerPaymentsSvc,
+  getCustomerStatementSvc,
   getCustomerSvc,
   listCardOptionsSvc,
   listCustomerCardsSvc,
+  listCustomerCreditTransactionsSvc,
+  listCustomerTransactionsSvc,
   listCustomersSvc,
+  postCustomerCreditPaymentSvc,
   updateCustomerSvc,
 } from './service';
 
@@ -54,8 +63,13 @@ export const updateCustomerCtrl = (
     telephone2?: string | null;
     address?: string | null;
     email?: string | null;
+    customerType?: number;
+    creditEligible?: boolean;
+    creditLimitPsw?: number;
+    paymentTermsDays?: number;
     isNiaVerified?: boolean;
     loggedToGovernment?: boolean;
+    sourceContext?: 'crm' | 'default';
   },
   actorUserId?: string | null,
 ) => updateCustomerSvc(id, companyId, patch, actorUserId);
@@ -65,3 +79,76 @@ export const findCustomersByTelephoneCtrl = findCustomersByTelephoneSvc;
 export const listCustomerCardsCtrl = listCustomerCardsSvc;
 export const listCardOptionsCtrl = listCardOptionsSvc;
 export const addCustomerCardCtrl = addCustomerCardSvc;
+export const listCustomerCreditTransactionsCtrl = listCustomerCreditTransactionsSvc;
+export const getCustomerCreditSummaryCtrl = getCustomerCreditSummarySvc;
+export const postCustomerCreditPaymentCtrl = postCustomerCreditPaymentSvc;
+export const getCustomerStatementCtrl = getCustomerStatementSvc;
+export const listCustomerCreditOpenItemsCtrl = listCustomerCreditOpenItemsSvc;
+export const getCustomerPaymentsMonthlyCtrl = getCustomerPaymentsMonthlySvc;
+export const getCustomerTransactionsMonthlyCtrl = getCustomerTransactionsMonthlySvc;
+
+export async function listCustomerTransactionsCtrl(input: {
+  customerId: string;
+  companyId: string;
+  page?: number;
+  pageSize?: number;
+  dateFrom?: string;
+  dateTo?: string;
+}) {
+  const pagination = normalizePagination(
+    { page: input.page, pageSize: input.pageSize },
+    { pageSize: 30, maxPageSize: 100 },
+  );
+  const { data, totalRecords } = await listCustomerTransactionsSvc({
+    customerId: input.customerId,
+    companyId: input.companyId,
+    dateFrom: input.dateFrom ?? null,
+    dateTo: input.dateTo ?? null,
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+  });
+  return {
+    data: data.map((row) => ({
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+    })),
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
+  };
+}
+
+export async function listCustomerPaymentsCtrl(input: {
+  customerId: string;
+  companyId: string;
+  page?: number;
+  pageSize?: number;
+  dateFrom?: string;
+  dateTo?: string;
+}) {
+  const pagination = normalizePagination(
+    { page: input.page, pageSize: input.pageSize },
+    { pageSize: 30, maxPageSize: 100 },
+  );
+  const { data, totalRecords } = await listCustomerPaymentsSvc({
+    customerId: input.customerId,
+    companyId: input.companyId,
+    dateFrom: input.dateFrom ?? null,
+    dateTo: input.dateTo ?? null,
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+  });
+  return {
+    data: data.map((row) => ({
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+    })),
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
+  };
+}

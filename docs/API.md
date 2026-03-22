@@ -3,6 +3,7 @@
 Base URL: `/v1`
 
 ## Core
+
 - `POST /auth/login`
 - `POST /auth/refresh`
 - `POST /auth/logout`
@@ -10,13 +11,25 @@ Base URL: `/v1`
 - `POST /auth/reset-password`
 
 ## Master Data
+
 - `/users`
 - `/branches`
 - `/locations`
 - `/statuses`
 - `/customers`
+  - `/customers/crm`
+  - `/customers/:id/crm`
+  - `/customers/:id/cards`
+  - `/customers/:id/statement`
+  - `/customers/:id/transactions`
+  - `/customers/:id/payments`
+  - `/customers/:id/credit/summary`
+  - `/customers/:id/credit/transactions`
+  - `/customers/:id/credit/open-items`
+  - `/customers/:id/credit/payments`
 
 ## Operations
+
 - `/shipments/bookings`
 - `/shipments/parcels`
 - `/shipments/consignments`
@@ -25,11 +38,13 @@ Base URL: `/v1`
 - `/shifts`
 
 ## Finance
+
 - `/payments`
 - `/accounting`
 - `/payroll`
 
 ## Inventory
+
 - `/inventory/categories`
 - `/inventory/products`
 - `/inventory/locations`
@@ -39,14 +54,17 @@ Base URL: `/v1`
 - `/inventory/stock-transfers`
 
 ## Governance
+
 - `/audit`
 - `/rbac`
 - `/reports`
 
 ## Geolocation (PostGIS)
+
 - `GET /geolocation/distance`
 - `GET /geolocation/branches/nearby`
 
 ## Interactive docs
+
 - Swagger UI: `/docs`
 - OpenAPI JSON: `/docs/json`

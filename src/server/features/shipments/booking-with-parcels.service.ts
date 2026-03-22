@@ -10,6 +10,7 @@ import {
 import { PaymentMethod } from '@/db/schemas';
 import { assertActiveSessionSvc } from '../cashiers/service';
 import { recordAuditLog } from '../audit/logger';
+import { getCustomerCreditSummarySvc, getCustomerSvc } from '../customers/service';
 
 export type CreateBookingWithParcelsBody = {
   senderId: string;
@@ -40,11 +41,43 @@ export type CreateBookingWithParcelsBody = {
 export async function createBookingWithParcelsSvc(
   body: CreateBookingWithParcelsBody,
 ): Promise<CreateBookingWithParcelsOutput> {
-  if (!body.senderId || !body.companyId || !body.sourceId || body.status == null || !body.createdBy) {
+  if (
+    !body.senderId ||
+    !body.companyId ||
+    !body.sourceId ||
+    body.status == null ||
+    !body.createdBy
+  ) {
     throw BadRequest('Missing required booking fields');
   }
   if (!Array.isArray(body.parcels) || body.parcels.length === 0) {
     throw BadRequest('At least one parcel is required');
+  }
+
+  const creditParcels = body.parcels.filter(
+    (parcel) => parcel.method === PaymentMethod.CREDIT && Number(parcel.chargeCedis ?? 0) > 0,
+  );
+
+  if (creditParcels.length > 0) {
+    const sender = await getCustomerSvc(body.senderId, body.companyId);
+    if (!sender.creditEligible) {
+      throw BadRequest('Sender is not eligible for credit booking');
+    }
+
+    const requestedCreditPsw = creditParcels.reduce(
+      (sum, parcel) => sum + Number(toPesewas(parcel.chargeCedis ?? 0)),
+      0,
+    );
+    if (requestedCreditPsw > 0) {
+      const summary = await getCustomerCreditSummarySvc({
+        customerId: body.senderId,
+        companyId: body.companyId,
+      });
+      const hasLimit = summary.creditLimitPsw > 0;
+      if (hasLimit && summary.balancePsw + requestedCreditPsw > summary.creditLimitPsw) {
+        throw BadRequest('Credit limit exceeded for sender');
+      }
+    }
   }
 
   const primaryParcel = body.parcels[0];
@@ -59,7 +92,8 @@ export async function createBookingWithParcelsSvc(
 
   const hasMixedCashierOrBranch = body.parcels.some(
     (parcel) =>
-      parcel.cashierUserId !== primaryParcel.cashierUserId || parcel.branchId !== primaryParcel.branchId,
+      parcel.cashierUserId !== primaryParcel.cashierUserId ||
+      parcel.branchId !== primaryParcel.branchId,
   );
   if (hasMixedCashierOrBranch) {
     throw BadRequest('All parcels in one booking must belong to the same cashier and branch');

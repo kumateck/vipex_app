@@ -540,6 +540,10 @@ export const ROUTES: Route[] = [
             url: '/settings/general',
           },
           {
+            title: 'Change Password',
+            url: '/settings/change-password',
+          },
+          {
             title: 'Email Templates',
             url: '/settings/email-templates',
           },

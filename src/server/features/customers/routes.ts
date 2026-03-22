@@ -9,9 +9,18 @@ import {
   deleteCustomerCtrl,
   findCustomersByTelephoneCtrl,
   getCustomerByIdCtrl,
+  getCustomerPaymentsMonthlyCtrl,
+  getCustomerTransactionsMonthlyCtrl,
+  listCustomerCreditOpenItemsCtrl,
+  getCustomerCreditSummaryCtrl,
+  listCustomerPaymentsCtrl,
+  getCustomerStatementCtrl,
   listCardOptionsCtrl,
   listCustomerCardsCtrl,
+  listCustomerCreditTransactionsCtrl,
+  listCustomerTransactionsCtrl,
   listCustomersCtrl,
+  postCustomerCreditPaymentCtrl,
   updateCustomerCtrl,
 } from './controller';
 
@@ -63,11 +72,6 @@ export const customersRoutes = new Elysia({ name: 'customers' })
     beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
     detail: { tags: ['Customers'], summary: 'List card type options' },
   })
-  .get('/:id', async ({ params, user }) => getCustomerByIdCtrl(params.id, user!.companyId!), {
-    params: t.Object({ id: UUID }),
-    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
-    detail: { tags: ['Customers'], summary: 'Get customer' },
-  })
   .get(
     '/:id/cards',
     async ({ params, user }) =>
@@ -100,31 +104,210 @@ export const customersRoutes = new Elysia({ name: 'customers' })
       detail: { tags: ['Customers'], summary: 'Add customer card' },
     },
   )
-  .post(
-    '/',
-    async ({ body, set, user }) => {
-      const res = await createCustomerCtrl({
-        ...(body as unknown as {
-          fullname: string;
-          telephone?: string | null;
-          telephone2?: string | null;
-          address?: string | null;
-          email?: string | null;
-          isNiaVerified?: boolean;
-          loggedToGovernment?: boolean;
-        }),
+  .get(
+    '/:id/transactions/monthly',
+    async ({ params, query, user }) =>
+      getCustomerTransactionsMonthlyCtrl({
+        customerId: params.id,
         companyId: user!.companyId!,
+        year: query.year,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      query: t.Object({
+        year: t.Optional(t.Number({ minimum: 2000, maximum: 2100 })),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+      detail: {
+        tags: ['Customers'],
+        summary: 'Get customer monthly sending/invoiced summary for a year',
+      },
+    },
+  )
+  .get(
+    '/:id/transactions',
+    async ({ params, query, user }) =>
+      listCustomerTransactionsCtrl({
+        customerId: params.id,
+        companyId: user!.companyId!,
+        page: query.page,
+        pageSize: query.pageSize,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      query: t.Object({
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+        dateFrom: t.Optional(t.String({ format: 'date-time' })),
+        dateTo: t.Optional(t.String({ format: 'date-time' })),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+      detail: { tags: ['Customers'], summary: 'List customer sending transactions' },
+    },
+  )
+  .get(
+    '/:id/payments/monthly',
+    async ({ params, query, user }) =>
+      getCustomerPaymentsMonthlyCtrl({
+        customerId: params.id,
+        companyId: user!.companyId!,
+        year: query.year,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      query: t.Object({
+        year: t.Optional(t.Number({ minimum: 2000, maximum: 2100 })),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+      detail: { tags: ['Customers'], summary: 'Get customer monthly payments summary for a year' },
+    },
+  )
+  .get(
+    '/:id/payments',
+    async ({ params, query, user }) =>
+      listCustomerPaymentsCtrl({
+        customerId: params.id,
+        companyId: user!.companyId!,
+        page: query.page,
+        pageSize: query.pageSize,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      query: t.Object({
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+        dateFrom: t.Optional(t.String({ format: 'date-time' })),
+        dateTo: t.Optional(t.String({ format: 'date-time' })),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+      detail: { tags: ['Customers'], summary: 'List customer payments' },
+    },
+  )
+  .get(
+    '/:id/statement',
+    async ({ params, query, user }) =>
+      getCustomerStatementCtrl({
+        customerId: params.id,
+        companyId: user!.companyId!,
+        dateFrom: query.dateFrom ?? null,
+        dateTo: query.dateTo ?? null,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      query: t.Object({
+        dateFrom: t.Optional(t.String({ format: 'date-time' })),
+        dateTo: t.Optional(t.String({ format: 'date-time' })),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+      detail: { tags: ['Customers'], summary: 'Get customer statement by date range' },
+    },
+  )
+  .get(
+    '/:id/credit/open-items',
+    async ({ params, query, user }) =>
+      listCustomerCreditOpenItemsCtrl({
+        customerId: params.id,
+        companyId: user!.companyId!,
+        dateFrom: query.dateFrom ?? null,
+        dateTo: query.dateTo ?? null,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      query: t.Object({
+        dateFrom: t.Optional(t.String({ format: 'date-time' })),
+        dateTo: t.Optional(t.String({ format: 'date-time' })),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+      detail: { tags: ['Customers'], summary: 'List customer open credit items' },
+    },
+  )
+  .get(
+    '/:id/credit/summary',
+    async ({ params, user }) =>
+      getCustomerCreditSummaryCtrl({ customerId: params.id, companyId: user!.companyId! }),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+      detail: { tags: ['Customers'], summary: 'Get customer credit summary' },
+    },
+  )
+  .get(
+    '/:id/credit/transactions',
+    async ({ params, query, user }) =>
+      listCustomerCreditTransactionsCtrl({
+        customerId: params.id,
+        companyId: user!.companyId!,
+        limit: query.limit,
+        dateFrom: query.dateFrom ?? null,
+        dateTo: query.dateTo ?? null,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      query: t.Object({
+        limit: t.Optional(t.Number({ minimum: 1, maximum: 500 })),
+        dateFrom: t.Optional(t.String({ format: 'date-time' })),
+        dateTo: t.Optional(t.String({ format: 'date-time' })),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+      detail: { tags: ['Customers'], summary: 'List customer credit transactions' },
+    },
+  )
+  .post(
+    '/:id/credit/payments',
+    async ({ params, body, user, set }) => {
+      const result = await postCustomerCreditPaymentCtrl({
+        customerId: params.id,
+        companyId: user!.companyId!,
+        amountCedis: (body as { amountCedis: number | string }).amountCedis,
+        notes: (body as { notes?: string | null }).notes,
+        referenceId: (body as { referenceId?: string | null }).referenceId,
         createdBy: user!.sub,
-      } as {
-        companyId: string;
+      });
+      set.status = HttpStatus.CREATED;
+      return result;
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        amountCedis: t.Union([t.Number(), t.String()]),
+        notes: t.Optional(t.Union([t.String(), t.Null()])),
+        referenceId: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateCustomers)],
+      detail: { tags: ['Customers'], summary: 'Record customer credit payment' },
+    },
+  )
+  .get('/:id', async ({ params, user }) => getCustomerByIdCtrl(params.id, user!.companyId!), {
+    params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
+    detail: { tags: ['Customers'], summary: 'Get customer' },
+  })
+  .post(
+    '/crm',
+    async ({ body, set, user }) => {
+      const payload = body as {
         fullname: string;
         telephone?: string | null;
         telephone2?: string | null;
         address?: string | null;
         email?: string | null;
+        customerType?: number;
+        creditEligible?: boolean;
+        creditLimitPsw?: number;
+        paymentTermsDays?: number;
         isNiaVerified?: boolean;
         loggedToGovernment?: boolean;
-        createdBy: string;
+      };
+
+      const res = await createCustomerCtrl({
+        ...payload,
+        sourceContext: 'crm',
+        companyId: user!.companyId!,
+        createdBy: user!.sub,
       });
       set.status = HttpStatus.CREATED;
       return res;
@@ -132,10 +315,58 @@ export const customersRoutes = new Elysia({ name: 'customers' })
     {
       body: t.Object({
         fullname: t.String({ minLength: 1, maxLength: 255 }),
-        telephone: t.Optional(t.String()),
-        telephone2: t.Optional(t.String()),
-        address: t.Optional(t.String()),
-        email: t.Optional(t.String()),
+        telephone: t.Optional(t.Union([t.String(), t.Null()])),
+        telephone2: t.Optional(t.Union([t.String(), t.Null()])),
+        address: t.Optional(t.Union([t.String(), t.Null()])),
+        email: t.Optional(t.Union([t.String(), t.Null()])),
+        customerType: t.Optional(t.Number()),
+        creditEligible: t.Optional(t.Boolean()),
+        creditLimitPsw: t.Optional(t.Number({ minimum: 0 })),
+        paymentTermsDays: t.Optional(t.Number({ minimum: 0 })),
+        isNiaVerified: t.Optional(t.Boolean()),
+        loggedToGovernment: t.Optional(t.Boolean()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateCustomers)],
+      detail: { tags: ['Customers'], summary: 'Create customer from CRM context' },
+    },
+  )
+  .post(
+    '/',
+    async ({ body, set, user }) => {
+      const payload = body as {
+        fullname: string;
+        telephone?: string | null;
+        telephone2?: string | null;
+        address?: string | null;
+        email?: string | null;
+        customerType?: number;
+        creditEligible?: boolean;
+        creditLimitPsw?: number;
+        paymentTermsDays?: number;
+        isNiaVerified?: boolean;
+        loggedToGovernment?: boolean;
+      };
+
+      const res = await createCustomerCtrl({
+        ...payload,
+        sourceContext: 'default',
+        companyId: user!.companyId!,
+        createdBy: user!.sub,
+      });
+      set.status = HttpStatus.CREATED;
+      return res;
+    },
+    {
+      body: t.Object({
+        fullname: t.String({ minLength: 1, maxLength: 255 }),
+        telephone: t.Optional(t.Union([t.String(), t.Null()])),
+        telephone2: t.Optional(t.Union([t.String(), t.Null()])),
+        address: t.Optional(t.Union([t.String(), t.Null()])),
+        email: t.Optional(t.Union([t.String(), t.Null()])),
+        customerType: t.Optional(t.Number()),
+        creditEligible: t.Optional(t.Boolean()),
+        creditLimitPsw: t.Optional(t.Number({ minimum: 0 })),
+        paymentTermsDays: t.Optional(t.Number({ minimum: 0 })),
         isNiaVerified: t.Optional(t.Boolean()),
         loggedToGovernment: t.Optional(t.Boolean()),
       }),
@@ -144,19 +375,26 @@ export const customersRoutes = new Elysia({ name: 'customers' })
     },
   )
   .patch(
-    '/:id',
+    '/:id/crm',
     async ({ params, body, user }) =>
       updateCustomerCtrl(
         params.id,
         user!.companyId!,
-        body as unknown as {
-          fullname?: string;
-          telephone?: string | null;
-          telephone2?: string | null;
-          address?: string | null;
-          email?: string | null;
-          isNiaVerified?: boolean;
-          loggedToGovernment?: boolean;
+        {
+          ...(body as {
+            fullname?: string;
+            telephone?: string | null;
+            telephone2?: string | null;
+            address?: string | null;
+            email?: string | null;
+            customerType?: number;
+            creditEligible?: boolean;
+            creditLimitPsw?: number;
+            paymentTermsDays?: number;
+            isNiaVerified?: boolean;
+            loggedToGovernment?: boolean;
+          }),
+          sourceContext: 'crm',
         },
         user!.sub,
       ),
@@ -168,6 +406,53 @@ export const customersRoutes = new Elysia({ name: 'customers' })
         telephone2: t.Optional(t.Union([t.String(), t.Null()])),
         address: t.Optional(t.Union([t.String(), t.Null()])),
         email: t.Optional(t.Union([t.String(), t.Null()])),
+        customerType: t.Optional(t.Number()),
+        creditEligible: t.Optional(t.Boolean()),
+        creditLimitPsw: t.Optional(t.Number({ minimum: 0 })),
+        paymentTermsDays: t.Optional(t.Number({ minimum: 0 })),
+        isNiaVerified: t.Optional(t.Boolean()),
+        loggedToGovernment: t.Optional(t.Boolean()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateCustomers)],
+      detail: { tags: ['Customers'], summary: 'Update customer from CRM context' },
+    },
+  )
+  .patch(
+    '/:id',
+    async ({ params, body, user }) =>
+      updateCustomerCtrl(
+        params.id,
+        user!.companyId!,
+        {
+          ...(body as {
+            fullname?: string;
+            telephone?: string | null;
+            telephone2?: string | null;
+            address?: string | null;
+            email?: string | null;
+            customerType?: number;
+            creditEligible?: boolean;
+            creditLimitPsw?: number;
+            paymentTermsDays?: number;
+            isNiaVerified?: boolean;
+            loggedToGovernment?: boolean;
+          }),
+          sourceContext: 'default',
+        },
+        user!.sub,
+      ),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        fullname: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
+        telephone: t.Optional(t.Union([t.String(), t.Null()])),
+        telephone2: t.Optional(t.Union([t.String(), t.Null()])),
+        address: t.Optional(t.Union([t.String(), t.Null()])),
+        email: t.Optional(t.Union([t.String(), t.Null()])),
+        customerType: t.Optional(t.Number()),
+        creditEligible: t.Optional(t.Boolean()),
+        creditLimitPsw: t.Optional(t.Number({ minimum: 0 })),
+        paymentTermsDays: t.Optional(t.Number({ minimum: 0 })),
         isNiaVerified: t.Optional(t.Boolean()),
         loggedToGovernment: t.Optional(t.Boolean()),
       }),

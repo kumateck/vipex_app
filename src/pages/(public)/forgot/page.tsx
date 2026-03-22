@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,26 +12,22 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { useForgotPasswordMutation } from '@/features/auth/api';
+import ThrowErrorMessage from '@/lib/throw-error';
+import { Spinner } from '@/components/ui';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+  const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     try {
-      const res = await fetch('/v1/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (!res.ok) throw new Error('Failed to request reset email');
+      await forgotPassword({ email }).unwrap();
       toast.success('If the email exists, a reset link has been sent');
+      setEmail('');
     } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setLoading(false);
+      ThrowErrorMessage(err);
     }
   };
 
@@ -42,7 +39,7 @@ export default function ForgotPassword() {
           <CardDescription>Enter your account email to receive a reset link</CardDescription>
         </CardHeader>
         <form onSubmit={onSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pb-5">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -56,9 +53,15 @@ export default function ForgotPassword() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Sending...' : 'Send reset link'}
-            </Button>
+            <div className="w-full space-y-2">
+              <Button type="submit" className="w-full flex gap-2" disabled={isLoading}>
+                {isLoading && <Spinner />}
+                {isLoading ? 'Sending...' : 'Send reset link'}
+              </Button>
+              <Button asChild type="button" variant="outline" className="w-full">
+                <Link to="/login">Return to login</Link>
+              </Button>
+            </div>
           </CardFooter>
         </form>
       </Card>

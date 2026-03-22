@@ -265,6 +265,7 @@ export function ParcelDeliveryCashierPage() {
                     <SelectItem value={String(PaymentMethod.MTN)}>MTN</SelectItem>
                     <SelectItem value={String(PaymentMethod.TELECEL)}>Telecel</SelectItem>
                     <SelectItem value={String(PaymentMethod.AIRTEL)}>Airtel</SelectItem>
+                    <SelectItem value={String(PaymentMethod.CREDIT)}>Credit</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

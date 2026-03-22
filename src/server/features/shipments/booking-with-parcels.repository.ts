@@ -4,12 +4,15 @@ import {
   bookings,
   parcels,
   payments,
+  customerCreditTransactions,
   PaymentComponent,
   Payer,
   CashierType,
   PaymentMethod,
   users,
   branches,
+  CustomerCreditSourceType,
+  CustomerCreditTransactionType,
 } from '@/db/schemas';
 import { sanitizeString } from '@/lib/utils';
 import { generateBookingCode, generateTrackingCode } from '@/server/utils/codegen';
@@ -209,10 +212,26 @@ export async function createBookingWithParcelsAndPaymentsRepo(
           .returning({ id: payments.id });
         createdPayments.push({ id: sanitizeString(pay?.id) });
       }
-    }
 
-    // Optional: deterministic ordering in response
-    createdParcels.sort((a, b2) => (a.id < b2.id ? -1 : a.id > b2.id ? 1 : 0));
+      const shouldPostSenderCredit =
+        p.method === PaymentMethod.CREDIT &&
+        (!p.senderPaymentPsw || p.senderPaymentPsw <= 0) &&
+        (p.plannedToBePaidPsw ?? 0) <= 0 &&
+        (p.chargePsw ?? 0) > 0;
+
+      if (shouldPostSenderCredit) {
+        await tx.insert(customerCreditTransactions).values({
+          companyId: input.companyId,
+          customerId: input.senderId,
+          sourceType: CustomerCreditSourceType.PARCEL,
+          transactionType: CustomerCreditTransactionType.CHARGE,
+          referenceId: sanitizeString(parcelRow?.id),
+          signedAmountPsw: Number(p.chargePsw ?? 0),
+          notes: 'Parcel booking posted on customer credit',
+          createdBy: input.createdBy,
+        });
+      }
+    }
 
     return {
       bookingId: sanitizeString(b?.id),

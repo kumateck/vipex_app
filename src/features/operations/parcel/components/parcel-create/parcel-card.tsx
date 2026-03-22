@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
+import { CustomerType, useGetCustomerByIdQuery } from '@/features/customers/api';
 import { CustomerLookupSection } from './customer-lookup-section';
 import type { ParcelBookingFormValues } from './parcel-form.types';
 
@@ -50,6 +51,7 @@ export function ParcelCard({
       | 'parcelValue'
       | 'charge'
       | 'paymentResponsibility'
+      | 'senderSettlementMode'
       | 'receiver.telephone'
       | 'receiver.customerId'
       | 'receiver.fullname',
@@ -61,17 +63,49 @@ export function ParcelCard({
   const parcelValueName = parcelFieldName('parcelValue');
   const parcelChargeName = parcelFieldName('charge');
   const parcelPaymentName = parcelFieldName('paymentResponsibility');
+  const parcelSettlementName = parcelFieldName('senderSettlementMode');
   const receiverPhoneName = parcelFieldName('receiver.telephone');
   const receiverCustomerName = parcelFieldName('receiver.customerId');
   const receiverFullnameName = parcelFieldName('receiver.fullname');
+  const senderCustomerIdName = 'sender.customerId' as const;
 
   const destinationBranchId = String(useWatch({ control, name: destinationBranchName }) ?? '');
+  const paymentResponsibility = String(useWatch({ control, name: parcelPaymentName }) ?? 'SENDER');
+  const senderSettlementMode = String(
+    useWatch({ control, name: parcelSettlementName }) ?? 'PAY_NOW',
+  );
+  const senderCustomerId = String(useWatch({ control, name: senderCustomerIdName }) ?? '');
   const previousBranchId = useRef(destinationBranchId);
 
   const { data: locationOptions = [], isLoading: isLoadingLocations } = useListLocationOptionsQuery(
     destinationBranchId && companyId ? { companyId, branchId: destinationBranchId } : undefined,
     { skip: !destinationBranchId || !companyId },
   );
+
+  const { data: senderCustomer } = useGetCustomerByIdQuery(senderCustomerId, {
+    skip: !senderCustomerId,
+  });
+
+  const senderIsCreditEligible =
+    !!senderCustomer &&
+    senderCustomer.customerType === CustomerType.Business &&
+    senderCustomer.creditEligible;
+
+  useEffect(() => {
+    const senderPays = paymentResponsibility === 'SENDER';
+    if ((!senderPays || !senderIsCreditEligible) && senderSettlementMode === 'CREDIT') {
+      setValue(parcelSettlementName, 'PAY_NOW', {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [
+    parcelSettlementName,
+    paymentResponsibility,
+    senderIsCreditEligible,
+    senderSettlementMode,
+    setValue,
+  ]);
 
   useEffect(() => {
     if (previousBranchId.current === destinationBranchId) return;
@@ -356,6 +390,39 @@ export function ParcelCard({
                         <SelectItem value="RECEIVER">Receiver pays on pickup</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name={parcelSettlementName}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sender Settlement</FormLabel>
+                    <Select
+                      value={String(field.value ?? 'PAY_NOW')}
+                      onValueChange={field.onChange}
+                      disabled={paymentResponsibility !== 'SENDER'}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select sender settlement" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="PAY_NOW">Pay now</SelectItem>
+                        {senderIsCreditEligible ? (
+                          <SelectItem value="CREDIT">On credit</SelectItem>
+                        ) : null}
+                      </SelectContent>
+                    </Select>
+                    {!senderIsCreditEligible && paymentResponsibility === 'SENDER' ? (
+                      <FormDescription>
+                        Credit is available only for eligible business senders in CRM.
+                      </FormDescription>
+                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}

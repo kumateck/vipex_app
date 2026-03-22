@@ -38,7 +38,7 @@ type ThemeProviderState = {
 const initialState: ThemeProviderState = {
   theme: 'dark',
   setTheme: () => null,
-  style: 'vega',
+  style: 'mira',
   setStyle: () => null,
   baseColor: 'neutral',
   setBaseColor: () => null,

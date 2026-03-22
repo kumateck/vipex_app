@@ -17,7 +17,7 @@ import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api'
 import { useGetCurrentActiveSessionQuery } from '@/features/cashiers/api/cashiers.api';
 import { useCreateCustomerMutation } from '@/features/customers/api';
 import { useAuthStore } from '@/stores/auth-store';
-import { BranchType } from '@/db/schemas/enums';
+import { BranchType, PaymentMethod } from '@/db/schemas/enums';
 import { useCreateBookingWithParcelsMutation } from '../api/parcel.api';
 import { CustomerLookupSection } from './parcel-create/customer-lookup-section';
 import { ParcelCard } from './parcel-create/parcel-card';
@@ -39,6 +39,7 @@ const createEmptyParcel = (): ParcelFormValues => ({
   parcelValue: '',
   charge: '',
   paymentResponsibility: 'SENDER',
+  senderSettlementMode: 'PAY_NOW',
   receiver: {
     telephone: '',
     customerId: '',
@@ -151,7 +152,9 @@ export function ParcelCreateForm() {
       return;
     }
 
-    const hasSameDestinationAsSource = values.parcels.some((parcel) => parcel.destinationBranchId === userBranchId);
+    const hasSameDestinationAsSource = values.parcels.some(
+      (parcel) => parcel.destinationBranchId === userBranchId,
+    );
     if (hasSameDestinationAsSource) {
       toast.error('Destination branch cannot be your current branch');
       return;
@@ -216,11 +219,16 @@ export function ParcelCreateForm() {
             status,
             parcelDetails: parcel.parcelDetails,
             parcelContent: parcel.parcelContent,
-            method: 0,
+            method:
+              parcel.paymentResponsibility === 'SENDER' && parcel.senderSettlementMode === 'CREDIT'
+                ? PaymentMethod.CREDIT
+                : PaymentMethod.CASH,
             parcelValueCedis: amounts[index]?.value,
             chargeCedis: amounts[index]?.charge,
             senderPaymentCedis:
-              parcel.paymentResponsibility === 'SENDER' ? amounts[index]?.charge : 0,
+              parcel.paymentResponsibility === 'SENDER' && parcel.senderSettlementMode === 'PAY_NOW'
+                ? amounts[index]?.charge
+                : 0,
             plannedToBePaidCedis:
               parcel.paymentResponsibility === 'RECEIVER' ? amounts[index]?.charge : 0,
           };
@@ -238,7 +246,8 @@ export function ParcelCreateForm() {
           receiverName: values.parcels[index]?.receiver.fullname ?? '-',
           receiverTelephone: values.parcels[index]?.receiver.telephone ?? '-',
           destinationBranchName:
-            branchOptions.find((branch) => branch.id === values.parcels[index]?.destinationBranchId)?.name ?? '-',
+            branchOptions.find((branch) => branch.id === values.parcels[index]?.destinationBranchId)
+              ?.name ?? '-',
           destinationLocationName: values.parcels[index]?.destinationLocationId ?? '-',
           totalChargeCedis: amounts[index]?.charge ?? 0,
           senderPaidCedis:

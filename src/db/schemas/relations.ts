@@ -2,7 +2,13 @@ import { relations } from 'drizzle-orm';
 import { companies, branches, locations, roles, rolePermissions, users } from './core';
 import { pendingBookings } from './shipments';
 import { receiptTemplates, generatedReceipts } from './receipts';
-import { customers, cards, customerCards } from './customers';
+import {
+  customers,
+  cards,
+  customerCards,
+  customerCreditTransactions,
+  customerCreditAllocations,
+} from './customers';
 import { cashierSessionTypes, cashierSessions } from './shifts';
 import { shiftTypes } from './shifts';
 import { bookings, parcels, consignments, consignmentItems } from './shipments';
@@ -59,6 +65,8 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
   company: one(companies, { fields: [customers.companyId], references: [companies.id] }),
   parcelsSent: many(parcels),
   parcelsReceived: many(parcels),
+  creditTransactions: many(customerCreditTransactions),
+  creditAllocations: many(customerCreditAllocations),
 }));
 
 export const cardsRelations = relations(cards, ({ one, many }) => ({
@@ -70,6 +78,42 @@ export const customerCardsRelations = relations(customerCards, ({ one }) => ({
   customer: one(customers, { fields: [customerCards.customerId], references: [customers.id] }),
   card: one(cards, { fields: [customerCards.cardId], references: [cards.id] }),
 }));
+
+export const customerCreditTransactionsRelations = relations(
+  customerCreditTransactions,
+  ({ one }) => ({
+    customer: one(customers, {
+      fields: [customerCreditTransactions.customerId],
+      references: [customers.id],
+    }),
+    company: one(companies, {
+      fields: [customerCreditTransactions.companyId],
+      references: [companies.id],
+    }),
+  }),
+);
+
+export const customerCreditAllocationsRelations = relations(
+  customerCreditAllocations,
+  ({ one }) => ({
+    customer: one(customers, {
+      fields: [customerCreditAllocations.customerId],
+      references: [customers.id],
+    }),
+    company: one(companies, {
+      fields: [customerCreditAllocations.companyId],
+      references: [companies.id],
+    }),
+    chargeTransaction: one(customerCreditTransactions, {
+      fields: [customerCreditAllocations.chargeTransactionId],
+      references: [customerCreditTransactions.id],
+    }),
+    paymentTransaction: one(customerCreditTransactions, {
+      fields: [customerCreditAllocations.paymentTransactionId],
+      references: [customerCreditTransactions.id],
+    }),
+  }),
+);
 
 // Cashiers
 export const cashierSessionTypesRelations = relations(cashierSessionTypes, ({ many }) => ({

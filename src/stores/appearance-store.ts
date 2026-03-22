@@ -52,7 +52,7 @@ type LegacyShapePreset = 'rounded' | 'comfortable' | 'compact';
 
 const DEFAULT_APPEARANCE = {
   theme: 'dark' as ThemeMode,
-  style: 'vega' as AppearanceStyle,
+  style: 'mira' as AppearanceStyle,
   baseColor: 'neutral' as BaseColor,
   themeColor: 'amber' as ThemeColor,
   chartColor: 'blue' as ChartColor,
