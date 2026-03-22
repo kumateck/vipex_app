@@ -1,6 +1,13 @@
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -95,32 +102,105 @@ export default function AppearancePage() {
   const resetAppearance = useAppearanceStore((state) => state.reset);
 
   return (
-    <div className="mx-auto w-full max-w-full p-4">
+    <div className="mx-auto w-full max-w-full p-4 py-1">
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-1.5">
           <CardTitle>Appearance</CardTitle>
           <CardDescription>
             Compact workspace styling. Changes apply instantly across the application.
           </CardDescription>
+
+          <CardAction>
+            <Button type="button" size="sm" variant="outline" onClick={resetAppearance}>
+              Reset to defaults
+            </Button>
+          </CardAction>
         </CardHeader>
         <CardContent className="space-y-4">
-          <section className="space-y-2 rounded-lg border border-border p-3">
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Theme</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {THEME_MODE_OPTIONS.map((option) => (
-                <Button
-                  key={option.value}
-                  type="button"
-                  variant={theme === option.value ? 'default' : 'outline'}
-                  onClick={() => setTheme(option.value)}
-                  className="h-8 justify-start text-xs"
+          <div className="grid grid-cols-2 gap-4">
+            <section className="space-y-2 rounded-lg border border-border p-3">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Theme</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {THEME_MODE_OPTIONS.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={theme === option.value ? 'default' : 'outline'}
+                    onClick={() => setTheme(option.value)}
+                    className="h-8 justify-start text-xs"
+                  >
+                    {theme === option.value ? <Check className="size-4" /> : null}
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </section>
+            <section className="grid gap-3 rounded-lg border border-border p-3 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="appearance-radius"
+                  className="text-xs uppercase tracking-wide text-muted-foreground"
                 >
-                  {theme === option.value ? <Check className="size-4" /> : null}
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-          </section>
+                  Radius
+                </Label>
+                <Select value={radius} onValueChange={(value) => setRadius(value as RadiusPreset)}>
+                  <SelectTrigger id="appearance-radius" className="h-8">
+                    <SelectValue placeholder="Select radius" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RADIUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="appearance-font"
+                  className="text-xs uppercase tracking-wide text-muted-foreground"
+                >
+                  Font
+                </Label>
+                <Select value={font} onValueChange={(value) => setFont(value as FontPreset)}>
+                  <SelectTrigger id="appearance-font" className="h-8">
+                    <SelectValue placeholder="Select font" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FONT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="appearance-heading"
+                  className="text-xs uppercase tracking-wide text-muted-foreground"
+                >
+                  Heading
+                </Label>
+                <Select
+                  value={heading}
+                  onValueChange={(value) => setHeading(value as HeadingPreset)}
+                >
+                  <SelectTrigger id="appearance-heading" className="h-8">
+                    <SelectValue placeholder="Select heading font" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HEADING_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </section>
+          </div>
 
           <section className="space-y-2 rounded-lg border border-border p-3">
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">Style</Label>
@@ -230,69 +310,6 @@ export default function AppearancePage() {
             </div>
           </section>
 
-          <section className="grid gap-3 rounded-lg border border-border p-3 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label
-                htmlFor="appearance-radius"
-                className="text-xs uppercase tracking-wide text-muted-foreground"
-              >
-                Radius
-              </Label>
-              <Select value={radius} onValueChange={(value) => setRadius(value as RadiusPreset)}>
-                <SelectTrigger id="appearance-radius" className="h-8">
-                  <SelectValue placeholder="Select radius" />
-                </SelectTrigger>
-                <SelectContent>
-                  {RADIUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="appearance-font"
-                className="text-xs uppercase tracking-wide text-muted-foreground"
-              >
-                Font
-              </Label>
-              <Select value={font} onValueChange={(value) => setFont(value as FontPreset)}>
-                <SelectTrigger id="appearance-font" className="h-8">
-                  <SelectValue placeholder="Select font" />
-                </SelectTrigger>
-                <SelectContent>
-                  {FONT_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="appearance-heading"
-                className="text-xs uppercase tracking-wide text-muted-foreground"
-              >
-                Heading
-              </Label>
-              <Select value={heading} onValueChange={(value) => setHeading(value as HeadingPreset)}>
-                <SelectTrigger id="appearance-heading" className="h-8">
-                  <SelectValue placeholder="Select heading font" />
-                </SelectTrigger>
-                <SelectContent>
-                  {HEADING_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </section>
-
           <section className="space-y-2 rounded-lg border border-border bg-card p-3">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Preview</p>
             <div className="rounded-md border border-border bg-background p-3">
@@ -330,12 +347,6 @@ export default function AppearancePage() {
               </div>
             </div>
           </section>
-
-          <div className="flex justify-end">
-            <Button type="button" size="sm" variant="outline" onClick={resetAppearance}>
-              Reset to defaults
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </div>
