@@ -141,7 +141,7 @@ export function ParcelSuperSearchPage() {
       {
         id: 'destination',
         header: 'Destination',
-        accessorFn: (row) => branchNameById.get(row.destinationId) ?? row.destinationId,
+        accessorFn: (row) => branchNameById.get(row.destinationId) ?? '-',
       },
       {
         id: 'actions',
@@ -340,10 +340,8 @@ export function ParcelSuperSearchPage() {
                           Date: {formatDate(consignment.consignmentDate)}
                         </p>
                         <p className="text-muted-foreground">
-                          Route: {branchNameById.get(consignment.sourceId) ?? consignment.sourceId}{' '}
-                          to{' '}
-                          {branchNameById.get(consignment.destinationId) ??
-                            consignment.destinationId}
+                          Route: {branchNameById.get(consignment.sourceId) ?? '-'} to{' '}
+                          {branchNameById.get(consignment.destinationId) ?? '-'}
                         </p>
                         <p className="text-muted-foreground">
                           Added: {formatDate(consignment.addedAt)}

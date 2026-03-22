@@ -646,6 +646,8 @@ export async function getCustomerCreditBalanceBeforeDateRepo(input: {
   companyId: string;
   before: Date;
 }): Promise<number> {
+  const beforeIso = input.before.toISOString();
+
   const [row] = await db
     .select({
       balance: sql<number>`COALESCE(SUM(${customerCreditTransactions.signedAmountPsw}), 0)`,
@@ -655,7 +657,7 @@ export async function getCustomerCreditBalanceBeforeDateRepo(input: {
       and(
         eq(customerCreditTransactions.customerId, input.customerId),
         eq(customerCreditTransactions.companyId, input.companyId),
-        sql`${customerCreditTransactions.createdAt} < ${input.before}`,
+        sql`${customerCreditTransactions.createdAt} < ${beforeIso}`,
       ),
     );
 
@@ -699,6 +701,8 @@ export type CustomerTransactionRow = {
   id: string;
   bookingCode: string;
   trackingCode: string;
+  sourceId: string;
+  destinationId: string;
   status: number;
   chargePsw: number;
   method: number;
@@ -736,6 +740,8 @@ export async function listCustomerTransactionsRepo(input: {
       id: parcels.id,
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
+      sourceId: parcels.sourceId,
+      destinationId: parcels.destinationId,
       status: parcels.status,
       chargePsw: parcels.chargePsw,
       method: parcels.method,
@@ -869,8 +875,8 @@ export async function listCustomerTransactionsMonthlyRepo(input: {
   companyId: string;
   year: number;
 }): Promise<CustomerTransactionsMonthlyRow[]> {
-  const dateFrom = new Date(Date.UTC(input.year, 0, 1, 0, 0, 0, 0));
-  const dateTo = new Date(Date.UTC(input.year, 11, 31, 23, 59, 59, 999));
+  const dateFromIso = new Date(Date.UTC(input.year, 0, 1, 0, 0, 0, 0)).toISOString();
+  const dateToIso = new Date(Date.UTC(input.year, 11, 31, 23, 59, 59, 999)).toISOString();
 
   const rows = await db.execute(sql<{
     month: number | string;
@@ -888,8 +894,8 @@ export async function listCustomerTransactionsMonthlyRepo(input: {
     FROM parcels p
     WHERE p.company_id = ${input.companyId}
       AND p.is_deleted = false
-      AND p.created_at >= ${dateFrom}
-      AND p.created_at <= ${dateTo}
+      AND p.created_at >= ${dateFromIso}
+      AND p.created_at <= ${dateToIso}
       AND (
         p.sender_id = ${input.customerId}
         OR p.receiver_id = ${input.customerId}

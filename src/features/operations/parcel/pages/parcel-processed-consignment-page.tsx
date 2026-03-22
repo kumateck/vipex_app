@@ -64,7 +64,10 @@ export function ParcelProcessedConsignmentPage() {
   const { data, isLoading, refetch } = useListProcessedParcelsForConsignmentQuery(query, {
     skip: !companyId || !sourceId,
   });
-  const { data: branchOptions = [] } = useListBranchOptionsQuery({ companyId }, { skip: !companyId });
+  const { data: branchOptions = [] } = useListBranchOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
   const [createConsignment, { isLoading: isCreatingConsignment }] = useCreateConsignmentMutation();
   const [addConsignmentItems, { isLoading: isAddingItems }] = useAddConsignmentItemsMutation();
 
@@ -135,7 +138,8 @@ export function ParcelProcessedConsignmentPage() {
     ? rows.filter((row) => row.destinationId === eligibleDestinationId)
     : [];
   const selectedEligibleCount = eligibleRows.filter((row) => selectedIds.has(row.id)).length;
-  const allEligibleSelected = eligibleRows.length > 0 && selectedEligibleCount === eligibleRows.length;
+  const allEligibleSelected =
+    eligibleRows.length > 0 && selectedEligibleCount === eligibleRows.length;
   const someEligibleSelected = selectedEligibleCount > 0 && !allEligibleSelected;
 
   const columns = useMemo<ColumnDef<ProcessedParcel>[]>(
@@ -172,17 +176,20 @@ export function ParcelProcessedConsignmentPage() {
       {
         id: 'sender',
         header: 'Sender',
-        accessorFn: (row) => `${row.senderName ?? '-'}${row.senderPhone ? ` (${row.senderPhone})` : ''}`,
+        accessorFn: (row) =>
+          `${row.senderName ?? '-'}${row.senderPhone ? ` (${row.senderPhone})` : ''}`,
       },
       {
         id: 'receiver',
         header: 'Receiver',
-        accessorFn: (row) => `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        accessorFn: (row) =>
+          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
       },
       {
         id: 'destination',
         header: 'Destination Branch',
-        accessorFn: (row) => row.destinationName ?? branchNameById.get(row.destinationId) ?? 'Unknown branch',
+        accessorFn: (row) =>
+          row.destinationName ?? branchNameById.get(row.destinationId) ?? 'Unknown branch',
       },
       {
         accessorKey: 'createdAt',
@@ -242,8 +249,9 @@ export function ParcelProcessedConsignmentPage() {
   };
 
   const isSubmitting = isCreatingConsignment || isAddingItems;
-  const lockedDestinationName =
-    lockedDestinationId ? branchNameById.get(lockedDestinationId) ?? lockedDestinationId : null;
+  const lockedDestinationName = lockedDestinationId
+    ? (branchNameById.get(lockedDestinationId) ?? '-')
+    : null;
 
   if (!companyId || !sourceId) {
     return (
@@ -252,7 +260,8 @@ export function ParcelProcessedConsignmentPage() {
           <CardHeader>
             <CardTitle>Processed Parcels for Consignment</CardTitle>
             <CardDescription>
-              A company and branch context is required to list processed parcels and create consignments.
+              A company and branch context is required to list processed parcels and create
+              consignments.
             </CardDescription>
           </CardHeader>
         </Card>

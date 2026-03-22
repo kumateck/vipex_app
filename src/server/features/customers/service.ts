@@ -498,20 +498,69 @@ function toSafeNumber(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function getErrorCode(error: unknown): string | undefined {
-  if (!error || typeof error !== 'object') return undefined;
+function getErrorCode(error: unknown, depth = 0): string | undefined {
+  if (!error || typeof error !== 'object' || depth > 6) return undefined;
   const err = error as { code?: unknown; cause?: unknown };
-  if (typeof err.code === 'string') return err.code;
-  if (err.cause && typeof err.cause === 'object') {
-    const cause = err.cause as { code?: unknown };
-    if (typeof cause.code === 'string') return cause.code;
-  }
-  return undefined;
+  if (typeof err.code === 'string' && err.code.length > 0) return err.code;
+  return getErrorCode(err.cause, depth + 1);
 }
 
 function isMissingRelationError(error: unknown): boolean {
   const code = getErrorCode(error);
   return code === '42P01' || code === '42703';
+}
+
+function serializeErrorChain(error: unknown, depth = 0): Array<Record<string, unknown>> {
+  if (!error || typeof error !== 'object' || depth > 8) return [];
+  const err = error as {
+    name?: unknown;
+    message?: unknown;
+    code?: unknown;
+    command?: unknown;
+    detail?: unknown;
+    hint?: unknown;
+    schema?: unknown;
+    table?: unknown;
+    column?: unknown;
+    constraint?: unknown;
+    cause?: unknown;
+  };
+
+  const node: Record<string, unknown> = {
+    depth,
+    name: err.name,
+    message: err.message,
+    code: err.code,
+    command: err.command,
+    detail: err.detail,
+    hint: err.hint,
+    schema: err.schema,
+    table: err.table,
+    column: err.column,
+    constraint: err.constraint,
+  };
+
+  return [node, ...serializeErrorChain(err.cause, depth + 1)];
+}
+
+function debugCustomerServiceError(
+  scope: string,
+  input: Record<string, unknown>,
+  error: unknown,
+): void {
+  console.error(
+    '[customers][debug]',
+    JSON.stringify(
+      {
+        scope,
+        input,
+        errorCode: getErrorCode(error),
+        errorChain: serializeErrorChain(error),
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 export async function getCustomerStatementSvc(input: {
@@ -520,218 +569,223 @@ export async function getCustomerStatementSvc(input: {
   dateFrom?: string | null;
   dateTo?: string | null;
 }) {
-  const customer = await getCustomerRepo(input.customerId);
-  if (!customer || customer.companyId !== input.companyId) throw NotFound('Customer not found');
+  try {
+    const customer = await getCustomerRepo(input.customerId);
+    if (!customer || customer.companyId !== input.companyId) throw NotFound('Customer not found');
 
-  const { dateFrom, dateTo } = parseDateRange(input);
+    const { dateFrom, dateTo } = parseDateRange(input);
 
-  const creditRowsPromise = (async () => {
-    try {
-      return await listCustomerCreditTransactionsByDateRepo({
-        customerId: input.customerId,
-        companyId: input.companyId,
-        dateFrom,
-        dateTo,
-      });
-    } catch (error) {
-      if (isMissingRelationError(error)) return [] as CustomerCreditTransactionRow[];
-      throw error;
-    }
-  })();
+    const creditRowsPromise = (async () => {
+      try {
+        return await listCustomerCreditTransactionsByDateRepo({
+          customerId: input.customerId,
+          companyId: input.companyId,
+          dateFrom,
+          dateTo,
+        });
+      } catch (error) {
+        if (isMissingRelationError(error)) return [] as CustomerCreditTransactionRow[];
+        throw error;
+      }
+    })();
 
-  const openingCreditBalancePromise = dateFrom
-    ? (async () => {
-        try {
-          return await getCustomerCreditBalanceBeforeDateRepo({
-            customerId: input.customerId,
-            companyId: input.companyId,
-            before: dateFrom,
-          });
-        } catch (error) {
-          if (isMissingRelationError(error)) return 0;
-          throw error;
-        }
-      })()
-    : Promise.resolve(0);
+    const openingCreditBalancePromise = dateFrom
+      ? (async () => {
+          try {
+            return await getCustomerCreditBalanceBeforeDateRepo({
+              customerId: input.customerId,
+              companyId: input.companyId,
+              before: dateFrom,
+            });
+          } catch (error) {
+            if (isMissingRelationError(error)) return 0;
+            throw error;
+          }
+        })()
+      : Promise.resolve(0);
 
-  const [sentParcels, receivedParcels, paymentsRows, creditRows, openingCreditBalancePsw] =
-    await Promise.all([
-      (async () => {
-        try {
-          return await listCustomerStatementSentParcelsRepo({
-            customerId: input.customerId,
-            companyId: input.companyId,
-            dateFrom,
-            dateTo,
-          });
-        } catch (error) {
-          if (isMissingRelationError(error)) return [];
-          throw error;
-        }
-      })(),
-      (async () => {
-        try {
-          return await listCustomerStatementReceivedParcelsRepo({
-            customerId: input.customerId,
-            companyId: input.companyId,
-            dateFrom,
-            dateTo,
-          });
-        } catch (error) {
-          if (isMissingRelationError(error)) return [];
-          throw error;
-        }
-      })(),
-      (async () => {
-        try {
-          return await listCustomerStatementPaymentsRepo({
-            customerId: input.customerId,
-            companyId: input.companyId,
-            dateFrom,
-            dateTo,
-          });
-        } catch (error) {
-          if (isMissingRelationError(error)) return [];
-          throw error;
-        }
-      })(),
-      creditRowsPromise,
-      openingCreditBalancePromise,
-    ]);
+    const [sentParcels, receivedParcels, paymentsRows, creditRows, openingCreditBalancePsw] =
+      await Promise.all([
+        (async () => {
+          try {
+            return await listCustomerStatementSentParcelsRepo({
+              customerId: input.customerId,
+              companyId: input.companyId,
+              dateFrom,
+              dateTo,
+            });
+          } catch (error) {
+            if (isMissingRelationError(error)) return [];
+            throw error;
+          }
+        })(),
+        (async () => {
+          try {
+            return await listCustomerStatementReceivedParcelsRepo({
+              customerId: input.customerId,
+              companyId: input.companyId,
+              dateFrom,
+              dateTo,
+            });
+          } catch (error) {
+            if (isMissingRelationError(error)) return [];
+            throw error;
+          }
+        })(),
+        (async () => {
+          try {
+            return await listCustomerStatementPaymentsRepo({
+              customerId: input.customerId,
+              companyId: input.companyId,
+              dateFrom,
+              dateTo,
+            });
+          } catch (error) {
+            if (isMissingRelationError(error)) return [];
+            throw error;
+          }
+        })(),
+        creditRowsPromise,
+        openingCreditBalancePromise,
+      ]);
 
-  const sentRows = sentParcels.flatMap((row) => {
-    const timestamp = toSafeIso(row.createdAt);
-    if (!timestamp) return [];
+    const sentRows = sentParcels.flatMap((row) => {
+      const timestamp = toSafeIso(row.createdAt);
+      if (!timestamp) return [];
+      return {
+        id: `parcel-sent:${row.id}`,
+        timestamp,
+        entryType: 'PARCEL_SENT' as const,
+        direction: 'info' as const,
+        amountPsw: toSafeNumber(row.chargePsw),
+        parcelId: row.id,
+        bookingCode: row.bookingCode,
+        trackingCode: row.trackingCode,
+        method: row.method,
+        notes: 'Parcel sent',
+      };
+    });
+
+    const receivedRows = receivedParcels.flatMap((row) => {
+      const timestamp = toSafeIso(row.createdAt);
+      if (!timestamp) return [];
+      return {
+        id: `parcel-received:${row.id}`,
+        timestamp,
+        entryType: 'PARCEL_RECEIVED' as const,
+        direction: 'info' as const,
+        amountPsw: toSafeNumber(row.plannedToBePaidPsw),
+        parcelId: row.id,
+        bookingCode: row.bookingCode,
+        trackingCode: row.trackingCode,
+        method: row.method,
+        notes: 'Parcel received',
+      };
+    });
+
+    const paymentRows = paymentsRows.flatMap((row) => {
+      const timestamp = toSafeIso(row.receivedAt);
+      if (!timestamp) return [];
+      const customerIsSender = row.senderId === input.customerId;
+      const customerIsReceiver =
+        row.receiverId === input.customerId || row.secondReceiverId === input.customerId;
+      const madeByCustomer =
+        (row.payer === Payer.SENDER && customerIsSender) ||
+        (row.payer === Payer.RECIPIENT && customerIsReceiver);
+      return {
+        id: `payment:${row.id}`,
+        timestamp,
+        entryType: 'PAYMENT' as const,
+        direction: madeByCustomer ? ('credit' as const) : ('info' as const),
+        amountPsw: toSafeNumber(row.grossAmountPsw),
+        parcelId: row.parcelId,
+        bookingCode: row.bookingCode,
+        trackingCode: row.trackingCode,
+        method: row.method,
+        notes:
+          row.component === PaymentComponent.DELIVERY_FEE
+            ? madeByCustomer
+              ? 'Delivery fee paid by customer'
+              : 'Delivery fee payment (other payer)'
+            : madeByCustomer
+              ? 'Payment made by customer'
+              : 'Payment recorded (other payer)',
+      };
+    });
+
+    const creditStatementRows = creditRows.flatMap((row) => {
+      const timestamp = toSafeIso(row.createdAt);
+      if (!timestamp) return [];
+      const signedAmountPsw = toSafeNumber(row.signedAmountPsw);
+      return {
+        id: `credit:${row.id}`,
+        timestamp,
+        entryType: 'CREDIT' as const,
+        direction: signedAmountPsw >= 0 ? ('debit' as const) : ('credit' as const),
+        amountPsw: Math.abs(signedAmountPsw),
+        parcelId: row.referenceId ?? null,
+        bookingCode: null,
+        trackingCode: null,
+        method: null,
+        notes: row.notes ?? (signedAmountPsw >= 0 ? 'Credit charge' : 'Credit payment'),
+      };
+    });
+
+    const rows = [...sentRows, ...receivedRows, ...paymentRows, ...creditStatementRows].sort(
+      (a, b) => {
+        if (a.timestamp === b.timestamp) return a.id < b.id ? 1 : -1;
+        return a.timestamp < b.timestamp ? 1 : -1;
+      },
+    );
+
+    const creditChargesPsw = creditRows
+      .filter((row) => toSafeNumber(row.signedAmountPsw) > 0)
+      .reduce((acc, row) => acc + toSafeNumber(row.signedAmountPsw), 0);
+    const creditPaymentsPsw = creditRows
+      .filter((row) => toSafeNumber(row.signedAmountPsw) < 0)
+      .reduce((acc, row) => acc + Math.abs(toSafeNumber(row.signedAmountPsw)), 0);
+    const paymentsMadeByCustomerPsw = paymentsRows.reduce((acc, row) => {
+      const customerIsSender = row.senderId === input.customerId;
+      const customerIsReceiver =
+        row.receiverId === input.customerId || row.secondReceiverId === input.customerId;
+      const madeByCustomer =
+        (row.payer === Payer.SENDER && customerIsSender) ||
+        (row.payer === Payer.RECIPIENT && customerIsReceiver);
+      return madeByCustomer ? acc + toSafeNumber(row.grossAmountPsw) : acc;
+    }, 0);
+
+    const closingCreditBalancePsw = openingCreditBalancePsw + creditChargesPsw - creditPaymentsPsw;
+
     return {
-      id: `parcel-sent:${row.id}`,
-      timestamp,
-      entryType: 'PARCEL_SENT' as const,
-      direction: 'info' as const,
-      amountPsw: toSafeNumber(row.chargePsw),
-      parcelId: row.id,
-      bookingCode: row.bookingCode,
-      trackingCode: row.trackingCode,
-      method: row.method,
-      notes: 'Parcel sent',
+      customer: {
+        id: customer.id,
+        fullname: customer.fullname,
+        customerType: customer.customerType,
+      },
+      range: {
+        dateFrom: dateFrom?.toISOString() ?? null,
+        dateTo: dateTo?.toISOString() ?? null,
+      },
+      summary: {
+        sentParcels: sentParcels.length,
+        receivedParcels: receivedParcels.length,
+        totalSentChargePsw: sentParcels.reduce((acc, row) => acc + toSafeNumber(row.chargePsw), 0),
+        totalReceivingToPayPsw: receivedParcels.reduce(
+          (acc, row) => acc + toSafeNumber(row.plannedToBePaidPsw),
+          0,
+        ),
+        paymentsMadeByCustomerPsw,
+        creditChargesPsw,
+        creditPaymentsPsw,
+        openingCreditBalancePsw,
+        closingCreditBalancePsw,
+      },
+      rows,
     };
-  });
-
-  const receivedRows = receivedParcels.flatMap((row) => {
-    const timestamp = toSafeIso(row.createdAt);
-    if (!timestamp) return [];
-    return {
-      id: `parcel-received:${row.id}`,
-      timestamp,
-      entryType: 'PARCEL_RECEIVED' as const,
-      direction: 'info' as const,
-      amountPsw: toSafeNumber(row.plannedToBePaidPsw),
-      parcelId: row.id,
-      bookingCode: row.bookingCode,
-      trackingCode: row.trackingCode,
-      method: row.method,
-      notes: 'Parcel received',
-    };
-  });
-
-  const paymentRows = paymentsRows.flatMap((row) => {
-    const timestamp = toSafeIso(row.receivedAt);
-    if (!timestamp) return [];
-    const customerIsSender = row.senderId === input.customerId;
-    const customerIsReceiver =
-      row.receiverId === input.customerId || row.secondReceiverId === input.customerId;
-    const madeByCustomer =
-      (row.payer === Payer.SENDER && customerIsSender) ||
-      (row.payer === Payer.RECIPIENT && customerIsReceiver);
-    return {
-      id: `payment:${row.id}`,
-      timestamp,
-      entryType: 'PAYMENT' as const,
-      direction: madeByCustomer ? ('credit' as const) : ('info' as const),
-      amountPsw: toSafeNumber(row.grossAmountPsw),
-      parcelId: row.parcelId,
-      bookingCode: row.bookingCode,
-      trackingCode: row.trackingCode,
-      method: row.method,
-      notes:
-        row.component === PaymentComponent.DELIVERY_FEE
-          ? madeByCustomer
-            ? 'Delivery fee paid by customer'
-            : 'Delivery fee payment (other payer)'
-          : madeByCustomer
-            ? 'Payment made by customer'
-            : 'Payment recorded (other payer)',
-    };
-  });
-
-  const creditStatementRows = creditRows.flatMap((row) => {
-    const timestamp = toSafeIso(row.createdAt);
-    if (!timestamp) return [];
-    const signedAmountPsw = toSafeNumber(row.signedAmountPsw);
-    return {
-      id: `credit:${row.id}`,
-      timestamp,
-      entryType: 'CREDIT' as const,
-      direction: signedAmountPsw >= 0 ? ('debit' as const) : ('credit' as const),
-      amountPsw: Math.abs(signedAmountPsw),
-      parcelId: row.referenceId ?? null,
-      bookingCode: null,
-      trackingCode: null,
-      method: null,
-      notes: row.notes ?? (signedAmountPsw >= 0 ? 'Credit charge' : 'Credit payment'),
-    };
-  });
-
-  const rows = [...sentRows, ...receivedRows, ...paymentRows, ...creditStatementRows].sort(
-    (a, b) => {
-      if (a.timestamp === b.timestamp) return a.id < b.id ? 1 : -1;
-      return a.timestamp < b.timestamp ? 1 : -1;
-    },
-  );
-
-  const creditChargesPsw = creditRows
-    .filter((row) => toSafeNumber(row.signedAmountPsw) > 0)
-    .reduce((acc, row) => acc + toSafeNumber(row.signedAmountPsw), 0);
-  const creditPaymentsPsw = creditRows
-    .filter((row) => toSafeNumber(row.signedAmountPsw) < 0)
-    .reduce((acc, row) => acc + Math.abs(toSafeNumber(row.signedAmountPsw)), 0);
-  const paymentsMadeByCustomerPsw = paymentsRows.reduce((acc, row) => {
-    const customerIsSender = row.senderId === input.customerId;
-    const customerIsReceiver =
-      row.receiverId === input.customerId || row.secondReceiverId === input.customerId;
-    const madeByCustomer =
-      (row.payer === Payer.SENDER && customerIsSender) ||
-      (row.payer === Payer.RECIPIENT && customerIsReceiver);
-    return madeByCustomer ? acc + toSafeNumber(row.grossAmountPsw) : acc;
-  }, 0);
-
-  const closingCreditBalancePsw = openingCreditBalancePsw + creditChargesPsw - creditPaymentsPsw;
-
-  return {
-    customer: {
-      id: customer.id,
-      fullname: customer.fullname,
-      customerType: customer.customerType,
-    },
-    range: {
-      dateFrom: dateFrom?.toISOString() ?? null,
-      dateTo: dateTo?.toISOString() ?? null,
-    },
-    summary: {
-      sentParcels: sentParcels.length,
-      receivedParcels: receivedParcels.length,
-      totalSentChargePsw: sentParcels.reduce((acc, row) => acc + toSafeNumber(row.chargePsw), 0),
-      totalReceivingToPayPsw: receivedParcels.reduce(
-        (acc, row) => acc + toSafeNumber(row.plannedToBePaidPsw),
-        0,
-      ),
-      paymentsMadeByCustomerPsw,
-      creditChargesPsw,
-      creditPaymentsPsw,
-      openingCreditBalancePsw,
-      closingCreditBalancePsw,
-    },
-    rows,
-  };
+  } catch (error) {
+    debugCustomerServiceError('getCustomerStatementSvc', input as Record<string, unknown>, error);
+    throw error;
+  }
 }
 
 export async function listCustomerTransactionsSvc(input: {
@@ -761,6 +815,8 @@ export async function listCustomerTransactionsSvc(input: {
         id: row.id,
         bookingCode: row.bookingCode,
         trackingCode: row.trackingCode,
+        sourceId: row.sourceId,
+        destinationId: row.destinationId,
         status: row.status,
         chargePsw: row.chargePsw,
         method: row.method,
@@ -941,43 +997,57 @@ export async function getCustomerTransactionsMonthlySvc(input: {
   companyId: string;
   year?: number;
 }) {
-  const customer = await getCustomerRepo(input.customerId);
-  if (!customer || customer.companyId !== input.companyId) throw NotFound('Customer not found');
+  try {
+    const customer = await getCustomerRepo(input.customerId);
+    if (!customer || customer.companyId !== input.companyId) throw NotFound('Customer not found');
 
-  const now = new Date();
-  const year = Number.isFinite(input.year) ? Math.trunc(Number(input.year)) : now.getFullYear();
-  if (year < 2000 || year > 2100) throw BadRequest('Invalid year');
+    const now = new Date();
+    const year = Number.isFinite(input.year) ? Math.trunc(Number(input.year)) : now.getFullYear();
+    if (year < 2000 || year > 2100) throw BadRequest('Invalid year');
 
-  const byMonth = await listCustomerTransactionsMonthlyRepo({
-    customerId: input.customerId,
-    companyId: input.companyId,
-    year,
-  });
+    let byMonth: Awaited<ReturnType<typeof listCustomerTransactionsMonthlyRepo>> = [];
+    try {
+      byMonth = await listCustomerTransactionsMonthlyRepo({
+        customerId: input.customerId,
+        companyId: input.companyId,
+        year,
+      });
+    } catch (error) {
+      if (!isMissingRelationError(error)) throw error;
+    }
 
-  const months = Array.from({ length: 12 }, (_, index) => ({
-    month: index + 1,
-    monthLabel: new Date(Date.UTC(year, index, 1)).toLocaleString('en-US', { month: 'short' }),
-    sentCount: 0,
-    receivedCount: 0,
-    sentAmountPsw: 0,
-    receivedAmountPsw: 0,
-  }));
+    const months = Array.from({ length: 12 }, (_, index) => ({
+      month: index + 1,
+      monthLabel: new Date(Date.UTC(year, index, 1)).toLocaleString('en-US', { month: 'short' }),
+      sentCount: 0,
+      receivedCount: 0,
+      sentAmountPsw: 0,
+      receivedAmountPsw: 0,
+    }));
 
-  for (const row of byMonth) {
-    const idx = row.month - 1;
-    if (idx < 0 || idx > 11) continue;
-    months[idx]!.sentCount = row.sentCount;
-    months[idx]!.receivedCount = row.receivedCount;
-    months[idx]!.sentAmountPsw = row.sentAmountPsw;
-    months[idx]!.receivedAmountPsw = row.receivedAmountPsw;
+    for (const row of byMonth) {
+      const idx = row.month - 1;
+      if (idx < 0 || idx > 11) continue;
+      months[idx]!.sentCount = row.sentCount;
+      months[idx]!.receivedCount = row.receivedCount;
+      months[idx]!.sentAmountPsw = row.sentAmountPsw;
+      months[idx]!.receivedAmountPsw = row.receivedAmountPsw;
+    }
+
+    return {
+      year,
+      totalSentCount: months.reduce((acc, row) => acc + row.sentCount, 0),
+      totalReceivedCount: months.reduce((acc, row) => acc + row.receivedCount, 0),
+      totalSentAmountPsw: months.reduce((acc, row) => acc + row.sentAmountPsw, 0),
+      totalReceivedAmountPsw: months.reduce((acc, row) => acc + row.receivedAmountPsw, 0),
+      months,
+    };
+  } catch (error) {
+    debugCustomerServiceError(
+      'getCustomerTransactionsMonthlySvc',
+      input as Record<string, unknown>,
+      error,
+    );
+    throw error;
   }
-
-  return {
-    year,
-    totalSentCount: months.reduce((acc, row) => acc + row.sentCount, 0),
-    totalReceivedCount: months.reduce((acc, row) => acc + row.receivedCount, 0),
-    totalSentAmountPsw: months.reduce((acc, row) => acc + row.sentAmountPsw, 0),
-    totalReceivedAmountPsw: months.reduce((acc, row) => acc + row.receivedAmountPsw, 0),
-    months,
-  };
 }

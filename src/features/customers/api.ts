@@ -112,6 +112,8 @@ export interface CustomerTransaction {
   id: string;
   bookingCode: string;
   trackingCode: string;
+  sourceId: string;
+  destinationId: string;
   status: number;
   chargePsw: number;
   method: number;

@@ -10,6 +10,7 @@ type ParcelTransactionDetailsDialogProps = {
   onOpenChange: (open: boolean) => void;
   details: ParcelFullDetails | undefined;
   isLoading: boolean;
+  branchNameById: Map<string, string>;
 };
 
 function detailRow(label: string, value: string | number | null | undefined) {
@@ -28,6 +29,7 @@ export function ParcelTransactionDetailsDialog({
   onOpenChange,
   details,
   isLoading,
+  branchNameById,
 }: ParcelTransactionDetailsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -48,8 +50,11 @@ export function ParcelTransactionDetailsDialog({
                 {detailRow('Tracking', details.parcel.trackingCode)}
                 {detailRow('Booking', details.parcel.bookingCode)}
                 {detailRow('Status', STATUS_LABELS[details.parcel.status] ?? details.parcel.status)}
-                {detailRow('Source Branch ID', details.parcel.sourceId)}
-                {detailRow('Destination Branch ID', details.parcel.destinationId)}
+                {detailRow('Source Branch', branchNameById.get(details.parcel.sourceId) ?? '-')}
+                {detailRow(
+                  'Destination Branch',
+                  branchNameById.get(details.parcel.destinationId) ?? '-',
+                )}
                 {detailRow('Parcel Details', details.parcel.parcelDetails)}
                 {detailRow('Parcel Content', details.parcel.parcelContent)}
                 {detailRow('Charge', formatMoney(details.parcel.chargePsw))}
@@ -130,7 +135,8 @@ export function ParcelTransactionDetailsDialog({
                         Date: {formatDate(consignment.consignmentDate)}
                       </p>
                       <p className="text-muted-foreground">
-                        Route: {consignment.sourceId} to {consignment.destinationId}
+                        Route: {branchNameById.get(consignment.sourceId) ?? '-'} to{' '}
+                        {branchNameById.get(consignment.destinationId) ?? '-'}
                       </p>
                       <p className="text-muted-foreground">
                         Added: {formatDate(consignment.addedAt)}

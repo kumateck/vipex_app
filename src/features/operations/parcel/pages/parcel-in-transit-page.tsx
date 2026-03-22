@@ -6,7 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
@@ -185,16 +191,14 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
             {
               id: 'source',
               header: 'Source Branch',
-              accessorFn: (row: ParcelSearchRow) =>
-                branchNameById.get(row.sourceId) ?? row.sourceId,
+              accessorFn: (row: ParcelSearchRow) => branchNameById.get(row.sourceId) ?? '-',
             },
           ] satisfies ColumnDef<ParcelSearchRow>[])
         : ([
             {
               id: 'destination',
               header: 'Destination Branch',
-              accessorFn: (row: ParcelSearchRow) =>
-                branchNameById.get(row.destinationId) ?? row.destinationId,
+              accessorFn: (row: ParcelSearchRow) => branchNameById.get(row.destinationId) ?? '-',
             },
           ] satisfies ColumnDef<ParcelSearchRow>[])),
       {
@@ -408,13 +412,11 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
                     <strong>Parcel Content:</strong> {details.parcel.parcelContent || '-'}
                   </p>
                   <p>
-                    <strong>Source:</strong>{' '}
-                    {branchNameById.get(details.parcel.sourceId) ?? details.parcel.sourceId}
+                    <strong>Source:</strong> {branchNameById.get(details.parcel.sourceId) ?? '-'}
                   </p>
                   <p>
                     <strong>Destination:</strong>{' '}
-                    {branchNameById.get(details.parcel.destinationId) ??
-                      details.parcel.destinationId}
+                    {branchNameById.get(details.parcel.destinationId) ?? '-'}
                   </p>
                   <p>
                     <strong>Consignment:</strong>{' '}

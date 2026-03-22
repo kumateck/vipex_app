@@ -9,6 +9,7 @@ import { formatMoney } from './customer-details.utils';
 type CustomerTransactionsTabProps = {
   isLoadingTransactions: boolean;
   transactions: ServerListResponse<CustomerTransaction> | undefined;
+  branchNameById: Map<string, string>;
   txPage: number;
   onPrevPage: () => void;
   onNextPage: () => void;
@@ -18,6 +19,7 @@ type CustomerTransactionsTabProps = {
 export function CustomerTransactionsTab({
   isLoadingTransactions,
   transactions,
+  branchNameById,
   txPage,
   onPrevPage,
   onNextPage,
@@ -38,6 +40,12 @@ export function CustomerTransactionsTab({
           ) : null}
           {(transactions?.data ?? []).map((row) => (
             <div key={row.id} className="rounded-md border p-2 text-xs">
+              <p className="text-muted-foreground">
+                {row.transactionRole === 'SENDER' ? 'Source Branch' : 'Destination Branch'}:{' '}
+                {branchNameById.get(
+                  row.transactionRole === 'SENDER' ? row.sourceId : row.destinationId,
+                ) ?? '-'}
+              </p>
               <div className="flex items-center justify-between gap-2">
                 <p className="font-medium">{row.trackingCode}</p>
                 <div className="flex items-center gap-2">

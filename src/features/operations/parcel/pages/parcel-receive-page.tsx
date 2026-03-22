@@ -84,7 +84,9 @@ function QrScanner({
         const video = videoRef.current;
         if (video && video.readyState >= 2) {
           const barcodes = await detector.detect(video);
-          const value = barcodes.find((barcode) => typeof barcode.rawValue === 'string')?.rawValue?.trim();
+          const value = barcodes
+            .find((barcode) => typeof barcode.rawValue === 'string')
+            ?.rawValue?.trim();
 
           if (value) {
             const now = Date.now();
@@ -150,6 +152,7 @@ export function ParcelReceivePage() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
+  const branchName = user?.branch?.name ?? '-';
 
   const [scannerEnabled, setScannerEnabled] = useState(true);
   const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
@@ -184,7 +187,9 @@ export function ParcelReceivePage() {
   const [updateParcelStatus, { isLoading: isUpdating }] = useUpdateParcelStatusMutation();
 
   const playSuccessBeep = useCallback(() => {
-    const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    const AudioCtx =
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
 
     try {
@@ -245,12 +250,13 @@ export function ParcelReceivePage() {
     [manualServerFilters],
   );
 
-  const { data: manualResults, isLoading: isManualLoading, refetch: refetchManual } = useSearchParcelsQuery(
-    manualQuery,
-    {
-      skip: !companyId || !branchId || !manualQuery.search || manualQuery.search.trim().length === 0,
-    },
-  );
+  const {
+    data: manualResults,
+    isLoading: isManualLoading,
+    refetch: refetchManual,
+  } = useSearchParcelsQuery(manualQuery, {
+    skip: !companyId || !branchId || !manualQuery.search || manualQuery.search.trim().length === 0,
+  });
 
   useEffect(() => {
     return () => {
@@ -354,12 +360,14 @@ export function ParcelReceivePage() {
       {
         id: 'sender',
         header: 'Sender',
-        accessorFn: (row) => `${row.senderName ?? '-'}${row.senderPhone ? ` (${row.senderPhone})` : ''}`,
+        accessorFn: (row) =>
+          `${row.senderName ?? '-'}${row.senderPhone ? ` (${row.senderPhone})` : ''}`,
       },
       {
         id: 'receiver',
         header: 'Receiver',
-        accessorFn: (row) => `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        accessorFn: (row) =>
+          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
       },
       {
         accessorKey: 'createdAt',
@@ -397,12 +405,13 @@ export function ParcelReceivePage() {
         <CardHeader>
           <CardTitle>Scan to Receive</CardTitle>
           <CardDescription>
-            Scan parcel sticker QR and auto-mark arrival after 3 seconds. If scanner is unavailable, use manual search and confirm receive.
+            Scan parcel sticker QR and auto-mark arrival after 3 seconds. If scanner is unavailable,
+            use manual search and confirm receive.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">Destination Branch: {branchId ?? 'Unknown'}</Badge>
+            <Badge variant="outline">Destination Branch: {branchName}</Badge>
             <Button
               variant="outline"
               onClick={() => setScannerEnabled((prev) => !prev)}
@@ -427,7 +436,9 @@ export function ParcelReceivePage() {
           </div>
 
           <div className="rounded-md border p-3 text-sm space-y-1">
-            <p className="font-medium flex items-center gap-2"><QrCode className="h-4 w-4" /> Last Scan</p>
+            <p className="font-medium flex items-center gap-2">
+              <QrCode className="h-4 w-4" /> Last Scan
+            </p>
             <p className="text-muted-foreground">Code: {lastScannedCode ?? '-'}</p>
             <p className="text-muted-foreground">
               {countdown != null ? `Auto-receive in ${countdown}s...` : 'Awaiting scan'}
@@ -440,7 +451,8 @@ export function ParcelReceivePage() {
         <CardHeader>
           <CardTitle>Manual Receive</CardTitle>
           <CardDescription>
-            Search by tracking code, booking code, sender/receiver name or telephone, then confirm receive.
+            Search by tracking code, booking code, sender/receiver name or telephone, then confirm
+            receive.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -463,7 +475,11 @@ export function ParcelReceivePage() {
               placeholder="Enter tracking, booking, sender/receiver name or phone"
               className="h-11 text-base"
             />
-            <Button type="submit" className="h-11 px-6" disabled={manualSearchInput.trim().length === 0}>
+            <Button
+              type="submit"
+              className="h-11 px-6"
+              disabled={manualSearchInput.trim().length === 0}
+            >
               Search
             </Button>
           </form>

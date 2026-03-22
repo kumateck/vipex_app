@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { endOfDay, startOfDay, subDays } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
+import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -78,6 +79,10 @@ export default function CustomerDetailsPage() {
   const { data: customerCards = [] } = useListCustomerCardsQuery(
     { customerId: id ?? '' },
     { skip: !id },
+  );
+  const { data: branchOptions = [] } = useListBranchOptionsQuery(
+    { companyId: customer?.companyId },
+    { skip: !customer?.companyId },
   );
 
   const { data: transactions, isLoading: isLoadingTransactions } = useListCustomerTransactionsQuery(
@@ -163,6 +168,10 @@ export default function CustomerDetailsPage() {
   const statementRowsWithRunningBalance = useMemo(
     () => buildStatementRowsWithRunningBalance(statement),
     [statement],
+  );
+  const branchNameById = useMemo(
+    () => new Map(branchOptions.map((branch) => [branch.id, branch.name])),
+    [branchOptions],
   );
 
   const handlePayDebt = async () => {
@@ -292,6 +301,7 @@ export default function CustomerDetailsPage() {
           <CustomerTransactionsTab
             isLoadingTransactions={isLoadingTransactions}
             transactions={transactions}
+            branchNameById={branchNameById}
             txPage={txPage}
             onPrevPage={() => setTxPage((prev) => Math.max(1, prev - 1))}
             onNextPage={() => setTxPage((prev) => prev + 1)}
@@ -354,6 +364,7 @@ export default function CustomerDetailsPage() {
         }}
         details={selectedParcelDetails}
         isLoading={isLoadingParcelDetails}
+        branchNameById={branchNameById}
       />
     </div>
   );
