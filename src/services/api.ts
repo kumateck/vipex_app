@@ -155,6 +155,7 @@ export const api = createApi({
     'Users',
     'Cashiers',
     'RBAC',
+    'Accounting',
   ],
   endpoints: () => ({}),
 });

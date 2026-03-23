@@ -41,6 +41,18 @@ Base URL: `/v1`
 
 - `/payments`
 - `/accounting`
+  - `daily-cash-expected`
+  - `daily-cash-confirmations`
+  - `expense-requests`
+  - `tax-filing-periods`
+  - `tax-journal-items`
+  - `reports/trial-balance`
+  - `reports/account-statement`
+  - `reports/income-statement`
+  - `reports/profit-loss`
+  - `reports/balance-sheet`
+  - `reports/cash-flow`
+  - `reports/monthly-branch-summary`
 - `/payroll`
 
 ## Inventory

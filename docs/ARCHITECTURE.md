@@ -1,10 +1,12 @@
 # VIPEX Backend Architecture
 
 ## Overview
+
 The backend is a modular monolith built on Bun + Elysia + Drizzle + PostgreSQL.
 Modules are isolated by feature folders and share infrastructure plugins for auth, error handling, logging, rate limiting, and observability.
 
 ## Runtime Components
+
 ```mermaid
 flowchart LR
   Client["Web / Mobile Client"] --> API["Elysia API /v1"]
@@ -24,6 +26,7 @@ flowchart LR
 ```
 
 ## Request Lifecycle
+
 ```mermaid
 sequenceDiagram
   participant C as Client
@@ -42,7 +45,20 @@ sequenceDiagram
 ```
 
 ## Design Rules
+
 - Use `HttpStatus` constants (no hardcoded numbers).
 - Use shared ID schema in `/src/server/schemas/common.ts` for all ID validation.
 - Return normalized errors through `/src/server/middlewares/error-handler.ts`.
 - Keep business logic in services, not in route definitions.
+
+## Accounting Model
+
+The accounting module is a controlled ledger layer over operations.
+
+- Branch is the primary accounting owner for every entry.
+- Location is an optional sub-dimension.
+- Operational activity is not automatically the general ledger.
+- Confirmed or approved accounting events post to journals.
+- Reporting reads from posted journal lines.
+
+Reference: `docs/ACCOUNTING_MODULE.md`

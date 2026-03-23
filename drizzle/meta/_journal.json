@@ -57,6 +57,13 @@
       "when": 1774214100000,
       "tag": "0007_pickup_queue",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1774303200000,
+      "tag": "0008_accounting_foundation",
+      "breakpoints": true
     }
   ]
 }

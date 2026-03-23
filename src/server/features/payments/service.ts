@@ -20,6 +20,7 @@ import {
 } from '../shipments/parcel-payment-settlement';
 import { updateParcelRepo } from '../shipments/parcels.repository';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
+import { recordPaymentTaxJournalItemSvc } from '../accounting/service';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 export type PaymentCreateInput = {
@@ -322,6 +323,25 @@ async function createPaymentCore(input: PaymentCreateInput, executor: DbExecutor
     },
     executor,
   );
+
+  if (input.component === PaymentComponent.PRINCIPAL && Number(tax.totalTax) > 0) {
+    await recordPaymentTaxJournalItemSvc(
+      {
+        companyId: input.companyId,
+        branchId: input.branchId,
+        sourceId: created.id,
+        postingDate: receivedAt,
+        taxBasePsw: Number(tax.principal),
+        taxTotalPsw: Number(tax.totalTax),
+        vatPsw: Number(tax.vat),
+        getfundPsw: Number(tax.getfund),
+        nhilPsw: Number(tax.nhil),
+        covidPsw: Number(tax.covid),
+        recordedByUserId: input.cashierUserId,
+      },
+      executor,
+    );
+  }
 
   return {
     kind: 'paymentCreated' as const,

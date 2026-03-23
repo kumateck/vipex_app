@@ -334,6 +334,28 @@ export const ROUTES: Route[] = [
           },
         ],
       },
+      {
+        title: 'Accounting',
+        icon: 'BookOpen',
+        items: [
+          {
+            title: 'Daily Cash',
+            url: '/accounting/daily-cash',
+          },
+          {
+            title: 'Expenses',
+            url: '/accounting/expenses',
+          },
+          {
+            title: 'Tax Filing',
+            url: '/accounting/tax',
+          },
+          {
+            title: 'Reports',
+            url: '/accounting/reports',
+          },
+        ],
+      },
     ],
   },
   {
