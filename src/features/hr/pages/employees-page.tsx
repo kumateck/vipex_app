@@ -57,6 +57,12 @@ const employmentTypeOptions = [
   { value: EmploymentType.CASUAL, label: 'Casual' },
 ];
 
+const paymentMethodOptions = [
+  { value: 'cash', label: 'Cash' },
+  { value: 'bank', label: 'Bank' },
+  { value: 'mobile_money', label: 'Mobile Money' },
+];
+
 function dateInputValue(value?: string | null) {
   return value ? value.slice(0, 10) : '';
 }
@@ -67,6 +73,11 @@ export function EmployeesPage() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [telephone, setTelephone] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [bankAccountName, setBankAccountName] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [mobileMoneyNumber, setMobileMoneyNumber] = useState('');
   const [branchId, setBranchId] = useState('');
   const [locationId, setLocationId] = useState('');
   const [departmentId, setDepartmentId] = useState('');
@@ -180,6 +191,42 @@ export function EmployeesPage() {
               value={telephone}
               onChange={(e) => setTelephone(e.target.value)}
             />
+            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+              <SelectTrigger>
+                <SelectValue placeholder="Payment method" />
+              </SelectTrigger>
+              <SelectContent>
+                {paymentMethodOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Bank name"
+              value={bankName}
+              onChange={(e) => setBankName(e.target.value)}
+              disabled={paymentMethod !== 'bank'}
+            />
+            <Input
+              placeholder="Account name"
+              value={bankAccountName}
+              onChange={(e) => setBankAccountName(e.target.value)}
+              disabled={paymentMethod !== 'bank'}
+            />
+            <Input
+              placeholder="Account number"
+              value={bankAccountNumber}
+              onChange={(e) => setBankAccountNumber(e.target.value)}
+              disabled={paymentMethod !== 'bank'}
+            />
+            <Input
+              placeholder="Mobile money number"
+              value={mobileMoneyNumber}
+              onChange={(e) => setMobileMoneyNumber(e.target.value)}
+              disabled={paymentMethod !== 'mobile_money'}
+            />
             <Select
               value={branchId}
               onValueChange={(value) => {
@@ -240,6 +287,9 @@ export function EmployeesPage() {
                 !firstName.trim() ||
                 !lastName.trim() ||
                 !telephone.trim() ||
+                (paymentMethod === 'bank' &&
+                  (!bankName.trim() || !bankAccountName.trim() || !bankAccountNumber.trim())) ||
+                (paymentMethod === 'mobile_money' && !mobileMoneyNumber.trim()) ||
                 isCreating
               }
               onClick={async () => {
@@ -249,6 +299,11 @@ export function EmployeesPage() {
                   lastName: lastName.trim(),
                   email: email.trim() || null,
                   telephone: telephone.trim(),
+                  paymentMethod: paymentMethod || null,
+                  bankName: bankName.trim() || null,
+                  bankAccountName: bankAccountName.trim() || null,
+                  bankAccountNumber: bankAccountNumber.trim() || null,
+                  mobileMoneyNumber: mobileMoneyNumber.trim() || null,
                   branchId: branchId || null,
                   locationId: locationId || null,
                   departmentId: departmentId || null,
@@ -260,6 +315,11 @@ export function EmployeesPage() {
                 setLastName('');
                 setEmail('');
                 setTelephone('');
+                setPaymentMethod('');
+                setBankName('');
+                setBankAccountName('');
+                setBankAccountNumber('');
+                setMobileMoneyNumber('');
                 setBranchId('');
                 setLocationId('');
                 setDepartmentId('');
@@ -386,17 +446,29 @@ export function EmployeesPage() {
               </Field>
               <Field>
                 <FieldLabel>Payment method</FieldLabel>
-                <Input
+                <Select
                   value={editForm.paymentMethod}
-                  onChange={(e) =>
-                    setEditForm((current) => ({ ...current, paymentMethod: e.target.value }))
+                  onValueChange={(value) =>
+                    setEditForm((current) => ({ ...current, paymentMethod: value }))
                   }
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymentMethodOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <Field>
                 <FieldLabel>Bank name</FieldLabel>
                 <Input
                   value={editForm.bankName}
+                  disabled={editForm.paymentMethod !== 'bank'}
                   onChange={(e) =>
                     setEditForm((current) => ({ ...current, bankName: e.target.value }))
                   }
@@ -406,6 +478,7 @@ export function EmployeesPage() {
                 <FieldLabel>Account name</FieldLabel>
                 <Input
                   value={editForm.bankAccountName}
+                  disabled={editForm.paymentMethod !== 'bank'}
                   onChange={(e) =>
                     setEditForm((current) => ({ ...current, bankAccountName: e.target.value }))
                   }
@@ -415,6 +488,7 @@ export function EmployeesPage() {
                 <FieldLabel>Account number</FieldLabel>
                 <Input
                   value={editForm.bankAccountNumber}
+                  disabled={editForm.paymentMethod !== 'bank'}
                   onChange={(e) =>
                     setEditForm((current) => ({ ...current, bankAccountNumber: e.target.value }))
                   }
@@ -424,6 +498,7 @@ export function EmployeesPage() {
                 <FieldLabel>Mobile money number</FieldLabel>
                 <Input
                   value={editForm.mobileMoneyNumber}
+                  disabled={editForm.paymentMethod !== 'mobile_money'}
                   onChange={(e) =>
                     setEditForm((current) => ({ ...current, mobileMoneyNumber: e.target.value }))
                   }
@@ -590,7 +665,15 @@ export function EmployeesPage() {
               Cancel
             </Button>
             <Button
-              disabled={!selectedEmployee || isUpdating}
+              disabled={
+                !selectedEmployee ||
+                isUpdating ||
+                (editForm.paymentMethod === 'bank' &&
+                  (!editForm.bankName.trim() ||
+                    !editForm.bankAccountName.trim() ||
+                    !editForm.bankAccountNumber.trim())) ||
+                (editForm.paymentMethod === 'mobile_money' && !editForm.mobileMoneyNumber.trim())
+              }
               onClick={async () => {
                 if (!selectedEmployee) return;
                 await updateEmployee({

@@ -11,12 +11,16 @@ import {
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { BranchType } from '@/db/schemas/enums';
 import {
+  approveLeaveRequestCtrl,
+  approveLeaveRequestByManagerCtrl,
   checkInAttendanceCtrl,
   checkOutAttendanceCtrl,
   createDepartmentCtrl,
   createEmployeeCtrl,
   createEmployeeUserAccountCtrl,
   createJobTitleCtrl,
+  createLeaveRequestCtrl,
+  createLeaveTypeCtrl,
   getEmployeeCtrl,
   listDepartmentOptionsCtrl,
   listDepartmentsCtrl,
@@ -24,6 +28,11 @@ import {
   listEmployeesCtrl,
   listJobTitleOptionsCtrl,
   listJobTitlesCtrl,
+  listLeaveRequestsCtrl,
+  listLeaveTypeOptionsCtrl,
+  listLeaveTypesCtrl,
+  rejectLeaveRequestCtrl,
+  rejectLeaveRequestByManagerCtrl,
   updateDepartmentCtrl,
   updateEmployeeCtrl,
   updateJobTitleCtrl,
@@ -225,6 +234,77 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         requireModuleEnabled('hr'),
       ],
       detail: { tags: ['HR'], summary: 'Update job title', operationId: 'updateJobTitle' },
+    },
+  )
+  .get(
+    '/leave-types/options',
+    async ({ user }) => listLeaveTypeOptionsCtrl((user as AuthUser).companyId!),
+    {
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadLeaveTypes),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'List leave type options',
+        operationId: 'listLeaveTypeOptions',
+      },
+    },
+  )
+  .get(
+    '/leave-types',
+    async ({ query, user }) =>
+      listLeaveTypesCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: (user as AuthUser).companyId!,
+          includeInactive: query.includeInactive ?? null,
+        },
+      }),
+    {
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        includeInactive: t.Optional(t.Boolean()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadLeaveTypes),
+        requireModuleEnabled('hr'),
+      ],
+      detail: { tags: ['HR'], summary: 'List leave types', operationId: 'listLeaveTypes' },
+    },
+  )
+  .post(
+    '/leave-types',
+    async ({ body, set, user }) => {
+      const result = await createLeaveTypeCtrl({
+        companyId: (user as AuthUser).companyId!,
+        code: body.code ?? null,
+        name: body.name,
+        isPaid: body.isPaid ?? true,
+        createdBy: (user as AuthUser).sub,
+      });
+      set.status = HttpStatus.CREATED;
+      return result;
+    },
+    {
+      body: t.Object({
+        code: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
+        name: NonEmpty255,
+        isPaid: t.Optional(t.Boolean()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCreateLeaveTypes),
+        requireModuleEnabled('hr'),
+      ],
+      detail: { tags: ['HR'], summary: 'Create leave type', operationId: 'createLeaveType' },
     },
   )
   .get(
@@ -486,6 +566,135 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         summary: 'Employee attendance check-out',
         operationId: 'checkOutAttendance',
       },
+    },
+  )
+  .get(
+    '/leave-requests',
+    async ({ query, user }) =>
+      listLeaveRequestsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: (user as AuthUser).companyId!,
+          employeeId: query.employeeId ?? null,
+          status: query.status ?? null,
+        },
+      }),
+    {
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        employeeId: t.Optional(UUID),
+        status: t.Optional(t.Number()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanListLeaveRequests),
+        requireModuleEnabled('hr'),
+      ],
+      detail: { tags: ['HR'], summary: 'List leave requests', operationId: 'listLeaveRequests' },
+    },
+  )
+  .post(
+    '/leave-requests',
+    async ({ body, set, user }) => {
+      const result = await createLeaveRequestCtrl({
+        companyId: (user as AuthUser).companyId!,
+        employeeId: body.employeeId,
+        leaveTypeId: body.leaveTypeId,
+        dateFrom: new Date(body.dateFrom),
+        dateTo: new Date(body.dateTo),
+        reason: body.reason ?? null,
+        createdBy: (user as AuthUser).sub,
+      });
+      set.status = HttpStatus.CREATED;
+      return result;
+    },
+    {
+      body: t.Object({
+        employeeId: UUID,
+        leaveTypeId: UUID,
+        dateFrom: t.String({ format: 'date' }),
+        dateTo: t.String({ format: 'date' }),
+        reason: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCreateLeaveRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: { tags: ['HR'], summary: 'Create leave request', operationId: 'createLeaveRequest' },
+    },
+  )
+  .post(
+    '/leave-requests/:id/manager-approve',
+    async ({ params, user }) => approveLeaveRequestByManagerCtrl(params.id, (user as AuthUser).sub),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveManagedLeaveRequests),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Manager approve leave request',
+        operationId: 'approveLeaveRequestByManager',
+      },
+    },
+  )
+  .post(
+    '/leave-requests/:id/manager-reject',
+    async ({ params, body, user }) =>
+      rejectLeaveRequestByManagerCtrl(params.id, (user as AuthUser).sub, body.reason ?? null),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({ reason: t.Optional(t.Union([t.String(), t.Null()])) }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveManagedLeaveRequests),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Manager reject leave request',
+        operationId: 'rejectLeaveRequestByManager',
+      },
+    },
+  )
+  .post(
+    '/leave-requests/:id/approve',
+    async ({ params, user }) => approveLeaveRequestCtrl(params.id, (user as AuthUser).sub),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveLeaveRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Approve leave request',
+        operationId: 'approveLeaveRequest',
+      },
+    },
+  )
+  .post(
+    '/leave-requests/:id/reject',
+    async ({ params, body, user }) =>
+      rejectLeaveRequestCtrl(params.id, (user as AuthUser).sub, body.reason ?? null),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({ reason: t.Optional(t.Union([t.String(), t.Null()])) }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveLeaveRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: { tags: ['HR'], summary: 'Reject leave request', operationId: 'rejectLeaveRequest' },
     },
   )
   .get(

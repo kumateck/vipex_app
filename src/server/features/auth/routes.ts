@@ -10,6 +10,7 @@ import {
   LogoutBody,
   RefreshBody,
   TokenPair,
+  AuthUserResponse,
 } from './schemas';
 import {
   changePasswordCtrl,
@@ -51,7 +52,7 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
       },
       {
         body: RefreshBody,
-        response: t.Object({ tokens: TokenPair }),
+        response: t.Object({ tokens: TokenPair, user: AuthUserResponse }),
         detail: {
           tags: ['Auth'],
           summary: 'Refresh',
@@ -124,20 +125,16 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
         },
       },
     )
-    .get(
-      '/me/permissions',
-      async ({ user }) => currentUserPermissionsCtrl(user!.sub),
-      {
-        response: CurrentUserPermissionsResponse,
-        beforeHandle: requireAuth(),
-        detail: {
-          tags: ['Auth'],
-          summary: 'Get current user permissions',
-          operationId: 'getCurrentUserPermissions',
-          security: [{ bearerAuth: [] }],
-        },
+    .get('/me/permissions', async ({ user }) => currentUserPermissionsCtrl(user!.sub), {
+      response: CurrentUserPermissionsResponse,
+      beforeHandle: requireAuth(),
+      detail: {
+        tags: ['Auth'],
+        summary: 'Get current user permissions',
+        operationId: 'getCurrentUserPermissions',
+        security: [{ bearerAuth: [] }],
       },
-    )
+    })
     .get(
       '/me/permissions/read-only',
       async ({ user }) => currentUserReadOnlyPermissionsCtrl(user!.sub),

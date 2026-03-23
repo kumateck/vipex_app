@@ -10,23 +10,39 @@ import {
 } from '@/db/schemas/enums';
 import { BadRequest, Conflict, Forbidden, NotFound } from '@/server/utils/http-error';
 import { toPesewas } from '@/server/utils/gh-money';
+import { recordAuditLog } from '../audit/logger';
 import {
+  createAccountRepo,
+  createApprovalPolicyRepo,
+  createCompanyBankAccountRepo,
   createDailyCashConfirmationRepo,
+  createExpenseCategoryRepo,
   createExpenseRequestRepo,
+  createTaxComponentRepo,
+  createTaxProfileRepo,
   createTaxFilingAuditLogRepo,
   createTaxFilingPeriodRepo,
   createTaxJournalItemRepo,
   getAccountByCodeRepo,
+  getAccountRepo,
+  getAccountUsageSummaryRepo,
+  getApprovalPolicyRepo,
   getCompanyAccountingSettingsRepo,
   getCompanyBankAccountRepo,
+  getCompanyBankAccountRepoById,
+  getCompanyBankAccountUsageSummaryRepo,
   getDailyCashConfirmationRepo,
   getDailyCashExpectedSummaryRepo,
   getDailyCashSessionSummaryRepo,
   getExpenseCategoryRepo,
+  getExpenseCategoryUsageSummaryRepo,
   getExpenseRequestRepo,
   getPettyCashFundByBranchRepo,
+  getTaxComponentRepo,
   getTaxFilingPeriodRepo,
   getTaxJournalItemRepo,
+  getTaxProfileRepo,
+  getTaxProfileUsageSummaryRepo,
   listAccountsRepo,
   listApprovalPoliciesRepo,
   listCompanyBankAccountsRepo,
@@ -34,12 +50,20 @@ import {
   listExpenseCategoriesRepo,
   listExpenseRequestsRepo,
   listJournalLinesForReportingRepo,
+  listTaxComponentsRepo,
   listTaxFilingPeriodsRepo,
   listTaxJournalItemsRepo,
+  listTaxProfilesRepo,
+  updateApprovalPolicyRepo,
   updateTaxFilingPeriodRepo,
   updateTaxJournalItemRepo,
+  updateAccountRepo,
+  updateCompanyBankAccountRepo,
+  updateTaxComponentRepo,
   updateDailyCashConfirmationRepo,
+  updateExpenseCategoryRepo,
   updateExpenseRequestRepo,
+  updateTaxProfileRepo,
 } from './repository';
 import { type JournalLineInput, postJournalEntrySvc } from './posting.service';
 
@@ -47,6 +71,28 @@ type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof d
 
 function toPsw(value: number | string) {
   return Number(toPesewas(value));
+}
+
+function buildAccountAuditPayload(row: {
+  id: string;
+  companyId: string;
+  code: string;
+  name: string;
+  accountClass: number;
+  parentAccountId?: string | null;
+  isPostable: boolean;
+  active: boolean;
+}) {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    code: row.code,
+    name: row.name,
+    accountClass: row.accountClass,
+    parentAccountId: row.parentAccountId ?? null,
+    isPostable: row.isPostable,
+    active: row.active,
+  };
 }
 
 export async function isAccountingEnabledForCompanySvc(
@@ -74,11 +120,256 @@ export async function listAccountsSvc(input: { companyId: string; active?: boole
   return listAccountsRepo(input);
 }
 
+export async function createAccountSvc(input: {
+  companyId: string;
+  code: string;
+  name: string;
+  accountClass: number;
+  parentAccountId?: string | null;
+  isPostable?: boolean;
+  active?: boolean;
+  createdBy?: string | null;
+}) {
+  const code = input.code.trim();
+  const name = input.name.trim();
+  if (!code || !name) throw BadRequest('Account code and name are required');
+
+  if (input.parentAccountId) {
+    const parent = await getAccountRepo(input.companyId, input.parentAccountId);
+    if (!parent) throw NotFound('Parent account not found');
+  }
+
+  const created = await createAccountRepo({
+    companyId: input.companyId,
+    code,
+    name,
+    accountClass: input.accountClass,
+    parentAccountId: input.parentAccountId ?? null,
+    isPostable: input.isPostable ?? true,
+    active: input.active ?? true,
+    createdBy: input.createdBy ?? null,
+  });
+
+  if (!created) throw NotFound('Failed to create account');
+  const after = await getAccountRepo(input.companyId, created.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.createdBy ?? null,
+    entityType: 'accounting_account',
+    entityId: created.id,
+    action: 'ACCOUNTING_ACCOUNT_CREATED',
+    message: 'Accounting account created',
+    metadata: {
+      after: after ? buildAccountAuditPayload(after) : null,
+    },
+  });
+  return { id: created.id };
+}
+
+function describeAccountUsage(usage: {
+  journalLineCount: number;
+  expenseCategoryCount: number;
+  bankAccountCount: number;
+  pettyCashFundCount: number;
+}) {
+  const parts: string[] = [];
+  if (usage.journalLineCount > 0) parts.push(`${usage.journalLineCount} journal entries`);
+  if (usage.expenseCategoryCount > 0)
+    parts.push(`${usage.expenseCategoryCount} expense categories`);
+  if (usage.bankAccountCount > 0) parts.push(`${usage.bankAccountCount} bank accounts`);
+  if (usage.pettyCashFundCount > 0) parts.push(`${usage.pettyCashFundCount} petty cash funds`);
+  return parts.join(', ');
+}
+
+export async function updateAccountSvc(input: {
+  companyId: string;
+  id: string;
+  code?: string;
+  name?: string;
+  accountClass?: number;
+  parentAccountId?: string | null;
+  isPostable?: boolean;
+  active?: boolean;
+  actorUserId?: string | null;
+}) {
+  const existing = await getAccountRepo(input.companyId, input.id);
+  if (!existing) throw NotFound('Account not found');
+  if (input.code !== undefined && !input.code.trim()) throw BadRequest('Account code is required');
+  if (input.name !== undefined && !input.name.trim()) throw BadRequest('Account name is required');
+
+  if (input.parentAccountId) {
+    if (input.parentAccountId === input.id) {
+      throw Conflict('An account cannot be its own parent');
+    }
+    const parent = await getAccountRepo(input.companyId, input.parentAccountId);
+    if (!parent) throw NotFound('Parent account not found');
+  }
+
+  const usage = await getAccountUsageSummaryRepo(input.companyId, input.id);
+  const usageText = describeAccountUsage(usage);
+  if (input.active === false && usageText) {
+    throw Conflict(`Account cannot be deactivated because it is in use by ${usageText}`);
+  }
+  if (
+    input.accountClass !== undefined &&
+    input.accountClass !== existing.accountClass &&
+    usage.journalLineCount > 0
+  ) {
+    throw Conflict('Account class cannot be changed after the account has journal activity');
+  }
+  if (
+    input.isPostable === false &&
+    (usage.journalLineCount > 0 ||
+      usage.expenseCategoryCount > 0 ||
+      usage.bankAccountCount > 0 ||
+      usage.pettyCashFundCount > 0)
+  ) {
+    throw Conflict('Account cannot be converted to summary while it is actively referenced');
+  }
+
+  const updated = await updateAccountRepo(input.id, {
+    code: input.code?.trim() || existing.code,
+    name: input.name?.trim() || existing.name,
+    accountClass: input.accountClass ?? existing.accountClass,
+    parentAccountId:
+      input.parentAccountId !== undefined ? input.parentAccountId : existing.parentAccountId,
+    isPostable: input.isPostable ?? existing.isPostable,
+    active: input.active ?? existing.active,
+  });
+
+  if (!updated) throw NotFound('Account not found');
+  const after = await getAccountRepo(input.companyId, input.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'accounting_account',
+    entityId: input.id,
+    action: 'ACCOUNTING_ACCOUNT_UPDATED',
+    message: 'Accounting account updated',
+    metadata: {
+      before: buildAccountAuditPayload(existing),
+      patch: {
+        code: input.code,
+        name: input.name,
+        accountClass: input.accountClass,
+        parentAccountId: input.parentAccountId,
+        isPostable: input.isPostable,
+        active: input.active,
+      },
+      after: after ? buildAccountAuditPayload(after) : null,
+    },
+  });
+  return { id: updated.id };
+}
+
 export async function listExpenseCategoriesSvc(input: {
   companyId: string;
   active?: boolean | null;
 }) {
   return listExpenseCategoriesRepo(input);
+}
+
+export async function createExpenseCategorySvc(input: {
+  companyId: string;
+  code: string;
+  name: string;
+  accountId: string;
+  active?: boolean;
+  createdBy?: string | null;
+}) {
+  const code = input.code.trim();
+  const name = input.name.trim();
+  if (!code || !name || !input.accountId) {
+    throw BadRequest('Expense category code, name, and account are required');
+  }
+
+  const account = await getAccountRepo(input.companyId, input.accountId);
+  if (!account) throw NotFound('Mapped account not found');
+
+  const created = await createExpenseCategoryRepo({
+    companyId: input.companyId,
+    code,
+    name,
+    accountId: input.accountId,
+    active: input.active ?? true,
+    createdBy: input.createdBy ?? null,
+  });
+
+  if (!created) throw NotFound('Failed to create expense category');
+  const after = await getExpenseCategoryRepo(input.companyId, created.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.createdBy ?? null,
+    entityType: 'expense_category',
+    entityId: created.id,
+    action: 'EXPENSE_CATEGORY_CREATED',
+    message: 'Expense category created',
+    metadata: { after },
+  });
+  return { id: created.id };
+}
+
+export async function updateExpenseCategorySvc(input: {
+  companyId: string;
+  id: string;
+  code?: string;
+  name?: string;
+  accountId?: string;
+  active?: boolean;
+  actorUserId?: string | null;
+}) {
+  const existing = await getExpenseCategoryRepo(input.companyId, input.id);
+  if (!existing) throw NotFound('Expense category not found');
+  if (input.code !== undefined && !input.code.trim()) {
+    throw BadRequest('Expense category code is required');
+  }
+  if (input.name !== undefined && !input.name.trim()) {
+    throw BadRequest('Expense category name is required');
+  }
+
+  const nextAccountId = input.accountId ?? existing.accountId;
+  const account = await getAccountRepo(input.companyId, nextAccountId);
+  if (!account) throw NotFound('Mapped account not found');
+  const usage = await getExpenseCategoryUsageSummaryRepo(input.companyId, input.id);
+  if (input.active === false && usage.openRequestCount > 0) {
+    throw Conflict('Expense category cannot be deactivated while requests are still open');
+  }
+  if (
+    input.accountId !== undefined &&
+    input.accountId !== existing.accountId &&
+    usage.postedRequestCount > 0
+  ) {
+    throw Conflict('Mapped account cannot be changed after posted expense requests exist');
+  }
+
+  const updated = await updateExpenseCategoryRepo(input.id, {
+    code: input.code !== undefined ? input.code.trim() : undefined,
+    name: input.name?.trim() || existing.name,
+    accountId: nextAccountId,
+    active: input.active ?? existing.active,
+  });
+
+  if (!updated) throw NotFound('Expense category not found');
+  const after = await getExpenseCategoryRepo(input.companyId, input.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'expense_category',
+    entityId: input.id,
+    action: 'EXPENSE_CATEGORY_UPDATED',
+    message: 'Expense category updated',
+    metadata: {
+      before: existing,
+      patch: {
+        code: input.code,
+        name: input.name,
+        accountId: input.accountId,
+        active: input.active,
+      },
+      after,
+    },
+  });
+  return { id: updated.id };
 }
 
 export async function listApprovalPoliciesSvc(input: {
@@ -88,11 +379,432 @@ export async function listApprovalPoliciesSvc(input: {
   return listApprovalPoliciesRepo(input);
 }
 
+export async function createApprovalPolicySvc(input: {
+  companyId: string;
+  policyCode: string;
+  name: string;
+  amountLimitPsw?: number;
+  requiresHeadOfficeApproval?: boolean;
+  appliesToFundingSource?: number | null;
+  active?: boolean;
+  createdBy?: string | null;
+}) {
+  const policyCode = input.policyCode.trim();
+  const name = input.name.trim();
+  if (!policyCode || !name) throw BadRequest('Policy code and name are required');
+
+  const created = await createApprovalPolicyRepo({
+    companyId: input.companyId,
+    policyCode,
+    name,
+    amountLimitPsw: Number(input.amountLimitPsw ?? 0),
+    requiresHeadOfficeApproval: input.requiresHeadOfficeApproval ?? false,
+    appliesToFundingSource: input.appliesToFundingSource ?? null,
+    active: input.active ?? true,
+    createdBy: input.createdBy ?? null,
+  });
+
+  if (!created) throw NotFound('Failed to create approval policy');
+  const after = await getApprovalPolicyRepo(input.companyId, created.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.createdBy ?? null,
+    entityType: 'accounting_approval_policy',
+    entityId: created.id,
+    action: 'ACCOUNTING_APPROVAL_POLICY_CREATED',
+    message: 'Accounting approval policy created',
+    metadata: { after },
+  });
+  return { id: created.id };
+}
+
+export async function updateApprovalPolicySvc(input: {
+  companyId: string;
+  id: string;
+  policyCode?: string;
+  name?: string;
+  amountLimitPsw?: number;
+  requiresHeadOfficeApproval?: boolean;
+  appliesToFundingSource?: number | null;
+  active?: boolean;
+  actorUserId?: string | null;
+}) {
+  const existing = await getApprovalPolicyRepo(input.companyId, input.id);
+  if (!existing) throw NotFound('Approval policy not found');
+  if (input.policyCode !== undefined && !input.policyCode.trim()) {
+    throw BadRequest('Policy code is required');
+  }
+  if (input.name !== undefined && !input.name.trim()) {
+    throw BadRequest('Policy name is required');
+  }
+
+  const updated = await updateApprovalPolicyRepo(input.id, {
+    policyCode: input.policyCode?.trim() || existing.policyCode,
+    name: input.name?.trim() || existing.name,
+    amountLimitPsw: Number(input.amountLimitPsw ?? existing.amountLimitPsw),
+    requiresHeadOfficeApproval:
+      input.requiresHeadOfficeApproval ?? existing.requiresHeadOfficeApproval,
+    appliesToFundingSource:
+      input.appliesToFundingSource !== undefined
+        ? input.appliesToFundingSource
+        : existing.appliesToFundingSource,
+    active: input.active ?? existing.active,
+  });
+
+  if (!updated) throw NotFound('Approval policy not found');
+  const after = await getApprovalPolicyRepo(input.companyId, input.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'accounting_approval_policy',
+    entityId: input.id,
+    action: 'ACCOUNTING_APPROVAL_POLICY_UPDATED',
+    message: 'Accounting approval policy updated',
+    metadata: {
+      before: existing,
+      patch: {
+        policyCode: input.policyCode,
+        name: input.name,
+        amountLimitPsw: input.amountLimitPsw,
+        requiresHeadOfficeApproval: input.requiresHeadOfficeApproval,
+        appliesToFundingSource: input.appliesToFundingSource,
+        active: input.active,
+      },
+      after,
+    },
+  });
+  return { id: updated.id };
+}
+
 export async function listCompanyBankAccountsSvc(input: {
   companyId: string;
   active?: boolean | null;
 }) {
   return listCompanyBankAccountsRepo(input);
+}
+
+export async function createCompanyBankAccountSvc(input: {
+  companyId: string;
+  accountId: string;
+  name: string;
+  bankName?: string | null;
+  branchName?: string | null;
+  accountNumberMasked?: string | null;
+  active?: boolean;
+  createdBy?: string | null;
+}) {
+  const name = input.name.trim();
+  if (!name || !input.accountId)
+    throw BadRequest('Bank account name and mapped account are required');
+
+  const account = await getAccountRepo(input.companyId, input.accountId);
+  if (!account) throw NotFound('Mapped bank ledger account not found');
+
+  const created = await createCompanyBankAccountRepo({
+    companyId: input.companyId,
+    accountId: input.accountId,
+    name,
+    bankName: input.bankName?.trim() || null,
+    branchName: input.branchName?.trim() || null,
+    accountNumberMasked: input.accountNumberMasked?.trim() || null,
+    active: input.active ?? true,
+    createdBy: input.createdBy ?? null,
+  });
+
+  if (!created) throw NotFound('Failed to create company bank account');
+  const after = await getCompanyBankAccountRepoById(input.companyId, created.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.createdBy ?? null,
+    entityType: 'company_bank_account',
+    entityId: created.id,
+    action: 'COMPANY_BANK_ACCOUNT_CREATED',
+    message: 'Company bank account created',
+    metadata: { after },
+  });
+  return { id: created.id };
+}
+
+export async function updateCompanyBankAccountSvc(input: {
+  companyId: string;
+  id: string;
+  accountId?: string;
+  name?: string;
+  bankName?: string | null;
+  branchName?: string | null;
+  accountNumberMasked?: string | null;
+  active?: boolean;
+  actorUserId?: string | null;
+}) {
+  const existing = await getCompanyBankAccountRepoById(input.companyId, input.id);
+  if (!existing) throw NotFound('Company bank account not found');
+  if (input.name !== undefined && !input.name.trim()) {
+    throw BadRequest('Bank account name is required');
+  }
+
+  const nextAccountId = input.accountId ?? existing.accountId;
+  const account = await getAccountRepo(input.companyId, nextAccountId);
+  if (!account) throw NotFound('Mapped bank ledger account not found');
+  const usage = await getCompanyBankAccountUsageSummaryRepo(input.companyId, input.id);
+  if (input.active === false && usage.openRequestCount > 0) {
+    throw Conflict(
+      'Company bank account cannot be deactivated while linked expense requests are still open',
+    );
+  }
+  if (
+    input.accountId !== undefined &&
+    input.accountId !== existing.accountId &&
+    usage.postedRequestCount > 0
+  ) {
+    throw Conflict('Mapped ledger account cannot be changed after posted expense requests exist');
+  }
+
+  const updated = await updateCompanyBankAccountRepo(input.id, {
+    accountId: nextAccountId,
+    name: input.name?.trim() || existing.name,
+    bankName: input.bankName !== undefined ? input.bankName?.trim() || null : existing.bankName,
+    branchName:
+      input.branchName !== undefined ? input.branchName?.trim() || null : existing.branchName,
+    accountNumberMasked:
+      input.accountNumberMasked !== undefined
+        ? input.accountNumberMasked?.trim() || null
+        : existing.accountNumberMasked,
+    active: input.active ?? existing.active,
+  });
+
+  if (!updated) throw NotFound('Company bank account not found');
+  const after = await getCompanyBankAccountRepoById(input.companyId, input.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'company_bank_account',
+    entityId: input.id,
+    action: 'COMPANY_BANK_ACCOUNT_UPDATED',
+    message: 'Company bank account updated',
+    metadata: {
+      before: existing,
+      patch: {
+        accountId: input.accountId,
+        name: input.name,
+        bankName: input.bankName,
+        branchName: input.branchName,
+        accountNumberMasked: input.accountNumberMasked,
+        active: input.active,
+      },
+      after,
+    },
+  });
+  return { id: updated.id };
+}
+
+export async function listTaxProfilesSvc(input: { companyId: string; active?: boolean | null }) {
+  return listTaxProfilesRepo(input);
+}
+
+export async function listTaxComponentsSvc(input: {
+  companyId: string;
+  profileId?: string | null;
+  active?: boolean | null;
+}) {
+  return listTaxComponentsRepo(input);
+}
+
+export async function createTaxProfileSvc(input: {
+  companyId: string;
+  name: string;
+  active?: boolean;
+  actorUserId?: string | null;
+}) {
+  const name = input.name.trim();
+  if (!name) throw BadRequest('Tax profile name is required');
+
+  const created = await createTaxProfileRepo({
+    companyId: input.companyId,
+    name,
+    active: input.active ?? true,
+  });
+
+  if (!created) throw NotFound('Failed to create tax profile');
+  const after = await getTaxProfileRepo(input.companyId, created.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'tax_profile',
+    entityId: created.id,
+    action: 'TAX_PROFILE_CREATED',
+    message: 'Tax profile created',
+    metadata: { after },
+  });
+  return { id: created.id };
+}
+
+export async function updateTaxProfileSvc(input: {
+  companyId: string;
+  id: string;
+  name?: string;
+  active?: boolean;
+  actorUserId?: string | null;
+}) {
+  const existing = await getTaxProfileRepo(input.companyId, input.id);
+  if (!existing) throw NotFound('Tax profile not found');
+  if (input.name !== undefined && !input.name.trim()) {
+    throw BadRequest('Tax profile name is required');
+  }
+
+  const usage = await getTaxProfileUsageSummaryRepo(input.companyId, input.id);
+  if (
+    input.active === false &&
+    (usage.compensationCount > 0 || usage.taxJournalItemCount > 0 || usage.taxComponentCount > 0)
+  ) {
+    throw Conflict(
+      'Tax profile cannot be deactivated while it is still referenced by payroll, tax journals, or tax components',
+    );
+  }
+
+  const updated = await updateTaxProfileRepo(input.id, {
+    name: input.name?.trim() || existing.name,
+    active: input.active ?? existing.active,
+  });
+
+  if (!updated) throw NotFound('Tax profile not found');
+  const after = await getTaxProfileRepo(input.companyId, input.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'tax_profile',
+    entityId: input.id,
+    action: 'TAX_PROFILE_UPDATED',
+    message: 'Tax profile updated',
+    metadata: {
+      before: existing,
+      patch: {
+        name: input.name,
+        active: input.active,
+      },
+      after,
+    },
+  });
+  return { id: updated.id };
+}
+
+export async function createTaxComponentSvc(input: {
+  companyId: string;
+  profileId: string;
+  key: string;
+  numerator: number;
+  denominator: number;
+  inclusive?: boolean;
+  sortOrder?: number;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  active?: boolean;
+  actorUserId?: string | null;
+}) {
+  const key = input.key.trim();
+  if (!key) throw BadRequest('Tax component key is required');
+  if (!Number.isFinite(input.numerator) || input.numerator < 0) {
+    throw BadRequest('Tax component numerator must be a non-negative number');
+  }
+  if (!Number.isFinite(input.denominator) || input.denominator <= 0) {
+    throw BadRequest('Tax component denominator must be greater than zero');
+  }
+  const profile = await getTaxProfileRepo(input.companyId, input.profileId);
+  if (!profile) throw NotFound('Tax profile not found');
+
+  const created = await createTaxComponentRepo({
+    profileId: input.profileId,
+    key,
+    numerator: Number(input.numerator),
+    denominator: Number(input.denominator),
+    inclusive: input.inclusive ?? true,
+    sortOrder: input.sortOrder ?? 0,
+    startsAt: input.startsAt ? new Date(input.startsAt) : new Date(),
+    endsAt: input.endsAt ? new Date(input.endsAt) : null,
+    active: input.active ?? true,
+  });
+  if (!created) throw NotFound('Failed to create tax component');
+  const after = await getTaxComponentRepo(input.companyId, created.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'tax_component',
+    entityId: created.id,
+    action: 'TAX_COMPONENT_CREATED',
+    message: 'Tax component created',
+    metadata: { after },
+  });
+  return { id: created.id };
+}
+
+export async function updateTaxComponentSvc(input: {
+  companyId: string;
+  id: string;
+  key?: string;
+  numerator?: number;
+  denominator?: number;
+  inclusive?: boolean;
+  sortOrder?: number;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  active?: boolean;
+  actorUserId?: string | null;
+}) {
+  const existing = await getTaxComponentRepo(input.companyId, input.id);
+  if (!existing) throw NotFound('Tax component not found');
+  if (input.key !== undefined && !input.key.trim()) {
+    throw BadRequest('Tax component key is required');
+  }
+  if (input.numerator !== undefined && (!Number.isFinite(input.numerator) || input.numerator < 0)) {
+    throw BadRequest('Tax component numerator must be a non-negative number');
+  }
+  if (
+    input.denominator !== undefined &&
+    (!Number.isFinite(input.denominator) || input.denominator <= 0)
+  ) {
+    throw BadRequest('Tax component denominator must be greater than zero');
+  }
+
+  const updated = await updateTaxComponentRepo(input.id, {
+    key: input.key?.trim() || existing.key,
+    numerator: input.numerator ?? existing.numerator,
+    denominator: input.denominator ?? existing.denominator,
+    inclusive: input.inclusive ?? existing.inclusive,
+    sortOrder: input.sortOrder ?? existing.sortOrder,
+    startsAt:
+      input.startsAt !== undefined
+        ? input.startsAt
+          ? new Date(input.startsAt)
+          : existing.startsAt
+        : existing.startsAt,
+    endsAt:
+      input.endsAt !== undefined ? (input.endsAt ? new Date(input.endsAt) : null) : existing.endsAt,
+    active: input.active ?? existing.active,
+  });
+  if (!updated) throw NotFound('Tax component not found');
+  const after = await getTaxComponentRepo(input.companyId, input.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'tax_component',
+    entityId: input.id,
+    action: 'TAX_COMPONENT_UPDATED',
+    message: 'Tax component updated',
+    metadata: {
+      before: existing,
+      patch: {
+        key: input.key,
+        numerator: input.numerator,
+        denominator: input.denominator,
+        inclusive: input.inclusive,
+        sortOrder: input.sortOrder,
+        startsAt: input.startsAt,
+        endsAt: input.endsAt,
+        active: input.active,
+      },
+      after,
+    },
+  });
+  return { id: updated.id };
 }
 
 export async function listDailyCashConfirmationsSvc(input: {

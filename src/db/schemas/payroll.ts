@@ -15,6 +15,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { companies, users } from './core';
 import { employees } from './hr';
 import {
+  ApprovalStatus,
   PayrollFrequency,
   PayrollItemType,
   PayrollPeriodStatus,
@@ -195,6 +196,98 @@ export const payrollPeriods = pgTable(
       t.payrollGroupId,
       t.periodStart,
       t.periodEnd,
+    ),
+  }),
+);
+
+export const payrollOvertimeEntries = pgTable(
+  'payroll_overtime_entries',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    payrollPeriodId: varchar('payroll_period_id', { length: 25 })
+      .notNull()
+      .references(() => payrollPeriods.id),
+    employeeId: varchar('employee_id', { length: 25 })
+      .notNull()
+      .references(() => employees.id),
+    overtimeMinutes: bigint('overtime_minutes', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    ratePerHourPsw: bigint('rate_per_hour_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    multiplierPct: bigint('multiplier_pct', { mode: 'number' })
+      .notNull()
+      .default(sql`100`),
+    approvalStatus: smallint('approval_status').notNull().default(ApprovalStatus.PENDING),
+    approvedBy: varchar('approved_by', { length: 25 }).references(() => users.id),
+    approvedAt: timestamp('approved_at', { withTimezone: false }),
+    rejectionReason: text('rejection_reason'),
+    notes: text('notes'),
+    createdBy: varchar('created_by', { length: 25 }).references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCycleEmployee: index('payroll_overtime_entries_cycle_employee_idx').on(
+      t.payrollPeriodId,
+      t.employeeId,
+    ),
+    byCompanyCycle: index('payroll_overtime_entries_company_cycle_idx').on(
+      t.companyId,
+      t.payrollPeriodId,
+    ),
+  }),
+);
+
+export const payrollManualAdjustments = pgTable(
+  'payroll_manual_adjustments',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    payrollPeriodId: varchar('payroll_period_id', { length: 25 })
+      .notNull()
+      .references(() => payrollPeriods.id),
+    employeeId: varchar('employee_id', { length: 25 })
+      .notNull()
+      .references(() => employees.id),
+    itemType: smallint('item_type').notNull().default(PayrollItemType.EARNING),
+    earningTypeId: varchar('earning_type_id', { length: 25 }).references(() => earningTypes.id),
+    deductionTypeId: varchar('deduction_type_id', { length: 25 }).references(
+      () => deductionTypes.id,
+    ),
+    code: varchar('code', { length: 50 }).notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    amountPsw: bigint('amount_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    isTaxable: boolean('is_taxable').notNull().default(false),
+    approvalStatus: smallint('approval_status').notNull().default(ApprovalStatus.PENDING),
+    approvedBy: varchar('approved_by', { length: 25 }).references(() => users.id),
+    approvedAt: timestamp('approved_at', { withTimezone: false }),
+    rejectionReason: text('rejection_reason'),
+    notes: text('notes'),
+    createdBy: varchar('created_by', { length: 25 }).references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCycleEmployee: index('payroll_manual_adjustments_cycle_employee_idx').on(
+      t.payrollPeriodId,
+      t.employeeId,
+    ),
+    byCompanyCycle: index('payroll_manual_adjustments_company_cycle_idx').on(
+      t.companyId,
+      t.payrollPeriodId,
     ),
   }),
 );

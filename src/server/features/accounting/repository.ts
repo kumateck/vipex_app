@@ -17,9 +17,12 @@ import {
   pettyCashFunds,
   pettyCashReplenishments,
   payments,
+  employeeCompensation,
+  taxComponents,
   taxFilingAuditLogs,
   taxFilingPeriods,
   taxJournalItems,
+  taxProfiles,
   users,
 } from '@/db/schemas';
 import type { SQL } from 'drizzle-orm';
@@ -122,6 +125,52 @@ export async function listCompanyBankAccountsRepo(input: {
     .orderBy(asc(companyBankAccounts.name));
 }
 
+export async function listTaxProfilesRepo(input: { companyId: string; active?: boolean | null }) {
+  const where = [eq(taxProfiles.companyId, input.companyId)];
+  if (input.active != null) where.push(eq(taxProfiles.active, input.active));
+
+  return db
+    .select({
+      id: taxProfiles.id,
+      companyId: taxProfiles.companyId,
+      name: taxProfiles.name,
+      active: taxProfiles.active,
+      createdAt: taxProfiles.createdAt,
+      updatedAt: taxProfiles.updatedAt,
+    })
+    .from(taxProfiles)
+    .where(and(...where))
+    .orderBy(asc(taxProfiles.name));
+}
+
+export async function listTaxComponentsRepo(input: {
+  companyId: string;
+  profileId?: string | null;
+  active?: boolean | null;
+}) {
+  const where: SQL[] = [eq(taxProfiles.companyId, input.companyId)];
+  if (input.profileId != null) where.push(eq(taxComponents.profileId, input.profileId));
+  if (input.active != null) where.push(eq(taxComponents.active, input.active));
+
+  return db
+    .select({
+      id: taxComponents.id,
+      profileId: taxComponents.profileId,
+      key: taxComponents.key,
+      numerator: taxComponents.numerator,
+      denominator: taxComponents.denominator,
+      inclusive: taxComponents.inclusive,
+      sortOrder: taxComponents.sortOrder,
+      startsAt: taxComponents.startsAt,
+      endsAt: taxComponents.endsAt,
+      active: taxComponents.active,
+    })
+    .from(taxComponents)
+    .innerJoin(taxProfiles, eq(taxProfiles.id, taxComponents.profileId))
+    .where(and(...where))
+    .orderBy(asc(taxComponents.profileId), asc(taxComponents.sortOrder), asc(taxComponents.key));
+}
+
 export async function getCompanyAccountingSettingsRepo(
   companyId: string,
   executor: DbExecutor = db,
@@ -158,6 +207,28 @@ export async function getAccountByCodeRepo(
   return row ?? null;
 }
 
+export async function getAccountRepo(
+  companyId: string,
+  accountId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      id: chartOfAccounts.id,
+      companyId: chartOfAccounts.companyId,
+      code: chartOfAccounts.code,
+      name: chartOfAccounts.name,
+      accountClass: chartOfAccounts.accountClass,
+      parentAccountId: chartOfAccounts.parentAccountId,
+      isPostable: chartOfAccounts.isPostable,
+      active: chartOfAccounts.active,
+    })
+    .from(chartOfAccounts)
+    .where(and(eq(chartOfAccounts.companyId, companyId), eq(chartOfAccounts.id, accountId)))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function getExpenseCategoryRepo(
   companyId: string,
   expenseCategoryId: string,
@@ -166,6 +237,8 @@ export async function getExpenseCategoryRepo(
   const [row] = await executor
     .select({
       id: expenseCategories.id,
+      companyId: expenseCategories.companyId,
+      code: expenseCategories.code,
       name: expenseCategories.name,
       accountId: expenseCategories.accountId,
       active: expenseCategories.active,
@@ -175,6 +248,322 @@ export async function getExpenseCategoryRepo(
       and(eq(expenseCategories.companyId, companyId), eq(expenseCategories.id, expenseCategoryId)),
     )
     .limit(1);
+  return row ?? null;
+}
+
+export async function getApprovalPolicyRepo(
+  companyId: string,
+  approvalPolicyId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      id: accountingApprovalPolicies.id,
+      companyId: accountingApprovalPolicies.companyId,
+      policyCode: accountingApprovalPolicies.policyCode,
+      name: accountingApprovalPolicies.name,
+      amountLimitPsw: accountingApprovalPolicies.amountLimitPsw,
+      requiresHeadOfficeApproval: accountingApprovalPolicies.requiresHeadOfficeApproval,
+      appliesToFundingSource: accountingApprovalPolicies.appliesToFundingSource,
+      active: accountingApprovalPolicies.active,
+    })
+    .from(accountingApprovalPolicies)
+    .where(
+      and(
+        eq(accountingApprovalPolicies.companyId, companyId),
+        eq(accountingApprovalPolicies.id, approvalPolicyId),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getCompanyBankAccountRepoById(
+  companyId: string,
+  bankAccountId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      id: companyBankAccounts.id,
+      companyId: companyBankAccounts.companyId,
+      accountId: companyBankAccounts.accountId,
+      name: companyBankAccounts.name,
+      bankName: companyBankAccounts.bankName,
+      branchName: companyBankAccounts.branchName,
+      accountNumberMasked: companyBankAccounts.accountNumberMasked,
+      active: companyBankAccounts.active,
+    })
+    .from(companyBankAccounts)
+    .where(
+      and(eq(companyBankAccounts.companyId, companyId), eq(companyBankAccounts.id, bankAccountId)),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getTaxProfileRepo(
+  companyId: string,
+  taxProfileId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      id: taxProfiles.id,
+      companyId: taxProfiles.companyId,
+      name: taxProfiles.name,
+      active: taxProfiles.active,
+    })
+    .from(taxProfiles)
+    .where(and(eq(taxProfiles.companyId, companyId), eq(taxProfiles.id, taxProfileId)))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getTaxComponentRepo(
+  companyId: string,
+  taxComponentId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      id: taxComponents.id,
+      profileId: taxComponents.profileId,
+      key: taxComponents.key,
+      numerator: taxComponents.numerator,
+      denominator: taxComponents.denominator,
+      inclusive: taxComponents.inclusive,
+      sortOrder: taxComponents.sortOrder,
+      startsAt: taxComponents.startsAt,
+      endsAt: taxComponents.endsAt,
+      active: taxComponents.active,
+    })
+    .from(taxComponents)
+    .innerJoin(taxProfiles, eq(taxProfiles.id, taxComponents.profileId))
+    .where(and(eq(taxProfiles.companyId, companyId), eq(taxComponents.id, taxComponentId)))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getAccountUsageSummaryRepo(companyId: string, accountId: string) {
+  const [row] = await db
+    .select({
+      journalLineCount: sql<number>`count(distinct ${journalLines.id})`,
+      expenseCategoryCount: sql<number>`count(distinct ${expenseCategories.id})`,
+      bankAccountCount: sql<number>`count(distinct ${companyBankAccounts.id})`,
+      pettyCashFundCount: sql<number>`count(distinct ${pettyCashFunds.id})`,
+    })
+    .from(chartOfAccounts)
+    .leftJoin(journalLines, eq(journalLines.accountId, chartOfAccounts.id))
+    .leftJoin(expenseCategories, eq(expenseCategories.accountId, chartOfAccounts.id))
+    .leftJoin(companyBankAccounts, eq(companyBankAccounts.accountId, chartOfAccounts.id))
+    .leftJoin(pettyCashFunds, eq(pettyCashFunds.accountId, chartOfAccounts.id))
+    .where(and(eq(chartOfAccounts.companyId, companyId), eq(chartOfAccounts.id, accountId)))
+    .groupBy(chartOfAccounts.id);
+  return (
+    row ?? {
+      journalLineCount: 0,
+      expenseCategoryCount: 0,
+      bankAccountCount: 0,
+      pettyCashFundCount: 0,
+    }
+  );
+}
+
+export async function getExpenseCategoryUsageSummaryRepo(
+  companyId: string,
+  expenseCategoryId: string,
+) {
+  const [row] = await db
+    .select({
+      totalRequestCount: sql<number>`count(*)`,
+      openRequestCount: sql<number>`count(*) filter (where ${expenseRequests.status} not in (3, 5))`,
+      postedRequestCount: sql<number>`count(*) filter (where ${expenseRequests.status} = 5)`,
+    })
+    .from(expenseRequests)
+    .where(
+      and(
+        eq(expenseRequests.companyId, companyId),
+        eq(expenseRequests.expenseCategoryId, expenseCategoryId),
+      ),
+    );
+  return row ?? { totalRequestCount: 0, openRequestCount: 0, postedRequestCount: 0 };
+}
+
+export async function getCompanyBankAccountUsageSummaryRepo(
+  companyId: string,
+  bankAccountId: string,
+) {
+  const [row] = await db
+    .select({
+      totalRequestCount: sql<number>`count(*)`,
+      openRequestCount: sql<number>`count(*) filter (where ${expenseRequests.status} not in (3, 5))`,
+      postedRequestCount: sql<number>`count(*) filter (where ${expenseRequests.status} = 5)`,
+    })
+    .from(expenseRequests)
+    .where(
+      and(
+        eq(expenseRequests.companyId, companyId),
+        eq(expenseRequests.companyBankAccountId, bankAccountId),
+      ),
+    );
+  return row ?? { totalRequestCount: 0, openRequestCount: 0, postedRequestCount: 0 };
+}
+
+export async function getTaxProfileUsageSummaryRepo(companyId: string, taxProfileId: string) {
+  const [row] = await db
+    .select({
+      compensationCount: sql<number>`count(distinct ${employeeCompensation.id})`,
+      taxJournalItemCount: sql<number>`count(distinct ${taxJournalItems.id})`,
+      taxComponentCount: sql<number>`count(distinct ${taxComponents.id})`,
+    })
+    .from(taxProfiles)
+    .leftJoin(employeeCompensation, eq(employeeCompensation.taxProfileId, taxProfiles.id))
+    .leftJoin(taxJournalItems, eq(taxJournalItems.taxProfileId, taxProfiles.id))
+    .leftJoin(taxComponents, eq(taxComponents.profileId, taxProfiles.id))
+    .where(and(eq(taxProfiles.companyId, companyId), eq(taxProfiles.id, taxProfileId)))
+    .groupBy(taxProfiles.id);
+  return row ?? { compensationCount: 0, taxJournalItemCount: 0, taxComponentCount: 0 };
+}
+
+export async function createAccountRepo(
+  values: typeof chartOfAccounts.$inferInsert,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .insert(chartOfAccounts)
+    .values(values)
+    .returning({ id: chartOfAccounts.id });
+  return row ?? null;
+}
+
+export async function updateAccountRepo(
+  accountId: string,
+  patch: Partial<typeof chartOfAccounts.$inferInsert>,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .update(chartOfAccounts)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(eq(chartOfAccounts.id, accountId))
+    .returning({ id: chartOfAccounts.id });
+  return row ?? null;
+}
+
+export async function createExpenseCategoryRepo(
+  values: typeof expenseCategories.$inferInsert,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .insert(expenseCategories)
+    .values(values)
+    .returning({ id: expenseCategories.id });
+  return row ?? null;
+}
+
+export async function createApprovalPolicyRepo(
+  values: typeof accountingApprovalPolicies.$inferInsert,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .insert(accountingApprovalPolicies)
+    .values(values)
+    .returning({ id: accountingApprovalPolicies.id });
+  return row ?? null;
+}
+
+export async function updateApprovalPolicyRepo(
+  approvalPolicyId: string,
+  patch: Partial<typeof accountingApprovalPolicies.$inferInsert>,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .update(accountingApprovalPolicies)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(eq(accountingApprovalPolicies.id, approvalPolicyId))
+    .returning({ id: accountingApprovalPolicies.id });
+  return row ?? null;
+}
+
+export async function createCompanyBankAccountRepo(
+  values: typeof companyBankAccounts.$inferInsert,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .insert(companyBankAccounts)
+    .values(values)
+    .returning({ id: companyBankAccounts.id });
+  return row ?? null;
+}
+
+export async function updateCompanyBankAccountRepo(
+  bankAccountId: string,
+  patch: Partial<typeof companyBankAccounts.$inferInsert>,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .update(companyBankAccounts)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(eq(companyBankAccounts.id, bankAccountId))
+    .returning({ id: companyBankAccounts.id });
+  return row ?? null;
+}
+
+export async function createTaxProfileRepo(
+  values: typeof taxProfiles.$inferInsert,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor.insert(taxProfiles).values(values).returning({ id: taxProfiles.id });
+  return row ?? null;
+}
+
+export async function createTaxComponentRepo(
+  values: typeof taxComponents.$inferInsert,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .insert(taxComponents)
+    .values(values)
+    .returning({ id: taxComponents.id });
+  return row ?? null;
+}
+
+export async function updateTaxProfileRepo(
+  taxProfileId: string,
+  patch: Partial<typeof taxProfiles.$inferInsert>,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .update(taxProfiles)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(eq(taxProfiles.id, taxProfileId))
+    .returning({ id: taxProfiles.id });
+  return row ?? null;
+}
+
+export async function updateTaxComponentRepo(
+  taxComponentId: string,
+  patch: Partial<typeof taxComponents.$inferInsert>,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .update(taxComponents)
+    .set({ ...patch })
+    .where(eq(taxComponents.id, taxComponentId))
+    .returning({ id: taxComponents.id });
+  return row ?? null;
+}
+
+export async function updateExpenseCategoryRepo(
+  expenseCategoryId: string,
+  patch: Partial<typeof expenseCategories.$inferInsert>,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .update(expenseCategories)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(eq(expenseCategories.id, expenseCategoryId))
+    .returning({ id: expenseCategories.id });
   return row ?? null;
 }
 

@@ -16,6 +16,7 @@ import {
 import { CashConfirmationStatus } from '@/db/schemas/enums';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
 import {
   type DailyCashConfirmationRow,
@@ -27,6 +28,7 @@ import {
 } from '../api';
 import {
   AccountingDisabledState,
+  AccountingUnauthorizedState,
   cashConfirmationStatusLabel,
   formatDate,
   formatMoney,
@@ -41,6 +43,14 @@ export function AccountingDailyCashPage() {
   const user = useAuthStore((state) => state.user);
   if (!user?.company?.useAccounting) {
     return <AccountingDisabledState />;
+  }
+  if (!user.permissions?.includes(PermissionKeys.CanPostAccountingEntries)) {
+    return (
+      <AccountingUnauthorizedState
+        title="Daily Cash Restricted"
+        description="Your role does not include permission to create, confirm, and post daily cash entries."
+      />
+    );
   }
 
   return <AccountingDailyCashPageContent user={user} />;

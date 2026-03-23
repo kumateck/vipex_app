@@ -7,6 +7,7 @@ export interface AuthUser {
   id: string;
   fullname: string;
   email: string;
+  employeeId?: string | null;
   telephone?: string;
   company: {
     id: string;

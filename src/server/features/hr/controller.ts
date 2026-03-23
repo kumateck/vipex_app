@@ -7,6 +7,8 @@ import {
   createEmployeeSvc,
   createEmployeeUserAccountSvc,
   createJobTitleSvc,
+  createLeaveRequestSvc,
+  createLeaveTypeSvc,
   getEmployeeSvc,
   listDepartmentOptionsSvc,
   listDepartmentsSvc,
@@ -14,6 +16,13 @@ import {
   listEmployeesSvc,
   listJobTitleOptionsSvc,
   listJobTitlesSvc,
+  listLeaveRequestsSvc,
+  listLeaveTypeOptionsSvc,
+  listLeaveTypesSvc,
+  approveLeaveRequestSvc,
+  approveLeaveRequestByManagerSvc,
+  rejectLeaveRequestSvc,
+  rejectLeaveRequestByManagerSvc,
   updateDepartmentSvc,
   updateEmployeeSvc,
   updateJobTitleSvc,
@@ -85,6 +94,40 @@ export async function listJobTitleOptionsCtrl(companyId: string, search?: string
 
 export async function createJobTitleCtrl(input: Parameters<typeof createJobTitleSvc>[0]) {
   return createJobTitleSvc(input);
+}
+
+export async function listLeaveTypesCtrl(
+  q: PaginationRequestDto<{ companyId: string; includeInactive?: boolean | null }>,
+) {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listLeaveTypesSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters!.companyId,
+    includeInactive: q.filters?.includeInactive ?? null,
+    search: pagination.search ?? null,
+  });
+
+  return {
+    data,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
+  };
+}
+
+export async function listLeaveTypeOptionsCtrl(companyId: string) {
+  return listLeaveTypeOptionsSvc(companyId);
+}
+
+export async function createLeaveTypeCtrl(input: Parameters<typeof createLeaveTypeSvc>[0]) {
+  return createLeaveTypeSvc(input);
+}
+
+export async function approveLeaveRequestByManagerCtrl(id: string, approvedBy: string) {
+  return approveLeaveRequestByManagerSvc(id, approvedBy);
 }
 
 export async function updateJobTitleCtrl(
@@ -177,6 +220,56 @@ export async function listAttendanceCtrl(
       pageSize: pagination.pageSize,
     }),
   };
+}
+
+export async function listLeaveRequestsCtrl(
+  q: PaginationRequestDto<{
+    companyId: string;
+    employeeId?: string | null;
+    status?: number | null;
+  }>,
+) {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listLeaveRequestsSvc({
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+    companyId: q.filters!.companyId,
+    employeeId: q.filters?.employeeId ?? null,
+    status: q.filters?.status ?? null,
+  });
+
+  return {
+    data,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
+  };
+}
+
+export async function createLeaveRequestCtrl(input: Parameters<typeof createLeaveRequestSvc>[0]) {
+  return createLeaveRequestSvc(input);
+}
+
+export async function approveLeaveRequestCtrl(id: string, approvedBy: string) {
+  return approveLeaveRequestSvc(id, approvedBy);
+}
+
+export async function rejectLeaveRequestByManagerCtrl(
+  id: string,
+  approvedBy: string,
+  reason?: string | null,
+) {
+  return rejectLeaveRequestByManagerSvc(id, approvedBy, reason);
+}
+
+export async function rejectLeaveRequestCtrl(
+  id: string,
+  approvedBy: string,
+  reason?: string | null,
+) {
+  return rejectLeaveRequestSvc(id, approvedBy, reason);
 }
 
 export async function createEmployeeUserAccountCtrl(

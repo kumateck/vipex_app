@@ -8,6 +8,8 @@ import {
   employeeJobAssignments,
   employees,
   jobTitles,
+  leaveRequests,
+  leaveTypes,
 } from './hr';
 import { pendingBookings, pickupQueues } from './shipments';
 import { receiptTemplates, generatedReceipts } from './receipts';
@@ -57,7 +59,9 @@ import {
   earningTypes,
   employeeCompensation,
   employeeCompensationItems,
+  payrollManualAdjustments,
   payrollGroups,
+  payrollOvertimeEntries,
   payrollPeriods,
   payrollRunEmployees,
   payrollRunItems,
@@ -76,6 +80,8 @@ export const companiesRelations = relations(companies, ({ many }) => ({
   employees: many(employees),
   payrollGroups: many(payrollGroups),
   payrollPeriods: many(payrollPeriods),
+  payrollOvertimeEntries: many(payrollOvertimeEntries),
+  payrollManualAdjustments: many(payrollManualAdjustments),
 }));
 
 export const branchesRelations = relations(branches, ({ one, many }) => ({
@@ -141,6 +147,7 @@ export const departmentsRelations = relations(departments, ({ one, many }) => ({
   creator: one(users, { fields: [departments.createdBy], references: [users.id] }),
   employees: many(employees),
   assignments: many(employeeJobAssignments),
+  leaveRequests: many(leaveRequests),
 }));
 
 export const jobTitlesRelations = relations(jobTitles, ({ one, many }) => ({
@@ -162,7 +169,10 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
   assignments: many(employeeJobAssignments),
   documents: many(employeeDocuments),
   attendanceRecords: many(attendanceRecords),
+  leaveRequests: many(leaveRequests),
   compensationRecords: many(employeeCompensation),
+  payrollOvertimeEntries: many(payrollOvertimeEntries),
+  payrollManualAdjustments: many(payrollManualAdjustments),
 }));
 
 export const employeeJobAssignmentsRelations = relations(employeeJobAssignments, ({ one }) => ({
@@ -212,6 +222,20 @@ export const attendanceRecordsRelations = relations(attendanceRecords, ({ one })
   branch: one(branches, { fields: [attendanceRecords.branchId], references: [branches.id] }),
   location: one(locations, { fields: [attendanceRecords.locationId], references: [locations.id] }),
   approver: one(users, { fields: [attendanceRecords.approvedBy], references: [users.id] }),
+}));
+
+export const leaveTypesRelations = relations(leaveTypes, ({ one, many }) => ({
+  company: one(companies, { fields: [leaveTypes.companyId], references: [companies.id] }),
+  creator: one(users, { fields: [leaveTypes.createdBy], references: [users.id] }),
+  leaveRequests: many(leaveRequests),
+}));
+
+export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({
+  company: one(companies, { fields: [leaveRequests.companyId], references: [companies.id] }),
+  employee: one(employees, { fields: [leaveRequests.employeeId], references: [employees.id] }),
+  leaveType: one(leaveTypes, { fields: [leaveRequests.leaveTypeId], references: [leaveTypes.id] }),
+  approver: one(users, { fields: [leaveRequests.approvedBy], references: [users.id] }),
+  creator: one(users, { fields: [leaveRequests.createdBy], references: [users.id] }),
 }));
 
 // Customers (company-scoped; no branch relation)
@@ -784,7 +808,55 @@ export const payrollPeriodsRelations = relations(payrollPeriods, ({ one, many })
     references: [payrollGroups.id],
   }),
   creator: one(users, { fields: [payrollPeriods.createdBy], references: [users.id] }),
+  overtimeEntries: many(payrollOvertimeEntries),
+  manualAdjustments: many(payrollManualAdjustments),
   runs: many(payrollRuns),
+}));
+
+export const payrollOvertimeEntriesRelations = relations(payrollOvertimeEntries, ({ one }) => ({
+  company: one(companies, {
+    fields: [payrollOvertimeEntries.companyId],
+    references: [companies.id],
+  }),
+  payrollPeriod: one(payrollPeriods, {
+    fields: [payrollOvertimeEntries.payrollPeriodId],
+    references: [payrollPeriods.id],
+  }),
+  employee: one(employees, {
+    fields: [payrollOvertimeEntries.employeeId],
+    references: [employees.id],
+  }),
+  creator: one(users, {
+    fields: [payrollOvertimeEntries.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const payrollManualAdjustmentsRelations = relations(payrollManualAdjustments, ({ one }) => ({
+  company: one(companies, {
+    fields: [payrollManualAdjustments.companyId],
+    references: [companies.id],
+  }),
+  payrollPeriod: one(payrollPeriods, {
+    fields: [payrollManualAdjustments.payrollPeriodId],
+    references: [payrollPeriods.id],
+  }),
+  employee: one(employees, {
+    fields: [payrollManualAdjustments.employeeId],
+    references: [employees.id],
+  }),
+  earningType: one(earningTypes, {
+    fields: [payrollManualAdjustments.earningTypeId],
+    references: [earningTypes.id],
+  }),
+  deductionType: one(deductionTypes, {
+    fields: [payrollManualAdjustments.deductionTypeId],
+    references: [deductionTypes.id],
+  }),
+  creator: one(users, {
+    fields: [payrollManualAdjustments.createdBy],
+    references: [users.id],
+  }),
 }));
 
 export const payrollRunsRelations = relations(payrollRuns, ({ one, many }) => ({

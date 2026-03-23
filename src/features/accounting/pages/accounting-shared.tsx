@@ -146,6 +146,26 @@ export function AccountingDisabledState() {
   );
 }
 
+export function AccountingUnauthorizedState(props: { title?: string; description?: string }) {
+  return (
+    <div className="mx-auto max-w-3xl p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{props.title ?? 'Accounting Access Required'}</CardTitle>
+          <CardDescription>
+            {props.description ??
+              'Your role does not currently include the permission needed for this accounting screen.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          Ask an administrator to update your role permissions if you should be able to view or
+          manage this area.
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export function ReasonDialog(props: {
   open: boolean;
   title: string;

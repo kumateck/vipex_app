@@ -2,8 +2,14 @@ import {
   approveExpenseRequestSvc,
   closeTaxFilingPeriodSvc,
   confirmDailyCashConfirmationSvc,
+  createAccountSvc,
+  createApprovalPolicySvc,
+  createCompanyBankAccountSvc,
   createDailyCashConfirmationSvc,
+  createExpenseCategorySvc,
   createExpenseRequestSvc,
+  createTaxComponentSvc,
+  createTaxProfileSvc,
   createTaxFilingPeriodSvc,
   excludeTaxItemSvc,
   getDailyCashExpectedSummarySvc,
@@ -19,8 +25,10 @@ import {
   listDailyCashConfirmationsSvc,
   listExpenseCategoriesSvc,
   listExpenseRequestsSvc,
+  listTaxComponentsSvc,
   listTaxFilingPeriodsSvc,
   listTaxJournalItemsSvc,
+  listTaxProfilesSvc,
   markTaxFilingPeriodUnderReviewSvc,
   markTaxItemFiledSvc,
   markTaxItemReadyForFilingSvc,
@@ -30,6 +38,12 @@ import {
   rejectExpenseRequestSvc,
   submitTaxFilingPeriodSvc,
   submitExpenseRequestSvc,
+  updateAccountSvc,
+  updateApprovalPolicySvc,
+  updateCompanyBankAccountSvc,
+  updateExpenseCategorySvc,
+  updateTaxComponentSvc,
+  updateTaxProfileSvc,
 } from './service';
 
 function toIsoRows<T extends { createdAt?: Date; updatedAt?: Date }>(rows: T[]) {
@@ -44,12 +58,18 @@ export async function listAccountsCtrl(input: { companyId: string; active?: bool
   return toIsoRows(await listAccountsSvc(input));
 }
 
+export const createAccountCtrl = createAccountSvc;
+export const updateAccountCtrl = updateAccountSvc;
+
 export async function listExpenseCategoriesCtrl(input: {
   companyId: string;
   active?: boolean | null;
 }) {
   return toIsoRows(await listExpenseCategoriesSvc(input));
 }
+
+export const createExpenseCategoryCtrl = createExpenseCategorySvc;
+export const updateExpenseCategoryCtrl = updateExpenseCategorySvc;
 
 export async function listApprovalPoliciesCtrl(input: {
   companyId: string;
@@ -58,12 +78,40 @@ export async function listApprovalPoliciesCtrl(input: {
   return toIsoRows(await listApprovalPoliciesSvc(input));
 }
 
+export const createApprovalPolicyCtrl = createApprovalPolicySvc;
+export const updateApprovalPolicyCtrl = updateApprovalPolicySvc;
+
 export async function listCompanyBankAccountsCtrl(input: {
   companyId: string;
   active?: boolean | null;
 }) {
   return toIsoRows(await listCompanyBankAccountsSvc(input));
 }
+
+export const createCompanyBankAccountCtrl = createCompanyBankAccountSvc;
+export const updateCompanyBankAccountCtrl = updateCompanyBankAccountSvc;
+
+export async function listTaxProfilesCtrl(input: { companyId: string; active?: boolean | null }) {
+  return toIsoRows(await listTaxProfilesSvc(input));
+}
+
+export const createTaxProfileCtrl = createTaxProfileSvc;
+export const updateTaxProfileCtrl = updateTaxProfileSvc;
+
+export async function listTaxComponentsCtrl(input: {
+  companyId: string;
+  profileId?: string | null;
+  active?: boolean | null;
+}) {
+  return (await listTaxComponentsSvc(input)).map((row) => ({
+    ...row,
+    startsAt: row.startsAt.toISOString(),
+    endsAt: row.endsAt ? row.endsAt.toISOString() : null,
+  }));
+}
+
+export const createTaxComponentCtrl = createTaxComponentSvc;
+export const updateTaxComponentCtrl = updateTaxComponentSvc;
 
 export async function listDailyCashConfirmationsCtrl(input: {
   companyId: string;

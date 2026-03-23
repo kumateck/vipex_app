@@ -7,6 +7,7 @@ The accounting module is implemented as a controlled ledger system for branch-ba
 It covers:
 
 - chart of accounts
+- accounting setup UI for master-data maintenance
 - journal batches, entries, and lines
 - payroll accrual journal posting
 - daily cash confirmation
@@ -23,6 +24,73 @@ It covers:
 - Only approved or confirmed accounting events post to the general ledger.
 - Tax calculation remains driven by the existing Ghana tax calculator.
 - Accounting is company-gated through `companies.use_accounting`.
+
+## Permissions
+
+Accounting now uses explicit permission keys in addition to the company-level module toggle:
+
+- `CanReadAccounting`
+- `CanManageAccountingSetup`
+- `CanManageTaxFiling`
+- `CanPostAccountingEntries`
+
+Current intent:
+
+- `CanReadAccounting`
+  - view accounting reports and accounting read endpoints
+- `CanManageAccountingSetup`
+  - manage chart of accounts, expense categories, approval policies, company bank accounts, tax profiles, and tax components
+- `CanManageTaxFiling`
+  - manage tax filing periods and filing actions on tax journal items
+- `CanPostAccountingEntries`
+  - create, approve, pay, confirm, and post accounting entry workflows such as daily cash and expenses
+
+UI gating:
+
+- `/accounting/reports` requires `CanReadAccounting`
+- `/accounting/setup` requires `CanManageAccountingSetup`
+- `/accounting/tax` requires `CanManageTaxFiling`
+- `/accounting/daily-cash` and `/accounting/expenses` require `CanPostAccountingEntries`
+
+Role-management support:
+
+- the role create dialog and role permissions dialog now include quick finance presets
+- current presets cover:
+  - accounting viewer
+  - accounting setup admin
+  - tax filing officer
+  - accounting operations
+  - accounting full access
+
+Backend gating:
+
+- accounting setup read endpoints allow either `CanReadAccounting` or `CanManageAccountingSetup`
+- accounting setup mutations require `CanManageAccountingSetup`
+- tax filing mutations require `CanManageTaxFiling`
+- accounting posting workflows require `CanPostAccountingEntries`
+
+## Audit Trail
+
+Accounting setup changes are now audit-logged through the shared audit logger.
+
+Current coverage:
+
+- account creation and update
+- expense category creation and update
+- approval policy creation and update
+- company bank account creation and update
+- tax profile creation and update
+- tax component creation and update
+
+Audit payload shape:
+
+- actor user id
+- entity type and entity id
+- action code
+- message
+- metadata with `before`, `patch`, and `after` where applicable
+
+This means accounting setup changes are now traceable at entity level, not just protected by permissions.
 
 ## Standalone Enablement
 
@@ -83,6 +151,54 @@ Run after migration:
 ```bash
 bun run seed:accounting
 ```
+
+## Accounting Setup
+
+Frontend:
+
+- [src/features/accounting/pages/accounting-setup-page.tsx](/Users/gigisiri/Business/Employment/vipex/vipex_app/src/features/accounting/pages/accounting-setup-page.tsx)
+- route: `/accounting/setup`
+
+Backend:
+
+- routes: [src/server/features/accounting/routes.ts](/Users/gigisiri/Business/Employment/vipex/vipex_app/src/server/features/accounting/routes.ts)
+- service: [src/server/features/accounting/service.ts](/Users/gigisiri/Business/Employment/vipex/vipex_app/src/server/features/accounting/service.ts)
+- repository: [src/server/features/accounting/repository.ts](/Users/gigisiri/Business/Employment/vipex/vipex_app/src/server/features/accounting/repository.ts)
+
+Current setup management supports:
+
+- create and update chart of accounts
+- set account code, name, class, parent, postable flag, and active flag
+- create and update expense categories
+- map each expense category to an expense account
+- create and update approval policies
+- define threshold amount, approval level, and funding-source scope
+- create and update company bank accounts
+- map company bank accounts to asset ledger accounts
+- create and update tax profiles
+- create and update tax components within each tax profile
+- activate or deactivate all accounting setup masters above
+
+Safety guardrails now enforced:
+
+- accounts cannot be deactivated while referenced by journal lines, expense categories, bank accounts, or petty cash funds
+- accounts cannot change class after journal activity exists
+- postable accounts cannot be converted to summary accounts while still actively referenced
+- expense categories cannot be deactivated while requests are still open
+- expense category mapped accounts cannot be changed after posted expense requests exist
+- company bank accounts cannot be deactivated while linked expense requests are still open
+- company bank account mapped ledger accounts cannot be changed after posted expense requests exist
+- tax profiles cannot be deactivated while referenced by payroll compensation, tax journals, or tax components
+
+Notes:
+
+- the setup page is also company-gated by accounting enablement
+- inactive setup records remain visible for maintenance
+- expense category mapping prefers active postable expense accounts
+- company bank account mapping prefers active postable asset accounts
+- seeded accounts are still useful as the baseline, but finance can now maintain names and mappings from the frontend
+- tax profile maintenance does not alter the Ghana tax computation logic; it only manages profile records used around posting and filing review
+- tax component maintenance stores profile metadata for finance and payroll reference, but the current Ghana tax compute path remains unchanged
 
 ## Daily Cash Confirmation
 

@@ -2,12 +2,17 @@ import { buildPaginationMeta, normalizePagination } from '@/server/utils/paginat
 import type { PaginationRequestDto } from '@/server/types/pagination.types';
 import {
   approvePayrollCycleSvc,
+  approvePayrollManualAdjustmentSvc,
+  approvePayrollOvertimeEntrySvc,
+  createPayrollManualAdjustmentSvc,
   createDeductionTypeSvc,
   createEarningTypeSvc,
+  createPayrollOvertimeEntrySvc,
   getEmployeeCompensationSvc,
   listCompensationSvc,
   listDeductionTypesSvc,
   listEarningTypesSvc,
+  listPayrollManualAdjustmentsSvc,
   createPayrollGroupSvc,
   createPayrollCycleSvc,
   getPayrollBankExportSvc,
@@ -15,8 +20,11 @@ import {
   journalizePayrollCycleSvc,
   listPayrollGroupsSvc,
   listPayrollCyclesSvc,
+  listPayrollOvertimeEntriesSvc,
   listPayslipsSvc,
   reopenPayrollCycleSvc,
+  rejectPayrollManualAdjustmentSvc,
+  rejectPayrollOvertimeEntrySvc,
   reversePayrollCycleSvc,
   runPayrollCycleSvc,
   setEmployeeCompensationSvc,
@@ -189,6 +197,60 @@ export async function listPayrollCyclesCtrl(
 
 export async function createPayrollCycleCtrl(input: Parameters<typeof createPayrollCycleSvc>[0]) {
   return createPayrollCycleSvc(input);
+}
+
+export async function listPayrollOvertimeEntriesCtrl(payrollCycleId: string, companyId: string) {
+  return listPayrollOvertimeEntriesSvc({ payrollCycleId, companyId });
+}
+
+export async function createPayrollOvertimeEntryCtrl(
+  input: Parameters<typeof createPayrollOvertimeEntrySvc>[0],
+) {
+  return createPayrollOvertimeEntrySvc(input);
+}
+
+export async function listPayrollManualAdjustmentsCtrl(payrollCycleId: string, companyId: string) {
+  return listPayrollManualAdjustmentsSvc({ payrollCycleId, companyId });
+}
+
+export async function createPayrollManualAdjustmentCtrl(
+  input: Parameters<typeof createPayrollManualAdjustmentSvc>[0],
+) {
+  return createPayrollManualAdjustmentSvc(input);
+}
+
+export async function approvePayrollOvertimeEntryCtrl(
+  payrollCycleId: string,
+  entryId: string,
+  approvedBy: string,
+) {
+  return approvePayrollOvertimeEntrySvc(payrollCycleId, entryId, approvedBy);
+}
+
+export async function rejectPayrollOvertimeEntryCtrl(
+  payrollCycleId: string,
+  entryId: string,
+  approvedBy: string,
+  reason?: string | null,
+) {
+  return rejectPayrollOvertimeEntrySvc(payrollCycleId, entryId, approvedBy, reason);
+}
+
+export async function approvePayrollManualAdjustmentCtrl(
+  payrollCycleId: string,
+  entryId: string,
+  approvedBy: string,
+) {
+  return approvePayrollManualAdjustmentSvc(payrollCycleId, entryId, approvedBy);
+}
+
+export async function rejectPayrollManualAdjustmentCtrl(
+  payrollCycleId: string,
+  entryId: string,
+  approvedBy: string,
+  reason?: string | null,
+) {
+  return rejectPayrollManualAdjustmentSvc(payrollCycleId, entryId, approvedBy, reason);
 }
 
 export async function runPayrollCycleCtrl(id: string, initiatedBy: string) {

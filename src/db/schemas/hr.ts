@@ -12,7 +12,14 @@ import {
 import { sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { branches, companies, locations, users } from './core';
-import { AttendanceStatus, EmploymentStatus, EmploymentType, Gender } from './enums';
+import {
+  ApprovalStatus,
+  AttendanceStatus,
+  EmploymentStatus,
+  EmploymentType,
+  Gender,
+  LeaveRequestStatus,
+} from './enums';
 
 export const departments = pgTable(
   'departments',
@@ -228,5 +235,72 @@ export const attendanceRecords = pgTable(
       t.employeeId,
       t.attendanceDate,
     ),
+  }),
+);
+
+export const leaveTypes = pgTable(
+  'leave_types',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    code: varchar('code', { length: 50 }),
+    name: varchar('name', { length: 255 }).notNull(),
+    isPaid: boolean('is_paid').notNull().default(true),
+    isActive: boolean('is_active').notNull().default(true),
+    createdBy: varchar('created_by', { length: 25 }).references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompany: index('leave_types_company_idx').on(t.companyId),
+    uqCompanyLowerName: uniqueIndex('leave_types_company_lower_name_uq').on(
+      t.companyId,
+      sql`lower(${t.name})`,
+    ),
+    uqCompanyCode: uniqueIndex('leave_types_company_code_uq').on(t.companyId, t.code),
+  }),
+);
+
+export const leaveRequests = pgTable(
+  'leave_requests',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    employeeId: varchar('employee_id', { length: 25 })
+      .notNull()
+      .references(() => employees.id),
+    leaveTypeId: varchar('leave_type_id', { length: 25 })
+      .notNull()
+      .references(() => leaveTypes.id),
+    dateFrom: timestamp('date_from', { withTimezone: false }).notNull(),
+    dateTo: timestamp('date_to', { withTimezone: false }).notNull(),
+    daysCount: integer('days_count').notNull().default(1),
+    reason: text('reason'),
+    managerApprovalStatus: smallint('manager_approval_status')
+      .notNull()
+      .default(ApprovalStatus.PENDING),
+    managerApprovedBy: varchar('manager_approved_by', { length: 25 }).references(() => users.id),
+    managerApprovedAt: timestamp('manager_approved_at', { withTimezone: false }),
+    managerRejectionReason: text('manager_rejection_reason'),
+    status: smallint('status').notNull().default(LeaveRequestStatus.PENDING),
+    approvedBy: varchar('approved_by', { length: 25 }).references(() => users.id),
+    approvedAt: timestamp('approved_at', { withTimezone: false }),
+    rejectionReason: text('rejection_reason'),
+    createdBy: varchar('created_by', { length: 25 }).references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompany: index('leave_requests_company_idx').on(t.companyId),
+    byEmployee: index('leave_requests_employee_idx').on(t.employeeId, t.dateFrom),
+    byStatus: index('leave_requests_company_status_idx').on(t.companyId, t.status),
   }),
 );

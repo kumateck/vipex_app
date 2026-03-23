@@ -24,6 +24,24 @@ export interface ExpenseCategoryRow {
   updatedAt?: string;
 }
 
+export interface AccountMutationInput {
+  companyId: string;
+  code: string;
+  name: string;
+  accountClass: number;
+  parentAccountId?: string | null;
+  isPostable?: boolean;
+  active?: boolean;
+}
+
+export interface ExpenseCategoryMutationInput {
+  companyId: string;
+  code: string;
+  name: string;
+  accountId: string;
+  active?: boolean;
+}
+
 export interface ApprovalPolicyRow {
   id: string;
   companyId: string;
@@ -37,6 +55,16 @@ export interface ApprovalPolicyRow {
   updatedAt?: string;
 }
 
+export interface ApprovalPolicyMutationInput {
+  companyId: string;
+  policyCode: string;
+  name: string;
+  amountLimitPsw?: number;
+  requiresHeadOfficeApproval?: boolean;
+  appliesToFundingSource?: number | null;
+  active?: boolean;
+}
+
 export interface CompanyBankAccountRow {
   id: string;
   companyId: string;
@@ -48,6 +76,57 @@ export interface CompanyBankAccountRow {
   active: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface CompanyBankAccountMutationInput {
+  companyId: string;
+  accountId: string;
+  name: string;
+  bankName?: string | null;
+  branchName?: string | null;
+  accountNumberMasked?: string | null;
+  active?: boolean;
+}
+
+export interface TaxProfileRow {
+  id: string;
+  companyId: string;
+  name: string;
+  active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface TaxProfileMutationInput {
+  companyId: string;
+  name: string;
+  active?: boolean;
+}
+
+export interface TaxComponentRow {
+  id: string;
+  profileId: string;
+  key: string;
+  numerator: number;
+  denominator: number;
+  inclusive: boolean;
+  sortOrder: number;
+  startsAt: string;
+  endsAt?: string | null;
+  active: boolean;
+}
+
+export interface TaxComponentMutationInput {
+  companyId: string;
+  profileId: string;
+  key: string;
+  numerator: number;
+  denominator: number;
+  inclusive?: boolean;
+  sortOrder?: number;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  active?: boolean;
 }
 
 export interface DailyCashConfirmationRow {
@@ -255,12 +334,42 @@ export const accountingApi = api.injectEndpoints({
       query: (params) => ({ url: '/accounting/accounts', params }),
       providesTags: [{ type: 'Accounting', id: 'ACCOUNTS' }],
     }),
+    createAccount: builder.mutation<{ id: string }, AccountMutationInput>({
+      query: (body) => ({ url: '/accounting/accounts', method: 'POST', body }),
+      invalidatesTags: [{ type: 'Accounting', id: 'ACCOUNTS' }],
+    }),
+    updateAccount: builder.mutation<
+      { id: string },
+      { id: string; body: Partial<AccountMutationInput> & { companyId: string } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/accounting/accounts/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Accounting', id: 'ACCOUNTS' }],
+    }),
     listExpenseCategories: builder.query<
       ExpenseCategoryRow[],
       { companyId: string; active?: boolean }
     >({
       query: (params) => ({ url: '/accounting/expense-categories', params }),
       providesTags: [{ type: 'Accounting', id: 'EXPENSE_CATEGORIES' }],
+    }),
+    createExpenseCategory: builder.mutation<{ id: string }, ExpenseCategoryMutationInput>({
+      query: (body) => ({ url: '/accounting/expense-categories', method: 'POST', body }),
+      invalidatesTags: [{ type: 'Accounting', id: 'EXPENSE_CATEGORIES' }],
+    }),
+    updateExpenseCategory: builder.mutation<
+      { id: string },
+      { id: string; body: Partial<ExpenseCategoryMutationInput> & { companyId: string } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/accounting/expense-categories/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Accounting', id: 'EXPENSE_CATEGORIES' }],
     }),
     listApprovalPolicies: builder.query<
       ApprovalPolicyRow[],
@@ -269,12 +378,89 @@ export const accountingApi = api.injectEndpoints({
       query: (params) => ({ url: '/accounting/approval-policies', params }),
       providesTags: [{ type: 'Accounting', id: 'APPROVAL_POLICIES' }],
     }),
+    createApprovalPolicy: builder.mutation<{ id: string }, ApprovalPolicyMutationInput>({
+      query: (body) => ({ url: '/accounting/approval-policies', method: 'POST', body }),
+      invalidatesTags: [{ type: 'Accounting', id: 'APPROVAL_POLICIES' }],
+    }),
+    updateApprovalPolicy: builder.mutation<
+      { id: string },
+      { id: string; body: Partial<ApprovalPolicyMutationInput> & { companyId: string } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/accounting/approval-policies/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Accounting', id: 'APPROVAL_POLICIES' }],
+    }),
     listCompanyBankAccounts: builder.query<
       CompanyBankAccountRow[],
       { companyId: string; active?: boolean }
     >({
       query: (params) => ({ url: '/accounting/bank-accounts', params }),
       providesTags: [{ type: 'Accounting', id: 'BANK_ACCOUNTS' }],
+    }),
+    createCompanyBankAccount: builder.mutation<{ id: string }, CompanyBankAccountMutationInput>({
+      query: (body) => ({ url: '/accounting/bank-accounts', method: 'POST', body }),
+      invalidatesTags: [{ type: 'Accounting', id: 'BANK_ACCOUNTS' }],
+    }),
+    updateCompanyBankAccount: builder.mutation<
+      { id: string },
+      { id: string; body: Partial<CompanyBankAccountMutationInput> & { companyId: string } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/accounting/bank-accounts/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Accounting', id: 'BANK_ACCOUNTS' }],
+    }),
+    listTaxProfiles: builder.query<TaxProfileRow[], { companyId: string; active?: boolean }>({
+      query: (params) => ({ url: '/accounting/tax-profiles', params }),
+      providesTags: [{ type: 'Accounting', id: 'TAX_PROFILES' }],
+    }),
+    listTaxComponents: builder.query<
+      TaxComponentRow[],
+      { companyId: string; profileId?: string; active?: boolean }
+    >({
+      query: (params) => ({ url: '/accounting/tax-components', params }),
+      providesTags: [{ type: 'Accounting', id: 'TAX_COMPONENTS' }],
+    }),
+    createTaxProfile: builder.mutation<{ id: string }, TaxProfileMutationInput>({
+      query: (body) => ({ url: '/accounting/tax-profiles', method: 'POST', body }),
+      invalidatesTags: [{ type: 'Accounting', id: 'TAX_PROFILES' }],
+    }),
+    updateTaxProfile: builder.mutation<
+      { id: string },
+      { id: string; body: Partial<TaxProfileMutationInput> & { companyId: string } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/accounting/tax-profiles/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Accounting', id: 'TAX_PROFILES' }],
+    }),
+    createTaxComponent: builder.mutation<{ id: string }, TaxComponentMutationInput>({
+      query: (body) => ({ url: '/accounting/tax-components', method: 'POST', body }),
+      invalidatesTags: [
+        { type: 'Accounting', id: 'TAX_COMPONENTS' },
+        { type: 'Accounting', id: 'TAX_PROFILES' },
+      ],
+    }),
+    updateTaxComponent: builder.mutation<
+      { id: string },
+      { id: string; body: Partial<TaxComponentMutationInput> & { companyId: string } }
+    >({
+      query: ({ id, body }) => ({
+        url: `/accounting/tax-components/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: [
+        { type: 'Accounting', id: 'TAX_COMPONENTS' },
+        { type: 'Accounting', id: 'TAX_PROFILES' },
+      ],
     }),
     listDailyCashConfirmations: builder.query<
       DailyCashConfirmationRow[],
@@ -492,9 +678,23 @@ export const accountingApi = api.injectEndpoints({
 
 export const {
   useListAccountsQuery,
+  useCreateAccountMutation,
+  useUpdateAccountMutation,
   useListExpenseCategoriesQuery,
+  useCreateExpenseCategoryMutation,
+  useUpdateExpenseCategoryMutation,
   useListApprovalPoliciesQuery,
+  useCreateApprovalPolicyMutation,
+  useUpdateApprovalPolicyMutation,
   useListCompanyBankAccountsQuery,
+  useCreateCompanyBankAccountMutation,
+  useUpdateCompanyBankAccountMutation,
+  useListTaxProfilesQuery,
+  useListTaxComponentsQuery,
+  useCreateTaxProfileMutation,
+  useUpdateTaxProfileMutation,
+  useCreateTaxComponentMutation,
+  useUpdateTaxComponentMutation,
   useListDailyCashConfirmationsQuery,
   useGetDailyCashExpectedSummaryQuery,
   useCreateDailyCashConfirmationMutation,

@@ -63,6 +63,59 @@ export interface Employee {
   hasUserAccount: boolean;
 }
 
+export interface AttendanceRecord {
+  id: string;
+  employeeId: string;
+  employeeName?: string | null;
+  branchId?: string | null;
+  branchName?: string | null;
+  locationId?: string | null;
+  locationName?: string | null;
+  attendanceDate: string;
+  checkInAt?: string | null;
+  checkOutAt?: string | null;
+  minutesWorked?: number | null;
+  status: number;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface LeaveType {
+  id: string;
+  companyId: string;
+  code?: string | null;
+  name: string;
+  isPaid: boolean;
+  isActive: boolean;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface LeaveRequest {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  employeeName?: string | null;
+  managerEmployeeId?: string | null;
+  leaveTypeId: string;
+  leaveTypeName?: string | null;
+  leaveTypeIsPaid?: boolean;
+  dateFrom: string;
+  dateTo: string;
+  daysCount: number;
+  reason?: string | null;
+  managerApprovalStatus: number;
+  managerApprovedBy?: string | null;
+  managerApprovedAt?: string | null;
+  managerRejectionReason?: string | null;
+  status: number;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  rejectionReason?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 export const hrApi = api.injectEndpoints({
   endpoints: (builder) => ({
     listDepartments: builder.query<
@@ -262,6 +315,156 @@ export const hrApi = api.injectEndpoints({
         ...invalidateEntityListTag('HR'),
       ],
     }),
+    listAttendance: builder.query<
+      ServerListResponse<AttendanceRecord>,
+      {
+        from: string;
+        to: string;
+        employeeId?: string | null;
+        branchId?: string | null;
+        page?: number;
+        pageSize?: number;
+      }
+    >({
+      query: (params) => ({
+        url: '/hr/attendance',
+        params,
+      }),
+      providesTags: (result) => provideEntityListTags('HR', result),
+    }),
+    checkInAttendance: builder.mutation<
+      { id?: string },
+      {
+        employeeId: string;
+        branchId?: string | null;
+        locationId?: string | null;
+        checkedInAt?: string;
+      }
+    >({
+      query: (body) => ({
+        url: '/hr/attendance/check-in',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: invalidateEntityListTag('HR'),
+    }),
+    checkOutAttendance: builder.mutation<
+      { id?: string },
+      { employeeId: string; checkedOutAt?: string }
+    >({
+      query: (body) => ({
+        url: '/hr/attendance/check-out',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: invalidateEntityListTag('HR'),
+    }),
+    listLeaveTypes: builder.query<
+      ServerListResponse<LeaveType>,
+      ServerListQuery<{ includeInactive?: boolean | null }> | void
+    >({
+      query: (query) => ({
+        url: '/hr/leave-types',
+        params: buildServerPaginationParams(query),
+      }),
+      providesTags: (result) => provideEntityListTags('HR', result),
+    }),
+    listLeaveTypeOptions: builder.query<LeaveType[], void>({
+      query: () => ({
+        url: '/hr/leave-types/options',
+      }),
+      providesTags: [{ type: 'HR', id: 'LEAVE_TYPE_OPTIONS' }],
+    }),
+    createLeaveType: builder.mutation<
+      { id?: string },
+      { code?: string | null; name: string; isPaid?: boolean }
+    >({
+      query: (body) => ({
+        url: '/hr/leave-types',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: invalidateEntityListTag('HR'),
+    }),
+    listLeaveRequests: builder.query<
+      ServerListResponse<LeaveRequest>,
+      {
+        employeeId?: string | null;
+        status?: number | null;
+        page?: number;
+        pageSize?: number;
+      } | void
+    >({
+      query: (query) => ({
+        url: '/hr/leave-requests',
+        params: buildServerPaginationParams(query),
+      }),
+      providesTags: (result) => provideEntityListTags('HR', result),
+    }),
+    createLeaveRequest: builder.mutation<
+      { id?: string },
+      {
+        employeeId: string;
+        leaveTypeId: string;
+        dateFrom: string;
+        dateTo: string;
+        reason?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: '/hr/leave-requests',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: invalidateEntityListTag('HR'),
+    }),
+    approveLeaveRequest: builder.mutation<{ id?: string }, string>({
+      query: (id) => ({
+        url: `/hr/leave-requests/${id}/approve`,
+        method: 'POST',
+        body: {},
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'HR', id },
+        ...invalidateEntityListTag('HR'),
+      ],
+    }),
+    approveLeaveRequestByManager: builder.mutation<{ id?: string }, string>({
+      query: (id) => ({
+        url: `/hr/leave-requests/${id}/manager-approve`,
+        method: 'POST',
+        body: {},
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'HR', id },
+        ...invalidateEntityListTag('HR'),
+      ],
+    }),
+    rejectLeaveRequest: builder.mutation<{ id?: string }, { id: string; reason?: string | null }>({
+      query: ({ id, reason }) => ({
+        url: `/hr/leave-requests/${id}/reject`,
+        method: 'POST',
+        body: { reason: reason ?? null },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'HR', id },
+        ...invalidateEntityListTag('HR'),
+      ],
+    }),
+    rejectLeaveRequestByManager: builder.mutation<
+      { id?: string },
+      { id: string; reason?: string | null }
+    >({
+      query: ({ id, reason }) => ({
+        url: `/hr/leave-requests/${id}/manager-reject`,
+        method: 'POST',
+        body: { reason: reason ?? null },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'HR', id },
+        ...invalidateEntityListTag('HR'),
+      ],
+    }),
   }),
 });
 
@@ -279,4 +482,16 @@ export const {
   useGetEmployeeQuery,
   useUpdateEmployeeMutation,
   useCreateEmployeeUserAccountMutation,
+  useListAttendanceQuery,
+  useCheckInAttendanceMutation,
+  useCheckOutAttendanceMutation,
+  useListLeaveTypesQuery,
+  useListLeaveTypeOptionsQuery,
+  useCreateLeaveTypeMutation,
+  useListLeaveRequestsQuery,
+  useCreateLeaveRequestMutation,
+  useApproveLeaveRequestMutation,
+  useApproveLeaveRequestByManagerMutation,
+  useRejectLeaveRequestMutation,
+  useRejectLeaveRequestByManagerMutation,
 } = hrApi;

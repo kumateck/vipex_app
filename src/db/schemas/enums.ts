@@ -95,6 +95,17 @@ export enum AttendanceStatus {
   LEAVE = 4,
   OFF_DAY = 5,
 }
+export enum LeaveRequestStatus {
+  PENDING = 0,
+  APPROVED = 1,
+  REJECTED = 2,
+  CANCELLED = 3,
+}
+export enum ApprovalStatus {
+  PENDING = 0,
+  APPROVED = 1,
+  REJECTED = 2,
+}
 export enum PayrollFrequency {
   MONTHLY = 0,
   WEEKLY = 1,

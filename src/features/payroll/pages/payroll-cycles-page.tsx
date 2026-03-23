@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { EntityAuditHistoryCard } from '@/features/audit/components/entity-audit-history-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -56,17 +57,9 @@ function formatMoneyPsw(amountPsw: number, currencyCode = 'GHS') {
   }).format(Number(amountPsw ?? 0) / 100);
 }
 
-function paymentMethodLabel(value?: number | null) {
-  switch (value) {
-    case 0:
-      return 'Cash';
-    case 1:
-      return 'Bank';
-    case 2:
-      return 'Mobile Money';
-    default:
-      return 'Unspecified';
-  }
+function paymentMethodLabel(value?: string | null) {
+  if (!value) return 'Unspecified';
+  return value.replaceAll('_', ' ').replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
 function statusLabel(status: number) {
@@ -269,6 +262,9 @@ export function PayrollCyclesPage() {
                             >
                               View payslips
                             </Button>
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link to={`/payroll/inputs?cycleId=${row.id}`}>Inputs</Link>
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -322,7 +318,7 @@ export function PayrollCyclesPage() {
                         'Currency',
                       ],
                       ...bankExportRows.map((row) => [
-                        row.payslipId ?? '',
+                        row.payslipNumber ?? '',
                         row.employeeNumber,
                         row.employeeName,
                         paymentMethodLabel(row.paymentMethod),
@@ -385,6 +381,11 @@ export function PayrollCyclesPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      <EntityAuditHistoryCard
+        title="Payroll Run History"
+        entityType="payroll_run"
+        entityId={rows.find((row) => row.id === selectedCycleId)?.latestRunId ?? null}
+      />
     </div>
   );
 }

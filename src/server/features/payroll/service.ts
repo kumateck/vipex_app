@@ -1,14 +1,17 @@
 import { createId } from '@paralleldrive/cuid2';
-import { Conflict, NotFound } from '@/server/utils/http-error';
+import { Conflict, Forbidden, NotFound } from '@/server/utils/http-error';
 import {
+  ApprovalStatus,
   CompensationItemCalculationType,
   EmploymentStatus,
   JournalSourceType,
+  PayType,
   PayrollItemType,
   PayrollPeriodStatus,
   PayrollRunStatus,
 } from '@/db/schemas/enums';
 import { recordAuditLog } from '../audit/logger';
+import { getUserByIdRepo } from '../auth/repository';
 import { assertAccountingEnabledSvc } from '../accounting/service';
 import { postJournalEntrySvc, type JournalLineInput } from '../accounting/posting.service';
 import { getAccountByCodeRepo, listJournalLinesByBatchRepo } from '../accounting/repository';
@@ -19,6 +22,8 @@ import {
   createEmployeeCompensationRepo,
   createPayrollGroupRepo,
   createPayrollCycleRepo,
+  createPayrollManualAdjustmentRepo,
+  createPayrollOvertimeEntryRepo,
   deactivateEmployeeCompensationsRepo,
   findDeductionTypeByCodeRepo,
   findEarningTypeByCodeRepo,
@@ -27,12 +32,19 @@ import {
   findLatestPayrollRunRepo,
   getDeductionTypeRepo,
   getEarningTypeRepo,
+  getPayrollManualAdjustmentRepo,
+  getPayrollOvertimeEntryRepo,
   findPayrollGroupRepo,
+  getAttendanceSummariesRepo,
   getCurrentEmployeeCompensationRepo,
   getPayrollCycleRepo,
   getPayrollCycleWithGroupRepo,
+  listPayrollManualAdjustmentsByEmployeesRepo,
+  listPayrollManualAdjustmentsRepo,
   listCompensationByGroupAndPeriodRepo,
   listPayrollRunEmployeeSummariesRepo,
+  listPayrollOvertimeEntriesByEmployeesRepo,
+  listPayrollOvertimeEntriesRepo,
   listCompensationRepo,
   listBankExportRowsRepo,
   listDeductionTypesRepo,
@@ -44,8 +56,10 @@ import {
   replacePayrollRunDataRepo,
   updateDeductionTypeRepo,
   updateEarningTypeRepo,
+  updatePayrollManualAdjustmentRepo,
   updatePayrollGroupRepo,
   updatePayrollCycleRepo,
+  updatePayrollOvertimeEntryRepo,
   updatePayrollRunRepo,
   type ListCompensationParams,
   type ListPayrollTypeParams,
@@ -53,6 +67,7 @@ import {
   type ListPayrollCycleParams,
 } from './repository';
 import { getEmployeeSvc } from '../hr/service';
+import { getPaidLeaveSummariesRepo } from '../hr/repository';
 import { db } from '@/db/config';
 
 export async function listPayrollGroupsSvc(p: ListPayrollGroupParams) {
@@ -342,6 +357,316 @@ export async function createPayrollCycleSvc(input: {
   return { id: created?.id };
 }
 
+export async function listPayrollOvertimeEntriesSvc(input: {
+  payrollCycleId: string;
+  companyId: string;
+}) {
+  const cycle = await getPayrollCycleRepo(input.payrollCycleId);
+  if (!cycle || cycle.companyId !== input.companyId) throw NotFound('Payroll cycle not found');
+  return listPayrollOvertimeEntriesRepo(input);
+}
+
+export async function createPayrollOvertimeEntrySvc(input: {
+  payrollCycleId: string;
+  companyId: string;
+  employeeId: string;
+  overtimeMinutes: number;
+  ratePerHourPsw: number;
+  multiplierPct?: number;
+  notes?: string | null;
+  createdBy: string;
+}) {
+  const cycle = await getPayrollCycleRepo(input.payrollCycleId);
+  if (!cycle || cycle.companyId !== input.companyId) throw NotFound('Payroll cycle not found');
+  if (
+    cycle.status === PayrollPeriodStatus.APPROVED ||
+    cycle.status === PayrollPeriodStatus.POSTED
+  ) {
+    throw Conflict('Cannot add overtime to an approved or posted payroll cycle');
+  }
+
+  const employee = await getEmployeeSvc(input.employeeId);
+  if (employee.companyId !== input.companyId) throw NotFound('Employee not found');
+  if (input.overtimeMinutes <= 0) throw Conflict('Overtime minutes must be greater than zero');
+  if (input.ratePerHourPsw <= 0) throw Conflict('Overtime hourly rate must be greater than zero');
+  const approvalStatus = employee.managerEmployeeId
+    ? ApprovalStatus.PENDING
+    : ApprovalStatus.APPROVED;
+
+  const created = await createPayrollOvertimeEntryRepo({
+    companyId: input.companyId,
+    payrollPeriodId: input.payrollCycleId,
+    employeeId: input.employeeId,
+    overtimeMinutes: input.overtimeMinutes,
+    ratePerHourPsw: input.ratePerHourPsw,
+    multiplierPct: input.multiplierPct ?? 100,
+    approvalStatus,
+    approvedAt: approvalStatus === ApprovalStatus.APPROVED ? new Date() : null,
+    notes: input.notes?.trim() || null,
+    createdBy: input.createdBy,
+  });
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.createdBy,
+    entityType: 'payroll_overtime_entry',
+    entityId: created?.id ?? null,
+    action: 'PAYROLL_OVERTIME_ENTRY_CREATED',
+    message: 'Payroll overtime entry created',
+    metadata: {
+      payrollCycleId: input.payrollCycleId,
+      employeeId: input.employeeId,
+      overtimeMinutes: input.overtimeMinutes,
+      ratePerHourPsw: input.ratePerHourPsw,
+      multiplierPct: input.multiplierPct ?? 100,
+      approvalStatus,
+    },
+  });
+
+  return { id: created?.id };
+}
+
+export async function listPayrollManualAdjustmentsSvc(input: {
+  payrollCycleId: string;
+  companyId: string;
+}) {
+  const cycle = await getPayrollCycleRepo(input.payrollCycleId);
+  if (!cycle || cycle.companyId !== input.companyId) throw NotFound('Payroll cycle not found');
+  return listPayrollManualAdjustmentsRepo(input);
+}
+
+export async function createPayrollManualAdjustmentSvc(input: {
+  payrollCycleId: string;
+  companyId: string;
+  employeeId: string;
+  itemType: number;
+  earningTypeId?: string | null;
+  deductionTypeId?: string | null;
+  amountPsw: number;
+  isTaxable?: boolean;
+  notes?: string | null;
+  createdBy: string;
+}) {
+  const cycle = await getPayrollCycleRepo(input.payrollCycleId);
+  if (!cycle || cycle.companyId !== input.companyId) throw NotFound('Payroll cycle not found');
+  if (
+    cycle.status === PayrollPeriodStatus.APPROVED ||
+    cycle.status === PayrollPeriodStatus.POSTED
+  ) {
+    throw Conflict('Cannot add adjustments to an approved or posted payroll cycle');
+  }
+
+  const employee = await getEmployeeSvc(input.employeeId);
+  if (employee.companyId !== input.companyId) throw NotFound('Employee not found');
+  if (input.amountPsw <= 0) throw Conflict('Adjustment amount must be greater than zero');
+  const approvalStatus = employee.managerEmployeeId
+    ? ApprovalStatus.PENDING
+    : ApprovalStatus.APPROVED;
+
+  let code = '';
+  let name = '';
+
+  if (input.itemType === PayrollItemType.DEDUCTION) {
+    if (!input.deductionTypeId) throw Conflict('Deduction type is required');
+    const type = await getDeductionTypeRepo(input.deductionTypeId);
+    if (!type || type.companyId !== input.companyId) throw NotFound('Deduction type not found');
+    code = type.code;
+    name = type.name;
+  } else {
+    if (!input.earningTypeId) throw Conflict('Earning type is required');
+    const type = await getEarningTypeRepo(input.earningTypeId);
+    if (!type || type.companyId !== input.companyId) throw NotFound('Earning type not found');
+    code = type.code;
+    name = type.name;
+  }
+
+  const created = await createPayrollManualAdjustmentRepo({
+    companyId: input.companyId,
+    payrollPeriodId: input.payrollCycleId,
+    employeeId: input.employeeId,
+    itemType: input.itemType,
+    earningTypeId:
+      input.itemType === PayrollItemType.EARNING ? (input.earningTypeId ?? null) : null,
+    deductionTypeId:
+      input.itemType === PayrollItemType.DEDUCTION ? (input.deductionTypeId ?? null) : null,
+    code,
+    name,
+    amountPsw: input.amountPsw,
+    isTaxable: input.itemType === PayrollItemType.DEDUCTION ? false : Boolean(input.isTaxable),
+    approvalStatus,
+    approvedAt: approvalStatus === ApprovalStatus.APPROVED ? new Date() : null,
+    notes: input.notes?.trim() || null,
+    createdBy: input.createdBy,
+  });
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.createdBy,
+    entityType: 'payroll_manual_adjustment',
+    entityId: created?.id ?? null,
+    action: 'PAYROLL_MANUAL_ADJUSTMENT_CREATED',
+    message: 'Payroll manual adjustment created',
+    metadata: {
+      payrollCycleId: input.payrollCycleId,
+      employeeId: input.employeeId,
+      itemType: input.itemType,
+      amountPsw: input.amountPsw,
+      code,
+      name,
+      approvalStatus,
+      isTaxable: input.itemType === PayrollItemType.DEDUCTION ? false : Boolean(input.isTaxable),
+    },
+  });
+
+  return { id: created?.id };
+}
+
+async function assertManagerCanApproveEmployeeInput(
+  managerEmployeeId: string | null | undefined,
+  actorUserId: string,
+) {
+  const actor = await getUserByIdRepo(actorUserId);
+  if (!actor?.employeeId) throw Forbidden('Current user is not linked to an employee record');
+  if (!managerEmployeeId) throw Conflict('This payroll input does not require manager approval');
+  if (actor.employeeId !== managerEmployeeId) {
+    throw Forbidden('Only the assigned manager can approve this payroll input');
+  }
+}
+
+export async function approvePayrollOvertimeEntrySvc(
+  payrollCycleId: string,
+  entryId: string,
+  approvedBy: string,
+) {
+  const cycle = await getPayrollCycleRepo(payrollCycleId);
+  if (!cycle) throw NotFound('Payroll cycle not found');
+  const entry = await getPayrollOvertimeEntryRepo(entryId);
+  if (!entry || entry.companyId !== cycle.companyId || entry.payrollPeriodId !== payrollCycleId) {
+    throw NotFound('Payroll overtime entry not found');
+  }
+  if (entry.approvalStatus !== ApprovalStatus.PENDING) {
+    throw Conflict('Payroll overtime entry approval has already been decided');
+  }
+  await assertManagerCanApproveEmployeeInput(entry.managerEmployeeId, approvedBy);
+  const updated = await updatePayrollOvertimeEntryRepo(entryId, {
+    approvalStatus: ApprovalStatus.APPROVED,
+    approvedBy,
+    approvedAt: new Date(),
+    rejectionReason: null,
+  });
+  await recordAuditLog({
+    companyId: entry.companyId,
+    actorUserId: approvedBy,
+    entityType: 'payroll_overtime_entry',
+    entityId: entryId,
+    action: 'PAYROLL_OVERTIME_ENTRY_APPROVED',
+    message: 'Payroll overtime entry approved by manager',
+    metadata: { payrollCycleId, employeeId: entry.employeeId },
+  });
+  return { id: updated?.id };
+}
+
+export async function rejectPayrollOvertimeEntrySvc(
+  payrollCycleId: string,
+  entryId: string,
+  approvedBy: string,
+  reason?: string | null,
+) {
+  const cycle = await getPayrollCycleRepo(payrollCycleId);
+  if (!cycle) throw NotFound('Payroll cycle not found');
+  const entry = await getPayrollOvertimeEntryRepo(entryId);
+  if (!entry || entry.companyId !== cycle.companyId || entry.payrollPeriodId !== payrollCycleId) {
+    throw NotFound('Payroll overtime entry not found');
+  }
+  if (entry.approvalStatus !== ApprovalStatus.PENDING) {
+    throw Conflict('Payroll overtime entry approval has already been decided');
+  }
+  await assertManagerCanApproveEmployeeInput(entry.managerEmployeeId, approvedBy);
+  const updated = await updatePayrollOvertimeEntryRepo(entryId, {
+    approvalStatus: ApprovalStatus.REJECTED,
+    approvedBy,
+    approvedAt: new Date(),
+    rejectionReason: reason ?? null,
+  });
+  await recordAuditLog({
+    companyId: entry.companyId,
+    actorUserId: approvedBy,
+    entityType: 'payroll_overtime_entry',
+    entityId: entryId,
+    action: 'PAYROLL_OVERTIME_ENTRY_REJECTED',
+    message: 'Payroll overtime entry rejected by manager',
+    metadata: { payrollCycleId, employeeId: entry.employeeId, reason: reason ?? null },
+  });
+  return { id: updated?.id };
+}
+
+export async function approvePayrollManualAdjustmentSvc(
+  payrollCycleId: string,
+  entryId: string,
+  approvedBy: string,
+) {
+  const cycle = await getPayrollCycleRepo(payrollCycleId);
+  if (!cycle) throw NotFound('Payroll cycle not found');
+  const entry = await getPayrollManualAdjustmentRepo(entryId);
+  if (!entry || entry.companyId !== cycle.companyId || entry.payrollPeriodId !== payrollCycleId) {
+    throw NotFound('Payroll manual adjustment not found');
+  }
+  if (entry.approvalStatus !== ApprovalStatus.PENDING) {
+    throw Conflict('Payroll manual adjustment approval has already been decided');
+  }
+  await assertManagerCanApproveEmployeeInput(entry.managerEmployeeId, approvedBy);
+  const updated = await updatePayrollManualAdjustmentRepo(entryId, {
+    approvalStatus: ApprovalStatus.APPROVED,
+    approvedBy,
+    approvedAt: new Date(),
+    rejectionReason: null,
+  });
+  await recordAuditLog({
+    companyId: entry.companyId,
+    actorUserId: approvedBy,
+    entityType: 'payroll_manual_adjustment',
+    entityId: entryId,
+    action: 'PAYROLL_MANUAL_ADJUSTMENT_APPROVED',
+    message: 'Payroll manual adjustment approved by manager',
+    metadata: { payrollCycleId, employeeId: entry.employeeId },
+  });
+  return { id: updated?.id };
+}
+
+export async function rejectPayrollManualAdjustmentSvc(
+  payrollCycleId: string,
+  entryId: string,
+  approvedBy: string,
+  reason?: string | null,
+) {
+  const cycle = await getPayrollCycleRepo(payrollCycleId);
+  if (!cycle) throw NotFound('Payroll cycle not found');
+  const entry = await getPayrollManualAdjustmentRepo(entryId);
+  if (!entry || entry.companyId !== cycle.companyId || entry.payrollPeriodId !== payrollCycleId) {
+    throw NotFound('Payroll manual adjustment not found');
+  }
+  if (entry.approvalStatus !== ApprovalStatus.PENDING) {
+    throw Conflict('Payroll manual adjustment approval has already been decided');
+  }
+  await assertManagerCanApproveEmployeeInput(entry.managerEmployeeId, approvedBy);
+  const updated = await updatePayrollManualAdjustmentRepo(entryId, {
+    approvalStatus: ApprovalStatus.REJECTED,
+    approvedBy,
+    approvedAt: new Date(),
+    rejectionReason: reason ?? null,
+  });
+  await recordAuditLog({
+    companyId: entry.companyId,
+    actorUserId: approvedBy,
+    entityType: 'payroll_manual_adjustment',
+    entityId: entryId,
+    action: 'PAYROLL_MANUAL_ADJUSTMENT_REJECTED',
+    message: 'Payroll manual adjustment rejected by manager',
+    metadata: { payrollCycleId, employeeId: entry.employeeId, reason: reason ?? null },
+  });
+  return { id: updated?.id };
+}
+
 function calculateItemAmount(
   basePayPsw: number,
   item: {
@@ -385,6 +710,68 @@ function calculateStatutoryComponents(
       (value): value is { code: string; name: string; amountPsw: number; inclusive: boolean } =>
         Boolean(value),
     );
+}
+
+function calculateAttendanceAdjustedBasePay(input: {
+  payType: number;
+  configuredBasePayPsw: number;
+  attendanceSummary?: {
+    presentDays: number;
+    halfDays: number;
+    totalMinutesWorked: number;
+  };
+  paidLeaveDays?: number;
+}) {
+  const summary = input.attendanceSummary ?? {
+    presentDays: 0,
+    halfDays: 0,
+    totalMinutesWorked: 0,
+  };
+  const paidLeaveDays = Number(input.paidLeaveDays ?? 0);
+
+  if (input.payType === PayType.DAILY) {
+    return {
+      basePayPsw: Math.round(
+        input.configuredBasePayPsw * (summary.presentDays + summary.halfDays * 0.5 + paidLeaveDays),
+      ),
+      metadata: {
+        configuredBasePayPsw: input.configuredBasePayPsw,
+        presentDays: summary.presentDays,
+        halfDays: summary.halfDays,
+        paidLeaveDays,
+      },
+    };
+  }
+
+  if (input.payType === PayType.HOURLY) {
+    const hoursWorked = summary.totalMinutesWorked / 60;
+    return {
+      basePayPsw: Math.round(input.configuredBasePayPsw * hoursWorked),
+      metadata: {
+        configuredBasePayPsw: input.configuredBasePayPsw,
+        totalMinutesWorked: summary.totalMinutesWorked,
+        hoursWorked,
+      },
+    };
+  }
+
+  return {
+    basePayPsw: input.configuredBasePayPsw,
+    metadata: {
+      configuredBasePayPsw: input.configuredBasePayPsw,
+    },
+  };
+}
+
+function calculateOvertimeAmount(input: {
+  overtimeMinutes: number;
+  ratePerHourPsw: number;
+  multiplierPct: number;
+}) {
+  if (input.overtimeMinutes <= 0 || input.ratePerHourPsw <= 0) return 0;
+  return Math.round(
+    (input.ratePerHourPsw * (input.overtimeMinutes / 60) * input.multiplierPct) / 100,
+  );
 }
 
 export async function runPayrollCycleSvc(id: string, initiatedBy: string) {
@@ -434,13 +821,55 @@ export async function runPayrollCycleSvc(id: string, initiatedBy: string) {
       row.employmentStatus !== EmploymentStatus.TERMINATED &&
       row.employmentStatus !== EmploymentStatus.INACTIVE,
   );
+  const attendanceSummaryByEmployeeId = await getAttendanceSummariesRepo({
+    companyId: cycle.companyId,
+    employeeIds: eligibleRows.map((row) => row.employeeId),
+    periodStart: cycle.periodStart,
+    periodEnd: cycle.periodEnd,
+  });
+  const paidLeaveDaysByEmployeeId = await getPaidLeaveSummariesRepo({
+    companyId: cycle.companyId,
+    employeeIds: eligibleRows.map((row) => row.employeeId),
+    periodStart: cycle.periodStart,
+    periodEnd: cycle.periodEnd,
+  });
+  const overtimeEntries = await listPayrollOvertimeEntriesByEmployeesRepo({
+    companyId: cycle.companyId,
+    payrollCycleId: cycle.id,
+    employeeIds: eligibleRows.map((row) => row.employeeId),
+  });
+  const manualAdjustments = await listPayrollManualAdjustmentsByEmployeesRepo({
+    companyId: cycle.companyId,
+    payrollCycleId: cycle.id,
+    employeeIds: eligibleRows.map((row) => row.employeeId),
+  });
+
+  const overtimeEntriesByEmployeeId = new Map<string, typeof overtimeEntries>();
+  for (const entry of overtimeEntries) {
+    const existing = overtimeEntriesByEmployeeId.get(entry.employeeId) ?? [];
+    existing.push(entry);
+    overtimeEntriesByEmployeeId.set(entry.employeeId, existing);
+  }
+
+  const manualAdjustmentsByEmployeeId = new Map<string, typeof manualAdjustments>();
+  for (const entry of manualAdjustments) {
+    const existing = manualAdjustmentsByEmployeeId.get(entry.employeeId) ?? [];
+    existing.push(entry);
+    manualAdjustmentsByEmployeeId.set(entry.employeeId, existing);
+  }
 
   const runEmployees = eligibleRows.map((row) => {
-    let grossPayPsw = row.basePayPsw;
+    const adjustedBasePay = calculateAttendanceAdjustedBasePay({
+      payType: row.payType,
+      configuredBasePayPsw: row.basePayPsw,
+      attendanceSummary: attendanceSummaryByEmployeeId.get(row.employeeId),
+      paidLeaveDays: paidLeaveDaysByEmployeeId.get(row.employeeId) ?? 0,
+    });
+    let grossPayPsw = adjustedBasePay.basePayPsw;
     let totalDeductionsPsw = 0;
-    let taxableGrossPsw = row.basePayPsw;
+    let taxableGrossPsw = adjustedBasePay.basePayPsw;
     const computedItems = row.items.map((item) => {
-      const amount = calculateItemAmount(row.basePayPsw, item);
+      const amount = calculateItemAmount(adjustedBasePay.basePayPsw, item);
       if (item.itemType === PayrollItemType.DEDUCTION) {
         totalDeductionsPsw += amount;
       } else {
@@ -473,6 +902,64 @@ export async function runPayrollCycleSvc(id: string, initiatedBy: string) {
       };
     });
 
+    const overtimeItems = (overtimeEntriesByEmployeeId.get(row.employeeId) ?? []).flatMap(
+      (entry) => {
+        const amountPsw = calculateOvertimeAmount({
+          overtimeMinutes: Number(entry.overtimeMinutes ?? 0),
+          ratePerHourPsw: Number(entry.ratePerHourPsw ?? 0),
+          multiplierPct: Number(entry.multiplierPct ?? 100),
+        });
+        if (amountPsw <= 0) return [];
+        grossPayPsw += amountPsw;
+        taxableGrossPsw += amountPsw;
+        return [
+          {
+            employeeId: row.employeeId,
+            itemType: PayrollItemType.EARNING,
+            code: 'OVERTIME',
+            name: 'Overtime',
+            amountPsw,
+            isTaxable: true,
+            source: 'overtime',
+            metadata: {
+              overtimeEntryId: entry.id,
+              overtimeMinutes: entry.overtimeMinutes,
+              ratePerHourPsw: entry.ratePerHourPsw,
+              multiplierPct: entry.multiplierPct,
+              notes: entry.notes ?? null,
+            },
+          },
+        ];
+      },
+    );
+
+    const manualAdjustmentItems = (manualAdjustmentsByEmployeeId.get(row.employeeId) ?? []).map(
+      (entry) => {
+        const amountPsw = Number(entry.amountPsw ?? 0);
+        if (entry.itemType === PayrollItemType.DEDUCTION) {
+          totalDeductionsPsw += amountPsw;
+        } else {
+          grossPayPsw += amountPsw;
+          if (entry.isTaxable) taxableGrossPsw += amountPsw;
+        }
+
+        return {
+          employeeId: row.employeeId,
+          itemType: entry.itemType,
+          code: entry.code,
+          name: entry.name,
+          amountPsw,
+          isTaxable:
+            entry.itemType === PayrollItemType.DEDUCTION ? false : Boolean(entry.isTaxable),
+          source: 'manual_adjustment',
+          metadata: {
+            manualAdjustmentId: entry.id,
+            notes: entry.notes ?? null,
+          },
+        };
+      },
+    );
+
     const statutoryItems = calculateStatutoryComponents(
       taxableGrossPsw,
       row.taxComponents ?? [],
@@ -503,7 +990,7 @@ export async function runPayrollCycleSvc(id: string, initiatedBy: string) {
         branchIdSnapshot: row.branchId ?? null,
         departmentNameSnapshot: row.departmentName ?? null,
         jobTitleNameSnapshot: row.jobTitleName ?? null,
-        basePayPsw: row.basePayPsw,
+        basePayPsw: adjustedBasePay.basePayPsw,
         grossPayPsw,
         totalDeductionsPsw,
         netPayPsw,
@@ -516,12 +1003,14 @@ export async function runPayrollCycleSvc(id: string, initiatedBy: string) {
           itemType: PayrollItemType.EARNING,
           code: 'BASE',
           name: 'Base Pay',
-          amountPsw: row.basePayPsw,
+          amountPsw: adjustedBasePay.basePayPsw,
           isTaxable: true,
           source: 'base',
-          metadata: { payType: row.payType },
+          metadata: { payType: row.payType, ...adjustedBasePay.metadata },
         },
         ...computedItems,
+        ...overtimeItems,
+        ...manualAdjustmentItems,
         ...statutoryItems,
       ],
       payslip: {
@@ -601,6 +1090,19 @@ export async function approvePayrollCycleSvc(
     notes: comments ?? null,
   });
   await updatePayrollCycleRepo(id, { status: PayrollPeriodStatus.APPROVED });
+
+  await recordAuditLog({
+    companyId: cycle.companyId,
+    actorUserId: approvedBy,
+    entityType: 'payroll_run',
+    entityId: run.id,
+    action: 'PAYROLL_RUN_APPROVED',
+    message: 'Payroll run approved',
+    metadata: {
+      payrollCycleId: id,
+      comments: comments ?? null,
+    },
+  });
 
   return { id: run.id };
 }

@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BranchType } from '@/db/schemas/enums';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
@@ -42,6 +43,45 @@ const EMPTY_META: PaginationMeta = {
   hasNextPage: false,
   hasPreviousPage: false,
 };
+
+const ACCOUNTING_PERMISSION_PRESETS = [
+  {
+    key: 'accounting-viewer',
+    label: 'Accounting Viewer',
+    description: 'Reports and accounting reads only',
+    permissionKeys: [PermissionKeys.CanReadAccounting],
+  },
+  {
+    key: 'accounting-setup',
+    label: 'Accounting Setup Admin',
+    description: 'Manage chart, categories, bank, policies, and tax setup',
+    permissionKeys: [PermissionKeys.CanReadAccounting, PermissionKeys.CanManageAccountingSetup],
+  },
+  {
+    key: 'accounting-tax',
+    label: 'Tax Filing Officer',
+    description: 'Manage tax filing periods and filing actions',
+    permissionKeys: [PermissionKeys.CanReadAccounting, PermissionKeys.CanManageTaxFiling],
+  },
+  {
+    key: 'accounting-operations',
+    label: 'Accounting Operations',
+    description: 'Daily cash and expense workflow posting',
+    permissionKeys: [PermissionKeys.CanReadAccounting, PermissionKeys.CanPostAccountingEntries],
+  },
+  {
+    key: 'accounting-full',
+    label: 'Accounting Full Access',
+    description: 'Full accounting setup, tax, and posting access',
+    permissionKeys: [
+      PermissionKeys.CanReadAccounting,
+      PermissionKeys.CanManageAccountingSetup,
+      PermissionKeys.CanManageTaxFiling,
+      PermissionKeys.CanPostAccountingEntries,
+      PermissionKeys.CanComputeTaxes,
+    ],
+  },
+] as const;
 
 export function RolesPageContent() {
   const authUser = useAuthStore((state) => state.user);
@@ -156,6 +196,10 @@ export function RolesPageContent() {
     );
   };
 
+  const applyPermissionPreset = (permissionKeys: string[]) => {
+    setSelectedPermissionKeys((current) => Array.from(new Set([...current, ...permissionKeys])));
+  };
+
   const handleCreateRole = async () => {
     const name = roleNameInput.trim();
     if (!name) return toast.error('Role name is required');
@@ -254,6 +298,10 @@ export function RolesPageContent() {
         onRoleNameChange={setRoleNameInput}
         selectedPermissionKeys={selectedPermissionKeys}
         onTogglePermission={handleTogglePermission}
+        permissionPresets={ACCOUNTING_PERMISSION_PRESETS.map((preset) => ({
+          ...preset,
+          onApply: () => applyPermissionPreset([...preset.permissionKeys]),
+        }))}
         groupedPermissionCatalog={groupedPermissionCatalog}
         loadingPermissions={isLoadingPermissions}
         submitting={isCreatingRole}
@@ -277,6 +325,10 @@ export function RolesPageContent() {
         groupedPermissionCatalog={groupedPermissionCatalog}
         allPermissionKeys={allPermissionKeys}
         onTogglePermission={handleTogglePermission}
+        permissionPresets={ACCOUNTING_PERMISSION_PRESETS.map((preset) => ({
+          ...preset,
+          onApply: () => applyPermissionPreset([...preset.permissionKeys]),
+        }))}
         onSelectAll={() => setSelectedPermissionKeys(allPermissionKeys)}
         onClearAll={() => setSelectedPermissionKeys([])}
         submitting={isSavingPermissions}

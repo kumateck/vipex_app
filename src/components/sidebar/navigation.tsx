@@ -33,13 +33,11 @@ export const ROUTES: Route[] = [
         title: 'Dashboard',
         url: '/dashboard',
         icon: 'LayoutDashboard',
-        isActive: false,
       },
       {
-        title: 'Analytics',
-        url: '/analytics',
-        icon: 'ChartLine',
-        isActive: false,
+        title: 'All Parcels',
+        url: '/parcels',
+        icon: 'Package',
       },
     ],
   },
@@ -47,16 +45,12 @@ export const ROUTES: Route[] = [
     title: 'Operations',
     menu: [
       {
-        title: 'Parcels',
-        icon: 'Package',
+        title: 'Sending',
+        icon: 'PackagePlus',
         items: [
           {
             title: 'Create Parcel',
             url: '/parcels/create',
-          },
-          {
-            title: 'All Parcels',
-            url: '/parcels',
           },
           {
             title: 'Sender Payments',
@@ -67,9 +61,15 @@ export const ROUTES: Route[] = [
             url: '/parcels/processed',
           },
           {
-            title: 'In Transit (Sent)',
+            title: 'In Transit (Outgoing)',
             url: '/parcels/in-transit/outgoing',
           },
+        ],
+      },
+      {
+        title: 'Receiving',
+        icon: 'PackageCheck',
+        items: [
           {
             title: 'In Transit (Incoming)',
             url: '/parcels/in-transit/incoming',
@@ -79,28 +79,20 @@ export const ROUTES: Route[] = [
             url: '/parcels/receive',
           },
           {
-            title: 'Track Parcel',
-            url: '/parcels/track',
-          },
-          {
-            title: 'Parcel Status',
-            url: '/parcels/status',
-          },
-          {
             title: 'Pickup Queue',
             url: '/parcels/pickup-queue',
           },
           {
-            title: 'Queue Board (Sender Paid)',
+            title: 'Queue Board (Sender)',
             url: '/parcels/pickup-queue/sender',
-          },
-          {
-            title: 'Queue Board (Receiver Pays)',
-            url: '/parcels/pickup-queue/receiver',
           },
           {
             title: 'Waiting for Pickup',
             url: '/parcels/waiting-pickup',
+          },
+          {
+            title: 'Queue Board (Receiver)',
+            url: '/parcels/pickup-queue/receiver',
           },
           {
             title: 'Receiver Cashier',
@@ -113,14 +105,6 @@ export const ROUTES: Route[] = [
         icon: 'Truck',
         items: [
           {
-            title: 'Office Pickup',
-            url: '/deliveries/office-pickup',
-          },
-          {
-            title: 'Address Collection',
-            url: '/parcels/home-delivery/address',
-          },
-          {
             title: 'Dispatch Parcels',
             url: '/parcels/home-delivery/dispatch',
           },
@@ -128,75 +112,29 @@ export const ROUTES: Route[] = [
             title: 'Delivery Cashier',
             url: '/parcels/delivery-cashier',
           },
-          {
-            title: 'Door-to-Door',
-            url: '/deliveries/door-to-door',
-          },
-          {
-            title: 'Assign Riders',
-            url: '/deliveries/assign-riders',
-          },
-          {
-            title: 'Active Deliveries',
-            url: '/deliveries/active',
-          },
-          {
-            title: 'Delivery History',
-            url: '/deliveries/history',
-          },
-          {
-            title: 'Rider Current',
-            url: '/parcels/rider/current',
-          },
-          {
-            title: 'Rider History',
-            url: '/parcels/rider/history',
-          },
         ],
       },
       {
-        title: 'Branches',
-        icon: 'Building2',
+        title: 'Call Center',
+        icon: 'Search',
         items: [
           {
-            title: 'All Branches',
-            url: '/branches',
+            title: 'Parcel Status',
+            url: '/parcels/status',
           },
           {
-            title: 'Branch Performance',
-            url: '/branches/performance',
-          },
-          {
-            title: 'Branch Transfers',
-            url: '/branches/transfers',
-          },
-        ],
-      },
-      {
-        title: 'Locations',
-        icon: 'MapPin',
-        items: [
-          {
-            title: 'Manage Locations',
-            url: '/locations',
-          },
-          {
-            title: 'Zones',
-            url: '/locations/zones',
-          },
-          {
-            title: 'Pricing by Location',
-            url: '/locations/pricing',
+            title: 'Address Collection',
+            url: '/parcels/home-delivery/address',
           },
         ],
       },
     ],
   },
   {
-    title: 'Customers',
+    title: 'CRM',
     menu: [
       {
-        title: 'Customer Management',
+        title: 'Customer Mgt',
         icon: 'Users',
         items: [
           {
@@ -207,42 +145,6 @@ export const ROUTES: Route[] = [
             title: 'Add Customer',
             url: '/customers/create',
           },
-          {
-            title: 'Customer Addresses',
-            url: '/customers/addresses',
-          },
-          {
-            title: 'Customer History',
-            url: '/customers/history',
-          },
-        ],
-      },
-      {
-        title: 'Senders',
-        icon: 'UserCheck',
-        items: [
-          {
-            title: 'All Senders',
-            url: '/senders',
-          },
-          {
-            title: 'Sender Addresses',
-            url: '/senders/addresses',
-          },
-        ],
-      },
-      {
-        title: 'Recipients',
-        icon: 'UserPlus',
-        items: [
-          {
-            title: 'All Recipients',
-            url: '/recipients',
-          },
-          {
-            title: 'Recipient Addresses',
-            url: '/recipients/addresses',
-          },
         ],
       },
     ],
@@ -251,24 +153,65 @@ export const ROUTES: Route[] = [
     title: 'Finance',
     menu: [
       {
-        title: 'Payments',
-        icon: 'CreditCard',
+        title: 'Accounting',
+        icon: 'BookOpen',
         items: [
           {
-            title: 'All Payments',
-            url: '/payments',
+            title: 'Daily Cash',
+            url: '/accounting/daily-cash',
+            permissionKey: 'CanPostAccountingEntries',
           },
           {
-            title: 'Collect Payment',
-            url: '/payments/collect',
+            title: 'Expenses',
+            url: '/accounting/expenses',
+            permissionKey: 'CanPostAccountingEntries',
           },
           {
-            title: 'Payment History',
-            url: '/payments/history',
+            title: 'Reports',
+            url: '/accounting/reports',
+            permissionKey: 'CanReadAccounting',
           },
           {
-            title: 'Refunds',
-            url: '/payments/refunds',
+            title: 'Accounting Setup',
+            url: '/accounting/setup',
+            permissionKey: 'CanManageAccountingSetup',
+          },
+        ],
+      },
+      {
+        title: 'Taxes',
+        icon: 'Receipt',
+        items: [
+          {
+            title: 'Tax Filing',
+            url: '/accounting/tax',
+            permissionKey: 'CanManageTaxFiling',
+          },
+        ],
+      },
+      {
+        title: 'Payroll',
+        icon: 'BadgeDollarSign',
+        items: [
+          {
+            title: 'Compensation Setup',
+            url: '/payroll/compensation',
+            permissionKey: 'CanReadCompensation',
+          },
+          {
+            title: 'Payroll Groups',
+            url: '/payroll/groups',
+            permissionKey: 'CanReadPayrollGroups',
+          },
+          {
+            title: 'Payroll Cycles',
+            url: '/payroll/cycles',
+            permissionKey: 'CanListPayrollCycles',
+          },
+          {
+            title: 'Payroll Inputs',
+            url: '/payroll/inputs',
+            permissionKey: 'CanReadPayrollInputs',
           },
         ],
       },
@@ -295,150 +238,49 @@ export const ROUTES: Route[] = [
         ],
       },
       {
-        title: 'Invoices',
-        icon: 'FileText',
-        items: [
-          {
-            title: 'All Invoices',
-            url: '/invoices',
-          },
-          {
-            title: 'Create Invoice',
-            url: '/invoices/create',
-          },
-          {
-            title: 'Pending Invoices',
-            url: '/invoices/pending',
-          },
-        ],
-      },
-      {
-        title: 'Tax Reports',
-        icon: 'Receipt',
-        items: [
-          {
-            title: 'Tax Overview',
-            url: '/tax/overview',
-          },
-          {
-            title: 'VAT Reports',
-            url: '/tax/vat-reports',
-          },
-          {
-            title: 'NHIL Reports',
-            url: '/tax/nhil-reports',
-          },
-          {
-            title: 'COVID Levy Reports',
-            url: '/tax/covid-levy-reports',
-          },
-        ],
-      },
-      {
-        title: 'Accounting',
-        icon: 'BookOpen',
-        items: [
-          {
-            title: 'Daily Cash',
-            url: '/accounting/daily-cash',
-          },
-          {
-            title: 'Expenses',
-            url: '/accounting/expenses',
-          },
-          {
-            title: 'Tax Filing',
-            url: '/accounting/tax',
-          },
-          {
-            title: 'Reports',
-            url: '/accounting/reports',
-          },
-        ],
+        title: 'Cashiers',
+        url: '/cashiers',
+        icon: 'UsersRound',
       },
     ],
   },
   {
-    title: 'Inventory',
+    title: 'HR',
     menu: [
       {
-        title: 'Inventory Management',
-        icon: 'Package2',
-        items: [
-          {
-            title: 'Product Categories',
-            url: '/inventory/categories',
-            permissionKey: 'CanListProductCategories',
-          },
-          {
-            title: 'Product Locations',
-            url: '/inventory/locations',
-            permissionKey: 'CanListProductLocations',
-          },
-          {
-            title: 'Product Locations',
-            url: '/inventory/locations',
-            permissionKey: 'CanListProductLocations',
-          },
-          {
-            title: 'All Inventory',
-            url: '/inventory',
-          },
-          {
-            title: 'Add Inventory',
-            url: '/inventory/create',
-          },
-          {
-            title: 'Stock Levels',
-            url: '/inventory/stock-levels',
-            permissionKey: 'CanListStockLevels',
-          },
-          {
-            title: 'Low Stock Alerts',
-            url: '/inventory/low-stock',
-          },
-        ],
+        title: 'Employees',
+        url: '/hr/employees',
+        icon: 'Briefcase',
+        permissionKey: 'CanListEmployees',
       },
       {
-        title: 'Inventory Transactions',
-        icon: 'ArrowLeftRight',
-        items: [
-          {
-            title: 'Stock Movements',
-            url: '/inventory/stock-movements',
-            permissionKey: 'CanListStockMovements',
-          },
-          {
-            title: 'Stock Adjustments',
-            url: '/inventory/stock-adjustments',
-            permissionKey: 'CanListStockAdjustments',
-          },
-          {
-            title: 'Stock Transfers',
-            url: '/inventory/stock-transfers',
-            permissionKey: 'CanListStockTransfers',
-          },
-          // {
-          //   title: 'All Transactions',
-          //   url: '/inventory/transactions',
-          //   permissionKey: 'CanListStockTransfers',
-          // },
-          // {
-          //   title: 'Stock In',
-          //   url: '/inventory/transactions/in',
-          //   permissionKey: 'CanListStockTransfers',
-          // },
-          // {
-          //   title: 'Stock Out',
-          //   url: '/inventory/transactions/out',
-          //   permissionKey: 'CanListStockTransfers',
-          // },
-        ],
+        title: 'Departments',
+        url: '/hr/departments',
+        icon: 'Network',
+        permissionKey: 'CanReadDepartments',
+      },
+      {
+        title: 'Job Titles',
+        url: '/hr/job-titles',
+        icon: 'UserCog',
+        permissionKey: 'CanReadJobTitles',
+      },
+      {
+        title: 'Attendance',
+        url: '/hr/attendance',
+        icon: 'Clock3',
+        permissionKey: 'CanListAttendance',
+      },
+      {
+        title: 'Leave Mgt',
+        url: '/hr/leave',
+        icon: 'CalendarDays',
+        permissionKey: 'CanListLeaveRequests',
       },
     ],
   },
   {
-    title: 'Human Resources',
+    title: 'IT',
     menu: [
       {
         title: 'User Management',
@@ -453,10 +295,6 @@ export const ROUTES: Route[] = [
             url: '/users/create',
           },
           {
-            title: 'User Invites',
-            url: '/users/invites',
-          },
-          {
             title: 'Active Users',
             url: '/users/active',
           },
@@ -464,10 +302,14 @@ export const ROUTES: Route[] = [
             title: 'Inactive Users',
             url: '/users/inactive',
           },
+          {
+            title: 'User Invites',
+            url: '/users/invites',
+          },
         ],
       },
       {
-        title: 'Roles & Permissions',
+        title: 'Role Management',
         icon: 'Shield',
         items: [
           {
@@ -478,31 +320,6 @@ export const ROUTES: Route[] = [
             title: 'Permissions',
             url: '/permissions',
           },
-          {
-            title: 'Role Assignments',
-            url: '/roles/assignments',
-          },
-        ],
-      },
-      {
-        title: 'HR Management',
-        icon: 'Briefcase',
-        items: [
-          {
-            title: 'Employees',
-            url: '/hr/employees',
-            permissionKey: 'CanListEmployees',
-          },
-          {
-            title: 'Departments',
-            url: '/hr/departments',
-            permissionKey: 'CanReadDepartments',
-          },
-          {
-            title: 'Job Titles',
-            url: '/hr/job-titles',
-            permissionKey: 'CanReadJobTitles',
-          },
         ],
       },
       {
@@ -510,242 +327,96 @@ export const ROUTES: Route[] = [
         icon: 'Bike',
         items: [
           {
-            title: 'All Riders',
-            url: '/riders',
+            title: 'Current Status',
+            url: '/parcels/rider/current',
           },
           {
-            title: 'Rider Performance',
-            url: '/riders/performance',
-          },
-          {
-            title: 'Rider Assignments',
-            url: '/riders/assignments',
+            title: 'History',
+            url: '/parcels/rider/history',
           },
         ],
       },
     ],
   },
   {
-    title: 'Configuration',
+    title: 'Setups',
     menu: [
       {
-        title: 'Payroll',
-        icon: 'BadgeDollarSign',
-        items: [
-          {
-            title: 'Compensation Setup',
-            url: '/payroll/compensation',
-            permissionKey: 'CanReadCompensation',
-          },
-          {
-            title: 'Payroll Groups',
-            url: '/payroll/groups',
-            permissionKey: 'CanReadPayrollGroups',
-          },
-          {
-            title: 'Payroll Cycles',
-            url: '/payroll/cycles',
-            permissionKey: 'CanListPayrollCycles',
-          },
-        ],
-      },
-      {
-        title: 'Company Settings',
+        title: 'Company Setup',
         icon: 'Building',
         items: [
           {
             title: 'Company Profile',
             url: '/settings/company',
-            permissionKey: 'CanManageCompanyModules',
           },
           {
-            title: 'Branches',
-            url: '/settings/branches',
-          },
-          {
-            title: 'Modules',
+            title: 'Module Management',
             url: '/settings/modules',
             permissionKey: 'CanManageCompanyModules',
           },
-        ],
-      },
-      {
-        title: 'Service Configuration',
-        icon: 'Settings',
-        items: [
           {
-            title: 'Cards',
+            title: 'Branch Management',
+            url: '/branches',
+          },
+          {
+            title: 'Location Management',
+            url: '/locations',
+          },
+          {
+            title: 'Status Management',
+            url: '/statuses',
+          },
+          {
+            title: 'Card Management',
             url: '/settings/cards',
           },
-          {
-            title: 'Parcel Types',
-            url: '/settings/parcel-types',
-          },
-          {
-            title: 'Statuses',
-            url: '/settings/statuses',
-          },
-          {
-            title: 'Delivery Modes',
-            url: '/settings/delivery-modes',
-          },
-        ],
-      },
-      {
-        title: 'Pricing',
-        icon: 'DollarSign',
-        items: [
-          {
-            title: 'Price Structure',
-            url: '/settings/pricing',
-          },
-          {
-            title: 'Tax Configuration',
-            url: '/settings/tax',
-          },
-          {
-            title: 'Discounts & Promotions',
-            url: '/settings/discounts',
-          },
-        ],
-      },
-      {
-        title: 'System Settings',
-        icon: 'Cog',
-        items: [
           {
             title: 'Appearance',
             url: '/settings/appearance',
           },
-          {
-            title: 'General Settings',
-            url: '/settings/general',
-          },
-          {
-            title: 'Change Password',
-            url: '/settings/change-password',
-          },
-          {
-            title: 'Email Templates',
-            url: '/settings/email-templates',
-          },
-          {
-            title: 'SMS Settings',
-            url: '/settings/sms',
-          },
-          {
-            title: 'Backup & Restore',
-            url: '/settings/backup',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'Reports',
-    menu: [
-      {
-        title: 'Financial Reports',
-        icon: 'TrendingUp',
-        items: [
-          {
-            title: 'Revenue Reports',
-            url: '/reports/revenue',
-          },
-          {
-            title: 'Payment Reports',
-            url: '/reports/payments',
-          },
-          {
-            title: 'Tax Reports',
-            url: '/reports/tax',
-          },
         ],
       },
       {
-        title: 'Operational Reports',
-        icon: 'ChartBarBig',
+        title: 'Inventory Setup',
+        icon: 'Package2',
         items: [
           {
-            title: 'Parcel Reports',
-            url: '/reports/parcels',
+            title: 'All Inventory',
+            url: '/inventory',
           },
           {
-            title: 'Delivery Reports',
-            url: '/reports/deliveries',
+            title: 'Products',
+            url: '/inventory/products',
           },
           {
-            title: 'Branch Performance',
-            url: '/reports/branch-performance',
+            title: 'Categories',
+            url: '/inventory/categories',
+            permissionKey: 'CanListProductCategories',
           },
           {
-            title: 'Rider Performance',
-            url: '/reports/rider-performance',
-          },
-        ],
-      },
-      {
-        title: 'Customer Reports',
-        icon: 'Users',
-        items: [
-          {
-            title: 'Customer Activity',
-            url: '/reports/customer-activity',
+            title: 'Locations',
+            url: '/inventory/locations',
+            permissionKey: 'CanListProductLocations',
           },
           {
-            title: 'Customer Revenue',
-            url: '/reports/customer-revenue',
-          },
-        ],
-      },
-      {
-        title: 'Inventory Reports',
-        icon: 'ClipboardList',
-        items: [
-          {
-            title: 'Stock Reports',
-            url: '/reports/stock',
+            title: 'Stock Levels',
+            url: '/inventory/stock-levels',
+            permissionKey: 'CanListStockLevels',
           },
           {
-            title: 'Transaction Reports',
-            url: '/reports/inventory-transactions',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'Audit & Compliance',
-    menu: [
-      {
-        title: 'Audit Logs',
-        icon: 'FileSearch',
-        items: [
-          {
-            title: 'All Audit Logs',
-            url: '/audit/logs',
+            title: 'Stock Movements',
+            url: '/inventory/stock-movements',
+            permissionKey: 'CanListStockMovements',
           },
           {
-            title: 'User Activity',
-            url: '/audit/user-activity',
+            title: 'Stock Adjustments',
+            url: '/inventory/stock-adjustments',
+            permissionKey: 'CanListStockAdjustments',
           },
           {
-            title: 'System Changes',
-            url: '/audit/system-changes',
-          },
-        ],
-      },
-      {
-        title: 'Compliance',
-        icon: 'ShieldCheck',
-        items: [
-          {
-            title: 'Data Privacy',
-            url: '/compliance/data-privacy',
-          },
-          {
-            title: 'Tax Compliance',
-            url: '/compliance/tax',
+            title: 'Stock Transfers',
+            url: '/inventory/stock-transfers',
+            permissionKey: 'CanListStockTransfers',
           },
         ],
       },

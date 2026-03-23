@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { TaxFilingPeriodStatus, TaxFilingStatus } from '@/db/schemas/enums';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import {
   type TaxFilingPeriodRow,
   type TaxJournalItemRow,
@@ -30,6 +31,7 @@ import {
 } from '../api';
 import {
   AccountingDisabledState,
+  AccountingUnauthorizedState,
   filingPeriodStatusLabel,
   formatDate,
   formatDateTime,
@@ -45,6 +47,14 @@ export function AccountingTaxPage() {
   const user = useAuthStore((state) => state.user);
   if (!user?.company?.useAccounting) {
     return <AccountingDisabledState />;
+  }
+  if (!user.permissions?.includes(PermissionKeys.CanManageTaxFiling)) {
+    return (
+      <AccountingUnauthorizedState
+        title="Tax Filing Restricted"
+        description="Your role does not include permission to manage tax filing periods and tax filing actions."
+      />
+    );
   }
 
   return <AccountingTaxPageContent user={user} />;

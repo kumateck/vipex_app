@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ExpenseFundingSource, ExpenseRequestStatus } from '@/db/schemas/enums';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import {
   type ExpenseRequestRow,
   useApproveExpenseRequestMutation,
@@ -31,6 +32,7 @@ import {
 } from '../api';
 import {
   AccountingDisabledState,
+  AccountingUnauthorizedState,
   expenseStatusLabel,
   formatDateTime,
   formatMoney,
@@ -45,6 +47,14 @@ export function AccountingExpensesPage() {
   const user = useAuthStore((state) => state.user);
   if (!user?.company?.useAccounting) {
     return <AccountingDisabledState />;
+  }
+  if (!user.permissions?.includes(PermissionKeys.CanPostAccountingEntries)) {
+    return (
+      <AccountingUnauthorizedState
+        title="Expense Workflow Restricted"
+        description="Your role does not include permission to create, approve, pay, and post accounting expense entries."
+      />
+    );
   }
 
   return <AccountingExpensesPageContent user={user} />;

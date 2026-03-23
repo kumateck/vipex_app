@@ -1,12 +1,15 @@
 import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
+  attendanceRecords,
   deductionTypes,
   departments,
   earningTypes,
   employeeCompensation,
   employeeCompensationItems,
   payrollGroups,
+  payrollManualAdjustments,
+  payrollOvertimeEntries,
   payrollPeriods,
   payrollRunItems,
   payrollRuns,
@@ -52,6 +55,11 @@ export type ListCompensationParams = {
   employeeId?: string | null;
   payrollGroupId?: string | null;
   search?: string | null;
+};
+
+export type PayrollCycleInputParams = {
+  payrollCycleId: string;
+  companyId: string;
 };
 
 export async function listPayrollGroupsRepo(p: ListPayrollGroupParams) {
@@ -588,6 +596,161 @@ export async function getPayrollCycleWithGroupRepo(id: string) {
   return row ?? null;
 }
 
+export async function listPayrollOvertimeEntriesRepo(input: PayrollCycleInputParams) {
+  return db
+    .select({
+      id: payrollOvertimeEntries.id,
+      companyId: payrollOvertimeEntries.companyId,
+      payrollPeriodId: payrollOvertimeEntries.payrollPeriodId,
+      employeeId: payrollOvertimeEntries.employeeId,
+      employeeNumber: employees.employeeNumber,
+      employeeName: employees.displayName,
+      managerEmployeeId: employees.managerEmployeeId,
+      overtimeMinutes: payrollOvertimeEntries.overtimeMinutes,
+      ratePerHourPsw: payrollOvertimeEntries.ratePerHourPsw,
+      multiplierPct: payrollOvertimeEntries.multiplierPct,
+      approvalStatus: payrollOvertimeEntries.approvalStatus,
+      approvedBy: payrollOvertimeEntries.approvedBy,
+      approvedAt: payrollOvertimeEntries.approvedAt,
+      rejectionReason: payrollOvertimeEntries.rejectionReason,
+      notes: payrollOvertimeEntries.notes,
+      createdBy: payrollOvertimeEntries.createdBy,
+      createdAt: payrollOvertimeEntries.createdAt,
+      updatedAt: payrollOvertimeEntries.updatedAt,
+    })
+    .from(payrollOvertimeEntries)
+    .innerJoin(employees, eq(payrollOvertimeEntries.employeeId, employees.id))
+    .where(
+      and(
+        eq(payrollOvertimeEntries.companyId, input.companyId),
+        eq(payrollOvertimeEntries.payrollPeriodId, input.payrollCycleId),
+      ),
+    )
+    .orderBy(desc(payrollOvertimeEntries.createdAt), desc(payrollOvertimeEntries.id));
+}
+
+export async function createPayrollOvertimeEntryRepo(
+  values: typeof payrollOvertimeEntries.$inferInsert,
+) {
+  const [row] = await db
+    .insert(payrollOvertimeEntries)
+    .values(values)
+    .returning({ id: payrollOvertimeEntries.id });
+  return row ?? null;
+}
+
+export async function getPayrollOvertimeEntryRepo(id: string) {
+  const [row] = await db
+    .select({
+      id: payrollOvertimeEntries.id,
+      companyId: payrollOvertimeEntries.companyId,
+      payrollPeriodId: payrollOvertimeEntries.payrollPeriodId,
+      employeeId: payrollOvertimeEntries.employeeId,
+      managerEmployeeId: employees.managerEmployeeId,
+      approvalStatus: payrollOvertimeEntries.approvalStatus,
+      approvedBy: payrollOvertimeEntries.approvedBy,
+      approvedAt: payrollOvertimeEntries.approvedAt,
+      rejectionReason: payrollOvertimeEntries.rejectionReason,
+    })
+    .from(payrollOvertimeEntries)
+    .innerJoin(employees, eq(payrollOvertimeEntries.employeeId, employees.id))
+    .where(eq(payrollOvertimeEntries.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function updatePayrollOvertimeEntryRepo(
+  id: string,
+  patch: Partial<typeof payrollOvertimeEntries.$inferInsert>,
+) {
+  const [row] = await db
+    .update(payrollOvertimeEntries)
+    .set(patch)
+    .where(eq(payrollOvertimeEntries.id, id))
+    .returning({ id: payrollOvertimeEntries.id });
+  return row ?? null;
+}
+
+export async function listPayrollManualAdjustmentsRepo(input: PayrollCycleInputParams) {
+  return db
+    .select({
+      id: payrollManualAdjustments.id,
+      companyId: payrollManualAdjustments.companyId,
+      payrollPeriodId: payrollManualAdjustments.payrollPeriodId,
+      employeeId: payrollManualAdjustments.employeeId,
+      employeeNumber: employees.employeeNumber,
+      employeeName: employees.displayName,
+      managerEmployeeId: employees.managerEmployeeId,
+      itemType: payrollManualAdjustments.itemType,
+      earningTypeId: payrollManualAdjustments.earningTypeId,
+      deductionTypeId: payrollManualAdjustments.deductionTypeId,
+      code: payrollManualAdjustments.code,
+      name: payrollManualAdjustments.name,
+      amountPsw: payrollManualAdjustments.amountPsw,
+      isTaxable: payrollManualAdjustments.isTaxable,
+      approvalStatus: payrollManualAdjustments.approvalStatus,
+      approvedBy: payrollManualAdjustments.approvedBy,
+      approvedAt: payrollManualAdjustments.approvedAt,
+      rejectionReason: payrollManualAdjustments.rejectionReason,
+      notes: payrollManualAdjustments.notes,
+      createdBy: payrollManualAdjustments.createdBy,
+      createdAt: payrollManualAdjustments.createdAt,
+      updatedAt: payrollManualAdjustments.updatedAt,
+    })
+    .from(payrollManualAdjustments)
+    .innerJoin(employees, eq(payrollManualAdjustments.employeeId, employees.id))
+    .where(
+      and(
+        eq(payrollManualAdjustments.companyId, input.companyId),
+        eq(payrollManualAdjustments.payrollPeriodId, input.payrollCycleId),
+      ),
+    )
+    .orderBy(desc(payrollManualAdjustments.createdAt), desc(payrollManualAdjustments.id));
+}
+
+export async function createPayrollManualAdjustmentRepo(
+  values: typeof payrollManualAdjustments.$inferInsert,
+) {
+  const [row] = await db
+    .insert(payrollManualAdjustments)
+    .values(values)
+    .returning({ id: payrollManualAdjustments.id });
+  return row ?? null;
+}
+
+export async function getPayrollManualAdjustmentRepo(id: string) {
+  const [row] = await db
+    .select({
+      id: payrollManualAdjustments.id,
+      companyId: payrollManualAdjustments.companyId,
+      payrollPeriodId: payrollManualAdjustments.payrollPeriodId,
+      employeeId: payrollManualAdjustments.employeeId,
+      managerEmployeeId: employees.managerEmployeeId,
+      itemType: payrollManualAdjustments.itemType,
+      approvalStatus: payrollManualAdjustments.approvalStatus,
+      approvedBy: payrollManualAdjustments.approvedBy,
+      approvedAt: payrollManualAdjustments.approvedAt,
+      rejectionReason: payrollManualAdjustments.rejectionReason,
+    })
+    .from(payrollManualAdjustments)
+    .innerJoin(employees, eq(payrollManualAdjustments.employeeId, employees.id))
+    .where(eq(payrollManualAdjustments.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function updatePayrollManualAdjustmentRepo(
+  id: string,
+  patch: Partial<typeof payrollManualAdjustments.$inferInsert>,
+) {
+  const [row] = await db
+    .update(payrollManualAdjustments)
+    .set(patch)
+    .where(eq(payrollManualAdjustments.id, id))
+    .returning({ id: payrollManualAdjustments.id });
+  return row ?? null;
+}
+
 export async function updatePayrollCycleRepo(
   id: string,
   patch: Partial<typeof payrollPeriods.$inferInsert>,
@@ -641,6 +804,7 @@ export async function listBankExportRowsRepo(payrollRunId: string) {
   return db
     .select({
       payslipId: payslips.id,
+      payslipNumber: payslips.payslipNumber,
       employeeId: payrollRunEmployees.employeeId,
       employeeNumber: payrollRunEmployees.employeeNumberSnapshot,
       employeeName: payrollRunEmployees.employeeNameSnapshot,
@@ -930,6 +1094,64 @@ export async function listCompensationByGroupAndPeriodRepo(input: {
   }));
 }
 
+export async function listPayrollOvertimeEntriesByEmployeesRepo(input: {
+  companyId: string;
+  payrollCycleId: string;
+  employeeIds: string[];
+}) {
+  if (!input.employeeIds.length) return [];
+
+  return db
+    .select({
+      id: payrollOvertimeEntries.id,
+      employeeId: payrollOvertimeEntries.employeeId,
+      overtimeMinutes: payrollOvertimeEntries.overtimeMinutes,
+      ratePerHourPsw: payrollOvertimeEntries.ratePerHourPsw,
+      multiplierPct: payrollOvertimeEntries.multiplierPct,
+      notes: payrollOvertimeEntries.notes,
+    })
+    .from(payrollOvertimeEntries)
+    .where(
+      and(
+        eq(payrollOvertimeEntries.companyId, input.companyId),
+        eq(payrollOvertimeEntries.payrollPeriodId, input.payrollCycleId),
+        eq(payrollOvertimeEntries.approvalStatus, 1),
+        inArray(payrollOvertimeEntries.employeeId, input.employeeIds),
+      ),
+    )
+    .orderBy(asc(payrollOvertimeEntries.createdAt), asc(payrollOvertimeEntries.id));
+}
+
+export async function listPayrollManualAdjustmentsByEmployeesRepo(input: {
+  companyId: string;
+  payrollCycleId: string;
+  employeeIds: string[];
+}) {
+  if (!input.employeeIds.length) return [];
+
+  return db
+    .select({
+      id: payrollManualAdjustments.id,
+      employeeId: payrollManualAdjustments.employeeId,
+      itemType: payrollManualAdjustments.itemType,
+      code: payrollManualAdjustments.code,
+      name: payrollManualAdjustments.name,
+      amountPsw: payrollManualAdjustments.amountPsw,
+      isTaxable: payrollManualAdjustments.isTaxable,
+      notes: payrollManualAdjustments.notes,
+    })
+    .from(payrollManualAdjustments)
+    .where(
+      and(
+        eq(payrollManualAdjustments.companyId, input.companyId),
+        eq(payrollManualAdjustments.payrollPeriodId, input.payrollCycleId),
+        eq(payrollManualAdjustments.approvalStatus, 1),
+        inArray(payrollManualAdjustments.employeeId, input.employeeIds),
+      ),
+    )
+    .orderBy(asc(payrollManualAdjustments.createdAt), asc(payrollManualAdjustments.id));
+}
+
 export async function listPayslipsByCycleRepo(input: {
   payrollCycleId: string;
   employeeId?: string | null;
@@ -971,4 +1193,66 @@ export async function listPayslipsByCycleRepo(input: {
     data,
     totalRecords: Number((countRow?.c as unknown as bigint) ?? 0n),
   };
+}
+
+export async function getAttendanceSummariesRepo(input: {
+  companyId: string;
+  employeeIds: string[];
+  periodStart: Date;
+  periodEnd: Date;
+}) {
+  if (!input.employeeIds.length) {
+    return new Map<
+      string,
+      {
+        presentDays: number;
+        halfDays: number;
+        totalMinutesWorked: number;
+      }
+    >();
+  }
+
+  const rows = await db
+    .select({
+      employeeId: attendanceRecords.employeeId,
+      status: attendanceRecords.status,
+      minutesWorked: attendanceRecords.minutesWorked,
+    })
+    .from(attendanceRecords)
+    .where(
+      and(
+        eq(attendanceRecords.companyId, input.companyId),
+        inArray(attendanceRecords.employeeId, input.employeeIds),
+        gte(attendanceRecords.attendanceDate, input.periodStart),
+        lte(attendanceRecords.attendanceDate, input.periodEnd),
+      ),
+    );
+
+  const summaryByEmployeeId = new Map<
+    string,
+    {
+      presentDays: number;
+      halfDays: number;
+      totalMinutesWorked: number;
+    }
+  >();
+
+  for (const row of rows) {
+    const current = summaryByEmployeeId.get(row.employeeId) ?? {
+      presentDays: 0,
+      halfDays: 0,
+      totalMinutesWorked: 0,
+    };
+
+    if (row.status === 0 || row.status === 2) {
+      current.presentDays += 1;
+    } else if (row.status === 3) {
+      current.halfDays += 1;
+    }
+
+    current.totalMinutesWorked += Number(row.minutesWorked ?? 0);
+    summaryByEmployeeId.set(row.employeeId, current);
+  }
+
+  return summaryByEmployeeId;
 }

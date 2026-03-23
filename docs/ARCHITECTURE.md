@@ -62,6 +62,9 @@ The accounting module is a controlled ledger layer over operations.
 - Reporting reads from posted journal lines.
 - Accounting is optional per company and is controlled through the company module system.
 - The current UI control point is `/settings/company`, which toggles the `accounting` module and keeps `companies.use_accounting` synchronized for auth and navigation gating.
+- Accounting master data maintenance is exposed at `/accounting/setup` for chart of accounts, expense categories, approval policies, company bank accounts, tax profiles, and tax components.
+- Accounting access is also role-gated through dedicated permission keys for viewing, setup management, tax filing, and posting workflows.
+- Accounting setup mutations are audit-logged with actor and before/after metadata through the shared audit module.
 
 Reference: `docs/ACCOUNTING_MODULE.md`
 

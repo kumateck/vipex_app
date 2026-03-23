@@ -21,6 +21,10 @@ Base URL: `/v1`
 - `/hr/job-titles`
 - `/hr/employees`
 - `/hr/attendance`
+- `/hr/leave-types`
+- `/hr/leave-requests`
+  - `/hr/leave-requests/:id/manager-approve`
+  - `/hr/leave-requests/:id/manager-reject`
 - `/customers`
   - `/customers/crm`
   - `/customers/:id/crm`
@@ -46,8 +50,14 @@ Base URL: `/v1`
 
 - `/payments`
 - `/accounting`
+  - `accounts`
+  - `expense-categories`
+  - `approval-policies`
+  - `bank-accounts`
+  - `tax-components`
   - `daily-cash-expected`
   - `daily-cash-confirmations`
+  - `tax-profiles`
   - `expense-requests`
   - `tax-filing-periods`
   - `tax-journal-items`
@@ -64,6 +74,12 @@ Base URL: `/v1`
   - `/payroll/deduction-types`
   - `/payroll/compensation`
   - `/payroll/cycles`
+  - `/payroll/cycles/:id/overtime`
+  - `/payroll/cycles/:id/overtime/:entryId/approve`
+  - `/payroll/cycles/:id/overtime/:entryId/reject`
+  - `/payroll/cycles/:id/adjustments`
+  - `/payroll/cycles/:id/adjustments/:entryId/approve`
+  - `/payroll/cycles/:id/adjustments/:entryId/reject`
   - `/payroll/cycles/:id/bank-export`
   - `/payroll/cycles/:id/payslips`
   - `/payroll/payslips/:id`
@@ -81,6 +97,9 @@ Notes:
 
 - Accounting availability is controlled through the `accounting` company module.
 - The accounting UI is surfaced at `/settings/company` for users with `CanManageCompanyModules`.
+- Accounting setup master data is surfaced at `/accounting/setup`.
+- The setup page currently manages chart of accounts, expense categories, approval policies, company bank accounts, tax profiles, and tax components.
+- Accounting API access is also role-gated with `CanReadAccounting`, `CanManageAccountingSetup`, `CanManageTaxFiling`, and `CanPostAccountingEntries`.
 - When `accounting` is disabled, `/accounting/*` UI routes are hidden and `/v1/accounting/*` API routes are blocked.
 
 Reference:

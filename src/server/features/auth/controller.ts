@@ -18,8 +18,14 @@ export async function loginCtrl(input: {
 }
 
 export async function refreshCtrl(refreshToken: string) {
-  const tokens = await refreshSvc(refreshToken);
-  return { tokens };
+  const { accessToken, refreshToken: nextRefreshToken, user } = await refreshSvc(refreshToken);
+  return {
+    tokens: {
+      accessToken,
+      refreshToken: nextRefreshToken,
+    },
+    user,
+  };
 }
 
 export async function logoutCtrl(refreshToken: string) {

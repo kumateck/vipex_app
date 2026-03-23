@@ -8,6 +8,7 @@ import { ensureCompanyModuleEnabledSvc } from '../features/company-modules/servi
 export type AuthUser = {
   sub: string;
   email: string;
+  employeeId?: string | null;
   roleId?: string | null;
   companyId?: string | null;
   branchId?: string | null;
@@ -46,6 +47,15 @@ export function requirePermissions(...required: string[]) {
     if (!user) throw UnauthorizedError();
     const granted = new Set(user.permissions ?? []);
     const ok = required.every((permission) => granted.has(permission));
+    if (!ok) throw Forbidden();
+  };
+}
+
+export function requireAnyPermissions(...required: string[]) {
+  return ({ user }: { user: AuthUser | null }) => {
+    if (!user) throw UnauthorizedError();
+    const granted = new Set(user.permissions ?? []);
+    const ok = required.some((permission) => granted.has(permission));
     if (!ok) throw Forbidden();
   };
 }

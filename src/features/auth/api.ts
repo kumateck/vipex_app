@@ -25,6 +25,7 @@ export interface RefreshTokenResponse {
     accessToken: string;
     refreshToken: string;
   };
+  user: AuthUser;
 }
 
 export interface ForgotPasswordRequest {
@@ -127,7 +128,7 @@ export const authApi = api.injectEndpoints({
 
           if (currentAuth.user) {
             currentAuth.setAuth({
-              user: currentAuth.user,
+              user: data.user,
               accessToken: data.tokens.accessToken,
               refreshToken: data.tokens.refreshToken,
             });

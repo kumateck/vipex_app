@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, ilike, lte, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, ilike, inArray, lte, or } from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
   attendanceRecords,
@@ -7,6 +7,8 @@ import {
   employees,
   employeeJobAssignments,
   jobTitles,
+  leaveRequests,
+  leaveTypes,
   locations,
   users,
 } from '@/db/schemas';
@@ -37,6 +39,22 @@ export type ListJobTitleParams = {
   companyId: string;
   includeInactive?: boolean | null;
   search?: string | null;
+};
+
+export type ListLeaveTypeParams = {
+  limit: number;
+  offset: number;
+  companyId: string;
+  includeInactive?: boolean | null;
+  search?: string | null;
+};
+
+export type ListLeaveRequestParams = {
+  limit: number;
+  offset: number;
+  companyId: string;
+  employeeId?: string | null;
+  status?: number | null;
 };
 
 export async function listDepartmentsRepo(p: ListDepartmentParams) {
@@ -157,6 +175,79 @@ export async function listJobTitleOptionsRepo(companyId: string, search?: string
       ),
     )
     .orderBy(asc(jobTitles.name), asc(jobTitles.id));
+}
+
+export async function listLeaveTypesRepo(p: ListLeaveTypeParams) {
+  const where = [
+    eq(leaveTypes.companyId, p.companyId),
+    ...(p.includeInactive ? [] : [eq(leaveTypes.isActive, true)]),
+    ...(p.search ? [ilike(leaveTypes.name, `%${p.search}%`)] : []),
+  ];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(leaveTypes)
+    .where(and(...where));
+  const data = await db
+    .select({
+      id: leaveTypes.id,
+      companyId: leaveTypes.companyId,
+      code: leaveTypes.code,
+      name: leaveTypes.name,
+      isPaid: leaveTypes.isPaid,
+      isActive: leaveTypes.isActive,
+      createdAt: leaveTypes.createdAt,
+      updatedAt: leaveTypes.updatedAt,
+    })
+    .from(leaveTypes)
+    .where(and(...where))
+    .orderBy(asc(leaveTypes.name), asc(leaveTypes.id))
+    .limit(p.limit)
+    .offset(p.offset);
+
+  return { data, totalRecords: Number((countRow?.c as unknown as bigint) ?? 0n) };
+}
+
+export async function listLeaveTypeOptionsRepo(companyId: string) {
+  return db
+    .select({
+      id: leaveTypes.id,
+      code: leaveTypes.code,
+      name: leaveTypes.name,
+      isPaid: leaveTypes.isPaid,
+    })
+    .from(leaveTypes)
+    .where(and(eq(leaveTypes.companyId, companyId), eq(leaveTypes.isActive, true)))
+    .orderBy(asc(leaveTypes.name), asc(leaveTypes.id));
+}
+
+export async function createLeaveTypeRepo(values: typeof leaveTypes.$inferInsert) {
+  const [row] = await db.insert(leaveTypes).values(values).returning({ id: leaveTypes.id });
+  return row ?? null;
+}
+
+export async function findLeaveTypeByNameRepo(companyId: string, name: string) {
+  const [row] = await db
+    .select({ id: leaveTypes.id })
+    .from(leaveTypes)
+    .where(and(eq(leaveTypes.companyId, companyId), ilike(leaveTypes.name, name)))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getLeaveTypeRepo(id: string) {
+  const [row] = await db
+    .select({
+      id: leaveTypes.id,
+      companyId: leaveTypes.companyId,
+      name: leaveTypes.name,
+      isPaid: leaveTypes.isPaid,
+      isActive: leaveTypes.isActive,
+    })
+    .from(leaveTypes)
+    .where(eq(leaveTypes.id, id))
+    .limit(1);
+  return row ?? null;
 }
 
 export async function createJobTitleRepo(values: typeof jobTitles.$inferInsert) {
@@ -465,6 +556,133 @@ export async function listAttendanceRepo(p: ListAttendanceParams) {
     data,
     totalRecords: Number((countRow?.c as unknown as bigint) ?? 0n),
   };
+}
+
+export async function listLeaveRequestsRepo(p: ListLeaveRequestParams) {
+  const where = [
+    eq(leaveRequests.companyId, p.companyId),
+    ...(p.employeeId ? [eq(leaveRequests.employeeId, p.employeeId)] : []),
+    ...(p.status !== null && p.status !== undefined ? [eq(leaveRequests.status, p.status)] : []),
+  ];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(leaveRequests)
+    .where(and(...where));
+  const data = await db
+    .select({
+      id: leaveRequests.id,
+      companyId: leaveRequests.companyId,
+      employeeId: leaveRequests.employeeId,
+      employeeName: employees.displayName,
+      leaveTypeId: leaveRequests.leaveTypeId,
+      leaveTypeName: leaveTypes.name,
+      leaveTypeIsPaid: leaveTypes.isPaid,
+      dateFrom: leaveRequests.dateFrom,
+      dateTo: leaveRequests.dateTo,
+      daysCount: leaveRequests.daysCount,
+      reason: leaveRequests.reason,
+      managerEmployeeId: employees.managerEmployeeId,
+      managerApprovalStatus: leaveRequests.managerApprovalStatus,
+      managerApprovedBy: leaveRequests.managerApprovedBy,
+      managerApprovedAt: leaveRequests.managerApprovedAt,
+      managerRejectionReason: leaveRequests.managerRejectionReason,
+      status: leaveRequests.status,
+      approvedBy: leaveRequests.approvedBy,
+      approvedAt: leaveRequests.approvedAt,
+      rejectionReason: leaveRequests.rejectionReason,
+      createdAt: leaveRequests.createdAt,
+      updatedAt: leaveRequests.updatedAt,
+    })
+    .from(leaveRequests)
+    .innerJoin(employees, eq(leaveRequests.employeeId, employees.id))
+    .innerJoin(leaveTypes, eq(leaveRequests.leaveTypeId, leaveTypes.id))
+    .where(and(...where))
+    .orderBy(desc(leaveRequests.dateFrom), desc(leaveRequests.createdAt))
+    .limit(p.limit)
+    .offset(p.offset);
+
+  return { data, totalRecords: Number((countRow?.c as unknown as bigint) ?? 0n) };
+}
+
+export async function createLeaveRequestRepo(values: typeof leaveRequests.$inferInsert) {
+  const [row] = await db.insert(leaveRequests).values(values).returning({ id: leaveRequests.id });
+  return row ?? null;
+}
+
+export async function getLeaveRequestRepo(id: string) {
+  const [row] = await db
+    .select({
+      id: leaveRequests.id,
+      companyId: leaveRequests.companyId,
+      employeeId: leaveRequests.employeeId,
+      leaveTypeId: leaveRequests.leaveTypeId,
+      dateFrom: leaveRequests.dateFrom,
+      dateTo: leaveRequests.dateTo,
+      daysCount: leaveRequests.daysCount,
+      managerApprovalStatus: leaveRequests.managerApprovalStatus,
+      managerApprovedBy: leaveRequests.managerApprovedBy,
+      managerApprovedAt: leaveRequests.managerApprovedAt,
+      managerRejectionReason: leaveRequests.managerRejectionReason,
+      status: leaveRequests.status,
+      approvedBy: leaveRequests.approvedBy,
+      approvedAt: leaveRequests.approvedAt,
+      rejectionReason: leaveRequests.rejectionReason,
+      managerEmployeeId: employees.managerEmployeeId,
+    })
+    .from(leaveRequests)
+    .innerJoin(employees, eq(leaveRequests.employeeId, employees.id))
+    .where(eq(leaveRequests.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function updateLeaveRequestRepo(
+  id: string,
+  patch: Partial<typeof leaveRequests.$inferInsert>,
+) {
+  const [row] = await db
+    .update(leaveRequests)
+    .set(patch)
+    .where(eq(leaveRequests.id, id))
+    .returning({ id: leaveRequests.id });
+  return row ?? null;
+}
+
+export async function getPaidLeaveSummariesRepo(input: {
+  companyId: string;
+  employeeIds: string[];
+  periodStart: Date;
+  periodEnd: Date;
+}) {
+  if (!input.employeeIds.length) return new Map<string, number>();
+
+  const rows = await db
+    .select({
+      employeeId: leaveRequests.employeeId,
+      daysCount: leaveRequests.daysCount,
+    })
+    .from(leaveRequests)
+    .innerJoin(leaveTypes, eq(leaveRequests.leaveTypeId, leaveTypes.id))
+    .where(
+      and(
+        eq(leaveRequests.companyId, input.companyId),
+        inArray(leaveRequests.employeeId, input.employeeIds),
+        eq(leaveRequests.status, 1),
+        eq(leaveTypes.isPaid, true),
+        lte(leaveRequests.dateFrom, input.periodEnd),
+        gte(leaveRequests.dateTo, input.periodStart),
+      ),
+    );
+
+  const daysByEmployeeId = new Map<string, number>();
+  for (const row of rows) {
+    daysByEmployeeId.set(
+      row.employeeId,
+      (daysByEmployeeId.get(row.employeeId) ?? 0) + Number(row.daysCount ?? 0),
+    );
+  }
+  return daysByEmployeeId;
 }
 
 export async function updateEmployeeHasUserAccountRepo(id: string, hasUserAccount: boolean) {

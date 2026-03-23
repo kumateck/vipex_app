@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
@@ -19,7 +19,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useListTaxProfilesQuery } from '@/features/accounting/api';
 import { useListEmployeesQuery } from '@/features/hr';
+import { useAuthStore, type AuthUser } from '@/stores/auth-store';
 import {
   CompensationItemCalculationType,
   PayrollFrequency,
@@ -70,6 +72,7 @@ export function PayrollCompensationPage() {
   const [payType, setPayType] = useState(String(PayType.MONTHLY));
   const [currencyCode, setCurrencyCode] = useState('GHS');
   const [basePayPsw, setBasePayPsw] = useState('');
+  const [taxProfileId, setTaxProfileId] = useState('');
   const [effectiveFrom, setEffectiveFrom] = useState(new Date().toISOString().slice(0, 10));
   const [draftItems, setDraftItems] = useState<DraftCompensationItem[]>([]);
   const [newItem, setNewItem] = useState<DraftCompensationItem>({
@@ -89,6 +92,12 @@ export function PayrollCompensationPage() {
   const { data: employeeCompensation } = useGetEmployeeCompensationQuery(employeeId, {
     skip: !employeeId,
   });
+  const authUser = useAuthStore((state) => state.user as AuthUser | null);
+  const companyId = authUser?.company?.id ?? '';
+  const { data: taxProfilesData } = useListTaxProfilesQuery(
+    { companyId, active: true },
+    { skip: !companyId },
+  );
 
   const [createEarningType, { isLoading: isCreatingEarning }] = useCreateEarningTypeMutation();
   const [createDeductionType, { isLoading: isCreatingDeduction }] =
@@ -101,6 +110,51 @@ export function PayrollCompensationPage() {
   const payrollGroups = payrollGroupsData?.data ?? [];
   const employees = employeesData?.data ?? [];
   const compensationRows = compensationData?.data ?? [];
+  const taxProfiles = taxProfilesData ?? [];
+
+  useEffect(() => {
+    if (!employeeId) {
+      setPayrollGroupId('');
+      setPayType(String(PayType.MONTHLY));
+      setCurrencyCode('GHS');
+      setBasePayPsw('');
+      setEffectiveFrom(new Date().toISOString().slice(0, 10));
+      setTaxProfileId('');
+      setDraftItems([]);
+      return;
+    }
+
+    if (!employeeCompensation) {
+      setPayrollGroupId('');
+      setPayType(String(PayType.MONTHLY));
+      setCurrencyCode('GHS');
+      setBasePayPsw('');
+      setEffectiveFrom(new Date().toISOString().slice(0, 10));
+      setTaxProfileId('');
+      setDraftItems([]);
+      return;
+    }
+
+    setPayrollGroupId(employeeCompensation.payrollGroupId ?? '');
+    setPayType(String(employeeCompensation.payType ?? PayType.MONTHLY));
+    setCurrencyCode(employeeCompensation.currencyCode ?? 'GHS');
+    setBasePayPsw(String(employeeCompensation.basePayPsw ?? ''));
+    setEffectiveFrom(employeeCompensation.effectiveFrom?.slice(0, 10) ?? '');
+    setTaxProfileId(employeeCompensation.taxProfileId ?? '');
+    setDraftItems(
+      (employeeCompensation.items ?? []).map((item) => ({
+        id: item.id ?? crypto.randomUUID(),
+        itemType: item.itemType,
+        typeId:
+          item.itemType === PayrollItemType.DEDUCTION
+            ? (item.deductionTypeId ?? '')
+            : (item.earningTypeId ?? ''),
+        calculationType: item.calculationType,
+        amountPsw: String(item.amountPsw),
+        percentageBasis: item.percentageBasis ?? 'base_pay',
+      })),
+    );
+  }, [employeeCompensation, employeeId]);
 
   return (
     <div className="w-full space-y-4 p-4">
@@ -299,6 +353,25 @@ export function PayrollCompensationPage() {
                       onChange={(e) => setEffectiveFrom(e.target.value)}
                     />
                   </Field>
+                  <Field>
+                    <FieldLabel>Tax profile</FieldLabel>
+                    <Select
+                      value={taxProfileId || '__none__'}
+                      onValueChange={(value) => setTaxProfileId(value === '__none__' ? '' : value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="No statutory profile" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">No statutory profile</SelectItem>
+                        {taxProfiles.map((profile) => (
+                          <SelectItem key={profile.id} value={profile.id}>
+                            {profile.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
                 </FieldGroup>
 
                 {employeeCompensation ? (
@@ -307,6 +380,12 @@ export function PayrollCompensationPage() {
                     <div>
                       {employeeCompensation.payrollGroupName} | Base{' '}
                       {employeeCompensation.basePayPsw} {employeeCompensation.currencyCode}
+                    </div>
+                    <div>
+                      Tax profile:{' '}
+                      {taxProfiles.find(
+                        (profile) => profile.id === employeeCompensation.taxProfileId,
+                      )?.name ?? 'None'}
                     </div>
                   </div>
                 ) : null}
@@ -456,6 +535,7 @@ export function PayrollCompensationPage() {
                       currencyCode: currencyCode.trim() || 'GHS',
                       basePayPsw: Number(basePayPsw),
                       effectiveFrom,
+                      taxProfileId: taxProfileId || null,
                       items: draftItems.map((item) => ({
                         itemType: item.itemType,
                         earningTypeId:
@@ -472,6 +552,7 @@ export function PayrollCompensationPage() {
                       })),
                     }).unwrap();
                     setDraftItems([]);
+                    setTaxProfileId('');
                   }}
                 >
                   Save compensation

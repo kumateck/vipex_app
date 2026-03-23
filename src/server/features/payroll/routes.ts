@@ -11,8 +11,12 @@ import {
 import { PermissionKeys } from '@/shared/permissions/constants';
 import {
   approvePayrollCycleCtrl,
+  approvePayrollManualAdjustmentCtrl,
+  approvePayrollOvertimeEntryCtrl,
+  createPayrollManualAdjustmentCtrl,
   createDeductionTypeCtrl,
   createEarningTypeCtrl,
+  createPayrollOvertimeEntryCtrl,
   createPayrollGroupCtrl,
   createPayrollCycleCtrl,
   getPayrollBankExportCtrl,
@@ -22,10 +26,14 @@ import {
   listCompensationCtrl,
   listDeductionTypesCtrl,
   listEarningTypesCtrl,
+  listPayrollManualAdjustmentsCtrl,
   listPayrollGroupsCtrl,
   listPayrollCyclesCtrl,
+  listPayrollOvertimeEntriesCtrl,
   listPayslipsCtrl,
   reopenPayrollCycleCtrl,
+  rejectPayrollManualAdjustmentCtrl,
+  rejectPayrollOvertimeEntryCtrl,
   reversePayrollCycleCtrl,
   runPayrollCycleCtrl,
   setEmployeeCompensationCtrl,
@@ -492,6 +500,204 @@ export const payrollRoutes = new Elysia({ name: 'payroll' })
         tags: ['Payroll'],
         summary: 'Create payroll cycle',
         operationId: 'createPayrollCycle',
+      },
+    },
+  )
+  .get(
+    '/cycles/:id/overtime',
+    async ({ params, user }) =>
+      listPayrollOvertimeEntriesCtrl(params.id, (user as AuthUser).companyId!),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadPayrollInputs),
+        requireModuleEnabled('payroll'),
+      ],
+      detail: {
+        tags: ['Payroll'],
+        summary: 'List payroll overtime entries',
+        operationId: 'listPayrollOvertimeEntries',
+      },
+    },
+  )
+  .post(
+    '/cycles/:id/overtime',
+    async ({ params, body, set, user }) => {
+      const result = await createPayrollOvertimeEntryCtrl({
+        payrollCycleId: params.id,
+        companyId: (user as AuthUser).companyId!,
+        employeeId: body.employeeId,
+        overtimeMinutes: body.overtimeMinutes,
+        ratePerHourPsw: body.ratePerHourPsw,
+        multiplierPct: body.multiplierPct ?? 100,
+        notes: body.notes ?? null,
+        createdBy: (user as AuthUser).sub,
+      });
+      set.status = HttpStatus.CREATED;
+      return result;
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        employeeId: UUID,
+        overtimeMinutes: t.Number({ minimum: 1 }),
+        ratePerHourPsw: t.Number({ minimum: 1 }),
+        multiplierPct: t.Optional(t.Number({ minimum: 1 })),
+        notes: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanManagePayrollInputs),
+        requireModuleEnabled('payroll'),
+      ],
+      detail: {
+        tags: ['Payroll'],
+        summary: 'Create payroll overtime entry',
+        operationId: 'createPayrollOvertimeEntry',
+      },
+    },
+  )
+  .post(
+    '/cycles/:id/overtime/:entryId/approve',
+    async ({ params, user }) =>
+      approvePayrollOvertimeEntryCtrl(params.id, params.entryId, (user as AuthUser).sub),
+    {
+      params: t.Object({ id: UUID, entryId: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveManagedPayrollInputs),
+        requireModuleEnabled('payroll'),
+      ],
+      detail: {
+        tags: ['Payroll'],
+        summary: 'Approve payroll overtime entry',
+        operationId: 'approvePayrollOvertimeEntry',
+      },
+    },
+  )
+  .post(
+    '/cycles/:id/overtime/:entryId/reject',
+    async ({ params, body, user }) =>
+      rejectPayrollOvertimeEntryCtrl(
+        params.id,
+        params.entryId,
+        (user as AuthUser).sub,
+        body.reason ?? null,
+      ),
+    {
+      params: t.Object({ id: UUID, entryId: UUID }),
+      body: t.Object({ reason: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])) }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveManagedPayrollInputs),
+        requireModuleEnabled('payroll'),
+      ],
+      detail: {
+        tags: ['Payroll'],
+        summary: 'Reject payroll overtime entry',
+        operationId: 'rejectPayrollOvertimeEntry',
+      },
+    },
+  )
+  .get(
+    '/cycles/:id/adjustments',
+    async ({ params, user }) =>
+      listPayrollManualAdjustmentsCtrl(params.id, (user as AuthUser).companyId!),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadPayrollInputs),
+        requireModuleEnabled('payroll'),
+      ],
+      detail: {
+        tags: ['Payroll'],
+        summary: 'List payroll manual adjustments',
+        operationId: 'listPayrollManualAdjustments',
+      },
+    },
+  )
+  .post(
+    '/cycles/:id/adjustments',
+    async ({ params, body, set, user }) => {
+      const result = await createPayrollManualAdjustmentCtrl({
+        payrollCycleId: params.id,
+        companyId: (user as AuthUser).companyId!,
+        employeeId: body.employeeId,
+        itemType: body.itemType,
+        earningTypeId: body.earningTypeId ?? null,
+        deductionTypeId: body.deductionTypeId ?? null,
+        amountPsw: body.amountPsw,
+        isTaxable: body.isTaxable ?? false,
+        notes: body.notes ?? null,
+        createdBy: (user as AuthUser).sub,
+      });
+      set.status = HttpStatus.CREATED;
+      return result;
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        employeeId: UUID,
+        itemType: t.Number(),
+        earningTypeId: t.Optional(t.Union([UUID, t.Null()])),
+        deductionTypeId: t.Optional(t.Union([UUID, t.Null()])),
+        amountPsw: t.Number({ minimum: 1 }),
+        isTaxable: t.Optional(t.Boolean()),
+        notes: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanManagePayrollInputs),
+        requireModuleEnabled('payroll'),
+      ],
+      detail: {
+        tags: ['Payroll'],
+        summary: 'Create payroll manual adjustment',
+        operationId: 'createPayrollManualAdjustment',
+      },
+    },
+  )
+  .post(
+    '/cycles/:id/adjustments/:entryId/approve',
+    async ({ params, user }) =>
+      approvePayrollManualAdjustmentCtrl(params.id, params.entryId, (user as AuthUser).sub),
+    {
+      params: t.Object({ id: UUID, entryId: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveManagedPayrollInputs),
+        requireModuleEnabled('payroll'),
+      ],
+      detail: {
+        tags: ['Payroll'],
+        summary: 'Approve payroll manual adjustment',
+        operationId: 'approvePayrollManualAdjustment',
+      },
+    },
+  )
+  .post(
+    '/cycles/:id/adjustments/:entryId/reject',
+    async ({ params, body, user }) =>
+      rejectPayrollManualAdjustmentCtrl(
+        params.id,
+        params.entryId,
+        (user as AuthUser).sub,
+        body.reason ?? null,
+      ),
+    {
+      params: t.Object({ id: UUID, entryId: UUID }),
+      body: t.Object({ reason: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])) }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveManagedPayrollInputs),
+        requireModuleEnabled('payroll'),
+      ],
+      detail: {
+        tags: ['Payroll'],
+        summary: 'Reject payroll manual adjustment',
+        operationId: 'rejectPayrollManualAdjustment',
       },
     },
   )

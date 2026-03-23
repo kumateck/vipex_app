@@ -76,6 +76,10 @@ const catalog = [
   // Payments / Accounting
   ['CanCreatePayments', 'Create payments', 'Payments'],
   ['CanReadPayments', 'List and view payments', 'Payments'],
+  ['CanReadAccounting', 'View accounting pages, lists, and reports', 'Accounting'],
+  ['CanManageAccountingSetup', 'Manage accounting setup masters', 'Accounting'],
+  ['CanManageTaxFiling', 'Manage tax filing periods and tax filing actions', 'Accounting'],
+  ['CanPostAccountingEntries', 'Create, approve, pay, and post accounting entries', 'Accounting'],
   ['CanComputeTaxes', 'Compute taxes', 'Accounting'],
 
   // Inventory
@@ -133,6 +137,12 @@ const catalog = [
   ['CanCheckInAttendance', 'Check in attendance', 'HR'],
   ['CanCheckOutAttendance', 'Check out attendance', 'HR'],
   ['CanListAttendance', 'List attendance report', 'HR'],
+  ['CanReadLeaveTypes', 'List leave types', 'HR'],
+  ['CanCreateLeaveTypes', 'Create leave types', 'HR'],
+  ['CanListLeaveRequests', 'List leave requests', 'HR'],
+  ['CanCreateLeaveRequest', 'Create leave request', 'HR'],
+  ['CanApproveLeaveRequest', 'Approve leave request', 'HR'],
+  ['CanApproveManagedLeaveRequests', 'Approve leave requests for direct reports', 'HR'],
   ['CanReadPayrollGroups', 'List payroll groups', 'Payroll'],
   ['CanCreatePayrollGroups', 'Create payroll groups', 'Payroll'],
   ['CanReadCompensation', 'View compensation setup', 'Payroll'],
@@ -141,6 +151,9 @@ const catalog = [
   ['CanCreatePayrollCycle', 'Create payroll cycle', 'Payroll'],
   ['CanRunPayrollCycle', 'Run payroll cycle', 'Payroll'],
   ['CanApprovePayrollCycle', 'Approve payroll cycle', 'Payroll'],
+  ['CanReadPayrollInputs', 'View payroll overtime and adjustment inputs', 'Payroll'],
+  ['CanManagePayrollInputs', 'Manage payroll overtime and adjustment inputs', 'Payroll'],
+  ['CanApproveManagedPayrollInputs', 'Approve payroll inputs for direct reports', 'Payroll'],
   ['CanReadPayrollRun', 'View payroll runs', 'Payroll'],
   ['CanListPayslips', 'List payslips', 'Payroll'],
   ['CanGetPayslip', 'Get payslip', 'Payroll'],

@@ -14,6 +14,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import {
   type AccountStatementReport,
   type BalanceSheetReport,
@@ -31,6 +32,7 @@ import {
 } from '../api';
 import {
   AccountingDisabledState,
+  AccountingUnauthorizedState,
   DateRangeFields,
   formatMoney,
   todayDateInputValue,
@@ -228,6 +230,14 @@ export function AccountingReportsPage() {
   const user = useAuthStore((state) => state.user);
   if (!user?.company?.useAccounting) {
     return <AccountingDisabledState />;
+  }
+  if (!user.permissions?.includes(PermissionKeys.CanReadAccounting)) {
+    return (
+      <AccountingUnauthorizedState
+        title="Accounting Reports Restricted"
+        description="Your role does not include permission to view accounting reports and accounting master data."
+      />
+    );
   }
 
   return <AccountingReportsPageContent user={user} />;

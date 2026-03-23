@@ -11,55 +11,58 @@ export const TokenPair = t.Object({
   refreshToken: t.String(),
 });
 
+export const AuthUserResponse = t.Object({
+  id: UUID,
+  email: t.String({ format: 'email' }),
+  fullname: t.String(),
+  employeeId: t.Optional(t.Union([UUID, t.Null()])),
+  company: t.Optional(
+    t.Union([
+      t.Object({
+        id: UUID,
+        name: t.String(),
+        useAccounting: t.Boolean(),
+      }),
+      t.Null(),
+    ]),
+  ),
+  branch: t.Optional(
+    t.Union([
+      t.Object({
+        id: UUID,
+        name: t.String(),
+        type: t.Number(),
+      }),
+      t.Null(),
+    ]),
+  ),
+  location: t.Optional(
+    t.Union([
+      t.Object({
+        id: UUID,
+        name: t.String(),
+      }),
+      t.Null(),
+    ]),
+  ),
+  locationId: t.Optional(t.Union([UUID, t.Null()])),
+  locationName: t.Optional(t.Union([t.String(), t.Null()])),
+  userType: t.Optional(t.Number()),
+  role: t.Optional(
+    t.Union([
+      t.Object({
+        id: UUID,
+        name: t.String(),
+      }),
+      t.Null(),
+    ]),
+  ),
+  permissions: t.Optional(t.Array(t.String())),
+});
+
 export const LoginResponse = t.Object({
   tokens: TokenPair,
-  user: t.Object({
-    id: UUID,
-    email: t.String({ format: 'email' }),
-    fullname: t.String(),
-    company: t.Optional(
-      t.Union([
-        t.Object({
-          id: UUID,
-          name: t.String(),
-          useAccounting: t.Boolean(),
-        }),
-        t.Null(),
-      ]),
-    ),
-    branch: t.Optional(
-      t.Union([
-        t.Object({
-          id: UUID,
-          name: t.String(),
-          type: t.Number(),
-        }),
-        t.Null(),
-      ]),
-    ),
-    location: t.Optional(
-      t.Union([
-        t.Object({
-          id: UUID,
-          name: t.String(),
-        }),
-        t.Null(),
-      ]),
-    ),
-    locationId: t.Optional(t.Union([UUID, t.Null()])),
-    locationName: t.Optional(t.Union([t.String(), t.Null()])),
-    userType: t.Optional(t.Number()),
-    role: t.Optional(
-      t.Union([
-        t.Object({
-          id: UUID,
-          name: t.String(),
-        }),
-        t.Null(),
-      ]),
-    ),
-    permissions: t.Optional(t.Array(t.String())),
-  }),
+  user: AuthUserResponse,
 });
 
 export const RefreshBody = t.Object({

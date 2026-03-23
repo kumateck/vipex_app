@@ -67,6 +67,7 @@ export interface EmployeeCompensation {
   payType: number;
   currencyCode: string;
   basePayPsw: number;
+  taxProfileId?: string | null;
   effectiveFrom?: string | null;
   effectiveTo?: string | null;
   isActive: boolean;
@@ -89,6 +90,50 @@ export interface PayrollCycle {
   approvedAt?: string | null;
 }
 
+export interface PayrollOvertimeEntry {
+  id: string;
+  companyId: string;
+  payrollPeriodId: string;
+  employeeId: string;
+  managerEmployeeId?: string | null;
+  employeeNumber?: string | null;
+  employeeName?: string | null;
+  overtimeMinutes: number;
+  ratePerHourPsw: number;
+  multiplierPct: number;
+  approvalStatus: number;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  rejectionReason?: string | null;
+  notes?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface PayrollManualAdjustment {
+  id: string;
+  companyId: string;
+  payrollPeriodId: string;
+  employeeId: string;
+  managerEmployeeId?: string | null;
+  employeeNumber?: string | null;
+  employeeName?: string | null;
+  itemType: number;
+  earningTypeId?: string | null;
+  deductionTypeId?: string | null;
+  code: string;
+  name: string;
+  amountPsw: number;
+  isTaxable: boolean;
+  approvalStatus: number;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  rejectionReason?: string | null;
+  notes?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 export interface Payslip {
   id: string;
   payrollRunEmployeeId: string;
@@ -102,6 +147,7 @@ export interface Payslip {
 
 export interface PayrollBankExportRow {
   payslipId?: string | null;
+  payslipNumber?: string | null;
   employeeId: string;
   employeeNumber: string;
   employeeName: string;
@@ -109,7 +155,7 @@ export interface PayrollBankExportRow {
   bankAccountName?: string | null;
   bankAccountNumber?: string | null;
   mobileMoneyNumber?: string | null;
-  paymentMethod?: number | null;
+  paymentMethod?: string | null;
   netPayPsw: number;
   currencyCode: string;
 }
@@ -359,6 +405,122 @@ export const payrollApi = api.injectEndpoints({
       }),
       invalidatesTags: invalidateEntityListTag('Payroll'),
     }),
+    listPayrollOvertimeEntries: builder.query<PayrollOvertimeEntry[], string>({
+      query: (payrollCycleId) => ({
+        url: `/payroll/cycles/${payrollCycleId}/overtime`,
+      }),
+      providesTags: (_result, _error, payrollCycleId) => [
+        { type: 'Payroll', id: `OVERTIME-${payrollCycleId}` },
+      ],
+    }),
+    createPayrollOvertimeEntry: builder.mutation<
+      { id?: string },
+      {
+        payrollCycleId: string;
+        employeeId: string;
+        overtimeMinutes: number;
+        ratePerHourPsw: number;
+        multiplierPct?: number;
+        notes?: string | null;
+      }
+    >({
+      query: ({ payrollCycleId, ...body }) => ({
+        url: `/payroll/cycles/${payrollCycleId}/overtime`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { payrollCycleId }) => [
+        { type: 'Payroll', id: `OVERTIME-${payrollCycleId}` },
+        ...invalidateEntityListTag('Payroll'),
+      ],
+    }),
+    approvePayrollOvertimeEntry: builder.mutation<
+      { id?: string },
+      { payrollCycleId: string; entryId: string }
+    >({
+      query: ({ payrollCycleId, entryId }) => ({
+        url: `/payroll/cycles/${payrollCycleId}/overtime/${entryId}/approve`,
+        method: 'POST',
+        body: {},
+      }),
+      invalidatesTags: (_result, _error, { payrollCycleId }) => [
+        { type: 'Payroll', id: `OVERTIME-${payrollCycleId}` },
+        ...invalidateEntityListTag('Payroll'),
+      ],
+    }),
+    rejectPayrollOvertimeEntry: builder.mutation<
+      { id?: string },
+      { payrollCycleId: string; entryId: string; reason?: string | null }
+    >({
+      query: ({ payrollCycleId, entryId, reason }) => ({
+        url: `/payroll/cycles/${payrollCycleId}/overtime/${entryId}/reject`,
+        method: 'POST',
+        body: { reason: reason ?? null },
+      }),
+      invalidatesTags: (_result, _error, { payrollCycleId }) => [
+        { type: 'Payroll', id: `OVERTIME-${payrollCycleId}` },
+        ...invalidateEntityListTag('Payroll'),
+      ],
+    }),
+    listPayrollManualAdjustments: builder.query<PayrollManualAdjustment[], string>({
+      query: (payrollCycleId) => ({
+        url: `/payroll/cycles/${payrollCycleId}/adjustments`,
+      }),
+      providesTags: (_result, _error, payrollCycleId) => [
+        { type: 'Payroll', id: `ADJUSTMENTS-${payrollCycleId}` },
+      ],
+    }),
+    createPayrollManualAdjustment: builder.mutation<
+      { id?: string },
+      {
+        payrollCycleId: string;
+        employeeId: string;
+        itemType: number;
+        earningTypeId?: string | null;
+        deductionTypeId?: string | null;
+        amountPsw: number;
+        isTaxable?: boolean;
+        notes?: string | null;
+      }
+    >({
+      query: ({ payrollCycleId, ...body }) => ({
+        url: `/payroll/cycles/${payrollCycleId}/adjustments`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { payrollCycleId }) => [
+        { type: 'Payroll', id: `ADJUSTMENTS-${payrollCycleId}` },
+        ...invalidateEntityListTag('Payroll'),
+      ],
+    }),
+    approvePayrollManualAdjustment: builder.mutation<
+      { id?: string },
+      { payrollCycleId: string; entryId: string }
+    >({
+      query: ({ payrollCycleId, entryId }) => ({
+        url: `/payroll/cycles/${payrollCycleId}/adjustments/${entryId}/approve`,
+        method: 'POST',
+        body: {},
+      }),
+      invalidatesTags: (_result, _error, { payrollCycleId }) => [
+        { type: 'Payroll', id: `ADJUSTMENTS-${payrollCycleId}` },
+        ...invalidateEntityListTag('Payroll'),
+      ],
+    }),
+    rejectPayrollManualAdjustment: builder.mutation<
+      { id?: string },
+      { payrollCycleId: string; entryId: string; reason?: string | null }
+    >({
+      query: ({ payrollCycleId, entryId, reason }) => ({
+        url: `/payroll/cycles/${payrollCycleId}/adjustments/${entryId}/reject`,
+        method: 'POST',
+        body: { reason: reason ?? null },
+      }),
+      invalidatesTags: (_result, _error, { payrollCycleId }) => [
+        { type: 'Payroll', id: `ADJUSTMENTS-${payrollCycleId}` },
+        ...invalidateEntityListTag('Payroll'),
+      ],
+    }),
     runPayrollCycle: builder.mutation<{ id?: string; employeeCount?: number }, string>({
       query: (id) => ({
         url: `/payroll/cycles/${id}/run`,
@@ -459,6 +621,14 @@ export const {
   useSetEmployeeCompensationMutation,
   useListPayrollCyclesQuery,
   useCreatePayrollCycleMutation,
+  useListPayrollOvertimeEntriesQuery,
+  useCreatePayrollOvertimeEntryMutation,
+  useApprovePayrollOvertimeEntryMutation,
+  useRejectPayrollOvertimeEntryMutation,
+  useListPayrollManualAdjustmentsQuery,
+  useCreatePayrollManualAdjustmentMutation,
+  useApprovePayrollManualAdjustmentMutation,
+  useRejectPayrollManualAdjustmentMutation,
   useRunPayrollCycleMutation,
   useApprovePayrollCycleMutation,
   useJournalizePayrollCycleMutation,

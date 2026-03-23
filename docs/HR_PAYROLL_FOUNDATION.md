@@ -45,6 +45,8 @@ Core tables:
 - `employee_job_assignments`
 - `employee_documents`
 - `attendance_records`
+- `leave_types`
+- `leave_requests`
 
 Important modeling decisions:
 
@@ -52,6 +54,7 @@ Important modeling decisions:
 - `employees` is the HR master record.
 - `users.employee_id` links a login account to an employee when needed.
 - An employee can exist without a user account.
+- Leave requests track manager approval separately from final HR approval.
 
 Implemented HR routes:
 
@@ -71,6 +74,15 @@ Implemented HR routes:
 - `POST /v1/hr/attendance/check-in`
 - `POST /v1/hr/attendance/check-out`
 - `GET /v1/hr/attendance`
+- `GET /v1/hr/leave-types/options`
+- `GET /v1/hr/leave-types`
+- `POST /v1/hr/leave-types`
+- `GET /v1/hr/leave-requests`
+- `POST /v1/hr/leave-requests`
+- `POST /v1/hr/leave-requests/:id/manager-approve`
+- `POST /v1/hr/leave-requests/:id/manager-reject`
+- `POST /v1/hr/leave-requests/:id/approve`
+- `POST /v1/hr/leave-requests/:id/reject`
 
 ## Payroll Data Model
 
@@ -82,6 +94,8 @@ Core tables:
 - `employee_compensation`
 - `employee_compensation_items`
 - `payroll_periods`
+- `payroll_overtime_entries`
+- `payroll_manual_adjustments`
 - `payroll_runs`
 - `payroll_run_employees`
 - `payroll_run_items`
@@ -96,6 +110,7 @@ Important modeling decisions:
 - Employee payment settlement data is stored on the employee record for bank export.
 - Statutory deductions are generated from the compensation tax profile using active tax components.
 - Approved payroll can be journalized into accounting when the accounting module is enabled and seeded.
+- Overtime and manual adjustments track manager approval separately from payroll cycle approval.
 
 Implemented payroll routes:
 
@@ -113,6 +128,14 @@ Implemented payroll routes:
 - `PUT /v1/payroll/compensation/:employeeId`
 - `GET /v1/payroll/cycles`
 - `POST /v1/payroll/cycles`
+- `GET /v1/payroll/cycles/:id/overtime`
+- `POST /v1/payroll/cycles/:id/overtime`
+- `POST /v1/payroll/cycles/:id/overtime/:entryId/approve`
+- `POST /v1/payroll/cycles/:id/overtime/:entryId/reject`
+- `GET /v1/payroll/cycles/:id/adjustments`
+- `POST /v1/payroll/cycles/:id/adjustments`
+- `POST /v1/payroll/cycles/:id/adjustments/:entryId/approve`
+- `POST /v1/payroll/cycles/:id/adjustments/:entryId/reject`
 - `POST /v1/payroll/cycles/:id/run`
 - `POST /v1/payroll/cycles/:id/approve`
 - `POST /v1/payroll/cycles/:id/reopen`
@@ -130,17 +153,28 @@ Basic admin pages were added for:
 - `/hr/departments`
 - `/hr/job-titles`
 - `/hr/employees`
+- `/hr/attendance`
+- `/hr/leave`
 - `/payroll/compensation`
 - `/payroll/groups`
 - `/payroll/cycles`
+- `/payroll/inputs`
 
 Implemented workflow coverage:
 
 - employee create and edit
+- employee settlement capture during create and edit
 - create user from employee
+- attendance listing and manual check-in/check-out
+- leave type setup
+- leave request creation and approval
+- manager approval for leave requests tied to the employee's assigned manager
+- leave request audit history in the UI
 - earning type setup
 - deduction type setup
 - employee compensation assignment
+- tax profile selection during compensation setup
+- compensation form prefill from the employee's current active record
 - payroll cycle creation
 - payroll run execution
 - payslip listing per cycle
@@ -150,6 +184,28 @@ Implemented workflow coverage:
 - payroll journal reversal
 - payroll reopen flow for non-posted cycles
 - tax-profile-driven statutory deductions during payroll run
+- overtime entries per payroll cycle
+- manual earning and deduction adjustments per payroll cycle
+- manager approval for payroll overtime and manual adjustments tied to the employee's assigned manager
+- overtime and manual adjustments included in payroll run snapshots and payslips
+- attendance-adjusted base pay for daily and hourly employees during payroll run
+- approved paid leave counted in daily payroll base-pay calculation
+- payroll run audit history visible from the payroll cycles screen
+
+Settlement validation rules:
+
+- `bank` payment method requires bank name, account name, and account number
+- `mobile_money` payment method requires mobile money number
+- allowed payment methods are `cash`, `bank`, and `mobile_money`
+
+Approval workflow rules:
+
+- leave requests for employees without a manager are auto-manager-approved
+- final leave approval requires manager approval first when a manager is assigned
+- manager rejection closes the leave request as rejected
+- payroll overtime and manual adjustments for employees without a manager are auto-approved
+- payroll runs include only manager-approved overtime and manager-approved manual adjustments
+- manager approval checks use the logged-in user's linked `employeeId`
 
 Payroll accounting posting rule:
 
@@ -163,6 +219,7 @@ Current accounting integration notes:
 - journal posting is only allowed after payroll approval
 - reversal is only allowed after payroll journal posting
 - posted payroll must be reversed before it can be reopened
+- overtime and manual adjustments are blocked once a cycle is approved or posted
 
 ## Setup Notes
 
@@ -195,6 +252,5 @@ Default seed behavior:
 The current implementation still does not include:
 
 - advanced statutory tax and pension calculations
-- overtime, leave, and attendance-driven pay adjustments
 - bank file formats for specific banks
 - payslip delivery workflow beyond generation/detail/printing

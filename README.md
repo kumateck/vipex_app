@@ -41,7 +41,24 @@ bun test
 Accounting is optional per company.
 
 - UI control: `/settings/company`
+- Accounting setup: `/accounting/setup`
 - Backend control: `/v1/company-modules`
+
+The accounting setup area currently manages:
+
+- chart of accounts
+- expense categories
+- approval policies
+- company bank accounts
+- tax profiles
+- tax components
+
+Accounting access is also role-controlled with dedicated permission keys for:
+
+- viewing accounting
+- managing accounting setup
+- managing tax filing
+- posting accounting entries
 - Supporting migrations:
   - `drizzle/0009_company_accounting_toggle.sql`
   - `drizzle/0011_sync_accounting_module_flag.sql`
