@@ -17,6 +17,7 @@ import {
   useSearchParcelsQuery,
   useUpdateParcelStatusMutation,
 } from '../api/parcel.api';
+import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 
 type BarcodeDetectorLike = {
   detect: (source: CanvasImageSource) => Promise<Array<{ rawValue?: string }>>;
@@ -373,6 +374,11 @@ export function ParcelReceivePage() {
         accessorKey: 'createdAt',
         header: 'Created',
         cell: ({ row }) => formatDate(row.original.createdAt),
+      },
+      {
+        id: 'holder',
+        header: 'Current Holder',
+        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
       },
       {
         id: 'actions',

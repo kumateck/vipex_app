@@ -79,6 +79,16 @@ export const ROUTES: Route[] = [
             url: '/parcels/receive',
           },
           {
+            title: 'Internal Transfers',
+            url: '/parcels/internal-transfers',
+            permissionKey: 'CanReadParcelInternalTransfers',
+          },
+          {
+            title: 'Transfer Acknowledgement',
+            url: '/parcels/internal-transfers/acknowledge',
+            permissionKey: 'CanReadParcelInternalTransfers',
+          },
+          {
             title: 'Pickup Queue',
             url: '/parcels/pickup-queue',
           },
@@ -159,22 +169,22 @@ export const ROUTES: Route[] = [
           {
             title: 'Daily Cash',
             url: '/accounting/daily-cash',
-            permissionKey: 'CanPostAccountingEntries',
+            // permissionKey: 'CanPostAccountingEntries',
           },
           {
             title: 'Expenses',
             url: '/accounting/expenses',
-            permissionKey: 'CanPostAccountingEntries',
+            // permissionKey: 'CanPostAccountingEntries',
           },
           {
             title: 'Reports',
             url: '/accounting/reports',
-            permissionKey: 'CanReadAccounting',
+            // permissionKey: 'CanReadAccounting',
           },
           {
             title: 'Accounting Setup',
             url: '/accounting/setup',
-            permissionKey: 'CanManageAccountingSetup',
+            // permissionKey: 'CanManageAccountingSetup',
           },
         ],
       },
@@ -185,7 +195,7 @@ export const ROUTES: Route[] = [
           {
             title: 'Tax Filing',
             url: '/accounting/tax',
-            permissionKey: 'CanManageTaxFiling',
+            // permissionKey: 'CanManageTaxFiling',
           },
         ],
       },
@@ -196,22 +206,22 @@ export const ROUTES: Route[] = [
           {
             title: 'Compensation Setup',
             url: '/payroll/compensation',
-            permissionKey: 'CanReadCompensation',
+            // permissionKey: 'CanReadCompensation',
           },
           {
             title: 'Payroll Groups',
             url: '/payroll/groups',
-            permissionKey: 'CanReadPayrollGroups',
+            // permissionKey: 'CanReadPayrollGroups',
           },
           {
             title: 'Payroll Cycles',
             url: '/payroll/cycles',
-            permissionKey: 'CanListPayrollCycles',
+            // permissionKey: 'CanListPayrollCycles',
           },
           {
             title: 'Payroll Inputs',
             url: '/payroll/inputs',
-            permissionKey: 'CanReadPayrollInputs',
+            // permissionKey: 'CanReadPayrollInputs',
           },
         ],
       },
@@ -251,31 +261,31 @@ export const ROUTES: Route[] = [
         title: 'Employees',
         url: '/hr/employees',
         icon: 'Briefcase',
-        permissionKey: 'CanListEmployees',
+        // permissionKey: 'CanListEmployees',
       },
       {
         title: 'Departments',
         url: '/hr/departments',
         icon: 'Network',
-        permissionKey: 'CanReadDepartments',
+        // permissionKey: 'CanReadDepartments',
       },
       {
         title: 'Job Titles',
         url: '/hr/job-titles',
         icon: 'UserCog',
-        permissionKey: 'CanReadJobTitles',
+        // permissionKey: 'CanReadJobTitles',
       },
       {
         title: 'Attendance',
         url: '/hr/attendance',
         icon: 'Clock3',
-        permissionKey: 'CanListAttendance',
+        // permissionKey: 'CanListAttendance',
       },
       {
         title: 'Leave Mgt',
         url: '/hr/leave',
         icon: 'CalendarDays',
-        permissionKey: 'CanListLeaveRequests',
+        // permissionKey: 'CanListLeaveRequests',
       },
     ],
   },
@@ -352,7 +362,7 @@ export const ROUTES: Route[] = [
           {
             title: 'Module Management',
             url: '/settings/modules',
-            permissionKey: 'CanManageCompanyModules',
+            // permissionKey: 'CanManageCompanyModules',
           },
           {
             title: 'Branch Management',
@@ -361,6 +371,11 @@ export const ROUTES: Route[] = [
           {
             title: 'Location Management',
             url: '/locations',
+          },
+          {
+            title: 'Warehouse Management',
+            url: '/warehouses',
+            permissionKey: 'CanReadWarehouses',
           },
           {
             title: 'Status Management',
@@ -391,32 +406,32 @@ export const ROUTES: Route[] = [
           {
             title: 'Categories',
             url: '/inventory/categories',
-            permissionKey: 'CanListProductCategories',
+            // permissionKey: 'CanListProductCategories',
           },
           {
             title: 'Locations',
             url: '/inventory/locations',
-            permissionKey: 'CanListProductLocations',
+            // permissionKey: 'CanListProductLocations',
           },
           {
             title: 'Stock Levels',
             url: '/inventory/stock-levels',
-            permissionKey: 'CanListStockLevels',
+            // permissionKey: 'CanListStockLevels',
           },
           {
             title: 'Stock Movements',
             url: '/inventory/stock-movements',
-            permissionKey: 'CanListStockMovements',
+            // permissionKey: 'CanListStockMovements',
           },
           {
             title: 'Stock Adjustments',
             url: '/inventory/stock-adjustments',
-            permissionKey: 'CanListStockAdjustments',
+            // permissionKey: 'CanListStockAdjustments',
           },
           {
             title: 'Stock Transfers',
             url: '/inventory/stock-transfers',
-            permissionKey: 'CanListStockTransfers',
+            // permissionKey: 'CanListStockTransfers',
           },
         ],
       },

@@ -32,6 +32,7 @@ bun test
 - API index: `docs/API.md`
 - Accounting module: `docs/ACCOUNTING_MODULE.md`
 - Company modules: `docs/COMPANY_MODULES.md`
+- Parcel internal transfers: `docs/PARCEL_INTERNAL_TRANSFERS.md`
 - Developer onboarding: `docs/ONBOARDING.md`
 - Appearance system: `docs/APPEARANCE_SYSTEM.md`
 - Style recipe status: `docs/APPEARANCE_STYLE_PARITY_PLAN.md`
@@ -53,6 +54,11 @@ The accounting setup area currently manages:
 - tax profiles
 - tax components
 
+It also supports:
+
+- safe deletion of unused ledger accounts
+- inline setup change history for accounting masters
+
 Accounting access is also role-controlled with dedicated permission keys for:
 
 - viewing accounting
@@ -64,3 +70,22 @@ Accounting access is also role-controlled with dedicated permission keys for:
   - `drizzle/0011_sync_accounting_module_flag.sql`
 
 Apply migrations before using the company-level accounting toggle.
+
+## Parcel Warehouses and Internal Transfers
+
+The app now supports branch-owned warehouses and branch-level internal parcel custody transfers.
+
+- Warehouse management: `/warehouses`
+- Internal transfer creation: `/parcels/internal-transfers`
+- Transfer acknowledgement: `/parcels/internal-transfers/acknowledge`
+
+Important rule:
+
+- internal transfers do not change parcel shipment status
+- custody only changes after destination acknowledgement
+
+Role management also includes quick presets for warehouse and internal-transfer access so branch admins can assign the new operational permissions without manually selecting each key.
+
+The main parcel operations pages now also show the current internal holder, so staff can tell whether a parcel is sitting at the main branch, a location, or a warehouse before serving or moving it.
+
+Internal transfer operations also include a printable transfer slip from both the transfer-creation side and the acknowledgement side.

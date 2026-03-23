@@ -38,6 +38,7 @@ import {
   useSearchParcelsQuery,
   useUpdateParcelMutation,
 } from '../api/parcel.api';
+import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 
 function formatCurrency(amountPsw: number) {
   return `GHS ${(amountPsw / 100).toFixed(2)}`;
@@ -182,6 +183,11 @@ export function ParcelWaitingPickupPage() {
         id: 'charge',
         header: 'Charge',
         accessorFn: (row) => formatCurrency(row.chargePsw),
+      },
+      {
+        id: 'holder',
+        header: 'Current Holder',
+        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
       },
     ];
 
@@ -424,6 +430,12 @@ export function ParcelWaitingPickupPage() {
                 <p>
                   <strong>Content:</strong> {selectedParcel.parcelContent}
                 </p>
+                <div className="flex items-center gap-2">
+                  <strong>Current Holder:</strong>
+                  <ParcelInternalHolderBadge
+                    holder={parcelDetails?.internalHolder ?? selectedParcel}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

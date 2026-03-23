@@ -255,6 +255,18 @@ export enum TaxFilingPeriodStatus {
   SUBMITTED = 2,
   CLOSED = 3,
 }
+
+export enum ParcelHolderType {
+  BRANCH = 0,
+  LOCATION = 1,
+  WAREHOUSE = 2,
+}
+
+export enum ParcelInternalTransferStatus {
+  PENDING = 0,
+  ACKNOWLEDGED = 1,
+  CANCELLED = 2,
+}
 export enum IdentificationType {
   PASSPORT = 0,
   DRIVER_LICENSE = 1,

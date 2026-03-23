@@ -22,6 +22,10 @@ const catalog = [
   ['CanCreateLocations', 'Create locations', 'Locations'],
   ['CanUpdateLocations', 'Update locations', 'Locations'],
   ['CanDeleteLocations', 'Delete locations', 'Locations'],
+  ['CanReadWarehouses', 'List and view warehouses', 'Warehouses'],
+  ['CanCreateWarehouses', 'Create warehouses', 'Warehouses'],
+  ['CanUpdateWarehouses', 'Update warehouses', 'Warehouses'],
+  ['CanDeleteWarehouses', 'Delete warehouses', 'Warehouses'],
   ['CanReadStatuses', 'List and view statuses', 'Statuses'],
   ['CanCreateStatuses', 'Create statuses', 'Statuses'],
   ['CanUpdateStatuses', 'Update statuses', 'Statuses'],
@@ -72,6 +76,10 @@ const catalog = [
   ['CanAssignDoorstepRider', 'Assign doorstep rider', 'Deliveries'],
   ['CanMarkOutForDelivery', 'Mark out for delivery', 'Deliveries'],
   ['CanCompleteDoorstepDelivery', 'Complete doorstep delivery', 'Deliveries'],
+  ['CanReadParcelInternalTransfers', 'List and view parcel internal transfers', 'Deliveries'],
+  ['CanCreateParcelInternalTransfers', 'Create parcel internal transfers', 'Deliveries'],
+  ['CanAcknowledgeParcelInternalTransfers', 'Acknowledge parcel internal transfers', 'Deliveries'],
+  ['CanCancelParcelInternalTransfers', 'Cancel parcel internal transfers', 'Deliveries'],
 
   // Payments / Accounting
   ['CanCreatePayments', 'Create payments', 'Payments'],

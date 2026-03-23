@@ -22,7 +22,10 @@ import {
   consignmentItems,
   consignments,
   deliveries,
+  locations,
+  parcelInternalHolders,
   pickupQueues,
+  warehouses,
 } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
@@ -94,6 +97,13 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     pickupQueueNumber: number | null;
     pickupQueuedAt: Date | null;
     pickupQueueEndedAt: Date | null;
+    currentHolderType: number | null;
+    currentHolderBranchId: string | null;
+    currentHolderBranchName: string | null;
+    currentHolderLocationId: string | null;
+    currentHolderLocationName: string | null;
+    currentHolderWarehouseId: string | null;
+    currentHolderWarehouseName: string | null;
   })[];
   totalRecords: number;
 }> {
@@ -120,8 +130,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   const s = alias(customers, 's');
   const r = alias(customers, 'r');
   const d = alias(branches, 'd');
+  const hb = alias(branches, 'hb');
   const ci = alias(consignmentItems, 'ci');
   const cg = alias(consignments, 'cg');
+  const hl = alias(locations, 'hl');
+  const hw = alias(warehouses, 'hw');
 
   const sort = p.sort ?? [];
   const orderBy = sort.length
@@ -221,6 +234,13 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       pickupQueueNumber: pickupQueues.queueNumber,
       pickupQueuedAt: pickupQueues.queuedAt,
       pickupQueueEndedAt: pickupQueues.endedAt,
+      currentHolderType: parcelInternalHolders.holderType,
+      currentHolderBranchId: parcelInternalHolders.branchId,
+      currentHolderBranchName: hb.name,
+      currentHolderLocationId: parcelInternalHolders.locationId,
+      currentHolderLocationName: hl.name,
+      currentHolderWarehouseId: parcelInternalHolders.warehouseId,
+      currentHolderWarehouseName: hw.name,
     })
     .from(parcels)
     .leftJoin(bookings, eq(parcels.bookingId, bookings.id))
@@ -231,6 +251,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(cg, eq(cg.id, ci.consignmentId))
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
     .leftJoin(pickupQueues, eq(pickupQueues.parcelId, parcels.id))
+    .leftJoin(parcelInternalHolders, eq(parcelInternalHolders.parcelId, parcels.id))
+    .leftJoin(hb, eq(hb.id, parcelInternalHolders.branchId))
+    .leftJoin(hl, eq(hl.id, parcelInternalHolders.locationId))
+    .leftJoin(hw, eq(hw.id, parcelInternalHolders.warehouseId))
     .where(
       whereParts.length || p.search
         ? and(

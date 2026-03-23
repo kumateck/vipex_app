@@ -28,6 +28,7 @@ import {
   useUpdateParcelMutation,
   useUpdateParcelStatusMutation,
 } from '../api/parcel.api';
+import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 
 type InTransitView = 'outgoing' | 'incoming';
 
@@ -213,6 +214,11 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         id: 'consignment',
         header: 'Consignment',
         accessorFn: (row) => formatConsignmentLabel(row.consignmentSerialForDay),
+      },
+      {
+        id: 'holder',
+        header: 'Current Holder',
+        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
       },
       {
         id: 'actions',
@@ -515,6 +521,10 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
                     <strong>Destination:</strong>{' '}
                     {branchNameById.get(details.parcel.destinationId) ?? '-'}
                   </p>
+                  <div className="flex items-center gap-2">
+                    <strong>Current Holder:</strong>
+                    <ParcelInternalHolderBadge holder={details.internalHolder} />
+                  </div>
                   <p>
                     <strong>Consignment:</strong>{' '}
                     {formatConsignmentLabel(activeConsignment?.serialForDay)}

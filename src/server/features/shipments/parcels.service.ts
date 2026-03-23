@@ -8,6 +8,7 @@ import { recordAuditLog } from '../audit/logger';
 import { listConsignmentsForParcelRepo } from './consignments.repository';
 import { getPickupQueueByParcelRepo } from '../pickup-queues/repository';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
+import { getParcelInternalHolderByParcelRepo } from '../parcel-internal-transfers/repository';
 
 import {
   createParcelRepo,
@@ -189,7 +190,7 @@ export async function setPlannedToBePaidSvc(id: string, plannedCedis: number | s
 
 export async function getParcelFullDetailsSvc(id: string) {
   const parcel = await getParcelSvc(id);
-  const [payments, delivery, consignments, pickupQueue] = await Promise.all([
+  const [payments, delivery, consignments, pickupQueue, internalHolder] = await Promise.all([
     (async () => {
       try {
         return await listPaymentsForParcelRepo(id);
@@ -222,6 +223,14 @@ export async function getParcelFullDetailsSvc(id: string) {
         throw error;
       }
     })(),
+    (async () => {
+      try {
+        return await getParcelInternalHolderByParcelRepo(id);
+      } catch (error) {
+        if (isSchemaCompatibilityError(error)) return null;
+        throw error;
+      }
+    })(),
   ]);
 
   return {
@@ -230,6 +239,7 @@ export async function getParcelFullDetailsSvc(id: string) {
     delivery,
     consignments,
     pickupQueue,
+    internalHolder,
   };
 }
 

@@ -65,6 +65,8 @@ The accounting module is a controlled ledger layer over operations.
 - Accounting master data maintenance is exposed at `/accounting/setup` for chart of accounts, expense categories, approval policies, company bank accounts, tax profiles, and tax components.
 - Accounting access is also role-gated through dedicated permission keys for viewing, setup management, tax filing, and posting workflows.
 - Accounting setup mutations are audit-logged with actor and before/after metadata through the shared audit module.
+- Accounting setup also surfaces entity-level audit history inline, so finance admins do not need to leave `/accounting/setup` to review record changes.
+- Chart-of-accounts deletion is supported only for accounts with no journal usage, setup mappings, petty cash linkage, or child accounts.
 
 Reference: `docs/ACCOUNTING_MODULE.md`
 
@@ -96,3 +98,15 @@ Current backend entry point:
 - `/v1/company-modules`
 
 Reference: `docs/COMPANY_MODULES.md`
+
+## Parcel Internal Custody
+
+Parcel internal custody is modeled separately from shipment status.
+
+- Warehouses are branch-owned master records.
+- Internal transfers can move parcels between branch, location, and warehouse holders within a branch.
+- Transfers are tracked independently from parcel status.
+- Acknowledgement is the event that updates current internal holder state.
+- Pending transfers prevent the same parcel from being queued into another internal transfer until the move is resolved.
+
+Reference: `docs/PARCEL_INTERNAL_TRANSFERS.md`

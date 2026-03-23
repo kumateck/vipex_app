@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { companies, branches, locations, roles, rolePermissions, users } from './core';
+import { companies, branches, locations, warehouses, roles, rolePermissions, users } from './core';
 import { companyModules, moduleCatalog } from './company-modules';
 import {
   attendanceRecords,
@@ -11,7 +11,13 @@ import {
   leaveRequests,
   leaveTypes,
 } from './hr';
-import { pendingBookings, pickupQueues } from './shipments';
+import {
+  pendingBookings,
+  pickupQueues,
+  parcelInternalHolders,
+  parcelInternalTransfers,
+  parcelInternalTransferItems,
+} from './shipments';
 import { receiptTemplates, generatedReceipts } from './receipts';
 import {
   customers,
@@ -87,6 +93,7 @@ export const companiesRelations = relations(companies, ({ many }) => ({
 export const branchesRelations = relations(branches, ({ one, many }) => ({
   company: one(companies, { fields: [branches.companyId], references: [companies.id] }),
   locations: many(locations),
+  warehouses: many(warehouses),
   users: many(users),
   pickupQueues: many(pickupQueues),
   pettyCashFunds: many(pettyCashFunds),
@@ -101,6 +108,12 @@ export const branchesRelations = relations(branches, ({ one, many }) => ({
 export const locationsRelations = relations(locations, ({ one }) => ({
   company: one(companies, { fields: [locations.companyId], references: [companies.id] }),
   branch: one(branches, { fields: [locations.branchId], references: [branches.id] }),
+}));
+
+export const warehousesRelations = relations(warehouses, ({ one, many }) => ({
+  company: one(companies, { fields: [warehouses.companyId], references: [companies.id] }),
+  branch: one(branches, { fields: [warehouses.branchId], references: [branches.id] }),
+  parcelHolders: many(parcelInternalHolders),
 }));
 
 export const rolesRelations = relations(roles, ({ one, many }) => ({
@@ -323,6 +336,87 @@ export const parcelsRelations = relations(parcels, ({ one }) => ({
   receiver: one(customers, { fields: [parcels.receiverId], references: [customers.id] }),
   pickupQueue: one(pickupQueues, { fields: [parcels.id], references: [pickupQueues.parcelId] }),
 }));
+
+export const parcelInternalHoldersRelations = relations(parcelInternalHolders, ({ one }) => ({
+  parcel: one(parcels, { fields: [parcelInternalHolders.parcelId], references: [parcels.id] }),
+  company: one(companies, {
+    fields: [parcelInternalHolders.companyId],
+    references: [companies.id],
+  }),
+  branch: one(branches, {
+    fields: [parcelInternalHolders.branchId],
+    references: [branches.id],
+  }),
+  location: one(locations, {
+    fields: [parcelInternalHolders.locationId],
+    references: [locations.id],
+  }),
+  warehouse: one(warehouses, {
+    fields: [parcelInternalHolders.warehouseId],
+    references: [warehouses.id],
+  }),
+  updater: one(users, {
+    fields: [parcelInternalHolders.updatedBy],
+    references: [users.id],
+  }),
+}));
+
+export const parcelInternalTransfersRelations = relations(
+  parcelInternalTransfers,
+  ({ one, many }) => ({
+    company: one(companies, {
+      fields: [parcelInternalTransfers.companyId],
+      references: [companies.id],
+    }),
+    branch: one(branches, {
+      fields: [parcelInternalTransfers.branchId],
+      references: [branches.id],
+    }),
+    sourceLocation: one(locations, {
+      fields: [parcelInternalTransfers.sourceLocationId],
+      references: [locations.id],
+    }),
+    sourceWarehouse: one(warehouses, {
+      fields: [parcelInternalTransfers.sourceWarehouseId],
+      references: [warehouses.id],
+    }),
+    destinationLocation: one(locations, {
+      fields: [parcelInternalTransfers.destinationLocationId],
+      references: [locations.id],
+    }),
+    destinationWarehouse: one(warehouses, {
+      fields: [parcelInternalTransfers.destinationWarehouseId],
+      references: [warehouses.id],
+    }),
+    transferredByUser: one(users, {
+      fields: [parcelInternalTransfers.transferredBy],
+      references: [users.id],
+    }),
+    acknowledgedByUser: one(users, {
+      fields: [parcelInternalTransfers.acknowledgedBy],
+      references: [users.id],
+    }),
+    cancelledByUser: one(users, {
+      fields: [parcelInternalTransfers.cancelledBy],
+      references: [users.id],
+    }),
+    items: many(parcelInternalTransferItems),
+  }),
+);
+
+export const parcelInternalTransferItemsRelations = relations(
+  parcelInternalTransferItems,
+  ({ one }) => ({
+    transfer: one(parcelInternalTransfers, {
+      fields: [parcelInternalTransferItems.transferId],
+      references: [parcelInternalTransfers.id],
+    }),
+    parcel: one(parcels, {
+      fields: [parcelInternalTransferItems.parcelId],
+      references: [parcels.id],
+    }),
+  }),
+);
 
 export const consignmentsRelations = relations(consignments, ({ one, many }) => ({
   company: one(companies, { fields: [consignments.companyId], references: [companies.id] }),

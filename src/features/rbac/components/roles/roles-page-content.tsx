@@ -83,6 +83,65 @@ const ACCOUNTING_PERMISSION_PRESETS = [
   },
 ] as const;
 
+const OPERATIONS_PERMISSION_PRESETS = [
+  {
+    key: 'warehouse-viewer',
+    label: 'Warehouse Viewer',
+    description: 'View warehouse records only',
+    permissionKeys: [PermissionKeys.CanReadWarehouses],
+  },
+  {
+    key: 'warehouse-manager',
+    label: 'Warehouse Manager',
+    description: 'Create, update, and retire warehouses',
+    permissionKeys: [
+      PermissionKeys.CanReadWarehouses,
+      PermissionKeys.CanCreateWarehouses,
+      PermissionKeys.CanUpdateWarehouses,
+      PermissionKeys.CanDeleteWarehouses,
+    ],
+  },
+  {
+    key: 'internal-transfer-clerk',
+    label: 'Internal Transfer Clerk',
+    description: 'Create and view internal parcel transfers',
+    permissionKeys: [
+      PermissionKeys.CanReadParcelInternalTransfers,
+      PermissionKeys.CanCreateParcelInternalTransfers,
+    ],
+  },
+  {
+    key: 'internal-transfer-receiver',
+    label: 'Transfer Acknowledgement Officer',
+    description: 'Acknowledge or cancel internal parcel transfers',
+    permissionKeys: [
+      PermissionKeys.CanReadParcelInternalTransfers,
+      PermissionKeys.CanAcknowledgeParcelInternalTransfers,
+      PermissionKeys.CanCancelParcelInternalTransfers,
+    ],
+  },
+  {
+    key: 'internal-transfer-full',
+    label: 'Internal Transfer Full Access',
+    description: 'Full warehouse and parcel internal transfer operations',
+    permissionKeys: [
+      PermissionKeys.CanReadWarehouses,
+      PermissionKeys.CanCreateWarehouses,
+      PermissionKeys.CanUpdateWarehouses,
+      PermissionKeys.CanDeleteWarehouses,
+      PermissionKeys.CanReadParcelInternalTransfers,
+      PermissionKeys.CanCreateParcelInternalTransfers,
+      PermissionKeys.CanAcknowledgeParcelInternalTransfers,
+      PermissionKeys.CanCancelParcelInternalTransfers,
+    ],
+  },
+] as const;
+
+const ROLE_PERMISSION_PRESETS = [
+  ...ACCOUNTING_PERMISSION_PRESETS,
+  ...OPERATIONS_PERMISSION_PRESETS,
+] as const;
+
 export function RolesPageContent() {
   const authUser = useAuthStore((state) => state.user);
   const companyId = authUser?.company?.id ?? null;
@@ -298,7 +357,7 @@ export function RolesPageContent() {
         onRoleNameChange={setRoleNameInput}
         selectedPermissionKeys={selectedPermissionKeys}
         onTogglePermission={handleTogglePermission}
-        permissionPresets={ACCOUNTING_PERMISSION_PRESETS.map((preset) => ({
+        permissionPresets={ROLE_PERMISSION_PRESETS.map((preset) => ({
           ...preset,
           onApply: () => applyPermissionPreset([...preset.permissionKeys]),
         }))}
@@ -325,7 +384,7 @@ export function RolesPageContent() {
         groupedPermissionCatalog={groupedPermissionCatalog}
         allPermissionKeys={allPermissionKeys}
         onTogglePermission={handleTogglePermission}
-        permissionPresets={ACCOUNTING_PERMISSION_PRESETS.map((preset) => ({
+        permissionPresets={ROLE_PERMISSION_PRESETS.map((preset) => ({
           ...preset,
           onApply: () => applyPermissionPreset([...preset.permissionKeys]),
         }))}

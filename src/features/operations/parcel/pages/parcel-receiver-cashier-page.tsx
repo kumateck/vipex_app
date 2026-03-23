@@ -41,6 +41,7 @@ import {
   useSearchParcelsQuery,
   useUpdateParcelMutation,
 } from '../api/parcel.api';
+import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 import { ParcelReceiptActions, type ReceiptPrintData } from '../components/parcel-receipt-actions';
 import { ParcelSessionGuard } from '../components/parcel-session-guard';
 
@@ -224,6 +225,11 @@ export function ParcelReceiverCashierPage() {
         id: 'receiverDue',
         header: 'Receiver Due',
         accessorFn: (row) => formatCurrency(row.plannedToBePaidPsw),
+      },
+      {
+        id: 'holder',
+        header: 'Current Holder',
+        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
       },
     ];
 
@@ -504,6 +510,12 @@ export function ParcelReceiverCashierPage() {
                   <p>
                     <strong>Content:</strong> {selectedParcel.parcelContent}
                   </p>
+                  <div className="flex items-center gap-2">
+                    <strong>Current Holder:</strong>
+                    <ParcelInternalHolderBadge
+                      holder={parcelDetails?.internalHolder ?? selectedParcel}
+                    />
+                  </div>
                   <p>
                     <strong>Receiver Due:</strong> {formatCurrency(receiverDuePsw)}
                   </p>

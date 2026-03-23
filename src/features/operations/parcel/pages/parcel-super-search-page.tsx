@@ -17,6 +17,7 @@ import {
   useGetParcelDetailsQuery,
   useSearchParcelsQuery,
 } from '../api/parcel.api';
+import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 
 const EMPTY_META: PaginationMeta = {
   totalRecords: 0,
@@ -144,6 +145,11 @@ export function ParcelSuperSearchPage() {
         accessorFn: (row) => branchNameById.get(row.destinationId) ?? '-',
       },
       {
+        id: 'holder',
+        header: 'Current Holder',
+        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
+      },
+      {
         id: 'actions',
         header: 'Actions',
         enableSorting: false,
@@ -247,6 +253,12 @@ export function ParcelSuperSearchPage() {
                     branchNameById.get(parcelDetails.parcel.destinationId) ??
                       parcelDetails.parcel.destinationId,
                   )}
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="text-muted-foreground">Current Holder</span>
+                    <div className="col-span-2">
+                      <ParcelInternalHolderBadge holder={parcelDetails.internalHolder} />
+                    </div>
+                  </div>
                   {detailRow('Parcel Details', parcelDetails.parcel.parcelDetails)}
                   {detailRow('Parcel Content', parcelDetails.parcel.parcelContent)}
                   {detailRow('Charge', formatCurrency(parcelDetails.parcel.chargePsw))}

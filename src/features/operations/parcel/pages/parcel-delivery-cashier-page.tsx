@@ -40,6 +40,7 @@ import {
   useGetParcelDetailsQuery,
   useSearchParcelsQuery,
 } from '../api/parcel.api';
+import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 import { ParcelSessionGuard } from '../components/parcel-session-guard';
 
 const EMPTY_META: PaginationMeta = {
@@ -126,6 +127,11 @@ export function ParcelDeliveryCashierPage() {
         header: 'Receiver',
         accessorFn: (row) =>
           `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+      },
+      {
+        id: 'holder',
+        header: 'Current Holder',
+        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
       },
       {
         id: 'action',
@@ -232,6 +238,10 @@ export function ParcelDeliveryCashierPage() {
               <p className="text-sm">
                 <strong>Tracking:</strong> {selectedParcel?.trackingCode}
               </p>
+              <div className="flex items-center gap-2 text-sm">
+                <strong>Current Holder:</strong>
+                <ParcelInternalHolderBadge holder={details?.internalHolder ?? selectedParcel} />
+              </div>
               <p className="text-sm">
                 <strong>Outstanding To Be Paid:</strong> {formatMoney(outstanding.principalPsw)}
               </p>

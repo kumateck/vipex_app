@@ -338,6 +338,14 @@ export const accountingApi = api.injectEndpoints({
       query: (body) => ({ url: '/accounting/accounts', method: 'POST', body }),
       invalidatesTags: [{ type: 'Accounting', id: 'ACCOUNTS' }],
     }),
+    deleteAccount: builder.mutation<{ id: string }, { id: string; companyId: string }>({
+      query: ({ id, companyId }) => ({
+        url: `/accounting/accounts/${id}`,
+        method: 'DELETE',
+        params: { companyId },
+      }),
+      invalidatesTags: [{ type: 'Accounting', id: 'ACCOUNTS' }],
+    }),
     updateAccount: builder.mutation<
       { id: string },
       { id: string; body: Partial<AccountMutationInput> & { companyId: string } }
@@ -679,6 +687,7 @@ export const accountingApi = api.injectEndpoints({
 export const {
   useListAccountsQuery,
   useCreateAccountMutation,
+  useDeleteAccountMutation,
   useUpdateAccountMutation,
   useListExpenseCategoriesQuery,
   useCreateExpenseCategoryMutation,

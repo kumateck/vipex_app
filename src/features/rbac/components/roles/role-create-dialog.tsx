@@ -126,7 +126,7 @@ export function RoleCreateDialog({
             </p>
           ) : null}
           <div className="space-y-2 rounded-md border p-3">
-            <p className="text-sm font-medium">Quick finance presets</p>
+            <p className="text-sm font-medium">Quick role presets</p>
             <div className="flex flex-wrap gap-2">
               {permissionPresets.map((preset) => (
                 <Button
@@ -141,8 +141,8 @@ export function RoleCreateDialog({
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              Use these to quickly assign common accounting permission bundles, then adjust any
-              individual permissions below if needed.
+              Use these to quickly assign common accounting, warehouse, and internal-transfer
+              permission bundles, then adjust any individual permissions below if needed.
             </p>
           </div>
           <div className="max-h-[360px] overflow-auto space-y-4 rounded-md border p-3">

@@ -22,6 +22,7 @@ import {
   createTaxComponentCtrl,
   createTaxProfileCtrl,
   createTaxFilingPeriodCtrl,
+  deleteAccountCtrl,
   excludeTaxItemCtrl,
   getDailyCashExpectedSummaryCtrl,
   getAccountStatementCtrl,
@@ -157,6 +158,21 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         active: t.Optional(t.Boolean()),
       }),
       detail: { tags: ['Accounting'], summary: 'Update chart of account item' },
+    },
+  )
+  .delete(
+    '/accounts/:id',
+    async ({ params, query, user }) =>
+      deleteAccountCtrl({
+        id: params.id,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        actorUserId: (user as AuthUser).sub,
+      }),
+    {
+      beforeHandle: canManageAccountingSetup,
+      params: t.Object({ id: t.String() }),
+      query: t.Object({ companyId: t.String() }),
+      detail: { tags: ['Accounting'], summary: 'Delete chart of account item' },
     },
   )
   .get(

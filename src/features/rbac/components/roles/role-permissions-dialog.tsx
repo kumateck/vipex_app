@@ -63,7 +63,7 @@ export function RolePermissionsDialog({
           </div>
         </div>
         <div className="space-y-2 rounded-md border p-3">
-          <p className="text-sm font-medium">Quick finance presets</p>
+          <p className="text-sm font-medium">Quick role presets</p>
           <div className="flex flex-wrap gap-2">
             {permissionPresets.map((preset) => (
               <Button

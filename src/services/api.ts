@@ -153,6 +153,7 @@ export const api = createApi({
     'Branches',
     'HR',
     'Locations',
+    'Warehouses',
     'Payroll',
     'Statuses',
     'Users',

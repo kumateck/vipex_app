@@ -12,6 +12,7 @@ export type ResourceTag =
   | 'Branches'
   | 'HR'
   | 'Locations'
+  | 'Warehouses'
   | 'Payroll'
   | 'Statuses'
   | 'Users'

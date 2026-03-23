@@ -1,6 +1,11 @@
 import { Elysia, t } from 'elysia';
 import { PaginationRequestQueryProps, UUID } from '@/server/schemas/common';
-import { authPlugin, requireAuth, requirePermissions } from '@/server/plugins/auth';
+import {
+  authPlugin,
+  requireAnyPermissions,
+  requireAuth,
+  requirePermissions,
+} from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import {
   createAuditExportJobCtrl,
@@ -79,7 +84,13 @@ export const auditRoutes = new Elysia({ name: 'audit' })
         from: t.Optional(t.String({ format: 'date-time' })),
         to: t.Optional(t.String({ format: 'date-time' })),
       }),
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanGetEntityAuditHistory)],
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanGetEntityAuditHistory,
+          PermissionKeys.CanManageAccountingSetup,
+        ),
+      ],
       detail: {
         tags: ['Audit'],
         summary: 'Get entity audit history',

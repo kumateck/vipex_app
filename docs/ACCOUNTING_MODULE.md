@@ -76,6 +76,7 @@ Accounting setup changes are now audit-logged through the shared audit logger.
 Current coverage:
 
 - account creation and update
+- account deletion when the account has no ledger activity or setup associations
 - expense category creation and update
 - approval policy creation and update
 - company bank account creation and update
@@ -168,6 +169,7 @@ Backend:
 Current setup management supports:
 
 - create and update chart of accounts
+- delete chart of accounts when the account has no journal activity, setup mappings, petty cash linkage, or child accounts
 - set account code, name, class, parent, postable flag, and active flag
 - create and update expense categories
 - map each expense category to an expense account
@@ -184,6 +186,7 @@ Safety guardrails now enforced:
 - accounts cannot be deactivated while referenced by journal lines, expense categories, bank accounts, or petty cash funds
 - accounts cannot change class after journal activity exists
 - postable accounts cannot be converted to summary accounts while still actively referenced
+- accounts cannot be deleted while referenced by journal lines, expense categories, bank accounts, petty cash funds, or child accounts
 - expense categories cannot be deactivated while requests are still open
 - expense category mapped accounts cannot be changed after posted expense requests exist
 - company bank accounts cannot be deactivated while linked expense requests are still open
@@ -194,6 +197,8 @@ Notes:
 
 - the setup page is also company-gated by accounting enablement
 - inactive setup records remain visible for maintenance
+- admins can open a setup record and review its inline change history directly inside `/accounting/setup`
+- the inline history panel currently covers accounts, expense categories, approval policies, company bank accounts, tax profiles, and tax components
 - expense category mapping prefers active postable expense accounts
 - company bank account mapping prefers active postable asset accounts
 - seeded accounts are still useful as the baseline, but finance can now maintain names and mappings from the frontend

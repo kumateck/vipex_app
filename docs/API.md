@@ -15,6 +15,7 @@ Base URL: `/v1`
 - `/users`
 - `/branches`
 - `/locations`
+- `/warehouses`
 - `/company-modules`
 - `/statuses`
 - `/hr/departments`
@@ -41,6 +42,7 @@ Base URL: `/v1`
 
 - `/shipments/bookings`
 - `/shipments/parcels`
+- `/shipments/parcel-internal-transfers`
 - `/shipments/consignments`
 - `/deliveries`
 - `/cashiers`
@@ -99,12 +101,29 @@ Notes:
 - The accounting UI is surfaced at `/settings/company` for users with `CanManageCompanyModules`.
 - Accounting setup master data is surfaced at `/accounting/setup`.
 - The setup page currently manages chart of accounts, expense categories, approval policies, company bank accounts, tax profiles, and tax components.
+- Ledger accounts can now be deleted through `DELETE /accounting/accounts/:id?companyId=...`, but only when they have no associated transactions or setup references.
+- The setup page now shows per-record audit history inline by consuming `GET /audit/entities/:entityType/:entityId`.
 - Accounting API access is also role-gated with `CanReadAccounting`, `CanManageAccountingSetup`, `CanManageTaxFiling`, and `CanPostAccountingEntries`.
 - When `accounting` is disabled, `/accounting/*` UI routes are hidden and `/v1/accounting/*` API routes are blocked.
+
+Parcel internal transfer notes:
+
+- `GET /warehouses`
+- `GET /warehouses/options`
+- `POST /warehouses`
+- `PATCH /warehouses/:id`
+- `DELETE /warehouses/:id`
+- `GET /shipments/parcel-internal-transfers`
+- `GET /shipments/parcel-internal-transfers/:id`
+- `POST /shipments/parcel-internal-transfers`
+- `POST /shipments/parcel-internal-transfers/:id/acknowledge`
+- `POST /shipments/parcel-internal-transfers/:id/cancel`
+- these APIs move internal custody only and do not change parcel shipment status
 
 Reference:
 
 - `docs/COMPANY_MODULES.md`
+- `docs/PARCEL_INTERNAL_TRANSFERS.md`
 
 ## Inventory
 

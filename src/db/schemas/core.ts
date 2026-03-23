@@ -90,6 +90,36 @@ export const locations = pgTable(
   }),
 );
 
+export const warehouses = pgTable(
+  'warehouses',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    branchId: varchar('branch_id', { length: 25 })
+      .notNull()
+      .references(() => branches.id),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: varchar('description', { length: 500 }),
+    active: boolean('active').notNull().default(true),
+    isDeleted: boolean('is_deleted').notNull().default(false),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompany: index('warehouses_company_idx').on(t.companyId),
+    byBranch: index('warehouses_branch_idx').on(t.branchId),
+    uqBranchLowerName: uniqueIndex('warehouses_branch_lower_name_uq').on(
+      t.branchId,
+      sql`lower(${t.name})`,
+    ),
+  }),
+);
+
 // Statuses (unique per company, case-insensitive)
 export const statuses = pgTable(
   'statuses',

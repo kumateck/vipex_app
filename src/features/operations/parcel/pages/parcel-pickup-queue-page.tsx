@@ -21,6 +21,7 @@ import {
   useGetParcelDetailsQuery,
   useLazySearchParcelsQuery,
 } from '../api/parcel.api';
+import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 
 function formatCurrency(amountPsw: number) {
   return `GHS ${(amountPsw / 100).toFixed(2)}`;
@@ -68,6 +69,11 @@ export function ParcelPickupQueuePage() {
           `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
       },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
+      {
+        id: 'holder',
+        header: 'Current Holder',
+        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
+      },
       {
         id: 'paymentBucket',
         header: 'Payment',
@@ -204,6 +210,12 @@ export function ParcelPickupQueuePage() {
                 <p>
                   <strong>Parcel:</strong> {selectedParcel.parcelDetails}
                 </p>
+                <div className="flex items-center gap-2">
+                  <strong>Current Holder:</strong>
+                  <ParcelInternalHolderBadge
+                    holder={parcelDetails?.internalHolder ?? selectedParcel}
+                  />
+                </div>
                 <p>
                   <strong>Payment Type:</strong> {getPaymentBucketLabel(selectedParcel)}
                 </p>

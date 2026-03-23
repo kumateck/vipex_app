@@ -39,6 +39,8 @@ import { geolocationRoutes } from './features/geolocation/routes';
 import { cardsRoutes } from './features/cards/routes';
 import { pickupQueuesRoutes } from './features/pickup-queues/routes';
 import { companyModulesRoutes } from './features/company-modules/routes';
+import { warehousesRoutes } from './features/warehouses/routes';
+import { parcelInternalTransfersRoutes } from './features/parcel-internal-transfers/routes';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -59,6 +61,7 @@ export const app = new Elysia()
       .group('/users', (r) => r.use(usersRoutes).use(usersInviteRoutes))
       .group('/branches', (r) => r.use(branchesRoutes))
       .group('/locations', (r) => r.use(locationsRoutes))
+      .group('/warehouses', (r) => r.use(warehousesRoutes))
       .group('/customers', (r) => r.use(customersRoutes))
       .group('/cards', (r) => r.use(cardsRoutes))
       .group('/cashiers', (r) => r.use(cashiersRoutes))
@@ -68,6 +71,7 @@ export const app = new Elysia()
           s
             .group('/bookings', (r) => r.use(bookingsRoutes).use(bookingWithParcelsRoutes))
             .group('/parcels', (r) => r.use(parcelsRoutes))
+            .group('/parcel-internal-transfers', (r) => r.use(parcelInternalTransfersRoutes))
             .group('/consignments', (r) => r.use(consignmentsRoutes))
             .group('/auto-grouping', (r) => r.use(autoGroupingRoutes)),
         // .group('/shifts', (r) => r.use(shiftManagementRoutes))

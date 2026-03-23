@@ -46,6 +46,13 @@ export type SenderCashierParcel = {
   plannedToBePaidPsw: number;
   status: number;
   createdAt: string;
+  currentHolderType?: number | null;
+  currentHolderBranchId?: string | null;
+  currentHolderBranchName?: string | null;
+  currentHolderLocationId?: string | null;
+  currentHolderLocationName?: string | null;
+  currentHolderWarehouseId?: string | null;
+  currentHolderWarehouseName?: string | null;
 };
 
 export type ProcessedParcel = SenderCashierParcel;
@@ -99,6 +106,25 @@ export type ParcelSearchRow = {
   pickupQueueNumber?: number | null;
   pickupQueuedAt?: string | null;
   pickupQueueEndedAt?: string | null;
+  currentHolderType?: number | null;
+  currentHolderBranchId?: string | null;
+  currentHolderBranchName?: string | null;
+  currentHolderLocationId?: string | null;
+  currentHolderLocationName?: string | null;
+  currentHolderWarehouseId?: string | null;
+  currentHolderWarehouseName?: string | null;
+};
+
+export type ParcelInternalHolderSnapshot = {
+  parcelId: string;
+  holderType: number;
+  branchId: string | null;
+  branchName: string | null;
+  locationId: string | null;
+  locationName: string | null;
+  warehouseId: string | null;
+  warehouseName: string | null;
+  updatedAt: string;
 };
 
 export type ParcelFullDetails = {
@@ -213,6 +239,7 @@ export type ParcelFullDetails = {
     createdAt: string;
     updatedAt: string;
   };
+  internalHolder: ParcelInternalHolderSnapshot | null;
 };
 
 export type PickupQueueRecord = {
@@ -278,6 +305,54 @@ export type RiderDoorstepResponse = {
     expectedToBePaidPsw: number;
     expectedTotalPsw: number;
   };
+};
+
+export type ParcelInternalTransferRow = {
+  id: string;
+  companyId: string;
+  branchId: string;
+  branchName: string | null;
+  referenceNo: string | null;
+  sourceHolderType: number;
+  sourceLocationId: string | null;
+  sourceLocationName: string | null;
+  sourceWarehouseId: string | null;
+  sourceWarehouseName: string | null;
+  destinationHolderType: number;
+  destinationLocationId: string | null;
+  destinationLocationName: string | null;
+  destinationWarehouseId: string | null;
+  destinationWarehouseName: string | null;
+  notes: string | null;
+  status: number;
+  transferredBy: string;
+  transferredByName: string | null;
+  transferredAt: string | null;
+  acknowledgedBy: string | null;
+  acknowledgedAt: string | null;
+  itemCount: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type ParcelInternalTransferDetails = {
+  transfer: ParcelInternalTransferRow & {
+    acknowledgedByName?: string | null;
+    cancelledBy?: string | null;
+    cancelledAt?: string | null;
+    cancelReason?: string | null;
+  };
+  items: Array<{
+    parcelId: string;
+    trackingCode: string;
+    bookingCode: string;
+    parcelDetails: string;
+    receiverId: string;
+    receiverName: string | null;
+    receiverPhone: string | null;
+    status: number;
+    addedAt: string | null;
+  }>;
 };
 
 export type SenderCashierParcelFilters = {
@@ -675,6 +750,74 @@ export const parcelApi = api.injectEndpoints({
       }),
       providesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    listParcelInternalTransfers: builder.query<
+      ParcelInternalTransferRow[],
+      {
+        branchId?: string;
+        status?: number;
+        destinationLocationId?: string;
+        destinationWarehouseId?: string;
+        sourceLocationId?: string;
+        sourceWarehouseId?: string;
+      } | void
+    >({
+      query: (params) => ({
+        url: '/shipments/parcel-internal-transfers',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    getParcelInternalTransferDetails: builder.query<ParcelInternalTransferDetails, string>({
+      query: (id) => ({
+        url: `/shipments/parcel-internal-transfers/${id}`,
+      }),
+      providesTags: (_result, _error, id) => [{ type: 'Bookings', id: `INTERNAL_TRANSFER_${id}` }],
+    }),
+    createParcelInternalTransfer: builder.mutation<
+      { id: string },
+      {
+        branchId: string;
+        sourceHolderType: number;
+        sourceLocationId?: string | null;
+        sourceWarehouseId?: string | null;
+        destinationHolderType: number;
+        destinationLocationId?: string | null;
+        destinationWarehouseId?: string | null;
+        notes?: string | null;
+        parcelIds: string[];
+      }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcel-internal-transfers',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    acknowledgeParcelInternalTransfer: builder.mutation<{ id: string }, { id: string }>({
+      query: ({ id }) => ({
+        url: `/shipments/parcel-internal-transfers/${id}/acknowledge`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Bookings', id: `INTERNAL_TRANSFER_${id}` },
+      ],
+    }),
+    cancelParcelInternalTransfer: builder.mutation<
+      { id: string },
+      { id: string; cancelReason: string }
+    >({
+      query: ({ id, cancelReason }) => ({
+        url: `/shipments/parcel-internal-transfers/${id}/cancel`,
+        method: 'POST',
+        body: { cancelReason },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Bookings', id: `INTERNAL_TRANSFER_${id}` },
+      ],
+    }),
   }),
 });
 
@@ -701,4 +844,9 @@ export const {
   useFinalizeDoorstepAtOfficeMutation,
   useCreatePickupQueueMutation,
   useListPickupQueueCardsQuery,
+  useListParcelInternalTransfersQuery,
+  useGetParcelInternalTransferDetailsQuery,
+  useCreateParcelInternalTransferMutation,
+  useAcknowledgeParcelInternalTransferMutation,
+  useCancelParcelInternalTransferMutation,
 } = parcelApi;

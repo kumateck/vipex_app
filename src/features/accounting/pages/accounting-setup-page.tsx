@@ -2,11 +2,22 @@ import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -18,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AccountClass, ExpenseFundingSource } from '@/db/schemas/enums';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore, type AuthUser } from '@/stores/auth-store';
+import { useGetEntityAuditHistoryQuery } from '@/features/audit/api';
 import {
   type AccountMutationInput,
   type AccountRow,
@@ -37,6 +49,7 @@ import {
   useCreateExpenseCategoryMutation,
   useCreateTaxComponentMutation,
   useCreateTaxProfileMutation,
+  useDeleteAccountMutation,
   useListAccountsQuery,
   useListApprovalPoliciesQuery,
   useListCompanyBankAccountsQuery,
@@ -172,6 +185,88 @@ function parseMoneyToPesewas(value: string) {
   return Math.round(amount * 100);
 }
 
+function formatAuditDateTime(value: string) {
+  return new Date(value).toLocaleString();
+}
+
+function stringifyAuditMetadata(metadata: unknown) {
+  if (metadata == null) return null;
+  try {
+    return JSON.stringify(metadata, null, 2);
+  } catch {
+    return String(metadata);
+  }
+}
+
+function AccountingSetupHistoryCard({
+  entityType,
+  entityId,
+  entityLabel,
+}: {
+  entityType: string;
+  entityId: string;
+  entityLabel: string;
+}) {
+  const { data, isFetching, isError } = useGetEntityAuditHistoryQuery(
+    { entityType, entityId },
+    { skip: !entityId },
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Change History</CardTitle>
+        <CardDescription>
+          Review the audit trail for this {entityLabel.toLowerCase()} without leaving accounting
+          setup.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isFetching ? (
+          <p className="text-sm text-muted-foreground">Loading history...</p>
+        ) : isError ? (
+          <p className="text-sm text-destructive">
+            Unable to load change history for this {entityLabel.toLowerCase()} right now.
+          </p>
+        ) : (data?.data?.length ?? 0) === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No setup changes have been recorded for this {entityLabel.toLowerCase()} yet.
+          </p>
+        ) : (
+          <ScrollArea className="h-80 pr-4">
+            <div className="space-y-4">
+              {data?.data.map((entry) => {
+                const metadata = stringifyAuditMetadata(entry.metadata);
+                return (
+                  <div key={entry.id} className="rounded-lg border p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline">{entry.action}</Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {formatAuditDateTime(entry.createdAt)}
+                      </span>
+                    </div>
+                    {entry.message ? (
+                      <p className="mt-2 text-sm font-medium">{entry.message}</p>
+                    ) : null}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Actor: {entry.actorUserId || 'System'}
+                    </p>
+                    {metadata ? (
+                      <pre className="mt-3 overflow-x-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap break-all">
+                        {metadata}
+                      </pre>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function AccountingSetupPage() {
   const user = useAuthStore((state) => state.user);
   if (!user?.company?.useAccounting) {
@@ -215,6 +310,7 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   const [editingBankAccountId, setEditingBankAccountId] = useState<string | null>(null);
   const [editingTaxProfileId, setEditingTaxProfileId] = useState<string | null>(null);
   const [editingTaxComponentId, setEditingTaxComponentId] = useState<string | null>(null);
+  const [isDeleteAccountDialogOpen, setIsDeleteAccountDialogOpen] = useState(false);
 
   const {
     data: accounts = [],
@@ -252,6 +348,7 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   );
 
   const [createAccount, { isLoading: isCreatingAccount }] = useCreateAccountMutation();
+  const [deleteAccount, { isLoading: isDeletingAccount }] = useDeleteAccountMutation();
   const [updateAccount, { isLoading: isUpdatingAccount }] = useUpdateAccountMutation();
   const [createExpenseCategory, { isLoading: isCreatingExpenseCategory }] =
     useCreateExpenseCategoryMutation();
@@ -433,6 +530,23 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
       await refetchAccounts();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to save account');
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (!companyId || !editingAccountId) {
+      toast.error('Select an account first');
+      return;
+    }
+
+    try {
+      await deleteAccount({ id: editingAccountId, companyId }).unwrap();
+      toast.success('Account deleted');
+      setIsDeleteAccountDialogOpen(false);
+      resetAccountForm();
+      await refetchAccounts();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete account');
     }
   }
 
@@ -882,140 +996,166 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
 
         <TabsContent value="accounts" className="space-y-4">
           <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-            <Card>
-              <CardHeader>
-                <CardTitle>{editingAccountId ? 'Edit Account' : 'New Account'}</CardTitle>
-                <CardDescription>
-                  Set the account code, class, posting behavior, and whether the account is active.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
-                  <div className="space-y-2">
-                    <Label htmlFor="account-code">Code</Label>
-                    <Input
-                      id="account-code"
-                      value={accountForm.code}
-                      onChange={(event) =>
-                        setAccountForm((current) => ({ ...current, code: event.target.value }))
-                      }
-                      placeholder="4000"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="account-name">Name</Label>
-                    <Input
-                      id="account-name"
-                      value={accountForm.name}
-                      onChange={(event) =>
-                        setAccountForm((current) => ({ ...current, name: event.target.value }))
-                      }
-                      placeholder="Parcel Revenue"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Account Class</Label>
-                    <Select
-                      value={String(accountForm.accountClass)}
-                      onValueChange={(value) =>
-                        setAccountForm((current) => ({
-                          ...current,
-                          accountClass: Number(value),
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select account class" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ACCOUNT_CLASS_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Parent Account</Label>
-                    <Select
-                      value={accountForm.parentAccountId ?? NO_PARENT}
-                      onValueChange={(value) =>
-                        setAccountForm((current) => ({
-                          ...current,
-                          parentAccountId: value === NO_PARENT ? null : value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Optional parent account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NO_PARENT}>No parent</SelectItem>
-                        {parentAccountOptions
-                          .filter((account) => account.id !== editingAccountId)
-                          .map((account) => (
-                            <SelectItem key={account.id} value={account.id}>
-                              {account.code} - {account.name}
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{editingAccountId ? 'Edit Account' : 'New Account'}</CardTitle>
+                  <CardDescription>
+                    Set the account code, class, posting behavior, and whether the account is
+                    active.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+                    <div className="space-y-2">
+                      <Label htmlFor="account-code">Code</Label>
+                      <Input
+                        id="account-code"
+                        value={accountForm.code}
+                        onChange={(event) =>
+                          setAccountForm((current) => ({ ...current, code: event.target.value }))
+                        }
+                        placeholder="4000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="account-name">Name</Label>
+                      <Input
+                        id="account-name"
+                        value={accountForm.name}
+                        onChange={(event) =>
+                          setAccountForm((current) => ({ ...current, name: event.target.value }))
+                        }
+                        placeholder="Parcel Revenue"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Account Class</Label>
+                      <Select
+                        value={String(accountForm.accountClass)}
+                        onValueChange={(value) =>
+                          setAccountForm((current) => ({
+                            ...current,
+                            accountClass: Number(value),
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select account class" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ACCOUNT_CLASS_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
                             </SelectItem>
                           ))}
-                      </SelectContent>
-                    </Select>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Parent Account</Label>
+                      <Select
+                        value={accountForm.parentAccountId ?? NO_PARENT}
+                        onValueChange={(value) =>
+                          setAccountForm((current) => ({
+                            ...current,
+                            parentAccountId: value === NO_PARENT ? null : value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Optional parent account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_PARENT}>No parent</SelectItem>
+                          {parentAccountOptions
+                            .filter((account) => account.id !== editingAccountId)
+                            .map((account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.code} - {account.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Posting Type</Label>
+                      <Select
+                        value={String(accountForm.isPostable)}
+                        onValueChange={(value) =>
+                          setAccountForm((current) => ({
+                            ...current,
+                            isPostable: value === 'true',
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Postable account</SelectItem>
+                          <SelectItem value="false">Summary account</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select
+                        value={String(accountForm.active)}
+                        onValueChange={(value) =>
+                          setAccountForm((current) => ({
+                            ...current,
+                            active: value === 'true',
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Active</SelectItem>
+                          <SelectItem value="false">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Posting Type</Label>
-                    <Select
-                      value={String(accountForm.isPostable)}
-                      onValueChange={(value) =>
-                        setAccountForm((current) => ({
-                          ...current,
-                          isPostable: value === 'true',
-                        }))
-                      }
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => void handleSaveAccount()}
+                      disabled={isCreatingAccount || isUpdatingAccount}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="true">Postable account</SelectItem>
-                        <SelectItem value="false">Summary account</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      {editingAccountId ? 'Update Account' : 'Create Account'}
+                    </Button>
+                    {editingAccountId ? (
+                      <Button
+                        variant="destructive"
+                        onClick={() => setIsDeleteAccountDialogOpen(true)}
+                        disabled={isDeletingAccount}
+                      >
+                        Delete Account
+                      </Button>
+                    ) : null}
+                    <Button variant="outline" onClick={resetAccountForm}>
+                      Clear
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select
-                      value={String(accountForm.active)}
-                      onValueChange={(value) =>
-                        setAccountForm((current) => ({
-                          ...current,
-                          active: value === 'true',
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="true">Active</SelectItem>
-                        <SelectItem value="false">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => void handleSaveAccount()}
-                    disabled={isCreatingAccount || isUpdatingAccount}
-                  >
-                    {editingAccountId ? 'Update Account' : 'Create Account'}
-                  </Button>
-                  <Button variant="outline" onClick={resetAccountForm}>
-                    Clear
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                  {editingAccountId ? (
+                    <p className="text-xs text-muted-foreground">
+                      Delete is only allowed when the account has no journal activity, no setup
+                      mappings, no petty cash fund, and no child accounts.
+                    </p>
+                  ) : null}
+                </CardContent>
+              </Card>
+
+              {editingAccountId ? (
+                <AccountingSetupHistoryCard
+                  entityType="accounting_account"
+                  entityId={editingAccountId}
+                  entityLabel="Account"
+                />
+              ) : null}
+            </div>
 
             <Card>
               <CardHeader>
@@ -1041,99 +1181,110 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
 
         <TabsContent value="categories" className="space-y-4">
           <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {editingExpenseCategoryId ? 'Edit Expense Category' : 'New Expense Category'}
-                </CardTitle>
-                <CardDescription>
-                  Map each expense category to the ledger account that should receive its postings.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
-                  <div className="space-y-2">
-                    <Label htmlFor="expense-category-code">Code</Label>
-                    <Input
-                      id="expense-category-code"
-                      value={expenseCategoryForm.code}
-                      onChange={(event) =>
-                        setExpenseCategoryForm((current) => ({
-                          ...current,
-                          code: event.target.value,
-                        }))
-                      }
-                      placeholder="FUEL"
-                    />
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {editingExpenseCategoryId ? 'Edit Expense Category' : 'New Expense Category'}
+                  </CardTitle>
+                  <CardDescription>
+                    Map each expense category to the ledger account that should receive its
+                    postings.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+                    <div className="space-y-2">
+                      <Label htmlFor="expense-category-code">Code</Label>
+                      <Input
+                        id="expense-category-code"
+                        value={expenseCategoryForm.code}
+                        onChange={(event) =>
+                          setExpenseCategoryForm((current) => ({
+                            ...current,
+                            code: event.target.value,
+                          }))
+                        }
+                        placeholder="FUEL"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="expense-category-name">Name</Label>
+                      <Input
+                        id="expense-category-name"
+                        value={expenseCategoryForm.name}
+                        onChange={(event) =>
+                          setExpenseCategoryForm((current) => ({
+                            ...current,
+                            name: event.target.value,
+                          }))
+                        }
+                        placeholder="Fuel"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Mapped Account</Label>
+                      <Select
+                        value={expenseCategoryForm.accountId || undefined}
+                        onValueChange={(value) =>
+                          setExpenseCategoryForm((current) => ({ ...current, accountId: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an expense account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {postableExpenseAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.code} - {account.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select
+                        value={String(expenseCategoryForm.active)}
+                        onValueChange={(value) =>
+                          setExpenseCategoryForm((current) => ({
+                            ...current,
+                            active: value === 'true',
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Active</SelectItem>
+                          <SelectItem value="false">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="expense-category-name">Name</Label>
-                    <Input
-                      id="expense-category-name"
-                      value={expenseCategoryForm.name}
-                      onChange={(event) =>
-                        setExpenseCategoryForm((current) => ({
-                          ...current,
-                          name: event.target.value,
-                        }))
-                      }
-                      placeholder="Fuel"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Mapped Account</Label>
-                    <Select
-                      value={expenseCategoryForm.accountId || undefined}
-                      onValueChange={(value) =>
-                        setExpenseCategoryForm((current) => ({ ...current, accountId: value }))
-                      }
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => void handleSaveExpenseCategory()}
+                      disabled={isCreatingExpenseCategory || isUpdatingExpenseCategory}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an expense account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {postableExpenseAccounts.map((account) => (
-                          <SelectItem key={account.id} value={account.id}>
-                            {account.code} - {account.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {editingExpenseCategoryId ? 'Update Category' : 'Create Category'}
+                    </Button>
+                    <Button variant="outline" onClick={resetExpenseCategoryForm}>
+                      Clear
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select
-                      value={String(expenseCategoryForm.active)}
-                      onValueChange={(value) =>
-                        setExpenseCategoryForm((current) => ({
-                          ...current,
-                          active: value === 'true',
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="true">Active</SelectItem>
-                        <SelectItem value="false">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => void handleSaveExpenseCategory()}
-                    disabled={isCreatingExpenseCategory || isUpdatingExpenseCategory}
-                  >
-                    {editingExpenseCategoryId ? 'Update Category' : 'Create Category'}
-                  </Button>
-                  <Button variant="outline" onClick={resetExpenseCategoryForm}>
-                    Clear
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {editingExpenseCategoryId ? (
+                <AccountingSetupHistoryCard
+                  entityType="expense_category"
+                  entityId={editingExpenseCategoryId}
+                  entityLabel="Expense Category"
+                />
+              ) : null}
+            </div>
 
             <Card>
               <CardHeader>
@@ -1160,140 +1311,150 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
 
         <TabsContent value="policies" className="space-y-4">
           <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {editingApprovalPolicyId ? 'Edit Approval Policy' : 'New Approval Policy'}
-                </CardTitle>
-                <CardDescription>
-                  Define spending thresholds and whether branch requests must move to head office
-                  approval.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
-                  <div className="space-y-2">
-                    <Label htmlFor="policy-code">Policy Code</Label>
-                    <Input
-                      id="policy-code"
-                      value={approvalPolicyForm.policyCode}
-                      onChange={(event) =>
-                        setApprovalPolicyForm((current) => ({
-                          ...current,
-                          policyCode: event.target.value,
-                        }))
-                      }
-                      placeholder="PETTY_LIMIT"
-                    />
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {editingApprovalPolicyId ? 'Edit Approval Policy' : 'New Approval Policy'}
+                  </CardTitle>
+                  <CardDescription>
+                    Define spending thresholds and whether branch requests must move to head office
+                    approval.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+                    <div className="space-y-2">
+                      <Label htmlFor="policy-code">Policy Code</Label>
+                      <Input
+                        id="policy-code"
+                        value={approvalPolicyForm.policyCode}
+                        onChange={(event) =>
+                          setApprovalPolicyForm((current) => ({
+                            ...current,
+                            policyCode: event.target.value,
+                          }))
+                        }
+                        placeholder="PETTY_LIMIT"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="policy-name">Name</Label>
+                      <Input
+                        id="policy-name"
+                        value={approvalPolicyForm.name}
+                        onChange={(event) =>
+                          setApprovalPolicyForm((current) => ({
+                            ...current,
+                            name: event.target.value,
+                          }))
+                        }
+                        placeholder="Branch petty cash limit"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="policy-amount-limit">Amount Limit (GHS)</Label>
+                      <Input
+                        id="policy-amount-limit"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={approvalPolicyForm.amountLimitCedis}
+                        onChange={(event) =>
+                          setApprovalPolicyForm((current) => ({
+                            ...current,
+                            amountLimitCedis: event.target.value,
+                          }))
+                        }
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Funding Scope</Label>
+                      <Select
+                        value={approvalPolicyForm.appliesToFundingSource}
+                        onValueChange={(value) =>
+                          setApprovalPolicyForm((current) => ({
+                            ...current,
+                            appliesToFundingSource: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FUNDING_SOURCE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Approval Level</Label>
+                      <Select
+                        value={String(approvalPolicyForm.requiresHeadOfficeApproval)}
+                        onValueChange={(value) =>
+                          setApprovalPolicyForm((current) => ({
+                            ...current,
+                            requiresHeadOfficeApproval: value === 'true',
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="false">Branch can approve</SelectItem>
+                          <SelectItem value="true">Head office approval required</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select
+                        value={String(approvalPolicyForm.active)}
+                        onValueChange={(value) =>
+                          setApprovalPolicyForm((current) => ({
+                            ...current,
+                            active: value === 'true',
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Active</SelectItem>
+                          <SelectItem value="false">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="policy-name">Name</Label>
-                    <Input
-                      id="policy-name"
-                      value={approvalPolicyForm.name}
-                      onChange={(event) =>
-                        setApprovalPolicyForm((current) => ({
-                          ...current,
-                          name: event.target.value,
-                        }))
-                      }
-                      placeholder="Branch petty cash limit"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="policy-amount-limit">Amount Limit (GHS)</Label>
-                    <Input
-                      id="policy-amount-limit"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={approvalPolicyForm.amountLimitCedis}
-                      onChange={(event) =>
-                        setApprovalPolicyForm((current) => ({
-                          ...current,
-                          amountLimitCedis: event.target.value,
-                        }))
-                      }
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Funding Scope</Label>
-                    <Select
-                      value={approvalPolicyForm.appliesToFundingSource}
-                      onValueChange={(value) =>
-                        setApprovalPolicyForm((current) => ({
-                          ...current,
-                          appliesToFundingSource: value,
-                        }))
-                      }
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => void handleSaveApprovalPolicy()}
+                      disabled={isCreatingApprovalPolicy || isUpdatingApprovalPolicy}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FUNDING_SOURCE_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {editingApprovalPolicyId ? 'Update Policy' : 'Create Policy'}
+                    </Button>
+                    <Button variant="outline" onClick={resetApprovalPolicyForm}>
+                      Clear
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Approval Level</Label>
-                    <Select
-                      value={String(approvalPolicyForm.requiresHeadOfficeApproval)}
-                      onValueChange={(value) =>
-                        setApprovalPolicyForm((current) => ({
-                          ...current,
-                          requiresHeadOfficeApproval: value === 'true',
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="false">Branch can approve</SelectItem>
-                        <SelectItem value="true">Head office approval required</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select
-                      value={String(approvalPolicyForm.active)}
-                      onValueChange={(value) =>
-                        setApprovalPolicyForm((current) => ({
-                          ...current,
-                          active: value === 'true',
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="true">Active</SelectItem>
-                        <SelectItem value="false">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => void handleSaveApprovalPolicy()}
-                    disabled={isCreatingApprovalPolicy || isUpdatingApprovalPolicy}
-                  >
-                    {editingApprovalPolicyId ? 'Update Policy' : 'Create Policy'}
-                  </Button>
-                  <Button variant="outline" onClick={resetApprovalPolicyForm}>
-                    Clear
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {editingApprovalPolicyId ? (
+                <AccountingSetupHistoryCard
+                  entityType="accounting_approval_policy"
+                  entityId={editingApprovalPolicyId}
+                  entityLabel="Approval Policy"
+                />
+              ) : null}
+            </div>
 
             <Card>
               <CardHeader>
@@ -1319,125 +1480,140 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
 
         <TabsContent value="bank-accounts" className="space-y-4">
           <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {editingBankAccountId ? 'Edit Company Bank Account' : 'New Company Bank Account'}
-                </CardTitle>
-                <CardDescription>
-                  Register the head-office bank accounts that accounting and expense payments can
-                  post against.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
-                  <div className="space-y-2">
-                    <Label htmlFor="bank-account-name">Display Name</Label>
-                    <Input
-                      id="bank-account-name"
-                      value={bankAccountForm.name}
-                      onChange={(event) =>
-                        setBankAccountForm((current) => ({ ...current, name: event.target.value }))
-                      }
-                      placeholder="Main Operations Account"
-                    />
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {editingBankAccountId
+                      ? 'Edit Company Bank Account'
+                      : 'New Company Bank Account'}
+                  </CardTitle>
+                  <CardDescription>
+                    Register the head-office bank accounts that accounting and expense payments can
+                    post against.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-account-name">Display Name</Label>
+                      <Input
+                        id="bank-account-name"
+                        value={bankAccountForm.name}
+                        onChange={(event) =>
+                          setBankAccountForm((current) => ({
+                            ...current,
+                            name: event.target.value,
+                          }))
+                        }
+                        placeholder="Main Operations Account"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Mapped Ledger Account</Label>
+                      <Select
+                        value={bankAccountForm.accountId || undefined}
+                        onValueChange={(value) =>
+                          setBankAccountForm((current) => ({ ...current, accountId: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an asset account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {postableAssetAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.code} - {account.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-name">Bank Name</Label>
+                      <Input
+                        id="bank-name"
+                        value={bankAccountForm.bankName ?? ''}
+                        onChange={(event) =>
+                          setBankAccountForm((current) => ({
+                            ...current,
+                            bankName: event.target.value,
+                          }))
+                        }
+                        placeholder="GCB Bank"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-branch">Bank Branch</Label>
+                      <Input
+                        id="bank-branch"
+                        value={bankAccountForm.branchName ?? ''}
+                        onChange={(event) =>
+                          setBankAccountForm((current) => ({
+                            ...current,
+                            branchName: event.target.value,
+                          }))
+                        }
+                        placeholder="Head Office Branch"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-account-number">Masked Account Number</Label>
+                      <Input
+                        id="bank-account-number"
+                        value={bankAccountForm.accountNumberMasked ?? ''}
+                        onChange={(event) =>
+                          setBankAccountForm((current) => ({
+                            ...current,
+                            accountNumberMasked: event.target.value,
+                          }))
+                        }
+                        placeholder="****1234"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select
+                        value={String(bankAccountForm.active)}
+                        onValueChange={(value) =>
+                          setBankAccountForm((current) => ({
+                            ...current,
+                            active: value === 'true',
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Active</SelectItem>
+                          <SelectItem value="false">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Mapped Ledger Account</Label>
-                    <Select
-                      value={bankAccountForm.accountId || undefined}
-                      onValueChange={(value) =>
-                        setBankAccountForm((current) => ({ ...current, accountId: value }))
-                      }
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => void handleSaveBankAccount()}
+                      disabled={isCreatingCompanyBankAccount || isUpdatingCompanyBankAccount}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an asset account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {postableAssetAccounts.map((account) => (
-                          <SelectItem key={account.id} value={account.id}>
-                            {account.code} - {account.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {editingBankAccountId ? 'Update Bank Account' : 'Create Bank Account'}
+                    </Button>
+                    <Button variant="outline" onClick={resetBankAccountForm}>
+                      Clear
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bank-name">Bank Name</Label>
-                    <Input
-                      id="bank-name"
-                      value={bankAccountForm.bankName ?? ''}
-                      onChange={(event) =>
-                        setBankAccountForm((current) => ({
-                          ...current,
-                          bankName: event.target.value,
-                        }))
-                      }
-                      placeholder="GCB Bank"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bank-branch">Bank Branch</Label>
-                    <Input
-                      id="bank-branch"
-                      value={bankAccountForm.branchName ?? ''}
-                      onChange={(event) =>
-                        setBankAccountForm((current) => ({
-                          ...current,
-                          branchName: event.target.value,
-                        }))
-                      }
-                      placeholder="Head Office Branch"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bank-account-number">Masked Account Number</Label>
-                    <Input
-                      id="bank-account-number"
-                      value={bankAccountForm.accountNumberMasked ?? ''}
-                      onChange={(event) =>
-                        setBankAccountForm((current) => ({
-                          ...current,
-                          accountNumberMasked: event.target.value,
-                        }))
-                      }
-                      placeholder="****1234"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select
-                      value={String(bankAccountForm.active)}
-                      onValueChange={(value) =>
-                        setBankAccountForm((current) => ({
-                          ...current,
-                          active: value === 'true',
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="true">Active</SelectItem>
-                        <SelectItem value="false">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => void handleSaveBankAccount()}
-                    disabled={isCreatingCompanyBankAccount || isUpdatingCompanyBankAccount}
-                  >
-                    {editingBankAccountId ? 'Update Bank Account' : 'Create Bank Account'}
-                  </Button>
-                  <Button variant="outline" onClick={resetBankAccountForm}>
-                    Clear
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {editingBankAccountId ? (
+                <AccountingSetupHistoryCard
+                  entityType="company_bank_account"
+                  entityId={editingBankAccountId}
+                  entityLabel="Bank Account"
+                />
+              ) : null}
+            </div>
 
             <Card>
               <CardHeader>
@@ -1463,63 +1639,73 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
 
         <TabsContent value="tax-profiles" className="space-y-4">
           <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {editingTaxProfileId ? 'Edit Tax Profile' : 'New Tax Profile'}
-                </CardTitle>
-                <CardDescription>
-                  Maintain the tax profiles that the Ghana tax engine can reference for posting and
-                  filing review.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
-                  <div className="space-y-2">
-                    <Label htmlFor="tax-profile-name">Name</Label>
-                    <Input
-                      id="tax-profile-name"
-                      value={taxProfileForm.name}
-                      onChange={(event) =>
-                        setTaxProfileForm((current) => ({ ...current, name: event.target.value }))
-                      }
-                      placeholder="Ghana VAT Standard"
-                    />
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {editingTaxProfileId ? 'Edit Tax Profile' : 'New Tax Profile'}
+                  </CardTitle>
+                  <CardDescription>
+                    Maintain the tax profiles that the Ghana tax engine can reference for posting
+                    and filing review.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+                    <div className="space-y-2">
+                      <Label htmlFor="tax-profile-name">Name</Label>
+                      <Input
+                        id="tax-profile-name"
+                        value={taxProfileForm.name}
+                        onChange={(event) =>
+                          setTaxProfileForm((current) => ({ ...current, name: event.target.value }))
+                        }
+                        placeholder="Ghana VAT Standard"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select
+                        value={String(taxProfileForm.active)}
+                        onValueChange={(value) =>
+                          setTaxProfileForm((current) => ({
+                            ...current,
+                            active: value === 'true',
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Active</SelectItem>
+                          <SelectItem value="false">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select
-                      value={String(taxProfileForm.active)}
-                      onValueChange={(value) =>
-                        setTaxProfileForm((current) => ({
-                          ...current,
-                          active: value === 'true',
-                        }))
-                      }
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => void handleSaveTaxProfile()}
+                      disabled={isCreatingTaxProfile || isUpdatingTaxProfile}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="true">Active</SelectItem>
-                        <SelectItem value="false">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      {editingTaxProfileId ? 'Update Tax Profile' : 'Create Tax Profile'}
+                    </Button>
+                    <Button variant="outline" onClick={resetTaxProfileForm}>
+                      Clear
+                    </Button>
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => void handleSaveTaxProfile()}
-                    disabled={isCreatingTaxProfile || isUpdatingTaxProfile}
-                  >
-                    {editingTaxProfileId ? 'Update Tax Profile' : 'Create Tax Profile'}
-                  </Button>
-                  <Button variant="outline" onClick={resetTaxProfileForm}>
-                    Clear
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {editingTaxProfileId ? (
+                <AccountingSetupHistoryCard
+                  entityType="tax_profile"
+                  entityId={editingTaxProfileId}
+                  entityLabel="Tax Profile"
+                />
+              ) : null}
+            </div>
 
             <Card>
               <CardHeader>
@@ -1546,186 +1732,200 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
 
         <TabsContent value="tax-components" className="space-y-4">
           <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {editingTaxComponentId ? 'Edit Tax Component' : 'New Tax Component'}
-                </CardTitle>
-                <CardDescription>
-                  Maintain the stored tax component rows for a profile. This keeps profile metadata
-                  maintainable without changing the current Ghana tax calculation code path.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Tax Profile</Label>
-                  <Select
-                    value={taxComponentForm.profileId || effectiveTaxProfileId || undefined}
-                    onValueChange={(value) => {
-                      setSelectedTaxProfileId(value);
-                      setTaxComponentForm((current) => ({ ...current, profileId: value }));
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select tax profile" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {taxProfiles.map((profile) => (
-                        <SelectItem key={profile.id} value={profile.id}>
-                          {profile.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {editingTaxComponentId ? 'Edit Tax Component' : 'New Tax Component'}
+                  </CardTitle>
+                  <CardDescription>
+                    Maintain the stored tax component rows for a profile. This keeps profile
+                    metadata maintainable without changing the current Ghana tax calculation code
+                    path.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="tax-component-key">Key</Label>
-                    <Input
-                      id="tax-component-key"
-                      value={taxComponentForm.key}
-                      onChange={(event) =>
-                        setTaxComponentForm((current) => ({ ...current, key: event.target.value }))
-                      }
-                      placeholder="VAT"
-                    />
+                    <Label>Tax Profile</Label>
+                    <Select
+                      value={taxComponentForm.profileId || effectiveTaxProfileId || undefined}
+                      onValueChange={(value) => {
+                        setSelectedTaxProfileId(value);
+                        setTaxComponentForm((current) => ({ ...current, profileId: value }));
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select tax profile" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {taxProfiles.map((profile) => (
+                          <SelectItem key={profile.id} value={profile.id}>
+                            {profile.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="grid gap-4 grid-cols-2">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
                     <div className="space-y-2">
-                      <Label htmlFor="tax-component-numerator">Numerator</Label>
+                      <Label htmlFor="tax-component-key">Key</Label>
                       <Input
-                        id="tax-component-numerator"
+                        id="tax-component-key"
+                        value={taxComponentForm.key}
+                        onChange={(event) =>
+                          setTaxComponentForm((current) => ({
+                            ...current,
+                            key: event.target.value,
+                          }))
+                        }
+                        placeholder="VAT"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="tax-component-numerator">Numerator</Label>
+                        <Input
+                          id="tax-component-numerator"
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={String(taxComponentForm.numerator)}
+                          onChange={(event) =>
+                            setTaxComponentForm((current) => ({
+                              ...current,
+                              numerator: Number(event.target.value),
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="tax-component-denominator">Denominator</Label>
+                        <Input
+                          id="tax-component-denominator"
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={String(taxComponentForm.denominator)}
+                          onChange={(event) =>
+                            setTaxComponentForm((current) => ({
+                              ...current,
+                              denominator: Number(event.target.value),
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tax-component-order">Sort Order</Label>
+                      <Input
+                        id="tax-component-order"
                         type="number"
                         min="0"
                         step="1"
-                        value={String(taxComponentForm.numerator)}
+                        value={String(taxComponentForm.sortOrder ?? 0)}
                         onChange={(event) =>
                           setTaxComponentForm((current) => ({
                             ...current,
-                            numerator: Number(event.target.value),
+                            sortOrder: Number(event.target.value),
                           }))
                         }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="tax-component-denominator">Denominator</Label>
+                      <Label>Charge Type</Label>
+                      <Select
+                        value={String(taxComponentForm.inclusive)}
+                        onValueChange={(value) =>
+                          setTaxComponentForm((current) => ({
+                            ...current,
+                            inclusive: value === 'true',
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Inclusive</SelectItem>
+                          <SelectItem value="false">Exclusive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tax-component-starts-at">Starts At</Label>
                       <Input
-                        id="tax-component-denominator"
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={String(taxComponentForm.denominator)}
+                        id="tax-component-starts-at"
+                        type="date"
+                        value={taxComponentForm.startsAt?.slice(0, 10) ?? ''}
                         onChange={(event) =>
                           setTaxComponentForm((current) => ({
                             ...current,
-                            denominator: Number(event.target.value),
+                            startsAt: event.target.value,
                           }))
                         }
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tax-component-ends-at">Ends At</Label>
+                      <Input
+                        id="tax-component-ends-at"
+                        type="date"
+                        value={taxComponentForm.endsAt?.slice(0, 10) ?? ''}
+                        onChange={(event) =>
+                          setTaxComponentForm((current) => ({
+                            ...current,
+                            endsAt: event.target.value || null,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select
+                        value={String(taxComponentForm.active)}
+                        onValueChange={(value) =>
+                          setTaxComponentForm((current) => ({
+                            ...current,
+                            active: value === 'true',
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Active</SelectItem>
+                          <SelectItem value="false">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tax-component-order">Sort Order</Label>
-                    <Input
-                      id="tax-component-order"
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={String(taxComponentForm.sortOrder ?? 0)}
-                      onChange={(event) =>
-                        setTaxComponentForm((current) => ({
-                          ...current,
-                          sortOrder: Number(event.target.value),
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Charge Type</Label>
-                    <Select
-                      value={String(taxComponentForm.inclusive)}
-                      onValueChange={(value) =>
-                        setTaxComponentForm((current) => ({
-                          ...current,
-                          inclusive: value === 'true',
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="true">Inclusive</SelectItem>
-                        <SelectItem value="false">Exclusive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tax-component-starts-at">Starts At</Label>
-                    <Input
-                      id="tax-component-starts-at"
-                      type="date"
-                      value={taxComponentForm.startsAt?.slice(0, 10) ?? ''}
-                      onChange={(event) =>
-                        setTaxComponentForm((current) => ({
-                          ...current,
-                          startsAt: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tax-component-ends-at">Ends At</Label>
-                    <Input
-                      id="tax-component-ends-at"
-                      type="date"
-                      value={taxComponentForm.endsAt?.slice(0, 10) ?? ''}
-                      onChange={(event) =>
-                        setTaxComponentForm((current) => ({
-                          ...current,
-                          endsAt: event.target.value || null,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select
-                      value={String(taxComponentForm.active)}
-                      onValueChange={(value) =>
-                        setTaxComponentForm((current) => ({
-                          ...current,
-                          active: value === 'true',
-                        }))
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => void handleSaveTaxComponent()}
+                      disabled={
+                        isCreatingTaxComponent ||
+                        isUpdatingTaxComponent ||
+                        !(taxComponentForm.profileId || effectiveTaxProfileId)
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="true">Active</SelectItem>
-                        <SelectItem value="false">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      {editingTaxComponentId ? 'Update Tax Component' : 'Create Tax Component'}
+                    </Button>
+                    <Button variant="outline" onClick={() => resetTaxComponentForm()}>
+                      Clear
+                    </Button>
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => void handleSaveTaxComponent()}
-                    disabled={
-                      isCreatingTaxComponent ||
-                      isUpdatingTaxComponent ||
-                      !(taxComponentForm.profileId || effectiveTaxProfileId)
-                    }
-                  >
-                    {editingTaxComponentId ? 'Update Tax Component' : 'Create Tax Component'}
-                  </Button>
-                  <Button variant="outline" onClick={() => resetTaxComponentForm()}>
-                    Clear
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {editingTaxComponentId ? (
+                <AccountingSetupHistoryCard
+                  entityType="tax_component"
+                  entityId={editingTaxComponentId}
+                  entityLabel="Tax Component"
+                />
+              ) : null}
+            </div>
 
             <Card>
               <CardHeader>
@@ -1772,6 +1972,28 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
           </div>
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={isDeleteAccountDialogOpen} onOpenChange={setIsDeleteAccountDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete ledger account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the selected account. The delete will only succeed when the
+              account has no journal transactions, setup mappings, petty cash links, or child
+              accounts.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingAccount}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeletingAccount}
+              onClick={() => void handleDeleteAccount()}
+            >
+              {isDeletingAccount ? 'Deleting...' : 'Delete Account'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

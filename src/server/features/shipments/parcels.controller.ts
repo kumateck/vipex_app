@@ -107,6 +107,12 @@ export async function getParcelDetailsCtrl(id: string) {
           updatedAt: result.pickupQueue.updatedAt.toISOString(),
         }
       : null,
+    internalHolder: result.internalHolder
+      ? {
+          ...result.internalHolder,
+          updatedAt: result.internalHolder.updatedAt.toISOString(),
+        }
+      : null,
   };
 }
 export const createParcelCtrl = createParcelSvc;

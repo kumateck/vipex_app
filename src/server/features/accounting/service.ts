@@ -23,6 +23,7 @@ import {
   createTaxFilingAuditLogRepo,
   createTaxFilingPeriodRepo,
   createTaxJournalItemRepo,
+  deleteAccountRepo,
   getAccountByCodeRepo,
   getAccountRepo,
   getAccountUsageSummaryRepo,
@@ -171,6 +172,7 @@ function describeAccountUsage(usage: {
   expenseCategoryCount: number;
   bankAccountCount: number;
   pettyCashFundCount: number;
+  childAccountCount: number;
 }) {
   const parts: string[] = [];
   if (usage.journalLineCount > 0) parts.push(`${usage.journalLineCount} journal entries`);
@@ -178,6 +180,7 @@ function describeAccountUsage(usage: {
     parts.push(`${usage.expenseCategoryCount} expense categories`);
   if (usage.bankAccountCount > 0) parts.push(`${usage.bankAccountCount} bank accounts`);
   if (usage.pettyCashFundCount > 0) parts.push(`${usage.pettyCashFundCount} petty cash funds`);
+  if (usage.childAccountCount > 0) parts.push(`${usage.childAccountCount} child accounts`);
   return parts.join(', ');
 }
 
@@ -260,6 +263,38 @@ export async function updateAccountSvc(input: {
     },
   });
   return { id: updated.id };
+}
+
+export async function deleteAccountSvc(input: {
+  companyId: string;
+  id: string;
+  actorUserId?: string | null;
+}) {
+  const existing = await getAccountRepo(input.companyId, input.id);
+  if (!existing) throw NotFound('Account not found');
+
+  const usage = await getAccountUsageSummaryRepo(input.companyId, input.id);
+  const usageText = describeAccountUsage(usage);
+  if (usageText) {
+    throw Conflict(`Account cannot be deleted because it is in use by ${usageText}`);
+  }
+
+  const deleted = await deleteAccountRepo(input.companyId, input.id);
+  if (!deleted) throw NotFound('Account not found');
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'accounting_account',
+    entityId: input.id,
+    action: 'ACCOUNTING_ACCOUNT_DELETED',
+    message: 'Accounting account deleted',
+    metadata: {
+      before: buildAccountAuditPayload(existing),
+    },
+  });
+
+  return { id: deleted.id };
 }
 
 export async function listExpenseCategoriesSvc(input: {

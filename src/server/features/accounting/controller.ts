@@ -11,6 +11,7 @@ import {
   createTaxComponentSvc,
   createTaxProfileSvc,
   createTaxFilingPeriodSvc,
+  deleteAccountSvc,
   excludeTaxItemSvc,
   getDailyCashExpectedSummarySvc,
   getAccountStatementSvc,
@@ -60,6 +61,7 @@ export async function listAccountsCtrl(input: { companyId: string; active?: bool
 
 export const createAccountCtrl = createAccountSvc;
 export const updateAccountCtrl = updateAccountSvc;
+export const deleteAccountCtrl = deleteAccountSvc;
 
 export async function listExpenseCategoriesCtrl(input: {
   companyId: string;

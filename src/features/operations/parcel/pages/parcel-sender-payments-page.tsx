@@ -31,6 +31,7 @@ import {
   useCollectSenderAndProcessMutation,
   useListSenderCashierParcelsQuery,
 } from '../api/parcel.api';
+import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 import { ParcelReceiptActions, type ReceiptPrintData } from '../components/parcel-receipt-actions';
 import { ParcelSessionGuard } from '../components/parcel-session-guard';
 
@@ -134,6 +135,11 @@ export function ParcelSenderPaymentsPage() {
         id: 'createdAtLabel',
         header: 'Created At',
         accessorFn: (row) => formatDate(row.createdAt),
+      },
+      {
+        id: 'holder',
+        header: 'Current Holder',
+        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
       },
       {
         id: 'actions',
@@ -284,6 +290,12 @@ export function ParcelSenderPaymentsPage() {
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Tracking</p>
                 <p className="font-medium">{selectedParcel?.trackingCode ?? '-'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Current Holder</p>
+                <div>
+                  <ParcelInternalHolderBadge holder={selectedParcel} />
+                </div>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Expected Charge</p>

@@ -22,6 +22,7 @@ import {
   useSearchParcelsQuery,
   useUpdateParcelMutation,
 } from '../api/parcel.api';
+import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 
 const STATUS_LABELS: Record<number, string> = {
   [ParcelStatus.ARRIVED_AT_DESTINATION]: 'Arrived at Destination',
@@ -145,6 +146,11 @@ export function ParcelStatusPage() {
         id: 'createdAt',
         header: 'Created',
         accessorFn: (row) => formatDate(row.createdAt),
+      },
+      {
+        id: 'holder',
+        header: 'Current Holder',
+        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
       },
       {
         id: 'actions',
@@ -291,6 +297,12 @@ export function ParcelStatusPage() {
             <p className="text-sm text-muted-foreground">
               {selectedParcel ? `Tracking: ${selectedParcel.trackingCode}` : ''}
             </p>
+            {selectedParcel ? (
+              <div className="flex items-center gap-2 text-sm">
+                <strong>Current Holder:</strong>
+                <ParcelInternalHolderBadge holder={selectedParcel} />
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <Label>Outcome</Label>

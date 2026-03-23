@@ -360,14 +360,26 @@ export async function getAccountUsageSummaryRepo(companyId: string, accountId: s
     .leftJoin(pettyCashFunds, eq(pettyCashFunds.accountId, chartOfAccounts.id))
     .where(and(eq(chartOfAccounts.companyId, companyId), eq(chartOfAccounts.id, accountId)))
     .groupBy(chartOfAccounts.id);
-  return (
-    row ?? {
-      journalLineCount: 0,
-      expenseCategoryCount: 0,
-      bankAccountCount: 0,
-      pettyCashFundCount: 0,
-    }
-  );
+  const [childAccountRow] = await db
+    .select({
+      childAccountCount: sql<number>`count(*)`,
+    })
+    .from(chartOfAccounts)
+    .where(
+      and(eq(chartOfAccounts.companyId, companyId), eq(chartOfAccounts.parentAccountId, accountId)),
+    );
+  return row
+    ? {
+        ...row,
+        childAccountCount: Number(childAccountRow?.childAccountCount ?? 0),
+      }
+    : {
+        journalLineCount: 0,
+        expenseCategoryCount: 0,
+        bankAccountCount: 0,
+        pettyCashFundCount: 0,
+        childAccountCount: Number(childAccountRow?.childAccountCount ?? 0),
+      };
 }
 
 export async function getExpenseCategoryUsageSummaryRepo(
@@ -446,6 +458,18 @@ export async function updateAccountRepo(
     .update(chartOfAccounts)
     .set({ ...patch, updatedAt: new Date() })
     .where(eq(chartOfAccounts.id, accountId))
+    .returning({ id: chartOfAccounts.id });
+  return row ?? null;
+}
+
+export async function deleteAccountRepo(
+  companyId: string,
+  accountId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .delete(chartOfAccounts)
+    .where(and(eq(chartOfAccounts.companyId, companyId), eq(chartOfAccounts.id, accountId)))
     .returning({ id: chartOfAccounts.id });
   return row ?? null;
 }
