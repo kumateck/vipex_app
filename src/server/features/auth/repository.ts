@@ -22,7 +22,7 @@ export async function getUserByEmailRepo(email: string) {
       user: users,
       branch: { id: branches.id, name: branches.name, type: branches.type },
       location: { id: locations.id, name: locations.name },
-      company: { id: companies.id, name: companies.name },
+      company: { id: companies.id, name: companies.name, useAccounting: companies.useAccounting },
       role: { id: roles.id, name: roles.name },
     })
     .from(users)
@@ -62,7 +62,7 @@ export async function getUserByIdRepo(id: string) {
       user: users,
       branch: { id: branches.id, name: branches.name, type: branches.type },
       location: { id: locations.id, name: locations.name },
-      company: { id: companies.id, name: companies.name },
+      company: { id: companies.id, name: companies.name, useAccounting: companies.useAccounting },
       role: { id: roles.id, name: roles.name },
     })
     .from(users)

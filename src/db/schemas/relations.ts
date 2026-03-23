@@ -1,5 +1,14 @@
 import { relations } from 'drizzle-orm';
 import { companies, branches, locations, roles, rolePermissions, users } from './core';
+import { companyModules, moduleCatalog } from './company-modules';
+import {
+  attendanceRecords,
+  departments,
+  employeeDocuments,
+  employeeJobAssignments,
+  employees,
+  jobTitles,
+} from './hr';
 import { pendingBookings, pickupQueues } from './shipments';
 import { receiptTemplates, generatedReceipts } from './receipts';
 import {
@@ -43,12 +52,30 @@ import {
   taxFilingRuns,
   taxFilingAuditLogs,
 } from './accounting';
+import {
+  deductionTypes,
+  earningTypes,
+  employeeCompensation,
+  employeeCompensationItems,
+  payrollGroups,
+  payrollPeriods,
+  payrollRunEmployees,
+  payrollRunItems,
+  payrollRuns,
+  payslips,
+} from './payroll';
 
 // Core
 export const companiesRelations = relations(companies, ({ many }) => ({
   branches: many(branches),
   users: many(users),
   roles: many(roles),
+  companyModules: many(companyModules),
+  departments: many(departments),
+  jobTitles: many(jobTitles),
+  employees: many(employees),
+  payrollGroups: many(payrollGroups),
+  payrollPeriods: many(payrollPeriods),
 }));
 
 export const branchesRelations = relations(branches, ({ one, many }) => ({
@@ -80,6 +107,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   branch: one(branches, { fields: [users.branchId], references: [branches.id] }),
   location: one(locations, { fields: [users.locationId], references: [locations.id] }),
   company: one(companies, { fields: [users.companyId], references: [companies.id] }),
+  employee: one(employees, { fields: [users.employeeId], references: [employees.id] }),
   cashierSessions: many(cashierSessions),
   recordedJournalEntries: many(journalEntries),
   recordedJournalLines: many(journalLines),
@@ -90,6 +118,100 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
   role: one(roles, { fields: [rolePermissions.roleId], references: [roles.id] }),
   company: one(companies, { fields: [rolePermissions.companyId], references: [companies.id] }),
+}));
+
+export const moduleCatalogRelations = relations(moduleCatalog, ({ many }) => ({
+  companyModules: many(companyModules),
+}));
+
+export const companyModulesRelations = relations(companyModules, ({ one }) => ({
+  company: one(companies, { fields: [companyModules.companyId], references: [companies.id] }),
+  module: one(moduleCatalog, {
+    fields: [companyModules.moduleCode],
+    references: [moduleCatalog.code],
+  }),
+  configuredByUser: one(users, {
+    fields: [companyModules.configuredBy],
+    references: [users.id],
+  }),
+}));
+
+export const departmentsRelations = relations(departments, ({ one, many }) => ({
+  company: one(companies, { fields: [departments.companyId], references: [companies.id] }),
+  creator: one(users, { fields: [departments.createdBy], references: [users.id] }),
+  employees: many(employees),
+  assignments: many(employeeJobAssignments),
+}));
+
+export const jobTitlesRelations = relations(jobTitles, ({ one, many }) => ({
+  company: one(companies, { fields: [jobTitles.companyId], references: [companies.id] }),
+  creator: one(users, { fields: [jobTitles.createdBy], references: [users.id] }),
+  employees: many(employees),
+  assignments: many(employeeJobAssignments),
+}));
+
+export const employeesRelations = relations(employees, ({ one, many }) => ({
+  company: one(companies, { fields: [employees.companyId], references: [companies.id] }),
+  branch: one(branches, { fields: [employees.branchId], references: [branches.id] }),
+  location: one(locations, { fields: [employees.locationId], references: [locations.id] }),
+  department: one(departments, { fields: [employees.departmentId], references: [departments.id] }),
+  jobTitle: one(jobTitles, { fields: [employees.jobTitleId], references: [jobTitles.id] }),
+  manager: one(employees, { fields: [employees.managerEmployeeId], references: [employees.id] }),
+  creator: one(users, { fields: [employees.createdBy], references: [users.id] }),
+  userAccounts: many(users),
+  assignments: many(employeeJobAssignments),
+  documents: many(employeeDocuments),
+  attendanceRecords: many(attendanceRecords),
+  compensationRecords: many(employeeCompensation),
+}));
+
+export const employeeJobAssignmentsRelations = relations(employeeJobAssignments, ({ one }) => ({
+  company: one(companies, {
+    fields: [employeeJobAssignments.companyId],
+    references: [companies.id],
+  }),
+  employee: one(employees, {
+    fields: [employeeJobAssignments.employeeId],
+    references: [employees.id],
+  }),
+  branch: one(branches, {
+    fields: [employeeJobAssignments.branchId],
+    references: [branches.id],
+  }),
+  location: one(locations, {
+    fields: [employeeJobAssignments.locationId],
+    references: [locations.id],
+  }),
+  department: one(departments, {
+    fields: [employeeJobAssignments.departmentId],
+    references: [departments.id],
+  }),
+  jobTitle: one(jobTitles, {
+    fields: [employeeJobAssignments.jobTitleId],
+    references: [jobTitles.id],
+  }),
+  manager: one(employees, {
+    fields: [employeeJobAssignments.managerEmployeeId],
+    references: [employees.id],
+  }),
+  creator: one(users, {
+    fields: [employeeJobAssignments.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const employeeDocumentsRelations = relations(employeeDocuments, ({ one }) => ({
+  company: one(companies, { fields: [employeeDocuments.companyId], references: [companies.id] }),
+  employee: one(employees, { fields: [employeeDocuments.employeeId], references: [employees.id] }),
+  uploader: one(users, { fields: [employeeDocuments.uploadedBy], references: [users.id] }),
+}));
+
+export const attendanceRecordsRelations = relations(attendanceRecords, ({ one }) => ({
+  company: one(companies, { fields: [attendanceRecords.companyId], references: [companies.id] }),
+  employee: one(employees, { fields: [attendanceRecords.employeeId], references: [employees.id] }),
+  branch: one(branches, { fields: [attendanceRecords.branchId], references: [branches.id] }),
+  location: one(locations, { fields: [attendanceRecords.locationId], references: [locations.id] }),
+  approver: one(users, { fields: [attendanceRecords.approvedBy], references: [users.id] }),
 }));
 
 // Customers (company-scoped; no branch relation)
@@ -589,4 +711,126 @@ export const receiptTemplatesRelations = relations(receiptTemplates, ({ one }) =
 export const generatedReceiptsRelations = relations(generatedReceipts, ({ one }) => ({
   company: one(companies, { fields: [generatedReceipts.companyId], references: [companies.id] }),
   printedBy: one(users, { fields: [generatedReceipts.printedBy], references: [users.id] }),
+}));
+
+// Payroll
+export const payrollGroupsRelations = relations(payrollGroups, ({ one, many }) => ({
+  company: one(companies, { fields: [payrollGroups.companyId], references: [companies.id] }),
+  creator: one(users, { fields: [payrollGroups.createdBy], references: [users.id] }),
+  periods: many(payrollPeriods),
+  employeeCompensation: many(employeeCompensation),
+}));
+
+export const earningTypesRelations = relations(earningTypes, ({ one, many }) => ({
+  company: one(companies, { fields: [earningTypes.companyId], references: [companies.id] }),
+  compensationItems: many(employeeCompensationItems),
+}));
+
+export const deductionTypesRelations = relations(deductionTypes, ({ one, many }) => ({
+  company: one(companies, { fields: [deductionTypes.companyId], references: [companies.id] }),
+  compensationItems: many(employeeCompensationItems),
+}));
+
+export const employeeCompensationRelations = relations(employeeCompensation, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [employeeCompensation.companyId],
+    references: [companies.id],
+  }),
+  employee: one(employees, {
+    fields: [employeeCompensation.employeeId],
+    references: [employees.id],
+  }),
+  payrollGroup: one(payrollGroups, {
+    fields: [employeeCompensation.payrollGroupId],
+    references: [payrollGroups.id],
+  }),
+  taxProfile: one(taxProfiles, {
+    fields: [employeeCompensation.taxProfileId],
+    references: [taxProfiles.id],
+  }),
+  creator: one(users, {
+    fields: [employeeCompensation.createdBy],
+    references: [users.id],
+  }),
+  items: many(employeeCompensationItems),
+}));
+
+export const employeeCompensationItemsRelations = relations(
+  employeeCompensationItems,
+  ({ one }) => ({
+    company: one(companies, {
+      fields: [employeeCompensationItems.companyId],
+      references: [companies.id],
+    }),
+    compensation: one(employeeCompensation, {
+      fields: [employeeCompensationItems.employeeCompensationId],
+      references: [employeeCompensation.id],
+    }),
+    earningType: one(earningTypes, {
+      fields: [employeeCompensationItems.earningTypeId],
+      references: [earningTypes.id],
+    }),
+    deductionType: one(deductionTypes, {
+      fields: [employeeCompensationItems.deductionTypeId],
+      references: [deductionTypes.id],
+    }),
+  }),
+);
+
+export const payrollPeriodsRelations = relations(payrollPeriods, ({ one, many }) => ({
+  company: one(companies, { fields: [payrollPeriods.companyId], references: [companies.id] }),
+  payrollGroup: one(payrollGroups, {
+    fields: [payrollPeriods.payrollGroupId],
+    references: [payrollGroups.id],
+  }),
+  creator: one(users, { fields: [payrollPeriods.createdBy], references: [users.id] }),
+  runs: many(payrollRuns),
+}));
+
+export const payrollRunsRelations = relations(payrollRuns, ({ one, many }) => ({
+  company: one(companies, { fields: [payrollRuns.companyId], references: [companies.id] }),
+  period: one(payrollPeriods, {
+    fields: [payrollRuns.payrollPeriodId],
+    references: [payrollPeriods.id],
+  }),
+  starter: one(users, { fields: [payrollRuns.startedBy], references: [users.id] }),
+  approver: one(users, { fields: [payrollRuns.approvedBy], references: [users.id] }),
+  journalBatch: one(journalBatches, {
+    fields: [payrollRuns.journalBatchId],
+    references: [journalBatches.id],
+  }),
+  employees: many(payrollRunEmployees),
+}));
+
+export const payrollRunEmployeesRelations = relations(payrollRunEmployees, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [payrollRunEmployees.companyId],
+    references: [companies.id],
+  }),
+  run: one(payrollRuns, {
+    fields: [payrollRunEmployees.payrollRunId],
+    references: [payrollRuns.id],
+  }),
+  employee: one(employees, {
+    fields: [payrollRunEmployees.employeeId],
+    references: [employees.id],
+  }),
+  items: many(payrollRunItems),
+  payslip: many(payslips),
+}));
+
+export const payrollRunItemsRelations = relations(payrollRunItems, ({ one }) => ({
+  company: one(companies, { fields: [payrollRunItems.companyId], references: [companies.id] }),
+  runEmployee: one(payrollRunEmployees, {
+    fields: [payrollRunItems.payrollRunEmployeeId],
+    references: [payrollRunEmployees.id],
+  }),
+}));
+
+export const payslipsRelations = relations(payslips, ({ one }) => ({
+  company: one(companies, { fields: [payslips.companyId], references: [companies.id] }),
+  runEmployee: one(payrollRunEmployees, {
+    fields: [payslips.payrollRunEmployeeId],
+    references: [payrollRunEmployees.id],
+  }),
 }));

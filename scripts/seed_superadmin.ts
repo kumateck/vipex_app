@@ -20,10 +20,6 @@ const ROLE_NAME = 'System Admin'; // Or 'Super Admin' - adjust to match your exi
 async function main() {
   console.log('🚀 Starting superadmin seed for Desmond Kofi Adusei...\n');
 
-  // Hash the password securely
-  console.log('🔐 Hashing password...');
-  const hashedPassword = await hashPassword(SUPERADMIN_PASSWORD);
-
   // 1) Find existing company by code
   console.log('📦 Looking up existing company...');
   const [company] = await db
@@ -83,25 +79,9 @@ async function main() {
   if (existingUser) {
     userId = existingUser.id;
     console.log(`   ✓ User already exists: ${SUPERADMIN_EMAIL} (${userId})`);
-
-    // Update password, ensure ACTIVE status, and update other fields
-    await db
-      .update(users)
-      .set({
-        fullname: SUPERADMIN_FULLNAME,
-        telephone: SUPERADMIN_TELEPHONE,
-        password: hashedPassword,
-        status: UserStatus.ACTIVE,
-        roleId: role.id,
-        companyId: company.id,
-        branchId: branch.id,
-        locationId: null,
-        userType: UserType.STAFF,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
-    console.log(`   ✓ Updated user details, password, and status to ACTIVE`);
   } else {
+    console.log('🔐 Hashing password...');
+    const hashedPassword = await hashPassword(SUPERADMIN_PASSWORD);
     userId = createId();
     await db.insert(users).values({
       id: userId,
@@ -131,12 +111,16 @@ async function main() {
   console.log(`User:       ${SUPERADMIN_FULLNAME}`);
   console.log(`Email:      ${SUPERADMIN_EMAIL}`);
   console.log(`User ID:    ${userId}`);
-  console.log(`Status:     ACTIVE`);
   console.log('═══════════════════════════════════════');
-  console.log('\n🔐 Login credentials:');
-  console.log(`   Email:    ${SUPERADMIN_EMAIL}`);
-  console.log(`   Password: ${SUPERADMIN_PASSWORD}`);
-  console.log('\n✨ You can now log in!\n');
+
+  if (!existingUser) {
+    console.log('\n🔐 Login credentials:');
+    console.log(`   Email:    ${SUPERADMIN_EMAIL}`);
+    console.log(`   Password: ${SUPERADMIN_PASSWORD}`);
+    console.log('\n✨ You can now log in!\n');
+  } else {
+    console.log('\nℹ️ Existing user was left unchanged.\n');
+  }
 
   process.exit(0);
 }

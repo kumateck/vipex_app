@@ -11,6 +11,7 @@ export interface AuthUser {
   company: {
     id: string;
     name: string;
+    useAccounting: boolean;
   } | null;
   branch: { id: string; name: string; type?: BranchType } | null;
   role: { id: string; name: string } | null;

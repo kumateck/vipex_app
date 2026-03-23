@@ -60,5 +60,36 @@ The accounting module is a controlled ledger layer over operations.
 - Operational activity is not automatically the general ledger.
 - Confirmed or approved accounting events post to journals.
 - Reporting reads from posted journal lines.
+- Accounting is optional per company and is controlled through the company module system.
+- The current UI control point is `/settings/company`, which toggles the `accounting` module and keeps `companies.use_accounting` synchronized for auth and navigation gating.
 
 Reference: `docs/ACCOUNTING_MODULE.md`
+
+## HR and Payroll
+
+HR and Payroll are implemented as company-scoped modules layered onto the modular monolith.
+
+- Module enablement is controlled through `company_modules`.
+- Every HR/Payroll route requires both permission and module access.
+- HR owns employees, departments, job titles, attendance, and employee identity.
+- Users remain the authentication/access layer and may optionally link to an employee.
+- Payroll depends on HR and uses separate transactional tables for periods, runs, run items, and payslips.
+
+Reference: `docs/HR_PAYROLL_FOUNDATION.md`
+
+## Company Module Control
+
+The application supports company-scoped module enablement through:
+
+- `module_catalog`
+- `company_modules`
+
+Current UI entry point:
+
+- `/settings/company`
+
+Current backend entry point:
+
+- `/v1/company-modules`
+
+Reference: `docs/COMPANY_MODULES.md`

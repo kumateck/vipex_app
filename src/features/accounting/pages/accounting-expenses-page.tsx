@@ -30,6 +30,7 @@ import {
   useSubmitExpenseRequestMutation,
 } from '../api';
 import {
+  AccountingDisabledState,
   expenseStatusLabel,
   formatDateTime,
   formatMoney,
@@ -38,11 +39,19 @@ import {
   ReasonDialog,
   StatusBadge,
 } from './accounting-shared';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore, type AuthUser } from '@/stores/auth-store';
 
 export function AccountingExpensesPage() {
   const user = useAuthStore((state) => state.user);
-  const companyId = user?.company?.id ?? '';
+  if (!user?.company?.useAccounting) {
+    return <AccountingDisabledState />;
+  }
+
+  return <AccountingExpensesPageContent user={user} />;
+}
+
+function AccountingExpensesPageContent({ user }: { user: AuthUser }) {
+  const companyId = user.company?.id ?? '';
   const defaultBranchId = user?.branch?.id ?? '';
   const defaultLocationId = user?.location?.id ?? '';
 

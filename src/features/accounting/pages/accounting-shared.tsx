@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -125,6 +126,24 @@ export function StatusBadge({
   tone?: 'default' | 'secondary' | 'outline';
 }) {
   return <Badge variant={tone}>{label}</Badge>;
+}
+
+export function AccountingDisabledState() {
+  return (
+    <div className="mx-auto max-w-3xl p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Accounting Disabled</CardTitle>
+          <CardDescription>This company has not enabled the accounting module.</CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          Accounting pages, ledger posting, tax filing, and accounting reports are unavailable until
+          accounting is enabled for the company. Current parcel, cashier, payment, and delivery
+          flows continue without accounting.
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 
 export function ReasonDialog(props: {

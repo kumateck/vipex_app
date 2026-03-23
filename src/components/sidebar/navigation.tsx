@@ -485,6 +485,27 @@ export const ROUTES: Route[] = [
         ],
       },
       {
+        title: 'HR Management',
+        icon: 'Briefcase',
+        items: [
+          {
+            title: 'Employees',
+            url: '/hr/employees',
+            permissionKey: 'CanListEmployees',
+          },
+          {
+            title: 'Departments',
+            url: '/hr/departments',
+            permissionKey: 'CanReadDepartments',
+          },
+          {
+            title: 'Job Titles',
+            url: '/hr/job-titles',
+            permissionKey: 'CanReadJobTitles',
+          },
+        ],
+      },
+      {
         title: 'Riders',
         icon: 'Bike',
         items: [
@@ -508,16 +529,43 @@ export const ROUTES: Route[] = [
     title: 'Configuration',
     menu: [
       {
+        title: 'Payroll',
+        icon: 'BadgeDollarSign',
+        items: [
+          {
+            title: 'Compensation Setup',
+            url: '/payroll/compensation',
+            permissionKey: 'CanReadCompensation',
+          },
+          {
+            title: 'Payroll Groups',
+            url: '/payroll/groups',
+            permissionKey: 'CanReadPayrollGroups',
+          },
+          {
+            title: 'Payroll Cycles',
+            url: '/payroll/cycles',
+            permissionKey: 'CanListPayrollCycles',
+          },
+        ],
+      },
+      {
         title: 'Company Settings',
         icon: 'Building',
         items: [
           {
             title: 'Company Profile',
             url: '/settings/company',
+            permissionKey: 'CanManageCompanyModules',
           },
           {
             title: 'Branches',
             url: '/settings/branches',
+          },
+          {
+            title: 'Modules',
+            url: '/settings/modules',
+            permissionKey: 'CanManageCompanyModules',
           },
         ],
       },

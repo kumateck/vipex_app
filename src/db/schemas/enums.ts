@@ -66,6 +66,70 @@ export enum UserType {
   CASHIER = 1,
   RIDER = 2,
 }
+export enum Gender {
+  MALE = 0,
+  FEMALE = 1,
+  OTHER = 2,
+  UNSPECIFIED = 3,
+}
+export enum EmploymentStatus {
+  ACTIVE = 0,
+  PROBATION = 1,
+  SUSPENDED = 2,
+  RESIGNED = 3,
+  TERMINATED = 4,
+  INACTIVE = 5,
+}
+export enum EmploymentType {
+  FULL_TIME = 0,
+  PART_TIME = 1,
+  CONTRACT = 2,
+  INTERN = 3,
+  CASUAL = 4,
+}
+export enum AttendanceStatus {
+  PRESENT = 0,
+  ABSENT = 1,
+  LATE = 2,
+  HALF_DAY = 3,
+  LEAVE = 4,
+  OFF_DAY = 5,
+}
+export enum PayrollFrequency {
+  MONTHLY = 0,
+  WEEKLY = 1,
+  BIWEEKLY = 2,
+}
+export enum PayType {
+  MONTHLY = 0,
+  DAILY = 1,
+  HOURLY = 2,
+}
+export enum PayrollPeriodStatus {
+  DRAFT = 0,
+  OPEN = 1,
+  PROCESSING = 2,
+  APPROVED = 3,
+  POSTED = 4,
+  CANCELLED = 5,
+}
+export enum PayrollRunStatus {
+  DRAFT = 0,
+  PROCESSING = 1,
+  COMPLETED = 2,
+  APPROVED = 3,
+  POSTED = 4,
+  FAILED = 5,
+}
+export enum PayrollItemType {
+  EARNING = 0,
+  DEDUCTION = 1,
+  EMPLOYER_CONTRIBUTION = 2,
+}
+export enum CompensationItemCalculationType {
+  FIXED = 0,
+  PERCENTAGE = 1,
+}
 // Inventory enums
 export enum StockMovementType {
   RECEIPT = 0,
@@ -143,6 +207,7 @@ export enum JournalSourceType {
   TAX = 5,
   SALES_CONFIRMATION = 6,
   PAYMENT = 7,
+  PAYROLL = 8,
 }
 
 export enum CashConfirmationStatus {

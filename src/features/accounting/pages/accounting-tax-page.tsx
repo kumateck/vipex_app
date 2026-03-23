@@ -29,6 +29,7 @@ import {
   useSubmitTaxFilingPeriodMutation,
 } from '../api';
 import {
+  AccountingDisabledState,
   filingPeriodStatusLabel,
   formatDate,
   formatDateTime,
@@ -38,11 +39,19 @@ import {
   taxFilingStatusLabel,
   todayDateInputValue,
 } from './accounting-shared';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore, type AuthUser } from '@/stores/auth-store';
 
 export function AccountingTaxPage() {
   const user = useAuthStore((state) => state.user);
-  const companyId = user?.company?.id ?? '';
+  if (!user?.company?.useAccounting) {
+    return <AccountingDisabledState />;
+  }
+
+  return <AccountingTaxPageContent user={user} />;
+}
+
+function AccountingTaxPageContent({ user }: { user: AuthUser }) {
+  const companyId = user.company?.id ?? '';
   const defaultBranchId = user?.branch?.id ?? '';
   const [branchId, setBranchId] = useState(defaultBranchId);
   const [filingStatus, setFilingStatus] = useState('all');

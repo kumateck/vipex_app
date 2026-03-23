@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia';
+import { authPlugin, type AuthUser, requireAuth } from '@/server/plugins/auth';
 import { fromPesewas, toPesewas } from '@/server/utils/gh-money';
 import { computeGhanaTaxesFromPesewas } from '../../utils/tax/ghana';
 import {
@@ -35,11 +36,26 @@ import {
   submitTaxFilingPeriodCtrl,
   submitExpenseRequestCtrl,
 } from './controller';
+import { assertAccountingEnabledSvc } from './service';
+
+function resolveCompanyId(user: AuthUser | null, fallback?: string) {
+  return user?.companyId ?? fallback ?? '';
+}
 
 export const accountingRoutes = new Elysia({ name: 'accounting' })
+  .use(authPlugin)
+  .onBeforeHandle(({ user }) => requireAuth()({ user }))
+  .onBeforeHandle(async ({ user }) => {
+    const authUser = user as AuthUser | null;
+    await assertAccountingEnabledSvc(resolveCompanyId(authUser));
+  })
   .get(
     '/accounts',
-    async ({ query }) => listAccountsCtrl({ companyId: query.companyId, active: query.active }),
+    async ({ query, user }) =>
+      listAccountsCtrl({
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        active: query.active,
+      }),
     {
       query: t.Object({ companyId: t.String(), active: t.Optional(t.Boolean()) }),
       detail: { tags: ['Accounting'], summary: 'List chart of accounts for a company' },
@@ -47,8 +63,11 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/expense-categories',
-    async ({ query }) =>
-      listExpenseCategoriesCtrl({ companyId: query.companyId, active: query.active }),
+    async ({ query, user }) =>
+      listExpenseCategoriesCtrl({
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        active: query.active,
+      }),
     {
       query: t.Object({ companyId: t.String(), active: t.Optional(t.Boolean()) }),
       detail: { tags: ['Accounting'], summary: 'List expense categories for a company' },
@@ -56,8 +75,11 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/approval-policies',
-    async ({ query }) =>
-      listApprovalPoliciesCtrl({ companyId: query.companyId, active: query.active }),
+    async ({ query, user }) =>
+      listApprovalPoliciesCtrl({
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        active: query.active,
+      }),
     {
       query: t.Object({ companyId: t.String(), active: t.Optional(t.Boolean()) }),
       detail: { tags: ['Accounting'], summary: 'List accounting approval policies for a company' },
@@ -65,8 +87,11 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/bank-accounts',
-    async ({ query }) =>
-      listCompanyBankAccountsCtrl({ companyId: query.companyId, active: query.active }),
+    async ({ query, user }) =>
+      listCompanyBankAccountsCtrl({
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        active: query.active,
+      }),
     {
       query: t.Object({ companyId: t.String(), active: t.Optional(t.Boolean()) }),
       detail: { tags: ['Accounting'], summary: 'List company bank accounts for a company' },
@@ -74,7 +99,10 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/tax-filing-periods',
-    async ({ query }) => listTaxFilingPeriodsCtrl({ companyId: query.companyId }),
+    async ({ query, user }) =>
+      listTaxFilingPeriodsCtrl({
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+      }),
     {
       query: t.Object({ companyId: t.String() }),
       detail: { tags: ['Accounting'], summary: 'List tax filing periods' },
@@ -82,17 +110,29 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .post(
     '/tax-filing-periods',
-    async ({ body }) =>
-      createTaxFilingPeriodCtrl(
-        body as {
+    async ({ body, user }) =>
+      createTaxFilingPeriodCtrl({
+        ...(body as {
           companyId: string;
           name: string;
           dateFrom: string;
           dateTo: string;
           notes?: string | null;
           createdByUserId: string;
-        },
-      ),
+        }),
+        companyId: resolveCompanyId(
+          user as AuthUser | null,
+          (body as { companyId: string }).companyId,
+        ),
+        createdByUserId: (user as AuthUser).sub,
+      } as {
+        companyId: string;
+        name: string;
+        dateFrom: string;
+        dateTo: string;
+        notes?: string | null;
+        createdByUserId: string;
+      }),
     {
       body: t.Object({
         companyId: t.String(),
@@ -107,9 +147,9 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/tax-journal-items',
-    async ({ query }) =>
+    async ({ query, user }) =>
       listTaxJournalItemsCtrl({
-        companyId: query.companyId,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
         branchId: query.branchId ?? null,
         filingStatus: query.filingStatus ?? null,
         filingPeriodId: query.filingPeriodId ?? null,
@@ -150,11 +190,11 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .post(
     '/tax-journal-items/:id/ready',
-    async ({ params, body }) =>
+    async ({ params, body, user }) =>
       markTaxItemReadyForFilingCtrl({
         id: params.id,
         filingPeriodId: (body as { filingPeriodId: string }).filingPeriodId,
-        actedByUserId: (body as { actedByUserId: string }).actedByUserId,
+        actedByUserId: (user as AuthUser).sub,
       }),
     {
       params: t.Object({ id: t.String() }),
@@ -164,11 +204,11 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .post(
     '/tax-journal-items/:id/file',
-    async ({ params, body }) =>
+    async ({ params, body, user }) =>
       markTaxItemFiledCtrl({
         id: params.id,
         filingPeriodId: (body as { filingPeriodId?: string | null }).filingPeriodId ?? null,
-        actedByUserId: (body as { actedByUserId: string }).actedByUserId,
+        actedByUserId: (user as AuthUser).sub,
       }),
     {
       params: t.Object({ id: t.String() }),
@@ -181,11 +221,11 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .post(
     '/tax-journal-items/:id/exclude',
-    async ({ params, body }) =>
+    async ({ params, body, user }) =>
       excludeTaxItemCtrl({
         id: params.id,
         reason: (body as { reason: string }).reason,
-        actedByUserId: (body as { actedByUserId: string }).actedByUserId,
+        actedByUserId: (user as AuthUser).sub,
       }),
     {
       params: t.Object({ id: t.String() }),
@@ -195,9 +235,9 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/daily-cash-expected',
-    async ({ query }) =>
+    async ({ query, user }) =>
       getDailyCashExpectedSummaryCtrl({
-        companyId: query.companyId,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
         branchId: query.branchId,
         confirmationDate: query.confirmationDate,
         locationId: query.locationId ?? null,
@@ -219,9 +259,9 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/daily-cash-confirmations',
-    async ({ query }) =>
+    async ({ query, user }) =>
       listDailyCashConfirmationsCtrl({
-        companyId: query.companyId,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
         branchId: query.branchId ?? null,
       }),
     {
@@ -231,9 +271,9 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .post(
     '/daily-cash-confirmations',
-    async ({ body }) =>
-      createDailyCashConfirmationCtrl(
-        body as {
+    async ({ body, user }) =>
+      createDailyCashConfirmationCtrl({
+        ...(body as {
           companyId: string;
           branchId: string;
           locationId?: string | null;
@@ -244,8 +284,24 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
           countedCashCedis: number | string;
           notes?: string | null;
           createdBy: string;
-        },
-      ),
+        }),
+        companyId: resolveCompanyId(
+          user as AuthUser | null,
+          (body as { companyId: string }).companyId,
+        ),
+        createdBy: (user as AuthUser).sub,
+      } as {
+        companyId: string;
+        branchId: string;
+        locationId?: string | null;
+        cashierUserId?: string | null;
+        accountantUserId?: string | null;
+        confirmationDate: string;
+        expectedCashCedis: number | string;
+        countedCashCedis: number | string;
+        notes?: string | null;
+        createdBy: string;
+      }),
     {
       body: t.Object({
         companyId: t.String(),
@@ -264,10 +320,10 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .post(
     '/daily-cash-confirmations/:id/confirm',
-    async ({ params, body }) =>
+    async ({ params, user }) =>
       confirmDailyCashConfirmationCtrl({
         id: params.id,
-        accountantUserId: (body as { accountantUserId: string }).accountantUserId,
+        accountantUserId: (user as AuthUser).sub,
       }),
     {
       params: t.Object({ id: t.String() }),
@@ -277,10 +333,10 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .post(
     '/daily-cash-confirmations/:id/post',
-    async ({ params, body }) =>
+    async ({ params, user }) =>
       postDailyCashConfirmationCtrl({
         id: params.id,
-        postedBy: (body as { postedBy: string }).postedBy,
+        postedBy: (user as AuthUser).sub,
       }),
     {
       params: t.Object({ id: t.String() }),
@@ -290,8 +346,11 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/expense-requests',
-    async ({ query }) =>
-      listExpenseRequestsCtrl({ companyId: query.companyId, branchId: query.branchId ?? null }),
+    async ({ query, user }) =>
+      listExpenseRequestsCtrl({
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        branchId: query.branchId ?? null,
+      }),
     {
       query: t.Object({ companyId: t.String(), branchId: t.Optional(t.String()) }),
       detail: { tags: ['Accounting'], summary: 'List expense requests' },
@@ -299,9 +358,9 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .post(
     '/expense-requests',
-    async ({ body }) =>
-      createExpenseRequestCtrl(
-        body as {
+    async ({ body, user }) =>
+      createExpenseRequestCtrl({
+        ...(body as {
           companyId: string;
           branchId: string;
           locationId?: string | null;
@@ -312,8 +371,25 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
           referenceNo?: string | null;
           requestedByUserId: string;
           recordedByUserId: string;
-        },
-      ),
+        }),
+        companyId: resolveCompanyId(
+          user as AuthUser | null,
+          (body as { companyId: string }).companyId,
+        ),
+        requestedByUserId: (user as AuthUser).sub,
+        recordedByUserId: (user as AuthUser).sub,
+      } as {
+        companyId: string;
+        branchId: string;
+        locationId?: string | null;
+        expenseCategoryId: string;
+        amountCedis: number | string;
+        fundingSource: number;
+        purpose: string;
+        referenceNo?: string | null;
+        requestedByUserId: string;
+        recordedByUserId: string;
+      }),
     {
       body: t.Object({
         companyId: t.String(),
@@ -340,10 +416,10 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .post(
     '/expense-requests/:id/approve',
-    async ({ params, body }) =>
+    async ({ params, body, user }) =>
       approveExpenseRequestCtrl({
         id: params.id,
-        approvedByUserId: (body as { approvedByUserId: string }).approvedByUserId,
+        approvedByUserId: (user as AuthUser).sub,
         approvalReason: (body as { approvalReason?: string | null }).approvalReason ?? null,
       }),
     {
@@ -357,10 +433,10 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .post(
     '/expense-requests/:id/reject',
-    async ({ params, body }) =>
+    async ({ params, body, user }) =>
       rejectExpenseRequestCtrl({
         id: params.id,
-        approvedByUserId: (body as { approvedByUserId: string }).approvedByUserId,
+        approvedByUserId: (user as AuthUser).sub,
         rejectionReason: (body as { rejectionReason: string }).rejectionReason,
       }),
     {
@@ -371,10 +447,10 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .post(
     '/expense-requests/:id/pay',
-    async ({ params, body }) =>
+    async ({ params, body, user }) =>
       payExpenseRequestCtrl({
         id: params.id,
-        paidByUserId: (body as { paidByUserId: string }).paidByUserId,
+        paidByUserId: (user as AuthUser).sub,
         companyBankAccountId:
           (body as { companyBankAccountId?: string | null }).companyBankAccountId ?? null,
       }),
@@ -389,8 +465,8 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .post(
     '/expense-requests/:id/post',
-    async ({ params, body }) =>
-      postExpenseRequestCtrl({ id: params.id, postedBy: (body as { postedBy: string }).postedBy }),
+    async ({ params, user }) =>
+      postExpenseRequestCtrl({ id: params.id, postedBy: (user as AuthUser).sub }),
     {
       params: t.Object({ id: t.String() }),
       body: t.Object({ postedBy: t.String() }),
@@ -399,9 +475,9 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/reports/trial-balance',
-    async ({ query }) =>
+    async ({ query, user }) =>
       getTrialBalanceCtrl({
-        companyId: query.companyId,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
         branchId: query.branchId ?? null,
         locationId: query.locationId ?? null,
         dateFrom: query.dateFrom ?? null,
@@ -420,9 +496,9 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/reports/account-statement',
-    async ({ query }) =>
+    async ({ query, user }) =>
       getAccountStatementCtrl({
-        companyId: query.companyId,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
         accountId: query.accountId,
         branchId: query.branchId ?? null,
         locationId: query.locationId ?? null,
@@ -443,9 +519,9 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/reports/income-statement',
-    async ({ query }) =>
+    async ({ query, user }) =>
       getIncomeStatementCtrl({
-        companyId: query.companyId,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
         branchId: query.branchId ?? null,
         locationId: query.locationId ?? null,
         dateFrom: query.dateFrom,
@@ -464,9 +540,9 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/reports/profit-loss',
-    async ({ query }) =>
+    async ({ query, user }) =>
       getProfitAndLossCtrl({
-        companyId: query.companyId,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
         branchId: query.branchId ?? null,
         locationId: query.locationId ?? null,
         dateFrom: query.dateFrom,
@@ -485,9 +561,9 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/reports/balance-sheet',
-    async ({ query }) =>
+    async ({ query, user }) =>
       getBalanceSheetCtrl({
-        companyId: query.companyId,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
         branchId: query.branchId ?? null,
         locationId: query.locationId ?? null,
         dateTo: query.dateTo,
@@ -504,9 +580,9 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/reports/monthly-branch-summary',
-    async ({ query }) =>
+    async ({ query, user }) =>
       getMonthlyBranchSummaryCtrl({
-        companyId: query.companyId,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
         branchId: query.branchId ?? null,
         locationId: query.locationId ?? null,
         dateFrom: query.dateFrom,
@@ -528,9 +604,9 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   )
   .get(
     '/reports/cash-flow',
-    async ({ query }) =>
+    async ({ query, user }) =>
       getCashFlowStatementCtrl({
-        companyId: query.companyId,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
         branchId: query.branchId ?? null,
         locationId: query.locationId ?? null,
         dateFrom: query.dateFrom,

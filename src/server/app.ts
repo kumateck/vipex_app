@@ -38,6 +38,7 @@ import { rbacRoutes } from './features/rbac/routes';
 import { geolocationRoutes } from './features/geolocation/routes';
 import { cardsRoutes } from './features/cards/routes';
 import { pickupQueuesRoutes } from './features/pickup-queues/routes';
+import { companyModulesRoutes } from './features/company-modules/routes';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -78,6 +79,7 @@ export const app = new Elysia()
       .group('/accounting', (r) => r.use(accountingRoutes))
       .group('/inventory', (r) => r.use(inventoryRoutes))
       .group('/shifts', (r) => r.use(shiftsRoutes))
+      .group('/company-modules', (r) => r.use(companyModulesRoutes))
       .group('/reports', (r) => r.use(reportingRoutes))
       .group('/audit', (r) => r.use(auditRoutes))
       .group('/hr', (r) => r.use(hrRoutes))

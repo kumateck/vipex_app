@@ -3,6 +3,7 @@ import { BranchType } from '@/db/schemas/enums';
 import { verifyAccessToken } from '../utils/jwt';
 import { Unauthorized as UnauthorizedError } from '../utils/http-error';
 import { Forbidden } from '../utils/http-error';
+import { ensureCompanyModuleEnabledSvc } from '../features/company-modules/service';
 
 export type AuthUser = {
   sub: string;
@@ -53,5 +54,13 @@ export function requireHeadOffice(message = 'Only head office users can perform 
   return ({ user }: { user: AuthUser | null }) => {
     if (!user) throw UnauthorizedError();
     if (user.branchType !== BranchType.HEADOFFICE) throw Forbidden(message);
+  };
+}
+
+export function requireModuleEnabled(moduleCode: string) {
+  return async ({ user }: { user: AuthUser | null }) => {
+    if (!user) throw UnauthorizedError();
+    if (!user.companyId) throw Forbidden('Authenticated user company context is missing');
+    await ensureCompanyModuleEnabledSvc(user.companyId, moduleCode);
   };
 }

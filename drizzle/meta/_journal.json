@@ -64,6 +64,34 @@
       "when": 1774303200000,
       "tag": "0008_accounting_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1774563000000,
+      "tag": "0009_company_accounting_toggle",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1774564200000,
+      "tag": "0010_hr_payroll_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1774565400000,
+      "tag": "0011_sync_accounting_module_flag",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1774566600000,
+      "tag": "0012_payroll_settlement_fields",
+      "breakpoints": true
     }
   ]
 }

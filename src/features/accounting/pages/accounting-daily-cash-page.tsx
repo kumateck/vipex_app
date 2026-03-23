@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
@@ -26,6 +26,7 @@ import {
   usePostDailyCashConfirmationMutation,
 } from '../api';
 import {
+  AccountingDisabledState,
   cashConfirmationStatusLabel,
   formatDate,
   formatMoney,
@@ -33,11 +34,20 @@ import {
   StatusBadge,
   todayDateInputValue,
 } from './accounting-shared';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore, type AuthUser } from '@/stores/auth-store';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
 export function AccountingDailyCashPage() {
   const user = useAuthStore((state) => state.user);
-  const companyId = user?.company?.id ?? '';
+  if (!user?.company?.useAccounting) {
+    return <AccountingDisabledState />;
+  }
+
+  return <AccountingDailyCashPageContent user={user} />;
+}
+
+function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
+  const companyId = user.company?.id ?? '';
   const defaultBranchId = user?.branch?.id ?? '';
   const defaultLocationId = user?.location?.id ?? '';
 
@@ -46,7 +56,7 @@ export function AccountingDailyCashPage() {
   const [cashierUserId, setCashierUserId] = useState('');
   const [confirmationDate, setConfirmationDate] = useState(todayDateInputValue());
   const [expectedCashCedis, setExpectedCashCedis] = useState('');
-  const [expectedCashTouched, setExpectedCashTouched] = useState(false);
+  const [expectedCashOverrideScope, setExpectedCashOverrideScope] = useState<string | null>(null);
   const [countedCashCedis, setCountedCashCedis] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -103,15 +113,13 @@ export function AccountingDailyCashPage() {
   );
 
   const isMutating = isCreating || isConfirming || isPosting;
-
-  useEffect(() => {
-    if (expectedCashTouched) return;
-    setExpectedCashCedis(((expectedSummary?.cashSalesPsw ?? 0) / 100).toFixed(2));
-  }, [expectedCashTouched, expectedSummary?.cashSalesPsw]);
-
-  useEffect(() => {
-    setExpectedCashTouched(false);
-  }, [branchId, locationId, cashierUserId, confirmationDate]);
+  const expectedScopeKey = `${branchId}:${locationId}:${cashierUserId}:${confirmationDate}`;
+  const suggestedExpectedCashCedis = useMemo(
+    () => ((expectedSummary?.cashSalesPsw ?? 0) / 100).toFixed(2),
+    [expectedSummary?.cashSalesPsw],
+  );
+  const expectedCashInputValue =
+    expectedCashOverrideScope === expectedScopeKey ? expectedCashCedis : suggestedExpectedCashCedis;
 
   async function handleCreate() {
     if (!companyId || !branchId || !user?.id) {
@@ -119,7 +127,7 @@ export function AccountingDailyCashPage() {
       return;
     }
 
-    const expected = Number(expectedCashCedis);
+    const expected = Number(expectedCashInputValue);
     const counted = Number(countedCashCedis);
     if (!Number.isFinite(expected) || expected < 0 || !Number.isFinite(counted) || counted < 0) {
       toast.error('Enter valid expected and counted cash amounts');
@@ -140,7 +148,7 @@ export function AccountingDailyCashPage() {
       }).unwrap();
       toast.success('Daily cash confirmation recorded');
       setExpectedCashCedis('');
-      setExpectedCashTouched(false);
+      setExpectedCashOverrideScope(null);
       setCountedCashCedis('');
       setNotes('');
       setCashierUserId('');
@@ -265,8 +273,8 @@ export function AccountingDailyCashPage() {
   const totalCountedPsw = confirmations.reduce((sum, row) => sum + row.countedCashPsw, 0);
 
   function applyExpectedCashFromOperations() {
-    setExpectedCashCedis(((expectedSummary?.cashSalesPsw ?? 0) / 100).toFixed(2));
-    setExpectedCashTouched(false);
+    setExpectedCashCedis('');
+    setExpectedCashOverrideScope(null);
     toast.success('Expected cash pulled from recorded cash payments');
   }
 
@@ -280,273 +288,284 @@ export function AccountingDailyCashPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Total Expected</CardDescription>
-            <CardTitle>{formatMoney(totalExpectedPsw)}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Total Counted</CardDescription>
-            <CardTitle>{formatMoney(totalCountedPsw)}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Open Confirmations</CardDescription>
-            <CardTitle>
-              {confirmations.filter((row) => row.status !== CashConfirmationStatus.POSTED).length}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
+      <ScrollableWrapper>
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Total Expected</CardDescription>
+                <CardTitle>{formatMoney(totalExpectedPsw)}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Total Counted</CardDescription>
+                <CardTitle>{formatMoney(totalCountedPsw)}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Open Confirmations</CardDescription>
+                <CardTitle>
+                  {
+                    confirmations.filter((row) => row.status !== CashConfirmationStatus.POSTED)
+                      .length
+                  }
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Expected Physical Cash</CardDescription>
-            <CardTitle>{formatMoney(expectedSummary?.cashSalesPsw ?? 0)}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 text-xs text-muted-foreground">
-            Cash-only collections from recorded payments for the selected day.
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Non-Cash Collections</CardDescription>
-            <CardTitle>{formatMoney(expectedSummary?.nonCashSalesPsw ?? 0)}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 text-xs text-muted-foreground">
-            Mobile money and other non-cash receipts are shown separately for review.
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Total Sales In View</CardDescription>
-            <CardTitle>{formatMoney(expectedSummary?.totalSalesPsw ?? 0)}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 text-xs text-muted-foreground">
-            Combined cash and non-cash receipts for the selected filters.
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Payment Count</CardDescription>
-            <CardTitle>{expectedSummary?.transactionCount ?? 0}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 text-xs text-muted-foreground">
-            Sender, receiver, and delivery collections included in the day summary.
-          </CardContent>
-        </Card>
-      </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Expected Physical Cash</CardDescription>
+                <CardTitle>{formatMoney(expectedSummary?.cashSalesPsw ?? 0)}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 text-xs text-muted-foreground">
+                Cash-only collections from recorded payments for the selected day.
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Non-Cash Collections</CardDescription>
+                <CardTitle>{formatMoney(expectedSummary?.nonCashSalesPsw ?? 0)}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 text-xs text-muted-foreground">
+                Mobile money and other non-cash receipts are shown separately for review.
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Total Sales In View</CardDescription>
+                <CardTitle>{formatMoney(expectedSummary?.totalSalesPsw ?? 0)}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 text-xs text-muted-foreground">
+                Combined cash and non-cash receipts for the selected filters.
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Payment Count</CardDescription>
+                <CardTitle>{expectedSummary?.transactionCount ?? 0}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 text-xs text-muted-foreground">
+                Sender, receiver, and delivery collections included in the day summary.
+              </CardContent>
+            </Card>
+          </div>
 
-      {expectedSummary?.session ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {expectedSummary?.session ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Session Status</CardDescription>
+                  <CardTitle>{expectedSummary.session.status}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 text-xs text-muted-foreground">
+                  Started {formatDate(expectedSummary.session.scheduledStartTime)}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Expected Closing Balance</CardDescription>
+                  <CardTitle>
+                    {formatMoney(expectedSummary.session.expectedClosingBalancePsw ?? 0)}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Reported Closing Balance</CardDescription>
+                  <CardTitle>
+                    {formatMoney(expectedSummary.session.closingBalancePsw ?? 0)}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Session Variance</CardDescription>
+                  <CardTitle>{formatMoney(expectedSummary.session.variancePsw ?? 0)}</CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
+          ) : null}
+
           <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Session Status</CardDescription>
-              <CardTitle>{expectedSummary.session.status}</CardTitle>
+            <CardHeader>
+              <CardTitle>Record Daily Confirmation</CardTitle>
+              <CardDescription>
+                Use this when the branch accountant physically counts cash at a location or cashier
+                point.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="pt-0 text-xs text-muted-foreground">
-              Started {formatDate(expectedSummary.session.scheduledStartTime)}
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="space-y-2">
+                  <Label htmlFor="daily-cash-branch">Branch</Label>
+                  <Select value={branchId} onValueChange={(value) => setBranchId(value)}>
+                    <SelectTrigger id="daily-cash-branch">
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branchOptions.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="daily-cash-location">Location</Label>
+                  <Select
+                    value={locationId || 'all'}
+                    onValueChange={(value) => setLocationId(value === 'all' ? '' : value)}
+                  >
+                    <SelectTrigger id="daily-cash-location">
+                      <SelectValue placeholder="All branch locations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Branch Level</SelectItem>
+                      {locationOptions.map((location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="daily-cash-cashier">Cashier / Officer</Label>
+                  <Select
+                    value={cashierUserId || 'all'}
+                    onValueChange={(value) => setCashierUserId(value === 'all' ? '' : value)}
+                  >
+                    <SelectTrigger id="daily-cash-cashier">
+                      <SelectValue placeholder="Optional" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Branch Rollup</SelectItem>
+                      {cashierOptions.map((cashier) => (
+                        <SelectItem key={cashier.id} value={cashier.id}>
+                          {cashier.fullname}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="daily-cash-date">Confirmation Date</Label>
+                  <Input
+                    id="daily-cash-date"
+                    type="date"
+                    value={confirmationDate}
+                    onChange={(event) => setConfirmationDate(event.target.value)}
+                  />
+                </div>
+                <QuickAmountInput
+                  id="daily-cash-expected"
+                  label="Expected Cash (GHS)"
+                  value={expectedCashInputValue}
+                  onChange={(value) => {
+                    setExpectedCashOverrideScope(expectedScopeKey);
+                    setExpectedCashCedis(value);
+                  }}
+                />
+                <QuickAmountInput
+                  id="daily-cash-counted"
+                  label="Counted Cash (GHS)"
+                  value={countedCashCedis}
+                  onChange={setCountedCashCedis}
+                />
+                <div className="space-y-2 xl:col-span-2">
+                  <Label htmlFor="daily-cash-notes">Notes</Label>
+                  <Input
+                    id="daily-cash-notes"
+                    value={notes}
+                    onChange={(event) => setNotes(event.target.value)}
+                    placeholder="Optional notes about count, shortage, or overage"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-3 text-sm">
+                <div className="flex-1 text-muted-foreground">
+                  Use recorded cash collections for this branch, location, cashier, and date to
+                  prefill the expected physical cash.
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={applyExpectedCashFromOperations}
+                  disabled={isFetchingExpected}
+                >
+                  Use Expected Cash
+                </Button>
+                {expectedSummary?.session?.closingBalancePsw != null ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      setCountedCashCedis(
+                        ((expectedSummary.session?.closingBalancePsw ?? 0) / 100).toFixed(2),
+                      )
+                    }
+                  >
+                    Use Session Closing
+                  </Button>
+                ) : null}
+                {expectedSummary?.session?.expectedClosingBalancePsw != null ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      setCountedCashCedis(
+                        ((expectedSummary.session?.expectedClosingBalancePsw ?? 0) / 100).toFixed(
+                          2,
+                        ),
+                      )
+                    }
+                  >
+                    Use Expected Closing
+                  </Button>
+                ) : null}
+                <div className="text-xs text-muted-foreground">
+                  Sender {formatMoney(expectedSummary?.senderSalesPsw ?? 0)} • Receiver{' '}
+                  {formatMoney(expectedSummary?.receiverSalesPsw ?? 0)} • Delivery{' '}
+                  {formatMoney(expectedSummary?.deliverySalesPsw ?? 0)}
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={() => void handleCreate()} disabled={isMutating || !branchId}>
+                  Record Confirmation
+                </Button>
+              </div>
             </CardContent>
           </Card>
+
           <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Expected Closing Balance</CardDescription>
-              <CardTitle>
-                {formatMoney(expectedSummary.session.expectedClosingBalancePsw ?? 0)}
-              </CardTitle>
+            <CardHeader>
+              <CardTitle>Recorded Confirmations</CardTitle>
+              <CardDescription>
+                Drafts can be confirmed, and confirmed rows can then be posted into the ledger.
+              </CardDescription>
             </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Reported Closing Balance</CardDescription>
-              <CardTitle>{formatMoney(expectedSummary.session.closingBalancePsw ?? 0)}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Session Variance</CardDescription>
-              <CardTitle>{formatMoney(expectedSummary.session.variancePsw ?? 0)}</CardTitle>
-            </CardHeader>
+            <CardContent>
+              <DataTable
+                mode="client"
+                data={confirmations}
+                columns={columns}
+                loading={isFetching}
+                searchPlaceholder="Search daily cash confirmations"
+                showSearch
+                pageSizeOptions={[10, 20, 50]}
+              />
+            </CardContent>
           </Card>
         </div>
-      ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Record Daily Confirmation</CardTitle>
-          <CardDescription>
-            Use this when the branch accountant physically counts cash at a location or cashier
-            point.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="daily-cash-branch">Branch</Label>
-              <Select value={branchId} onValueChange={(value) => setBranchId(value)}>
-                <SelectTrigger id="daily-cash-branch">
-                  <SelectValue placeholder="Select branch" />
-                </SelectTrigger>
-                <SelectContent>
-                  {branchOptions.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="daily-cash-location">Location</Label>
-              <Select
-                value={locationId || 'all'}
-                onValueChange={(value) => setLocationId(value === 'all' ? '' : value)}
-              >
-                <SelectTrigger id="daily-cash-location">
-                  <SelectValue placeholder="All branch locations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Branch Level</SelectItem>
-                  {locationOptions.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {location.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="daily-cash-cashier">Cashier / Officer</Label>
-              <Select
-                value={cashierUserId || 'all'}
-                onValueChange={(value) => setCashierUserId(value === 'all' ? '' : value)}
-              >
-                <SelectTrigger id="daily-cash-cashier">
-                  <SelectValue placeholder="Optional" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Branch Rollup</SelectItem>
-                  {cashierOptions.map((cashier) => (
-                    <SelectItem key={cashier.id} value={cashier.id}>
-                      {cashier.fullname}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="daily-cash-date">Confirmation Date</Label>
-              <Input
-                id="daily-cash-date"
-                type="date"
-                value={confirmationDate}
-                onChange={(event) => setConfirmationDate(event.target.value)}
-              />
-            </div>
-            <QuickAmountInput
-              id="daily-cash-expected"
-              label="Expected Cash (GHS)"
-              value={expectedCashCedis}
-              onChange={(value) => {
-                setExpectedCashTouched(true);
-                setExpectedCashCedis(value);
-              }}
-            />
-            <QuickAmountInput
-              id="daily-cash-counted"
-              label="Counted Cash (GHS)"
-              value={countedCashCedis}
-              onChange={setCountedCashCedis}
-            />
-            <div className="space-y-2 xl:col-span-2">
-              <Label htmlFor="daily-cash-notes">Notes</Label>
-              <Input
-                id="daily-cash-notes"
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder="Optional notes about count, shortage, or overage"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-3 text-sm">
-            <div className="flex-1 text-muted-foreground">
-              Use recorded cash collections for this branch, location, cashier, and date to prefill
-              the expected physical cash.
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={applyExpectedCashFromOperations}
-              disabled={isFetchingExpected}
-            >
-              Use Expected Cash
-            </Button>
-            {expectedSummary?.session?.closingBalancePsw != null ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  setCountedCashCedis(
-                    ((expectedSummary.session?.closingBalancePsw ?? 0) / 100).toFixed(2),
-                  )
-                }
-              >
-                Use Session Closing
-              </Button>
-            ) : null}
-            {expectedSummary?.session?.expectedClosingBalancePsw != null ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  setCountedCashCedis(
-                    ((expectedSummary.session?.expectedClosingBalancePsw ?? 0) / 100).toFixed(2),
-                  )
-                }
-              >
-                Use Expected Closing
-              </Button>
-            ) : null}
-            <div className="text-xs text-muted-foreground">
-              Sender {formatMoney(expectedSummary?.senderSalesPsw ?? 0)} • Receiver{' '}
-              {formatMoney(expectedSummary?.receiverSalesPsw ?? 0)} • Delivery{' '}
-              {formatMoney(expectedSummary?.deliverySalesPsw ?? 0)}
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button onClick={() => void handleCreate()} disabled={isMutating || !branchId}>
-              Record Confirmation
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recorded Confirmations</CardTitle>
-          <CardDescription>
-            Drafts can be confirmed, and confirmed rows can then be posted into the ledger.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            mode="client"
-            data={confirmations}
-            columns={columns}
-            loading={isFetching}
-            searchPlaceholder="Search daily cash confirmations"
-            showSearch
-            pageSizeOptions={[10, 20, 50]}
-          />
-        </CardContent>
-      </Card>
+      </ScrollableWrapper>
     </div>
   );
 }

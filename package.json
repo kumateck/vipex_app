@@ -18,6 +18,7 @@
     "apply:triggers": "bun run scripts/apply_triggers.ts",
     "enable:pgcrypto": "bun run scripts/enable_pgcrypto.ts",
     "seed:init": "bun run scripts/seed_initial.ts",
+    "seed:bootstrap": "bun run scripts/seed_bootstrap_system.ts",
     "seed:accounting": "bun run scripts/seed_accounting.ts",
     "seed:sessions": "bun run scripts/seed_session_types.ts",
     "seed:users": "bun run scripts/seed_demo_user.ts",

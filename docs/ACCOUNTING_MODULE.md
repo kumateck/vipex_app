@@ -8,6 +8,7 @@ It covers:
 
 - chart of accounts
 - journal batches, entries, and lines
+- payroll accrual journal posting
 - daily cash confirmation
 - expense request approval and posting
 - tax journal capture and filing review
@@ -21,6 +22,20 @@ It covers:
 - Raw operational activity is not the general ledger.
 - Only approved or confirmed accounting events post to the general ledger.
 - Tax calculation remains driven by the existing Ghana tax calculator.
+- Accounting is company-gated through `companies.use_accounting`.
+
+## Standalone Enablement
+
+The accounting module is standalone at company level.
+
+- If `companies.use_accounting = false`, accounting routes are blocked.
+- Accounting pages are hidden from the sidebar.
+- Direct navigation to accounting pages shows a disabled state.
+- Payment, parcel, cashier, queue, and delivery flows continue to operate normally.
+- Payment-side tax journal capture is skipped while accounting is disabled.
+- Head office can manage the toggle from `/settings/company`, which uses the existing company module controls and keeps the company flag in sync.
+
+This means the company can run the operational system without forcing accounting adoption.
 
 ## Data Model
 
@@ -114,6 +129,35 @@ Important:
 - When a cashier session exists for the selected cashier and day, the screen also shows session status, expected closing balance, reported closing balance, and session variance.
 - The UI can use session closing or expected closing balances to prefill counted cash.
 - Revenue posting is split between parcel revenue and delivery revenue based on the cash payment mix for the selected confirmation scope.
+
+## Payroll Posting
+
+Backend integration:
+
+- payroll service: [src/server/features/payroll/service.ts](/Users/gigisiri/Business/Employment/vipex/vipex_app/src/server/features/payroll/service.ts)
+- shared posting service: [src/server/features/accounting/posting.service.ts](/Users/gigisiri/Business/Employment/vipex/vipex_app/src/server/features/accounting/posting.service.ts)
+
+Workflow:
+
+1. Payroll cycle is created.
+2. Payroll cycle is run.
+3. Payroll cycle is approved.
+4. Approved payroll is journalized.
+5. Posted payroll can be reversed if a reopen is needed.
+
+Posting rule:
+
+- Dr `5190 Compensation`
+- Cr `2100 Accrued Expenses`
+
+Current implementation notes:
+
+- posting is grouped by branch using payroll run snapshots
+- posting requires accounting to be enabled for the company
+- posting requires seeded chart accounts from [scripts/seed_accounting.ts](/Users/gigisiri/Business/Employment/vipex/vipex_app/scripts/seed_accounting.ts)
+- journal source type is `PAYROLL`
+- reversal posts a new balanced journal batch with debits and credits swapped from the original payroll batch
+- reversing a payroll journal moves the cycle back to `APPROVED`, after which payroll can be reopened
 
 ## Expense Requests
 
@@ -273,10 +317,10 @@ Key endpoints:
 
 ## Current Limitations
 
-- Daily cash confirmation expected totals come from recorded payments, not from cashier session closure records.
-- Revenue posting from daily cash confirmation currently credits parcel revenue only. If finer revenue splits are needed later, posting rules should be expanded.
-- Tax filing period actions do not yet enforce that all included items are filed before close.
-- Export formats such as PDF or spreadsheet are not implemented yet.
+- Daily cash confirmation defaults are derived from recorded payments and session summaries, but accountant batches are not auto-created from session closure yet.
+- Revenue posting is split between parcel revenue and delivery revenue, but not yet into finer sub-accounts such as sender vs receiver revenue.
+- Tax filing close enforcement is implemented, but accounting action endpoints still rely on record IDs and should be tightened further with explicit company ownership checks if you want stricter tenant isolation.
+- Export supports CSV and browser print output; richer packaged exports such as PDF or spreadsheet templates are not implemented yet.
 
 ## Verification
 

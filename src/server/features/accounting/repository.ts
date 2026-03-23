@@ -4,6 +4,7 @@ import {
   accountingApprovalPolicies,
   chartOfAccounts,
   cashierSessions,
+  companies,
   dailyCashConfirmations,
   branches,
   companyBankAccounts,
@@ -121,6 +122,22 @@ export async function listCompanyBankAccountsRepo(input: {
     .orderBy(asc(companyBankAccounts.name));
 }
 
+export async function getCompanyAccountingSettingsRepo(
+  companyId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      id: companies.id,
+      useAccounting: companies.useAccounting,
+    })
+    .from(companies)
+    .where(eq(companies.id, companyId))
+    .limit(1);
+
+  return row ?? null;
+}
+
 export async function getAccountByCodeRepo(
   companyId: string,
   code: string,
@@ -188,6 +205,25 @@ export async function createJournalLinesRepo(
   executor: DbExecutor = db,
 ) {
   return executor.insert(journalLines).values(values).returning({ id: journalLines.id });
+}
+
+export async function listJournalLinesByBatchRepo(batchId: string, executor: DbExecutor = db) {
+  return executor
+    .select({
+      entryId: journalEntries.id,
+      branchId: journalLines.branchId,
+      locationId: journalLines.locationId,
+      recordedByUserId: journalLines.recordedByUserId,
+      accountId: journalLines.accountId,
+      debitPsw: journalLines.debitPsw,
+      creditPsw: journalLines.creditPsw,
+      description: journalLines.description,
+      metadata: journalLines.metadata,
+    })
+    .from(journalLines)
+    .innerJoin(journalEntries, eq(journalEntries.id, journalLines.entryId))
+    .where(eq(journalEntries.batchId, batchId))
+    .orderBy(asc(journalLines.createdAt), asc(journalLines.id));
 }
 
 export async function createTaxJournalItemRepo(

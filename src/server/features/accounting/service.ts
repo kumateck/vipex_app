@@ -8,7 +8,7 @@ import {
   TaxFilingPeriodStatus,
   TaxFilingStatus,
 } from '@/db/schemas/enums';
-import { BadRequest, Conflict, NotFound } from '@/server/utils/http-error';
+import { BadRequest, Conflict, Forbidden, NotFound } from '@/server/utils/http-error';
 import { toPesewas } from '@/server/utils/gh-money';
 import {
   createDailyCashConfirmationRepo,
@@ -17,6 +17,7 @@ import {
   createTaxFilingPeriodRepo,
   createTaxJournalItemRepo,
   getAccountByCodeRepo,
+  getCompanyAccountingSettingsRepo,
   getCompanyBankAccountRepo,
   getDailyCashConfirmationRepo,
   getDailyCashExpectedSummaryRepo,
@@ -46,6 +47,20 @@ type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof d
 
 function toPsw(value: number | string) {
   return Number(toPesewas(value));
+}
+
+export async function isAccountingEnabledForCompanySvc(
+  companyId: string,
+  executor: DbExecutor = db,
+) {
+  const company = await getCompanyAccountingSettingsRepo(companyId, executor);
+  return Boolean(company?.useAccounting);
+}
+
+export async function assertAccountingEnabledSvc(companyId: string, executor: DbExecutor = db) {
+  if (!(await isAccountingEnabledForCompanySvc(companyId, executor))) {
+    throw Forbidden('Accounting module is disabled for this company');
+  }
 }
 
 async function requireAccountByCode(companyId: string, code: string, executor: DbExecutor = db) {
@@ -994,6 +1009,7 @@ export async function recordPaymentTaxJournalItemSvc(
   executor: DbExecutor = db,
 ) {
   if (input.taxTotalPsw <= 0) return null;
+  if (!(await isAccountingEnabledForCompanySvc(input.companyId, executor))) return null;
 
   const created = await createTaxJournalItemRepo(
     {

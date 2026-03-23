@@ -1,7 +1,13 @@
 import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import { UserType } from '@/db/schemas/enums';
-import { createUserSvc, getUserSvc, listUserOptionsSvc, listUsersSvc, updateUserSvc } from './service';
+import {
+  createUserSvc,
+  getUserSvc,
+  listUserOptionsSvc,
+  listUsersSvc,
+  updateUserSvc,
+} from './service';
 
 // Normalize DB row to API DTO
 function toUserDto(u: {
@@ -112,6 +118,7 @@ export async function createUserCtrl(input: {
   fullname: string;
   telephone: string;
   email: string;
+  employeeId?: string | null;
   status?: number;
   roleId: string;
   companyId: string;

@@ -22,6 +22,7 @@ export const LoginResponse = t.Object({
         t.Object({
           id: UUID,
           name: t.String(),
+          useAccounting: t.Boolean(),
         }),
         t.Null(),
       ]),

@@ -21,6 +21,7 @@ export const companies = pgTable('companies', {
   type: varchar('type', { length: 255 }).notNull(),
   code: varchar('code', { length: 255 }).notNull(),
   tin: varchar('tin', { length: 255 }),
+  useAccounting: boolean('use_accounting').notNull().default(false),
   isDeleted: boolean('is_deleted').notNull().default(false),
   createdBy: varchar('created_by', { length: 25 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
@@ -69,6 +70,7 @@ export const locations = pgTable(
     companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
+    employeeId: varchar('employee_id', { length: 25 }),
     branchId: varchar('branch_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
@@ -166,6 +168,7 @@ export const users = pgTable(
     fullname: varchar('fullname', { length: 255 }).notNull(),
     telephone: varchar('telephone', { length: 255 }).notNull(),
     email: varchar('email', { length: 255 }).notNull(),
+    employeeId: varchar('employee_id', { length: 25 }),
     password: varchar('password', { length: 255 }),
     status: smallint('status').notNull().default(UserStatus.INVITED), // INVITED default
     roleId: varchar('role_id', { length: 25 })
@@ -188,9 +191,11 @@ export const users = pgTable(
   },
   (t) => ({
     byCompany: index('users_company_idx').on(t.companyId),
+    byCompanyEmployee: index('users_company_employee_idx').on(t.companyId, t.employeeId),
     uqCompanyLowerEmail: uniqueIndex('users_company_lower_email_uq').on(
       t.companyId,
       sql`lower(${t.email})`,
     ),
+    uqEmployeeId: uniqueIndex('users_employee_id_uq').on(t.employeeId),
   }),
 );

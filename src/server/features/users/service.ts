@@ -41,6 +41,7 @@ export async function createUserSvc(input: {
   fullname: string;
   telephone: string;
   email: string;
+  employeeId?: string | null;
   status?: number;
   roleId: string;
   companyId: string;

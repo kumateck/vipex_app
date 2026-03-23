@@ -18,9 +18,6 @@ const ROLE_NAME = 'System Admin';
 async function main() {
   console.log('🚀 Starting demo user seed...\n');
 
-  console.log('🔐 Hashing password...');
-  const hashedPassword = await hashPassword(DEMO_PASSWORD);
-
   console.log('📦 Looking up existing company...');
   const [company] = await db
     .select({ id: companies.id, name: companies.name })
@@ -72,24 +69,9 @@ async function main() {
   if (existingUser) {
     userId = existingUser.id;
     console.log(`   ✓ User already exists: ${DEMO_EMAIL} (${userId})`);
-
-    await db
-      .update(users)
-      .set({
-        fullname: DEMO_FULLNAME,
-        telephone: DEMO_TELEPHONE,
-        password: hashedPassword,
-        status: UserStatus.ACTIVE,
-        roleId: role.id,
-        companyId: company.id,
-        branchId: branch.id,
-        locationId: null,
-        userType: UserType.STAFF,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
-    console.log(`   ✓ Updated user details, password, and status to ACTIVE`);
   } else {
+    console.log('🔐 Hashing password...');
+    const hashedPassword = await hashPassword(DEMO_PASSWORD);
     userId = createId();
     await db.insert(users).values({
       id: userId,
@@ -120,12 +102,16 @@ async function main() {
   console.log(`Email:      ${DEMO_EMAIL}`);
   console.log(`Telephone:  ${DEMO_TELEPHONE}`);
   console.log(`User ID:    ${userId}`);
-  console.log(`Status:     ACTIVE`);
   console.log('═══════════════════════════════════════');
-  console.log('\n🔐 Login credentials:');
-  console.log(`   Email:    ${DEMO_EMAIL}`);
-  console.log(`   Password: ${DEMO_PASSWORD}`);
-  console.log('\n✨ You can now log in!\n');
+
+  if (!existingUser) {
+    console.log('\n🔐 Login credentials:');
+    console.log(`   Email:    ${DEMO_EMAIL}`);
+    console.log(`   Password: ${DEMO_PASSWORD}`);
+    console.log('\n✨ You can now log in!\n');
+  } else {
+    console.log('\nℹ️ Existing user was left unchanged.\n');
+  }
 
   process.exit(0);
 }

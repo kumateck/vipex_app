@@ -29,8 +29,13 @@ import {
   useGetTrialBalanceReportQuery,
   useListAccountsQuery,
 } from '../api';
-import { DateRangeFields, formatMoney, todayDateInputValue } from './accounting-shared';
-import { useAuthStore } from '@/stores/auth-store';
+import {
+  AccountingDisabledState,
+  DateRangeFields,
+  formatMoney,
+  todayDateInputValue,
+} from './accounting-shared';
+import { useAuthStore, type AuthUser } from '@/stores/auth-store';
 
 function escapeCsv(value: string | number) {
   const stringValue = String(value);
@@ -130,9 +135,106 @@ function StatementLinesTable({
   );
 }
 
+function SummaryCards(props: {
+  income?: IncomeStatementReport | undefined;
+  balance?: BalanceSheetReport | undefined;
+  cash?: CashFlowReport | undefined;
+}) {
+  if (props.income) {
+    return (
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Total Income</CardDescription>
+            <CardTitle>{formatMoney(props.income.totals.totalIncomePsw)}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Total Expenses</CardDescription>
+            <CardTitle>{formatMoney(props.income.totals.totalExpensePsw)}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Net Profit</CardDescription>
+            <CardTitle>{formatMoney(props.income.totals.netProfitPsw)}</CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  if (props.balance) {
+    return (
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Assets</CardDescription>
+            <CardTitle>{formatMoney(props.balance.totals.assetsPsw)}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Liabilities</CardDescription>
+            <CardTitle>{formatMoney(props.balance.totals.liabilitiesPsw)}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Equity</CardDescription>
+            <CardTitle>{formatMoney(props.balance.totals.equityPsw)}</CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  if (props.cash) {
+    return (
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Operating Inflows</CardDescription>
+            <CardTitle>{formatMoney(props.cash.operating.inflowsPsw)}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Operating Outflows</CardDescription>
+            <CardTitle>{formatMoney(props.cash.operating.outflowsPsw)}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Investing Net</CardDescription>
+            <CardTitle>{formatMoney(props.cash.investing.netPsw)}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Net Change In Cash</CardDescription>
+            <CardTitle>{formatMoney(props.cash.totals.netChangeInCashPsw)}</CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export function AccountingReportsPage() {
   const user = useAuthStore((state) => state.user);
-  const companyId = user?.company?.id ?? '';
+  if (!user?.company?.useAccounting) {
+    return <AccountingDisabledState />;
+  }
+
+  return <AccountingReportsPageContent user={user} />;
+}
+
+function AccountingReportsPageContent({ user }: { user: AuthUser }) {
+  const companyId = user.company?.id ?? '';
   const defaultBranchId = user?.branch?.id ?? '';
   const defaultLocationId = user?.location?.id ?? '';
 
@@ -294,95 +396,6 @@ export function AccountingReportsPage() {
       },
     ];
   }, [monthlyBranchSummary.data?.branches]);
-
-  function SummaryCards(props: {
-    income?: IncomeStatementReport | undefined;
-    balance?: BalanceSheetReport | undefined;
-    cash?: CashFlowReport | undefined;
-  }) {
-    if (props.income) {
-      return (
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Total Income</CardDescription>
-              <CardTitle>{formatMoney(props.income.totals.totalIncomePsw)}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Total Expenses</CardDescription>
-              <CardTitle>{formatMoney(props.income.totals.totalExpensePsw)}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Net Profit</CardDescription>
-              <CardTitle>{formatMoney(props.income.totals.netProfitPsw)}</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-      );
-    }
-
-    if (props.balance) {
-      return (
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Assets</CardDescription>
-              <CardTitle>{formatMoney(props.balance.totals.assetsPsw)}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Liabilities</CardDescription>
-              <CardTitle>{formatMoney(props.balance.totals.liabilitiesPsw)}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Equity</CardDescription>
-              <CardTitle>{formatMoney(props.balance.totals.equityPsw)}</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-      );
-    }
-
-    if (props.cash) {
-      return (
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Operating Inflows</CardDescription>
-              <CardTitle>{formatMoney(props.cash.operating.inflowsPsw)}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Operating Outflows</CardDescription>
-              <CardTitle>{formatMoney(props.cash.operating.outflowsPsw)}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Investing Net</CardDescription>
-              <CardTitle>{formatMoney(props.cash.investing.netPsw)}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardDescription>Net Change In Cash</CardDescription>
-              <CardTitle>{formatMoney(props.cash.totals.netChangeInCashPsw)}</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-      );
-    }
-
-    return null;
-  }
 
   const exportConfig = useMemo(() => {
     if (activeTab === 'trial-balance') {
