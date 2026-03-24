@@ -28,6 +28,11 @@ const FINANCIAL_REPORT_ROUTES: ReportRoute[] = [
     to: '/reports/financial/income-statement',
   },
   {
+    title: 'Profit & Loss',
+    description: 'Review profitability for the selected reporting period.',
+    to: '/reports/financial/profit-loss',
+  },
+  {
     title: 'Balance Sheet',
     description: 'View assets, liabilities, and equity at a selected date.',
     to: '/reports/financial/balance-sheet',
@@ -36,6 +41,21 @@ const FINANCIAL_REPORT_ROUTES: ReportRoute[] = [
     title: 'Cash Flow',
     description: 'Analyze operating, investing, and financing cash movement.',
     to: '/reports/financial/cash-flow',
+  },
+  {
+    title: 'General Ledger',
+    description: 'Inspect posted ledger lines and balances across time.',
+    to: '/reports/financial/general-ledger',
+  },
+  {
+    title: 'Journal Listing',
+    description: 'Review posted journal lines from accounting activity.',
+    to: '/reports/financial/journal-listing',
+  },
+  {
+    title: 'Account Activity',
+    description: 'Track account-level movement and running balances.',
+    to: '/reports/financial/account-activity',
   },
 ];
 

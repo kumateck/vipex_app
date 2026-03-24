@@ -1,5 +1,5 @@
-import { ComingSoonPage } from '@/components/coming-soon-page';
+import { AccountingReportRoutePage } from '@/features/accounting/pages/accounting-report-route-page';
 
-export default function ReportsPlaceholderPage() {
-  return <ComingSoonPage title="Profit & Loss" />;
+export default function FinancialProfitLossPage() {
+  return <AccountingReportRoutePage report="profit-loss" />;
 }

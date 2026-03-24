@@ -25,7 +25,59 @@ export interface Route {
   menu: MenuItem[];
 }
 
-export const ROUTES: Route[] = [
+const IMPLEMENTED_STANDALONE_REPORT_URLS = new Set<string>([
+  '/reports/financial/trial-balance',
+  '/reports/financial/account-statement',
+  '/reports/financial/income-statement',
+  '/reports/financial/profit-loss',
+  '/reports/financial/balance-sheet',
+  '/reports/financial/cash-flow',
+  '/reports/financial/general-ledger',
+  '/reports/financial/journal-listing',
+  '/reports/financial/account-activity',
+  '/reports/branch/monthly-summary',
+  '/reports/branch/profit-summary',
+  '/reports/payroll/register-employee',
+  '/reports/payroll/earnings',
+  '/reports/payroll/deductions',
+  '/reports/payroll/overtime',
+  '/reports/payroll/journal-posting',
+  '/reports/hr/master-list',
+  '/reports/attendance/daily',
+  '/reports/leave/requests',
+  '/reports/expenses/by-category',
+  '/reports/cash/daily-confirmation',
+  '/reports/customers/statement',
+  '/reports/customers/credit-summary',
+  '/reports/customers/aging',
+  '/reports/parcels/register',
+  '/reports/parcels/delivered',
+  '/reports/transfers/pending',
+  '/reports/transfers/acknowledged',
+  '/reports/cashier/shifts',
+  '/reports/cashier/revenue',
+]);
+
+function isImplementedReportUrl(url?: string) {
+  if (!url) return true;
+  if (!url.startsWith('/reports/')) return true;
+  return IMPLEMENTED_STANDALONE_REPORT_URLS.has(url);
+}
+
+function filterSubItems(items?: SubItem[]): SubItem[] | undefined {
+  if (!items?.length) return items;
+  const filtered: SubItem[] = [];
+  for (const item of items) {
+    const nextChildren = filterSubItems(item.children);
+    const keepByUrl = isImplementedReportUrl(item.url);
+    const hasChildren = Boolean(nextChildren?.length);
+    if (!keepByUrl && !hasChildren) continue;
+    filtered.push({ ...item, children: nextChildren });
+  }
+  return filtered.length ? filtered : undefined;
+}
+
+const BASE_ROUTES: Route[] = [
   {
     title: 'Main',
     menu: [
@@ -632,3 +684,15 @@ export const ROUTES: Route[] = [
     ],
   },
 ];
+
+export const ROUTES: Route[] = BASE_ROUTES.map((route) => {
+  const filteredMenu: MenuItem[] = [];
+  for (const menuItem of route.menu) {
+    const nextItems = filterSubItems(menuItem.items);
+    const keepByUrl = isImplementedReportUrl(menuItem.url);
+    const hasItems = Boolean(nextItems?.length);
+    if (!keepByUrl && !hasItems) continue;
+    filteredMenu.push({ ...menuItem, items: nextItems });
+  }
+  return { ...route, menu: filteredMenu };
+}).filter((route) => route.menu.length > 0);

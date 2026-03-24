@@ -1,5 +1,5 @@
-import { ComingSoonPage } from '@/components/coming-soon-page';
+import { AccountingReportRoutePage } from '@/features/accounting/pages/accounting-report-route-page';
 
-export default function ReportsPlaceholderPage() {
-  return <ComingSoonPage title="General Ledger" />;
+export default function FinancialGeneralLedgerPage() {
+  return <AccountingReportRoutePage report="general-ledger" />;
 }

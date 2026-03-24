@@ -26,6 +26,7 @@ import {
   useGetBalanceSheetReportQuery,
   useGetCashFlowReportQuery,
   useGetIncomeStatementReportQuery,
+  useGetProfitLossReportQuery,
   useGetMonthlyBranchSummaryReportQuery,
   useGetTrialBalanceReportQuery,
   useListAccountsQuery,
@@ -42,14 +43,26 @@ export type AccountingRouteReportKey =
   | 'trial-balance'
   | 'account-statement'
   | 'income-statement'
+  | 'profit-loss'
   | 'balance-sheet'
   | 'cash-flow'
-  | 'monthly-branch-summary';
+  | 'monthly-branch-summary'
+  | 'general-ledger'
+  | 'journal-listing'
+  | 'account-activity';
 
 type ReportMeta = {
   title: string;
   description: string;
   exportFile: string;
+};
+
+type AccountingReportFilters = {
+  branchId: string;
+  locationId: string;
+  accountId: string;
+  dateFrom: string;
+  dateTo: string;
 };
 
 const REPORT_META: Record<AccountingRouteReportKey, ReportMeta> = {
@@ -68,6 +81,11 @@ const REPORT_META: Record<AccountingRouteReportKey, ReportMeta> = {
     description: 'Compare income and expense lines with summarized totals.',
     exportFile: 'income-statement.csv',
   },
+  'profit-loss': {
+    title: 'Profit & Loss',
+    description: 'Review revenue, expenses, and net profit for the selected period.',
+    exportFile: 'profit-loss.csv',
+  },
   'balance-sheet': {
     title: 'Balance Sheet',
     description: 'Track assets, liabilities, and equity at the selected date.',
@@ -82,6 +100,21 @@ const REPORT_META: Record<AccountingRouteReportKey, ReportMeta> = {
     title: 'Monthly Branch Summary',
     description: 'Compare income, expenses, and net values across branches.',
     exportFile: 'monthly-branch-summary.csv',
+  },
+  'general-ledger': {
+    title: 'General Ledger',
+    description: 'Inspect running ledger entries for a selected account over time.',
+    exportFile: 'general-ledger.csv',
+  },
+  'journal-listing': {
+    title: 'Journal Listing',
+    description: 'Inspect posted ledger journal lines for a selected account over time.',
+    exportFile: 'journal-listing.csv',
+  },
+  'account-activity': {
+    title: 'Account Activity',
+    description: 'Track account-level movement and running balances over time.',
+    exportFile: 'account-activity.csv',
   },
 };
 
@@ -298,6 +331,7 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
   const [accountId, setAccountId] = useState('');
   const [dateFrom, setDateFrom] = useState(todayDateInputValue());
   const [dateTo, setDateTo] = useState(todayDateInputValue());
+  const [appliedFilters, setAppliedFilters] = useState<AccountingReportFilters | null>(null);
 
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
     companyId ? { companyId } : undefined,
@@ -314,40 +348,82 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
     { skip: !companyId },
   );
 
+  const hasPendingFilterChanges =
+    !appliedFilters ||
+    appliedFilters.branchId !== branchId ||
+    appliedFilters.locationId !== locationId ||
+    appliedFilters.accountId !== accountId ||
+    appliedFilters.dateFrom !== dateFrom ||
+    appliedFilters.dateTo !== dateTo;
+
   const commonParams = {
     companyId,
-    branchId: branchId || undefined,
-    locationId: locationId || undefined,
+    branchId: appliedFilters?.branchId || undefined,
+    locationId: appliedFilters?.locationId || undefined,
   };
+  const reportMode: AccountingRouteReportKey =
+    report === 'general-ledger' || report === 'journal-listing' || report === 'account-activity'
+      ? 'account-statement'
+      : report;
 
   const trialBalance = useGetTrialBalanceReportQuery(
-    { ...commonParams, dateFrom, dateTo },
-    { skip: !companyId || report !== 'trial-balance' },
+    {
+      ...commonParams,
+      dateFrom: appliedFilters?.dateFrom ?? dateFrom,
+      dateTo: appliedFilters?.dateTo ?? dateTo,
+    },
+    { skip: !companyId || !appliedFilters || reportMode !== 'trial-balance' },
   );
 
   const incomeStatement = useGetIncomeStatementReportQuery(
-    { ...commonParams, dateFrom, dateTo },
-    { skip: !companyId || report !== 'income-statement' },
+    {
+      ...commonParams,
+      dateFrom: appliedFilters?.dateFrom ?? dateFrom,
+      dateTo: appliedFilters?.dateTo ?? dateTo,
+    },
+    { skip: !companyId || !appliedFilters || reportMode !== 'income-statement' },
+  );
+
+  const profitLoss = useGetProfitLossReportQuery(
+    {
+      ...commonParams,
+      dateFrom: appliedFilters?.dateFrom ?? dateFrom,
+      dateTo: appliedFilters?.dateTo ?? dateTo,
+    },
+    { skip: !companyId || !appliedFilters || reportMode !== 'profit-loss' },
   );
 
   const balanceSheet = useGetBalanceSheetReportQuery(
-    { ...commonParams, dateTo },
-    { skip: !companyId || report !== 'balance-sheet' },
+    { ...commonParams, dateTo: appliedFilters?.dateTo ?? dateTo },
+    { skip: !companyId || !appliedFilters || reportMode !== 'balance-sheet' },
   );
 
   const cashFlow = useGetCashFlowReportQuery(
-    { ...commonParams, dateFrom, dateTo },
-    { skip: !companyId || report !== 'cash-flow' },
+    {
+      ...commonParams,
+      dateFrom: appliedFilters?.dateFrom ?? dateFrom,
+      dateTo: appliedFilters?.dateTo ?? dateTo,
+    },
+    { skip: !companyId || !appliedFilters || reportMode !== 'cash-flow' },
   );
 
   const monthlyBranchSummary = useGetMonthlyBranchSummaryReportQuery(
-    { ...commonParams, dateFrom, dateTo },
-    { skip: !companyId || report !== 'monthly-branch-summary' },
+    {
+      ...commonParams,
+      dateFrom: appliedFilters?.dateFrom ?? dateFrom,
+      dateTo: appliedFilters?.dateTo ?? dateTo,
+    },
+    { skip: !companyId || !appliedFilters || reportMode !== 'monthly-branch-summary' },
   );
 
   const accountStatement = useGetAccountStatementReportQuery(
-    { ...commonParams, accountId, dateFrom, dateTo },
-    { skip: !companyId || !accountId || report !== 'account-statement' },
+    {
+      ...commonParams,
+      accountId: appliedFilters?.accountId ?? accountId,
+      dateFrom: appliedFilters?.dateFrom ?? dateFrom,
+      dateTo: appliedFilters?.dateTo ?? dateTo,
+    },
+    { skip: !companyId || !appliedFilters?.accountId || reportMode !== 'account-statement' },
   );
 
   const trialBalanceColumns = useMemo<ColumnDef<TrialBalanceReport['rows'][number]>[]>(
@@ -401,7 +477,7 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
   }, [monthlyBranchSummary.data?.branches]);
 
   const exportConfig = useMemo(() => {
-    if (report === 'trial-balance') {
+    if (reportMode === 'trial-balance') {
       return {
         title: REPORT_META[report].title,
         filename: REPORT_META[report].exportFile,
@@ -420,7 +496,9 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
       };
     }
 
-    if (report === 'income-statement') {
+    if (reportMode === 'income-statement' || reportMode === 'profit-loss') {
+      const statement = reportMode === 'income-statement' ? incomeStatement.data : profitLoss.data;
+
       return {
         title: REPORT_META[report].title,
         filename: REPORT_META[report].exportFile,
@@ -428,7 +506,7 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
           {
             heading: 'Income',
             headers: ['Code', 'Account', 'Amount'],
-            rows: (incomeStatement.data?.income ?? []).map((row) => [
+            rows: (statement?.income ?? []).map((row) => [
               row.accountCode,
               row.accountName,
               formatMoney(row.amountPsw),
@@ -437,7 +515,7 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
           {
             heading: 'Expenses',
             headers: ['Code', 'Account', 'Amount'],
-            rows: (incomeStatement.data?.expenses ?? []).map((row) => [
+            rows: (statement?.expenses ?? []).map((row) => [
               row.accountCode,
               row.accountName,
               formatMoney(row.amountPsw),
@@ -447,7 +525,7 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
       };
     }
 
-    if (report === 'balance-sheet') {
+    if (reportMode === 'balance-sheet') {
       return {
         title: REPORT_META[report].title,
         filename: REPORT_META[report].exportFile,
@@ -483,7 +561,7 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
       };
     }
 
-    if (report === 'cash-flow') {
+    if (reportMode === 'cash-flow') {
       return {
         title: REPORT_META[report].title,
         filename: REPORT_META[report].exportFile,
@@ -508,7 +586,7 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
       };
     }
 
-    if (report === 'monthly-branch-summary') {
+    if (reportMode === 'monthly-branch-summary') {
       const branches = monthlyBranchSummary.data?.branches ?? [];
       const headers = [
         'Code',
@@ -577,10 +655,13 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
     cashFlow.data?.totals.netChangeInCashPsw,
     incomeStatement.data?.expenses,
     incomeStatement.data?.income,
+    profitLoss.data?.expenses,
+    profitLoss.data?.income,
     monthlyBranchSummary.data?.branches,
     monthlyBranchSummary.data?.expenseRows,
     monthlyBranchSummary.data?.incomeRows,
     report,
+    reportMode,
     trialBalance.data?.rows,
   ]);
 
@@ -596,7 +677,14 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
 
       <div className="flex flex-wrap gap-3">
         <Button
+          onClick={() => setAppliedFilters({ branchId, locationId, accountId, dateFrom, dateTo })}
+          disabled={!hasPendingFilterChanges}
+        >
+          Load report
+        </Button>
+        <Button
           variant="outline"
+          disabled={!appliedFilters}
           onClick={() =>
             downloadCsv(
               exportConfig.filename,
@@ -611,6 +699,7 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
         </Button>
         <Button
           variant="outline"
+          disabled={!appliedFilters}
           onClick={() => printHtml(exportConfig.title, exportConfig.sections)}
         >
           Print Report
@@ -625,6 +714,11 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {!appliedFilters ? (
+            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+              Select filters and click Load report.
+            </div>
+          ) : null}
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="reports-branch">Branch</Label>
@@ -666,7 +760,7 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
               </Select>
             </div>
 
-            {report === 'account-statement' ? (
+            {reportMode === 'account-statement' ? (
               <div className="space-y-2 xl:col-span-2">
                 <Label htmlFor="reports-account">Account</Label>
                 <Select
@@ -698,7 +792,7 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
         </CardContent>
       </Card>
 
-      {report === 'trial-balance' ? (
+      {reportMode === 'trial-balance' ? (
         <Card>
           <CardHeader>
             <CardTitle>Trial Balance</CardTitle>
@@ -718,16 +812,23 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
         </Card>
       ) : null}
 
-      {report === 'income-statement' ? (
+      {reportMode === 'income-statement' || reportMode === 'profit-loss' ? (
         <>
-          <SummaryCards income={incomeStatement.data} />
+          <SummaryCards
+            income={reportMode === 'income-statement' ? incomeStatement.data : profitLoss.data}
+          />
           <div className="grid gap-4 xl:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Income</CardTitle>
               </CardHeader>
               <CardContent>
-                <StatementLinesTable rows={incomeStatement.data?.income ?? []} />
+                <StatementLinesTable
+                  rows={
+                    (reportMode === 'income-statement' ? incomeStatement.data : profitLoss.data)
+                      ?.income ?? []
+                  }
+                />
               </CardContent>
             </Card>
             <Card>
@@ -735,14 +836,19 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
                 <CardTitle>Expenses</CardTitle>
               </CardHeader>
               <CardContent>
-                <StatementLinesTable rows={incomeStatement.data?.expenses ?? []} />
+                <StatementLinesTable
+                  rows={
+                    (reportMode === 'income-statement' ? incomeStatement.data : profitLoss.data)
+                      ?.expenses ?? []
+                  }
+                />
               </CardContent>
             </Card>
           </div>
         </>
       ) : null}
 
-      {report === 'balance-sheet' ? (
+      {reportMode === 'balance-sheet' ? (
         <>
           <SummaryCards balance={balanceSheet.data} />
           <div className="grid gap-4 xl:grid-cols-3">
@@ -774,7 +880,7 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
         </>
       ) : null}
 
-      {report === 'cash-flow' ? (
+      {reportMode === 'cash-flow' ? (
         <>
           <SummaryCards cash={cashFlow.data} />
           <div className="grid gap-4 md:grid-cols-3">
@@ -823,7 +929,7 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
         </>
       ) : null}
 
-      {report === 'monthly-branch-summary' ? (
+      {reportMode === 'monthly-branch-summary' ? (
         <>
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
@@ -886,7 +992,7 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
         </>
       ) : null}
 
-      {report === 'account-statement' ? (
+      {reportMode === 'account-statement' ? (
         <Card>
           <CardHeader>
             <CardTitle>Account Statement</CardTitle>

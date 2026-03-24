@@ -317,6 +317,25 @@ type ReportsPageProps = {
   standalone?: boolean;
 };
 
+type ReportLoadFilters = {
+  reportKey: ReportKey;
+  branchId: string | null;
+  destinationBranchId: string | null;
+  departmentId: string | null;
+  employeeId: string | null;
+  customerId: string | null;
+  payrollCycleId: string | null;
+  riderUserId: string | null;
+  from: string;
+  to: string;
+  employeeStatus: number | null;
+  leaveStatus: number | null;
+  cashConfirmationStatus: number | null;
+  expenseRequestStatus: number | null;
+  creditAgingBucket: string | null;
+  employeeSearch: string;
+};
+
 export function ReportsPage({ initialReport = 'employees', standalone = false }: ReportsPageProps) {
   const user = useAuthStore((state) => state.user);
   const printRef = useRef<HTMLDivElement>(null);
@@ -444,6 +463,7 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
   const selectedExpenseRequestStatus =
     expenseRequestStatus !== '__all__' ? Number(expenseRequestStatus) : null;
   const selectedCreditAgingBucket = creditAgingBucket !== '__all__' ? creditAgingBucket : null;
+  const [loadedFilters, setLoadedFilters] = useState<ReportLoadFilters | null>(null);
 
   const { data: branchOptions = [] } = useListBranchOptionsQuery();
   const { data: departmentOptions = [] } = useListDepartmentOptionsQuery();
@@ -456,58 +476,111 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
   const payrollCycleOptions = payrollCyclesData?.data ?? [];
   const customerOptions = customersData?.data ?? [];
 
+  const draftLoadFilters: ReportLoadFilters = {
+    reportKey: activeReport,
+    branchId: selectedBranchId,
+    destinationBranchId: selectedDestinationBranchId,
+    departmentId: selectedDepartmentId,
+    employeeId: selectedEmployeeId,
+    customerId: selectedCustomerId,
+    payrollCycleId: selectedPayrollCycleId,
+    riderUserId: selectedRiderUserId,
+    from,
+    to,
+    employeeStatus: selectedEmployeeStatus,
+    leaveStatus: selectedLeaveStatus,
+    cashConfirmationStatus: selectedCashConfirmationStatus,
+    expenseRequestStatus: selectedExpenseRequestStatus,
+    creditAgingBucket: selectedCreditAgingBucket,
+    employeeSearch: employeeSearch || '',
+  };
+
+  const isLoadedForActiveReport = loadedFilters?.reportKey === activeReport;
+  const hasPendingFilterChanges = useMemo(() => {
+    if (!isLoadedForActiveReport || !loadedFilters) return true;
+    return (
+      draftLoadFilters.branchId !== loadedFilters.branchId ||
+      draftLoadFilters.destinationBranchId !== loadedFilters.destinationBranchId ||
+      draftLoadFilters.departmentId !== loadedFilters.departmentId ||
+      draftLoadFilters.employeeId !== loadedFilters.employeeId ||
+      draftLoadFilters.customerId !== loadedFilters.customerId ||
+      draftLoadFilters.payrollCycleId !== loadedFilters.payrollCycleId ||
+      draftLoadFilters.riderUserId !== loadedFilters.riderUserId ||
+      draftLoadFilters.from !== loadedFilters.from ||
+      draftLoadFilters.to !== loadedFilters.to ||
+      draftLoadFilters.employeeStatus !== loadedFilters.employeeStatus ||
+      draftLoadFilters.leaveStatus !== loadedFilters.leaveStatus ||
+      draftLoadFilters.cashConfirmationStatus !== loadedFilters.cashConfirmationStatus ||
+      draftLoadFilters.expenseRequestStatus !== loadedFilters.expenseRequestStatus ||
+      draftLoadFilters.creditAgingBucket !== loadedFilters.creditAgingBucket ||
+      draftLoadFilters.employeeSearch !== loadedFilters.employeeSearch
+    );
+  }, [draftLoadFilters, isLoadedForActiveReport, loadedFilters]);
+
+  const appliedFilters = isLoadedForActiveReport ? loadedFilters : null;
+
   const { data: employeeReport, isFetching: isEmployeeReportFetching } =
     useGetEmployeeMasterReportQuery(
       {
-        branchId: selectedBranchId,
-        departmentId: selectedDepartmentId,
-        status: selectedEmployeeStatus,
-        search: employeeSearch || null,
+        branchId: appliedFilters?.branchId ?? null,
+        departmentId: appliedFilters?.departmentId ?? null,
+        status: appliedFilters?.employeeStatus ?? null,
+        search: appliedFilters?.employeeSearch || null,
       },
-      { skip: activeReport !== 'employees' || !canEmployees },
+      { skip: activeReport !== 'employees' || !canEmployees || !appliedFilters },
     );
 
   const { data: attendanceReport, isFetching: isAttendanceReportFetching } =
     useGetAttendanceReportQuery(
       {
-        from,
-        to,
-        employeeId: selectedEmployeeId,
-        branchId: selectedBranchId,
+        from: appliedFilters?.from ?? from,
+        to: appliedFilters?.to ?? to,
+        employeeId: appliedFilters?.employeeId ?? null,
+        branchId: appliedFilters?.branchId ?? null,
       },
-      { skip: activeReport !== 'attendance' || !canAttendance },
+      { skip: activeReport !== 'attendance' || !canAttendance || !appliedFilters },
     );
 
   const { data: leaveReport, isFetching: isLeaveReportFetching } = useGetLeaveRequestsReportQuery(
     {
-      from,
-      to,
-      employeeId: selectedEmployeeId,
-      status: selectedLeaveStatus,
+      from: appliedFilters?.from ?? from,
+      to: appliedFilters?.to ?? to,
+      employeeId: appliedFilters?.employeeId ?? null,
+      status: appliedFilters?.leaveStatus ?? null,
     },
-    { skip: activeReport !== 'leave' || !canLeave },
+    { skip: activeReport !== 'leave' || !canLeave || !appliedFilters },
   );
 
   const { data: payrollRegisterReport, isFetching: isPayrollRegisterFetching } =
     useGetPayrollRegisterReportQuery(
-      { payrollCycleId: selectedPayrollCycleId ?? '' },
+      { payrollCycleId: appliedFilters?.payrollCycleId ?? '' },
       {
-        skip: activeReport !== 'payroll-register' || !canPayrollRegister || !selectedPayrollCycleId,
+        skip:
+          activeReport !== 'payroll-register' ||
+          !canPayrollRegister ||
+          !appliedFilters?.payrollCycleId,
       },
     );
 
   const { data: payrollOvertimeReport, isFetching: isPayrollOvertimeFetching } =
     useGetPayrollOvertimeReportQuery(
-      { payrollCycleId: selectedPayrollCycleId ?? '' },
-      { skip: activeReport !== 'payroll-overtime' || !canPayrollInputs || !selectedPayrollCycleId },
+      { payrollCycleId: appliedFilters?.payrollCycleId ?? '' },
+      {
+        skip:
+          activeReport !== 'payroll-overtime' ||
+          !canPayrollInputs ||
+          !appliedFilters?.payrollCycleId,
+      },
     );
 
   const { data: payrollAdjustmentsReport, isFetching: isPayrollAdjustmentsFetching } =
     useGetPayrollAdjustmentsReportQuery(
-      { payrollCycleId: selectedPayrollCycleId ?? '' },
+      { payrollCycleId: appliedFilters?.payrollCycleId ?? '' },
       {
         skip:
-          activeReport !== 'payroll-adjustments' || !canPayrollInputs || !selectedPayrollCycleId,
+          activeReport !== 'payroll-adjustments' ||
+          !canPayrollInputs ||
+          !appliedFilters?.payrollCycleId,
       },
     );
 
@@ -515,115 +588,127 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
     data: payrollJournalReconciliationReport,
     isFetching: isPayrollJournalReconciliationFetching,
   } = useGetPayrollJournalReconciliationReportQuery(
-    { payrollCycleId: selectedPayrollCycleId ?? '' },
+    { payrollCycleId: appliedFilters?.payrollCycleId ?? '' },
     {
       skip:
         activeReport !== 'payroll-journal-reconciliation' ||
         !canPayrollJournalReconciliation ||
-        !selectedPayrollCycleId,
+        !appliedFilters?.payrollCycleId,
     },
   );
 
   const { data: customerStatement, isFetching: isCustomerStatementFetching } =
     useGetCustomerStatementQuery(
       {
-        customerId: selectedCustomerId ?? '',
-        ...toDateTimeRange(from, to),
+        customerId: appliedFilters?.customerId ?? '',
+        ...toDateTimeRange(appliedFilters?.from ?? from, appliedFilters?.to ?? to),
       },
-      { skip: activeReport !== 'customer-statement' || !canCustomers || !selectedCustomerId },
+      {
+        skip: activeReport !== 'customer-statement' || !canCustomers || !appliedFilters?.customerId,
+      },
     );
 
   const { data: parcelStatusReport, isFetching: isParcelStatusFetching } =
     useGetParcelStatusSummaryReportQuery(
       {
-        branchId: selectedBranchId,
-        from,
-        to,
+        branchId: appliedFilters?.branchId ?? null,
+        from: appliedFilters?.from ?? from,
+        to: appliedFilters?.to ?? to,
       },
-      { skip: activeReport !== 'parcel-status' || !canParcels },
+      { skip: activeReport !== 'parcel-status' || !canParcels || !appliedFilters },
     );
 
   const { data: deliveryPerformanceReport, isFetching: isDeliveryPerformanceFetching } =
     useGetDeliveryPerformanceReportQuery(
       {
-        branchId: selectedBranchId,
-        riderUserId: selectedRiderUserId,
-        from,
-        to,
+        branchId: appliedFilters?.branchId ?? null,
+        riderUserId: appliedFilters?.riderUserId ?? null,
+        from: appliedFilters?.from ?? from,
+        to: appliedFilters?.to ?? to,
       },
-      { skip: activeReport !== 'delivery-performance' || !canParcels },
+      { skip: activeReport !== 'delivery-performance' || !canParcels || !appliedFilters },
     );
 
   const { data: shiftRevenueReport, isFetching: isShiftRevenueFetching } =
     useGetShiftRevenueReportQuery(
       {
-        branchId: selectedBranchId,
-        from,
-        to,
+        branchId: appliedFilters?.branchId ?? null,
+        from: appliedFilters?.from ?? from,
+        to: appliedFilters?.to ?? to,
       },
-      { skip: activeReport !== 'shift-revenue' || !canShiftRevenue },
+      { skip: activeReport !== 'shift-revenue' || !canShiftRevenue || !appliedFilters },
     );
 
   const { data: branchProfitabilityReport, isFetching: isBranchProfitabilityFetching } =
     useGetBranchProfitabilityReportQuery(
       {
-        branchId: selectedBranchId,
-        from,
-        to,
+        branchId: appliedFilters?.branchId ?? null,
+        from: appliedFilters?.from ?? from,
+        to: appliedFilters?.to ?? to,
       },
-      { skip: activeReport !== 'branch-profitability' || !canBranchProfitability },
+      {
+        skip: activeReport !== 'branch-profitability' || !canBranchProfitability || !appliedFilters,
+      },
     );
 
   const { data: dailyCashConfirmationReport, isFetching: isDailyCashConfirmationFetching } =
     useGetDailyCashConfirmationReportQuery(
       {
-        branchId: selectedBranchId,
-        from,
-        to,
-        status: selectedCashConfirmationStatus,
+        branchId: appliedFilters?.branchId ?? null,
+        from: appliedFilters?.from ?? from,
+        to: appliedFilters?.to ?? to,
+        status: appliedFilters?.cashConfirmationStatus ?? null,
       },
-      { skip: activeReport !== 'daily-cash-confirmations' || !canAccountingReports },
+      {
+        skip:
+          activeReport !== 'daily-cash-confirmations' || !canAccountingReports || !appliedFilters,
+      },
     );
 
   const { data: expenseByCategoryReport, isFetching: isExpenseByCategoryFetching } =
     useGetExpenseByCategoryReportQuery(
       {
-        branchId: selectedBranchId,
-        from,
-        to,
-        status: selectedExpenseRequestStatus,
+        branchId: appliedFilters?.branchId ?? null,
+        from: appliedFilters?.from ?? from,
+        to: appliedFilters?.to ?? to,
+        status: appliedFilters?.expenseRequestStatus ?? null,
       },
-      { skip: activeReport !== 'expense-by-category' || !canAccountingReports },
+      { skip: activeReport !== 'expense-by-category' || !canAccountingReports || !appliedFilters },
     );
 
   const { data: creditExposureReport, isFetching: isCreditExposureFetching } =
     useGetCreditExposureReportQuery(
       {
-        agingBucket: selectedCreditAgingBucket,
+        agingBucket: appliedFilters?.creditAgingBucket ?? null,
       },
-      { skip: activeReport !== 'credit-exposure' || !canCreditExposure },
+      { skip: activeReport !== 'credit-exposure' || !canCreditExposure || !appliedFilters },
     );
 
   const { data: customerCreditAgingDetailReport, isFetching: isCustomerCreditAgingDetailFetching } =
     useGetCustomerCreditAgingDetailReportQuery(
       {
-        customerId: selectedCustomerId,
-        agingBucket: selectedCreditAgingBucket,
-        from,
-        to,
+        customerId: appliedFilters?.customerId ?? null,
+        agingBucket: appliedFilters?.creditAgingBucket ?? null,
+        from: appliedFilters?.from ?? from,
+        to: appliedFilters?.to ?? to,
       },
-      { skip: activeReport !== 'customer-credit-aging-detail' || !canCreditExposure },
+      {
+        skip:
+          activeReport !== 'customer-credit-aging-detail' || !canCreditExposure || !appliedFilters,
+      },
     );
 
   const { data: toBePaidOutstandingReport, isFetching: isToBePaidOutstandingFetching } =
     useGetToBePaidOutstandingReportQuery(
       {
-        sourceBranchId: selectedBranchId,
-        destinationBranchId: selectedDestinationBranchId,
-        from,
-        to,
+        sourceBranchId: appliedFilters?.branchId ?? null,
+        destinationBranchId: appliedFilters?.destinationBranchId ?? null,
+        from: appliedFilters?.from ?? from,
+        to: appliedFilters?.to ?? to,
       },
-      { skip: activeReport !== 'tobepaid-outstanding' || !canToBePaidOutstanding },
+      {
+        skip: activeReport !== 'tobepaid-outstanding' || !canToBePaidOutstanding || !appliedFilters,
+      },
     );
 
   const {
@@ -631,13 +716,16 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
     isFetching: isToBePaidCollectionsReconciliationFetching,
   } = useGetToBePaidCollectionsReconciliationReportQuery(
     {
-      sourceBranchId: selectedBranchId,
-      destinationBranchId: selectedDestinationBranchId,
-      from,
-      to,
+      sourceBranchId: appliedFilters?.branchId ?? null,
+      destinationBranchId: appliedFilters?.destinationBranchId ?? null,
+      from: appliedFilters?.from ?? from,
+      to: appliedFilters?.to ?? to,
     },
     {
-      skip: activeReport !== 'tobepaid-collections-reconciliation' || !canToBePaidOutstanding,
+      skip:
+        activeReport !== 'tobepaid-collections-reconciliation' ||
+        !canToBePaidOutstanding ||
+        !appliedFilters,
     },
   );
 
@@ -1921,6 +2009,10 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
     documentTitle: REPORT_LABELS[activeReport].toLowerCase().replaceAll(/\s+/g, '-'),
   });
 
+  const handleLoadReport = () => {
+    setLoadedFilters(draftLoadFilters);
+  };
+
   if (!availableReports.length) {
     return (
       <div className="w-full p-4">
@@ -1958,8 +2050,16 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
             </Button>
           ) : null}
           <Button
+            onClick={handleLoadReport}
+            disabled={currentReport.loading || !hasPendingFilterChanges}
+          >
+            Load report
+          </Button>
+          <Button
             variant="outline"
-            disabled={!currentSection || currentSection.rows.length === 0}
+            disabled={
+              !isLoadedForActiveReport || !currentSection || currentSection.rows.length === 0
+            }
             onClick={() => {
               if (!currentSection) return;
               downloadCsv(currentReport.csvFilename, currentSection);
@@ -1968,7 +2068,10 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
             Export CSV
           </Button>
           <Button
-            disabled={!currentReport.sections.some((section) => section.rows.length > 0)}
+            disabled={
+              !isLoadedForActiveReport ||
+              !currentReport.sections.some((section) => section.rows.length > 0)
+            }
             onClick={() => void printReport()}
           >
             Print report
@@ -1997,6 +2100,11 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
             <CardDescription>{currentReport.description}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {!isLoadedForActiveReport ? (
+              <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                Select filters and click Load report.
+              </div>
+            ) : null}
             {activeReport === 'employees' ? (
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="space-y-2">

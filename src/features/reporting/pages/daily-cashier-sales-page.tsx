@@ -76,6 +76,14 @@ const PAYMENT_METHOD_LABELS: Record<number, string> = {
   [PaymentMethod.CREDIT]: 'Credit',
 };
 
+type DailyCashierSalesFilters = {
+  date: string;
+  branchId: string | null;
+  locationId: string | null;
+  cashierType: number | null;
+  cashierUserId: string | null;
+};
+
 export function DailyCashierSalesPage() {
   const user = useAuthStore((state) => state.user);
   const printRef = useRef<HTMLDivElement>(null);
@@ -102,6 +110,7 @@ export function DailyCashierSalesPage() {
   const effectiveCashierUserId = canSelectCashier ? selectedCashierUserId : (user?.id ?? null);
   const effectiveBranchId = isHeadOffice ? selectedBranchId : userBranchId;
   const selectedLocationId = effectiveBranchId && locationId !== '__all__' ? locationId : null;
+  const [appliedFilters, setAppliedFilters] = useState<DailyCashierSalesFilters | null>(null);
 
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
     companyId ? { companyId } : undefined,
@@ -120,24 +129,26 @@ export function DailyCashierSalesPage() {
     { skip: !effectiveBranchId || !canSelectCashier },
   );
 
-  const baseParams = useMemo(
-    () => ({
+  const {
+    data: report,
+    isFetching,
+    isUninitialized,
+  } = useGetDailyCashierSalesReportQuery(
+    appliedFilters ?? {
       date,
       branchId: effectiveBranchId,
       locationId: selectedLocationId,
       cashierType: selectedCashierType,
-    }),
-    [date, effectiveBranchId, selectedCashierType, selectedLocationId],
+      cashierUserId: effectiveCashierUserId,
+    },
+    {
+      skip: !companyId || !appliedFilters,
+    },
   );
-
-  const { data: optionsReport, isFetching: isCashierOptionsFetching } =
-    useGetDailyCashierSalesReportQuery(baseParams, {
-      skip: !companyId || !canSelectCashier,
-    });
 
   const cashierOptions = useMemo(() => {
     const byCashier = new Map<string, { id: string; name: string }>();
-    for (const transaction of optionsReport?.transactions ?? []) {
+    for (const transaction of report?.transactions ?? []) {
       if (!transaction.cashierId) continue;
       byCashier.set(transaction.cashierId, {
         id: transaction.cashierId,
@@ -145,7 +156,7 @@ export function DailyCashierSalesPage() {
       });
     }
     return Array.from(byCashier.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [optionsReport?.transactions]);
+  }, [report?.transactions]);
 
   useEffect(() => {
     if (!canSelectCashier) return;
@@ -159,52 +170,72 @@ export function DailyCashierSalesPage() {
     setCashierUserId('__all__');
   }, [canSelectCashier, cashierOptions, cashierUserId]);
 
-  const reportParams = useMemo(
-    () => ({
-      ...baseParams,
-      cashierUserId: effectiveCashierUserId,
-    }),
-    [baseParams, effectiveCashierUserId],
-  );
+  useEffect(() => {
+    setAppliedFilters((current) => {
+      if (!current) return current;
+      return current.branchId === effectiveBranchId
+        ? current
+        : { ...current, branchId: effectiveBranchId };
+    });
+  }, [effectiveBranchId]);
 
-  const { data: report, isFetching } = useGetDailyCashierSalesReportQuery(reportParams, {
-    skip: !companyId,
-  });
+  const draftFilters: DailyCashierSalesFilters = {
+    date,
+    branchId: effectiveBranchId,
+    locationId: selectedLocationId,
+    cashierType: selectedCashierType,
+    cashierUserId: effectiveCashierUserId,
+  };
 
-  const printReport = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `daily-cashier-sales-${date}`,
-  });
+  const hasPendingFilterChanges =
+    !appliedFilters ||
+    draftFilters.date !== appliedFilters.date ||
+    draftFilters.branchId !== appliedFilters.branchId ||
+    draftFilters.locationId !== appliedFilters.locationId ||
+    draftFilters.cashierType !== appliedFilters.cashierType ||
+    draftFilters.cashierUserId !== appliedFilters.cashierUserId;
+
+  const handleLoadReport = () => {
+    setAppliedFilters(draftFilters);
+  };
+
+  const activeFilters = appliedFilters ?? draftFilters;
 
   const filters = [
-    { label: 'Date', value: date },
+    { label: 'Date', value: activeFilters.date },
     {
       label: 'Branch',
       value: isHeadOffice
-        ? (branchOptions.find((branch) => branch.id === selectedBranchId)?.name ?? 'All branches')
+        ? (branchOptions.find((branch) => branch.id === activeFilters.branchId)?.name ??
+          'All branches')
         : (user?.branch?.name ?? 'My branch'),
     },
     {
       label: 'Location',
       value:
-        locationOptions.find((location) => location.id === selectedLocationId)?.name ??
+        locationOptions.find((location) => location.id === activeFilters.locationId)?.name ??
         'All locations',
     },
     {
       label: 'Cashier Type',
       value:
-        selectedCashierType !== null
-          ? (CASHIER_TYPE_LABELS[selectedCashierType] ?? String(selectedCashierType))
+        activeFilters.cashierType !== null
+          ? (CASHIER_TYPE_LABELS[activeFilters.cashierType] ?? String(activeFilters.cashierType))
           : 'All cashier types',
     },
     {
       label: 'Cashier',
       value: canSelectCashier
-        ? (cashierOptions.find((cashier) => cashier.id === selectedCashierUserId)?.name ??
+        ? (cashierOptions.find((cashier) => cashier.id === activeFilters.cashierUserId)?.name ??
           'All cashiers')
         : (user?.fullname ?? 'My sales'),
     },
   ];
+
+  const printReport = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `daily-cashier-sales-${appliedFilters?.date ?? date}`,
+  });
 
   return (
     <div className="w-full space-y-4 p-4">
@@ -215,12 +246,18 @@ export function DailyCashierSalesPage() {
             Daily sales by session with sender, receiver, and delivery cashier breakdown.
           </p>
         </div>
-        <Button
-          onClick={() => void printReport()}
-          disabled={!report || report.transactions.length === 0}
-        >
-          Print report
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleLoadReport} disabled={isFetching || !hasPendingFilterChanges}>
+            Load report
+          </Button>
+          <Button
+            onClick={() => void printReport()}
+            disabled={!report || report.transactions.length === 0}
+            variant="outline"
+          >
+            Print report
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -303,14 +340,9 @@ export function DailyCashierSalesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">All cashiers</SelectItem>
-                  {isCashierOptionsFetching ? (
-                    <SelectItem value="__loading__" disabled>
-                      Loading cashiers...
-                    </SelectItem>
-                  ) : null}
-                  {!isCashierOptionsFetching && cashierOptions.length === 0 ? (
+                  {cashierOptions.length === 0 ? (
                     <SelectItem value="__empty__" disabled>
-                      No cashiers found
+                      Load report to list cashiers
                     </SelectItem>
                   ) : null}
                   {cashierOptions.map((cashier) => (
@@ -427,6 +459,12 @@ export function DailyCashierSalesPage() {
                 <TableRow>
                   <TableCell colSpan={9} className="text-center text-muted-foreground">
                     Loading...
+                  </TableCell>
+                </TableRow>
+              ) : isUninitialized ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
+                    Select filters and click Load report.
                   </TableCell>
                 </TableRow>
               ) : (report?.transactions.length ?? 0) === 0 ? (
