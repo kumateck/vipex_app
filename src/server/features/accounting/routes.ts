@@ -81,11 +81,24 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
   })
   .get(
     '/accounts',
-    async ({ query, user }) =>
-      listAccountsCtrl({
-        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
-        active: query.active,
-      }),
+    async ({ query, user }) => {
+      const companyId = resolveCompanyId(user as AuthUser | null, query.companyId);
+      const active = query.active;
+      try {
+        return await listAccountsCtrl({
+          companyId,
+          active,
+        });
+      } catch (error) {
+        console.error('[accounting/accounts] list failed', {
+          companyId,
+          active,
+          userId: (user as AuthUser | null)?.sub ?? null,
+          error,
+        });
+        throw error;
+      }
+    },
     {
       beforeHandle: canReadOrManageAccountingSetup,
       query: t.Object({ companyId: t.String(), active: t.Optional(t.Boolean()) }),
@@ -100,6 +113,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
           companyId: string;
           code: string;
           name: string;
+          label?: string | null;
           accountClass: number;
           parentAccountId?: string | null;
           isPostable?: boolean;
@@ -117,6 +131,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         companyId: t.String(),
         code: t.String(),
         name: t.String(),
+        label: t.Optional(t.Union([t.String(), t.Null()])),
         accountClass: t.Number(),
         parentAccountId: t.Optional(t.Union([t.String(), t.Null()])),
         isPostable: t.Optional(t.Boolean()),
@@ -133,10 +148,12 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
           companyId: string;
           code?: string;
           name?: string;
+          label?: string | null;
           accountClass?: number;
           parentAccountId?: string | null;
           isPostable?: boolean;
           active?: boolean;
+          syncLinkedCategory?: boolean;
         }),
         id: params.id,
         companyId: resolveCompanyId(
@@ -152,10 +169,12 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         companyId: t.String(),
         code: t.Optional(t.String()),
         name: t.Optional(t.String()),
+        label: t.Optional(t.Union([t.String(), t.Null()])),
         accountClass: t.Optional(t.Number()),
         parentAccountId: t.Optional(t.Union([t.String(), t.Null()])),
         isPostable: t.Optional(t.Boolean()),
         active: t.Optional(t.Boolean()),
+        syncLinkedCategory: t.Optional(t.Boolean()),
       }),
       detail: { tags: ['Accounting'], summary: 'Update chart of account item' },
     },
@@ -166,12 +185,13 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
       deleteAccountCtrl({
         id: params.id,
         companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        removeLinkedCategory: query.removeLinkedCategory,
         actorUserId: (user as AuthUser).sub,
       }),
     {
       beforeHandle: canManageAccountingSetup,
       params: t.Object({ id: t.String() }),
-      query: t.Object({ companyId: t.String() }),
+      query: t.Object({ companyId: t.String(), removeLinkedCategory: t.Optional(t.Boolean()) }),
       detail: { tags: ['Accounting'], summary: 'Delete chart of account item' },
     },
   )

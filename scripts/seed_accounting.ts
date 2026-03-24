@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { createId } from '@paralleldrive/cuid2';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 import { db } from '../src/db/config';
 import {
   accountingApprovalPolicies,
@@ -193,7 +193,13 @@ async function main() {
         .select({ id: chartOfAccounts.id })
         .from(chartOfAccounts)
         .where(
-          and(eq(chartOfAccounts.companyId, company.id), eq(chartOfAccounts.code, account.code)),
+          and(
+            eq(chartOfAccounts.companyId, company.id),
+            or(
+              eq(chartOfAccounts.code, account.code),
+              sql`lower(${chartOfAccounts.name}) = lower(${account.name})`,
+            ),
+          ),
         )
         .limit(1);
 
@@ -212,6 +218,8 @@ async function main() {
           createdBy,
         });
         console.log(`Created account ${account.code} for company ${company.id}`);
+      } else {
+        console.log(`Reusing existing account ${account.code} (${account.name}) for ${company.id}`);
       }
       accountIds.set(account.code, id);
     }
@@ -252,7 +260,15 @@ async function main() {
       const [existing] = await db
         .select({ id: expenseCategories.id })
         .from(expenseCategories)
-        .where(and(eq(expenseCategories.companyId, company.id), eq(expenseCategories.code, code)))
+        .where(
+          and(
+            eq(expenseCategories.companyId, company.id),
+            or(
+              eq(expenseCategories.code, code),
+              sql`lower(${expenseCategories.name}) = lower(${name})`,
+            ),
+          ),
+        )
         .limit(1);
 
       if (!existing) {

@@ -30,6 +30,7 @@ import {
 } from '../api/parcel.api';
 import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 import { printParcelInternalTransferSlip } from '../utils/internal-transfer-print';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
 function holderTypeLabel(value: number) {
   switch (value) {
@@ -330,366 +331,376 @@ export function ParcelInternalTransfersPage() {
           without changing parcel shipment status.
         </p>
       </div>
+      <ScrollableWrapper>
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Pending Transfers</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-semibold">{transferCounts.pending}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Acknowledged Transfers</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-semibold">{transferCounts.acknowledged}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Cancelled Transfers</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-semibold">{transferCounts.cancelled}</p>
+              </CardContent>
+            </Card>
+          </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Pending Transfers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{transferCounts.pending}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Acknowledged Transfers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{transferCounts.acknowledged}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Cancelled Transfers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold">{transferCounts.cancelled}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[430px_minmax(0,1fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Create Transfer</CardTitle>
-            <CardDescription>
-              Choose the current holder and the next holder, then select parcels for the move.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4">
-              <div className="space-y-2">
-                <Label>From</Label>
-                <Select
-                  value={sourceHolderType}
-                  onValueChange={setSourceHolderType}
-                  disabled={!canCreate}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={String(ParcelHolderType.BRANCH)}>Main Branch</SelectItem>
-                    <SelectItem value={String(ParcelHolderType.LOCATION)}>Location</SelectItem>
-                    <SelectItem value={String(ParcelHolderType.WAREHOUSE)}>Warehouse</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {Number(sourceHolderType) === ParcelHolderType.LOCATION ? (
-                <div className="space-y-2">
-                  <Label>Source Location</Label>
-                  <Select
-                    value={sourceLocationId || undefined}
-                    onValueChange={setSourceLocationId}
-                    disabled={!canCreate}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select source location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locationOptions.map((location) => (
-                        <SelectItem key={location.id} value={location.id}>
-                          {location.name}
+          <div className="grid gap-4 xl:grid-cols-[430px_minmax(0,1fr)]">
+            <Card>
+              <CardHeader>
+                <CardTitle>Create Transfer</CardTitle>
+                <CardDescription>
+                  Choose the current holder and the next holder, then select parcels for the move.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label>From</Label>
+                    <Select
+                      value={sourceHolderType}
+                      onValueChange={setSourceHolderType}
+                      disabled={!canCreate}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={String(ParcelHolderType.BRANCH)}>Main Branch</SelectItem>
+                        <SelectItem value={String(ParcelHolderType.LOCATION)}>Location</SelectItem>
+                        <SelectItem value={String(ParcelHolderType.WAREHOUSE)}>
+                          Warehouse
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
-              {Number(sourceHolderType) === ParcelHolderType.WAREHOUSE ? (
-                <div className="space-y-2">
-                  <Label>Source Warehouse</Label>
-                  <Select
-                    value={sourceWarehouseId || undefined}
-                    onValueChange={setSourceWarehouseId}
-                    disabled={!canCreate}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select source warehouse" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {warehouseOptions.map((warehouse) => (
-                        <SelectItem key={warehouse.id} value={warehouse.id}>
-                          {warehouse.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
-
-              <div className="space-y-2">
-                <Label>To</Label>
-                <Select
-                  value={destinationHolderType}
-                  onValueChange={setDestinationHolderType}
-                  disabled={!canCreate}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={String(ParcelHolderType.BRANCH)}>Main Branch</SelectItem>
-                    <SelectItem value={String(ParcelHolderType.LOCATION)}>Location</SelectItem>
-                    <SelectItem value={String(ParcelHolderType.WAREHOUSE)}>Warehouse</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {Number(destinationHolderType) === ParcelHolderType.LOCATION ? (
-                <div className="space-y-2">
-                  <Label>Destination Location</Label>
-                  <Select
-                    value={destinationLocationId || undefined}
-                    onValueChange={setDestinationLocationId}
-                    disabled={!canCreate}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select destination location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locationOptions.map((location) => (
-                        <SelectItem key={location.id} value={location.id}>
-                          {location.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
-              {Number(destinationHolderType) === ParcelHolderType.WAREHOUSE ? (
-                <div className="space-y-2">
-                  <Label>Destination Warehouse</Label>
-                  <Select
-                    value={destinationWarehouseId || undefined}
-                    onValueChange={setDestinationWarehouseId}
-                    disabled={!canCreate}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select destination warehouse" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {warehouseOptions.map((warehouse) => (
-                        <SelectItem key={warehouse.id} value={warehouse.id}>
-                          {warehouse.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
-              <div className="space-y-2">
-                <Label htmlFor="transfer-notes">Notes</Label>
-                <Input
-                  id="transfer-notes"
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Optional transfer note"
-                  disabled={!canCreate}
-                />
-              </div>
-            </div>
-            {canCreate ? (
-              <Button onClick={() => void handleCreateTransfer()} disabled={isCreating}>
-                {isCreating ? 'Creating...' : `Create Transfer (${selectedParcels.length})`}
-              </Button>
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Search Parcels</CardTitle>
-              <CardDescription>
-                Search parcels already assigned to this branch, then add them to the transfer list.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Tracking code, booking code, receiver name, or phone"
-                />
-                <Button onClick={() => void runSearch()} disabled={isSearching}>
-                  Search
-                </Button>
-              </div>
-              <DataTable
-                mode="client"
-                data={searchResults?.data ?? []}
-                columns={searchColumns}
-                loading={isSearching}
-                pageSizeOptions={[10, 20]}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Selected Parcels</CardTitle>
-              <CardDescription>
-                These parcels will move together on the same internal transfer note.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {selectedParcels.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No parcels selected yet.</p>
-              ) : (
-                selectedParcels.map((parcel) => (
-                  <div
-                    key={parcel.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div className="space-y-1">
-                      <p className="font-medium">{parcel.trackingCode}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {parcel.bookingCode} • {parcel.receiverName || '-'} • {parcel.parcelDetails}
-                      </p>
-                      <ParcelInternalHolderBadge holder={parcel} />
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {Number(sourceHolderType) === ParcelHolderType.LOCATION ? (
+                    <div className="space-y-2">
+                      <Label>Source Location</Label>
+                      <Select
+                        value={sourceLocationId || undefined}
+                        onValueChange={setSourceLocationId}
+                        disabled={!canCreate}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select source location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locationOptions.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => removeParcel(parcel.id)}>
-                      Remove
+                  ) : null}
+                  {Number(sourceHolderType) === ParcelHolderType.WAREHOUSE ? (
+                    <div className="space-y-2">
+                      <Label>Source Warehouse</Label>
+                      <Select
+                        value={sourceWarehouseId || undefined}
+                        onValueChange={setSourceWarehouseId}
+                        disabled={!canCreate}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select source warehouse" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {warehouseOptions.map((warehouse) => (
+                            <SelectItem key={warehouse.id} value={warehouse.id}>
+                              {warehouse.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
+
+                  <div className="space-y-2">
+                    <Label>To</Label>
+                    <Select
+                      value={destinationHolderType}
+                      onValueChange={setDestinationHolderType}
+                      disabled={!canCreate}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={String(ParcelHolderType.BRANCH)}>Main Branch</SelectItem>
+                        <SelectItem value={String(ParcelHolderType.LOCATION)}>Location</SelectItem>
+                        <SelectItem value={String(ParcelHolderType.WAREHOUSE)}>
+                          Warehouse
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {Number(destinationHolderType) === ParcelHolderType.LOCATION ? (
+                    <div className="space-y-2">
+                      <Label>Destination Location</Label>
+                      <Select
+                        value={destinationLocationId || undefined}
+                        onValueChange={setDestinationLocationId}
+                        disabled={!canCreate}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select destination location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locationOptions.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
+                  {Number(destinationHolderType) === ParcelHolderType.WAREHOUSE ? (
+                    <div className="space-y-2">
+                      <Label>Destination Warehouse</Label>
+                      <Select
+                        value={destinationWarehouseId || undefined}
+                        onValueChange={setDestinationWarehouseId}
+                        disabled={!canCreate}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select destination warehouse" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {warehouseOptions.map((warehouse) => (
+                            <SelectItem key={warehouse.id} value={warehouse.id}>
+                              {warehouse.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
+                  <div className="space-y-2">
+                    <Label htmlFor="transfer-notes">Notes</Label>
+                    <Input
+                      id="transfer-notes"
+                      value={notes}
+                      onChange={(event) => setNotes(event.target.value)}
+                      placeholder="Optional transfer note"
+                      disabled={!canCreate}
+                    />
+                  </div>
+                </div>
+                {canCreate ? (
+                  <Button onClick={() => void handleCreateTransfer()} disabled={isCreating}>
+                    {isCreating ? 'Creating...' : `Create Transfer (${selectedParcels.length})`}
+                  </Button>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Search Parcels</CardTitle>
+                  <CardDescription>
+                    Search parcels already assigned to this branch, then add them to the transfer
+                    list.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      placeholder="Tracking code, booking code, receiver name, or phone"
+                    />
+                    <Button onClick={() => void runSearch()} disabled={isSearching}>
+                      Search
                     </Button>
                   </div>
-                ))
-              )}
+                  <DataTable
+                    mode="client"
+                    data={searchResults?.data ?? []}
+                    columns={searchColumns}
+                    loading={isSearching}
+                    pageSizeOptions={[10, 20]}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Selected Parcels</CardTitle>
+                  <CardDescription>
+                    These parcels will move together on the same internal transfer note.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {selectedParcels.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No parcels selected yet.</p>
+                  ) : (
+                    selectedParcels.map((parcel) => (
+                      <div
+                        key={parcel.id}
+                        className="flex items-center justify-between rounded-lg border p-3"
+                      >
+                        <div className="space-y-1">
+                          <p className="font-medium">{parcel.trackingCode}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {parcel.bookingCode} • {parcel.receiverName || '-'} •{' '}
+                            {parcel.parcelDetails}
+                          </p>
+                          <ParcelInternalHolderBadge holder={parcel} />
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => removeParcel(parcel.id)}>
+                          Remove
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Transfer History</CardTitle>
+              <CardDescription>Review recent internal moves for this branch.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                mode="client"
+                data={transfers}
+                columns={transferColumns}
+                loading={isFetchingTransfers}
+                showSearch
+                searchPlaceholder="Search transfers"
+                pageSizeOptions={[10, 20, 50]}
+              />
+              {cancelTransferId ? (
+                <div className="mt-4 space-y-2 rounded-lg border p-4">
+                  <Label htmlFor="cancel-reason">Cancel Reason</Label>
+                  <Input
+                    id="cancel-reason"
+                    value={cancelReason}
+                    onChange={(event) => setCancelReason(event.target.value)}
+                    placeholder="Why is this transfer being cancelled?"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      onClick={() => void handleCancelTransfer()}
+                      disabled={isCancelling}
+                    >
+                      {isCancelling ? 'Cancelling...' : 'Confirm Cancel'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setCancelTransferId('');
+                        setCancelReason('');
+                      }}
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
-        </div>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Transfer History</CardTitle>
-          <CardDescription>Review recent internal moves for this branch.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            mode="client"
-            data={transfers}
-            columns={transferColumns}
-            loading={isFetchingTransfers}
-            showSearch
-            searchPlaceholder="Search transfers"
-            pageSizeOptions={[10, 20, 50]}
-          />
-          {cancelTransferId ? (
-            <div className="mt-4 space-y-2 rounded-lg border p-4">
-              <Label htmlFor="cancel-reason">Cancel Reason</Label>
-              <Input
-                id="cancel-reason"
-                value={cancelReason}
-                onChange={(event) => setCancelReason(event.target.value)}
-                placeholder="Why is this transfer being cancelled?"
-              />
-              <div className="flex gap-2">
-                <Button
-                  variant="destructive"
-                  onClick={() => void handleCancelTransfer()}
-                  disabled={isCancelling}
-                >
-                  {isCancelling ? 'Cancelling...' : 'Confirm Cancel'}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setCancelTransferId('');
-                    setCancelReason('');
-                  }}
-                >
-                  Close
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      {selectedHistoryTransferId ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Transfer Slip Preview</CardTitle>
-            <CardDescription>
-              Review the transfer note and print a handover slip for parcel movement.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isFetchingHistoryDetails ? (
-              <p className="text-sm text-muted-foreground">Loading transfer details...</p>
-            ) : !selectedHistoryDetails ? (
-              <p className="text-sm text-muted-foreground">Transfer details are unavailable.</p>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">
-                    {transferStatusLabel(selectedHistoryDetails.transfer.status)}
-                  </Badge>
-                  <Badge variant="secondary">
-                    {selectedHistoryDetails.items.length} parcel
-                    {selectedHistoryDetails.items.length === 1 ? '' : 's'}
-                  </Badge>
-                </div>
-                <div className="grid gap-2 text-sm md:grid-cols-2">
-                  <p>
-                    <strong>Reference:</strong> {selectedHistoryDetails.transfer.referenceNo ?? '-'}
-                  </p>
-                  <p>
-                    <strong>Transferred At:</strong>{' '}
-                    {selectedHistoryDetails.transfer.transferredAt ?? '-'}
-                  </p>
-                  <p>
-                    <strong>From:</strong>{' '}
-                    {holderSummary(selectedHistoryDetails.transfer, 'source')}
-                  </p>
-                  <p>
-                    <strong>To:</strong>{' '}
-                    {holderSummary(selectedHistoryDetails.transfer, 'destination')}
-                  </p>
-                  <p>
-                    <strong>Transferred By:</strong>{' '}
-                    {selectedHistoryDetails.transfer.transferredByName ?? '-'}
-                  </p>
-                  <p>
-                    <strong>Notes:</strong> {selectedHistoryDetails.transfer.notes ?? '-'}
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  {selectedHistoryDetails.items.map((item) => (
-                    <div key={item.parcelId} className="rounded-lg border p-3 text-sm">
-                      <p className="font-medium">{item.trackingCode}</p>
-                      <p className="text-muted-foreground">
-                        {item.bookingCode} • {item.receiverName ?? '-'} • {item.parcelDetails}
+          {selectedHistoryTransferId ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Transfer Slip Preview</CardTitle>
+                <CardDescription>
+                  Review the transfer note and print a handover slip for parcel movement.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isFetchingHistoryDetails ? (
+                  <p className="text-sm text-muted-foreground">Loading transfer details...</p>
+                ) : !selectedHistoryDetails ? (
+                  <p className="text-sm text-muted-foreground">Transfer details are unavailable.</p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline">
+                        {transferStatusLabel(selectedHistoryDetails.transfer.status)}
+                      </Badge>
+                      <Badge variant="secondary">
+                        {selectedHistoryDetails.items.length} parcel
+                        {selectedHistoryDetails.items.length === 1 ? '' : 's'}
+                      </Badge>
+                    </div>
+                    <div className="grid gap-2 text-sm md:grid-cols-2">
+                      <p>
+                        <strong>Reference:</strong>{' '}
+                        {selectedHistoryDetails.transfer.referenceNo ?? '-'}
+                      </p>
+                      <p>
+                        <strong>Transferred At:</strong>{' '}
+                        {selectedHistoryDetails.transfer.transferredAt ?? '-'}
+                      </p>
+                      <p>
+                        <strong>From:</strong>{' '}
+                        {holderSummary(selectedHistoryDetails.transfer, 'source')}
+                      </p>
+                      <p>
+                        <strong>To:</strong>{' '}
+                        {holderSummary(selectedHistoryDetails.transfer, 'destination')}
+                      </p>
+                      <p>
+                        <strong>Transferred By:</strong>{' '}
+                        {selectedHistoryDetails.transfer.transferredByName ?? '-'}
+                      </p>
+                      <p>
+                        <strong>Notes:</strong> {selectedHistoryDetails.transfer.notes ?? '-'}
                       </p>
                     </div>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => printParcelInternalTransferSlip(selectedHistoryDetails)}
-                  >
-                    Print Transfer Slip
-                  </Button>
-                  <Button variant="ghost" onClick={() => setSelectedHistoryTransferId('')}>
-                    Close Preview
-                  </Button>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      ) : null}
+                    <div className="space-y-3">
+                      {selectedHistoryDetails.items.map((item) => (
+                        <div key={item.parcelId} className="rounded-lg border p-3 text-sm">
+                          <p className="font-medium">{item.trackingCode}</p>
+                          <p className="text-muted-foreground">
+                            {item.bookingCode} • {item.receiverName ?? '-'} • {item.parcelDetails}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => printParcelInternalTransferSlip(selectedHistoryDetails)}
+                      >
+                        Print Transfer Slip
+                      </Button>
+                      <Button variant="ghost" onClick={() => setSelectedHistoryTransferId('')}>
+                        Close Preview
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      </ScrollableWrapper>
     </div>
   );
 }

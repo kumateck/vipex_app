@@ -39,6 +39,7 @@ export async function listAccountsRepo(input: { companyId: string; active?: bool
       companyId: chartOfAccounts.companyId,
       code: chartOfAccounts.code,
       name: chartOfAccounts.name,
+      label: chartOfAccounts.label,
       accountClass: chartOfAccounts.accountClass,
       parentAccountId: chartOfAccounts.parentAccountId,
       isPostable: chartOfAccounts.isPostable,
@@ -196,6 +197,7 @@ export async function getAccountByCodeRepo(
       id: chartOfAccounts.id,
       code: chartOfAccounts.code,
       name: chartOfAccounts.name,
+      label: chartOfAccounts.label,
       accountClass: chartOfAccounts.accountClass,
       isPostable: chartOfAccounts.isPostable,
       active: chartOfAccounts.active,
@@ -217,6 +219,7 @@ export async function getAccountRepo(
       companyId: chartOfAccounts.companyId,
       code: chartOfAccounts.code,
       name: chartOfAccounts.name,
+      label: chartOfAccounts.label,
       accountClass: chartOfAccounts.accountClass,
       parentAccountId: chartOfAccounts.parentAccountId,
       isPostable: chartOfAccounts.isPostable,
@@ -248,6 +251,50 @@ export async function getExpenseCategoryRepo(
     )
     .limit(1);
   return row ?? null;
+}
+
+export async function getExpenseCategoryByAccountRepo(
+  companyId: string,
+  accountId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      id: expenseCategories.id,
+      companyId: expenseCategories.companyId,
+      code: expenseCategories.code,
+      name: expenseCategories.name,
+      accountId: expenseCategories.accountId,
+      active: expenseCategories.active,
+    })
+    .from(expenseCategories)
+    .where(
+      and(eq(expenseCategories.companyId, companyId), eq(expenseCategories.accountId, accountId)),
+    )
+    .orderBy(asc(expenseCategories.createdAt))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function listExpenseCategoriesByAccountRepo(
+  companyId: string,
+  accountId: string,
+  executor: DbExecutor = db,
+) {
+  return executor
+    .select({
+      id: expenseCategories.id,
+      companyId: expenseCategories.companyId,
+      code: expenseCategories.code,
+      name: expenseCategories.name,
+      accountId: expenseCategories.accountId,
+      active: expenseCategories.active,
+    })
+    .from(expenseCategories)
+    .where(
+      and(eq(expenseCategories.companyId, companyId), eq(expenseCategories.accountId, accountId)),
+    )
+    .orderBy(asc(expenseCategories.createdAt));
 }
 
 export async function getApprovalPolicyRepo(
@@ -344,8 +391,12 @@ export async function getTaxComponentRepo(
   return row ?? null;
 }
 
-export async function getAccountUsageSummaryRepo(companyId: string, accountId: string) {
-  const [row] = await db
+export async function getAccountUsageSummaryRepo(
+  companyId: string,
+  accountId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
     .select({
       journalLineCount: sql<number>`count(distinct ${journalLines.id})`,
       expenseCategoryCount: sql<number>`count(distinct ${expenseCategories.id})`,
@@ -359,7 +410,7 @@ export async function getAccountUsageSummaryRepo(companyId: string, accountId: s
     .leftJoin(pettyCashFunds, eq(pettyCashFunds.accountId, chartOfAccounts.id))
     .where(and(eq(chartOfAccounts.companyId, companyId), eq(chartOfAccounts.id, accountId)))
     .groupBy(chartOfAccounts.id);
-  const [childAccountRow] = await db
+  const [childAccountRow] = await executor
     .select({
       childAccountCount: sql<number>`count(*)`,
     })
@@ -384,8 +435,9 @@ export async function getAccountUsageSummaryRepo(companyId: string, accountId: s
 export async function getExpenseCategoryUsageSummaryRepo(
   companyId: string,
   expenseCategoryId: string,
+  executor: DbExecutor = db,
 ) {
-  const [row] = await db
+  const [row] = await executor
     .select({
       totalRequestCount: sql<number>`count(*)`,
       openRequestCount: sql<number>`count(*) filter (where ${expenseRequests.status} not in (3, 5))`,
@@ -586,6 +638,20 @@ export async function updateExpenseCategoryRepo(
     .update(expenseCategories)
     .set({ ...patch, updatedAt: new Date() })
     .where(eq(expenseCategories.id, expenseCategoryId))
+    .returning({ id: expenseCategories.id });
+  return row ?? null;
+}
+
+export async function deleteExpenseCategoryRepo(
+  companyId: string,
+  expenseCategoryId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .delete(expenseCategories)
+    .where(
+      and(eq(expenseCategories.companyId, companyId), eq(expenseCategories.id, expenseCategoryId)),
+    )
     .returning({ id: expenseCategories.id });
   return row ?? null;
 }

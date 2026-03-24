@@ -5,6 +5,7 @@ export interface AccountRow {
   companyId: string;
   code: string;
   name: string;
+  label?: string | null;
   accountClass: number;
   parentAccountId?: string | null;
   isPostable: boolean;
@@ -28,10 +29,12 @@ export interface AccountMutationInput {
   companyId: string;
   code: string;
   name: string;
+  label?: string | null;
   accountClass: number;
   parentAccountId?: string | null;
   isPostable?: boolean;
   active?: boolean;
+  syncLinkedCategory?: boolean;
 }
 
 export interface ExpenseCategoryMutationInput {
@@ -338,11 +341,14 @@ export const accountingApi = api.injectEndpoints({
       query: (body) => ({ url: '/accounting/accounts', method: 'POST', body }),
       invalidatesTags: [{ type: 'Accounting', id: 'ACCOUNTS' }],
     }),
-    deleteAccount: builder.mutation<{ id: string }, { id: string; companyId: string }>({
-      query: ({ id, companyId }) => ({
+    deleteAccount: builder.mutation<
+      { id: string },
+      { id: string; companyId: string; removeLinkedCategory?: boolean }
+    >({
+      query: ({ id, companyId, removeLinkedCategory }) => ({
         url: `/accounting/accounts/${id}`,
         method: 'DELETE',
-        params: { companyId },
+        params: { companyId, removeLinkedCategory },
       }),
       invalidatesTags: [{ type: 'Accounting', id: 'ACCOUNTS' }],
     }),

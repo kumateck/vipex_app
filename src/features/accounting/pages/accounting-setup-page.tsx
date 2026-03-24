@@ -15,6 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -74,6 +75,7 @@ import {
 
 const NO_PARENT = '__none__';
 const ALL_FUNDING_SOURCES = '__all__';
+const ALL_TAX_PROFILES = '__all__';
 
 const ACCOUNT_CLASS_OPTIONS = [
   { value: String(AccountClass.ASSET), label: 'Asset' },
@@ -126,10 +128,12 @@ function createEmptyAccountForm(companyId: string): AccountMutationInput {
     companyId,
     code: '',
     name: '',
+    label: '',
     accountClass: AccountClass.ASSET,
     parentAccountId: null,
     isPostable: true,
     active: true,
+    syncLinkedCategory: true,
   };
 }
 
@@ -302,6 +306,14 @@ export function AccountingSetupPage() {
 function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   const companyId = user.company?.id ?? '';
   const [activeTab, setActiveTab] = useState('accounts');
+  const isAccountsTab = activeTab === 'accounts';
+  const isCategoriesTab = activeTab === 'categories';
+  const isPoliciesTab = activeTab === 'policies';
+  const isBankAccountsTab = activeTab === 'bank-accounts';
+  const isTaxProfilesTab = activeTab === 'tax-profiles';
+  const isTaxComponentsTab = activeTab === 'tax-components';
+  const needsAccounts = isAccountsTab || isCategoriesTab || isBankAccountsTab;
+  const needsTaxProfiles = isTaxProfilesTab || isTaxComponentsTab;
 
   const [accountForm, setAccountForm] = useState(() => createEmptyAccountForm(companyId));
   const [expenseCategoryForm, setExpenseCategoryForm] = useState(() =>
@@ -315,6 +327,7 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   );
   const [taxProfileForm, setTaxProfileForm] = useState(() => createEmptyTaxProfileForm(companyId));
   const [selectedTaxProfileId, setSelectedTaxProfileId] = useState('');
+  const [viewingTaxProfileId, setViewingTaxProfileId] = useState(ALL_TAX_PROFILES);
   const [taxComponentForm, setTaxComponentForm] = useState(() =>
     createEmptyTaxComponentForm(companyId),
   );
@@ -326,40 +339,44 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   const [editingTaxProfileId, setEditingTaxProfileId] = useState<string | null>(null);
   const [editingTaxComponentId, setEditingTaxComponentId] = useState<string | null>(null);
   const [isDeleteAccountDialogOpen, setIsDeleteAccountDialogOpen] = useState(false);
+  const [removeLinkedCategoryOnDelete, setRemoveLinkedCategoryOnDelete] = useState(false);
 
   const {
     data: accounts = [],
     isFetching: isFetchingAccounts,
     refetch: refetchAccounts,
-  } = useListAccountsQuery({ companyId }, { skip: !companyId });
+  } = useListAccountsQuery({ companyId }, { skip: !companyId || !needsAccounts });
   const {
     data: expenseCategories = [],
     isFetching: isFetchingExpenseCategories,
     refetch: refetchExpenseCategories,
-  } = useListExpenseCategoriesQuery({ companyId }, { skip: !companyId });
+  } = useListExpenseCategoriesQuery({ companyId }, { skip: !companyId || !isCategoriesTab });
   const {
     data: approvalPolicies = [],
     isFetching: isFetchingApprovalPolicies,
     refetch: refetchApprovalPolicies,
-  } = useListApprovalPoliciesQuery({ companyId }, { skip: !companyId });
+  } = useListApprovalPoliciesQuery({ companyId }, { skip: !companyId || !isPoliciesTab });
   const {
     data: companyBankAccounts = [],
     isFetching: isFetchingCompanyBankAccounts,
     refetch: refetchCompanyBankAccounts,
-  } = useListCompanyBankAccountsQuery({ companyId }, { skip: !companyId });
+  } = useListCompanyBankAccountsQuery({ companyId }, { skip: !companyId || !isBankAccountsTab });
   const {
     data: taxProfiles = [],
     isFetching: isFetchingTaxProfiles,
     refetch: refetchTaxProfiles,
-  } = useListTaxProfilesQuery({ companyId }, { skip: !companyId });
+  } = useListTaxProfilesQuery({ companyId }, { skip: !companyId || !needsTaxProfiles });
   const effectiveTaxProfileId = selectedTaxProfileId || taxProfiles[0]?.id || '';
   const {
     data: taxComponents = [],
     isFetching: isFetchingTaxComponents,
     refetch: refetchTaxComponents,
   } = useListTaxComponentsQuery(
-    { companyId, profileId: effectiveTaxProfileId || undefined },
-    { skip: !companyId || !effectiveTaxProfileId },
+    {
+      companyId,
+      profileId: viewingTaxProfileId === ALL_TAX_PROFILES ? undefined : viewingTaxProfileId,
+    },
+    { skip: !companyId || !isTaxComponentsTab },
   );
 
   const [createAccount, { isLoading: isCreatingAccount }] = useCreateAccountMutation();
@@ -388,6 +405,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
     () => new Map(accounts.map((account) => [account.id, `${account.code} - ${account.name}`])),
     [accounts],
   );
+  const taxProfileNameById = useMemo(
+    () => new Map(taxProfiles.map((profile) => [profile.id, profile.name])),
+    [taxProfiles],
+  );
   const postableExpenseAccounts = accounts.filter(
     (account) =>
       account.active && account.isPostable && account.accountClass === AccountClass.EXPENSE,
@@ -397,9 +418,12 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
       account.active && account.isPostable && account.accountClass === AccountClass.ASSET,
   );
   const parentAccountOptions = accounts.filter((account) => account.active);
+  const canLinkExpenseCategory =
+    accountForm.accountClass === AccountClass.EXPENSE && Boolean(accountForm.isPostable);
 
   function resetAccountForm() {
     setEditingAccountId(null);
+    setRemoveLinkedCategoryOnDelete(false);
     setAccountForm(createEmptyAccountForm(companyId));
   }
 
@@ -431,14 +455,17 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   function handleEditAccount(account: AccountRow) {
     setActiveTab('accounts');
     setEditingAccountId(account.id);
+    setRemoveLinkedCategoryOnDelete(false);
     setAccountForm({
       companyId,
       code: account.code,
       name: account.name,
+      label: account.label ?? '',
       accountClass: account.accountClass,
       parentAccountId: account.parentAccountId ?? null,
       isPostable: account.isPostable,
       active: account.active,
+      syncLinkedCategory: true,
     });
   }
 
@@ -525,6 +552,7 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
       companyId,
       code: accountForm.code.trim(),
       name: accountForm.name.trim(),
+      label: accountForm.label?.trim() || null,
       parentAccountId: accountForm.parentAccountId || null,
     };
 
@@ -555,7 +583,11 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
     }
 
     try {
-      await deleteAccount({ id: editingAccountId, companyId }).unwrap();
+      await deleteAccount({
+        id: editingAccountId,
+        companyId,
+        removeLinkedCategory: removeLinkedCategoryOnDelete,
+      }).unwrap();
       toast.success('Account deleted');
       setIsDeleteAccountDialogOpen(false);
       resetAccountForm();
@@ -750,6 +782,7 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
     () => [
       { accessorKey: 'code', header: 'Code' },
       { accessorKey: 'name', header: 'Name' },
+      { accessorKey: 'label', header: 'Label', cell: ({ row }) => row.original.label || '-' },
       {
         id: 'accountClass',
         header: 'Class',
@@ -935,6 +968,11 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
 
   const taxComponentColumns = useMemo<ColumnDef<TaxComponentRow>[]>(
     () => [
+      {
+        id: 'profile',
+        header: 'Profile',
+        accessorFn: (row) => taxProfileNameById.get(row.profileId) ?? row.profileId,
+      },
       { accessorKey: 'key', header: 'Key' },
       {
         id: 'fraction',
@@ -976,7 +1014,7 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         ),
       },
     ],
-    [],
+    [taxProfileNameById],
   );
 
   return (
@@ -991,11 +1029,19 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Badge variant="outline">{accounts.length} accounts</Badge>
-          <Badge variant="outline">{expenseCategories.length} expense categories</Badge>
-          <Badge variant="outline">{approvalPolicies.length} approval policies</Badge>
-          <Badge variant="outline">{companyBankAccounts.length} bank accounts</Badge>
-          <Badge variant="outline">{taxProfiles.length} tax profiles</Badge>
+          <Badge variant="outline">{needsAccounts ? accounts.length : '—'} accounts</Badge>
+          <Badge variant="outline">
+            {isCategoriesTab ? expenseCategories.length : '—'} expense categories
+          </Badge>
+          <Badge variant="outline">
+            {isPoliciesTab ? approvalPolicies.length : '—'} approval policies
+          </Badge>
+          <Badge variant="outline">
+            {isBankAccountsTab ? companyBankAccounts.length : '—'} bank accounts
+          </Badge>
+          <Badge variant="outline">
+            {needsTaxProfiles ? taxProfiles.length : '—'} tax profiles
+          </Badge>
         </div>
       </div>
 
@@ -1043,6 +1089,20 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                         }
                         placeholder="Parcel Revenue"
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="account-label">Label (Category Name)</Label>
+                      <Input
+                        id="account-label"
+                        value={accountForm.label ?? ''}
+                        onChange={(event) =>
+                          setAccountForm((current) => ({ ...current, label: event.target.value }))
+                        }
+                        placeholder="Fuel"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Used as the linked expense category name when category sync is enabled.
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <Label>Account Class</Label>
@@ -1132,6 +1192,26 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                           <SelectItem value="false">Inactive</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2 md:col-span-2 xl:col-span-1">
+                      <Label className="block">Category Sync</Label>
+                      <label className="flex cursor-pointer items-start gap-2 rounded-md border p-2 text-sm">
+                        <Checkbox
+                          checked={Boolean(accountForm.syncLinkedCategory)}
+                          disabled={!canLinkExpenseCategory}
+                          onCheckedChange={(checked) =>
+                            setAccountForm((current) => ({
+                              ...current,
+                              syncLinkedCategory: checked === true,
+                            }))
+                          }
+                        />
+                        <span className="text-muted-foreground">
+                          {canLinkExpenseCategory
+                            ? 'Keep linked expense category aligned with account code and label on save.'
+                            : 'Enable for postable expense accounts to sync a linked expense category.'}
+                        </span>
+                      </label>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -1944,25 +2024,23 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
               <CardHeader>
                 <CardTitle>Tax Components</CardTitle>
                 <CardDescription>
-                  Stored component rows for the selected profile. These records support profile
-                  maintenance and payroll references while the current Ghana tax engine stays
-                  intact.
+                  Stored component rows for all profiles or the selected profile. These records
+                  support profile maintenance and payroll references while the current Ghana tax
+                  engine stays intact.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Viewing Profile</Label>
                   <Select
-                    value={effectiveTaxProfileId || undefined}
-                    onValueChange={(value) => {
-                      setSelectedTaxProfileId(value);
-                      resetTaxComponentForm(value);
-                    }}
+                    value={viewingTaxProfileId}
+                    onValueChange={(value) => setViewingTaxProfileId(value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select tax profile to view components" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value={ALL_TAX_PROFILES}>All profiles</SelectItem>
                       {taxProfiles.map((profile) => (
                         <SelectItem key={profile.id} value={profile.id}>
                           {profile.name}
@@ -1996,6 +2074,18 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
               accounts.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="rounded-md border p-3">
+            <label className="flex cursor-pointer items-start gap-2 text-sm">
+              <Checkbox
+                checked={removeLinkedCategoryOnDelete}
+                onCheckedChange={(checked) => setRemoveLinkedCategoryOnDelete(checked === true)}
+              />
+              <span className="text-muted-foreground">
+                Also delete the linked expense category (only possible when that category has no
+                expense requests).
+              </span>
+            </label>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeletingAccount}>Cancel</AlertDialogCancel>
             <AlertDialogAction

@@ -24,6 +24,7 @@ import {
   createTaxFilingPeriodRepo,
   createTaxJournalItemRepo,
   deleteAccountRepo,
+  deleteExpenseCategoryRepo,
   getAccountByCodeRepo,
   getAccountRepo,
   getAccountUsageSummaryRepo,
@@ -36,6 +37,7 @@ import {
   getDailyCashExpectedSummaryRepo,
   getDailyCashSessionSummaryRepo,
   getExpenseCategoryRepo,
+  getExpenseCategoryByAccountRepo,
   getExpenseCategoryUsageSummaryRepo,
   getExpenseRequestRepo,
   getPettyCashFundByBranchRepo,
@@ -48,6 +50,7 @@ import {
   listApprovalPoliciesRepo,
   listCompanyBankAccountsRepo,
   listDailyCashConfirmationsRepo,
+  listExpenseCategoriesByAccountRepo,
   listExpenseCategoriesRepo,
   listExpenseRequestsRepo,
   listJournalLinesForReportingRepo,
@@ -91,6 +94,7 @@ function buildAccountAuditPayload(row: {
   companyId: string;
   code: string;
   name: string;
+  label?: string | null;
   accountClass: number;
   parentAccountId?: string | null;
   isPostable: boolean;
@@ -101,11 +105,74 @@ function buildAccountAuditPayload(row: {
     companyId: row.companyId,
     code: row.code,
     name: row.name,
+    label: row.label ?? null,
     accountClass: row.accountClass,
     parentAccountId: row.parentAccountId ?? null,
     isPostable: row.isPostable,
     active: row.active,
   };
+}
+
+function resolveAccountLabel(label: string | null | undefined, name: string) {
+  const trimmed = label?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : name;
+}
+
+function supportsLinkedExpenseCategory(accountClass: number, isPostable: boolean) {
+  return accountClass === AccountClass.EXPENSE && isPostable;
+}
+
+async function syncLinkedExpenseCategoryForAccount(input: {
+  companyId: string;
+  account: {
+    id: string;
+    code: string;
+    name: string;
+    label?: string | null;
+    accountClass: number;
+    isPostable: boolean;
+    active: boolean;
+  };
+  actorUserId?: string | null;
+  executor: DbExecutor;
+}) {
+  if (!supportsLinkedExpenseCategory(input.account.accountClass, input.account.isPostable)) {
+    return;
+  }
+
+  const code = input.account.code.trim();
+  const name = resolveAccountLabel(input.account.label, input.account.name);
+  const existing = await getExpenseCategoryByAccountRepo(
+    input.companyId,
+    input.account.id,
+    input.executor,
+  );
+
+  if (existing) {
+    await updateExpenseCategoryRepo(
+      existing.id,
+      {
+        code,
+        name,
+        accountId: input.account.id,
+        active: input.account.active,
+      },
+      input.executor,
+    );
+    return;
+  }
+
+  await createExpenseCategoryRepo(
+    {
+      companyId: input.companyId,
+      code,
+      name,
+      accountId: input.account.id,
+      active: input.account.active,
+      createdBy: input.actorUserId ?? null,
+    },
+    input.executor,
+  );
 }
 
 export async function isAccountingEnabledForCompanySvc(
@@ -143,6 +210,7 @@ export async function createAccountSvc(input: {
   companyId: string;
   code: string;
   name: string;
+  label?: string | null;
   accountClass: number;
   parentAccountId?: string | null;
   isPostable?: boolean;
@@ -151,6 +219,7 @@ export async function createAccountSvc(input: {
 }) {
   const code = input.code.trim();
   const name = input.name.trim();
+  const label = input.label?.trim() || null;
   if (!code || !name) throw BadRequest('Account code and name are required');
 
   if (input.parentAccountId) {
@@ -158,15 +227,34 @@ export async function createAccountSvc(input: {
     if (!parent) throw NotFound('Parent account not found');
   }
 
-  const created = await createAccountRepo({
-    companyId: input.companyId,
-    code,
-    name,
-    accountClass: input.accountClass,
-    parentAccountId: input.parentAccountId ?? null,
-    isPostable: input.isPostable ?? true,
-    active: input.active ?? true,
-    createdBy: input.createdBy ?? null,
+  const created = await db.transaction(async (tx) => {
+    const inserted = await createAccountRepo(
+      {
+        companyId: input.companyId,
+        code,
+        name,
+        label,
+        accountClass: input.accountClass,
+        parentAccountId: input.parentAccountId ?? null,
+        isPostable: input.isPostable ?? true,
+        active: input.active ?? true,
+        createdBy: input.createdBy ?? null,
+      },
+      tx,
+    );
+    if (!inserted) return null;
+
+    const createdAccount = await getAccountRepo(input.companyId, inserted.id, tx);
+    if (!createdAccount) return null;
+
+    await syncLinkedExpenseCategoryForAccount({
+      companyId: input.companyId,
+      account: createdAccount,
+      actorUserId: input.createdBy ?? null,
+      executor: tx,
+    });
+
+    return inserted;
   });
 
   if (!created) throw NotFound('Failed to create account');
@@ -207,10 +295,12 @@ export async function updateAccountSvc(input: {
   id: string;
   code?: string;
   name?: string;
+  label?: string | null;
   accountClass?: number;
   parentAccountId?: string | null;
   isPostable?: boolean;
   active?: boolean;
+  syncLinkedCategory?: boolean;
   actorUserId?: string | null;
 }) {
   const existing = await getAccountRepo(input.companyId, input.id);
@@ -248,14 +338,31 @@ export async function updateAccountSvc(input: {
     throw Conflict('Account cannot be converted to summary while it is actively referenced');
   }
 
-  const updated = await updateAccountRepo(input.id, {
+  const nextAccount = {
     code: input.code?.trim() || existing.code,
     name: input.name?.trim() || existing.name,
+    label: input.label !== undefined ? input.label?.trim() || null : (existing.label ?? null),
     accountClass: input.accountClass ?? existing.accountClass,
     parentAccountId:
       input.parentAccountId !== undefined ? input.parentAccountId : existing.parentAccountId,
     isPostable: input.isPostable ?? existing.isPostable,
     active: input.active ?? existing.active,
+  };
+
+  const updated = await db.transaction(async (tx) => {
+    const row = await updateAccountRepo(input.id, nextAccount, tx);
+    if (!row) return null;
+
+    if (input.syncLinkedCategory) {
+      await syncLinkedExpenseCategoryForAccount({
+        companyId: input.companyId,
+        account: { id: input.id, ...nextAccount },
+        actorUserId: input.actorUserId ?? null,
+        executor: tx,
+      });
+    }
+
+    return row;
   });
 
   if (!updated) throw NotFound('Account not found');
@@ -272,10 +379,12 @@ export async function updateAccountSvc(input: {
       patch: {
         code: input.code,
         name: input.name,
+        label: input.label,
         accountClass: input.accountClass,
         parentAccountId: input.parentAccountId,
         isPostable: input.isPostable,
         active: input.active,
+        syncLinkedCategory: input.syncLinkedCategory,
       },
       after: after ? buildAccountAuditPayload(after) : null,
     },
@@ -286,19 +395,48 @@ export async function updateAccountSvc(input: {
 export async function deleteAccountSvc(input: {
   companyId: string;
   id: string;
+  removeLinkedCategory?: boolean;
   actorUserId?: string | null;
 }) {
   const existing = await getAccountRepo(input.companyId, input.id);
   if (!existing) throw NotFound('Account not found');
 
-  const usage = await getAccountUsageSummaryRepo(input.companyId, input.id);
-  const usageText = describeAccountUsage(usage);
-  if (usageText) {
-    throw Conflict(`Account cannot be deleted because it is in use by ${usageText}`);
-  }
+  const deleted = await db.transaction(async (tx) => {
+    if (input.removeLinkedCategory) {
+      const linkedCategories = await listExpenseCategoriesByAccountRepo(
+        input.companyId,
+        input.id,
+        tx,
+      );
+      for (const linkedCategory of linkedCategories) {
+        const categoryUsage = await getExpenseCategoryUsageSummaryRepo(
+          input.companyId,
+          linkedCategory.id,
+          tx,
+        );
+        if (categoryUsage.totalRequestCount > 0) {
+          throw Conflict(
+            'Linked expense category cannot be deleted because it is already used by expense requests',
+          );
+        }
 
-  const deleted = await deleteAccountRepo(input.companyId, input.id);
-  if (!deleted) throw NotFound('Account not found');
+        const removed = await deleteExpenseCategoryRepo(input.companyId, linkedCategory.id, tx);
+        if (!removed) {
+          throw Conflict('Failed to delete linked expense category');
+        }
+      }
+    }
+
+    const usage = await getAccountUsageSummaryRepo(input.companyId, input.id, tx);
+    const usageText = describeAccountUsage(usage);
+    if (usageText) {
+      throw Conflict(`Account cannot be deleted because it is in use by ${usageText}`);
+    }
+
+    const row = await deleteAccountRepo(input.companyId, input.id, tx);
+    if (!row) throw NotFound('Account not found');
+    return row;
+  });
 
   await recordAuditLog({
     companyId: input.companyId,
@@ -309,6 +447,7 @@ export async function deleteAccountSvc(input: {
     message: 'Accounting account deleted',
     metadata: {
       before: buildAccountAuditPayload(existing),
+      removeLinkedCategory: Boolean(input.removeLinkedCategory),
     },
   });
 

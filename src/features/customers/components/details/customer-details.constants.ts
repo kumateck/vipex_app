@@ -16,5 +16,4 @@ export const STATUS_LABELS: Record<number, string> = {
   14: 'Cancelled',
 };
 
-export const ACTIVE_TAB_TRIGGER_CLASS =
-  'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground';
+export const ACTIVE_TAB_TRIGGER_CLASS = '';

@@ -78,6 +78,7 @@ export const chartOfAccounts = pgTable(
       .references(() => companies.id),
     code: varchar('code', { length: 30 }).notNull(),
     name: varchar('name', { length: 255 }).notNull(),
+    label: varchar('label', { length: 255 }),
     accountClass: smallint('account_class').notNull().default(AccountClass.ASSET),
     parentAccountId: varchar('parent_account_id', { length: 25 }),
     isPostable: boolean('is_postable').notNull().default(true),

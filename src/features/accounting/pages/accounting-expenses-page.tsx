@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ExpenseFundingSource, ExpenseRequestStatus } from '@/db/schemas/enums';
+import { BranchType, ExpenseFundingSource, ExpenseRequestStatus } from '@/db/schemas/enums';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
 import { PermissionKeys } from '@/shared/permissions/constants';
@@ -64,6 +64,8 @@ function AccountingExpensesPageContent({ user }: { user: AuthUser }) {
   const companyId = user.company?.id ?? '';
   const defaultBranchId = user?.branch?.id ?? '';
   const defaultLocationId = user?.location?.id ?? '';
+  const isHeadOffice = user?.branch?.type === BranchType.HEADOFFICE;
+  const userBranchId = user?.branch?.id ?? '';
 
   const [branchId, setBranchId] = useState(defaultBranchId);
   const [locationId, setLocationId] = useState(defaultLocationId);
@@ -74,14 +76,21 @@ function AccountingExpensesPageContent({ user }: { user: AuthUser }) {
   const [referenceNo, setReferenceNo] = useState('');
   const [companyBankAccountId, setCompanyBankAccountId] = useState('');
   const [rejectingRow, setRejectingRow] = useState<ExpenseRequestRow | null>(null);
+  const effectiveBranchId = isHeadOffice ? branchId : userBranchId;
+
+  useEffect(() => {
+    if (!isHeadOffice && userBranchId && branchId !== userBranchId) {
+      setBranchId(userBranchId);
+    }
+  }, [branchId, isHeadOffice, userBranchId]);
 
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
     companyId ? { companyId } : undefined,
-    { skip: !companyId },
+    { skip: !companyId || !isHeadOffice },
   );
   const { data: locationOptions = [] } = useListLocationOptionsQuery(
-    companyId && branchId ? { companyId, branchId } : undefined,
-    { skip: !companyId || !branchId },
+    companyId && effectiveBranchId ? { companyId, branchId: effectiveBranchId } : undefined,
+    { skip: !companyId || !effectiveBranchId },
   );
   const { data: expenseCategories = [] } = useListExpenseCategoriesQuery(
     { companyId, active: true },
@@ -96,7 +105,7 @@ function AccountingExpensesPageContent({ user }: { user: AuthUser }) {
     isFetching,
     refetch,
   } = useListExpenseRequestsQuery(
-    { companyId, branchId: branchId || undefined },
+    { companyId, branchId: effectiveBranchId || undefined },
     { skip: !companyId },
   );
 
@@ -120,7 +129,7 @@ function AccountingExpensesPageContent({ user }: { user: AuthUser }) {
     isCreating || isSubmitting || isApproving || isRejecting || isPaying || isPosting;
 
   async function handleCreate() {
-    if (!companyId || !branchId || !user?.id) {
+    if (!companyId || !effectiveBranchId || !user?.id) {
       toast.error('Authenticated user and branch are required');
       return;
     }
@@ -134,7 +143,7 @@ function AccountingExpensesPageContent({ user }: { user: AuthUser }) {
     try {
       await createExpenseRequest({
         companyId,
-        branchId,
+        branchId: effectiveBranchId,
         locationId: locationId || null,
         expenseCategoryId,
         amountCedis: amount,
@@ -381,18 +390,28 @@ function AccountingExpensesPageContent({ user }: { user: AuthUser }) {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="expense-branch">Branch</Label>
-              <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger id="expense-branch">
-                  <SelectValue placeholder="Select branch" />
-                </SelectTrigger>
-                <SelectContent>
-                  {branchOptions.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isHeadOffice ? (
+                <Select
+                  value={branchId}
+                  onValueChange={(value) => {
+                    setBranchId(value);
+                    setLocationId('');
+                  }}
+                >
+                  <SelectTrigger id="expense-branch">
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branchOptions.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={user?.branch?.name ?? 'My branch'} disabled />
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="expense-location">Location</Label>
@@ -494,7 +513,7 @@ function AccountingExpensesPageContent({ user }: { user: AuthUser }) {
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={() => void handleCreate()} disabled={isMutating || !branchId}>
+            <Button onClick={() => void handleCreate()} disabled={isMutating || !effectiveBranchId}>
               Record Expense
             </Button>
           </div>

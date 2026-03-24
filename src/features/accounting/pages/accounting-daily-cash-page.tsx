@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CashConfirmationStatus } from '@/db/schemas/enums';
+import { BranchType, CashConfirmationStatus, UserType } from '@/db/schemas/enums';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
 import { PermissionKeys } from '@/shared/permissions/constants';
@@ -61,6 +61,8 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
   const companyId = user.company?.id ?? '';
   const defaultBranchId = user?.branch?.id ?? '';
   const defaultLocationId = user?.location?.id ?? '';
+  const isHeadOffice = user?.branch?.type === BranchType.HEADOFFICE;
+  const userBranchId = user?.branch?.id ?? '';
 
   const [branchId, setBranchId] = useState(defaultBranchId);
   const [locationId, setLocationId] = useState(defaultLocationId);
@@ -70,31 +72,43 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
   const [expectedCashOverrideScope, setExpectedCashOverrideScope] = useState<string | null>(null);
   const [countedCashCedis, setCountedCashCedis] = useState('');
   const [notes, setNotes] = useState('');
+  const effectiveBranchId = isHeadOffice ? branchId : userBranchId;
+
+  useEffect(() => {
+    if (!isHeadOffice && userBranchId && branchId !== userBranchId) {
+      setBranchId(userBranchId);
+    }
+  }, [branchId, isHeadOffice, userBranchId]);
 
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
     companyId ? { companyId } : undefined,
-    { skip: !companyId },
+    { skip: !companyId || !isHeadOffice },
   );
   const { data: locationOptions = [] } = useListLocationOptionsQuery(
-    companyId && branchId ? { companyId, branchId } : undefined,
-    { skip: !companyId || !branchId },
+    companyId && effectiveBranchId ? { companyId, branchId: effectiveBranchId } : undefined,
+    { skip: !companyId || !effectiveBranchId },
   );
   const { data: cashierOptions = [] } = useListUserOptionsQuery(
-    companyId && branchId
-      ? { companyId, branchId, locationId: locationId || undefined }
+    companyId && effectiveBranchId
+      ? {
+          companyId,
+          branchId: effectiveBranchId,
+          locationId: locationId || undefined,
+          userType: UserType.CASHIER,
+        }
       : undefined,
-    { skip: !companyId || !branchId },
+    { skip: !companyId || !effectiveBranchId },
   );
   const { data: expectedSummary, isFetching: isFetchingExpected } =
     useGetDailyCashExpectedSummaryQuery(
       {
         companyId,
-        branchId,
+        branchId: effectiveBranchId,
         confirmationDate,
         locationId: locationId || undefined,
         cashierUserId: cashierUserId || undefined,
       },
-      { skip: !companyId || !branchId || !confirmationDate },
+      { skip: !companyId || !effectiveBranchId || !confirmationDate },
     );
 
   const {
@@ -102,7 +116,7 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
     isFetching,
     refetch,
   } = useListDailyCashConfirmationsQuery(
-    { companyId, branchId: branchId || undefined },
+    { companyId, branchId: effectiveBranchId || undefined },
     { skip: !companyId },
   );
   const [createConfirmation, { isLoading: isCreating }] = useCreateDailyCashConfirmationMutation();
@@ -111,8 +125,14 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
   const [postConfirmation, { isLoading: isPosting }] = usePostDailyCashConfirmationMutation();
 
   const branchNameById = useMemo(
-    () => new Map(branchOptions.map((branch) => [branch.id, branch.name])),
-    [branchOptions],
+    () =>
+      new Map(
+        [
+          ...(user?.branch?.id && user?.branch?.name ? [[user.branch.id, user.branch.name]] : []),
+          ...branchOptions.map((branch) => [branch.id, branch.name]),
+        ].map(([id, name]) => [id as string, name as string]),
+      ),
+    [branchOptions, user?.branch?.id, user?.branch?.name],
   );
   const locationNameById = useMemo(
     () => new Map(locationOptions.map((location) => [location.id, location.name])),
@@ -124,7 +144,7 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
   );
 
   const isMutating = isCreating || isConfirming || isPosting;
-  const expectedScopeKey = `${branchId}:${locationId}:${cashierUserId}:${confirmationDate}`;
+  const expectedScopeKey = `${effectiveBranchId}:${locationId}:${cashierUserId}:${confirmationDate}`;
   const suggestedExpectedCashCedis = useMemo(
     () => ((expectedSummary?.cashSalesPsw ?? 0) / 100).toFixed(2),
     [expectedSummary?.cashSalesPsw],
@@ -148,7 +168,7 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
   }
 
   async function handleCreate() {
-    if (!companyId || !branchId || !user?.id) {
+    if (!companyId || !effectiveBranchId || !user?.id) {
       toast.error('Authenticated company, branch and user are required');
       return;
     }
@@ -163,7 +183,7 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
     try {
       await createConfirmation({
         companyId,
-        branchId,
+        branchId: effectiveBranchId,
         locationId: locationId || null,
         cashierUserId: cashierUserId || null,
         confirmationDate: `${confirmationDate}T00:00:00.000Z`,
@@ -429,24 +449,38 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div className="space-y-2">
                   <Label htmlFor="daily-cash-branch">Branch</Label>
-                  <Select value={branchId} onValueChange={(value) => setBranchId(value)}>
-                    <SelectTrigger id="daily-cash-branch">
-                      <SelectValue placeholder="Select branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branchOptions.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {isHeadOffice ? (
+                    <Select
+                      value={branchId}
+                      onValueChange={(value) => {
+                        setBranchId(value);
+                        setLocationId('');
+                        setCashierUserId('');
+                      }}
+                    >
+                      <SelectTrigger id="daily-cash-branch">
+                        <SelectValue placeholder="Select branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {branchOptions.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input value={user?.branch?.name ?? 'My branch'} disabled />
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="daily-cash-location">Location</Label>
                   <Select
                     value={locationId || 'all'}
-                    onValueChange={(value) => setLocationId(value === 'all' ? '' : value)}
+                    onValueChange={(value) => {
+                      setLocationId(value === 'all' ? '' : value);
+                      setCashierUserId('');
+                    }}
                   >
                     <SelectTrigger id="daily-cash-location">
                       <SelectValue placeholder="All branch locations" />
@@ -563,7 +597,10 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
               </div>
 
               <div className="flex justify-end">
-                <Button onClick={() => void handleCreate()} disabled={isMutating || !branchId}>
+                <Button
+                  onClick={() => void handleCreate()}
+                  disabled={isMutating || !effectiveBranchId}
+                >
                   Record Confirmation
                 </Button>
               </div>
