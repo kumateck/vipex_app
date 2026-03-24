@@ -83,6 +83,13 @@ const EnvSchema = z.object({
   SMTP_DEBUG: toBoolean.default(false), // Log SMTP traffic (no credentials)
   // App URLs
   APP_BASE_URL: z.string().default(`http://localhost:${process.env.PORT || 3000}`),
+  // MinIO / S3-compatible object storage (optional)
+  MINIO_ENDPOINT: z.string().url().optional(),
+  MINIO_REGION: z.string().default('us-east-1'),
+  MINIO_ACCESS_KEY: z.string().optional(),
+  MINIO_SECRET_KEY: z.string().optional(),
+  MINIO_BUCKET: z.string().default('vipex-uploads'),
+  MINIO_FORCE_PATH_STYLE: toBoolean.default(true),
   // Redis / rate limiting
   REDIS_URL: z.string().url().optional(),
   RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),

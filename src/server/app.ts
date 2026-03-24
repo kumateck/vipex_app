@@ -41,6 +41,7 @@ import { pickupQueuesRoutes } from './features/pickup-queues/routes';
 import { companyModulesRoutes } from './features/company-modules/routes';
 import { warehousesRoutes } from './features/warehouses/routes';
 import { parcelInternalTransfersRoutes } from './features/parcel-internal-transfers/routes';
+import { uploadsRoutes } from './features/uploads/routes';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -64,6 +65,7 @@ export const app = new Elysia()
       .group('/warehouses', (r) => r.use(warehousesRoutes))
       .group('/customers', (r) => r.use(customersRoutes))
       .group('/cards', (r) => r.use(cardsRoutes))
+      .group('/uploads', (r) => r.use(uploadsRoutes))
       .group('/cashiers', (r) => r.use(cashiersRoutes))
       .group(
         '/shipments',

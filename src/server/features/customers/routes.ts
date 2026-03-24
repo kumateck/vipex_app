@@ -22,6 +22,7 @@ import {
   listCustomersCtrl,
   postCustomerCreditPaymentCtrl,
   updateCustomerCtrl,
+  updateCustomerCardCtrl,
 } from './controller';
 
 export const customersRoutes = new Elysia({ name: 'customers' })
@@ -90,6 +91,8 @@ export const customersRoutes = new Elysia({ name: 'customers' })
         companyId: user!.companyId!,
         cardId: (body as { cardId: string }).cardId,
         cardNumber: (body as { cardNumber: string }).cardNumber,
+        frontImageUrl: (body as { frontImageUrl?: string | null }).frontImageUrl ?? null,
+        backImageUrl: (body as { backImageUrl?: string | null }).backImageUrl ?? null,
       });
       set.status = HttpStatus.CREATED;
       return result;
@@ -99,9 +102,31 @@ export const customersRoutes = new Elysia({ name: 'customers' })
       body: t.Object({
         cardId: UUID,
         cardNumber: t.String({ minLength: 1, maxLength: 255 }),
+        frontImageUrl: t.Optional(t.Union([t.String({ maxLength: 2000 }), t.Null()])),
+        backImageUrl: t.Optional(t.Union([t.String({ maxLength: 2000 }), t.Null()])),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateCustomers)],
       detail: { tags: ['Customers'], summary: 'Add customer card' },
+    },
+  )
+  .patch(
+    '/:id/cards/:cardRecordId',
+    async ({ params, body, user }) =>
+      updateCustomerCardCtrl({
+        id: params.cardRecordId,
+        customerId: params.id,
+        companyId: user!.companyId!,
+        frontImageUrl: body.frontImageUrl,
+        backImageUrl: body.backImageUrl,
+      }),
+    {
+      params: t.Object({ id: UUID, cardRecordId: UUID }),
+      body: t.Object({
+        frontImageUrl: t.Optional(t.Union([t.String({ maxLength: 2000 }), t.Null()])),
+        backImageUrl: t.Optional(t.Union([t.String({ maxLength: 2000 }), t.Null()])),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateCustomers)],
+      detail: { tags: ['Customers'], summary: 'Update customer card images' },
     },
   )
   .get(

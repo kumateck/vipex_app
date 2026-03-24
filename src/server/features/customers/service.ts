@@ -11,6 +11,7 @@ import {
   findCustomerByCompanyTelephonesRepo,
   findCustomersByTelephoneRepo,
   getCardOptionByIdRepo,
+  getCustomerCardRepo,
   getCustomerCreditBalancePswRepo,
   getCustomerCreditBalanceBeforeDateRepo,
   getCustomerRepo,
@@ -28,6 +29,7 @@ import {
   listCustomerTransactionsRepo,
   listCustomersRepo,
   softDeleteCustomerRepo,
+  updateCustomerCardRepo,
   updateCustomerRepo,
   type CardOptionRow,
   type CustomerCardRow,
@@ -324,6 +326,8 @@ export async function addCustomerCardSvc(input: {
   companyId: string;
   cardId: string;
   cardNumber: string;
+  frontImageUrl?: string | null;
+  backImageUrl?: string | null;
 }): Promise<{ id: string }> {
   const customer = await getCustomerRepo(input.customerId);
   if (!customer || customer.companyId !== input.companyId) throw NotFound('Customer not found');
@@ -344,7 +348,31 @@ export async function addCustomerCardSvc(input: {
     customerId: input.customerId,
     cardId: input.cardId,
     cardNumber,
+    frontImageUrl: input.frontImageUrl ?? null,
+    backImageUrl: input.backImageUrl ?? null,
   });
+}
+
+export async function updateCustomerCardSvc(input: {
+  id: string;
+  customerId: string;
+  companyId: string;
+  frontImageUrl?: string | null;
+  backImageUrl?: string | null;
+}): Promise<{ id: string }> {
+  const customer = await getCustomerRepo(input.customerId);
+  if (!customer || customer.companyId !== input.companyId) throw NotFound('Customer not found');
+
+  const existing = await getCustomerCardRepo({ id: input.id, customerId: input.customerId });
+  if (!existing) throw NotFound('Customer card not found');
+
+  const updated = await updateCustomerCardRepo(input.id, {
+    frontImageUrl: input.frontImageUrl,
+    backImageUrl: input.backImageUrl,
+  });
+  if (!updated) throw NotFound('Customer card not found');
+
+  return updated;
 }
 
 export async function listCustomerCreditTransactionsSvc(input: {

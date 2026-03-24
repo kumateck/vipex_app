@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -30,6 +32,8 @@ import { useListBranchOptionsQuery } from '@/features/branches';
 import { useListLocationOptionsQuery } from '@/features/locations';
 import { useListRoleOptionsQuery } from '@/features/rbac';
 import { EmploymentStatus, EmploymentType } from '@/db/schemas/enums';
+import { ImageUploadField } from '@/features/uploads/components/image-upload-field';
+import { useUploadImageMutation } from '@/features/uploads/api/uploads.api';
 import {
   useCreateEmployeeMutation,
   useCreateEmployeeUserAccountMutation,
@@ -72,6 +76,7 @@ export function EmployeesPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [telephone, setTelephone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [bankName, setBankName] = useState('');
@@ -89,6 +94,7 @@ export function EmployeesPage() {
     middleName: '',
     lastName: '',
     email: '',
+    profileImageUrl: '',
     telephone: '',
     paymentMethod: '',
     bankName: '',
@@ -125,6 +131,7 @@ export function EmployeesPage() {
 
   const [createEmployee, { isLoading: isCreating }] = useCreateEmployeeMutation();
   const [updateEmployee, { isLoading: isUpdating }] = useUpdateEmployeeMutation();
+  const [uploadImage, { isLoading: isUploadingImage }] = useUploadImageMutation();
   const [createEmployeeUserAccount, { isLoading: isLinking }] =
     useCreateEmployeeUserAccountMutation();
 
@@ -137,6 +144,7 @@ export function EmployeesPage() {
       middleName: selectedEmployee.middleName ?? '',
       lastName: selectedEmployee.lastName ?? '',
       email: selectedEmployee.email ?? '',
+      profileImageUrl: selectedEmployee.profileImageUrl ?? '',
       telephone: selectedEmployee.telephone ?? '',
       paymentMethod: selectedEmployee.paymentMethod ?? '',
       bankName: selectedEmployee.bankName ?? '',
@@ -161,6 +169,20 @@ export function EmployeesPage() {
     setUserBranchId(linkEmployee.branchId ?? '');
     setUserLocationId(linkEmployee.locationId ?? '');
   }, [linkEmployee]);
+
+  async function resolveEmployeeProfileImage(nextEmployeeId: string, value?: string | null) {
+    if (!value) return null;
+    if (!value.startsWith('data:')) return value;
+
+    const upload = await uploadImage({
+      modelType: 'employee-profile-image',
+      modelId: nextEmployeeId,
+      dataUrl: value,
+      fileName: `${nextEmployeeId}-profile-image.png`,
+    }).unwrap();
+
+    return upload.url;
+  }
 
   return (
     <div className="w-full space-y-4 p-4">
@@ -191,6 +213,16 @@ export function EmployeesPage() {
               value={telephone}
               onChange={(e) => setTelephone(e.target.value)}
             />
+            <div className="md:col-span-2">
+              <ImageUploadField
+                id="employee-create-profile-image"
+                label="Profile image"
+                value={profileImageUrl}
+                onChange={setProfileImageUrl}
+                helperText="Optional employee profile photo."
+                disabled={isCreating || isUploadingImage}
+              />
+            </div>
             <Select value={paymentMethod} onValueChange={setPaymentMethod}>
               <SelectTrigger>
                 <SelectValue placeholder="Payment method" />
@@ -290,40 +322,59 @@ export function EmployeesPage() {
                 (paymentMethod === 'bank' &&
                   (!bankName.trim() || !bankAccountName.trim() || !bankAccountNumber.trim())) ||
                 (paymentMethod === 'mobile_money' && !mobileMoneyNumber.trim()) ||
-                isCreating
+                isCreating ||
+                isUploadingImage
               }
               onClick={async () => {
-                await createEmployee({
-                  employeeNumber: employeeNumber.trim(),
-                  firstName: firstName.trim(),
-                  lastName: lastName.trim(),
-                  email: email.trim() || null,
-                  telephone: telephone.trim(),
-                  paymentMethod: paymentMethod || null,
-                  bankName: bankName.trim() || null,
-                  bankAccountName: bankAccountName.trim() || null,
-                  bankAccountNumber: bankAccountNumber.trim() || null,
-                  mobileMoneyNumber: mobileMoneyNumber.trim() || null,
-                  branchId: branchId || null,
-                  locationId: locationId || null,
-                  departmentId: departmentId || null,
-                  jobTitleId: jobTitleId || null,
-                  hireDate: new Date().toISOString().slice(0, 10),
-                }).unwrap();
-                setEmployeeNumber('');
-                setFirstName('');
-                setLastName('');
-                setEmail('');
-                setTelephone('');
-                setPaymentMethod('');
-                setBankName('');
-                setBankAccountName('');
-                setBankAccountNumber('');
-                setMobileMoneyNumber('');
-                setBranchId('');
-                setLocationId('');
-                setDepartmentId('');
-                setJobTitleId('');
+                try {
+                  const created = await createEmployee({
+                    employeeNumber: employeeNumber.trim(),
+                    firstName: firstName.trim(),
+                    lastName: lastName.trim(),
+                    email: email.trim() || null,
+                    telephone: telephone.trim(),
+                    paymentMethod: paymentMethod || null,
+                    bankName: bankName.trim() || null,
+                    bankAccountName: bankAccountName.trim() || null,
+                    bankAccountNumber: bankAccountNumber.trim() || null,
+                    mobileMoneyNumber: mobileMoneyNumber.trim() || null,
+                    branchId: branchId || null,
+                    locationId: locationId || null,
+                    departmentId: departmentId || null,
+                    jobTitleId: jobTitleId || null,
+                    hireDate: new Date().toISOString().slice(0, 10),
+                  }).unwrap();
+
+                  if (created.id && profileImageUrl) {
+                    const uploadedProfileImageUrl = await resolveEmployeeProfileImage(
+                      created.id,
+                      profileImageUrl,
+                    );
+                    await updateEmployee({
+                      id: created.id,
+                      body: { profileImageUrl: uploadedProfileImageUrl },
+                    }).unwrap();
+                  }
+
+                  setEmployeeNumber('');
+                  setFirstName('');
+                  setLastName('');
+                  setEmail('');
+                  setProfileImageUrl(null);
+                  setTelephone('');
+                  setPaymentMethod('');
+                  setBankName('');
+                  setBankAccountName('');
+                  setBankAccountNumber('');
+                  setMobileMoneyNumber('');
+                  setBranchId('');
+                  setLocationId('');
+                  setDepartmentId('');
+                  setJobTitleId('');
+                  toast.success('Employee created');
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : 'Failed to create employee');
+                }
               }}
             >
               Add employee
@@ -352,7 +403,20 @@ export function EmployeesPage() {
                 rows.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>{row.employeeNumber}</TableCell>
-                    <TableCell>{row.displayName}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage
+                            src={row.profileImageUrl ?? undefined}
+                            alt={row.displayName}
+                          />
+                          <AvatarFallback>
+                            {row.displayName.slice(0, 1).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{row.displayName}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>{row.departmentName ?? '-'}</TableCell>
                     <TableCell>{row.jobTitleName ?? '-'}</TableCell>
                     <TableCell>{row.branchName ?? '-'}</TableCell>
@@ -399,6 +463,16 @@ export function EmployeesPage() {
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-2">
             <FieldGroup>
+              <ImageUploadField
+                id="employee-edit-profile-image"
+                label="Profile image"
+                value={editForm.profileImageUrl}
+                onChange={(value) =>
+                  setEditForm((current) => ({ ...current, profileImageUrl: value ?? '' }))
+                }
+                helperText="Upload or replace the employee photo."
+                disabled={isUpdating || isUploadingImage}
+              />
               <Field>
                 <FieldLabel>First name</FieldLabel>
                 <Input
@@ -668,6 +742,7 @@ export function EmployeesPage() {
               disabled={
                 !selectedEmployee ||
                 isUpdating ||
+                isUploadingImage ||
                 (editForm.paymentMethod === 'bank' &&
                   (!editForm.bankName.trim() ||
                     !editForm.bankAccountName.trim() ||
@@ -676,31 +751,41 @@ export function EmployeesPage() {
               }
               onClick={async () => {
                 if (!selectedEmployee) return;
-                await updateEmployee({
-                  id: selectedEmployee.id,
-                  body: {
-                    firstName: editForm.firstName.trim(),
-                    middleName: editForm.middleName.trim() || null,
-                    lastName: editForm.lastName.trim(),
-                    email: editForm.email.trim() || null,
-                    telephone: editForm.telephone.trim(),
-                    paymentMethod: editForm.paymentMethod.trim() || null,
-                    bankName: editForm.bankName.trim() || null,
-                    bankAccountName: editForm.bankAccountName.trim() || null,
-                    bankAccountNumber: editForm.bankAccountNumber.trim() || null,
-                    mobileMoneyNumber: editForm.mobileMoneyNumber.trim() || null,
-                    branchId: editForm.branchId || null,
-                    locationId: editForm.locationId || null,
-                    departmentId: editForm.departmentId || null,
-                    jobTitleId: editForm.jobTitleId || null,
-                    employmentStatus: Number(editForm.employmentStatus),
-                    employmentType: Number(editForm.employmentType),
-                    confirmationDate: editForm.confirmationDate || null,
-                    terminationDate: editForm.terminationDate || null,
-                    terminationReason: editForm.terminationReason.trim() || null,
-                  },
-                }).unwrap();
-                setSelectedEmployee(null);
+                try {
+                  const uploadedProfileImageUrl = await resolveEmployeeProfileImage(
+                    selectedEmployee.id,
+                    editForm.profileImageUrl || null,
+                  );
+                  await updateEmployee({
+                    id: selectedEmployee.id,
+                    body: {
+                      firstName: editForm.firstName.trim(),
+                      middleName: editForm.middleName.trim() || null,
+                      lastName: editForm.lastName.trim(),
+                      email: editForm.email.trim() || null,
+                      profileImageUrl: uploadedProfileImageUrl,
+                      telephone: editForm.telephone.trim(),
+                      paymentMethod: editForm.paymentMethod.trim() || null,
+                      bankName: editForm.bankName.trim() || null,
+                      bankAccountName: editForm.bankAccountName.trim() || null,
+                      bankAccountNumber: editForm.bankAccountNumber.trim() || null,
+                      mobileMoneyNumber: editForm.mobileMoneyNumber.trim() || null,
+                      branchId: editForm.branchId || null,
+                      locationId: editForm.locationId || null,
+                      departmentId: editForm.departmentId || null,
+                      jobTitleId: editForm.jobTitleId || null,
+                      employmentStatus: Number(editForm.employmentStatus),
+                      employmentType: Number(editForm.employmentType),
+                      confirmationDate: editForm.confirmationDate || null,
+                      terminationDate: editForm.terminationDate || null,
+                      terminationReason: editForm.terminationReason.trim() || null,
+                    },
+                  }).unwrap();
+                  toast.success('Employee updated');
+                  setSelectedEmployee(null);
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : 'Failed to update employee');
+                }
               }}
             >
               Save changes

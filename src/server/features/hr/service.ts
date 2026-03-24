@@ -239,6 +239,7 @@ export async function createEmployeeSvc(input: {
   middleName?: string | null;
   lastName: string;
   email?: string | null;
+  profileImageUrl?: string | null;
   telephone: string;
   paymentMethod?: string | null;
   bankName?: string | null;
@@ -273,6 +274,7 @@ export async function createEmployeeSvc(input: {
     lastName: input.lastName,
     displayName,
     email: input.email ?? null,
+    profileImageUrl: input.profileImageUrl ?? null,
     telephone: input.telephone,
     paymentMethod: settlement.paymentMethod,
     bankName: settlement.bankName,
@@ -328,6 +330,7 @@ export async function updateEmployeeSvc(
     middleName?: string | null;
     lastName?: string;
     email?: string | null;
+    profileImageUrl?: string | null;
     telephone?: string;
     paymentMethod?: string | null;
     bankName?: string | null;

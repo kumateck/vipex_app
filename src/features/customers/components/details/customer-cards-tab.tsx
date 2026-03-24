@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { ImageUploadField } from '@/features/uploads/components/image-upload-field';
 import {
   Select,
   SelectContent,
@@ -15,6 +16,10 @@ type CustomerCardsTabProps = {
   onCardIdChange: (value: string) => void;
   cardNumber: string;
   onCardNumberChange: (value: string) => void;
+  frontImageUrl?: string | null;
+  onFrontImageUrlChange: (value: string | null) => void;
+  backImageUrl?: string | null;
+  onBackImageUrlChange: (value: string | null) => void;
   cardOptions: CustomerCardOption[];
   customerCards: CustomerCardRecord[];
   isAddingCard: boolean;
@@ -26,6 +31,10 @@ export function CustomerCardsTab({
   onCardIdChange,
   cardNumber,
   onCardNumberChange,
+  frontImageUrl,
+  onFrontImageUrlChange,
+  backImageUrl,
+  onBackImageUrlChange,
   cardOptions,
   customerCards,
   isAddingCard,
@@ -66,6 +75,25 @@ export function CustomerCardsTab({
           </Button>
         </div>
 
+        <div className="grid gap-3 md:grid-cols-2">
+          <ImageUploadField
+            id="customer-card-front-image"
+            label="Card front image"
+            value={frontImageUrl}
+            onChange={onFrontImageUrlChange}
+            helperText="Optional front image of the customer card."
+            disabled={isAddingCard}
+          />
+          <ImageUploadField
+            id="customer-card-back-image"
+            label="Card back image"
+            value={backImageUrl}
+            onChange={onBackImageUrlChange}
+            helperText="Optional back image of the customer card."
+            disabled={isAddingCard}
+          />
+        </div>
+
         <div className="space-y-1">
           {customerCards.length === 0 ? (
             <p className="text-xs text-muted-foreground">No cards linked yet.</p>
@@ -74,6 +102,28 @@ export function CustomerCardsTab({
               <div key={item.id} className="rounded-md border p-2 text-xs">
                 <p className="font-medium">{item.cardName}</p>
                 <p className="text-muted-foreground">{item.cardNumber}</p>
+                <div className="mt-2 flex gap-2">
+                  {item.frontImageUrl ? (
+                    <a
+                      href={item.frontImageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      Front image
+                    </a>
+                  ) : null}
+                  {item.backImageUrl ? (
+                    <a
+                      href={item.backImageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      Back image
+                    </a>
+                  ) : null}
+                </div>
               </div>
             ))
           )}

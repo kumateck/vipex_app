@@ -27,6 +27,7 @@ import {
   useListCardOptionsQuery,
   useListCustomerCardsQuery,
 } from '@/features/customers/api';
+import { useUploadImageMutation } from '@/features/uploads/api/uploads.api';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   type RiderDoorstepRecord,
@@ -72,6 +73,7 @@ export function ParcelRiderCurrentPage() {
   );
   const [addCustomerCard] = useAddCustomerCardMutation();
   const [createCustomer] = useCreateCustomerMutation();
+  const [uploadImage, { isLoading: isUploadingSignature }] = useUploadImageMutation();
   const [riderGiven, { isLoading: isConfirming }] = useRiderGivenParcelToCustomerMutation();
   const [riderReturned, { isLoading: isReturning }] = useRiderReturnParcelToOfficeMutation();
 
@@ -171,6 +173,17 @@ export function ParcelRiderCurrentPage() {
     }
 
     try {
+      let signatureUrl = signatureImage;
+      if (signatureImage.startsWith('data:')) {
+        const upload = await uploadImage({
+          modelType: 'delivery-handover-signature',
+          modelId: selected.parcelId,
+          dataUrl: signatureImage,
+          fileName: `${selected.parcelId}-handover-signature.png`,
+        }).unwrap();
+        signatureUrl = upload.url;
+      }
+
       const mainCard = await resolveCardForCustomer({
         customerId: selected.receiverId,
         mode: mainCardMode,
@@ -208,7 +221,7 @@ export function ParcelRiderCurrentPage() {
       await riderGiven({
         parcelId: selected.parcelId,
         riderUserId,
-        signatureImage,
+        signatureImage: signatureUrl,
         secondReceiverId: secondReceiverId ?? null,
         cardId: mainCard.cardId,
         cardNumber: mainCard.cardNumber,
@@ -424,8 +437,12 @@ export function ParcelRiderCurrentPage() {
             <Button variant="outline" onClick={() => setSelected(null)}>
               Cancel
             </Button>
-            <Button onClick={onConfirm} disabled={isConfirming}>
-              {isConfirming ? 'Saving...' : 'Confirm Handover'}
+            <Button onClick={onConfirm} disabled={isConfirming || isUploadingSignature}>
+              {isUploadingSignature
+                ? 'Uploading Signature...'
+                : isConfirming
+                  ? 'Saving...'
+                  : 'Confirm Handover'}
             </Button>
           </DialogFooter>
         </DialogContent>

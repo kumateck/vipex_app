@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, ilike, inArray, lte, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
   attendanceRecords,
@@ -321,12 +321,13 @@ export async function listEmployeesRepo(p: ListEmployeeParams) {
       lastName: employees.lastName,
       displayName: employees.displayName,
       email: employees.email,
+      profileImageUrl: sql<string | null>`NULL`,
       telephone: employees.telephone,
-      paymentMethod: employees.paymentMethod,
-      bankName: employees.bankName,
-      bankAccountName: employees.bankAccountName,
-      bankAccountNumber: employees.bankAccountNumber,
-      mobileMoneyNumber: employees.mobileMoneyNumber,
+      paymentMethod: sql<string | null>`NULL`,
+      bankName: sql<string | null>`NULL`,
+      bankAccountName: sql<string | null>`NULL`,
+      bankAccountNumber: sql<string | null>`NULL`,
+      mobileMoneyNumber: sql<string | null>`NULL`,
       employmentStatus: employees.employmentStatus,
       employmentType: employees.employmentType,
       hireDate: employees.hireDate,
@@ -370,6 +371,7 @@ export async function getEmployeeRepo(id: string) {
       lastName: employees.lastName,
       displayName: employees.displayName,
       email: employees.email,
+      profileImageUrl: employees.profileImageUrl,
       telephone: employees.telephone,
       alternatePhone: employees.alternatePhone,
       dateOfBirth: employees.dateOfBirth,

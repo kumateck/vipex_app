@@ -13,6 +13,30 @@ type QueryResult = QueryReturnValue<unknown, FetchBaseQueryError, QueryMeta>;
 
 const inFlightRequests = new Map<string, Promise<QueryResult>>();
 
+function sanitizeQueryParams(params: FetchArgs['params']): FetchArgs['params'] {
+  if (!params || typeof params !== 'object' || params instanceof URLSearchParams) {
+    return params;
+  }
+
+  const entries = Object.entries(params as Record<string, unknown>).filter(([, value]) => {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string' && value.trim().toLowerCase() === 'null') return false;
+    return true;
+  });
+
+  return Object.fromEntries(entries) as Record<string, unknown>;
+}
+
+function sanitizeFetchArgs(args: string | FetchArgs): string | FetchArgs {
+  if (typeof args === 'string') return args;
+  if (!('params' in args) || args.params === undefined) return args;
+
+  return {
+    ...args,
+    params: sanitizeQueryParams(args.params),
+  };
+}
+
 function safeSerialize(value: unknown): string {
   if (value === undefined) return '';
   if (value === null) return 'null';
@@ -64,8 +88,10 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
   api,
   extraOptions,
 ) => {
+  const requestArgs = sanitizeFetchArgs(args);
+
   const runRequest = async (): Promise<QueryResult> => {
-    let result = await baseQuery(args, api, extraOptions);
+    let result = await baseQuery(requestArgs, api, extraOptions);
 
     // If we get a 401, try to refresh the token
     if (result.error && result.error.status === 401) {
@@ -100,7 +126,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
             });
 
             // Retry the original request with new token
-            result = await baseQuery(args, api, extraOptions);
+            result = await baseQuery(requestArgs, api, extraOptions);
           }
         } else {
           // Refresh failed - logout user
@@ -125,7 +151,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
     return runRequest();
   }
 
-  const requestKey = buildRequestKey(args);
+  const requestKey = buildRequestKey(requestArgs);
   const pending = inFlightRequests.get(requestKey);
   if (pending) {
     return pending;

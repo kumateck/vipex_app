@@ -30,6 +30,7 @@ Base URL: `/v1`
   - `/customers/crm`
   - `/customers/:id/crm`
   - `/customers/:id/cards`
+  - `/customers/:id/cards/:cardRecordId`
   - `/customers/:id/statement`
   - `/customers/:id/transactions`
   - `/customers/:id/payments`
@@ -94,6 +95,11 @@ Base URL: `/v1`
 - `/company-modules`
   - `GET /company-modules`
   - `PUT /company-modules/:moduleCode`
+- `/uploads`
+  - `GET /uploads?modelType=...&modelId=...`
+  - `POST /uploads`
+  - `DELETE /uploads/:id`
+  - `GET /uploads/object/:key`
 
 Notes:
 
@@ -120,10 +126,20 @@ Parcel internal transfer notes:
 - `POST /shipments/parcel-internal-transfers/:id/cancel`
 - these APIs move internal custody only and do not change parcel shipment status
 
+Upload notes:
+
+- image uploads are now backed by MinIO when configured
+- uploads are recorded against `modelType` and `modelId`
+- rider signature capture uses the upload API before delivery confirmation is saved
+- employee profile photos use the same upload API with `modelType=employee-profile-image`
+- customer card images use the same upload API with `modelType=customer-card-front-image` and `customer-card-back-image`
+- uploaded objects are served back through the app proxy route
+
 Reference:
 
 - `docs/COMPANY_MODULES.md`
 - `docs/PARCEL_INTERNAL_TRANSFERS.md`
+- `docs/REPORTING_MODULE.md`
 
 ## Inventory
 
@@ -140,6 +156,24 @@ Reference:
 - `/audit`
 - `/rbac`
 - `/reports`
+  - `GET /reports/employees`
+  - `GET /reports/attendance`
+  - `GET /reports/leave-requests`
+  - `GET /reports/payroll-register`
+  - `GET /reports/payroll-overtime`
+  - `GET /reports/payroll-adjustments`
+  - `GET /reports/payroll-journal-reconciliation`
+  - `GET /reports/cashier-performance`
+  - `GET /reports/daily-cash-confirmations`
+  - `GET /reports/expense-by-category`
+  - `GET /reports/shift-revenue`
+  - `GET /reports/branch-profitability`
+  - `GET /reports/credit-exposure`
+  - `GET /reports/customer-credit-aging-detail`
+  - `GET /reports/tobepaid-outstanding`
+  - `GET /reports/tobepaid-collections-reconciliation`
+  - `GET /reports/parcel-status-summary`
+  - `GET /reports/delivery-performance`
 
 ## Geolocation (PostGIS)
 

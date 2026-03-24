@@ -89,3 +89,36 @@ Role management also includes quick presets for warehouse and internal-transfer 
 The main parcel operations pages now also show the current internal holder, so staff can tell whether a parcel is sitting at the main branch, a location, or a warehouse before serving or moving it.
 
 Internal transfer operations also include a printable transfer slip from both the transfer-creation side and the acknowledgement side.
+
+## MinIO Uploads
+
+The app now supports MinIO-backed image storage through the backend.
+
+- upload endpoint: `POST /v1/uploads`
+- list endpoint: `GET /v1/uploads?modelType=...&modelId=...`
+- delete endpoint: `DELETE /v1/uploads/:id`
+- object proxy endpoint: `/v1/uploads/object/:key`
+- wired usages:
+  - rider handover signatures
+  - employee profile images
+  - customer card front and back images
+
+Configure these environment variables to enable it:
+
+- `MINIO_ENDPOINT`
+- `MINIO_REGION`
+- `MINIO_ACCESS_KEY`
+- `MINIO_SECRET_KEY`
+- `MINIO_BUCKET`
+- `MINIO_FORCE_PATH_STYLE`
+
+Uploads are now associated to:
+
+- `modelType`
+- `modelId`
+
+so the same upload resource can be reused for signatures, employee profiles, customer cards, employee documents, and future parcel proof images.
+
+Supporting migration:
+
+- `drizzle/0018_employee_profile_customer_card_images.sql`

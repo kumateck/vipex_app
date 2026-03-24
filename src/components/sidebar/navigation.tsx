@@ -163,6 +163,11 @@ export const ROUTES: Route[] = [
     title: 'Finance',
     menu: [
       {
+        title: 'Reports Center',
+        url: '/reports',
+        icon: 'FileText',
+      },
+      {
         title: 'Accounting',
         icon: 'BookOpen',
         items: [

@@ -20,6 +20,7 @@ import {
   useListCustomerPaymentsQuery,
   useListCustomerTransactionsQuery,
   usePostCustomerCreditPaymentMutation,
+  useUpdateCustomerCardMutation,
 } from '@/features/customers/api';
 import {
   ACTIVE_TAB_TRIGGER_CLASS,
@@ -35,6 +36,7 @@ import {
   formatMoney,
   ParcelTransactionDetailsDialog,
 } from '@/features/customers/components/details';
+import { useUploadImageMutation } from '@/features/uploads/api/uploads.api';
 import { useParams } from 'react-router-dom';
 
 function createLast30DaysRange(): DateRange {
@@ -69,6 +71,8 @@ export default function CustomerDetailsPage() {
   const [paymentNotes, setPaymentNotes] = useState('');
   const [cardId, setCardId] = useState('');
   const [cardNumber, setCardNumber] = useState('');
+  const [cardFrontImageUrl, setCardFrontImageUrl] = useState<string | null>(null);
+  const [cardBackImageUrl, setCardBackImageUrl] = useState<string | null>(null);
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
   const shouldLoadTransactions = activeTab === 'transactions';
   const shouldLoadPayments = activeTab === 'payments';
@@ -173,6 +177,8 @@ export default function CustomerDetailsPage() {
   const [postCreditPayment, { isLoading: isPostingPayment }] =
     usePostCustomerCreditPaymentMutation();
   const [addCustomerCard, { isLoading: isAddingCard }] = useAddCustomerCardMutation();
+  const [updateCustomerCard] = useUpdateCustomerCardMutation();
+  const [uploadImage] = useUploadImageMutation();
 
   const statementRowsWithRunningBalance = useMemo(
     () => buildStatementRowsWithRunningBalance(statement),
@@ -223,9 +229,52 @@ export default function CustomerDetailsPage() {
     }
 
     try {
-      await addCustomerCard({ customerId: id, cardId, cardNumber: cardNumber.trim() }).unwrap();
+      const createdCard = await addCustomerCard({
+        customerId: id,
+        cardId,
+        cardNumber: cardNumber.trim(),
+      }).unwrap();
+
+      let frontImageUrl: string | null = null;
+      let backImageUrl: string | null = null;
+
+      if (cardFrontImageUrl?.startsWith('data:')) {
+        const uploadedFront = await uploadImage({
+          modelType: 'customer-card-front-image',
+          modelId: createdCard.id,
+          dataUrl: cardFrontImageUrl,
+          fileName: `${createdCard.id}-front.png`,
+        }).unwrap();
+        frontImageUrl = uploadedFront.url;
+      } else {
+        frontImageUrl = cardFrontImageUrl;
+      }
+
+      if (cardBackImageUrl?.startsWith('data:')) {
+        const uploadedBack = await uploadImage({
+          modelType: 'customer-card-back-image',
+          modelId: createdCard.id,
+          dataUrl: cardBackImageUrl,
+          fileName: `${createdCard.id}-back.png`,
+        }).unwrap();
+        backImageUrl = uploadedBack.url;
+      } else {
+        backImageUrl = cardBackImageUrl;
+      }
+
+      if (frontImageUrl || backImageUrl) {
+        await updateCustomerCard({
+          customerId: id,
+          cardRecordId: createdCard.id,
+          frontImageUrl,
+          backImageUrl,
+        }).unwrap();
+      }
+
       toast.success('Card added');
       setCardNumber('');
+      setCardFrontImageUrl(null);
+      setCardBackImageUrl(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to add card');
     }
@@ -356,6 +405,10 @@ export default function CustomerDetailsPage() {
             onCardIdChange={setCardId}
             cardNumber={cardNumber}
             onCardNumberChange={setCardNumber}
+            frontImageUrl={cardFrontImageUrl}
+            onFrontImageUrlChange={setCardFrontImageUrl}
+            backImageUrl={cardBackImageUrl}
+            onBackImageUrlChange={setCardBackImageUrl}
             cardOptions={cardOptions}
             customerCards={customerCards}
             isAddingCard={isAddingCard}

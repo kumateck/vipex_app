@@ -3,6 +3,7 @@ import {
   varchar,
   boolean,
   timestamp,
+  text,
   index,
   smallint,
   bigint,
@@ -79,6 +80,8 @@ export const customerCards = pgTable('customer_cards', {
     .notNull()
     .references(() => cards.id),
   cardNumber: varchar('card_number', { length: 255 }).notNull(),
+  frontImageUrl: text('front_image_url'),
+  backImageUrl: text('back_image_url'),
   createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
 });

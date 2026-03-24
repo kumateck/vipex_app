@@ -1,5 +1,14 @@
 import { relations } from 'drizzle-orm';
-import { companies, branches, locations, warehouses, roles, rolePermissions, users } from './core';
+import {
+  companies,
+  branches,
+  locations,
+  warehouses,
+  uploads,
+  roles,
+  rolePermissions,
+  users,
+} from './core';
 import { companyModules, moduleCatalog } from './company-modules';
 import {
   attendanceRecords,
@@ -88,6 +97,7 @@ export const companiesRelations = relations(companies, ({ many }) => ({
   payrollPeriods: many(payrollPeriods),
   payrollOvertimeEntries: many(payrollOvertimeEntries),
   payrollManualAdjustments: many(payrollManualAdjustments),
+  uploads: many(uploads),
 }));
 
 export const branchesRelations = relations(branches, ({ one, many }) => ({
@@ -132,6 +142,12 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   recordedJournalLines: many(journalLines),
   dailyCashConfirmations: many(dailyCashConfirmations),
   expenseRequests: many(expenseRequests),
+  uploads: many(uploads),
+}));
+
+export const uploadsRelations = relations(uploads, ({ one }) => ({
+  company: one(companies, { fields: [uploads.companyId], references: [companies.id] }),
+  uploader: one(users, { fields: [uploads.uploadedBy], references: [users.id] }),
 }));
 
 export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({

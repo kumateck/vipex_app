@@ -256,6 +256,8 @@ export type CustomerCardRow = {
   cardId: string;
   cardName: string;
   cardNumber: string;
+  frontImageUrl: string | null;
+  backImageUrl: string | null;
   createdAt: Date;
 };
 
@@ -275,6 +277,8 @@ export async function listCustomerCardsRepo(input: {
       cardId: customerCards.cardId,
       cardName: cards.name,
       cardNumber: customerCards.cardNumber,
+      frontImageUrl: customerCards.frontImageUrl,
+      backImageUrl: customerCards.backImageUrl,
       createdAt: customerCards.createdAt,
     })
     .from(customerCards)
@@ -337,6 +341,8 @@ export async function createCustomerCardRepo(input: {
   customerId: string;
   cardId: string;
   cardNumber: string;
+  frontImageUrl?: string | null;
+  backImageUrl?: string | null;
 }): Promise<{ id: string }> {
   const [row] = await db
     .insert(customerCards)
@@ -344,9 +350,48 @@ export async function createCustomerCardRepo(input: {
       customerId: input.customerId,
       cardId: input.cardId,
       cardNumber: input.cardNumber,
+      frontImageUrl: input.frontImageUrl ?? null,
+      backImageUrl: input.backImageUrl ?? null,
     })
     .returning({ id: customerCards.id });
   return row!;
+}
+
+export async function getCustomerCardRepo(input: {
+  id: string;
+  customerId: string;
+}): Promise<{
+  id: string;
+  customerId: string;
+  frontImageUrl: string | null;
+  backImageUrl: string | null;
+} | null> {
+  const [row] = await db
+    .select({
+      id: customerCards.id,
+      customerId: customerCards.customerId,
+      frontImageUrl: customerCards.frontImageUrl,
+      backImageUrl: customerCards.backImageUrl,
+    })
+    .from(customerCards)
+    .where(and(eq(customerCards.id, input.id), eq(customerCards.customerId, input.customerId)))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function updateCustomerCardRepo(
+  id: string,
+  patch: {
+    frontImageUrl?: string | null;
+    backImageUrl?: string | null;
+  },
+): Promise<{ id: string } | null> {
+  const [row] = await db
+    .update(customerCards)
+    .set(patch)
+    .where(eq(customerCards.id, id))
+    .returning({ id: customerCards.id });
+  return row ?? null;
 }
 
 export type CustomerCreditTransactionRow = {

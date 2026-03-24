@@ -38,6 +38,7 @@ export interface Employee {
   lastName: string;
   displayName: string;
   email?: string | null;
+  profileImageUrl?: string | null;
   telephone: string;
   paymentMethod?: string | null;
   bankName?: string | null;
@@ -234,6 +235,7 @@ export const hrApi = api.injectEndpoints({
         middleName?: string | null;
         lastName: string;
         email?: string | null;
+        profileImageUrl?: string | null;
         telephone: string;
         paymentMethod?: string | null;
         bankName?: string | null;
@@ -272,6 +274,7 @@ export const hrApi = api.injectEndpoints({
           middleName?: string | null;
           lastName?: string;
           email?: string | null;
+          profileImageUrl?: string | null;
           telephone?: string;
           paymentMethod?: string | null;
           bankName?: string | null;

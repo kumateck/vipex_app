@@ -18,6 +18,7 @@ import {
   listCustomerTransactionsSvc,
   listCustomersSvc,
   postCustomerCreditPaymentSvc,
+  updateCustomerCardSvc,
   updateCustomerSvc,
 } from './service';
 
@@ -79,6 +80,7 @@ export const findCustomersByTelephoneCtrl = findCustomersByTelephoneSvc;
 export const listCustomerCardsCtrl = listCustomerCardsSvc;
 export const listCardOptionsCtrl = listCardOptionsSvc;
 export const addCustomerCardCtrl = addCustomerCardSvc;
+export const updateCustomerCardCtrl = updateCustomerCardSvc;
 export const listCustomerCreditTransactionsCtrl = listCustomerCreditTransactionsSvc;
 export const getCustomerCreditSummaryCtrl = getCustomerCreditSummarySvc;
 export const postCustomerCreditPaymentCtrl = postCustomerCreditPaymentSvc;

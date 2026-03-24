@@ -70,6 +70,18 @@ import { type JournalLineInput, postJournalEntrySvc } from './posting.service';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
+function readErrorCode(value: unknown, depth = 0): string | null {
+  if (!value || typeof value !== 'object' || depth > 6) return null;
+  const obj = value as { code?: unknown; cause?: unknown };
+  if (typeof obj.code === 'string' && obj.code.length > 0) return obj.code;
+  return readErrorCode(obj.cause, depth + 1);
+}
+
+function isMissingSchemaError(error: unknown) {
+  const code = readErrorCode(error);
+  return code === '42P01' || code === '42703';
+}
+
 function toPsw(value: number | string) {
   return Number(toPesewas(value));
 }
@@ -100,8 +112,14 @@ export async function isAccountingEnabledForCompanySvc(
   companyId: string,
   executor: DbExecutor = db,
 ) {
-  const company = await getCompanyAccountingSettingsRepo(companyId, executor);
-  return Boolean(company?.useAccounting);
+  try {
+    const company = await getCompanyAccountingSettingsRepo(companyId, executor);
+    return Boolean(company?.useAccounting);
+  } catch (error) {
+    if (!isMissingSchemaError(error)) throw error;
+    // Backward compatibility for databases that do not yet have the module-flag column/table shape.
+    return true;
+  }
 }
 
 export async function assertAccountingEnabledSvc(companyId: string, executor: DbExecutor = db) {

@@ -82,6 +82,18 @@ HR and Payroll are implemented as company-scoped modules layered onto the modula
 
 Reference: `docs/HR_PAYROLL_FOUNDATION.md`
 
+## Reporting
+
+Reporting is implemented as a shared read-model layer over the domain modules.
+
+- `/v1/reports/*` endpoints aggregate HR, payroll, customer, parcel, and cashier data.
+- Accounting retains its dedicated financial report endpoints under `/v1/accounting/reports/*`.
+- The web UI entry point for cross-module operational reporting is `/reports`.
+- Printable reports use a shared letterhead-friendly React print document built with `react-to-print`.
+- New reports should reuse the shared report page, export, and print patterns before adding one-off screens.
+
+Reference: `docs/REPORTING_MODULE.md`
+
 ## Company Module Control
 
 The application supports company-scoped module enablement through:
@@ -110,3 +122,16 @@ Parcel internal custody is modeled separately from shipment status.
 - Pending transfers prevent the same parcel from being queued into another internal transfer until the move is resolved.
 
 Reference: `docs/PARCEL_INTERNAL_TRANSFERS.md`
+
+## Shared Upload Storage
+
+Uploads are implemented as a shared platform resource instead of feature-specific file tables.
+
+- Binary files are stored in MinIO through a single upload service.
+- Metadata is stored in the shared `uploads` table with `modelType` and `modelId`.
+- Features keep their own business fields for the active image URL when needed, for example:
+  - `employees.profile_image_url`
+  - `customer_cards.front_image_url`
+  - `customer_cards.back_image_url`
+- The same upload API now supports rider signatures, employee profile photos, and customer card images without duplicating storage logic.
+- Uploaded objects are served back through the app proxy route instead of exposing raw bucket paths directly.

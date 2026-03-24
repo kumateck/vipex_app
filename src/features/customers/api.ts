@@ -75,6 +75,8 @@ export interface CustomerCardRecord {
   cardId: string;
   cardName: string;
   cardNumber: string;
+  frontImageUrl?: string | null;
+  backImageUrl?: string | null;
   createdAt: string;
 }
 
@@ -293,11 +295,35 @@ export const customersApi = api.injectEndpoints({
     }),
     addCustomerCard: builder.mutation<
       { id: string },
-      { customerId: string; cardId: string; cardNumber: string }
+      {
+        customerId: string;
+        cardId: string;
+        cardNumber: string;
+        frontImageUrl?: string | null;
+        backImageUrl?: string | null;
+      }
     >({
       query: ({ customerId, ...body }) => ({
         url: `/customers/${customerId}/cards`,
         method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { customerId }) => [
+        { type: 'Customers', id: `CARDS:${customerId}` },
+      ],
+    }),
+    updateCustomerCard: builder.mutation<
+      { id: string },
+      {
+        customerId: string;
+        cardRecordId: string;
+        frontImageUrl?: string | null;
+        backImageUrl?: string | null;
+      }
+    >({
+      query: ({ customerId, cardRecordId, ...body }) => ({
+        url: `/customers/${customerId}/cards/${cardRecordId}`,
+        method: 'PATCH',
         body,
       }),
       invalidatesTags: (_result, _error, { customerId }) => [
@@ -437,6 +463,7 @@ export const {
   useListCardOptionsQuery,
   useListCustomerCardsQuery,
   useAddCustomerCardMutation,
+  useUpdateCustomerCardMutation,
   useGetCustomerCreditSummaryQuery,
   useListCustomerCreditTransactionsQuery,
   useGetCustomerStatementQuery,

@@ -120,6 +120,20 @@
       "when": 1774900800000,
       "tag": "0016_internal_parcel_transfers",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1774988400000,
+      "tag": "0017_uploads_model",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1775074800000,
+      "tag": "0018_employee_profile_customer_card_images",
+      "breakpoints": true
     }
   ]
 }

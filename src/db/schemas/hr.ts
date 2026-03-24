@@ -90,6 +90,7 @@ export const employees = pgTable(
     lastName: varchar('last_name', { length: 100 }).notNull(),
     displayName: varchar('display_name', { length: 255 }).notNull(),
     email: varchar('email', { length: 255 }),
+    profileImageUrl: text('profile_image_url'),
     telephone: varchar('telephone', { length: 30 }).notNull(),
     alternatePhone: varchar('alternate_phone', { length: 30 }),
     dateOfBirth: timestamp('date_of_birth', { withTimezone: false }),

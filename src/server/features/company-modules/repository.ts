@@ -118,3 +118,13 @@ export async function updateCompanyAccountingFlagRepo(input: {
 
   return row ?? null;
 }
+
+export async function getCompanyAccountingFlagRepo(companyId: string) {
+  const [row] = await db
+    .select({ useAccounting: companies.useAccounting })
+    .from(companies)
+    .where(eq(companies.id, companyId))
+    .limit(1);
+
+  return row ?? null;
+}

@@ -120,6 +120,33 @@ export const warehouses = pgTable(
   }),
 );
 
+export const uploads = pgTable(
+  'uploads',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    modelType: varchar('model_type', { length: 80 }).notNull(),
+    modelId: varchar('model_id', { length: 80 }).notNull(),
+    fileName: varchar('file_name', { length: 255 }).notNull(),
+    contentType: varchar('content_type', { length: 120 }).notNull(),
+    objectKey: varchar('object_key', { length: 500 }).notNull(),
+    fileUrl: varchar('file_url', { length: 500 }).notNull(),
+    sizeBytes: doublePrecision('size_bytes').notNull(),
+    uploadedBy: varchar('uploaded_by', { length: 25 }).references(() => users.id),
+    isDeleted: boolean('is_deleted').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompanyModel: index('uploads_company_model_idx').on(t.companyId, t.modelType, t.modelId),
+    byObjectKey: uniqueIndex('uploads_object_key_uq').on(t.objectKey),
+  }),
+);
+
 // Statuses (unique per company, case-insensitive)
 export const statuses = pgTable(
   'statuses',

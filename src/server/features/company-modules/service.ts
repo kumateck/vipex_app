@@ -2,6 +2,7 @@ import { BadRequest, Conflict, Forbidden } from '@/server/utils/http-error';
 import { recordAuditLog } from '../audit/logger';
 import {
   findCatalogModulesRepo,
+  getCompanyAccountingFlagRepo,
   findCompanyModuleRepo,
   listCompanyModulesRepo,
   listModuleCatalogRepo,
@@ -12,6 +13,18 @@ import {
 export const MODULE_DEPENDENCIES: Record<string, string[]> = {
   payroll: ['hr'],
 };
+
+function readErrorCode(value: unknown, depth = 0): string | null {
+  if (!value || typeof value !== 'object' || depth > 6) return null;
+  const obj = value as { code?: unknown; cause?: unknown };
+  if (typeof obj.code === 'string' && obj.code.length > 0) return obj.code;
+  return readErrorCode(obj.cause, depth + 1);
+}
+
+function isMissingSchemaError(error: unknown) {
+  const code = readErrorCode(error);
+  return code === '42P01' || code === '42703';
+}
 
 async function ensureModuleExists(moduleCode: string) {
   const modules = await findCatalogModulesRepo([moduleCode]);
@@ -41,10 +54,37 @@ export async function listCompanyModulesSvc(companyId: string) {
 }
 
 export async function ensureCompanyModuleEnabledSvc(companyId: string, moduleCode: string) {
-  const existing = await findCompanyModuleRepo(companyId, moduleCode);
-  if (!existing?.isEnabled)
-    throw Forbidden(`Module "${moduleCode}" is not enabled for this company`);
-  return existing;
+  try {
+    const existing = await findCompanyModuleRepo(companyId, moduleCode);
+    if (!existing?.isEnabled) {
+      throw Forbidden(`Module "${moduleCode}" is not enabled for this company`);
+    }
+    return existing;
+  } catch (error) {
+    if (!isMissingSchemaError(error)) throw error;
+
+    // Backward-compatible mode for environments missing module tables/columns.
+    // Keep accounting gated by the legacy company-level accounting flag when available.
+    if (moduleCode === 'accounting') {
+      const legacyAccounting = await getCompanyAccountingFlagRepo(companyId);
+      if (legacyAccounting && !legacyAccounting.useAccounting) {
+        throw Forbidden(`Module "${moduleCode}" is not enabled for this company`);
+      }
+    }
+
+    return {
+      id: 'legacy-schema-fallback',
+      companyId,
+      moduleCode,
+      isEnabled: true,
+      enabledAt: null,
+      disabledAt: null,
+      configuredBy: null,
+      settings: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+  }
 }
 
 export async function setCompanyModuleStateSvc(input: {
