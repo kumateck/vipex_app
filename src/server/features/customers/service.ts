@@ -357,6 +357,8 @@ export async function updateCustomerCardSvc(input: {
   id: string;
   customerId: string;
   companyId: string;
+  cardId?: string;
+  cardNumber?: string;
   frontImageUrl?: string | null;
   backImageUrl?: string | null;
 }): Promise<{ id: string }> {
@@ -366,7 +368,28 @@ export async function updateCustomerCardSvc(input: {
   const existing = await getCustomerCardRepo({ id: input.id, customerId: input.customerId });
   if (!existing) throw NotFound('Customer card not found');
 
+  const nextCardId = input.cardId ?? existing.cardId;
+  const nextCardNumber =
+    input.cardNumber !== undefined ? input.cardNumber.trim() : existing.cardNumber;
+
+  if (!nextCardNumber) throw BadRequest('Card number is required');
+
+  if (nextCardId !== existing.cardId) {
+    const card = await getCardOptionByIdRepo({ id: nextCardId, companyId: input.companyId });
+    if (!card) throw NotFound('Card type not found');
+  }
+
+  const duplicate = await findCustomerCardByTypeAndNumberRepo({
+    customerId: input.customerId,
+    cardId: nextCardId,
+    cardNumber: nextCardNumber,
+    excludeCardRecordId: existing.id,
+  });
+  if (duplicate) throw Conflict('A customer card with this type and number already exists');
+
   const updated = await updateCustomerCardRepo(input.id, {
+    cardId: nextCardId,
+    cardNumber: nextCardNumber,
     frontImageUrl: input.frontImageUrl,
     backImageUrl: input.backImageUrl,
   });

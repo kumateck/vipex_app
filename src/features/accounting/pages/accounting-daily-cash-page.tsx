@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -130,6 +131,21 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
   );
   const expectedCashInputValue =
     expectedCashOverrideScope === expectedScopeKey ? expectedCashCedis : suggestedExpectedCashCedis;
+
+  const confirmationDateValue = confirmationDate
+    ? new Date(`${confirmationDate}T00:00:00`)
+    : undefined;
+  const isConfirmationDateValid = Boolean(
+    confirmationDateValue && !Number.isNaN(confirmationDateValue.getTime()),
+  );
+
+  function toDateInputValue(date?: Date) {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 
   async function handleCreate() {
     if (!companyId || !branchId || !user?.id) {
@@ -466,11 +482,10 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="daily-cash-date">Confirmation Date</Label>
-                  <Input
-                    id="daily-cash-date"
-                    type="date"
-                    value={confirmationDate}
-                    onChange={(event) => setConfirmationDate(event.target.value)}
+                  <DatePicker
+                    date={isConfirmationDateValid ? confirmationDateValue : undefined}
+                    onDateChange={(value) => setConfirmationDate(toDateInputValue(value))}
+                    placeholder="Select date"
                   />
                 </div>
                 <QuickAmountInput

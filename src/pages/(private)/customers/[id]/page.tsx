@@ -177,7 +177,7 @@ export default function CustomerDetailsPage() {
   const [postCreditPayment, { isLoading: isPostingPayment }] =
     usePostCustomerCreditPaymentMutation();
   const [addCustomerCard, { isLoading: isAddingCard }] = useAddCustomerCardMutation();
-  const [updateCustomerCard] = useUpdateCustomerCardMutation();
+  const [updateCustomerCard, { isLoading: isUpdatingCard }] = useUpdateCustomerCardMutation();
   const [uploadImage] = useUploadImageMutation();
 
   const statementRowsWithRunningBalance = useMemo(
@@ -277,6 +277,64 @@ export default function CustomerDetailsPage() {
       setCardBackImageUrl(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to add card');
+    }
+  };
+
+  const handleUpdateCard = async (input: {
+    cardRecordId: string;
+    cardId: string;
+    cardNumber: string;
+    frontImageUrl?: string | null;
+    backImageUrl?: string | null;
+  }) => {
+    if (!id) return;
+
+    if (!input.cardId) {
+      toast.error('Select a card type');
+      return;
+    }
+
+    if (!input.cardNumber.trim()) {
+      toast.error('Enter card number');
+      return;
+    }
+
+    try {
+      let frontImageUrl = input.frontImageUrl ?? null;
+      let backImageUrl = input.backImageUrl ?? null;
+
+      if (frontImageUrl?.startsWith('data:')) {
+        const uploadedFront = await uploadImage({
+          modelType: 'customer-card-front-image',
+          modelId: input.cardRecordId,
+          dataUrl: frontImageUrl,
+          fileName: `${input.cardRecordId}-front.png`,
+        }).unwrap();
+        frontImageUrl = uploadedFront.url;
+      }
+
+      if (backImageUrl?.startsWith('data:')) {
+        const uploadedBack = await uploadImage({
+          modelType: 'customer-card-back-image',
+          modelId: input.cardRecordId,
+          dataUrl: backImageUrl,
+          fileName: `${input.cardRecordId}-back.png`,
+        }).unwrap();
+        backImageUrl = uploadedBack.url;
+      }
+
+      await updateCustomerCard({
+        customerId: id,
+        cardRecordId: input.cardRecordId,
+        cardId: input.cardId,
+        cardNumber: input.cardNumber.trim(),
+        frontImageUrl,
+        backImageUrl,
+      }).unwrap();
+
+      toast.success('Card updated');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update card');
     }
   };
 
@@ -412,7 +470,9 @@ export default function CustomerDetailsPage() {
             cardOptions={cardOptions}
             customerCards={customerCards}
             isAddingCard={isAddingCard}
+            isUpdatingCard={isUpdatingCard}
             onAddCard={handleAddCard}
+            onUpdateCard={handleUpdateCard}
           />
         </TabsContent>
       </Tabs>

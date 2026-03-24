@@ -1,8 +1,11 @@
 import { Elysia, t } from 'elysia';
 import { UUID } from '@/server/schemas/common';
+import { BranchType } from '@/db/schemas/enums';
+import { Forbidden } from '@/server/utils/http-error';
 import {
   authPlugin,
   requireAuth,
+  requireAnyPermissions,
   requireModuleEnabled,
   requirePermissions,
 } from '@/server/plugins/auth';
@@ -14,6 +17,7 @@ import {
   getCreditExposureReportSvc,
   getCustomerCreditAgingDetailReportSvc,
   getDailyCashConfirmationReportSvc,
+  getDailyCashierSalesReportSvc,
   getDeliveryPerformanceReportSvc,
   getEmployeeMasterReportSvc,
   getExpenseByCategoryReportSvc,
@@ -30,6 +34,58 @@ import {
 
 export const reportingRoutes = new Elysia({ name: 'reporting' })
   .use(authPlugin)
+  .get(
+    '/daily-cashier-sales',
+    async ({ user, query }) => {
+      const authUser = user!;
+      if (!authUser.companyId) {
+        throw Forbidden('Authenticated user company context is missing');
+      }
+
+      const isHeadOffice = authUser.branchType === BranchType.HEADOFFICE;
+      const effectiveBranchId = isHeadOffice ? (query.branchId ?? null) : authUser.branchId;
+      if (!isHeadOffice && !effectiveBranchId) {
+        throw Forbidden('Authenticated user branch/company context is missing');
+      }
+
+      const canSelectCashier = (authUser.permissions ?? []).includes(
+        PermissionKeys.CanReadAccounting,
+      );
+
+      return getDailyCashierSalesReportSvc({
+        companyId: authUser.companyId,
+        branchId: effectiveBranchId,
+        viewerUserId: authUser.sub,
+        canSelectCashier,
+        date: query.date,
+        requestedBranchId: query.branchId ?? null,
+        locationId: query.locationId ?? null,
+        cashierUserId: query.cashierUserId ?? null,
+        cashierType: query.cashierType ?? null,
+      });
+    },
+    {
+      query: t.Object({
+        date: t.String({ format: 'date' }),
+        branchId: t.Optional(UUID),
+        locationId: t.Optional(UUID),
+        cashierUserId: t.Optional(UUID),
+        cashierType: t.Optional(t.Number()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanGetCashierPerformanceReport,
+          PermissionKeys.CanReadAccounting,
+        ),
+      ],
+      detail: {
+        tags: ['Reporting'],
+        summary: 'Daily cashier sales report by session and payment mode',
+        operationId: 'getDailyCashierSalesReport',
+      },
+    },
+  )
   .get(
     '/daily-cash-confirmations',
     async ({ user, query }) =>

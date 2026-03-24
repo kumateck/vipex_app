@@ -492,6 +492,83 @@ export interface ShiftRevenueReport {
   rows: ShiftRevenueReportRow[];
 }
 
+export interface DailyCashierSalesSessionRow {
+  id: string;
+  cashierId: string;
+  cashierName: string;
+  branchId: string;
+  branchName: string;
+  locationId?: string | null;
+  locationName?: string | null;
+  scheduledStartTime: string;
+  scheduledEndTime: string;
+  actualStartTime?: string | null;
+  actualEndTime?: string | null;
+  status: string;
+  openingBalancePsw: number;
+  closingBalancePsw?: number | null;
+  totals: {
+    transactionCount: number;
+    grossPsw: number;
+    netPsw: number;
+    taxPsw: number;
+    cashPsw: number;
+    mtnPsw: number;
+    telecelPsw: number;
+    airtelPsw: number;
+    creditPsw: number;
+  };
+}
+
+export interface DailyCashierSalesTransactionRow {
+  paymentId: string;
+  sessionId?: string | null;
+  parcelId: string;
+  bookingCode: string;
+  trackingCode: string;
+  cashierId?: string | null;
+  cashierName: string;
+  branchId?: string | null;
+  branchName: string;
+  locationId?: string | null;
+  locationName?: string | null;
+  cashierType: number;
+  method: number;
+  component: number;
+  payer: number;
+  grossAmountPsw: number;
+  netAmountPsw: number;
+  taxTotalPsw: number;
+  receivedAt: string;
+  receiptNo?: string | null;
+}
+
+export interface DailyCashierSalesReport {
+  filters: Record<string, unknown>;
+  generatedAt: string;
+  totals: {
+    sessions: number;
+    transactions: number;
+    grossPsw: number;
+    netPsw: number;
+    taxPsw: number;
+  };
+  paymentModeTotals: {
+    cashPsw: number;
+    mtnPsw: number;
+    telecelPsw: number;
+    airtelPsw: number;
+    creditPsw: number;
+  };
+  cashierTypeTotals: {
+    senderPsw: number;
+    receiverPsw: number;
+    deliveryPsw: number;
+  };
+  sessions: DailyCashierSalesSessionRow[];
+  transactions: DailyCashierSalesTransactionRow[];
+}
+
 export interface BranchProfitabilityReportRow {
   branchId: string;
   branchName: string;
@@ -781,6 +858,21 @@ export const reportingApi = api.injectEndpoints({
         params,
       }),
     }),
+    getDailyCashierSalesReport: builder.query<
+      DailyCashierSalesReport,
+      {
+        date: string;
+        branchId?: string | null;
+        locationId?: string | null;
+        cashierUserId?: string | null;
+        cashierType?: number | null;
+      }
+    >({
+      query: (params) => ({
+        url: '/reports/daily-cashier-sales',
+        params,
+      }),
+    }),
     getBranchProfitabilityReport: builder.query<
       BranchProfitabilityReport,
       {
@@ -864,6 +956,7 @@ export const {
   useGetDeliveryPerformanceReportQuery,
   useGetParcelStatusSummaryReportQuery,
   useGetShiftRevenueReportQuery,
+  useGetDailyCashierSalesReportQuery,
   useGetBranchProfitabilityReportQuery,
   useGetCreditExposureReportQuery,
   useGetCustomerCreditAgingDetailReportQuery,

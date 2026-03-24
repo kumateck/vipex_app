@@ -15,6 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -104,6 +105,20 @@ function accountClassLabel(accountClass: number) {
     default:
       return `Class ${accountClass}`;
   }
+}
+
+function parseDateInputValue(value?: string | null) {
+  if (!value) return undefined;
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function toDateInputValue(date?: Date) {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function createEmptyAccountForm(companyId: string): AccountMutationInput {
@@ -1853,30 +1868,28 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="tax-component-starts-at">Starts At</Label>
-                      <Input
-                        id="tax-component-starts-at"
-                        type="date"
-                        value={taxComponentForm.startsAt?.slice(0, 10) ?? ''}
-                        onChange={(event) =>
+                      <DatePicker
+                        date={parseDateInputValue(taxComponentForm.startsAt)}
+                        onDateChange={(value) =>
                           setTaxComponentForm((current) => ({
                             ...current,
-                            startsAt: event.target.value,
+                            startsAt: toDateInputValue(value),
                           }))
                         }
+                        placeholder="Select start date"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="tax-component-ends-at">Ends At</Label>
-                      <Input
-                        id="tax-component-ends-at"
-                        type="date"
-                        value={taxComponentForm.endsAt?.slice(0, 10) ?? ''}
-                        onChange={(event) =>
+                      <DatePicker
+                        date={parseDateInputValue(taxComponentForm.endsAt)}
+                        onDateChange={(value) =>
                           setTaxComponentForm((current) => ({
                             ...current,
-                            endsAt: event.target.value || null,
+                            endsAt: value ? toDateInputValue(value) : null,
                           }))
                         }
+                        placeholder="Select end date"
                       />
                     </div>
                     <div className="space-y-2">

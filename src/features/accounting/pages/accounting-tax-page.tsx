@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -42,6 +43,7 @@ import {
   todayDateInputValue,
 } from './accounting-shared';
 import { useAuthStore, type AuthUser } from '@/stores/auth-store';
+import type { DateRange } from 'react-day-picker';
 
 export function AccountingTaxPage() {
   const user = useAuthStore((state) => state.user);
@@ -122,6 +124,19 @@ function AccountingTaxPageContent({ user }: { user: AuthUser }) {
     isMarkingReady ||
     isMarkingFiled ||
     isExcluding;
+
+  const periodRange: DateRange | undefined = {
+    from: periodDateFrom ? new Date(`${periodDateFrom}T00:00:00`) : undefined,
+    to: periodDateTo ? new Date(`${periodDateTo}T00:00:00`) : undefined,
+  };
+
+  const toDateInputValue = (date?: Date) => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   async function reloadAll() {
     await Promise.all([refetchPeriods(), refetchTaxItems()]);
@@ -449,20 +464,13 @@ function AccountingTaxPageContent({ user }: { user: AuthUser }) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="tax-period-date-from">Date From</Label>
-              <Input
-                id="tax-period-date-from"
-                type="date"
-                value={periodDateFrom}
-                onChange={(event) => setPeriodDateFrom(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tax-period-date-to">Date To</Label>
-              <Input
-                id="tax-period-date-to"
-                type="date"
-                value={periodDateTo}
-                onChange={(event) => setPeriodDateTo(event.target.value)}
+              <DateRangePicker
+                value={periodRange}
+                onChange={(value) => {
+                  setPeriodDateFrom(toDateInputValue(value?.from));
+                  setPeriodDateTo(toDateInputValue(value?.to));
+                }}
+                placeholder="Select filing period range"
               />
             </div>
             <div className="space-y-2">

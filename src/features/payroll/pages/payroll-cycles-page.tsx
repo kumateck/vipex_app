@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { EntityAuditHistoryCard } from '@/features/audit/components/entity-audit-history-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
+import type { DateRange } from 'react-day-picker';
 import {
   Table,
   TableBody,
@@ -95,6 +96,20 @@ function runStatusLabel(status?: number | null) {
   }
 }
 
+function parseDateInputValue(value: string) {
+  if (!value) return undefined;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function toDateInputValue(date?: Date) {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function PayrollCyclesPage() {
   const [payrollGroupId, setPayrollGroupId] = useState('');
   const [periodStart, setPeriodStart] = useState('');
@@ -121,6 +136,10 @@ export function PayrollCyclesPage() {
   const groups = useMemo(() => groupsData?.data ?? [], [groupsData]);
   const payslips = payslipsData?.data ?? [];
   const bankExportRows = bankExportData?.rows ?? [];
+  const periodRange: DateRange | undefined = {
+    from: parseDateInputValue(periodStart),
+    to: parseDateInputValue(periodEnd),
+  };
 
   return (
     <div className="w-full space-y-4 p-4">
@@ -149,15 +168,13 @@ export function PayrollCyclesPage() {
                     </option>
                   ))}
                 </select>
-                <Input
-                  type="date"
-                  value={periodStart}
-                  onChange={(e) => setPeriodStart(e.target.value)}
-                />
-                <Input
-                  type="date"
-                  value={periodEnd}
-                  onChange={(e) => setPeriodEnd(e.target.value)}
+                <DateRangePicker
+                  value={periodRange}
+                  onChange={(value) => {
+                    setPeriodStart(toDateInputValue(value?.from));
+                    setPeriodEnd(toDateInputValue(value?.to));
+                  }}
+                  placeholder="Select payroll period"
                 />
                 <Button
                   disabled={!payrollGroupId || !periodStart || !periodEnd || isCreating}

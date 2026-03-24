@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   Dialog,
   DialogContent,
@@ -69,6 +70,20 @@ const paymentMethodOptions = [
 
 function dateInputValue(value?: string | null) {
   return value ? value.slice(0, 10) : '';
+}
+
+function parseDateInputValue(value?: string | null) {
+  if (!value) return undefined;
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function toDateInputValue(date?: Date) {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function EmployeesPage() {
@@ -705,22 +720,28 @@ export function EmployeesPage() {
               </Field>
               <Field>
                 <FieldLabel>Confirmation date</FieldLabel>
-                <Input
-                  type="date"
-                  value={editForm.confirmationDate}
-                  onChange={(e) =>
-                    setEditForm((current) => ({ ...current, confirmationDate: e.target.value }))
+                <DatePicker
+                  date={parseDateInputValue(editForm.confirmationDate)}
+                  onDateChange={(value) =>
+                    setEditForm((current) => ({
+                      ...current,
+                      confirmationDate: toDateInputValue(value),
+                    }))
                   }
+                  placeholder="Select confirmation date"
                 />
               </Field>
               <Field>
                 <FieldLabel>Termination date</FieldLabel>
-                <Input
-                  type="date"
-                  value={editForm.terminationDate}
-                  onChange={(e) =>
-                    setEditForm((current) => ({ ...current, terminationDate: e.target.value }))
+                <DatePicker
+                  date={parseDateInputValue(editForm.terminationDate)}
+                  onDateChange={(value) =>
+                    setEditForm((current) => ({
+                      ...current,
+                      terminationDate: toDateInputValue(value),
+                    }))
                   }
+                  placeholder="Select termination date"
                 />
               </Field>
               <Field className="md:col-span-2">

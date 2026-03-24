@@ -116,17 +116,21 @@ export const customersRoutes = new Elysia({ name: 'customers' })
         id: params.cardRecordId,
         customerId: params.id,
         companyId: user!.companyId!,
+        cardId: body.cardId,
+        cardNumber: body.cardNumber,
         frontImageUrl: body.frontImageUrl,
         backImageUrl: body.backImageUrl,
       }),
     {
       params: t.Object({ id: UUID, cardRecordId: UUID }),
       body: t.Object({
+        cardId: t.Optional(UUID),
+        cardNumber: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
         frontImageUrl: t.Optional(t.Union([t.String({ maxLength: 2000 }), t.Null()])),
         backImageUrl: t.Optional(t.Union([t.String({ maxLength: 2000 }), t.Null()])),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateCustomers)],
-      detail: { tags: ['Customers'], summary: 'Update customer card images' },
+      detail: { tags: ['Customers'], summary: 'Update customer card' },
     },
   )
   .get(

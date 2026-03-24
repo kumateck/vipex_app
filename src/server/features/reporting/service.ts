@@ -1,6 +1,11 @@
 import { BadRequest, NotFound } from '@/server/utils/http-error';
 import { listJournalLinesForReportingRepo } from '@/server/features/accounting/repository';
-import { AccountClass, CustomerCreditSourceType } from '@/db/schemas/enums';
+import {
+  AccountClass,
+  CashierType,
+  CustomerCreditSourceType,
+  PaymentMethod,
+} from '@/db/schemas/enums';
 import type { CreditExposureReportRow } from './repository';
 import {
   findLatestPayrollRunRepo,
@@ -13,6 +18,8 @@ import {
   listAttendanceReportRowsRepo,
   listCashierSessionsForDayRepo,
   listCreditExposureReportRowsRepo,
+  listDailyCashierSalesSessionsRepo,
+  listDailyCashierSalesTransactionsRepo,
   listDailyCashConfirmationReportRowsRepo,
   listEmployeeMasterReportRowsRepo,
   listExpenseByCategoryDetailRowsRepo,
@@ -117,6 +124,188 @@ export async function getCashierDaySessionsReportSvc(input: {
         })),
       };
     }),
+  };
+}
+
+export async function getDailyCashierSalesReportSvc(input: {
+  companyId: string;
+  branchId?: string | null;
+  viewerUserId: string;
+  canSelectCashier: boolean;
+  date: string;
+  requestedBranchId?: string | null;
+  locationId?: string | null;
+  cashierUserId?: string | null;
+  cashierType?: number | null;
+}) {
+  const reportDate = parseDateInput(input.date);
+  const effectiveCashierUserId = input.canSelectCashier
+    ? (input.cashierUserId ?? null)
+    : input.viewerUserId;
+
+  const sessions = await listDailyCashierSalesSessionsRepo({
+    companyId: input.companyId,
+    date: reportDate,
+    branchId: input.branchId ?? null,
+    locationId: input.locationId ?? null,
+  });
+
+  const scopedSessions = effectiveCashierUserId
+    ? sessions.filter((session) => session.cashierId === effectiveCashierUserId)
+    : sessions;
+
+  const sessionIds = scopedSessions.map((session) => session.id);
+  const transactions = await listDailyCashierSalesTransactionsRepo({
+    sessionIds,
+    cashierType: input.cashierType ?? null,
+  });
+
+  const sessionById = new Map(scopedSessions.map((session) => [session.id, session]));
+  const transactionsBySessionId = new Map<string, typeof transactions>();
+  for (const transaction of transactions) {
+    if (!transaction.sessionId) continue;
+    const current = transactionsBySessionId.get(transaction.sessionId) ?? [];
+    current.push(transaction);
+    transactionsBySessionId.set(transaction.sessionId, current);
+  }
+
+  const sessionRows = scopedSessions
+    .map((session) => {
+      const sessionTransactions = transactionsBySessionId.get(session.id) ?? [];
+      const totals = {
+        transactionCount: sessionTransactions.length,
+        grossPsw: 0,
+        netPsw: 0,
+        taxPsw: 0,
+        cashPsw: 0,
+        mtnPsw: 0,
+        telecelPsw: 0,
+        airtelPsw: 0,
+        creditPsw: 0,
+      };
+
+      for (const transaction of sessionTransactions) {
+        totals.grossPsw += Number(transaction.grossAmountPsw ?? 0);
+        totals.netPsw += Number(transaction.netAmountPsw ?? 0);
+        totals.taxPsw += Number(transaction.taxTotalPsw ?? 0);
+        if (transaction.method === PaymentMethod.CASH)
+          totals.cashPsw += Number(transaction.grossAmountPsw ?? 0);
+        if (transaction.method === PaymentMethod.MTN)
+          totals.mtnPsw += Number(transaction.grossAmountPsw ?? 0);
+        if (transaction.method === PaymentMethod.TELECEL)
+          totals.telecelPsw += Number(transaction.grossAmountPsw ?? 0);
+        if (transaction.method === PaymentMethod.AIRTEL)
+          totals.airtelPsw += Number(transaction.grossAmountPsw ?? 0);
+        if (transaction.method === PaymentMethod.CREDIT)
+          totals.creditPsw += Number(transaction.grossAmountPsw ?? 0);
+      }
+
+      return {
+        id: session.id,
+        cashierId: session.cashierId,
+        cashierName: session.cashierName,
+        branchId: session.branchId,
+        branchName: session.branchName,
+        locationId: session.locationId,
+        locationName: session.locationName,
+        scheduledStartTime: session.scheduledStartTime.toISOString(),
+        scheduledEndTime: session.scheduledEndTime.toISOString(),
+        actualStartTime: session.actualStartTime?.toISOString() ?? null,
+        actualEndTime: session.actualEndTime?.toISOString() ?? null,
+        status: session.status,
+        openingBalancePsw: Number(session.openingBalancePsw ?? 0),
+        closingBalancePsw:
+          session.closingBalancePsw !== null && session.closingBalancePsw !== undefined
+            ? Number(session.closingBalancePsw)
+            : null,
+        totals,
+      };
+    })
+    .filter((session) => session.totals.transactionCount > 0);
+
+  const transactionRows = transactions
+    .map((transaction) => {
+      const session = transaction.sessionId ? sessionById.get(transaction.sessionId) : null;
+      return {
+        paymentId: transaction.paymentId,
+        sessionId: transaction.sessionId,
+        parcelId: transaction.parcelId,
+        bookingCode: transaction.bookingCode,
+        trackingCode: transaction.trackingCode,
+        cashierId: session?.cashierId ?? null,
+        cashierName: session?.cashierName ?? '-',
+        branchId: session?.branchId ?? null,
+        branchName: session?.branchName ?? '-',
+        locationId: session?.locationId ?? null,
+        locationName: session?.locationName ?? null,
+        cashierType: transaction.cashierType,
+        method: transaction.method,
+        component: transaction.component,
+        payer: transaction.payer,
+        grossAmountPsw: Number(transaction.grossAmountPsw ?? 0),
+        netAmountPsw: Number(transaction.netAmountPsw ?? 0),
+        taxTotalPsw: Number(transaction.taxTotalPsw ?? 0),
+        receivedAt: transaction.receivedAt.toISOString(),
+        receiptNo: transaction.receiptNo,
+      };
+    })
+    .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
+
+  const totals = {
+    sessions: sessionRows.length,
+    transactions: transactionRows.length,
+    grossPsw: 0,
+    netPsw: 0,
+    taxPsw: 0,
+  };
+
+  const paymentModeTotals = {
+    cashPsw: 0,
+    mtnPsw: 0,
+    telecelPsw: 0,
+    airtelPsw: 0,
+    creditPsw: 0,
+  };
+
+  const cashierTypeTotals = {
+    senderPsw: 0,
+    receiverPsw: 0,
+    deliveryPsw: 0,
+  };
+
+  for (const row of transactionRows) {
+    totals.grossPsw += row.grossAmountPsw;
+    totals.netPsw += row.netAmountPsw;
+    totals.taxPsw += row.taxTotalPsw;
+
+    if (row.method === PaymentMethod.CASH) paymentModeTotals.cashPsw += row.grossAmountPsw;
+    if (row.method === PaymentMethod.MTN) paymentModeTotals.mtnPsw += row.grossAmountPsw;
+    if (row.method === PaymentMethod.TELECEL) paymentModeTotals.telecelPsw += row.grossAmountPsw;
+    if (row.method === PaymentMethod.AIRTEL) paymentModeTotals.airtelPsw += row.grossAmountPsw;
+    if (row.method === PaymentMethod.CREDIT) paymentModeTotals.creditPsw += row.grossAmountPsw;
+
+    if (row.cashierType === CashierType.SENDING) cashierTypeTotals.senderPsw += row.grossAmountPsw;
+    if (row.cashierType === CashierType.TOBEPAID)
+      cashierTypeTotals.receiverPsw += row.grossAmountPsw;
+    if (row.cashierType === CashierType.DELIVERY)
+      cashierTypeTotals.deliveryPsw += row.grossAmountPsw;
+  }
+
+  return {
+    filters: {
+      date: input.date,
+      branchId: input.branchId ?? null,
+      requestedBranchId: input.requestedBranchId ?? null,
+      locationId: input.locationId ?? null,
+      cashierUserId: effectiveCashierUserId,
+      cashierType: input.cashierType ?? null,
+    },
+    generatedAt: new Date().toISOString(),
+    totals,
+    paymentModeTotals,
+    cashierTypeTotals,
+    sessions: sessionRows,
+    transactions: transactionRows,
   };
 }
 

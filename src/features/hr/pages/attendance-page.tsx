@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import {
   Select,
   SelectContent,
@@ -24,9 +24,18 @@ import {
   useListAttendanceQuery,
   useListEmployeesQuery,
 } from '../api/hr.api';
+import type { DateRange } from 'react-day-picker';
 
 function todayDateInputValue() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function toDateInputValue(date?: Date) {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function formatMinutes(minutes?: number | null) {
@@ -59,6 +68,10 @@ export function AttendancePage() {
 
   const employees = employeesData?.data ?? [];
   const rows = data?.data ?? [];
+  const attendanceRange: DateRange | undefined = {
+    from: from ? new Date(`${from}T00:00:00`) : undefined,
+    to: to ? new Date(`${to}T00:00:00`) : undefined,
+  };
 
   return (
     <div className="w-full space-y-4 p-4">
@@ -94,8 +107,14 @@ export function AttendancePage() {
                 ))}
               </SelectContent>
             </Select>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            <DateRangePicker
+              value={attendanceRange}
+              onChange={(value) => {
+                setFrom(toDateInputValue(value?.from));
+                setTo(toDateInputValue(value?.to));
+              }}
+              placeholder="Select attendance range"
+            />
             <div className="flex gap-2">
               <Button
                 disabled={!selectedEmployeeId || isCheckingIn}

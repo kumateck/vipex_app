@@ -322,6 +322,7 @@ export async function findCustomerCardByTypeAndNumberRepo(input: {
   customerId: string;
   cardId: string;
   cardNumber: string;
+  excludeCardRecordId?: string | null;
 }): Promise<{ id: string } | null> {
   const [row] = await db
     .select({ id: customerCards.id })
@@ -331,6 +332,7 @@ export async function findCustomerCardByTypeAndNumberRepo(input: {
         eq(customerCards.customerId, input.customerId),
         eq(customerCards.cardId, input.cardId),
         eq(customerCards.cardNumber, input.cardNumber),
+        ...(input.excludeCardRecordId ? [ne(customerCards.id, input.excludeCardRecordId)] : []),
       ),
     )
     .limit(1);
@@ -357,12 +359,11 @@ export async function createCustomerCardRepo(input: {
   return row!;
 }
 
-export async function getCustomerCardRepo(input: {
+export async function getCustomerCardRepo(input: { id: string; customerId: string }): Promise<{
   id: string;
   customerId: string;
-}): Promise<{
-  id: string;
-  customerId: string;
+  cardId: string;
+  cardNumber: string;
   frontImageUrl: string | null;
   backImageUrl: string | null;
 } | null> {
@@ -370,6 +371,8 @@ export async function getCustomerCardRepo(input: {
     .select({
       id: customerCards.id,
       customerId: customerCards.customerId,
+      cardId: customerCards.cardId,
+      cardNumber: customerCards.cardNumber,
       frontImageUrl: customerCards.frontImageUrl,
       backImageUrl: customerCards.backImageUrl,
     })
@@ -382,6 +385,8 @@ export async function getCustomerCardRepo(input: {
 export async function updateCustomerCardRepo(
   id: string,
   patch: {
+    cardId?: string;
+    cardNumber?: string;
     frontImageUrl?: string | null;
     backImageUrl?: string | null;
   },

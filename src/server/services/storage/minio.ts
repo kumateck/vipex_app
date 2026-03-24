@@ -54,7 +54,11 @@ async function ensureBucketReady() {
     } catch {
       await client.send(new CreateBucketCommand({ Bucket: env.MINIO_BUCKET }));
     }
-  })();
+  })().catch((error) => {
+    // Allow retries on subsequent requests if initial bucket check/create fails.
+    ensureBucketPromise = null;
+    throw error;
+  });
 
   return ensureBucketPromise;
 }

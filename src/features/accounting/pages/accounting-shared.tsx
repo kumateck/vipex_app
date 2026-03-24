@@ -8,10 +8,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import type { DateRange } from 'react-day-picker';
 import {
   CashConfirmationStatus,
   ExpenseFundingSource,
@@ -226,26 +228,29 @@ export function DateRangeFields(props: {
   onDateFromChange: (value: string) => void;
   onDateToChange: (value: string) => void;
 }) {
+  const value: DateRange | undefined = {
+    from: props.dateFrom ? new Date(`${props.dateFrom}T00:00:00`) : undefined,
+    to: props.dateTo ? new Date(`${props.dateTo}T00:00:00`) : undefined,
+  };
+
+  const toDateInputValue = (date?: Date) => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   return (
-    <div className="grid gap-3 md:grid-cols-2">
-      <div className="space-y-2">
-        <Label htmlFor="date-from">Date From</Label>
-        <Input
-          id="date-from"
-          type="date"
-          value={props.dateFrom}
-          onChange={(event) => props.onDateFromChange(event.target.value)}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="date-to">Date To</Label>
-        <Input
-          id="date-to"
-          type="date"
-          value={props.dateTo}
-          onChange={(event) => props.onDateToChange(event.target.value)}
-        />
-      </div>
+    <div className="space-y-2">
+      <Label>Date Range</Label>
+      <DateRangePicker
+        value={value}
+        onChange={(next) => {
+          props.onDateFromChange(toDateInputValue(next?.from));
+          props.onDateToChange(toDateInputValue(next?.to));
+        }}
+      />
     </div>
   );
 }

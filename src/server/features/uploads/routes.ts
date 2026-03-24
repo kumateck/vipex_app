@@ -1,6 +1,12 @@
 import { Elysia, t } from 'elysia';
 import { authPlugin, type AuthUser, requireAuth } from '@/server/plugins/auth';
-import { createUploadSvc, deleteUploadSvc, getUploadObjectSvc, listUploadsSvc } from './service';
+import {
+  createUploadSvc,
+  deleteUploadSvc,
+  getUploadObjectSvc,
+  listUploadModelTypesSvc,
+  listUploadsSvc,
+} from './service';
 
 export const uploadsRoutes = new Elysia({ prefix: '' })
   .use(authPlugin)
@@ -36,6 +42,11 @@ export const uploadsRoutes = new Elysia({ prefix: '' })
       };
     },
   }))
+  .get('/model-types', () => listUploadModelTypesSvc(), {
+    beforeHandle: [requireAuth()],
+    response: t.Array(t.String()),
+    detail: { tags: ['Uploads'], summary: 'List supported upload model types' },
+  })
   .get(
     '/',
     async ({ query, user, serializeUpload }) =>

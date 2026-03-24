@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { EntityAuditHistoryCard } from '@/features/audit/components/entity-audit-history-card';
 import { Input } from '@/components/ui/input';
 import { useAuthStore, type AuthUser } from '@/stores/auth-store';
@@ -31,6 +32,7 @@ import {
   useRejectLeaveRequestMutation,
   useRejectLeaveRequestByManagerMutation,
 } from '../api/hr.api';
+import type { DateRange } from 'react-day-picker';
 
 function leaveStatusLabel(status: number) {
   switch (status) {
@@ -55,6 +57,14 @@ function managerApprovalLabel(status: number, hasManager: boolean) {
     default:
       return 'Pending';
   }
+}
+
+function toDateInputValue(date?: Date) {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function LeavePage() {
@@ -91,6 +101,10 @@ export function LeavePage() {
   const leaveTypes = leaveTypesData?.data ?? [];
   const leaveRequests = leaveRequestsData?.data ?? [];
   const employees = employeesData?.data ?? [];
+  const requestRange: DateRange | undefined = {
+    from: dateFrom ? new Date(`${dateFrom}T00:00:00`) : undefined,
+    to: dateTo ? new Date(`${dateTo}T00:00:00`) : undefined,
+  };
 
   return (
     <div className="w-full space-y-4 p-4">
@@ -194,8 +208,14 @@ export function LeavePage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+              <DateRangePicker
+                value={requestRange}
+                onChange={(value) => {
+                  setDateFrom(toDateInputValue(value?.from));
+                  setDateTo(toDateInputValue(value?.to));
+                }}
+                placeholder="Select leave date range"
+              />
               <Button
                 disabled={
                   !employeeId || !leaveTypeId || !dateFrom || !dateTo || isCreatingLeaveRequest

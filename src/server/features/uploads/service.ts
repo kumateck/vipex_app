@@ -8,12 +8,23 @@ import {
 import { BadRequest, NotFound } from '@/server/utils/http-error';
 import { createUploadRepo, deleteUploadRepo, getUploadRepo, listUploadsRepo } from './repository';
 
+export const UPLOAD_MODEL_TYPES = [
+  'customer-card-front-image',
+  'customer-card-back-image',
+  'employee-profile-image',
+  'delivery-handover-signature',
+] as const;
+
 function normalizeModelSegment(value: string) {
   const normalized = value
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, '-');
   return normalized.replace(/^-+|-+$/g, '');
+}
+
+export async function listUploadModelTypesSvc() {
+  return [...UPLOAD_MODEL_TYPES];
 }
 
 export async function createUploadSvc(input: {
@@ -31,43 +42,82 @@ export async function createUploadSvc(input: {
   if (!modelId) throw BadRequest('modelId is required');
   if (!fileName) throw BadRequest('fileName is required');
 
-  const stored = await uploadImageDataUrl({
-    folder: `${modelType}/${modelId}`,
-    dataUrl: input.dataUrl,
-    fileName,
-  });
-
-  const created = await createUploadRepo({
+  console.log('[uploads] createUploadSvc:start', {
     companyId: input.companyId,
+    uploadedBy: input.uploadedBy,
     modelType,
     modelId,
     fileName,
-    contentType: stored.contentType,
-    objectKey: stored.key,
-    fileUrl: stored.url,
-    sizeBytes: stored.size,
-    uploadedBy: input.uploadedBy,
+    dataUrlLength: input.dataUrl.length,
   });
-  if (!created) throw BadRequest('Failed to create upload');
 
-  await recordAuditLog({
-    companyId: input.companyId,
-    actorUserId: input.uploadedBy,
-    entityType: 'upload',
-    entityId: created.id,
-    action: 'UPLOAD_CREATED',
-    message: 'Uploaded file created',
-    metadata: {
+  try {
+    const stored = await uploadImageDataUrl({
+      folder: `${modelType}/${modelId}`,
+      dataUrl: input.dataUrl,
+      fileName,
+    });
+    console.log('[uploads] storage:uploaded', {
+      objectKey: stored.key,
+      contentType: stored.contentType,
+      sizeBytes: stored.size,
+    });
+
+    const created = await createUploadRepo({
+      companyId: input.companyId,
       modelType,
       modelId,
       fileName,
       contentType: stored.contentType,
-      sizeBytes: stored.size,
       objectKey: stored.key,
-    },
-  });
+      fileUrl: stored.url,
+      sizeBytes: stored.size,
+      uploadedBy: input.uploadedBy,
+    });
+    if (!created) throw BadRequest('Failed to create upload');
 
-  return created;
+    await recordAuditLog({
+      companyId: input.companyId,
+      actorUserId: input.uploadedBy,
+      entityType: 'upload',
+      entityId: created.id,
+      action: 'UPLOAD_CREATED',
+      message: 'Uploaded file created',
+      metadata: {
+        modelType,
+        modelId,
+        fileName,
+        contentType: stored.contentType,
+        sizeBytes: stored.size,
+        objectKey: stored.key,
+      },
+    });
+
+    console.log('[uploads] createUploadSvc:success', {
+      uploadId: created.id,
+      modelType,
+      modelId,
+    });
+    return created;
+  } catch (error) {
+    console.error('[uploads] createUploadSvc:error', {
+      companyId: input.companyId,
+      uploadedBy: input.uploadedBy,
+      modelType,
+      modelId,
+      fileName,
+      message: error instanceof Error ? error.message : String(error),
+      code:
+        typeof error === 'object' && error !== null && 'code' in error
+          ? String((error as { code?: unknown }).code ?? '')
+          : '',
+      name:
+        typeof error === 'object' && error !== null && 'name' in error
+          ? String((error as { name?: unknown }).name ?? '')
+          : '',
+    });
+    throw error;
+  }
 }
 
 export async function listUploadsSvc(input: {

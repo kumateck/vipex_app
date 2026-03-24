@@ -266,6 +266,40 @@ export type CashierSessionTransactionRow = {
   receiptNo: string | null;
 };
 
+export type DailyCashierSalesSessionRow = {
+  id: string;
+  cashierId: string;
+  cashierName: string;
+  branchId: string;
+  branchName: string;
+  locationId: string | null;
+  locationName: string | null;
+  scheduledStartTime: Date;
+  scheduledEndTime: Date;
+  actualStartTime: Date | null;
+  actualEndTime: Date | null;
+  status: string;
+  openingBalancePsw: number;
+  closingBalancePsw: number | null;
+};
+
+export type DailyCashierSalesTransactionRow = {
+  sessionId: string | null;
+  paymentId: string;
+  parcelId: string;
+  bookingCode: string;
+  trackingCode: string;
+  cashierType: number;
+  method: number;
+  component: number;
+  payer: number;
+  grossAmountPsw: number;
+  netAmountPsw: number;
+  taxTotalPsw: number;
+  receivedAt: Date;
+  receiptNo: string | null;
+};
+
 export async function listCashierSessionsForDayRepo(input: {
   companyId: string;
   cashierId: string;
@@ -329,6 +363,87 @@ export async function listSessionTransactionsRepo(
     .from(payments)
     .innerJoin(parcels, eq(parcels.id, payments.parcelId))
     .where(and(inArray(parcels.cashierSessionId, sessionIds), isNull(payments.voidedAt)))
+    .orderBy(asc(payments.receivedAt), asc(payments.id));
+}
+
+export async function listDailyCashierSalesSessionsRepo(input: {
+  companyId: string;
+  date: Date;
+  branchId?: string | null;
+  locationId?: string | null;
+}): Promise<DailyCashierSalesSessionRow[]> {
+  const dayStart = new Date(input.date);
+  dayStart.setHours(0, 0, 0, 0);
+  const nextDayStart = new Date(dayStart);
+  nextDayStart.setDate(nextDayStart.getDate() + 1);
+
+  return db
+    .select({
+      id: cashierSessions.id,
+      cashierId: cashierSessions.cashierId,
+      cashierName: users.fullname,
+      branchId: cashierSessions.branchId,
+      branchName: branches.name,
+      locationId: users.locationId,
+      locationName: locations.name,
+      scheduledStartTime: cashierSessions.scheduledStartTime,
+      scheduledEndTime: cashierSessions.scheduledEndTime,
+      actualStartTime: cashierSessions.actualStartTime,
+      actualEndTime: cashierSessions.actualEndTime,
+      status: cashierSessions.status,
+      openingBalancePsw: cashierSessions.openingBalancePsw,
+      closingBalancePsw: cashierSessions.closingBalancePsw,
+    })
+    .from(cashierSessions)
+    .innerJoin(users, eq(users.id, cashierSessions.cashierId))
+    .innerJoin(branches, eq(branches.id, cashierSessions.branchId))
+    .leftJoin(locations, eq(locations.id, users.locationId))
+    .where(
+      and(
+        eq(users.companyId, input.companyId),
+        gte(cashierSessions.scheduledStartTime, dayStart),
+        lt(cashierSessions.scheduledStartTime, nextDayStart),
+        ...(input.branchId ? [eq(cashierSessions.branchId, input.branchId)] : []),
+        ...(input.locationId ? [eq(users.locationId, input.locationId)] : []),
+      ),
+    )
+    .orderBy(desc(cashierSessions.scheduledStartTime), desc(cashierSessions.id));
+}
+
+export async function listDailyCashierSalesTransactionsRepo(input: {
+  sessionIds: string[];
+  cashierType?: number | null;
+}): Promise<DailyCashierSalesTransactionRow[]> {
+  if (!input.sessionIds.length) return [];
+
+  return db
+    .select({
+      sessionId: parcels.cashierSessionId,
+      paymentId: payments.id,
+      parcelId: payments.parcelId,
+      bookingCode: parcels.bookingCode,
+      trackingCode: parcels.trackingCode,
+      cashierType: payments.cashierType,
+      method: payments.method,
+      component: payments.component,
+      payer: payments.payer,
+      grossAmountPsw: payments.grossAmountPsw,
+      netAmountPsw: payments.netAmountPsw,
+      taxTotalPsw: payments.taxTotalPsw,
+      receivedAt: payments.receivedAt,
+      receiptNo: payments.receiptNo,
+    })
+    .from(payments)
+    .innerJoin(parcels, eq(parcels.id, payments.parcelId))
+    .where(
+      and(
+        inArray(parcels.cashierSessionId, input.sessionIds),
+        isNull(payments.voidedAt),
+        ...(input.cashierType !== null && input.cashierType !== undefined
+          ? [eq(payments.cashierType, input.cashierType)]
+          : []),
+      ),
+    )
     .orderBy(asc(payments.receivedAt), asc(payments.id));
 }
 

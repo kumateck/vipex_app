@@ -317,6 +317,8 @@ export const customersApi = api.injectEndpoints({
       {
         customerId: string;
         cardRecordId: string;
+        cardId?: string;
+        cardNumber?: string;
         frontImageUrl?: string | null;
         backImageUrl?: string | null;
       }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -63,8 +64,9 @@ import {
   PrintableReportDocument,
   type PrintableReportSection,
 } from '../components/printable-report-document';
+import type { DateRange } from 'react-day-picker';
 
-type ReportKey =
+export type ReportKey =
   | 'employees'
   | 'attendance'
   | 'leave'
@@ -212,6 +214,20 @@ function todayDateInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function parseDateInputValue(value: string) {
+  if (!value) return undefined;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function toDateInputValue(date?: Date) {
+  if (!date) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function formatMoneyPsw(amountPsw?: number | null, currencyCode = 'GHS') {
   return new Intl.NumberFormat('en-GH', {
     style: 'currency',
@@ -296,11 +312,16 @@ function SummaryGrid({ items }: { items: SummaryItem[] }) {
   );
 }
 
-export function ReportsPage() {
+type ReportsPageProps = {
+  initialReport?: ReportKey;
+  standalone?: boolean;
+};
+
+export function ReportsPage({ initialReport = 'employees', standalone = false }: ReportsPageProps) {
   const user = useAuthStore((state) => state.user);
   const printRef = useRef<HTMLDivElement>(null);
 
-  const [activeReport, setActiveReport] = useState<ReportKey>('employees');
+  const [activeReport, setActiveReport] = useState<ReportKey>(initialReport);
   const [branchId, setBranchId] = useState('__all__');
   const [destinationBranchId, setDestinationBranchId] = useState('__all__');
   const [departmentId, setDepartmentId] = useState('__all__');
@@ -316,6 +337,15 @@ export function ReportsPage() {
   const [expenseRequestStatus, setExpenseRequestStatus] = useState('__all__');
   const [creditAgingBucket, setCreditAgingBucket] = useState('__all__');
   const [employeeSearch, setEmployeeSearch] = useState('');
+  const reportDateRange: DateRange | undefined = {
+    from: parseDateInputValue(from),
+    to: parseDateInputValue(to),
+  };
+
+  const setReportDateRange = (value: DateRange | undefined) => {
+    setFrom(toDateInputValue(value?.from));
+    setTo(toDateInputValue(value?.to));
+  };
 
   const companyName = user?.company?.name ?? 'Company';
   const permissions = user?.permissions ?? [];
@@ -340,7 +370,7 @@ export function ReportsPage() {
   );
   const canAccountingReports = permissions.includes(PermissionKeys.CanReadAccounting);
 
-  const availableReports = useMemo(
+  const allAvailableReports = useMemo(
     () =>
       [
         canEmployees ? 'employees' : null,
@@ -379,6 +409,14 @@ export function ReportsPage() {
     ],
   );
 
+  const availableReports = useMemo(
+    () =>
+      standalone
+        ? allAvailableReports.filter((report) => report === initialReport)
+        : allAvailableReports,
+    [allAvailableReports, initialReport, standalone],
+  );
+
   useEffect(() => {
     const nextReport = availableReports[0];
     if (!nextReport) return;
@@ -386,6 +424,10 @@ export function ReportsPage() {
       setActiveReport(nextReport);
     }
   }, [activeReport, availableReports]);
+
+  useEffect(() => {
+    setActiveReport(initialReport);
+  }, [initialReport]);
 
   const selectedBranchId = branchId !== '__all__' ? branchId : null;
   const selectedDestinationBranchId =
@@ -1900,15 +1942,21 @@ export function ReportsPage() {
     <div className="w-full space-y-4 p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Reports Center</h1>
-          <p className="text-sm text-muted-foreground">
-            Operational, HR, payroll, customer, and parcel reports with print-ready output.
-          </p>
+          <h1 className="text-2xl font-semibold">
+            {standalone ? REPORT_LABELS[activeReport] : 'Reports Center'}
+          </h1>
+          {!standalone ? (
+            <p className="text-sm text-muted-foreground">
+              Operational, HR, payroll, customer, and parcel reports with print-ready output.
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link to="/accounting/reports">Open accounting reports</Link>
-          </Button>
+          {!standalone ? (
+            <Button asChild variant="outline">
+              <Link to="/accounting/reports">Open accounting reports</Link>
+            </Button>
+          ) : null}
           <Button
             variant="outline"
             disabled={!currentSection || currentSection.rows.length === 0}
@@ -1933,13 +1981,15 @@ export function ReportsPage() {
         onValueChange={(value) => setActiveReport(value as ReportKey)}
         className="space-y-4"
       >
-        <TabsList className="flex h-auto flex-wrap justify-start gap-2">
-          {availableReports.map((reportKey) => (
-            <TabsTrigger key={reportKey} value={reportKey}>
-              {REPORT_LABELS[reportKey]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {!standalone ? (
+          <TabsList className="flex h-auto flex-wrap justify-start gap-2">
+            {availableReports.map((reportKey) => (
+              <TabsTrigger key={reportKey} value={reportKey}>
+                {REPORT_LABELS[reportKey]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        ) : null}
 
         <Card>
           <CardHeader>
@@ -2042,17 +2092,13 @@ export function ReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>From</Label>
-                  <Input
-                    type="date"
-                    value={from}
-                    onChange={(event) => setFrom(event.target.value)}
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Date range</Label>
+                  <DateRangePicker
+                    value={reportDateRange}
+                    onChange={setReportDateRange}
+                    placeholder="Select date range"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>To</Label>
-                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
                 </div>
               </div>
             ) : null}
@@ -2091,17 +2137,13 @@ export function ReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>From</Label>
-                  <Input
-                    type="date"
-                    value={from}
-                    onChange={(event) => setFrom(event.target.value)}
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Date range</Label>
+                  <DateRangePicker
+                    value={reportDateRange}
+                    onChange={setReportDateRange}
+                    placeholder="Select date range"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>To</Label>
-                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
                 </div>
               </div>
             ) : null}
@@ -2148,17 +2190,13 @@ export function ReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>From</Label>
-                  <Input
-                    type="date"
-                    value={from}
-                    onChange={(event) => setFrom(event.target.value)}
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Date range</Label>
+                  <DateRangePicker
+                    value={reportDateRange}
+                    onChange={setReportDateRange}
+                    placeholder="Select date range"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>To</Label>
-                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
                 </div>
               </div>
             ) : null}
@@ -2181,17 +2219,13 @@ export function ReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>From</Label>
-                  <Input
-                    type="date"
-                    value={from}
-                    onChange={(event) => setFrom(event.target.value)}
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Date range</Label>
+                  <DateRangePicker
+                    value={reportDateRange}
+                    onChange={setReportDateRange}
+                    placeholder="Select date range"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>To</Label>
-                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
                 </div>
               </div>
             ) : null}
@@ -2230,17 +2264,13 @@ export function ReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>From</Label>
-                  <Input
-                    type="date"
-                    value={from}
-                    onChange={(event) => setFrom(event.target.value)}
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Date range</Label>
+                  <DateRangePicker
+                    value={reportDateRange}
+                    onChange={setReportDateRange}
+                    placeholder="Select date range"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>To</Label>
-                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
                 </div>
               </div>
             ) : null}
@@ -2263,17 +2293,13 @@ export function ReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>From</Label>
-                  <Input
-                    type="date"
-                    value={from}
-                    onChange={(event) => setFrom(event.target.value)}
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Date range</Label>
+                  <DateRangePicker
+                    value={reportDateRange}
+                    onChange={setReportDateRange}
+                    placeholder="Select date range"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>To</Label>
-                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
                 </div>
               </div>
             ) : null}
@@ -2312,17 +2338,13 @@ export function ReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>From</Label>
-                  <Input
-                    type="date"
-                    value={from}
-                    onChange={(event) => setFrom(event.target.value)}
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Date range</Label>
+                  <DateRangePicker
+                    value={reportDateRange}
+                    onChange={setReportDateRange}
+                    placeholder="Select date range"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>To</Label>
-                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
                 </div>
               </div>
             ) : null}
@@ -2361,17 +2383,13 @@ export function ReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>From</Label>
-                  <Input
-                    type="date"
-                    value={from}
-                    onChange={(event) => setFrom(event.target.value)}
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Date range</Label>
+                  <DateRangePicker
+                    value={reportDateRange}
+                    onChange={setReportDateRange}
+                    placeholder="Select date range"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>To</Label>
-                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
                 </div>
               </div>
             ) : null}
@@ -2431,17 +2449,13 @@ export function ReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>From</Label>
-                  <Input
-                    type="date"
-                    value={from}
-                    onChange={(event) => setFrom(event.target.value)}
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Date range</Label>
+                  <DateRangePicker
+                    value={reportDateRange}
+                    onChange={setReportDateRange}
+                    placeholder="Select date range"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>To</Label>
-                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
                 </div>
               </div>
             ) : null}
@@ -2480,17 +2494,13 @@ export function ReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>From</Label>
-                  <Input
-                    type="date"
-                    value={from}
-                    onChange={(event) => setFrom(event.target.value)}
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Date range</Label>
+                  <DateRangePicker
+                    value={reportDateRange}
+                    onChange={setReportDateRange}
+                    placeholder="Select date range"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>To</Label>
-                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
                 </div>
               </div>
             ) : null}
@@ -2529,17 +2539,13 @@ export function ReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>From</Label>
-                  <Input
-                    type="date"
-                    value={from}
-                    onChange={(event) => setFrom(event.target.value)}
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Date range</Label>
+                  <DateRangePicker
+                    value={reportDateRange}
+                    onChange={setReportDateRange}
+                    placeholder="Select date range"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>To</Label>
-                  <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
                 </div>
               </div>
             ) : null}
