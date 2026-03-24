@@ -419,8 +419,12 @@ export async function updateStockTransferSvc(
 }
 
 // Reports
-export async function getLowStockReportSvc(companyId: string, locationId?: string | null) {
-  return getLowStockProductsRepo(companyId, locationId);
+export async function getLowStockReportSvc(filters: {
+  companyId?: string | null;
+  branchId?: string | null;
+  locationId?: string | null;
+}) {
+  return getLowStockProductsRepo(filters);
 }
 
 export async function getMovementHistorySvc(p: MovementHistoryParams) {

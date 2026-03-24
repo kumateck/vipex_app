@@ -1,6 +1,11 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { UUID, NonEmptyString255, PaginationRequestQueryProps, SmallInt } from '@/server/schemas/common';
+import {
+  UUID,
+  NonEmptyString255,
+  PaginationRequestQueryProps,
+  SmallInt,
+} from '@/server/schemas/common';
 import {
   listProductCategoriesCtrl,
   listProductCategoryOptionsCtrl,
@@ -105,18 +110,22 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
       },
     },
   )
-  .patch('/categories/:id', async ({ params, body }) => updateProductCategoryCtrl(params.id, body), {
-    params: t.Object({ id: UUID }),
-    body: t.Object({
-      name: t.Optional(NonEmptyString255),
-      description: t.Optional(t.Union([t.String(), t.Null()])),
-    }),
-    detail: {
-      tags: ['Inventory'],
-      summary: 'Update product category',
-      operationId: 'updateProductCategory',
+  .patch(
+    '/categories/:id',
+    async ({ params, body }) => updateProductCategoryCtrl(params.id, body),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        name: t.Optional(NonEmptyString255),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+      detail: {
+        tags: ['Inventory'],
+        summary: 'Update product category',
+        operationId: 'updateProductCategory',
+      },
     },
-  })
+  )
   .delete('/categories/:id', async ({ params }) => deleteProductCategoryCtrl(params.id), {
     params: t.Object({ id: UUID }),
     detail: {
@@ -141,7 +150,11 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         categoryId: t.Optional(UUID),
         search: t.Optional(t.String()),
       }),
-      detail: { tags: ['Inventory'], summary: 'List product options', operationId: 'listProductOptions' },
+      detail: {
+        tags: ['Inventory'],
+        summary: 'List product options',
+        operationId: 'listProductOptions',
+      },
     },
   )
   .get(
@@ -283,18 +296,22 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
       },
     },
   )
-  .patch('/locations/:id', async ({ params, body }) => updateInventoryLocationCtrl(params.id, body), {
-    params: t.Object({ id: UUID }),
-    body: t.Object({
-      name: t.Optional(NonEmptyString255),
-      description: t.Optional(t.Union([t.String(), t.Null()])),
-    }),
-    detail: {
-      tags: ['Inventory'],
-      summary: 'Update inventory location',
-      operationId: 'updateInventoryLocation',
+  .patch(
+    '/locations/:id',
+    async ({ params, body }) => updateInventoryLocationCtrl(params.id, body),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        name: t.Optional(NonEmptyString255),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+      detail: {
+        tags: ['Inventory'],
+        summary: 'Update inventory location',
+        operationId: 'updateInventoryLocation',
+      },
     },
-  })
+  )
   .delete('/locations/:id', async ({ params }) => deleteInventoryLocationCtrl(params.id), {
     params: t.Object({ id: UUID }),
     detail: {
@@ -331,11 +348,14 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
       detail: { tags: ['Inventory'], summary: 'List stock levels', operationId: 'listStockLevels' },
     },
   )
-  .get('/stock-levels/:productId/:locationId', async ({ params }) =>
-    getStockLevelCtrl(params.productId, params.locationId), {
-    params: t.Object({ productId: UUID, locationId: UUID }),
-    detail: { tags: ['Inventory'], summary: 'Get stock level', operationId: 'getStockLevel' },
-  })
+  .get(
+    '/stock-levels/:productId/:locationId',
+    async ({ params }) => getStockLevelCtrl(params.productId, params.locationId),
+    {
+      params: t.Object({ productId: UUID, locationId: UUID }),
+      detail: { tags: ['Inventory'], summary: 'Get stock level', operationId: 'getStockLevel' },
+    },
+  )
 
   // Stock Movements
   .get(
@@ -512,23 +532,28 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
       },
     },
   )
-  .patch('/stock-transfers/:id', async ({ params, body }) => updateStockTransferCtrl(params.id, body), {
-    params: t.Object({ id: UUID }),
-    body: t.Object({
-      status: SmallInt,
-      completedBy: t.Optional(UUID),
-    }),
-    detail: {
-      tags: ['Inventory'],
-      summary: 'Update stock transfer',
-      operationId: 'updateStockTransfer',
+  .patch(
+    '/stock-transfers/:id',
+    async ({ params, body }) => updateStockTransferCtrl(params.id, body),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        status: SmallInt,
+        completedBy: t.Optional(UUID),
+      }),
+      detail: {
+        tags: ['Inventory'],
+        summary: 'Update stock transfer',
+        operationId: 'updateStockTransfer',
+      },
     },
-  })
+  )
 
   // Reports
-  .get('/reports/low-stock', async ({ query }) => getLowStockReportCtrl(query.companyId, query.locationId), {
+  .get('/reports/low-stock', async ({ query }) => getLowStockReportCtrl(query), {
     query: t.Object({
-      companyId: UUID,
+      companyId: t.Optional(UUID),
+      branchId: t.Optional(UUID),
       locationId: t.Optional(UUID),
     }),
     detail: {

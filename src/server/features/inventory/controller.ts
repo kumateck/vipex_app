@@ -433,13 +433,18 @@ export async function updateStockTransferCtrl(
 }
 
 // Reports
-export async function getLowStockReportCtrl(companyId: string, locationId?: string | null) {
-  const data = await getLowStockReportSvc(companyId, locationId);
+export async function getLowStockReportCtrl(filters: {
+  companyId?: string | null;
+  branchId?: string | null;
+  locationId?: string | null;
+}) {
+  const data = await getLowStockReportSvc(filters);
   return {
     data: data.map((item) => ({
       ...item,
       minStockLevel: item.minStockLevel?.toString(),
-      currentQuantity: item.currentQuantity?.toString(),
+      quantity: item.quantity?.toString(),
+      deficit: (Number(item.minStockLevel) - Number(item.quantity)).toString(),
     })),
   };
 }

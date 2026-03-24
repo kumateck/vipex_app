@@ -33,6 +33,7 @@
     "test:e2e": "bun test tests/server/geolocation.api.e2e.spec.ts",
     "test:watch": "bun test --watch",
     "test:ci": "bun test --bail --timeout=30000",
+    "test:prepush": "bun test tests/health.spec.ts tests/server tests/utils --bail --timeout=30000",
     "uuid:convert": "bun run scripts/convert_uuid_to_cuid.ts"
   },
   "dependencies": {

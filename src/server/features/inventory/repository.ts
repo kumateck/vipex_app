@@ -38,7 +38,9 @@ export async function listProductCategoriesRepo(p: ListProductCategoriesParams) 
               ? desc(productCategories.createdAt)
               : asc(productCategories.createdAt);
           if (s.field === 'name')
-            return s.direction === 'desc' ? desc(productCategories.name) : asc(productCategories.name);
+            return s.direction === 'desc'
+              ? desc(productCategories.name)
+              : asc(productCategories.name);
           if (s.field === 'id')
             return s.direction === 'desc' ? desc(productCategories.id) : asc(productCategories.id);
           return null;
@@ -165,13 +167,17 @@ export async function listProductsRepo(p: ListProductsParams) {
             return s.direction === 'desc' ? desc(products.name) : asc(products.name);
           if (s.field === 'sku')
             return s.direction === 'desc' ? desc(products.sku) : asc(products.sku);
-          if (s.field === 'id') return s.direction === 'desc' ? desc(products.id) : asc(products.id);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(products.id) : asc(products.id);
           return null;
         })
         .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(products.createdAt), asc(products.id)];
 
-  const [countRow] = await db.select({ c: count() }).from(products).where(and(...where));
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(products)
+    .where(and(...where));
   const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
   const rows = await db
     .select()
@@ -289,7 +295,9 @@ export async function listInventoryLocationsRepo(p: ListInventoryLocationsParams
               ? desc(inventoryLocations.name)
               : asc(inventoryLocations.name);
           if (s.field === 'id')
-            return s.direction === 'desc' ? desc(inventoryLocations.id) : asc(inventoryLocations.id);
+            return s.direction === 'desc'
+              ? desc(inventoryLocations.id)
+              : asc(inventoryLocations.id);
           return null;
         })
         .filter((value): value is ReturnType<typeof asc> => value !== null)
@@ -407,7 +415,9 @@ export async function listStockLevelsRepo(p: ListStockLevelsParams) {
     ? sort
         .map((s) => {
           if (s.field === 'updatedAt')
-            return s.direction === 'desc' ? desc(stockLevels.updatedAt) : asc(stockLevels.updatedAt);
+            return s.direction === 'desc'
+              ? desc(stockLevels.updatedAt)
+              : asc(stockLevels.updatedAt);
           if (s.field === 'id')
             return s.direction === 'desc' ? desc(stockLevels.id) : asc(stockLevels.id);
           return null;
@@ -629,21 +639,29 @@ export async function updateStockTransferRepo(
 }
 
 // Reports
-export async function getLowStockProductsRepo(companyId: string, locationId?: string | null) {
-  const where = [eq(products.companyId, companyId), eq(products.isDeleted, false)];
-  if (locationId) where.push(eq(stockLevels.locationId, locationId));
+export async function getLowStockProductsRepo(filters: {
+  companyId?: string | null;
+  branchId?: string | null;
+  locationId?: string | null;
+}) {
+  const where = [eq(products.isDeleted, false)];
+  if (filters.companyId) where.push(eq(products.companyId, filters.companyId));
+  if (filters.branchId) where.push(eq(inventoryLocations.branchId, filters.branchId));
+  if (filters.locationId) where.push(eq(stockLevels.locationId, filters.locationId));
 
   const rows = await db
     .select({
       productId: products.id,
       productName: products.name,
-      sku: products.sku,
+      productSku: products.sku,
       minStockLevel: products.minStockLevel,
       locationId: stockLevels.locationId,
-      currentQuantity: stockLevels.quantity,
+      quantity: stockLevels.quantity,
+      locationName: inventoryLocations.name,
     })
     .from(products)
     .leftJoin(stockLevels, eq(products.id, stockLevels.productId))
+    .leftJoin(inventoryLocations, eq(stockLevels.locationId, inventoryLocations.id))
     .where(and(...where, sql`${stockLevels.quantity} < ${products.minStockLevel}`))
     .orderBy(asc(products.name));
 
