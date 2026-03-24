@@ -1,4 +1,4 @@
-import { eq, and, sql, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../../../db/client';
 import {
   paymentRules,
@@ -8,6 +8,9 @@ import {
   DeliveryFeeBasis,
 } from '../../../db/schemas';
 import { createHash } from 'crypto';
+
+type PaymentRuleRow = typeof paymentRules.$inferSelect;
+type PaymentCalculationRow = typeof paymentCalculations.$inferSelect;
 
 export interface PaymentCalculationInput {
   companyId: string;
@@ -225,7 +228,7 @@ async function getApplicablePaymentRules(params: {
   weight?: number;
   parcelValuePsw: number;
 }) {
-  const { companyId, sourceBranchId, destinationBranchId, weight, parcelValuePsw } = params;
+  const { companyId, sourceBranchId, destinationBranchId } = params;
 
   // Try specific route rules first
   const routeRules = await db
@@ -306,43 +309,58 @@ function createDefaultCalculation(
 /**
  * Calculate delivery fee based on rule configuration
  */
-function calculateDeliveryFee(rule: any, weight?: number, distanceKm?: number): number {
+function calculateDeliveryFee(
+  rule: Pick<PaymentRuleRow, 'deliveryFeeBasis' | 'deliveryFeePsw'> | null | undefined,
+  weight?: number,
+  distanceKm?: number,
+): number {
   if (!rule) return 0;
 
   const basis = rule.deliveryFeeBasis ?? DeliveryFeeBasis.FIXED;
   const baseFee = rule.deliveryFeePsw ?? 0;
 
   switch (basis) {
-    case DeliveryFeeBasis.FIXED:
+    case DeliveryFeeBasis.FIXED: {
       return baseFee;
+    }
 
-    case DeliveryFeeBasis.WEIGHT:
+    case DeliveryFeeBasis.WEIGHT: {
       if (!weight) return baseFee;
       // BaseFee is rate per kg in pesewas
       const weightRate = Number(baseFee) / 100;
       return Math.round(weight * weightRate * 100);
+    }
 
-    case DeliveryFeeBasis.DISTANCE:
+    case DeliveryFeeBasis.DISTANCE: {
       if (!distanceKm) return baseFee;
       // BaseFee is rate per km in pesewas
       const distanceRate = Number(baseFee) / 100;
       return Math.round(distanceKm * distanceRate * 100);
+    }
 
-    case DeliveryFeeBasis.VALUE:
+    case DeliveryFeeBasis.VALUE: {
       // BaseFee is percentage * 100 (e.g., 5% = 500)
       const percentage = Number(baseFee) / 100;
       const parcelValue = 1000n; // Default value if not available
       return Math.round((Number(parcelValue) / 100) * percentage * 100);
+    }
 
-    default:
+    default: {
       return baseFee;
+    }
   }
 }
 
 /**
  * Calculate insurance based on rule configuration
  */
-function calculateInsurance(rule: any, parcelValuePsw: number): number {
+function calculateInsurance(
+  rule:
+    | Pick<PaymentRuleRow, 'insuranceRequired' | 'insuranceRate' | 'insuranceMinPsw'>
+    | null
+    | undefined,
+  parcelValuePsw: number,
+): number {
   if (!rule || !rule.insuranceRequired || !rule.insuranceRate) return 0;
 
   // Calculate insurance amount
@@ -358,7 +376,10 @@ function calculateInsurance(rule: any, parcelValuePsw: number): number {
  * Calculate split payment amounts based on rule and responsibility
  */
 function calculateSplitPayment(
-  rule: any,
+  rule:
+    | Pick<PaymentRuleRow, 'splitPaymentType' | 'splitPercentage' | 'splitFixedSenderPsw'>
+    | null
+    | undefined,
   responsibility: PaymentResponsibility,
   totalChargePsw: number,
   customSplitPercentage?: number,
@@ -388,29 +409,34 @@ function calculateSplitPayment(
  * Calculate split amounts for SPLIT responsibility
  */
 function calculateSplitAmounts(
-  rule: any,
+  rule:
+    | Pick<PaymentRuleRow, 'splitPaymentType' | 'splitPercentage' | 'splitFixedSenderPsw'>
+    | null
+    | undefined,
   totalChargePsw: number,
   customSplitPercentage?: number,
 ): { senderAmountPsw: number; recipientAmountPsw: number } {
   const splitType = rule?.splitPaymentType ?? SplitPaymentType.PERCENTAGE;
 
   switch (splitType) {
-    case SplitPaymentType.PERCENTAGE:
+    case SplitPaymentType.PERCENTAGE: {
       const senderPercentage = customSplitPercentage ?? rule?.splitPercentage ?? 50;
       const senderAmount = (totalChargePsw * senderPercentage) / 100;
       return {
         senderAmountPsw: senderAmount,
         recipientAmountPsw: totalChargePsw - senderAmount,
       };
+    }
 
-    case SplitPaymentType.FIXED:
+    case SplitPaymentType.FIXED: {
       const fixedSender = rule?.splitFixedSenderPsw ?? totalChargePsw / 2;
       return {
         senderAmountPsw: fixedSender,
         recipientAmountPsw: totalChargePsw - fixedSender,
       };
+    }
 
-    case SplitPaymentType.WEIGHTED:
+    case SplitPaymentType.WEIGHTED: {
       // Complex logic based on multiple factors
       // For now, fall back to 50/50
       const weightedHalf = totalChargePsw / 2;
@@ -418,14 +444,16 @@ function calculateSplitAmounts(
         senderAmountPsw: weightedHalf,
         recipientAmountPsw: totalChargePsw - weightedHalf,
       };
+    }
 
-    default:
+    default: {
       // Default 50/50 split
       const defaultHalf = totalChargePsw / 2;
       return {
         senderAmountPsw: defaultHalf,
         recipientAmountPsw: totalChargePsw - defaultHalf,
       };
+    }
   }
 }
 
@@ -475,12 +503,12 @@ function generateCalculationHash(input: PaymentCalculationInput): string {
 /**
  * Map database calculation result to API response format
  */
-function mapDbResultToCalculation(dbResult: any): PaymentCalculationResult {
+function mapDbResultToCalculation(dbResult: PaymentCalculationRow): PaymentCalculationResult {
   return {
     parcelValue: (Number(dbResult.parcelValuePsw) / 100).toFixed(2),
     parcelValuePsw: dbResult.parcelValuePsw,
-    weight: dbResult.weight,
-    distanceKm: dbResult.distanceKm,
+    weight: dbResult.weight ?? undefined,
+    distanceKm: dbResult.distanceKm ?? undefined,
 
     baseCharge: (Number(dbResult.baseChargePsw) / 100).toFixed(2),
     baseChargePsw: dbResult.baseChargePsw,
@@ -509,9 +537,9 @@ function mapDbResultToCalculation(dbResult: any): PaymentCalculationResult {
     taxTotal: (Number(dbResult.taxTotalPsw) / 100).toFixed(2),
     taxTotalPsw: dbResult.taxTotalPsw,
 
-    paymentRuleId: dbResult.paymentRuleId,
-    paymentResponsibility: dbResult.paymentResponsibility,
-    splitType: dbResult.splitType,
+    paymentRuleId: dbResult.paymentRuleId ?? undefined,
+    paymentResponsibility: PaymentResponsibility.SENDER,
+    splitType: undefined,
     calculationHash: dbResult.calculationHash,
   };
 }

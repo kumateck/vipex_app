@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, smallint, bigint, index } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, timestamp, smallint, bigint, index } from 'drizzle-orm/pg-core';
 import { parcels } from './shipments';
 import { users, branches, companies } from './core';
 import { CashierType, PaymentMethod, Payer, PaymentComponent } from './enums';

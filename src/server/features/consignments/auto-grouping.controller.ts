@@ -4,6 +4,18 @@ import type { AutoGroupingInput } from './auto-grouping.service';
 import { parcels } from '@/db/schemas';
 import { eq } from 'drizzle-orm';
 
+type GroupingParcel = {
+  id: string;
+  trackingCode: string;
+  destinationId: string;
+  createdAt: Date;
+};
+
+type DestinationBreakdown = {
+  destinationId: string;
+  parcelCount: number;
+};
+
 export async function autoGroupingController(input: AutoGroupingInput) {
   const result = await autoGroupParcels(input);
 
@@ -46,7 +58,7 @@ export async function getGroupingStatusController(branchId: string) {
   };
 }
 
-function calculateAverageWaitTime(parcels: any[]): string {
+function calculateAverageWaitTime(parcels: GroupingParcel[]): string {
   if (parcels.length === 0) return '0 hours';
 
   const now = Date.now();
@@ -76,8 +88,8 @@ function getSuggestedAction(parcelCount: number): string {
   return 'MONITOR PENDING PARCELS';
 }
 
-function getDestinationBreakdown(parcels: any[]): any[] {
-  const destinationCounts = new Map();
+function getDestinationBreakdown(parcels: GroupingParcel[]): DestinationBreakdown[] {
+  const destinationCounts = new Map<string, number>();
 
   for (const parcel of parcels) {
     const dest = parcel.destinationId;

@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { createId } from '@paralleldrive/cuid2';
-import { and, eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { db } from '../src/db/config';
 import { branches, companies, companyModules, moduleCatalog, roles, users } from '@/db/schemas';
 import { BranchType, UserStatus, UserType } from '@/db/schemas/enums';

@@ -28,4 +28,4 @@ export interface StatusCreatePayload extends StatusMutationInput {
   createdBy: string;
 }
 
-export interface StatusUpdatePayload extends StatusMutationInput {}
+export type StatusUpdatePayload = StatusMutationInput;

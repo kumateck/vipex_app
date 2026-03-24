@@ -1,5 +1,5 @@
 import { calculatePayment } from './calculation.service';
-import type { PaymentCalculationInput } from './calculation.service';
+import { PaymentResponsibility } from '../../../db/schemas/enums';
 
 export interface PaymentCalculationQuery {
   companyId: string;
@@ -8,7 +8,7 @@ export interface PaymentCalculationQuery {
   parcelValue: string;
   weight?: number;
   distanceKm?: number;
-  paymentResponsibility?: number;
+  paymentResponsibility?: PaymentResponsibility;
   customSplitPercentage?: number;
   includeInsurance?: boolean;
 }
@@ -21,7 +21,7 @@ export async function calculatePaymentController(query: PaymentCalculationQuery)
     parcelValue: query.parcelValue,
     weight: query.weight,
     distanceKm: query.distanceKm,
-    paymentResponsibility: query.paymentResponsibility as any,
+    paymentResponsibility: query.paymentResponsibility,
     customSplitPercentage: query.customSplitPercentage,
     includeInsurance: query.includeInsurance,
   });

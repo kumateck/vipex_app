@@ -57,10 +57,6 @@ export default [
       'no-undef': 'off', // TS handles undefined vars
       'prefer-const': 'warn',
       'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
-      // Existing codebase debt: keep visible but non-blocking during push.
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-empty-object-type': 'warn',
-      'no-case-declarations': 'warn',
     },
   },
   // Optionally, stricter rules for server code

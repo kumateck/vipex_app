@@ -10,7 +10,9 @@ export type PaginationDefaults = {
   maxPageSize?: number;
 };
 
-export function normalizePagination<TFilters = Record<string, any>>(
+type PrimitiveFilterValue = string | number | boolean | null | undefined;
+
+export function normalizePagination<TFilters = Record<string, PrimitiveFilterValue>>(
   input: PaginationRequestDto<TFilters> | undefined,
   defaults: PaginationDefaults = {},
 ): NormalizedPagination<TFilters> {

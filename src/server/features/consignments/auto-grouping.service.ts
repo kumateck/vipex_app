@@ -1,7 +1,17 @@
-import { eq, and, desc, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '../../../db/client';
 import { consignments, consignmentItems, parcels } from '../../../db/schemas/shipments';
-import { PaymentResponsibility } from '../../../db/schemas/enums';
+
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+type AutoGroupingParcel = {
+  id: string;
+  trackingCode: string;
+  destinationId: string;
+  parcelValuePsw: number;
+  createdAt: Date;
+  companyId: string;
+};
 
 export interface AutoGroupingInput {
   sourceBranchId: string;
@@ -43,7 +53,7 @@ export async function autoGroupParcels(input: AutoGroupingInput): Promise<{
     .limit(200);
 
   // Group by destination
-  const destinationGroups = new Map<string, any[]>();
+  const destinationGroups = new Map<string, AutoGroupingParcel[]>();
 
   for (const parcel of allParcels) {
     const destination = parcel.destinationId;
@@ -58,12 +68,23 @@ export async function autoGroupParcels(input: AutoGroupingInput): Promise<{
   let groupedParcels = 0;
 
   for (const [destination, group] of destinationGroups) {
-    if (group.length >= minParcelCount && (forceCreate || group.length >= 10)) {
+    const firstParcel = group[0];
+    if (!firstParcel) continue;
+
+    const oldestParcel = group[0];
+    const waitThresholdReached = oldestParcel
+      ? (Date.now() - new Date(oldestParcel.createdAt).getTime()) / (60 * 1000) >= maxWaitMinutes
+      : false;
+
+    if (
+      group.length >= minParcelCount &&
+      (forceCreate || group.length >= 10 || waitThresholdReached)
+    ) {
       const consignment = await createConsignment({
-        companyId: companyId || group[0].companyId,
+        companyId: companyId || firstParcel.companyId,
         sourceBranchId,
         destinationBranchId: destination,
-        parcelIds: group.map((p: any) => p.id),
+        parcelIds: group.map((p) => p.id),
         createdBy: 'system-auto-group',
       });
 
@@ -96,7 +117,7 @@ async function createConsignment(input: {
   const serialForDay = 1; // Simplified - just increment
   const consignmentCode = generateConsignmentCode(consignmentDate, serialForDay);
 
-  return await db.transaction(async (tx: any) => {
+  return await db.transaction(async (tx: DbTransaction) => {
     // Create consignment
     const [consignment] = await tx
       .insert(consignments)
@@ -104,12 +125,16 @@ async function createConsignment(input: {
         companyId,
         sourceId: sourceBranchId,
         destinationId: destinationBranchId,
-        consignmentDate: consignmentDate.toISOString().split('T')[0],
+        consignmentDate,
         serialForDay,
         code: consignmentCode,
         createdBy,
       })
       .returning();
+
+    if (!consignment) {
+      throw new Error('Failed to create consignment');
+    }
 
     // Add parcels to consignment
     for (const parcelId of parcelIds) {

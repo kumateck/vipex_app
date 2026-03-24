@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, gte, lte, lt, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, lte, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
   productCategories,

@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import { UUID, NonEmptyString255 } from '../../schemas/common';
+import { UUID } from '../../schemas/common';
 import { autoGroupingController, getGroupingStatusController } from './auto-grouping.controller';
 import type { AutoGroupingInput } from './auto-grouping.service';
 
