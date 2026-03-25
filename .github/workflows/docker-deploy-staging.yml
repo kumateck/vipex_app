@@ -77,7 +77,19 @@ jobs:
             echo "Pruning unused Docker images"
             docker image prune -a -f
 
+            echo "Running database migrations"
+            docker run --rm --net sail \
+              -e DATABASE_URL='Host=postgres_db;Port=5432;Username=${{ secrets.DB_USERNAME }};Password=${{ secrets.DB_PASSWORD }};Database=vipexdstagingdb' \
+              "${DOCKER_IMAGE_NAME}:latest" bun run migrate
+
             echo "Running the new Docker container with env vars"
-            docker run -d --restart always --net sail -p "${HOST_PORT}:${CONTAINER_PORT}" --name "${CONTAINER_NAME}" \
+            docker run -d --restart always --net sail \
+              -p "${HOST_PORT}:${CONTAINER_PORT}" \
+              --name "${CONTAINER_NAME}" \
+              -e DATABASE_URL='Host=postgres_db;Port=5432;Username=${{ secrets.DB_USERNAME }};Password=${{ secrets.DB_PASSWORD }};Database=vipexdstagingdb' \
+              -e JWT_SECRET='${{ secrets.JWT_SECRET }}' \
+              -e EMAI_USER='dkadusei@kumateck.com' \
+              -e EMAIL_PASSWORD='Password' \
+              -e NODE_ENV='production' \
               "${DOCKER_IMAGE_NAME}:latest"
           EOF
