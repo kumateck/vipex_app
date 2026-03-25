@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { createId } from '@paralleldrive/cuid2';
-import { sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../src/db/config';
 import { branches, companies, companyModules, moduleCatalog, roles, users } from '@/db/schemas';
 import { BranchType, UserStatus, UserType } from '@/db/schemas/enums';
@@ -41,19 +41,104 @@ async function main() {
     );
   }
 
-  const sysUserId = createId();
-  const hashedPassword = await hashPassword(SYS_PASSWORD);
+  const bootstrapActorId = createId();
 
-  const companyId = createId();
-  await db.insert(companies).values({
-    id: companyId,
-    name: COMPANY_NAME,
-    type: COMPANY_TYPE,
-    code: COMPANY_CODE,
-    tin: COMPANY_TIN,
-    isDeleted: false,
-    createdBy: sysUserId,
-  });
+  let companyId: string;
+  const [existingCompany] = await db
+    .select({ id: companies.id })
+    .from(companies)
+    .where(sql`lower(${companies.code}) = lower(${COMPANY_CODE})`)
+    .limit(1);
+
+  if (existingCompany) {
+    companyId = existingCompany.id;
+  } else {
+    companyId = createId();
+    await db.insert(companies).values({
+      id: companyId,
+      name: COMPANY_NAME,
+      type: COMPANY_TYPE,
+      code: COMPANY_CODE,
+      tin: COMPANY_TIN,
+      isDeleted: false,
+      createdBy: bootstrapActorId,
+    });
+  }
+
+  let branchId: string;
+  const [existingBranch] = await db
+    .select({ id: branches.id })
+    .from(branches)
+    .where(
+      and(eq(branches.companyId, companyId), sql`lower(${branches.name}) = lower(${BRANCH_NAME})`),
+    )
+    .limit(1);
+
+  if (existingBranch) {
+    branchId = existingBranch.id;
+  } else {
+    branchId = createId();
+    await db.insert(branches).values({
+      id: branchId,
+      name: BRANCH_NAME,
+      type: BRANCH_TYPE,
+      companyId,
+      telephone: '+233302000000',
+      address: '1 Vipex Ave, Accra, Ghana',
+      email: 'headoffice@vipex.local',
+      isDeleted: false,
+      createdBy: bootstrapActorId,
+    });
+  }
+
+  let roleId: string;
+  const [existingRole] = await db
+    .select({ id: roles.id })
+    .from(roles)
+    .where(and(eq(roles.companyId, companyId), sql`lower(${roles.name}) = lower(${ROLE_NAME})`))
+    .limit(1);
+
+  if (existingRole) {
+    roleId = existingRole.id;
+  } else {
+    roleId = createId();
+    await db.insert(roles).values({
+      id: roleId,
+      companyId,
+      name: ROLE_NAME,
+      createdBy: bootstrapActorId,
+      isDeleted: false,
+    });
+  }
+
+  let sysUserId: string;
+  const [existingSysUser] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.companyId, companyId), sql`lower(${users.email}) = lower(${SYS_EMAIL})`))
+    .limit(1);
+
+  if (existingSysUser) {
+    sysUserId = existingSysUser.id;
+  } else {
+    sysUserId = bootstrapActorId;
+    const hashedPassword = await hashPassword(SYS_PASSWORD);
+    await db.insert(users).values({
+      id: sysUserId,
+      fullname: SYS_FULLNAME,
+      telephone: SYS_TELEPHONE,
+      email: SYS_EMAIL,
+      password: hashedPassword,
+      status: UserStatus.ACTIVE,
+      roleId,
+      companyId,
+      branchId,
+      locationId: null,
+      userType: UserType.STAFF,
+      createdBy: sysUserId,
+      taxReportConfirmation: false,
+    });
+  }
 
   for (const [code, name, isCoreEnabled] of MODULES) {
     const [existingModule] = await db
@@ -73,54 +158,29 @@ async function main() {
       });
     }
 
-    await db.insert(companyModules).values({
-      id: createId(),
-      companyId,
-      moduleCode: code,
-      isEnabled: isCoreEnabled,
-      enabledAt: isCoreEnabled ? new Date() : null,
-      disabledAt: isCoreEnabled ? null : new Date(),
-      configuredBy: sysUserId,
-    });
+    const [existingCompanyModule] = await db
+      .select({ id: companyModules.id })
+      .from(companyModules)
+      .where(
+        and(
+          eq(companyModules.companyId, companyId),
+          sql`lower(${companyModules.moduleCode}) = lower(${code})`,
+        ),
+      )
+      .limit(1);
+
+    if (!existingCompanyModule) {
+      await db.insert(companyModules).values({
+        id: createId(),
+        companyId,
+        moduleCode: code,
+        isEnabled: isCoreEnabled,
+        enabledAt: isCoreEnabled ? new Date() : null,
+        disabledAt: isCoreEnabled ? null : new Date(),
+        configuredBy: sysUserId,
+      });
+    }
   }
-
-  const branchId = createId();
-  await db.insert(branches).values({
-    id: branchId,
-    name: BRANCH_NAME,
-    type: BRANCH_TYPE,
-    companyId,
-    telephone: '+233302000000',
-    address: '1 Vipex Ave, Accra, Ghana',
-    email: 'headoffice@vipex.local',
-    isDeleted: false,
-    createdBy: sysUserId,
-  });
-
-  const roleId = createId();
-  await db.insert(roles).values({
-    id: roleId,
-    companyId,
-    name: ROLE_NAME,
-    createdBy: sysUserId,
-    isDeleted: false,
-  });
-
-  await db.insert(users).values({
-    id: sysUserId,
-    fullname: SYS_FULLNAME,
-    telephone: SYS_TELEPHONE,
-    email: SYS_EMAIL,
-    password: hashedPassword,
-    status: UserStatus.ACTIVE,
-    roleId,
-    companyId,
-    branchId,
-    locationId: null,
-    userType: UserType.STAFF,
-    createdBy: sysUserId,
-    taxReportConfirmation: false,
-  });
 
   console.log('\nBootstrap seed complete.');
   console.log({
