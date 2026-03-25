@@ -3,7 +3,7 @@ name: Build and Deploy Docker Image
 on:
   push:
     branches:
-      - dev
+      - development
 
 env:
   DOCKER_IMAGE_NAME: kumateck/vipex_app_dev
