@@ -9,9 +9,14 @@ const alg = 'HS256';
 export type JwtPayload = {
   sub: string; // user id
   email: string;
+  employeeId?: string | null;
   roleId?: string | null;
   companyId?: string | null;
   branchId?: string | null;
+  branchType?: number | null;
+  locationId?: string | null;
+  userType?: number | null;
+  permissions?: string[];
 };
 
 export async function signAccessToken(payload: JwtPayload) {

@@ -4,17 +4,20 @@ import {
   bookings,
   parcels,
   payments,
+  customerCreditTransactions,
   PaymentComponent,
   Payer,
   CashierType,
   PaymentMethod,
   users,
   branches,
+  CustomerCreditSourceType,
+  CustomerCreditTransactionType,
 } from '@/db/schemas';
 import { sanitizeString } from '@/lib/utils';
 import { generateBookingCode, generateTrackingCode } from '@/server/utils/codegen';
 
-export type CreatedParcelRef = { id: string; trackingCode: string };
+export type CreatedParcelRef = { id: string; trackingCode: string; bookingCode: string };
 export type CreatedPaymentRef = { id: string };
 
 export type CreateBookingWithParcelsInput = {
@@ -22,7 +25,7 @@ export type CreateBookingWithParcelsInput = {
   senderId: string;
   companyId: string;
   sourceId: string;
-  statusId: string;
+  status: number;
   createdBy: string;
   cashierSessionId?: string | null;
 
@@ -31,10 +34,11 @@ export type CreateBookingWithParcelsInput = {
   parcels: Array<{
     destinationId: string;
     receiverId: string;
-    statusId: string; // initial parcel status
+    status: number; // initial parcel status
     parcelDetails: string;
     parcelContent: string;
     parcelValuePsw?: number; // pre-converted pesewas; optional
+    chargePsw?: number; // pre-converted pesewas; optional
     plannedToBePaidPsw?: number; // pre-converted pesewas; optional
     method: PaymentMethod; // the method captured for this parcel context
     trackingCode?: string | null; // if absent, will be generated
@@ -136,10 +140,8 @@ export async function createBookingWithParcelsAndPaymentsRepo(
     const [b] = await tx
       .insert(bookings)
       .values({
-        senderId: input.senderId,
         companyId: input.companyId,
         sourceId: input.sourceId,
-        statusId: input.statusId,
         createdBy: input.createdBy,
         cashierSessionId: input.cashierSessionId ?? null,
         // createdAt/updatedAt default at DB
@@ -165,10 +167,11 @@ export async function createBookingWithParcelsAndPaymentsRepo(
           trackingCode: tracking,
           senderId: input.senderId,
           receiverId: p.receiverId,
-          statusId: p.statusId,
+          status: p.status,
           parcelDetails: p.parcelDetails,
           parcelContent: p.parcelContent,
           parcelValuePsw: p.parcelValuePsw ?? 0,
+          chargePsw: p.chargePsw ?? 0,
           plannedToBePaidPsw: p.plannedToBePaidPsw ?? 0,
           method: p.method,
           createdBy: input.createdBy,
@@ -179,6 +182,7 @@ export async function createBookingWithParcelsAndPaymentsRepo(
       createdParcels.push({
         id: sanitizeString(parcelRow?.id),
         trackingCode: sanitizeString(parcelRow?.trackingCode),
+        bookingCode: code,
       });
 
       if (p.senderPaymentPsw && p.senderPaymentPsw > 0) {
@@ -208,10 +212,26 @@ export async function createBookingWithParcelsAndPaymentsRepo(
           .returning({ id: payments.id });
         createdPayments.push({ id: sanitizeString(pay?.id) });
       }
-    }
 
-    // Optional: deterministic ordering in response
-    createdParcels.sort((a, b2) => (a.id < b2.id ? -1 : a.id > b2.id ? 1 : 0));
+      const shouldPostSenderCredit =
+        p.method === PaymentMethod.CREDIT &&
+        (!p.senderPaymentPsw || p.senderPaymentPsw <= 0) &&
+        (p.plannedToBePaidPsw ?? 0) <= 0 &&
+        (p.chargePsw ?? 0) > 0;
+
+      if (shouldPostSenderCredit) {
+        await tx.insert(customerCreditTransactions).values({
+          companyId: input.companyId,
+          customerId: input.senderId,
+          sourceType: CustomerCreditSourceType.PARCEL,
+          transactionType: CustomerCreditTransactionType.CHARGE,
+          referenceId: sanitizeString(parcelRow?.id),
+          signedAmountPsw: Number(p.chargePsw ?? 0),
+          notes: 'Parcel booking posted on customer credit',
+          createdBy: input.createdBy,
+        });
+      }
+    }
 
     return {
       bookingId: sanitizeString(b?.id),

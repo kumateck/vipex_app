@@ -7,6 +7,8 @@ import {
   listSessionsSvc,
   openSessionSvc,
   closeSessionSvc,
+  getCurrentActiveSessionSvc,
+  getCurrentActiveSessionSummarySvc,
 } from './service';
 
 export async function listSessionTypesCtrl() {
@@ -34,6 +36,8 @@ export async function listSessionsCtrl(
     cashierId: q.filters?.cashierId ?? null,
     branchId: q.filters?.branchId ?? null,
     activeOnly: q.filters?.activeOnly ?? null,
+    dateFrom: q.dateFrom ?? null,
+    dateTo: q.dateTo ?? null,
     sort: pagination.sort ?? null,
   });
   return {
@@ -55,3 +59,26 @@ export async function listSessionsCtrl(
 export const getSessionByIdCtrl = getSessionSvc;
 export const openSessionCtrl = openSessionSvc;
 export const closeSessionCtrl = closeSessionSvc;
+
+export async function getCurrentActiveSessionCtrl(input: {
+  cashierId: string;
+  branchId?: string | null;
+}) {
+  const session = await getCurrentActiveSessionSvc(input);
+  if (!session) return null;
+  return {
+    ...session,
+    scheduledStartTime: session.scheduledStartTime.toISOString(),
+    actualEndTime: session.actualEndTime ? session.actualEndTime.toISOString() : null,
+    createdAt: session.createdAt.toISOString(),
+    updatedAt: session.updatedAt.toISOString(),
+  };
+}
+
+export async function getCurrentActiveSessionSummaryCtrl(input: {
+  cashierId: string;
+  branchId?: string | null;
+  mode?: 'sender' | 'receiver' | 'delivery';
+}) {
+  return getCurrentActiveSessionSummarySvc(input);
+}

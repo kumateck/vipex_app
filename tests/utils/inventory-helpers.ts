@@ -22,6 +22,7 @@ import {
   // TransferStatus,
   UserStatus,
   TransferStatus,
+  BranchType,
 } from '@/db/schemas/enums';
 
 // Test data generators
@@ -48,7 +49,7 @@ export async function createTestCompany(data?: {
 export async function createTestBranch(data: {
   companyId: string;
   name?: string;
-  type?: string;
+  type?: number;
   createdBy?: string;
 }) {
   const [branch] = await db
@@ -56,7 +57,7 @@ export async function createTestBranch(data: {
     .values({
       companyId: data.companyId,
       name: data.name || `Test Branch ${Date.now()}`,
-      type: data.type || 'test',
+      type: data.type ?? BranchType.AGENCY,
       createdBy: data.createdBy || createId(),
       isDeleted: false,
     })

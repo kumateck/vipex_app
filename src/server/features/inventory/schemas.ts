@@ -1,13 +1,11 @@
 import { t } from 'elysia';
-import { UUID, NonEmptyString255, PaginationRequestQuery, SmallInt } from '../../schemas/common';
+import { UUID, NonEmptyString255, PaginationRequestQueryProps, SmallInt } from '../../schemas/common';
 
 // Product Category schemas
-export const ListProductCategoriesQuery = t.Intersect([
-  PaginationRequestQuery,
-  t.Object({
-    companyId: t.Optional(UUID),
-  }),
-]);
+export const ListProductCategoriesQuery = t.Object({
+  ...PaginationRequestQueryProps,
+  companyId: t.Optional(UUID),
+});
 
 export const CreateProductCategoryBody = t.Object({
   companyId: UUID,
@@ -22,13 +20,11 @@ export const UpdateProductCategoryBody = t.Object({
 });
 
 // Product schemas
-export const ListProductsQuery = t.Intersect([
-  PaginationRequestQuery,
-  t.Object({
-    companyId: t.Optional(UUID),
-    categoryId: t.Optional(UUID),
-  }),
-]);
+export const ListProductsQuery = t.Object({
+  ...PaginationRequestQueryProps,
+  companyId: t.Optional(UUID),
+  categoryId: t.Optional(UUID),
+});
 
 export const CreateProductBody = t.Object({
   companyId: UUID,
@@ -50,13 +46,11 @@ export const UpdateProductBody = t.Object({
 });
 
 // Inventory Location schemas
-export const ListInventoryLocationsQuery = t.Intersect([
-  PaginationRequestQuery,
-  t.Object({
-    companyId: t.Optional(UUID),
-    branchId: t.Optional(UUID),
-  }),
-]);
+export const ListInventoryLocationsQuery = t.Object({
+  ...PaginationRequestQueryProps,
+  companyId: t.Optional(UUID),
+  branchId: t.Optional(UUID),
+});
 
 export const CreateInventoryLocationBody = t.Object({
   companyId: UUID,
@@ -72,29 +66,25 @@ export const UpdateInventoryLocationBody = t.Object({
 });
 
 // Stock Level schemas
-export const ListStockLevelsQuery = t.Intersect([
-  PaginationRequestQuery,
-  t.Object({
-    companyId: t.Optional(UUID),
-    productId: t.Optional(UUID),
-    locationId: t.Optional(UUID),
-  }),
-]);
+export const ListStockLevelsQuery = t.Object({
+  ...PaginationRequestQueryProps,
+  companyId: t.Optional(UUID),
+  productId: t.Optional(UUID),
+  locationId: t.Optional(UUID),
+});
 
 export const UpdateStockLevelBody = t.Object({
   quantity: t.String(), // bigint as string
 });
 
 // Stock Movement schemas
-export const ListStockMovementsQuery = t.Intersect([
-  PaginationRequestQuery,
-  t.Object({
-    companyId: t.Optional(UUID),
-    productId: t.Optional(UUID),
-    locationId: t.Optional(UUID),
-    movementType: t.Optional(SmallInt),
-  }),
-]);
+export const ListStockMovementsQuery = t.Object({
+  ...PaginationRequestQueryProps,
+  companyId: t.Optional(UUID),
+  productId: t.Optional(UUID),
+  locationId: t.Optional(UUID),
+  movementType: t.Optional(SmallInt),
+});
 
 export const CreateStockMovementBody = t.Object({
   companyId: UUID,
@@ -109,14 +99,12 @@ export const CreateStockMovementBody = t.Object({
 });
 
 // Stock Adjustment schemas
-export const ListStockAdjustmentsQuery = t.Intersect([
-  PaginationRequestQuery,
-  t.Object({
-    companyId: t.Optional(UUID),
-    productId: t.Optional(UUID),
-    locationId: t.Optional(UUID),
-  }),
-]);
+export const ListStockAdjustmentsQuery = t.Object({
+  ...PaginationRequestQueryProps,
+  companyId: t.Optional(UUID),
+  productId: t.Optional(UUID),
+  locationId: t.Optional(UUID),
+});
 
 export const CreateStockAdjustmentBody = t.Object({
   companyId: UUID,
@@ -129,14 +117,12 @@ export const CreateStockAdjustmentBody = t.Object({
 });
 
 // Stock Transfer schemas
-export const ListStockTransfersQuery = t.Intersect([
-  PaginationRequestQuery,
-  t.Object({
-    companyId: t.Optional(UUID),
-    productId: t.Optional(UUID),
-    status: t.Optional(SmallInt),
-  }),
-]);
+export const ListStockTransfersQuery = t.Object({
+  ...PaginationRequestQueryProps,
+  companyId: t.Optional(UUID),
+  productId: t.Optional(UUID),
+  status: t.Optional(SmallInt),
+});
 
 export const CreateStockTransferBody = t.Object({
   companyId: UUID,
@@ -159,13 +145,11 @@ export const LowStockReportQuery = t.Object({
   locationId: t.Optional(UUID),
 });
 
-export const MovementHistoryQuery = t.Intersect([
-  PaginationRequestQuery,
-  t.Object({
-    companyId: UUID,
-    productId: t.Optional(UUID),
-    locationId: t.Optional(UUID),
-    startDate: t.Optional(t.String({ format: 'date-time' })),
-    endDate: t.Optional(t.String({ format: 'date-time' })),
-  }),
-]);
+export const MovementHistoryQuery = t.Object({
+  ...PaginationRequestQueryProps,
+  companyId: UUID,
+  productId: t.Optional(UUID),
+  locationId: t.Optional(UUID),
+  startDate: t.Optional(t.String({ format: 'date-time' })),
+  endDate: t.Optional(t.String({ format: 'date-time' })),
+});

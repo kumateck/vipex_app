@@ -1,20 +1,35 @@
 import { api } from '@/services/api';
+import {
+  buildServerPaginationParams,
+  provideEntityListTags,
+  type ServerListQuery,
+  type ServerListResponse,
+} from '@/services/rtk-query';
 
 export interface Booking {
   id: string;
   senderId: string;
   companyId: string;
   sourceId: string;
-  statusId: string;
+  status: number;
   createdAt: string;
   updatedAt?: string;
 }
 
+export interface BookingFilters {
+  companyId?: string | null;
+  senderId?: string | null;
+  sourceId?: string | null;
+}
+
 export const bookingsApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    listBookings: builder.query<{ data: Booking[] }, { companyId?: string; limit?: number }>({
-      query: (params) => ({ url: '/shipments/bookings', params }),
-      providesTags: ['Bookings'],
+    listBookings: builder.query<ServerListResponse<Booking>, ServerListQuery<BookingFilters> | void>({
+      query: (query) => ({
+        url: '/shipments/bookings',
+        params: buildServerPaginationParams(query),
+      }),
+      providesTags: (result) => provideEntityListTags('Bookings', result),
     }),
   }),
 });

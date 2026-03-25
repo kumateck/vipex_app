@@ -2,16 +2,19 @@ import { buildPaginationMeta, normalizePagination } from '@/server/utils/paginat
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import {
   listProductCategoriesSvc,
+  listProductCategoryOptionsSvc,
   getProductCategorySvc,
   createProductCategorySvc,
   updateProductCategorySvc,
   deleteProductCategorySvc,
   listProductsSvc,
+  listProductOptionsSvc,
   getProductSvc,
   createProductSvc,
   updateProductSvc,
   deleteProductSvc,
   listInventoryLocationsSvc,
+  listInventoryLocationOptionsSvc,
   getInventoryLocationSvc,
   createInventoryLocationSvc,
   updateInventoryLocationSvc,
@@ -58,6 +61,13 @@ export async function listProductCategoriesCtrl(
 
 export async function getProductCategoryCtrl(id: string) {
   return getProductCategorySvc(id);
+}
+
+export async function listProductCategoryOptionsCtrl(filters: {
+  companyId?: string | null;
+  search?: string | null;
+}) {
+  return listProductCategoryOptionsSvc(filters);
 }
 
 export async function createProductCategoryCtrl(input: {
@@ -114,6 +124,14 @@ export async function getProductCtrl(id: string) {
     ...product,
     minStockLevel: product.minStockLevel.toString(),
   };
+}
+
+export async function listProductOptionsCtrl(filters: {
+  companyId?: string | null;
+  categoryId?: string | null;
+  search?: string | null;
+}) {
+  return listProductOptionsSvc(filters);
 }
 
 export async function createProductCtrl(input: {
@@ -181,6 +199,14 @@ export async function listInventoryLocationsCtrl(
 
 export async function getInventoryLocationCtrl(id: string) {
   return getInventoryLocationSvc(id);
+}
+
+export async function listInventoryLocationOptionsCtrl(filters: {
+  companyId?: string | null;
+  branchId?: string | null;
+  search?: string | null;
+}) {
+  return listInventoryLocationOptionsSvc(filters);
 }
 
 export async function createInventoryLocationCtrl(input: {
@@ -407,13 +433,18 @@ export async function updateStockTransferCtrl(
 }
 
 // Reports
-export async function getLowStockReportCtrl(companyId: string, locationId?: string | null) {
-  const data = await getLowStockReportSvc(companyId, locationId);
+export async function getLowStockReportCtrl(filters: {
+  companyId?: string | null;
+  branchId?: string | null;
+  locationId?: string | null;
+}) {
+  const data = await getLowStockReportSvc(filters);
   return {
     data: data.map((item) => ({
       ...item,
       minStockLevel: item.minStockLevel?.toString(),
-      currentQuantity: item.currentQuantity?.toString(),
+      quantity: item.quantity?.toString(),
+      deficit: (Number(item.minStockLevel) - Number(item.quantity)).toString(),
     })),
   };
 }

@@ -18,27 +18,17 @@ export async function getBookingSvc(id: string): Promise<BookingRow & { parcelCo
   return { ...b, parcelCount: count };
 }
 export async function createBookingSvc(input: {
-  senderId: string;
   companyId: string;
   sourceId: string;
-  statusId: string;
   createdBy: string;
   cashierSessionId?: string | null;
 }) {
-  if (
-    !input.senderId ||
-    !input.companyId ||
-    !input.sourceId ||
-    !input.statusId ||
-    !input.createdBy
-  ) {
+  if (!input.companyId || !input.sourceId || !input.createdBy) {
     throw BadRequest('Missing required fields');
   }
   const created = await createBookingRepo({
-    senderId: input.senderId,
     companyId: input.companyId,
     sourceId: input.sourceId,
-    statusId: input.statusId,
     createdBy: input.createdBy,
     cashierSessionId: input.cashierSessionId ?? null,
   });

@@ -1,12 +1,12 @@
 import {
   pgTable,
-  uuid,
   varchar,
   timestamp,
   boolean,
   bigint,
   index,
   smallint,
+  text,
 } from 'drizzle-orm/pg-core';
 import { parcels } from './shipments';
 import { users, locations } from './core';
@@ -35,8 +35,11 @@ export const deliveries = pgTable(
     deliveryUserId: varchar('delivery_user_id', { length: 25 }).references(() => users.id),
 
     riderUserId: varchar('rider_user_id', { length: 25 }).references(() => users.id),
+    signatureImage: text('signature_image'),
 
-    receiverCalledConfirmedBy: varchar('receiver_called_confirmed_by', { length: 25 }).references(() => users.id),
+    receiverCalledConfirmedBy: varchar('receiver_called_confirmed_by', { length: 25 }).references(
+      () => users.id,
+    ),
     receiverCalledConfirmedAt: timestamp('receiver_called_confirmed_at', { withTimezone: false }),
 
     // bigint defaults via SQL literal

@@ -3,6 +3,7 @@ import { sentryPlugin } from './plugins/sentry';
 import { swaggerPlugin } from './plugins/swagger';
 import { requestId } from './middlewares/requestId';
 import { logger } from './middlewares/logger';
+import { auditTrail } from './middlewares/audit-trail';
 import { errorHandler } from './middlewares/error-handler';
 import { rateLimit } from './middlewares/rate-limit';
 import { health } from './routes/health';
@@ -15,7 +16,6 @@ import { corsPlugin } from './plugins/cors';
 import { usersInviteRoutes } from './features/auth/routes.invite-resend';
 import { branchesRoutes } from './features/branches/routes';
 import { locationsRoutes } from './features/locations/routes';
-import { statusesRoutes } from './features/statuses/routes';
 import { usersRoutes } from './features/users/routes';
 import { customersRoutes } from './features/customers/routes';
 import { bookingsRoutes } from './features/shipments/bookings.routes';
@@ -36,6 +36,12 @@ import { hrRoutes } from './features/hr/routes';
 import { payrollRoutes } from './features/payroll/routes';
 import { rbacRoutes } from './features/rbac/routes';
 import { geolocationRoutes } from './features/geolocation/routes';
+import { cardsRoutes } from './features/cards/routes';
+import { pickupQueuesRoutes } from './features/pickup-queues/routes';
+import { companyModulesRoutes } from './features/company-modules/routes';
+import { warehousesRoutes } from './features/warehouses/routes';
+import { parcelInternalTransfersRoutes } from './features/parcel-internal-transfers/routes';
+import { uploadsRoutes } from './features/uploads/routes';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -45,6 +51,7 @@ export const app = new Elysia()
   .use(requestId)
   .use(rateLimit)
   .use(logger)
+  .use(auditTrail)
   .use(errorHandler)
   .use(health)
   // Mount dev routes BEFORE any catch-all
@@ -54,9 +61,11 @@ export const app = new Elysia()
       .use(api)
       .group('/users', (r) => r.use(usersRoutes).use(usersInviteRoutes))
       .group('/branches', (r) => r.use(branchesRoutes))
-      .group('/statuses', (r) => r.use(statusesRoutes))
       .group('/locations', (r) => r.use(locationsRoutes))
+      .group('/warehouses', (r) => r.use(warehousesRoutes))
       .group('/customers', (r) => r.use(customersRoutes))
+      .group('/cards', (r) => r.use(cardsRoutes))
+      .group('/uploads', (r) => r.use(uploadsRoutes))
       .group('/cashiers', (r) => r.use(cashiersRoutes))
       .group(
         '/shipments',
@@ -64,6 +73,7 @@ export const app = new Elysia()
           s
             .group('/bookings', (r) => r.use(bookingsRoutes).use(bookingWithParcelsRoutes))
             .group('/parcels', (r) => r.use(parcelsRoutes))
+            .group('/parcel-internal-transfers', (r) => r.use(parcelInternalTransfersRoutes))
             .group('/consignments', (r) => r.use(consignmentsRoutes))
             .group('/auto-grouping', (r) => r.use(autoGroupingRoutes)),
         // .group('/shifts', (r) => r.use(shiftManagementRoutes))
@@ -71,9 +81,11 @@ export const app = new Elysia()
       )
       .group('/payments', (r) => r.use(paymentsRoutes).use(paymentCalculationRoutes))
       .group('/deliveries', (r) => r.use(deliveriesRoutes))
+      .group('/pickup-queues', (r) => r.use(pickupQueuesRoutes))
       .group('/accounting', (r) => r.use(accountingRoutes))
       .group('/inventory', (r) => r.use(inventoryRoutes))
       .group('/shifts', (r) => r.use(shiftsRoutes))
+      .group('/company-modules', (r) => r.use(companyModulesRoutes))
       .group('/reports', (r) => r.use(reportingRoutes))
       .group('/audit', (r) => r.use(auditRoutes))
       .group('/hr', (r) => r.use(hrRoutes))

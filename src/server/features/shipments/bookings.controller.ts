@@ -5,7 +5,6 @@ import { createBookingSvc, getBookingSvc, listBookingsSvc } from './bookings.ser
 export async function listBookingsCtrl(
   q: PaginationRequestDto<{
     companyId?: string | null;
-    senderId?: string | null;
     sourceId?: string | null;
   }>,
 ): Promise<PaginatedResponseDto<unknown>> {
@@ -14,7 +13,6 @@ export async function listBookingsCtrl(
     limit: pagination.pageSize,
     offset: pagination.offset,
     companyId: q.filters?.companyId ?? null,
-    senderId: q.filters?.senderId ?? null,
     sourceId: q.filters?.sourceId ?? null,
     sort: pagination.sort ?? null,
   });

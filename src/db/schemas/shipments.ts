@@ -1,6 +1,5 @@
 import {
   pgTable,
-  uuid,
   varchar,
   boolean,
   timestamp,
@@ -12,10 +11,17 @@ import {
   json,
   text,
 } from 'drizzle-orm/pg-core';
-import { companies, branches, users, statuses, locations } from './core';
+import { companies, branches, users, locations, warehouses } from './core';
 import { customers, cards } from './customers';
 import { sql } from 'drizzle-orm';
-import { PaymentMethod, PaymentResponsibility, PendingBookingStatus } from './enums';
+import {
+  ParcelHolderType,
+  ParcelInternalTransferStatus,
+  ParcelStatus,
+  PaymentMethod,
+  PaymentResponsibility,
+  PendingBookingStatus,
+} from './enums';
 import { createId } from '@paralleldrive/cuid2';
 
 // Bookings: pure header (no destinationId, invoice, paymentMode, actionType)
@@ -26,18 +32,12 @@ export const bookings = pgTable(
     id: varchar('id', { length: 25 })
       .primaryKey()
       .$defaultFn(() => createId()),
-    senderId: varchar('sender_id', { length: 25 })
-      .notNull()
-      .references(() => customers.id),
     companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
     sourceId: varchar('source_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
-    statusId: varchar('status_id', { length: 25 })
-      .notNull()
-      .references(() => statuses.id),
     createdBy: varchar('created_by', { length: 25 })
       .notNull()
       .references(() => users.id),
@@ -45,10 +45,7 @@ export const bookings = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
     cashierSessionId: varchar('cashier_session_id', { length: 25 }),
   },
-  (t) => ({
-    bySender: index('bookings_sender_idx').on(t.senderId),
-    byCreated: index('bookings_created_idx').on(t.createdAt),
-  }),
+  (t) => ({ byCreated: index('bookings_created_idx').on(t.createdAt) }),
 );
 // Parcels: trackingCode (QR) + bookingCode (human visible); payment method stored as smallint
 export const parcels = pgTable(
@@ -81,14 +78,15 @@ export const parcels = pgTable(
       .references(() => customers.id),
     secondReceiverId: varchar('second_receiver_id', { length: 25 }).references(() => customers.id),
 
-    statusId: varchar('status_id', { length: 25 })
-      .notNull()
-      .references(() => statuses.id),
+    status: smallint('status').notNull().default(ParcelStatus.CREATED),
     parcelDetails: varchar('parcel_details', { length: 255 }).notNull(),
     parcelContent: varchar('parcel_content', { length: 255 }).notNull(),
 
     // bigint defaults via SQL literal
     parcelValuePsw: bigint('parcel_value_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    chargePsw: bigint('charge_psw', { mode: 'number' })
       .notNull()
       .default(sql`0`),
 
@@ -126,7 +124,7 @@ export const parcels = pgTable(
     ),
     bySender: index('parcels_sender_idx').on(t.senderId),
     byReceiver: index('parcels_receiver_idx').on(t.receiverId),
-    byStatus: index('parcels_status_idx').on(t.statusId),
+    byStatus: index('parcels_status_idx').on(t.status),
   }),
 );
 export const consignments = pgTable(
@@ -243,5 +241,147 @@ export const pendingBookings = pgTable(
     byStatus: index('pending_bookings_status_idx').on(t.status),
     byExpires: index('pending_bookings_expires_idx').on(t.expiresAt),
     byCreated: index('pending_bookings_created_idx').on(t.createdAt),
+  }),
+);
+
+export const pickupQueues = pgTable(
+  'pickup_queues',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    branchId: varchar('branch_id', { length: 25 })
+      .notNull()
+      .references(() => branches.id),
+    parcelId: varchar('parcel_id', { length: 25 })
+      .notNull()
+      .references(() => parcels.id),
+    paymentBucket: varchar('payment_bucket', { length: 2 }).notNull(),
+    queueDate: timestamp('queue_date', { mode: 'date' }).notNull(),
+    queueNumber: integer('queue_number').notNull(),
+    queueCode: varchar('queue_code', { length: 32 }).notNull(),
+    pickerStaffId: varchar('picker_staff_id', { length: 25 }).references(() => users.id),
+    idCardTypeId: varchar('id_card_type_id', { length: 25 }).references(() => cards.id),
+    idCardNumber: varchar('id_card_number', { length: 255 }),
+    queuedBy: varchar('queued_by', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+    queuedAt: timestamp('queued_at', { withTimezone: false }).notNull().defaultNow(),
+    endedAt: timestamp('ended_at', { withTimezone: false }),
+    endedBy: varchar('ended_by', { length: 25 }).references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uqPickupQueueParcel: uniqueIndex('pickup_queues_parcel_uq').on(t.parcelId),
+    uqPickupQueueDailyCode: uniqueIndex('pickup_queues_daily_code_uq').on(
+      t.branchId,
+      t.queueDate,
+      t.paymentBucket,
+      t.queueNumber,
+    ),
+    byBranchQueuedAt: index('pickup_queues_branch_queued_at_idx').on(t.branchId, t.queuedAt),
+    byQueueCode: uniqueIndex('pickup_queues_code_uq').on(t.queueCode),
+  }),
+);
+
+export const parcelInternalHolders = pgTable(
+  'parcel_internal_holders',
+  {
+    parcelId: varchar('parcel_id', { length: 25 })
+      .primaryKey()
+      .references(() => parcels.id),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    branchId: varchar('branch_id', { length: 25 })
+      .notNull()
+      .references(() => branches.id),
+    holderType: smallint('holder_type').notNull().default(ParcelHolderType.BRANCH),
+    locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
+    warehouseId: varchar('warehouse_id', { length: 25 }).references(() => warehouses.id),
+    updatedBy: varchar('updated_by', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byBranch: index('parcel_internal_holders_branch_idx').on(t.branchId),
+    byLocation: index('parcel_internal_holders_location_idx').on(t.locationId),
+    byWarehouse: index('parcel_internal_holders_warehouse_idx').on(t.warehouseId),
+  }),
+);
+
+export const parcelInternalTransfers = pgTable(
+  'parcel_internal_transfers',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    branchId: varchar('branch_id', { length: 25 })
+      .notNull()
+      .references(() => branches.id),
+    referenceNo: varchar('reference_no', { length: 64 }),
+    sourceHolderType: smallint('source_holder_type').notNull().default(ParcelHolderType.BRANCH),
+    sourceLocationId: varchar('source_location_id', { length: 25 }).references(() => locations.id),
+    sourceWarehouseId: varchar('source_warehouse_id', { length: 25 }).references(
+      () => warehouses.id,
+    ),
+    destinationHolderType: smallint('destination_holder_type')
+      .notNull()
+      .default(ParcelHolderType.LOCATION),
+    destinationLocationId: varchar('destination_location_id', { length: 25 }).references(
+      () => locations.id,
+    ),
+    destinationWarehouseId: varchar('destination_warehouse_id', { length: 25 }).references(
+      () => warehouses.id,
+    ),
+    notes: text('notes'),
+    status: smallint('status').notNull().default(ParcelInternalTransferStatus.PENDING),
+    transferredBy: varchar('transferred_by', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+    transferredAt: timestamp('transferred_at', { withTimezone: false }).notNull().defaultNow(),
+    acknowledgedBy: varchar('acknowledged_by', { length: 25 }).references(() => users.id),
+    acknowledgedAt: timestamp('acknowledged_at', { withTimezone: false }),
+    cancelledBy: varchar('cancelled_by', { length: 25 }).references(() => users.id),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: false }),
+    cancelReason: text('cancel_reason'),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byBranchStatus: index('parcel_internal_transfers_branch_status_idx').on(t.branchId, t.status),
+    byReference: uniqueIndex('parcel_internal_transfers_reference_uq').on(t.referenceNo),
+    byDestinationLocation: index('parcel_internal_transfers_dest_location_idx').on(
+      t.destinationLocationId,
+    ),
+    byDestinationWarehouse: index('parcel_internal_transfers_dest_warehouse_idx').on(
+      t.destinationWarehouseId,
+    ),
+  }),
+);
+
+export const parcelInternalTransferItems = pgTable(
+  'parcel_internal_transfer_items',
+  {
+    transferId: varchar('transfer_id', { length: 25 })
+      .notNull()
+      .references(() => parcelInternalTransfers.id),
+    parcelId: varchar('parcel_id', { length: 25 })
+      .notNull()
+      .references(() => parcels.id),
+    addedAt: timestamp('added_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: uniqueIndex('parcel_internal_transfer_items_uq').on(t.transferId, t.parcelId),
+    byParcel: index('parcel_internal_transfer_items_parcel_idx').on(t.parcelId),
   }),
 );

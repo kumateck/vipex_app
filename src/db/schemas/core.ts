@@ -9,7 +9,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { CashierType, UserStatus } from './enums';
+import { BranchType, CashierType, UserStatus, UserType } from './enums';
 import { createId } from '@paralleldrive/cuid2';
 
 // Companies
@@ -21,6 +21,7 @@ export const companies = pgTable('companies', {
   type: varchar('type', { length: 255 }).notNull(),
   code: varchar('code', { length: 255 }).notNull(),
   tin: varchar('tin', { length: 255 }),
+  useAccounting: boolean('use_accounting').notNull().default(false),
   isDeleted: boolean('is_deleted').notNull().default(false),
   createdBy: varchar('created_by', { length: 25 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
@@ -38,10 +39,11 @@ export const branches = pgTable(
       .notNull()
       .references(() => companies.id),
     name: varchar('name', { length: 255 }).notNull(),
-    type: varchar('type', { length: 255 }).notNull(),
+    type: smallint('type').notNull().default(BranchType.AGENCY),
     telephone: varchar('telephone', { length: 255 }),
     address: varchar('address', { length: 255 }),
     email: varchar('email', { length: 255 }),
+    usePickupQueue: boolean('use_pickup_queue').notNull().default(false),
     latitude: doublePrecision('latitude'),
     longitude: doublePrecision('longitude'),
     isDeleted: boolean('is_deleted').notNull().default(false),
@@ -68,6 +70,7 @@ export const locations = pgTable(
     companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
+    employeeId: varchar('employee_id', { length: 25 }),
     branchId: varchar('branch_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
@@ -84,6 +87,63 @@ export const locations = pgTable(
       t.branchId,
       sql`lower(${t.name})`,
     ),
+  }),
+);
+
+export const warehouses = pgTable(
+  'warehouses',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    branchId: varchar('branch_id', { length: 25 })
+      .notNull()
+      .references(() => branches.id),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: varchar('description', { length: 500 }),
+    active: boolean('active').notNull().default(true),
+    isDeleted: boolean('is_deleted').notNull().default(false),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompany: index('warehouses_company_idx').on(t.companyId),
+    byBranch: index('warehouses_branch_idx').on(t.branchId),
+    uqBranchLowerName: uniqueIndex('warehouses_branch_lower_name_uq').on(
+      t.branchId,
+      sql`lower(${t.name})`,
+    ),
+  }),
+);
+
+export const uploads = pgTable(
+  'uploads',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    modelType: varchar('model_type', { length: 80 }).notNull(),
+    modelId: varchar('model_id', { length: 80 }).notNull(),
+    fileName: varchar('file_name', { length: 255 }).notNull(),
+    contentType: varchar('content_type', { length: 120 }).notNull(),
+    objectKey: varchar('object_key', { length: 500 }).notNull(),
+    fileUrl: varchar('file_url', { length: 500 }).notNull(),
+    sizeBytes: doublePrecision('size_bytes').notNull(),
+    uploadedBy: varchar('uploaded_by', { length: 25 }).references(() => users.id),
+    isDeleted: boolean('is_deleted').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompanyModel: index('uploads_company_model_idx').on(t.companyId, t.modelType, t.modelId),
+    byObjectKey: uniqueIndex('uploads_object_key_uq').on(t.objectKey),
   }),
 );
 
@@ -139,31 +199,6 @@ export const roles = pgTable(
   }),
 );
 
-// Permissions
-export const permissions = pgTable(
-  'permissions',
-  {
-    id: varchar('id', { length: 25 })
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    companyId: varchar('company_id', { length: 25 })
-      .notNull()
-      .references(() => companies.id),
-    permission: varchar('permission', { length: 255 }).notNull(),
-    description: varchar('description', { length: 255 }).notNull(),
-    permType: varchar('perm_type', { length: 255 }).notNull(),
-    permIcon: varchar('perm_icon', { length: 255 }),
-    permParent: varchar('perm_parent', { length: 255 }),
-    isDeleted: boolean('is_deleted').notNull().default(false),
-    createdBy: varchar('created_by', { length: 25 }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
-  },
-  (t) => ({
-    byCompany: index('permissions_company_idx').on(t.companyId),
-  }),
-);
-
 // Role Permissions
 export const rolePermissions = pgTable('role_permissions', {
   id: varchar('id', { length: 25 })
@@ -175,36 +210,49 @@ export const rolePermissions = pgTable('role_permissions', {
   companyId: varchar('company_id', { length: 25 })
     .notNull()
     .references(() => companies.id),
-  permissionId: varchar('permission_id', { length: 25 })
-    .notNull()
-    .references(() => permissions.id),
+  permission: varchar('permission', { length: 255 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
 });
 
 // Users (status is smallint; map in app with your enums)
-export const users = pgTable('users', {
-  id: varchar('id', { length: 25 })
-    .primaryKey()
-    .$defaultFn(() => createId()),
-  fullname: varchar('fullname', { length: 255 }).notNull(),
-  telephone: varchar('telephone', { length: 255 }).notNull(),
-  email: varchar('email', { length: 255 }).notNull(),
-  password: varchar('password', { length: 255 }),
-  status: smallint('status').notNull().default(UserStatus.INVITED), // INVITED default
-  roleId: varchar('role_id', { length: 25 })
-    .notNull()
-    .references(() => roles.id),
-  companyId: varchar('company_id', { length: 25 })
-    .notNull()
-    .references(() => companies.id),
-  branchId: varchar('branch_id', { length: 25 })
-    .notNull()
-    .references(() => branches.id),
-  createdBy: varchar('created_by', { length: 25 }).notNull(),
-  taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
-  resetToken: varchar('reset_token', { length: 255 }),
-  resetTokenExpires: timestamp('reset_token_expires', { withTimezone: false }),
-  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
-});
+export const users = pgTable(
+  'users',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    fullname: varchar('fullname', { length: 255 }).notNull(),
+    telephone: varchar('telephone', { length: 255 }).notNull(),
+    email: varchar('email', { length: 255 }).notNull(),
+    employeeId: varchar('employee_id', { length: 25 }),
+    password: varchar('password', { length: 255 }),
+    status: smallint('status').notNull().default(UserStatus.INVITED), // INVITED default
+    roleId: varchar('role_id', { length: 25 })
+      .notNull()
+      .references(() => roles.id),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    branchId: varchar('branch_id', { length: 25 })
+      .notNull()
+      .references(() => branches.id),
+    locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
+    userType: smallint('user_type').notNull().default(UserType.STAFF),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
+    taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
+    resetToken: varchar('reset_token', { length: 255 }),
+    resetTokenExpires: timestamp('reset_token_expires', { withTimezone: false }),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompany: index('users_company_idx').on(t.companyId),
+    byCompanyEmployee: index('users_company_employee_idx').on(t.companyId, t.employeeId),
+    uqCompanyLowerEmail: uniqueIndex('users_company_lower_email_uq').on(
+      t.companyId,
+      sql`lower(${t.email})`,
+    ),
+    uqEmployeeId: uniqueIndex('users_employee_id_uq').on(t.employeeId),
+  }),
+);

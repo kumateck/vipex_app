@@ -5,10 +5,8 @@ import type { SortField } from '@/server/types/pagination.types';
 
 export type BookingRow = {
   id: string;
-  senderId: string;
   companyId: string;
   sourceId: string;
-  statusId: string;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -19,7 +17,6 @@ export type ListBookingsParams = {
   limit: number;
   offset: number;
   companyId?: string | null;
-  senderId?: string | null;
   sourceId?: string | null;
   sort?: SortField[] | null;
 };
@@ -29,7 +26,6 @@ export async function listBookingsRepo(
 ): Promise<{ data: BookingRow[]; totalRecords: number }> {
   const whereParts: (ReturnType<typeof eq> | ReturnType<typeof and> | ReturnType<typeof or>)[] = [];
   if (p.companyId) whereParts.push(eq(bookings.companyId, p.companyId));
-  if (p.senderId) whereParts.push(eq(bookings.senderId, p.senderId));
   if (p.sourceId) whereParts.push(eq(bookings.sourceId, p.sourceId));
   const sort = p.sort ?? [];
   const orderBy = sort.length
@@ -37,7 +33,8 @@ export async function listBookingsRepo(
         .map((s) => {
           if (s.field === 'createdAt')
             return s.direction === 'desc' ? desc(bookings.createdAt) : asc(bookings.createdAt);
-          if (s.field === 'id') return s.direction === 'desc' ? desc(bookings.id) : asc(bookings.id);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(bookings.id) : asc(bookings.id);
           return null;
         })
         .filter((value): value is ReturnType<typeof asc> => value !== null)
@@ -52,10 +49,8 @@ export async function listBookingsRepo(
   const rows = await db
     .select({
       id: bookings.id,
-      senderId: bookings.senderId,
       companyId: bookings.companyId,
       sourceId: bookings.sourceId,
-      statusId: bookings.statusId,
       createdBy: bookings.createdBy,
       createdAt: bookings.createdAt,
       updatedAt: bookings.updatedAt,
@@ -74,10 +69,8 @@ export async function getBookingRepo(id: string): Promise<BookingRow | null> {
   const [row] = await db
     .select({
       id: bookings.id,
-      senderId: bookings.senderId,
       companyId: bookings.companyId,
       sourceId: bookings.sourceId,
-      statusId: bookings.statusId,
       createdBy: bookings.createdBy,
       createdAt: bookings.createdAt,
       updatedAt: bookings.updatedAt,

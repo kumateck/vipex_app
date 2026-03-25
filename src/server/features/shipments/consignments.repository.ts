@@ -44,9 +44,25 @@ export async function createConsignmentRepo(
   return row;
 }
 
+export async function getConsignmentRepo(id: string): Promise<ConsignmentRow | null> {
+  const [row] = await db.select().from(consignments).where(eq(consignments.id, id)).limit(1);
+  return row ?? null;
+}
+
 export type ConsignmentItemRow = {
   consignmentId: string;
   parcelId: string;
+  addedAt: Date;
+  removedAt: Date | null;
+};
+
+export type ParcelConsignmentRow = {
+  consignmentId: string;
+  code: string;
+  consignmentDate: Date;
+  serialForDay: number;
+  sourceId: string;
+  destinationId: string;
   addedAt: Date;
   removedAt: Date | null;
 };
@@ -79,4 +95,22 @@ export async function removeConsignmentItemRepo(
     )
     .returning({ parcelId: consignmentItems.parcelId });
   return rows.length;
+}
+
+export async function listConsignmentsForParcelRepo(parcelId: string): Promise<ParcelConsignmentRow[]> {
+  const rows = await db
+    .select({
+      consignmentId: consignmentItems.consignmentId,
+      code: consignments.code,
+      consignmentDate: consignments.consignmentDate,
+      serialForDay: consignments.serialForDay,
+      sourceId: consignments.sourceId,
+      destinationId: consignments.destinationId,
+      addedAt: consignmentItems.addedAt,
+      removedAt: consignmentItems.removedAt,
+    })
+    .from(consignmentItems)
+    .innerJoin(consignments, eq(consignments.id, consignmentItems.consignmentId))
+    .where(eq(consignmentItems.parcelId, parcelId));
+  return rows;
 }

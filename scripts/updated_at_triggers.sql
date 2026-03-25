@@ -10,38 +10,34 @@ begin
 end;
 $$ language plpgsql;
 
--- Create/replace triggers for each table
+-- Create/replace triggers for every base table that has an "updated_at" column
 do $$
 declare
-  t text;
-  tables text[] := array[
-    'companies',
-    'branches',
-    'customers',
-    'cards',
-    'customer_cards',
-    'statuses',
-    'roles',
-    'users',
-    'permissions',
-    'role_permissions',
-    'locations',
-    'cashier_session_types',
-    'cashier_sessions',
-    'bookings',
-    'consignments',
-    'parcels',
-    'deliveries'
-  ];
+  row_rec record;
 begin
-  foreach t in array tables
+  for row_rec in
+    select c.table_schema, c.table_name
+    from information_schema.columns c
+    join information_schema.tables tbl
+      on tbl.table_schema = c.table_schema
+     and tbl.table_name = c.table_name
+    where c.table_schema = 'public'
+      and c.column_name = 'updated_at'
+      and tbl.table_type = 'BASE TABLE'
+    order by c.table_name
   loop
-    -- Drop prior trigger (if any), then create fresh
-    execute format('drop trigger if exists trg_%I_updated_at on %I;', t, t);
     execute format(
-      'create trigger trg_%I_updated_at before update on %I
-       for each row execute function set_updated_at();',
-      t, t
+      'drop trigger if exists trg_%I_updated_at on %I.%I;',
+      row_rec.table_name,
+      row_rec.table_schema,
+      row_rec.table_name
+    );
+
+    execute format(
+      'create trigger trg_%I_updated_at before update on %I.%I for each row execute function set_updated_at();',
+      row_rec.table_name,
+      row_rec.table_schema,
+      row_rec.table_name
     );
   end loop;
 end $$;

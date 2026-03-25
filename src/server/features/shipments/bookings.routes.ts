@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { PaginationRequestQuery, UUID } from '../../schemas/common';
+import { PaginationRequestQueryProps, UUID } from '../../schemas/common';
 import { createBookingCtrl, getBookingByIdCtrl, listBookingsCtrl } from './bookings.controller';
 
 export const bookingsRoutes = new Elysia({ name: 'bookings' })
@@ -16,19 +16,15 @@ export const bookingsRoutes = new Elysia({ name: 'bookings' })
         dateTo: query.dateTo,
         filters: {
           companyId: query.companyId ?? null,
-          senderId: query.senderId ?? null,
           sourceId: query.sourceId ?? null,
         },
       }),
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          companyId: t.Optional(UUID),
-          senderId: t.Optional(UUID),
-          sourceId: t.Optional(UUID),
-        }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        companyId: t.Optional(UUID),
+        sourceId: t.Optional(UUID),
+      }),
       detail: { tags: ['Shipments'], summary: 'List bookings' },
     },
   )
@@ -41,10 +37,8 @@ export const bookingsRoutes = new Elysia({ name: 'bookings' })
     async ({ body, set }) => {
       const res = await createBookingCtrl(
         body as {
-          senderId: string;
           companyId: string;
           sourceId: string;
-          statusId: string;
           createdBy: string;
           cashierSessionId?: string | null;
         },
@@ -54,10 +48,8 @@ export const bookingsRoutes = new Elysia({ name: 'bookings' })
     },
     {
       body: t.Object({
-        senderId: UUID,
         companyId: UUID,
         sourceId: UUID,
-        statusId: UUID,
         createdBy: UUID,
         cashierSessionId: t.Optional(UUID),
       }),

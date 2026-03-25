@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { locations } from '@/db/schemas';
+import { branches, locations } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
 
 export type ListLocationParams = {
@@ -10,6 +10,12 @@ export type ListLocationParams = {
   branchId?: string | null;
   includeDeleted?: boolean | null;
   sort?: SortField[] | null;
+};
+
+export type LocationOptionRow = {
+  id: string;
+  name: string;
+  branchId: string;
 };
 
 export async function listLocationsRepo(p: ListLocationParams) {
@@ -42,6 +48,10 @@ export async function listLocationsRepo(p: ListLocationParams) {
       id: locations.id,
       companyId: locations.companyId,
       branchId: locations.branchId,
+      branch: {
+        id: branches.id,
+        name: branches.name,
+      },
       name: locations.name,
       isDeleted: locations.isDeleted,
       createdBy: locations.createdBy,
@@ -49,6 +59,7 @@ export async function listLocationsRepo(p: ListLocationParams) {
       updatedAt: locations.updatedAt,
     })
     .from(locations)
+    .leftJoin(branches, eq(locations.branchId, branches.id))
     .where(where.length ? and(...where) : undefined)
     .orderBy(...orderBy)
     .limit(p.limit)
@@ -63,6 +74,10 @@ export async function getLocationRepo(id: string) {
       id: locations.id,
       companyId: locations.companyId,
       branchId: locations.branchId,
+      branch: {
+        id: branches.id,
+        name: branches.name,
+      },
       name: locations.name,
       isDeleted: locations.isDeleted,
       createdBy: locations.createdBy,
@@ -70,9 +85,33 @@ export async function getLocationRepo(id: string) {
       updatedAt: locations.updatedAt,
     })
     .from(locations)
+    .leftJoin(branches, eq(locations.branchId, branches.id))
     .where(eq(locations.id, id))
     .limit(1);
   return row ?? null;
+}
+
+export async function listLocationOptionsRepo(p: {
+  companyId?: string | null;
+  branchId?: string | null;
+  search?: string | null;
+  includeDeleted?: boolean | null;
+}): Promise<LocationOptionRow[]> {
+  const where = [];
+  if (p.companyId) where.push(eq(locations.companyId, p.companyId));
+  if (p.branchId) where.push(eq(locations.branchId, p.branchId));
+  if (!p.includeDeleted) where.push(eq(locations.isDeleted, false));
+  if (p.search) where.push(sql`${locations.name} ILIKE ${`%${p.search}%`}`);
+
+  return db
+    .select({
+      id: locations.id,
+      name: locations.name,
+      branchId: locations.branchId,
+    })
+    .from(locations)
+    .where(where.length ? and(...where) : undefined)
+    .orderBy(asc(locations.name), asc(locations.id));
 }
 
 export async function findLocationByNameRepo(branchId: string, name: string) {

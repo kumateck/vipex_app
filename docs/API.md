@@ -3,6 +3,7 @@
 Base URL: `/v1`
 
 ## Core
+
 - `POST /auth/login`
 - `POST /auth/refresh`
 - `POST /auth/logout`
@@ -10,26 +11,138 @@ Base URL: `/v1`
 - `POST /auth/reset-password`
 
 ## Master Data
+
 - `/users`
 - `/branches`
 - `/locations`
+- `/warehouses`
+- `/company-modules`
 - `/statuses`
+- `/hr/departments`
+- `/hr/job-titles`
+- `/hr/employees`
+- `/hr/attendance`
+- `/hr/leave-types`
+- `/hr/leave-requests`
+  - `/hr/leave-requests/:id/manager-approve`
+  - `/hr/leave-requests/:id/manager-reject`
 - `/customers`
+  - `/customers/crm`
+  - `/customers/:id/crm`
+  - `/customers/:id/cards`
+  - `/customers/:id/cards/:cardRecordId`
+  - `/customers/:id/statement`
+  - `/customers/:id/transactions`
+  - `/customers/:id/payments`
+  - `/customers/:id/credit/summary`
+  - `/customers/:id/credit/transactions`
+  - `/customers/:id/credit/open-items`
+  - `/customers/:id/credit/payments`
 
 ## Operations
+
 - `/shipments/bookings`
 - `/shipments/parcels`
+- `/shipments/parcel-internal-transfers`
 - `/shipments/consignments`
 - `/deliveries`
 - `/cashiers`
 - `/shifts`
 
 ## Finance
+
 - `/payments`
 - `/accounting`
+  - `accounts`
+  - `expense-categories`
+  - `approval-policies`
+  - `bank-accounts`
+  - `tax-components`
+  - `daily-cash-expected`
+  - `daily-cash-confirmations`
+  - `tax-profiles`
+  - `expense-requests`
+  - `tax-filing-periods`
+  - `tax-journal-items`
+  - `reports/trial-balance`
+  - `reports/account-statement`
+  - `reports/income-statement`
+  - `reports/profit-loss`
+  - `reports/balance-sheet`
+  - `reports/cash-flow`
+  - `reports/monthly-branch-summary`
 - `/payroll`
+  - `/payroll/groups`
+  - `/payroll/earning-types`
+  - `/payroll/deduction-types`
+  - `/payroll/compensation`
+  - `/payroll/cycles`
+  - `/payroll/cycles/:id/overtime`
+  - `/payroll/cycles/:id/overtime/:entryId/approve`
+  - `/payroll/cycles/:id/overtime/:entryId/reject`
+  - `/payroll/cycles/:id/adjustments`
+  - `/payroll/cycles/:id/adjustments/:entryId/approve`
+  - `/payroll/cycles/:id/adjustments/:entryId/reject`
+  - `/payroll/cycles/:id/bank-export`
+  - `/payroll/cycles/:id/payslips`
+  - `/payroll/payslips/:id`
+  - `/payroll/cycles/:id/journalize`
+  - `/payroll/cycles/:id/reverse`
+  - `/payroll/cycles/:id/reopen`
+
+## Platform
+
+- `/company-modules`
+  - `GET /company-modules`
+  - `PUT /company-modules/:moduleCode`
+- `/uploads`
+  - `GET /uploads?modelType=...&modelId=...`
+  - `POST /uploads`
+  - `DELETE /uploads/:id`
+  - `GET /uploads/object/:key`
+
+Notes:
+
+- Accounting availability is controlled through the `accounting` company module.
+- The accounting UI is surfaced at `/settings/company` for users with `CanManageCompanyModules`.
+- Accounting setup master data is surfaced at `/accounting/setup`.
+- The setup page currently manages chart of accounts, expense categories, approval policies, company bank accounts, tax profiles, and tax components.
+- Ledger accounts can now be deleted through `DELETE /accounting/accounts/:id?companyId=...`, but only when they have no associated transactions or setup references.
+- The setup page now shows per-record audit history inline by consuming `GET /audit/entities/:entityType/:entityId`.
+- Accounting API access is also role-gated with `CanReadAccounting`, `CanManageAccountingSetup`, `CanManageTaxFiling`, and `CanPostAccountingEntries`.
+- When `accounting` is disabled, `/accounting/*` UI routes are hidden and `/v1/accounting/*` API routes are blocked.
+
+Parcel internal transfer notes:
+
+- `GET /warehouses`
+- `GET /warehouses/options`
+- `POST /warehouses`
+- `PATCH /warehouses/:id`
+- `DELETE /warehouses/:id`
+- `GET /shipments/parcel-internal-transfers`
+- `GET /shipments/parcel-internal-transfers/:id`
+- `POST /shipments/parcel-internal-transfers`
+- `POST /shipments/parcel-internal-transfers/:id/acknowledge`
+- `POST /shipments/parcel-internal-transfers/:id/cancel`
+- these APIs move internal custody only and do not change parcel shipment status
+
+Upload notes:
+
+- image uploads are now backed by MinIO when configured
+- uploads are recorded against `modelType` and `modelId`
+- rider signature capture uses the upload API before delivery confirmation is saved
+- employee profile photos use the same upload API with `modelType=employee-profile-image`
+- customer card images use the same upload API with `modelType=customer-card-front-image` and `customer-card-back-image`
+- uploaded objects are served back through the app proxy route
+
+Reference:
+
+- `docs/COMPANY_MODULES.md`
+- `docs/PARCEL_INTERNAL_TRANSFERS.md`
+- `docs/REPORTING_MODULE.md`
 
 ## Inventory
+
 - `/inventory/categories`
 - `/inventory/products`
 - `/inventory/locations`
@@ -39,14 +152,35 @@ Base URL: `/v1`
 - `/inventory/stock-transfers`
 
 ## Governance
+
 - `/audit`
 - `/rbac`
 - `/reports`
+  - `GET /reports/employees`
+  - `GET /reports/attendance`
+  - `GET /reports/leave-requests`
+  - `GET /reports/payroll-register`
+  - `GET /reports/payroll-overtime`
+  - `GET /reports/payroll-adjustments`
+  - `GET /reports/payroll-journal-reconciliation`
+  - `GET /reports/cashier-performance`
+  - `GET /reports/daily-cash-confirmations`
+  - `GET /reports/expense-by-category`
+  - `GET /reports/shift-revenue`
+  - `GET /reports/branch-profitability`
+  - `GET /reports/credit-exposure`
+  - `GET /reports/customer-credit-aging-detail`
+  - `GET /reports/tobepaid-outstanding`
+  - `GET /reports/tobepaid-collections-reconciliation`
+  - `GET /reports/parcel-status-summary`
+  - `GET /reports/delivery-performance`
 
 ## Geolocation (PostGIS)
+
 - `GET /geolocation/distance`
 - `GET /geolocation/branches/nearby`
 
 ## Interactive docs
+
 - Swagger UI: `/docs`
 - OpenAPI JSON: `/docs/json`

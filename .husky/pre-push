@@ -1,11 +1,17 @@
 #!/usr/bin/env sh
-# . "$(dirname -- "$0")/_/husky.sh"
+set -e
 
-# Ensure bun is in PATH
 export PATH="$HOME/.bun/bin:$PATH"
 
-echo "Running pre-push checks (typecheck + tests)..."
-bun run typecheck || exit 1
-#bun test || exit 1
-# Optionally also build to catch build-time issues:
-bun run build || exit 1
+echo "Running pre-push quality gate..."
+echo "Step 1/4: Full lint"
+bun run lint
+
+echo "Step 2/4: Unit tests (CI mode)"
+bun run test:prepush
+
+echo "Step 3/4: Typecheck"
+bun run typecheck
+
+echo "Step 4/4: Build"
+bun run build

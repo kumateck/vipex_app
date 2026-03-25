@@ -3,6 +3,7 @@ import {
   createStatusRepo,
   findStatusByNameRepo,
   getStatusRepo,
+  listStatusOptionsRepo,
   listStatusesRepo,
   softDeleteStatusRepo,
   updateStatusRepo,
@@ -11,6 +12,13 @@ import {
 
 export async function listStatusesSvc(p: ListStatusParams) {
   return listStatusesRepo(p);
+}
+export async function listStatusOptionsSvc(p: {
+  companyId?: string | null;
+  search?: string | null;
+  includeDeleted?: boolean | null;
+}) {
+  return listStatusOptionsRepo(p);
 }
 export async function getStatusSvc(id: string) {
   const s = await getStatusRepo(id);

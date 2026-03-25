@@ -58,4 +58,4 @@ const EditableCell = <TData,>({ getValue, row, column, table }: EditableCellProp
   );
 };
 
-export default React.memo(EditableCell);
+export default React.memo(EditableCell) as typeof EditableCell;

@@ -1,17 +1,24 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import type { BranchType, UserType } from '@/shared/access/constants';
+
 export interface AuthUser {
   id: string;
   fullname: string;
   email: string;
-  telephone: string;
+  employeeId?: string | null;
+  telephone?: string;
   company: {
     id: string;
     name: string;
-  };
-  branch: { id: string; name: string };
-  role: { id: string; name: string };
+    useAccounting: boolean;
+  } | null;
+  branch: { id: string; name: string; type?: BranchType } | null;
+  role: { id: string; name: string } | null;
+  permissions: string[];
+  userType?: UserType;
+  location?: { id: string; name: string } | null;
   locationId?: string;
   locationName?: string;
 }

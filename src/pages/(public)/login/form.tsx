@@ -3,9 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
-import { Eye, EyeOff } from 'lucide-react';
-import { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,13 +11,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 // adjust this import path to wherever you place the schema file
 import { loginSchema, type LoginSchema } from './schema';
 import { useLoginMutation } from '@/features/auth/api';
-import { useLocation, useNavigate } from 'react-router-dom';
 import ThrowErrorMessage from '@/lib/throw-error';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui';
+import { PasswordField } from '@/features/auth/components/password-field';
 
 export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) {
-  const [showPassword, setShowPassword] = useState(false);
   const [login, { isLoading }] = useLoginMutation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -80,41 +77,19 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
               </Field>
 
               <Field>
-                <div className="flex items-center">
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <a href="#" className="ml-auto text-sm underline-offset-2 hover:underline">
-                    Forgot your password?
-                  </a>
-                </div>
-
-                <InputGroup>
-                  <InputGroupInput
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter your password"
-                    aria-invalid={!!errors.password}
-                    {...register('password')}
-                  />
-                  <InputGroupAddon align="inline-end">
-                    {showPassword ? (
-                      <EyeOff
-                        onClick={() => setShowPassword(false)}
-                        className="cursor-pointer"
-                        aria-label="Hide password"
-                      />
-                    ) : (
-                      <Eye
-                        onClick={() => setShowPassword(true)}
-                        className="cursor-pointer"
-                        aria-label="Show password"
-                      />
-                    )}
-                  </InputGroupAddon>
-                </InputGroup>
-
-                {errors.password?.message ? (
-                  <p className="text-sm text-destructive">{errors.password.message}</p>
-                ) : null}
+                <PasswordField
+                  id="password"
+                  label="Password"
+                  labelClassName="gap-2 text-sm font-medium leading-snug"
+                  labelAction={
+                    <Link to="/forgot" className="text-sm underline-offset-2 hover:underline">
+                      Forgot your password?
+                    </Link>
+                  }
+                  placeholder="Enter your password"
+                  error={errors.password?.message}
+                  {...register('password')}
+                />
               </Field>
 
               <Field>

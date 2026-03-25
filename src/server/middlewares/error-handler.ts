@@ -12,7 +12,7 @@ type ErrorLike = {
   status?: number;
   details?: ErrorDetails;
   all?: Array<{ path?: string; message?: string; summary?: string }>;
-  cause?: string | Record<string, string>;
+  cause?: unknown;
   name?: string;
   stack?: string;
 };
@@ -46,29 +46,46 @@ const toErrorLike = (error: object | null | undefined): ErrorLike => {
   return error as ErrorLike;
 };
 
+const readNestedCode = (value: unknown, depth = 0): string | undefined => {
+  if (!value || typeof value !== 'object' || depth > 4) return undefined;
+  const candidate = value as { code?: unknown; cause?: unknown };
+  if (typeof candidate.code === 'string' && candidate.code.trim().length > 0) {
+    return candidate.code;
+  }
+  return readNestedCode(candidate.cause, depth + 1);
+};
+
 const toInfraMapping = (err: ErrorLike): InfraMapping => {
-  if (err.code === '23505') {
+  const infraCode = err.code ?? readNestedCode(err.cause);
+  const infraCommand =
+    typeof err.command === 'string'
+      ? err.command
+      : err.cause && typeof err.cause === 'object' && 'command' in (err.cause as Record<string, unknown>)
+        ? String((err.cause as Record<string, unknown>).command ?? '')
+        : '';
+
+  if (infraCode === '23505') {
     return {
       status: HttpStatus.CONFLICT,
       code: 'UNIQUE_VIOLATION',
       message: 'A record with the same unique value already exists.',
     };
   }
-  if (err.code === '23503') {
+  if (infraCode === '23503') {
     return {
       status: HttpStatus.CONFLICT,
       code: 'FOREIGN_KEY_VIOLATION',
       message: 'A related record is missing or invalid.',
     };
   }
-  if (err.code === 'ESOCKET' || err.command === 'CONN') {
+  if (infraCode === 'ESOCKET' || infraCommand === 'CONN') {
     return {
       status: HttpStatus.BAD_GATEWAY,
       code: 'UPSTREAM_UNAVAILABLE',
       message: 'A dependent service is temporarily unavailable.',
     };
   }
-  if (err.code === '42883') {
+  if (infraCode === '42883') {
     return {
       status: HttpStatus.SERVICE_UNAVAILABLE,
       code: 'POSTGIS_NOT_ENABLED',
@@ -205,13 +222,13 @@ export function errorHandler(app: Elysia) {
           t: new Date().toISOString(),
           requestId,
           path,
-          method,
-          code: mapped.code,
-          originalMessage: err.message || null,
-          originalCode: err.code || null,
-          stack: err.stack || null,
-        }),
-      );
+      method,
+      code: mapped.code,
+      originalMessage: err.message || null,
+      originalCode: err.code ?? readNestedCode(err.cause) ?? null,
+      stack: err.stack || null,
+    }),
+  );
     }
 
     return buildErrorBody({

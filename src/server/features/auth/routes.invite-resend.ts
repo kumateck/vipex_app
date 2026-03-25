@@ -1,8 +1,10 @@
 import { Elysia, t } from 'elysia';
 import { UUID } from '../../schemas/common';
 import { resendSetupInviteSvc } from './service.invite-resend';
+import { authPlugin, requireAuth, requirePermissions } from '@/server/plugins/auth';
+import { PermissionKeys } from '@/shared/permissions/constants';
 
-export const usersInviteRoutes = new Elysia({ name: 'users-invite' }).post(
+export const usersInviteRoutes = new Elysia({ name: 'users-invite' }).use(authPlugin).post(
   '/auth/resend-setup/:id',
   async ({ params, body }) => {
     const res = await resendSetupInviteSvc(params.id, { force: body?.force });
@@ -15,6 +17,7 @@ export const usersInviteRoutes = new Elysia({ name: 'users-invite' }).post(
       ok: t.Boolean(),
       expiresAt: t.String({ format: 'date-time' }),
     }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanResendSetupInvite)],
     detail: {
       tags: ['Auth'],
       summary: 'Resend account setup email',

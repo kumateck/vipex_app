@@ -5,19 +5,21 @@ import tsparser from '@typescript-eslint/parser';
 
 export default [
   {
-    // Files to lint
-    files: ['**/*.{ts,tsx,js,jsx}'],
     ignores: [
-      'node_modules/',
-      'dist/',
-      'build/',
-      '.turbo/',
-      '.vercel/',
-      '.next/',
-      'coverage/',
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.turbo/**',
+      '**/.vercel/**',
+      '**/.next/**',
+      '**/coverage/**',
       'bun.lockb',
       'scripts/generate-routes.ts',
     ],
+  },
+  {
+    // Files to lint
+    files: ['**/*.{ts,tsx,js,jsx}'],
     languageOptions: {
       parser: tsparser,
       ecmaVersion: 'latest',

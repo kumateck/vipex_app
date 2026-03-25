@@ -8,12 +8,13 @@ import {
   type CreatePendingBookingInput,
   type ConfirmPendingBookingInput,
 } from './pending-bookings.service';
+import { PendingBookingStatus } from '@/db/schemas/enums';
 import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 
 export type ListPendingBookingsQuery = PaginationRequestDto<{
   branchId: string;
-  status?: number;
+  status?: PendingBookingStatus;
   attendantId?: string;
 }>;
 
@@ -23,7 +24,7 @@ export async function listPendingBookingsCtrl(
   const pagination = normalizePagination(query, { pageSize: 20 });
 
   const { data, totalRecords } = await getPendingBookings(query.filters?.branchId ?? '', {
-    status: query.filters?.status as any,
+    status: query.filters?.status,
     attendantId: query.filters?.attendantId,
     limit: pagination.pageSize,
     offset: pagination.offset,

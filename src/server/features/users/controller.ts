@@ -1,6 +1,13 @@
 import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
-import { createUserSvc, getUserSvc, listUsersSvc, updateUserSvc } from './service';
+import { UserType } from '@/db/schemas/enums';
+import {
+  createUserSvc,
+  getUserSvc,
+  listUserOptionsSvc,
+  listUsersSvc,
+  updateUserSvc,
+} from './service';
 
 // Normalize DB row to API DTO
 function toUserDto(u: {
@@ -12,6 +19,9 @@ function toUserDto(u: {
   roleId: string;
   companyId: string;
   branchId: string;
+  locationId?: string | null;
+  locationName?: string | null;
+  userType?: number | null;
   createdBy: string;
   createdAt: Date | string | null;
   updatedAt: Date | string | null;
@@ -28,6 +38,9 @@ function toUserDto(u: {
     roleId: u.roleId,
     companyId: u.companyId,
     branchId: u.branchId,
+    locationId: u.locationId ?? null,
+    locationName: u.locationName ?? null,
+    userType: u.userType ?? UserType.STAFF,
     createdBy: u.createdBy,
     createdAt:
       u.createdAt && typeof u.createdAt !== 'string'
@@ -47,10 +60,17 @@ export async function listUsersCtrl(
   q: PaginationRequestDto<{
     companyId?: string | null;
     branchId?: string | null;
+    locationId?: string | null;
     roleId?: string | null;
+    userType?: number | null;
     status?: number | null;
+    statuses?: string | null;
   }>,
 ): Promise<PaginatedResponseDto<ReturnType<typeof toUserDto>>> {
+  const parsedStatuses = q.filters?.statuses
+    ?.split(',')
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isInteger(value));
   const pagination = normalizePagination(q, { pageSize: 20 });
 
   const { data, totalRecords } = await listUsersSvc({
@@ -58,8 +78,11 @@ export async function listUsersCtrl(
     offset: pagination.offset,
     companyId: q.filters?.companyId ?? null,
     branchId: q.filters?.branchId ?? null,
+    locationId: q.filters?.locationId ?? null,
     roleId: q.filters?.roleId ?? null,
+    userType: q.filters?.userType ?? null,
     status: q.filters?.status ?? null,
+    statuses: parsedStatuses?.length ? parsedStatuses : null,
     search: pagination.search ?? null,
     sort: pagination.sort ?? null,
   });
@@ -79,15 +102,36 @@ export async function getUserByIdCtrl(id: string) {
   return toUserDto(u);
 }
 
+export async function listUserOptionsCtrl(filters: {
+  companyId?: string | null;
+  branchId?: string | null;
+  locationId?: string | null;
+  roleId?: string | null;
+  userType?: number | null;
+  status?: number | null;
+  search?: string | null;
+}) {
+  return listUserOptionsSvc(filters);
+}
+
 export async function createUserCtrl(input: {
   fullname: string;
   telephone: string;
   email: string;
+  employeeId?: string | null;
   status?: number;
   roleId: string;
   companyId: string;
   branchId: string;
+  locationId?: string | null;
+  userType: number;
   createdBy: string;
+  actor: {
+    companyId?: string | null;
+    branchId?: string | null;
+    branchType?: number | null;
+    locationId?: string | null;
+  };
 }) {
   return createUserSvc(input);
 }
@@ -101,6 +145,8 @@ export async function updateUserCtrl(
     status?: number;
     roleId?: string;
     branchId?: string;
+    locationId?: string | null;
+    userType?: number;
   },
 ) {
   return updateUserSvc(id, patch);

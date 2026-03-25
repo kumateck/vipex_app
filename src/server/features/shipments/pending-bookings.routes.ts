@@ -1,6 +1,11 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { UUID, NonEmptyString255, PaginationRequestQuery, SmallInt } from '../../schemas/common';
+import {
+  UUID,
+  NonEmptyString255,
+  PaginationRequestQueryProps,
+  SmallInt,
+} from '../../schemas/common';
 import {
   listPendingBookingsCtrl,
   getPendingBookingCtrl,
@@ -9,6 +14,16 @@ import {
   cancelPendingBookingCtrl,
   cleanupExpiredPendingBookingsCtrl,
 } from './pending-bookings.controller';
+import type {
+  CreatePendingBookingInput,
+  ConfirmPendingBookingInput,
+} from './pending-bookings.service';
+
+type ConfirmPendingBookingBody = Omit<ConfirmPendingBookingInput, 'pendingBookingId'>;
+type CancelPendingBookingBody = {
+  cancelledBy: string;
+  reason?: string;
+};
 
 export const pendingBookingsRoutes = new Elysia({ name: 'pending-bookings' })
   // List pending bookings for a branch
@@ -29,14 +44,12 @@ export const pendingBookingsRoutes = new Elysia({ name: 'pending-bookings' })
         },
       }),
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          branchId: UUID,
-          status: t.Optional(SmallInt),
-          attendantId: t.Optional(UUID),
-        }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        branchId: UUID,
+        status: t.Optional(SmallInt),
+        attendantId: t.Optional(UUID),
+      }),
       detail: {
         tags: ['Shipments'],
         summary: 'List pending bookings',
@@ -59,7 +72,7 @@ export const pendingBookingsRoutes = new Elysia({ name: 'pending-bookings' })
   .post(
     '/',
     async ({ body, set }) => {
-      const res = await createPendingBookingCtrl(body as any);
+      const res = await createPendingBookingCtrl(body as CreatePendingBookingInput);
       set.status = HttpStatus.CREATED;
       return res;
     },
@@ -110,7 +123,7 @@ export const pendingBookingsRoutes = new Elysia({ name: 'pending-bookings' })
     async ({ body, params }) =>
       confirmPendingBookingCtrl({
         pendingBookingId: params.id,
-        ...(body as any),
+        ...(body as ConfirmPendingBookingBody),
       }),
     {
       params: t.Object({ id: UUID }),
@@ -132,7 +145,11 @@ export const pendingBookingsRoutes = new Elysia({ name: 'pending-bookings' })
   .post(
     '/:id/cancel',
     async ({ body, params }) =>
-      cancelPendingBookingCtrl(params.id, (body as any).cancelledBy, (body as any).reason),
+      cancelPendingBookingCtrl(
+        params.id,
+        (body as CancelPendingBookingBody).cancelledBy,
+        (body as CancelPendingBookingBody).reason,
+      ),
     {
       params: t.Object({ id: UUID }),
       body: t.Object({

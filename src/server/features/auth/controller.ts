@@ -5,6 +5,7 @@ import {
   logoutSvc,
   refreshSvc,
   resetPasswordSvc,
+  getCurrentUserPermissionsSvc,
 } from './service';
 
 export async function loginCtrl(input: {
@@ -17,8 +18,14 @@ export async function loginCtrl(input: {
 }
 
 export async function refreshCtrl(refreshToken: string) {
-  const tokens = await refreshSvc(refreshToken);
-  return { tokens };
+  const { accessToken, refreshToken: nextRefreshToken, user } = await refreshSvc(refreshToken);
+  return {
+    tokens: {
+      accessToken,
+      refreshToken: nextRefreshToken,
+    },
+    user,
+  };
 }
 
 export async function logoutCtrl(refreshToken: string) {
@@ -39,4 +46,14 @@ export async function resetPasswordCtrl(token: string, password: string) {
 export async function changePasswordCtrl(userId: string, oldPassword: string, newPassword: string) {
   await changePasswordSvc(userId, oldPassword, newPassword);
   return { success: true };
+}
+
+export async function currentUserPermissionsCtrl(userId: string) {
+  const result = await getCurrentUserPermissionsSvc(userId);
+  return { permissions: result.allPermissions };
+}
+
+export async function currentUserReadOnlyPermissionsCtrl(userId: string) {
+  const result = await getCurrentUserPermissionsSvc(userId);
+  return { readOnlyPermissions: result.readOnlyPermissions };
 }

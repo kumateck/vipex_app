@@ -1,6 +1,5 @@
 import {
   pgTable,
-  uuid,
   varchar,
   timestamp,
   bigint,
@@ -55,7 +54,9 @@ export const paymentRules = pgTable(
 
     // Branch and distance specific
     sourceBranchId: varchar('source_branch_id', { length: 25 }).references(() => branches.id),
-    destinationBranchId: varchar('destination_branch_id', { length: 25 }).references(() => branches.id),
+    destinationBranchId: varchar('destination_branch_id', { length: 25 }).references(
+      () => branches.id,
+    ),
     distanceKm: smallint('distance_km'), // for distance-based pricing
 
     // Active flag and conditions

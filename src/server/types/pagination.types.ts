@@ -1,11 +1,12 @@
-export type SortDirection = "asc" | "desc";
+export type SortDirection = 'asc' | 'desc';
+type PrimitiveFilterValue = string | number | boolean | null | undefined;
 
 export interface SortField {
   field: string;
   direction: SortDirection;
 }
 
-export interface PaginationRequestDto<TFilters = Record<string, any>> {
+export interface PaginationRequestDto<TFilters = Record<string, PrimitiveFilterValue>> {
   page?: number; // default: 1
   pageSize?: number; // default: 10 or 20
   search?: string; // global search
@@ -32,7 +33,7 @@ export interface PaginatedResponseDto<T> {
   meta: PaginationMeta;
 }
 
-export type NormalizedPagination<TFilters = Record<string, any>> = Required<
+export type NormalizedPagination<TFilters = Record<string, PrimitiveFilterValue>> = Required<
   Pick<PaginationRequestDto<TFilters>, 'page' | 'pageSize'>
 > &
   Omit<PaginationRequestDto<TFilters>, 'page' | 'pageSize'> & {

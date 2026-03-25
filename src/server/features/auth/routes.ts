@@ -2,15 +2,20 @@ import { Elysia, t } from 'elysia';
 import { authPlugin, requireAuth } from '../../plugins/auth';
 import {
   ChangePasswordBody,
+  CurrentUserPermissionsResponse,
+  CurrentUserReadOnlyPermissionsResponse,
   ForgotPasswordBody,
   LoginBody,
   LoginResponse,
   LogoutBody,
   RefreshBody,
   TokenPair,
+  AuthUserResponse,
 } from './schemas';
 import {
   changePasswordCtrl,
+  currentUserPermissionsCtrl,
+  currentUserReadOnlyPermissionsCtrl,
   forgotPasswordCtrl,
   loginCtrl,
   logoutCtrl,
@@ -47,7 +52,7 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
       },
       {
         body: RefreshBody,
-        response: t.Object({ tokens: TokenPair }),
+        response: t.Object({ tokens: TokenPair, user: AuthUserResponse }),
         detail: {
           tags: ['Auth'],
           summary: 'Refresh',
@@ -116,6 +121,30 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
           tags: ['Auth'],
           summary: 'Change password (authenticated)',
           operationId: 'changePassword',
+          security: [{ bearerAuth: [] }],
+        },
+      },
+    )
+    .get('/me/permissions', async ({ user }) => currentUserPermissionsCtrl(user!.sub), {
+      response: CurrentUserPermissionsResponse,
+      beforeHandle: requireAuth(),
+      detail: {
+        tags: ['Auth'],
+        summary: 'Get current user permissions',
+        operationId: 'getCurrentUserPermissions',
+        security: [{ bearerAuth: [] }],
+      },
+    })
+    .get(
+      '/me/permissions/read-only',
+      async ({ user }) => currentUserReadOnlyPermissionsCtrl(user!.sub),
+      {
+        response: CurrentUserReadOnlyPermissionsResponse,
+        beforeHandle: requireAuth(),
+        detail: {
+          tags: ['Auth'],
+          summary: 'Get current user read-only permissions',
+          operationId: 'getCurrentUserReadOnlyPermissions',
           security: [{ bearerAuth: [] }],
         },
       },

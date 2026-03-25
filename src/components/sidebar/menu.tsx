@@ -225,23 +225,21 @@ export function NavMain({ title, items }: NavMainProps) {
       <SidebarMenu>
         {items.map((item) => {
           const hasChildren = !!item.items?.length;
-
-          // Active if current path matches the item's url OR any child url
-          const isActive =
-            (!!item.url && currentPath === item.url) ||
-            (hasChildren && item.items!.some((sub) => sub.url && currentPath === sub.url));
+          const isItemActive = !!item.url && currentPath === item.url;
+          const hasActiveChild =
+            hasChildren && item.items!.some((sub) => sub.url && currentPath === sub.url);
 
           if (hasChildren) {
             return (
               <Collapsible
                 key={item.title}
                 asChild
-                defaultOpen={isActive}
+                defaultOpen={hasActiveChild}
                 className="group/collapsible"
               >
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip={item.title} isActive={isActive}>
+                    <SidebarMenuButton tooltip={item.title} isActive={isItemActive}>
                       {item.icon && <Icon name={item.icon} />}
                       <span>{item.title}</span>
                       <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -272,7 +270,7 @@ export function NavMain({ title, items }: NavMainProps) {
 
           return (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild tooltip={item.title} isActive={isActive}>
+              <SidebarMenuButton asChild tooltip={item.title} isActive={isItemActive}>
                 <Link to={item.url as string}>
                   {item.icon && <Icon name={item.icon} />}
                   <span>{item.title}</span>

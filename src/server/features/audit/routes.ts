@@ -1,52 +1,79 @@
 import { Elysia, t } from 'elysia';
-import { HttpStatus } from '../../utils/http-status';
-import { PaginationRequestQuery, UUID } from '@/server/schemas/common';
-
-const notImplemented = (scope: string) => ({
-  error: {
-    status: HttpStatus.NOT_IMPLEMENTED,
-    message: `${scope} is defined but not implemented yet.`,
-  },
-});
+import { PaginationRequestQueryProps, UUID } from '@/server/schemas/common';
+import {
+  authPlugin,
+  requireAnyPermissions,
+  requireAuth,
+  requirePermissions,
+} from '@/server/plugins/auth';
+import { PermissionKeys } from '@/shared/permissions/constants';
+import {
+  createAuditExportJobCtrl,
+  getAuditLogCtrl,
+  listAuditLogsCtrl,
+  listEntityAuditHistoryCtrl,
+} from './controller';
 
 export const auditRoutes = new Elysia({ name: 'audit' })
+  .use(authPlugin)
   .get(
     '/logs',
-    async ({ set }) => {
-      set.status = HttpStatus.NOT_IMPLEMENTED;
-      return notImplemented('List audit logs');
+    async ({ query, user }) => {
+      return listAuditLogsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort: query.sort,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: user!.companyId!,
+          actorUserId: query.actorUserId ?? null,
+          entityType: query.entityType ?? null,
+          entityId: query.entityId ?? null,
+          action: query.action ?? null,
+          from: query.from ?? null,
+          to: query.to ?? null,
+        },
+      });
     },
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          actorUserId: t.Optional(UUID),
-          entityType: t.Optional(t.String()),
-          entityId: t.Optional(UUID),
-          action: t.Optional(t.String()),
-          from: t.Optional(t.String({ format: 'date-time' })),
-          to: t.Optional(t.String({ format: 'date-time' })),
-        }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        actorUserId: t.Optional(UUID),
+        entityType: t.Optional(t.String()),
+        entityId: t.Optional(UUID),
+        action: t.Optional(t.String()),
+        from: t.Optional(t.String({ format: 'date-time' })),
+        to: t.Optional(t.String({ format: 'date-time' })),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanListAuditLogs)],
       detail: { tags: ['Audit'], summary: 'List audit logs', operationId: 'listAuditLogs' },
     },
   )
   .get(
     '/logs/:id',
-    async ({ set }) => {
-      set.status = HttpStatus.NOT_IMPLEMENTED;
-      return notImplemented('Get audit log');
+    async ({ params, user }) => {
+      return getAuditLogCtrl(params.id, user!.companyId!);
     },
     {
       params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanGetAuditLog)],
       detail: { tags: ['Audit'], summary: 'Get audit log', operationId: 'getAuditLog' },
     },
   )
   .get(
     '/entities/:entityType/:entityId',
-    async ({ set }) => {
-      set.status = HttpStatus.NOT_IMPLEMENTED;
-      return notImplemented('Get entity audit history');
+    async ({ params, query, user }) => {
+      return {
+        data: await listEntityAuditHistoryCtrl({
+          companyId: user!.companyId!,
+          entityType: params.entityType,
+          entityId: params.entityId,
+          from: query.from ?? null,
+          to: query.to ?? null,
+        }),
+      };
     },
     {
       params: t.Object({
@@ -57,6 +84,13 @@ export const auditRoutes = new Elysia({ name: 'audit' })
         from: t.Optional(t.String({ format: 'date-time' })),
         to: t.Optional(t.String({ format: 'date-time' })),
       }),
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanGetEntityAuditHistory,
+          PermissionKeys.CanManageAccountingSetup,
+        ),
+      ],
       detail: {
         tags: ['Audit'],
         summary: 'Get entity audit history',
@@ -66,17 +100,22 @@ export const auditRoutes = new Elysia({ name: 'audit' })
   )
   .post(
     '/exports',
-    async ({ set }) => {
-      set.status = HttpStatus.NOT_IMPLEMENTED;
-      return notImplemented('Create audit export job');
+    async ({ body, user }) => {
+      return createAuditExportJobCtrl({
+        companyId: user!.companyId!,
+        requestedBy: user!.sub,
+        from: body.from,
+        to: body.to,
+        format: body.format,
+      });
     },
     {
       body: t.Object({
-        requestedBy: UUID,
         from: t.String({ format: 'date-time' }),
         to: t.String({ format: 'date-time' }),
         format: t.String(),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateAuditExportJob)],
       detail: {
         tags: ['Audit'],
         summary: 'Create audit export job',

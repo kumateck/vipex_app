@@ -1,1 +1,7 @@
-# bunx --bun lint-staged
+#!/usr/bin/env sh
+set -e
+
+export PATH="$HOME/.bun/bin:$PATH"
+
+echo "Running pre-commit checks (staged files only)..."
+bunx --bun lint-staged

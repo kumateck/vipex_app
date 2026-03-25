@@ -4,6 +4,7 @@ import {
   createBranchSvc,
   deleteBranchSvc,
   getBranchSvc,
+  listBranchOptionsSvc,
   listBranchesSvc,
   updateBranchSvc,
 } from './service';
@@ -13,10 +14,11 @@ function toBranchDto(b: {
   id: string;
   companyId: string;
   name: string;
-  type: string;
+  type: number;
   telephone: string | null;
   address: string | null;
   email: string | null;
+  usePickupQueue: boolean;
   isDeleted: boolean;
   createdBy: string;
   createdAt: Date | string | null;
@@ -30,6 +32,7 @@ function toBranchDto(b: {
     telephone: b.telephone ?? null,
     address: b.address ?? null,
     email: b.email ?? null,
+    usePickupQueue: !!b.usePickupQueue,
     isDeleted: !!b.isDeleted,
     createdBy: b.createdBy,
     createdAt:
@@ -70,13 +73,27 @@ export async function getBranchByIdCtrl(id: string) {
   return toBranchDto(b);
 }
 
+export async function listBranchOptionsCtrl(filters: {
+  companyId?: string | null;
+  search?: string | null;
+  includeDeleted?: boolean | null;
+}) {
+  const rows = await listBranchOptionsSvc(filters);
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    type: row.type,
+  }));
+}
+
 export async function createBranchCtrl(input: {
   companyId: string;
   name: string;
-  type: string;
+  type: number;
   telephone?: string | null;
   address?: string | null;
   email?: string | null;
+  usePickupQueue?: boolean;
   createdBy: string;
 }) {
   return createBranchSvc(input);
@@ -86,10 +103,11 @@ export async function updateBranchCtrl(
   id: string,
   patch: {
     name?: string;
-    type?: string;
+    type?: number;
     telephone?: string | null;
     address?: string | null;
     email?: string | null;
+    usePickupQueue?: boolean;
   },
 ) {
   return updateBranchSvc(id, patch);

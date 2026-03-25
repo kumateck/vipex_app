@@ -10,7 +10,7 @@ const Dashboard = () => {
     setData((prev) => prev.filter((item) => item.id !== rowId));
   }, []);
   return (
-    <div className="h-screen w-full flex flex-col bg-gray-50 text-gray-900 font-sans">
+    <div className="h-screen w-full flex flex-col bg-background text-foreground font-sans">
       {/* App Header */}
       {/* <header className="h-14 bg-white border-b border-gray-200 px-4 flex items-center justify-between shadow-sm z-30 shrink-0">
         <div className="flex items-center gap-3">

@@ -1,24 +1,36 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '../../../db/config';
-import { branches, companies, passwordResets, refreshTokens, roles, users } from '@/db/schemas';
+import {
+  branches,
+  companies,
+  locations,
+  passwordResets,
+  refreshTokens,
+  rolePermissions,
+  roles,
+  users,
+} from '@/db/schemas';
 
 // export async function getUserByEmailRepo(email: string) {
 //   const [u] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 //   return u ?? null;
 // }
 export async function getUserByEmailRepo(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
   const [row] = await db
     .select({
       user: users,
-      branch: { id: branches.id, name: branches.name },
-      company: { id: companies.id, name: companies.name },
+      branch: { id: branches.id, name: branches.name, type: branches.type },
+      location: { id: locations.id, name: locations.name },
+      company: { id: companies.id, name: companies.name, useAccounting: companies.useAccounting },
       role: { id: roles.id, name: roles.name },
     })
     .from(users)
     .leftJoin(branches, eq(branches.id, users.branchId))
+    .leftJoin(locations, eq(locations.id, users.locationId))
     .leftJoin(companies, eq(companies.id, users.companyId))
     .leftJoin(roles, eq(roles.id, users.roleId))
-    .where(eq(users.email, email))
+    .where(sql`lower(${users.email}) = ${normalizedEmail}`)
     .limit(1);
 
   if (!row) return null;
@@ -26,14 +38,50 @@ export async function getUserByEmailRepo(email: string) {
   return {
     ...row.user,
     branch: row.branch?.id ? row.branch : null,
+    location: row.location?.id ? row.location : null,
     company: row.company?.id ? row.company : null,
     role: row.role?.id ? row.role : null,
   };
 }
 
+export async function listRolePermissionKeysRepo(
+  roleId?: string | null,
+  companyId?: string | null,
+): Promise<string[]> {
+  if (!roleId || !companyId) return [];
+  const rows = await db
+    .select({ key: rolePermissions.permission })
+    .from(rolePermissions)
+    .where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.companyId, companyId)));
+  return rows.map((row) => row.key);
+}
+
 export async function getUserByIdRepo(id: string) {
-  const [u] = await db.select().from(users).where(eq(users.id, id)).limit(1);
-  return u ?? null;
+  const [row] = await db
+    .select({
+      user: users,
+      branch: { id: branches.id, name: branches.name, type: branches.type },
+      location: { id: locations.id, name: locations.name },
+      company: { id: companies.id, name: companies.name, useAccounting: companies.useAccounting },
+      role: { id: roles.id, name: roles.name },
+    })
+    .from(users)
+    .leftJoin(branches, eq(branches.id, users.branchId))
+    .leftJoin(locations, eq(locations.id, users.locationId))
+    .leftJoin(companies, eq(companies.id, users.companyId))
+    .leftJoin(roles, eq(roles.id, users.roleId))
+    .where(eq(users.id, id))
+    .limit(1);
+
+  if (!row) return null;
+
+  return {
+    ...row.user,
+    branch: row.branch?.id ? row.branch : null,
+    location: row.location?.id ? row.location : null,
+    company: row.company?.id ? row.company : null,
+    role: row.role?.id ? row.role : null,
+  };
 }
 
 export async function insertRefreshTokenRepo(data: {

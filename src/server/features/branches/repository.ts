@@ -10,6 +10,12 @@ export type ListBranchParams = {
   sort?: SortField[] | null;
 };
 
+export type BranchOptionRow = {
+  id: string;
+  name: string;
+  type: number;
+};
+
 export async function listBranchesRepo(p: ListBranchParams) {
   const where = [];
   if (p.companyId) where.push(eq(branches.companyId, p.companyId));
@@ -44,6 +50,7 @@ export async function listBranchesRepo(p: ListBranchParams) {
       telephone: branches.telephone,
       address: branches.address,
       email: branches.email,
+      usePickupQueue: branches.usePickupQueue,
       isDeleted: branches.isDeleted,
       createdBy: branches.createdBy,
       createdAt: branches.createdAt,
@@ -58,6 +65,27 @@ export async function listBranchesRepo(p: ListBranchParams) {
   return { data: rows, totalRecords };
 }
 
+export async function listBranchOptionsRepo(p: {
+  companyId?: string | null;
+  search?: string | null;
+  includeDeleted?: boolean | null;
+}): Promise<BranchOptionRow[]> {
+  const where = [];
+  if (p.companyId) where.push(eq(branches.companyId, p.companyId));
+  if (!p.includeDeleted) where.push(eq(branches.isDeleted, false));
+  if (p.search) where.push(sql`${branches.name} ILIKE ${`%${p.search}%`}`);
+
+  return db
+    .select({
+      id: branches.id,
+      name: branches.name,
+      type: branches.type,
+    })
+    .from(branches)
+    .where(where.length ? and(...where) : undefined)
+    .orderBy(asc(branches.name), asc(branches.id));
+}
+
 export async function getBranchRepo(id: string) {
   const [row] = await db
     .select({
@@ -68,6 +96,7 @@ export async function getBranchRepo(id: string) {
       telephone: branches.telephone,
       address: branches.address,
       email: branches.email,
+      usePickupQueue: branches.usePickupQueue,
       isDeleted: branches.isDeleted,
       createdBy: branches.createdBy,
       createdAt: branches.createdAt,
@@ -82,7 +111,7 @@ export async function getBranchRepo(id: string) {
 // Case-insensitive uniqueness guard: companyId + lower(name)
 export async function findBranchByNameRepo(companyId: string, name: string) {
   const [row] = await db
-    .select({ id: branches.id })
+    .select({ id: branches.id, isDeleted: branches.isDeleted })
     .from(branches)
     .where(and(eq(branches.companyId, companyId), sql`lower(${branches.name}) = lower(${name})`))
     .limit(1);

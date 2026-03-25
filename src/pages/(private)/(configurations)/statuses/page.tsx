@@ -1,3 +1,3 @@
-export default function StatusesPage() {
-  return null;
-}
+import { StatusesListPage } from '@/features/statuses';
+
+export default StatusesListPage;

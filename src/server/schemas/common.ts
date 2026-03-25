@@ -17,7 +17,7 @@ export const PaginationQuery = t.Object({
 
 export const DateTimeStr = t.String({ format: 'date-time' });
 
-export const PaginationRequestQuery = t.Object({
+export const PaginationRequestQueryProps = {
   page: t.Optional(t.Number({ minimum: 1 })),
   pageSize: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
   search: t.Optional(t.String()),
@@ -32,7 +32,9 @@ export const PaginationRequestQuery = t.Object({
   ),
   dateFrom: t.Optional(DateTimeStr),
   dateTo: t.Optional(DateTimeStr),
-});
+} as const;
+
+export const PaginationRequestQuery = t.Object(PaginationRequestQueryProps);
 
 export const PaginationMetaSchema = t.Object({
   totalRecords: t.Number({ minimum: 0 }),

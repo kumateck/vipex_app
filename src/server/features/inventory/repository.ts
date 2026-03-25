@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, gte, lte, lt, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, lte, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
   productCategories,
@@ -19,6 +19,11 @@ export type ListProductCategoriesParams = {
   sort?: SortField[] | null;
 };
 
+export type ProductCategoryOptionRow = {
+  id: string;
+  name: string;
+};
+
 export async function listProductCategoriesRepo(p: ListProductCategoriesParams) {
   const where: (ReturnType<typeof eq> | ReturnType<typeof and> | ReturnType<typeof or>)[] = [
     eq(productCategories.isDeleted, false),
@@ -33,7 +38,9 @@ export async function listProductCategoriesRepo(p: ListProductCategoriesParams) 
               ? desc(productCategories.createdAt)
               : asc(productCategories.createdAt);
           if (s.field === 'name')
-            return s.direction === 'desc' ? desc(productCategories.name) : asc(productCategories.name);
+            return s.direction === 'desc'
+              ? desc(productCategories.name)
+              : asc(productCategories.name);
           if (s.field === 'id')
             return s.direction === 'desc' ? desc(productCategories.id) : asc(productCategories.id);
           return null;
@@ -65,6 +72,26 @@ export async function getProductCategoryRepo(id: string) {
     .where(and(eq(productCategories.id, id), eq(productCategories.isDeleted, false)))
     .limit(1);
   return row ?? null;
+}
+
+export async function listProductCategoryOptionsRepo(p: {
+  companyId?: string | null;
+  search?: string | null;
+}): Promise<ProductCategoryOptionRow[]> {
+  const where: (ReturnType<typeof eq> | ReturnType<typeof and> | ReturnType<typeof or>)[] = [
+    eq(productCategories.isDeleted, false),
+  ];
+  if (p.companyId) where.push(eq(productCategories.companyId, p.companyId));
+  if (p.search) where.push(sql`${productCategories.name} ILIKE ${`%${p.search}%`}`);
+
+  return db
+    .select({
+      id: productCategories.id,
+      name: productCategories.name,
+    })
+    .from(productCategories)
+    .where(and(...where))
+    .orderBy(asc(productCategories.name), asc(productCategories.id));
 }
 
 export async function findProductCategoryByNameRepo(companyId: string, name: string) {
@@ -120,6 +147,12 @@ export type ListProductsParams = {
   sort?: SortField[] | null;
 };
 
+export type ProductOptionRow = {
+  id: string;
+  name: string;
+  sku: string;
+};
+
 export async function listProductsRepo(p: ListProductsParams) {
   const where = [eq(products.isDeleted, false)];
   if (p.companyId) where.push(eq(products.companyId, p.companyId));
@@ -134,13 +167,17 @@ export async function listProductsRepo(p: ListProductsParams) {
             return s.direction === 'desc' ? desc(products.name) : asc(products.name);
           if (s.field === 'sku')
             return s.direction === 'desc' ? desc(products.sku) : asc(products.sku);
-          if (s.field === 'id') return s.direction === 'desc' ? desc(products.id) : asc(products.id);
+          if (s.field === 'id')
+            return s.direction === 'desc' ? desc(products.id) : asc(products.id);
           return null;
         })
         .filter((value): value is ReturnType<typeof asc> => value !== null)
     : [asc(products.createdAt), asc(products.id)];
 
-  const [countRow] = await db.select({ c: count() }).from(products).where(and(...where));
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(products)
+    .where(and(...where));
   const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
   const rows = await db
     .select()
@@ -160,6 +197,30 @@ export async function getProductRepo(id: string) {
     .where(and(eq(products.id, id), eq(products.isDeleted, false)))
     .limit(1);
   return row ?? null;
+}
+
+export async function listProductOptionsRepo(p: {
+  companyId?: string | null;
+  categoryId?: string | null;
+  search?: string | null;
+}): Promise<ProductOptionRow[]> {
+  const where = [eq(products.isDeleted, false)];
+  if (p.companyId) where.push(eq(products.companyId, p.companyId));
+  if (p.categoryId) where.push(eq(products.categoryId, p.categoryId));
+  if (p.search) {
+    const term = `%${p.search}%`;
+    where.push(sql`(${products.name} ILIKE ${term} OR ${products.sku} ILIKE ${term})`);
+  }
+
+  return db
+    .select({
+      id: products.id,
+      name: products.name,
+      sku: products.sku,
+    })
+    .from(products)
+    .where(and(...where))
+    .orderBy(asc(products.name), asc(products.id));
 }
 
 export async function findProductBySkuRepo(companyId: string, sku: string) {
@@ -209,6 +270,12 @@ export type ListInventoryLocationsParams = {
   sort?: SortField[] | null;
 };
 
+export type InventoryLocationOptionRow = {
+  id: string;
+  name: string;
+  branchId: string;
+};
+
 export async function listInventoryLocationsRepo(p: ListInventoryLocationsParams) {
   const where: (ReturnType<typeof eq> | ReturnType<typeof and> | ReturnType<typeof or>)[] = [
     eq(inventoryLocations.isDeleted, false),
@@ -228,7 +295,9 @@ export async function listInventoryLocationsRepo(p: ListInventoryLocationsParams
               ? desc(inventoryLocations.name)
               : asc(inventoryLocations.name);
           if (s.field === 'id')
-            return s.direction === 'desc' ? desc(inventoryLocations.id) : asc(inventoryLocations.id);
+            return s.direction === 'desc'
+              ? desc(inventoryLocations.id)
+              : asc(inventoryLocations.id);
           return null;
         })
         .filter((value): value is ReturnType<typeof asc> => value !== null)
@@ -257,6 +326,29 @@ export async function getInventoryLocationRepo(id: string) {
     .where(and(eq(inventoryLocations.id, id), eq(inventoryLocations.isDeleted, false)))
     .limit(1);
   return row ?? null;
+}
+
+export async function listInventoryLocationOptionsRepo(p: {
+  companyId?: string | null;
+  branchId?: string | null;
+  search?: string | null;
+}): Promise<InventoryLocationOptionRow[]> {
+  const where: (ReturnType<typeof eq> | ReturnType<typeof and> | ReturnType<typeof or>)[] = [
+    eq(inventoryLocations.isDeleted, false),
+  ];
+  if (p.companyId) where.push(eq(inventoryLocations.companyId, p.companyId));
+  if (p.branchId) where.push(eq(inventoryLocations.branchId, p.branchId));
+  if (p.search) where.push(sql`${inventoryLocations.name} ILIKE ${`%${p.search}%`}`);
+
+  return db
+    .select({
+      id: inventoryLocations.id,
+      name: inventoryLocations.name,
+      branchId: inventoryLocations.branchId,
+    })
+    .from(inventoryLocations)
+    .where(and(...where))
+    .orderBy(asc(inventoryLocations.name), asc(inventoryLocations.id));
 }
 
 export async function findInventoryLocationByNameRepo(branchId: string, name: string) {
@@ -323,7 +415,9 @@ export async function listStockLevelsRepo(p: ListStockLevelsParams) {
     ? sort
         .map((s) => {
           if (s.field === 'updatedAt')
-            return s.direction === 'desc' ? desc(stockLevels.updatedAt) : asc(stockLevels.updatedAt);
+            return s.direction === 'desc'
+              ? desc(stockLevels.updatedAt)
+              : asc(stockLevels.updatedAt);
           if (s.field === 'id')
             return s.direction === 'desc' ? desc(stockLevels.id) : asc(stockLevels.id);
           return null;
@@ -545,21 +639,29 @@ export async function updateStockTransferRepo(
 }
 
 // Reports
-export async function getLowStockProductsRepo(companyId: string, locationId?: string | null) {
-  const where = [eq(products.companyId, companyId), eq(products.isDeleted, false)];
-  if (locationId) where.push(eq(stockLevels.locationId, locationId));
+export async function getLowStockProductsRepo(filters: {
+  companyId?: string | null;
+  branchId?: string | null;
+  locationId?: string | null;
+}) {
+  const where = [eq(products.isDeleted, false)];
+  if (filters.companyId) where.push(eq(products.companyId, filters.companyId));
+  if (filters.branchId) where.push(eq(inventoryLocations.branchId, filters.branchId));
+  if (filters.locationId) where.push(eq(stockLevels.locationId, filters.locationId));
 
   const rows = await db
     .select({
       productId: products.id,
       productName: products.name,
-      sku: products.sku,
+      productSku: products.sku,
       minStockLevel: products.minStockLevel,
       locationId: stockLevels.locationId,
-      currentQuantity: stockLevels.quantity,
+      quantity: stockLevels.quantity,
+      locationName: inventoryLocations.name,
     })
     .from(products)
     .leftJoin(stockLevels, eq(products.id, stockLevels.productId))
+    .leftJoin(inventoryLocations, eq(stockLevels.locationId, inventoryLocations.id))
     .where(and(...where, sql`${stockLevels.quantity} < ${products.minStockLevel}`))
     .orderBy(asc(products.name));
 

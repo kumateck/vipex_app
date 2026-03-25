@@ -43,7 +43,7 @@ interface UserProfileProps {
 
 export function UserProfile({ variant = 'header', user, className }: UserProfileProps) {
   const navigate = useNavigate();
-  const { isMobile } = useSidebar();
+  const { isMobile, state } = useSidebar();
   const authUser = useAuthStore((s) => s.user);
   // TODO: Get from auth context if not provided
   const userData: UserProfileData = user ?? {
@@ -66,6 +66,8 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
     navigate('/login');
   };
 
+  const isSidebarCollapsed = variant === 'sidebar' && !isMobile && state === 'collapsed';
+
   // Sidebar variant - full width button with details
   if (variant === 'sidebar') {
     return (
@@ -74,6 +76,7 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
           <button
             className={cn(
               'flex w-full items-center gap-3 rounded-lg p-2 transition-colors',
+              isSidebarCollapsed && 'justify-center',
               'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               'data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
@@ -86,13 +89,17 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-1 flex-col items-start text-left leading-tight">
-              <span className="truncate text-sm font-semibold text-foreground">
-                {authUser?.fullname}
-              </span>
-              <span className="truncate text-xs text-muted-foreground">{authUser?.email}</span>
-            </div>
-            <ChevronsUpDown className="ml-auto h-4 w-4 text-muted-foreground shrink-0" />
+            {!isSidebarCollapsed ? (
+              <>
+                <div className="flex flex-1 flex-col items-start text-left leading-tight">
+                  <span className="truncate text-sm font-semibold text-foreground">
+                    {authUser?.fullname}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">{authUser?.email}</span>
+                </div>
+                <ChevronsUpDown className="ml-auto h-4 w-4 text-muted-foreground shrink-0" />
+              </>
+            ) : null}
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

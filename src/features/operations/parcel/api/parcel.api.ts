@@ -1,0 +1,852 @@
+import { api } from '@/services/api';
+import {
+  buildServerPaginationParams,
+  type ServerListQuery,
+  type ServerListResponse,
+} from '@/services/rtk-query';
+
+export type CreateBookingWithParcelsInput = {
+  senderId: string;
+  status: number;
+  cashierSessionId?: string | null;
+  parcels: Array<{
+    destinationId: string;
+    receiverId: string;
+    status: number;
+    parcelDetails: string;
+    parcelContent: string;
+    method: number;
+    parcelValueCedis?: number;
+    chargeCedis?: number;
+    plannedToBePaidCedis?: number;
+    senderPaymentCedis?: number;
+    senderPaymentMethod?: number;
+  }>;
+};
+
+export type CreateBookingWithParcelsResponse = {
+  bookingId: string;
+  parcels: Array<{ id: string; trackingCode: string; bookingCode: string }>;
+  payments: Array<{ id: string }>;
+};
+
+export type SenderCashierParcel = {
+  id: string;
+  destinationId: string;
+  destinationName?: string | null;
+  pickupLocationId: string | null;
+  bookingCode: string;
+  trackingCode: string;
+  parcelDetails: string;
+  senderName: string | null;
+  senderPhone: string | null;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  chargePsw: number;
+  plannedToBePaidPsw: number;
+  status: number;
+  createdAt: string;
+  currentHolderType?: number | null;
+  currentHolderBranchId?: string | null;
+  currentHolderBranchName?: string | null;
+  currentHolderLocationId?: string | null;
+  currentHolderLocationName?: string | null;
+  currentHolderWarehouseId?: string | null;
+  currentHolderWarehouseName?: string | null;
+};
+
+export type ProcessedParcel = SenderCashierParcel;
+
+export type ParcelSearchRow = {
+  id: string;
+  companyId: string;
+  sourceId: string;
+  destinationId: string;
+  destinationName?: string | null;
+  consignmentId?: string | null;
+  consignmentCode?: string | null;
+  consignmentSerialForDay?: number | null;
+  bookingId: string;
+  bookingCode: string;
+  trackingCode: string;
+  senderId: string;
+  receiverId: string;
+  secondReceiverId: string | null;
+  status: number;
+  parcelDetails: string;
+  parcelContent: string;
+  parcelValuePsw: number;
+  chargePsw: number;
+  cardId: string | null;
+  cardNumber: string | null;
+  secondCardId: string | null;
+  secondCardNumber: string | null;
+  pickupLocationId: string | null;
+  plannedToBePaidPsw: number;
+  method: number;
+  taxReportConfirmation: boolean;
+  isDeleted: boolean;
+  createdBy: string | null;
+  createdAt: string;
+  receivedBy: string | null;
+  receivedAt: string | null;
+  confirmedBy: string | null;
+  confirmedAt: string | null;
+  updatedAt: string;
+  cashierSessionId: string | null;
+  bookingCreatedAt: string | null;
+  senderName: string | null;
+  senderPhone: string | null;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  dropoffAddress?: string | null;
+  deliveryFeePsw?: number | null;
+  pickupQueueId?: string | null;
+  pickupQueueCode?: string | null;
+  pickupQueueNumber?: number | null;
+  pickupQueuedAt?: string | null;
+  pickupQueueEndedAt?: string | null;
+  currentHolderType?: number | null;
+  currentHolderBranchId?: string | null;
+  currentHolderBranchName?: string | null;
+  currentHolderLocationId?: string | null;
+  currentHolderLocationName?: string | null;
+  currentHolderWarehouseId?: string | null;
+  currentHolderWarehouseName?: string | null;
+};
+
+export type ParcelInternalHolderSnapshot = {
+  parcelId: string;
+  holderType: number;
+  branchId: string | null;
+  branchName: string | null;
+  locationId: string | null;
+  locationName: string | null;
+  warehouseId: string | null;
+  warehouseName: string | null;
+  updatedAt: string;
+};
+
+export type ParcelFullDetails = {
+  parcel: {
+    id: string;
+    companyId: string;
+    sourceId: string;
+    destinationId: string;
+    bookingId: string;
+    bookingCode: string;
+    trackingCode: string;
+    senderId: string;
+    receiverId: string;
+    secondReceiverId: string | null;
+    status: number;
+    parcelDetails: string;
+    parcelContent: string;
+    parcelValuePsw: number;
+    chargePsw: number;
+    cardId: string | null;
+    cardNumber: string | null;
+    secondCardId: string | null;
+    secondCardNumber: string | null;
+    pickupLocationId: string | null;
+    plannedToBePaidPsw: number;
+    method: number;
+    taxReportConfirmation: boolean;
+    isDeleted: boolean;
+    createdBy: string | null;
+    createdAt: string;
+    receivedBy: string | null;
+    receivedAt: string | null;
+    confirmedBy: string | null;
+    confirmedAt: string | null;
+    updatedAt: string;
+    cashierSessionId: string | null;
+  };
+  payments: Array<{
+    id: string;
+    companyId: string;
+    branchId: string;
+    parcelId: string;
+    component: number;
+    payer: number;
+    cashierType: number;
+    method: number;
+    cashierUserId: string;
+    grossAmountPsw: number;
+    netAmountPsw: number;
+    vatPsw: number;
+    getfundPsw: number;
+    nhilPsw: number;
+    covidPsw: number;
+    taxTotalPsw: number;
+    receivedAt: string;
+    notes: string | null;
+    receiptNo: string | null;
+    voidedAt: string | null;
+    voidedBy: string | null;
+    createdAt: string;
+  }>;
+  delivery: null | {
+    id: string;
+    parcelId: string;
+    mode: number;
+    status: string;
+    officeLocationId: string | null;
+    dropoffAddress: string | null;
+    frontDeskUserId: string | null;
+    deliveryUserId: string | null;
+    riderUserId: string | null;
+    signatureImage: string | null;
+    receiverCalledConfirmedBy: string | null;
+    receiverCalledConfirmedAt: string | null;
+    chargePsw: number;
+    amountPaidPsw: number;
+    isDeleted: boolean;
+    deliveredAt: string | null;
+    confirmedBy: string | null;
+    confirmedAt: string | null;
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
+    cashierSessionId: string | null;
+  };
+  consignments: Array<{
+    consignmentId: string;
+    code: string;
+    consignmentDate: string;
+    serialForDay: number;
+    sourceId: string;
+    destinationId: string;
+    addedAt: string;
+    removedAt: string | null;
+  }>;
+  pickupQueue: null | {
+    id: string;
+    companyId: string;
+    branchId: string;
+    parcelId: string;
+    paymentBucket: string;
+    queueDate: string;
+    queueNumber: number;
+    queueCode: string;
+    pickerStaffId: string | null;
+    idCardTypeId: string | null;
+    idCardNumber: string | null;
+    queuedBy: string;
+    queuedAt: string;
+    endedAt: string | null;
+    endedBy: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  internalHolder: ParcelInternalHolderSnapshot | null;
+};
+
+export type PickupQueueRecord = {
+  id: string;
+  companyId: string;
+  branchId: string;
+  parcelId: string;
+  paymentBucket: string;
+  queueDate: string;
+  queueNumber: number;
+  queueCode: string;
+  pickerStaffId: string | null;
+  idCardTypeId: string | null;
+  idCardNumber: string | null;
+  queuedBy: string;
+  queuedAt: string;
+  endedAt: string | null;
+  endedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PickupQueueCard = PickupQueueRecord & {
+  trackingCode: string;
+  bookingCode: string;
+  parcelDetails: string;
+  plannedToBePaidPsw: number;
+  chargePsw: number;
+  receiverName: string | null;
+  receiverPhone: string | null;
+};
+
+export type RiderDoorstepRecord = {
+  deliveryId: string;
+  parcelId: string;
+  riderUserId: string | null;
+  deliveryStatus: string;
+  signatureImage: string | null;
+  dropoffAddress: string | null;
+  deliveryFeePsw: number;
+  amountPaidPsw: number;
+  trackingCode: string;
+  bookingCode: string;
+  parcelStatus: number;
+  parcelDetails: string;
+  parcelContent: string;
+  plannedToBePaidPsw: number;
+  chargePsw: number;
+  destinationId: string;
+  destinationName: string | null;
+  receiverId: string;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  secondReceiverId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RiderDoorstepResponse = {
+  rows: RiderDoorstepRecord[];
+  totals: {
+    expectedDeliveryFeePsw: number;
+    expectedToBePaidPsw: number;
+    expectedTotalPsw: number;
+  };
+};
+
+export type ParcelInternalTransferRow = {
+  id: string;
+  companyId: string;
+  branchId: string;
+  branchName: string | null;
+  referenceNo: string | null;
+  sourceHolderType: number;
+  sourceLocationId: string | null;
+  sourceLocationName: string | null;
+  sourceWarehouseId: string | null;
+  sourceWarehouseName: string | null;
+  destinationHolderType: number;
+  destinationLocationId: string | null;
+  destinationLocationName: string | null;
+  destinationWarehouseId: string | null;
+  destinationWarehouseName: string | null;
+  notes: string | null;
+  status: number;
+  transferredBy: string;
+  transferredByName: string | null;
+  transferredAt: string | null;
+  acknowledgedBy: string | null;
+  acknowledgedAt: string | null;
+  itemCount: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type ParcelInternalTransferDetails = {
+  transfer: ParcelInternalTransferRow & {
+    acknowledgedByName?: string | null;
+    cancelledBy?: string | null;
+    cancelledAt?: string | null;
+    cancelReason?: string | null;
+  };
+  items: Array<{
+    parcelId: string;
+    trackingCode: string;
+    bookingCode: string;
+    parcelDetails: string;
+    receiverId: string;
+    receiverName: string | null;
+    receiverPhone: string | null;
+    status: number;
+    addedAt: string | null;
+  }>;
+};
+
+export type SenderCashierParcelFilters = {
+  companyId?: string | null;
+  sourceId?: string | null;
+  destinationId?: string | null;
+  status?: number | null;
+  includeDeleted?: boolean | null;
+};
+
+export type ParcelSearchFilters = {
+  companyId?: string | null;
+  sourceId?: string | null;
+  destinationId?: string | null;
+  status?: number | null;
+  statuses?: number[] | null;
+  senderPaid?: boolean | null;
+  includeDeleted?: boolean | null;
+};
+
+export const parcelApi = api.injectEndpoints({
+  endpoints: (builder) => ({
+    createBookingWithParcels: builder.mutation<
+      CreateBookingWithParcelsResponse,
+      CreateBookingWithParcelsInput
+    >({
+      query: (body) => ({
+        url: '/shipments/bookings/create-with-parcels',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    listSenderCashierParcels: builder.query<
+      ServerListResponse<SenderCashierParcel>,
+      ServerListQuery<SenderCashierParcelFilters> | void
+    >({
+      query: (query) => ({
+        url: '/shipments/parcels',
+        params: buildServerPaginationParams(query),
+      }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    searchParcels: builder.query<
+      ServerListResponse<ParcelSearchRow>,
+      ServerListQuery<ParcelSearchFilters> | void
+    >({
+      query: (query) => ({
+        url: '/shipments/parcels',
+        params: buildServerPaginationParams(query),
+      }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    getParcelDetails: builder.query<ParcelFullDetails, string>({
+      query: (id) => ({
+        url: `/shipments/parcels/${id}/details`,
+      }),
+      providesTags: (_result, _error, id) => [{ type: 'Bookings', id }],
+    }),
+    listProcessedParcelsForConsignment: builder.query<
+      ServerListResponse<ProcessedParcel>,
+      ServerListQuery<SenderCashierParcelFilters> | void
+    >({
+      query: (query) => ({
+        url: '/shipments/parcels',
+        params: buildServerPaginationParams(query),
+      }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    collectSenderPayment: builder.mutation<
+      {
+        id: string;
+        amounts: {
+          grossPsw: number;
+          netPsw: number;
+          vatPsw: number;
+          getfundPsw: number;
+          nhilPsw: number;
+          covidPsw: number;
+          taxTotalPsw: number;
+          grossCedis: number;
+          netCedis: number;
+          vatCedis: number;
+          getfundCedis: number;
+          nhilCedis: number;
+          covidCedis: number;
+          taxTotalCedis: number;
+        };
+      },
+      {
+        parcelId: string;
+        amountCedis: number;
+        method: number;
+        component: number;
+        payer: number;
+        cashierType: number;
+      }
+    >({
+      query: (body) => ({
+        url: '/payments',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
+      ],
+    }),
+    collectSenderAndProcess: builder.mutation<
+      {
+        parcelId: string;
+        status: number;
+        statusChanged: boolean;
+        message: string;
+        payment: null | {
+          id: string;
+          amounts: {
+            grossPsw: number;
+            netPsw: number;
+            vatPsw: number;
+            getfundPsw: number;
+            nhilPsw: number;
+            covidPsw: number;
+            taxTotalPsw: number;
+            grossCedis: number;
+            netCedis: number;
+            vatCedis: number;
+            getfundCedis: number;
+            nhilCedis: number;
+            covidCedis: number;
+            taxTotalCedis: number;
+          };
+          message?: string;
+        };
+      },
+      { parcelId: string; amountCedis?: number | null; method: number }
+    >({
+      query: (body) => ({
+        url: '/payments/collect-sender-and-process',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
+      ],
+    }),
+    collectReceiverAndDeliver: builder.mutation<
+      {
+        parcelId: string;
+        status: number;
+        message: string;
+        payment: null | {
+          id: string;
+          amounts: {
+            grossPsw: number;
+            netPsw: number;
+            vatPsw: number;
+            getfundPsw: number;
+            nhilPsw: number;
+            covidPsw: number;
+            taxTotalPsw: number;
+            grossCedis: number;
+            netCedis: number;
+            vatCedis: number;
+            getfundCedis: number;
+            nhilCedis: number;
+            covidCedis: number;
+            taxTotalCedis: number;
+          };
+          message?: string;
+        };
+      },
+      {
+        parcelId: string;
+        amountCedis?: number | null;
+        method: number;
+        confirmedBy: string;
+        secondReceiverId?: string | null;
+        cardId?: string | null;
+        cardNumber?: string | null;
+        secondCardId?: string | null;
+        secondCardNumber?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: '/payments/collect-receiver-and-deliver',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
+      ],
+    }),
+    createConsignment: builder.mutation<
+      { id: string; code: string; serialForDay: number },
+      {
+        companyId: string;
+        sourceId: string;
+        destinationId: string;
+        consignmentDate: string;
+        createdBy: string;
+      }
+    >({
+      query: (body) => ({
+        url: '/shipments/consignments',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    addConsignmentItems: builder.mutation<
+      { added: number },
+      {
+        consignmentId: string;
+        parcelIds: string[];
+      }
+    >({
+      query: ({ consignmentId, parcelIds }) => ({
+        url: `/shipments/consignments/${consignmentId}/items`,
+        method: 'POST',
+        body: { parcelIds },
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    updateParcelStatus: builder.mutation<{ id: string }, { id: string; status: number }>({
+      query: ({ id, status }) => ({
+        url: `/shipments/parcels/${id}`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    updateParcel: builder.mutation<
+      { id: string },
+      {
+        id: string;
+        parcelDetails?: string;
+        parcelContent?: string;
+        status?: number;
+        secondReceiverId?: string | null;
+        cardId?: string | null;
+        cardNumber?: string | null;
+        secondCardId?: string | null;
+        secondCardNumber?: string | null;
+        confirmedBy?: string | null;
+        confirmedAt?: string | null;
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    logParcelDiscrepancy: builder.mutation<
+      { success: boolean },
+      {
+        companyId: string;
+        actorUserId?: string | null;
+        parcelId?: string | null;
+        trackingCode?: string | null;
+        bookingCode?: string | null;
+        discrepancyType: 'record_not_physical' | 'physical_missing_in_system';
+        notes?: string | null;
+        branchId?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcels/discrepancies',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    collectDoorstepAddress: builder.mutation<
+      { id: string },
+      {
+        parcelId: string;
+        userId: string;
+        dropoffAddress: string;
+        deliveryFeeCedis: number | string;
+      }
+    >({
+      query: ({ parcelId, ...body }) => ({
+        url: `/deliveries/dd/${parcelId}/address-collected`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    dispatchDoorstepParcels: builder.mutation<
+      { updated: number },
+      { parcelIds: string[]; riderUserId: string; userId: string }
+    >({
+      query: (body) => ({
+        url: '/deliveries/dd/dispatch/bulk',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    listRiderDoorstepParcels: builder.query<
+      RiderDoorstepResponse,
+      { riderUserId: string; mode?: 'current' | 'history' }
+    >({
+      query: ({ riderUserId, mode = 'current' }) => ({
+        url: `/deliveries/dd/rider/${riderUserId}`,
+        params: { mode },
+      }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    riderGivenParcelToCustomer: builder.mutation<
+      { id: string },
+      {
+        parcelId: string;
+        riderUserId: string;
+        signatureImage: string;
+        secondReceiverId?: string | null;
+        cardId?: string | null;
+        cardNumber?: string | null;
+        secondCardId?: string | null;
+        secondCardNumber?: string | null;
+      }
+    >({
+      query: ({ parcelId, ...body }) => ({
+        url: `/deliveries/dd/${parcelId}/rider-given`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    riderReturnParcelToOffice: builder.mutation<
+      { id: string },
+      { parcelId: string; riderUserId: string }
+    >({
+      query: ({ parcelId, riderUserId }) => ({
+        url: `/deliveries/dd/${parcelId}/returned`,
+        method: 'POST',
+        body: { riderUserId },
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    finalizeDoorstepAtOffice: builder.mutation<
+      { id: string },
+      {
+        parcelId: string;
+        cashierUserId: string;
+        branchId: string;
+        companyId: string;
+        principalAmountCedis?: number | string | null;
+        deliveryFeeAmountCedis?: number | string | null;
+        method: number;
+      }
+    >({
+      query: ({ parcelId, ...body }) => ({
+        url: `/deliveries/dd/${parcelId}/finalize-at-office`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
+      ],
+    }),
+    createPickupQueue: builder.mutation<
+      PickupQueueRecord,
+      {
+        parcelId: string;
+        pickerStaffId?: string | null;
+        idCardTypeId?: string | null;
+        idCardNumber?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: '/pickup-queues',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    listPickupQueueCards: builder.query<
+      PickupQueueCard[],
+      { branchId: string; paymentBucket?: 'SP' | 'TP' }
+    >({
+      query: ({ branchId, paymentBucket }) => ({
+        url: `/pickup-queues/branch/${branchId}/cards`,
+        params: paymentBucket ? { paymentBucket } : undefined,
+      }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    listParcelInternalTransfers: builder.query<
+      ParcelInternalTransferRow[],
+      {
+        branchId?: string;
+        status?: number;
+        destinationLocationId?: string;
+        destinationWarehouseId?: string;
+        sourceLocationId?: string;
+        sourceWarehouseId?: string;
+      } | void
+    >({
+      query: (params) => ({
+        url: '/shipments/parcel-internal-transfers',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    getParcelInternalTransferDetails: builder.query<ParcelInternalTransferDetails, string>({
+      query: (id) => ({
+        url: `/shipments/parcel-internal-transfers/${id}`,
+      }),
+      providesTags: (_result, _error, id) => [{ type: 'Bookings', id: `INTERNAL_TRANSFER_${id}` }],
+    }),
+    createParcelInternalTransfer: builder.mutation<
+      { id: string },
+      {
+        branchId: string;
+        sourceHolderType: number;
+        sourceLocationId?: string | null;
+        sourceWarehouseId?: string | null;
+        destinationHolderType: number;
+        destinationLocationId?: string | null;
+        destinationWarehouseId?: string | null;
+        notes?: string | null;
+        parcelIds: string[];
+      }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcel-internal-transfers',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    acknowledgeParcelInternalTransfer: builder.mutation<{ id: string }, { id: string }>({
+      query: ({ id }) => ({
+        url: `/shipments/parcel-internal-transfers/${id}/acknowledge`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Bookings', id: `INTERNAL_TRANSFER_${id}` },
+      ],
+    }),
+    cancelParcelInternalTransfer: builder.mutation<
+      { id: string },
+      { id: string; cancelReason: string }
+    >({
+      query: ({ id, cancelReason }) => ({
+        url: `/shipments/parcel-internal-transfers/${id}/cancel`,
+        method: 'POST',
+        body: { cancelReason },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Bookings', id: `INTERNAL_TRANSFER_${id}` },
+      ],
+    }),
+  }),
+});
+
+export const {
+  useCreateBookingWithParcelsMutation,
+  useListSenderCashierParcelsQuery,
+  useSearchParcelsQuery,
+  useLazySearchParcelsQuery,
+  useGetParcelDetailsQuery,
+  useListProcessedParcelsForConsignmentQuery,
+  useCollectSenderPaymentMutation,
+  useCollectSenderAndProcessMutation,
+  useCollectReceiverAndDeliverMutation,
+  useCreateConsignmentMutation,
+  useAddConsignmentItemsMutation,
+  useUpdateParcelStatusMutation,
+  useUpdateParcelMutation,
+  useLogParcelDiscrepancyMutation,
+  useCollectDoorstepAddressMutation,
+  useDispatchDoorstepParcelsMutation,
+  useListRiderDoorstepParcelsQuery,
+  useRiderGivenParcelToCustomerMutation,
+  useRiderReturnParcelToOfficeMutation,
+  useFinalizeDoorstepAtOfficeMutation,
+  useCreatePickupQueueMutation,
+  useListPickupQueueCardsQuery,
+  useListParcelInternalTransfersQuery,
+  useGetParcelInternalTransferDetailsQuery,
+  useCreateParcelInternalTransferMutation,
+  useAcknowledgeParcelInternalTransferMutation,
+  useCancelParcelInternalTransferMutation,
+} = parcelApi;

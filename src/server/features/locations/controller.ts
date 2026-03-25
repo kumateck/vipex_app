@@ -4,6 +4,7 @@ import {
   createLocationSvc,
   deleteLocationSvc,
   getLocationSvc,
+  listLocationOptionsSvc,
   listLocationsSvc,
   updateLocationSvc,
 } from './service';
@@ -13,6 +14,7 @@ function toLocationDto(l: {
   id: string;
   companyId: string;
   branchId: string;
+  branch: { id: string | null; name: string | null } | null;
   name: string;
   isDeleted: boolean;
   createdBy: string;
@@ -23,6 +25,7 @@ function toLocationDto(l: {
     id: l.id,
     companyId: l.companyId,
     branchId: l.branchId,
+    branch: l.branch?.id && l.branch?.name ? { id: l.branch.id, name: l.branch.name } : null,
     name: l.name,
     isDeleted: !!l.isDeleted,
     createdBy: l.createdBy,
@@ -68,6 +71,20 @@ export async function listLocationsCtrl(
 export async function getLocationByIdCtrl(id: string) {
   const l = await getLocationSvc(id);
   return toLocationDto(l);
+}
+
+export async function listLocationOptionsCtrl(filters: {
+  companyId?: string | null;
+  branchId?: string | null;
+  search?: string | null;
+  includeDeleted?: boolean | null;
+}) {
+  const rows = await listLocationOptionsSvc(filters);
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    branchId: row.branchId,
+  }));
 }
 
 export async function createLocationCtrl(input: {

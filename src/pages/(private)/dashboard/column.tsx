@@ -40,7 +40,7 @@ export const columns: ColumnDef<User>[] = [
       <div className="flex items-center justify-center w-full h-full gap-2">
         <button
           onClick={() => table.options.meta?.removeRow(row.original.id)}
-          className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+          className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           title="Delete Record"
         >
           <svg

@@ -5,6 +5,7 @@ import {
   createStatusSvc,
   deleteStatusSvc,
   getStatusSvc,
+  listStatusOptionsSvc,
   listStatusesSvc,
   updateStatusSvc,
 } from './service';
@@ -64,6 +65,19 @@ export async function listStatusesCtrl(
 export async function getStatusByIdCtrl(id: string) {
   const s = await getStatusSvc(id);
   return toStatusDto(s);
+}
+
+export async function listStatusOptionsCtrl(filters: {
+  companyId?: string | null;
+  search?: string | null;
+  includeDeleted?: boolean | null;
+}) {
+  const rows = await listStatusOptionsSvc(filters);
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    color: row.color,
+  }));
 }
 
 export async function createStatusCtrl(input: {

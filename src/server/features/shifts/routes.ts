@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
-import { PaginationRequestQuery, UUID } from '@/server/schemas/common';
+import { PaginationRequestQueryProps, UUID } from '@/server/schemas/common';
 
 const notImplemented = (scope: string) => ({
   error: {
@@ -17,17 +17,15 @@ export const shiftsRoutes = new Elysia({ name: 'shifts' })
       return notImplemented('List shift sessions');
     },
     {
-      query: t.Intersect([
-        PaginationRequestQuery,
-        t.Object({
-          companyId: t.Optional(UUID),
-          branchId: t.Optional(UUID),
-          locationId: t.Optional(UUID),
-          cashierId: t.Optional(UUID),
-          status: t.Optional(t.String()),
-          shiftType: t.Optional(t.String()),
-        }),
-      ]),
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        companyId: t.Optional(UUID),
+        branchId: t.Optional(UUID),
+        locationId: t.Optional(UUID),
+        cashierId: t.Optional(UUID),
+        status: t.Optional(t.String()),
+        shiftType: t.Optional(t.String()),
+      }),
       detail: { tags: ['Shifts'], summary: 'List shift sessions', operationId: 'listShiftSessions' },
     },
   )

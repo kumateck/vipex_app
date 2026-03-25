@@ -19,6 +19,50 @@ export interface ShiftEndInput {
   varianceReason?: string;
 }
 
+type ShiftSessionSummary = {
+  id: string;
+  openingBalancePsw?: number | null;
+  closingBalancePsw?: number | null;
+  variancePsw?: number | null;
+  scheduledStartTime: Date;
+  scheduledEndTime?: Date | null;
+  actualStartTime: Date | null;
+  actualEndTime?: Date | null;
+  shiftTypeId: string | null;
+};
+
+type ShiftReport = {
+  sessionId: string;
+  shiftType: string;
+  isCrossDayShift: boolean;
+  scheduledStart: Date;
+  actualStart: Date | null;
+  scheduledEnd: Date | null;
+  actualEnd: Date | null;
+  duration: string;
+  openingBalance: string;
+  closingBalance: string;
+  variance: string;
+  varianceReason: string;
+  complianceScore: number;
+  requiresInvestigation: boolean;
+  efficiencyScore: number;
+};
+
+type ShiftAnalytics = {
+  totalSessions: number;
+  completedSessions: number;
+  averageDuration: number;
+  totalVariance: number;
+  shiftTypeDistribution: Array<[string, number]>;
+  sessions: Array<{
+    id: string;
+    status: string;
+    duration: string;
+    variance: string;
+  }>;
+};
+
 /**
  * Start a cashier session with shift support
  */
@@ -58,7 +102,7 @@ export async function startShift(input: ShiftStartInput): Promise<{
  */
 export async function endShift(input: ShiftEndInput): Promise<{
   sessionId: string;
-  shiftReport: any;
+  shiftReport: ShiftReport;
   message: string;
 }> {
   // Get cashier session
@@ -67,6 +111,7 @@ export async function endShift(input: ShiftEndInput): Promise<{
       id: cashierSessions.id,
       openingBalancePsw: cashierSessions.openingBalancePsw,
       scheduledStartTime: cashierSessions.scheduledStartTime,
+      scheduledEndTime: cashierSessions.scheduledEndTime,
       actualStartTime: cashierSessions.actualStartTime,
       shiftTypeId: cashierSessions.shiftTypeId,
     })
@@ -98,7 +143,12 @@ export async function endShift(input: ShiftEndInput): Promise<{
     .where(eq(cashierSessions.id, input.sessionId));
 
   // Generate comprehensive shift report
-  const shiftReport = await generateShiftReport(session);
+  const shiftReport = await generateShiftReport({
+    ...session,
+    actualEndTime: input.actualEndTime ? new Date(input.actualEndTime) : new Date(),
+    closingBalancePsw,
+    variancePsw,
+  });
 
   return {
     sessionId: input.sessionId,
@@ -114,7 +164,7 @@ export async function getShiftAnalytics(
   branchId: string,
   startDate?: Date,
   endDate?: Date,
-): Promise<any> {
+): Promise<ShiftAnalytics> {
   const start = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Default last 30 days
   const end = endDate || new Date();
 
@@ -161,9 +211,9 @@ export async function getShiftAnalytics(
   );
 
   // Get shift type distribution
-  const shiftTypeCounts = new Map();
+  const shiftTypeCounts = new Map<string, number>();
   for (const session of sessions) {
-    const typeId = session.shiftTypeId;
+    const typeId = session.shiftTypeId ?? 'UNKNOWN';
     shiftTypeCounts.set(typeId, (shiftTypeCounts.get(typeId) || 0) + 1);
   }
 
@@ -185,17 +235,19 @@ export async function getShiftAnalytics(
 /**
  * Generate comprehensive shift report
  */
-async function generateShiftReport(session: any): Promise<any> {
+async function generateShiftReport(session: ShiftSessionSummary): Promise<ShiftReport> {
   // Get shift type
-  const [shiftType] = await db
-    .select({
-      name: shiftTypes.name,
-      allowCrossDay: shiftTypes.allowCrossDay,
-      standardDurationHours: shiftTypes.standardDurationHours,
-    })
-    .from(shiftTypes)
-    .where(eq(shiftTypes.id, session.shiftTypeId))
-    .limit(1);
+  const [shiftType] = session.shiftTypeId
+    ? await db
+        .select({
+          name: shiftTypes.name,
+          allowCrossDay: shiftTypes.allowCrossDay,
+          standardDurationHours: shiftTypes.standardDurationHours,
+        })
+        .from(shiftTypes)
+        .where(eq(shiftTypes.id, session.shiftTypeId))
+        .limit(1)
+    : [];
 
   // Calculate shift metrics
   const shiftDuration = calculateShiftDuration(session);
@@ -206,8 +258,8 @@ async function generateShiftReport(session: any): Promise<any> {
     isCrossDayShift: shiftType?.allowCrossDay || false,
     scheduledStart: session.scheduledStartTime,
     actualStart: session.actualStartTime,
-    scheduledEnd: session.scheduledEndTime,
-    actualEnd: session.actualEndTime,
+    scheduledEnd: session.scheduledEndTime ?? null,
+    actualEnd: session.actualEndTime ?? null,
     duration: shiftDuration,
 
     // Financial metrics
@@ -219,9 +271,9 @@ async function generateShiftReport(session: any): Promise<any> {
       : '0.00',
     variance: session.variancePsw ? (Number(session.variancePsw) / 100).toFixed(2) : '0.00',
     varianceReason:
-      session.variancePsw > 0
+      Number(session.variancePsw ?? 0) > 0
         ? 'Surplus cash'
-        : session.variancePsw < 0
+        : Number(session.variancePsw ?? 0) < 0
           ? 'Cash shortage'
           : 'Balanced',
 
@@ -234,7 +286,9 @@ async function generateShiftReport(session: any): Promise<any> {
   };
 }
 
-function calculateShiftDuration(session: any): string {
+function calculateShiftDuration(
+  session: Pick<ShiftSessionSummary, 'actualStartTime' | 'actualEndTime'>,
+): string {
   if (!session.actualStartTime || !session.actualEndTime) {
     return 'Not completed';
   }
@@ -246,13 +300,13 @@ function calculateShiftDuration(session: any): string {
   return `${hours}h ${minutes}m`;
 }
 
-function calculateComplianceScore(session: any): number {
+function calculateComplianceScore(session: ShiftSessionSummary): number {
   let score = 100; // Start with perfect score
 
   // Deduct for variance
-  if (session.variancePsw) {
+  if (session.variancePsw && session.openingBalancePsw) {
     const variancePercent =
-      (Math.abs(Number(session.variancePsw)) / Number(session.openingBalancePsw || 1)) * 100;
+      (Math.abs(Number(session.variancePsw)) / Number(session.openingBalancePsw)) * 100;
     score -= Math.min(50, variancePercent * 5); // Max 50 points for variance
   }
 
@@ -269,7 +323,7 @@ function calculateComplianceScore(session: any): number {
   return Math.max(0, score);
 }
 
-function calculateShiftEfficiencyScore(session: any): number {
+function calculateShiftEfficiencyScore(session: ShiftSessionSummary): number {
   let score = 50; // Start with base score
 
   // Bonus for on-time completion

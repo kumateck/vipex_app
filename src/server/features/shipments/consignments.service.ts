@@ -1,10 +1,14 @@
 import { BadRequest } from '../../utils/http-error';
+import { ParcelStatus } from '@/db/schemas';
 import {
   addConsignmentItemsRepo,
   createConsignmentRepo,
+  getConsignmentRepo,
   getNextSerialForDayRepo,
   removeConsignmentItemRepo,
 } from './consignments.repository';
+import { updateParcelsStatusRepo } from './parcels.repository';
+import { getParcelSvc } from './parcels.service';
 
 function makeCode(consignmentDate: Date, serial: number): string {
   const y = consignmentDate.getFullYear();
@@ -42,9 +46,37 @@ export async function addItemsToConsignmentSvc(input: {
   parcelIds: string[];
 }) {
   if (input.parcelIds.length === 0) return { added: 0 };
+  const consignment = await getConsignmentRepo(input.consignmentId);
+  if (!consignment) {
+    throw BadRequest('Consignment not found');
+  }
+
+  const uniqueParcelIds = [...new Set(input.parcelIds)];
+  const parcels = await Promise.all(uniqueParcelIds.map((parcelId) => getParcelSvc(parcelId)));
+
+  for (const parcel of parcels) {
+    if (parcel.isDeleted) {
+      throw BadRequest(`Parcel ${parcel.id} is deleted and cannot be assigned to a consignment`);
+    }
+    if (parcel.status !== ParcelStatus.PROCESSED) {
+      throw BadRequest(`Parcel ${parcel.id} must be in PROCESSED status before consignment`);
+    }
+    if (parcel.companyId !== consignment.companyId || parcel.sourceId !== consignment.sourceId) {
+      throw BadRequest(`Parcel ${parcel.id} does not belong to this source branch consignment`);
+    }
+    if (parcel.destinationId !== consignment.destinationId) {
+      throw BadRequest(
+        `Parcel ${parcel.id} destination does not match consignment destination branch`,
+      );
+    }
+  }
+
   const added = await addConsignmentItemsRepo(
-    input.parcelIds.map((pid) => ({ consignmentId: input.consignmentId, parcelId: pid })),
+    uniqueParcelIds.map((parcelId) => ({ consignmentId: input.consignmentId, parcelId })),
   );
+  if (added > 0) {
+    await updateParcelsStatusRepo(uniqueParcelIds, ParcelStatus.IN_TRANSIT);
+  }
   return { added };
 }
 

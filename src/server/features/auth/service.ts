@@ -8,6 +8,7 @@ import {
   getUserByIdRepo,
   insertPasswordResetRepo,
   insertRefreshTokenRepo,
+  listRolePermissionKeysRepo,
   markPasswordResetUsedRepo,
   revokeAllUserTokensRepo,
   revokeRefreshTokenRepo,
@@ -20,6 +21,7 @@ import { sendPasswordResetEmail } from '@/server/services/mail/templates/passwor
 import { UserStatus } from '@/db/schemas/enums';
 import { HttpError } from '@/server/utils/http-error';
 import { HttpStatus } from '@/server/utils/http-status';
+import { PermissionCatalog } from '@/shared/permissions/constants';
 
 async function sha256HexAsync(input: string): Promise<string> {
   const enc = new TextEncoder().encode(input);
@@ -40,12 +42,22 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
     throw new HttpError(HttpStatus.FORBIDDEN, 'Account disabled');
   const ok = await verifyPassword(password, user?.password);
   if (!ok) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
+  const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
+  const resolvedPermissionKeys =
+    permissionKeys.length > 0
+      ? permissionKeys
+      : PermissionCatalog.map((permission) => permission.key);
   const payload = {
     sub: user.id,
     email: user.email,
+    employeeId: user.employeeId ?? null,
     roleId: user.roleId ?? null,
     companyId: user.companyId ?? null,
     branchId: user.branchId ?? null,
+    branchType: user.branch?.type ?? null,
+    locationId: user.locationId ?? null,
+    userType: user.userType ?? null,
+    permissions: resolvedPermissionKeys,
   };
   const accessToken = await signAccessToken(payload);
   const refreshPlain = generateOpaqueToken(32);
@@ -66,9 +78,15 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
       id: user.id,
       email: user.email,
       fullname: user.fullname,
+      employeeId: user.employeeId ?? null,
       role: user.role ?? null,
       company: user.company ?? null,
       branch: user.branch ?? null,
+      location: user.location ?? null,
+      locationId: user.locationId ?? null,
+      locationName: user.location?.name ?? null,
+      userType: user.userType ?? null,
+      permissions: resolvedPermissionKeys,
     },
   };
 }
@@ -83,6 +101,11 @@ export async function refreshSvc(refreshToken: string) {
 
   const user = await getUserByIdRepo(current.userId);
   if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
+  const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
+  const resolvedPermissionKeys =
+    permissionKeys.length > 0
+      ? permissionKeys
+      : PermissionCatalog.map((permission) => permission.key);
 
   // Rotate
   const nextPlain = generateOpaqueToken(32);
@@ -94,12 +117,34 @@ export async function refreshSvc(refreshToken: string) {
   const accessToken = await signAccessToken({
     sub: user.id,
     email: user.email,
+    employeeId: user.employeeId ?? null,
     roleId: user.roleId ?? null,
     companyId: user.companyId ?? null,
     branchId: user.branchId ?? null,
+    branchType: user.branch?.type ?? null,
+    locationId: user.locationId ?? null,
+    userType: user.userType ?? null,
+    permissions: resolvedPermissionKeys,
   });
 
-  return { accessToken, refreshToken: nextPlain };
+  return {
+    accessToken,
+    refreshToken: nextPlain,
+    user: {
+      id: user.id,
+      email: user.email,
+      fullname: user.fullname,
+      employeeId: user.employeeId ?? null,
+      role: user.role ?? null,
+      company: user.company ?? null,
+      branch: user.branch ?? null,
+      location: user.location ?? null,
+      locationId: user.locationId ?? null,
+      locationName: user.location?.name ?? null,
+      userType: user.userType ?? null,
+      permissions: resolvedPermissionKeys,
+    },
+  };
 }
 
 export async function logoutSvc(refreshToken: string) {
@@ -180,4 +225,20 @@ export async function changePasswordSvc(userId: string, oldPassword: string, new
   const passwordHash = await hashPassword(newPassword);
   await updateUserPasswordRepo(user.id, passwordHash);
   await revokeAllUserTokensRepo(user.id);
+}
+
+export async function getCurrentUserPermissionsSvc(userId: string) {
+  const user = await getUserByIdRepo(userId);
+  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
+
+  const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
+  const allPermissions =
+    permissionKeys.length > 0
+      ? permissionKeys
+      : PermissionCatalog.map((permission) => permission.key);
+  const readOnlyPermissions = allPermissions.filter((permission) =>
+    /^Can(Read|List|Get)/.test(permission),
+  );
+
+  return { allPermissions, readOnlyPermissions };
 }
