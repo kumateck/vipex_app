@@ -77,11 +77,6 @@ jobs:
             echo "Pruning unused Docker images"
             docker image prune -a -f
 
-            echo "Running database migrations"
-            docker run --rm --net sail \
-              -e DATABASE_URL='postgres://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@postgres_db:5432/vipexdevdb' \
-              "${DOCKER_IMAGE_NAME}:latest" bun run migrate
-
             echo "Running the new Docker container with env vars"
             docker run -d --restart always --net sail \
               -p "${HOST_PORT}:${CONTAINER_PORT}" \
