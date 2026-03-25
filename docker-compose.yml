@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # Migration Service (Runs once on startup)
+  migrate:
+    build: .
+    container_name: vipex_migrate
+    entrypoint: ['bun', 'run', 'migrate']
+    environment:
+      # Connect to host machine's Postgres
+      DATABASE_URL: postgresql://root:PassWord1@host.docker.internal:5432/vipex_db
+      NODE_ENV: production
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
+  # Application Service
+  app:
+    build: .
+    container_name: vipex_app
+    ports:
+      - '8080:3000'
+    environment:
+      DATABASE_URL: postgresql://root:PassWord1@host.docker.internal:5432/vipex_db
+      NODE_ENV: production
+      PORT: 3000
+      JWT_SECRET: 'test-secret-at-least-32-chars-long-1234567890'
+      JWT_ACCESS_EXPIRES: '15m'
+      JWT_REFRESH_EXPIRES: '7d'
+      SWAGGER_ENABLED: 'true'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
