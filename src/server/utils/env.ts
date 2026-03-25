@@ -36,6 +36,20 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
+function normalizeAppBaseUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const parsed = new URL(candidate);
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
 const toBoolean = z.preprocess((value) => {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'string') {
@@ -83,7 +97,7 @@ const EnvSchema = z.object({
   SMTP_GREETING_TIMEOUT: z.coerce.number().int().positive().default(5000), // ms
   SMTP_DEBUG: toBoolean.default(false), // Log SMTP traffic (no credentials)
   // App URLs
-  APP_BASE_URL: z.string().default(`http://localhost:${process.env.PORT || 3000}`),
+  APP_BASE_URL: z.string().optional(),
   // MinIO / S3-compatible object storage (optional)
   MINIO_ENDPOINT: z.string().url().optional(),
   MINIO_REGION: z.string().default('us-east-1'),
@@ -108,6 +122,25 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-export const env = parsed.data;
+const inferredAppBaseUrl =
+  normalizeAppBaseUrl(process.env.APP_BASE_URL) ??
+  normalizeAppBaseUrl(process.env.APP_URL) ??
+  normalizeAppBaseUrl(process.env.PUBLIC_APP_URL) ??
+  normalizeAppBaseUrl(process.env.VERCEL_URL);
+
+const fallbackLocalAppBaseUrl = `http://localhost:${parsed.data.PORT || 3000}`;
+const resolvedAppBaseUrl = inferredAppBaseUrl ?? fallbackLocalAppBaseUrl;
+
+if (parsed.data.NODE_ENV === 'production' && !inferredAppBaseUrl) {
+  console.error(
+    'Invalid environment configuration:\n- APP_BASE_URL: required in production (or APP_URL/PUBLIC_APP_URL/VERCEL_URL)',
+  );
+  process.exit(1);
+}
+
+export const env = {
+  ...parsed.data,
+  APP_BASE_URL: resolvedAppBaseUrl,
+};
 export const isProd = env.NODE_ENV === 'production';
 export const isDev = env.NODE_ENV === 'development';
