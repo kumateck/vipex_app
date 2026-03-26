@@ -23,6 +23,7 @@ COPY . .
 
 # Generate routes
 RUN bun run routes:generate
+RUN bun run build:web
 
 # [Optional] tests & build
 # ENV NODE_ENV=production
