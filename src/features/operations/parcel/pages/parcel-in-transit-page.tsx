@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
@@ -411,69 +412,71 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
 
   return (
     <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {view === 'incoming' ? (
-            <div className="flex flex-wrap items-center justify-end gap-2">
+      <ScrollableWrapper>
+        <Card>
+          <CardHeader>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {view === 'incoming' ? (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setDiscrepancyParcel(null);
+                    setDiscrepancyDialogOpen(true);
+                    setMissingTrackingCode('');
+                    setMissingBookingCode('');
+                    setDiscrepancyNotes('');
+                  }}
+                >
+                  Log Missing Physical Parcel
+                </Button>
+              </div>
+            ) : null}
+            <form className="flex items-center gap-2" onSubmit={handleSearchSubmit}>
+              <Input
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Search by tracking, booking, sender or receiver"
+                className="h-11 text-base"
+              />
+              <Button type="submit" className="h-11 px-6" disabled={!companyId || !branchId}>
+                Search
+              </Button>
               <Button
                 type="button"
                 variant="outline"
+                className="h-11 px-6"
                 onClick={() => {
-                  setDiscrepancyParcel(null);
-                  setDiscrepancyDialogOpen(true);
-                  setMissingTrackingCode('');
-                  setMissingBookingCode('');
-                  setDiscrepancyNotes('');
+                  setSearchInput('');
+                  setQuery((prev) => ({
+                    ...prev,
+                    page: 1,
+                    search: undefined,
+                    filters: serverFilters,
+                  }));
                 }}
               >
-                Log Missing Physical Parcel
+                Clear
               </Button>
-            </div>
-          ) : null}
-          <form className="flex items-center gap-2" onSubmit={handleSearchSubmit}>
-            <Input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search by tracking, booking, sender or receiver"
-              className="h-11 text-base"
+            </form>
+            <DataTable
+              mode="server"
+              data={data?.data ?? []}
+              columns={columns}
+              meta={data?.meta ?? EMPTY_META}
+              loading={isLoading}
+              showSearch={false}
+              serverFilters={serverFilters}
+              onRequestChange={handleRequestChange}
+              enableVirtualization={false}
             />
-            <Button type="submit" className="h-11 px-6" disabled={!companyId || !branchId}>
-              Search
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 px-6"
-              onClick={() => {
-                setSearchInput('');
-                setQuery((prev) => ({
-                  ...prev,
-                  page: 1,
-                  search: undefined,
-                  filters: serverFilters,
-                }));
-              }}
-            >
-              Clear
-            </Button>
-          </form>
-          <DataTable
-            mode="server"
-            data={data?.data ?? []}
-            columns={columns}
-            meta={data?.meta ?? EMPTY_META}
-            loading={isLoading}
-            showSearch={false}
-            serverFilters={serverFilters}
-            onRequestChange={handleRequestChange}
-            enableVirtualization={false}
-          />
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </ScrollableWrapper>
 
       <Dialog
         open={Boolean(selectedParcelId)}

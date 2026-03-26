@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
   SelectContent,
@@ -186,109 +187,115 @@ export function WarehousesPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>{editing ? 'Edit Warehouse' : 'New Warehouse'}</CardTitle>
-            <CardDescription>
-              Warehouses are owned by a branch and can be used as parcel holding points.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Branch</Label>
-              <Select
-                value={form.branchId || undefined}
-                onValueChange={(value) => setForm((current) => ({ ...current, branchId: value }))}
-                disabled={!canManage}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select branch" />
-                </SelectTrigger>
-                <SelectContent>
-                  {branchOptions.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="warehouse-name">Name</Label>
-              <Input
-                id="warehouse-name"
-                value={form.name}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, name: event.target.value }))
-                }
-                placeholder="Main Receiving Store"
-                disabled={!canManage}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="warehouse-description">Description</Label>
-              <Input
-                id="warehouse-description"
-                value={form.description ?? ''}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, description: event.target.value }))
-                }
-                placeholder="Optional note"
-                disabled={!canManage}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select
-                value={String(form.active ?? true)}
-                onValueChange={(value) =>
-                  setForm((current) => ({ ...current, active: value === 'true' }))
-                }
-                disabled={!canManage}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Active</SelectItem>
-                  <SelectItem value="false">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {canManage ? (
-              <div className="flex gap-2">
-                <Button onClick={() => void handleSave()} disabled={isCreating || isUpdating}>
-                  {editing ? 'Update Warehouse' : 'Create Warehouse'}
-                </Button>
-                <Button variant="outline" onClick={resetForm}>
-                  Clear
-                </Button>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
+      <ScrollableWrapper>
+        <div className="space-y-6">
+          <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+            <Card>
+              <CardHeader>
+                <CardTitle>{editing ? 'Edit Warehouse' : 'New Warehouse'}</CardTitle>
+                <CardDescription>
+                  Warehouses are owned by a branch and can be used as parcel holding points.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Branch</Label>
+                  <Select
+                    value={form.branchId || undefined}
+                    onValueChange={(value) =>
+                      setForm((current) => ({ ...current, branchId: value }))
+                    }
+                    disabled={!canManage}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branchOptions.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="warehouse-name">Name</Label>
+                  <Input
+                    id="warehouse-name"
+                    value={form.name}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, name: event.target.value }))
+                    }
+                    placeholder="Main Receiving Store"
+                    disabled={!canManage}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="warehouse-description">Description</Label>
+                  <Input
+                    id="warehouse-description"
+                    value={form.description ?? ''}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, description: event.target.value }))
+                    }
+                    placeholder="Optional note"
+                    disabled={!canManage}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={String(form.active ?? true)}
+                    onValueChange={(value) =>
+                      setForm((current) => ({ ...current, active: value === 'true' }))
+                    }
+                    disabled={!canManage}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">Active</SelectItem>
+                      <SelectItem value="false">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {canManage ? (
+                  <div className="flex gap-2">
+                    <Button onClick={() => void handleSave()} disabled={isCreating || isUpdating}>
+                      {editing ? 'Update Warehouse' : 'Create Warehouse'}
+                    </Button>
+                    <Button variant="outline" onClick={resetForm}>
+                      Clear
+                    </Button>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Warehouses</CardTitle>
-            <CardDescription>
-              These warehouses can be used as parcel holding points inside a branch.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DataTable
-              mode="client"
-              data={data?.data ?? []}
-              columns={columns}
-              loading={isLoading}
-              showSearch
-              searchPlaceholder="Search warehouses"
-              pageSizeOptions={[10, 20, 50]}
-            />
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Warehouses</CardTitle>
+                <CardDescription>
+                  These warehouses can be used as parcel holding points inside a branch.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  mode="client"
+                  data={data?.data ?? []}
+                  columns={columns}
+                  loading={isLoading}
+                  showSearch
+                  searchPlaceholder="Search warehouses"
+                  pageSizeOptions={[10, 20, 50]}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </ScrollableWrapper>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { useListAuditLogsQuery } from '@/features/audit/api';
 import { useListCompanyModulesQuery } from '@/features/company-modules/api';
 import type { CompanyModuleRow } from '@/features/company-modules/api';
@@ -140,180 +141,182 @@ export function ITDashboardV1Page() {
   return (
     <RoleDashboardGuard role="it">
       <div className="w-full p-4 space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>IT Dashboard</CardTitle>
-            <CardDescription>
-              Platform governance analytics for access changes, module state, and security-sensitive
-              activity.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <DashboardScopeFilterBar onApply={setScope} />
+        <ScrollableWrapper>
+          <Card>
+            <CardHeader>
+              <CardTitle>IT Dashboard</CardTitle>
+              <CardDescription>
+                Platform governance analytics for access changes, module state, and
+                security-sensitive activity.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <DashboardScopeFilterBar onApply={setScope} />
 
-            {!scope ? (
-              <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
-                Apply scope to load IT analytics.
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <Badge variant="secondary">Branch: {branchId ?? 'All'}</Badge>
-                  <Badge variant="secondary">Location: {locationId ?? 'All'}</Badge>
-                  <Badge variant="secondary">
-                    Date: {from}
-                    {to !== from ? ` to ${to}` : ''}
-                  </Badge>
-                  {loading ? <Badge>Loading...</Badge> : null}
+              {!scope ? (
+                <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
+                  Apply scope to load IT analytics.
                 </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <Badge variant="secondary">Branch: {branchId ?? 'All'}</Badge>
+                    <Badge variant="secondary">Location: {locationId ?? 'All'}</Badge>
+                    <Badge variant="secondary">
+                      Date: {from}
+                      {to !== from ? ` to ${to}` : ''}
+                    </Badge>
+                    {loading ? <Badge>Loading...</Badge> : null}
+                  </div>
 
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  <DashboardKpiCard
-                    label="Audit Events"
-                    value={canListAudit ? (auditLogs.data?.meta.totalRecords ?? 0) : '-'}
-                    loading={loading}
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <DashboardKpiCard
+                      label="Audit Events"
+                      value={canListAudit ? (auditLogs.data?.meta.totalRecords ?? 0) : '-'}
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Role/Permission Changes"
+                      value={canListAudit ? rolePermissionChanges : '-'}
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Module Changes"
+                      value={canListAudit ? moduleChanges : '-'}
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Security Signals"
+                      value={canListAudit ? securitySignals : '-'}
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Active Users (sampled)"
+                      value={canReadUsers ? (users.data?.meta.totalRecords ?? 0) : '-'}
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Roles"
+                      value={canReadRoles ? (roles.data?.meta.totalRecords ?? 0) : '-'}
+                      loading={loading}
+                    />
+                  </div>
+                  <DashboardExportActions
+                    filenamePrefix="it-dashboard"
+                    disabled={!scope}
+                    rows={[
+                      {
+                        metric: 'Audit Events',
+                        value: canListAudit ? (auditLogs.data?.meta.totalRecords ?? 0) : '-',
+                      },
+                      {
+                        metric: 'Role/Permission Changes',
+                        value: canListAudit ? rolePermissionChanges : '-',
+                      },
+                      { metric: 'Module Changes', value: canListAudit ? moduleChanges : '-' },
+                      { metric: 'Security Signals', value: canListAudit ? securitySignals : '-' },
+                      {
+                        metric: 'Active Users (sampled)',
+                        value: canReadUsers ? (users.data?.meta.totalRecords ?? 0) : '-',
+                      },
+                      {
+                        metric: 'Roles',
+                        value: canReadRoles ? (roles.data?.meta.totalRecords ?? 0) : '-',
+                      },
+                    ]}
                   />
-                  <DashboardKpiCard
-                    label="Role/Permission Changes"
-                    value={canListAudit ? rolePermissionChanges : '-'}
-                    loading={loading}
-                  />
-                  <DashboardKpiCard
-                    label="Module Changes"
-                    value={canListAudit ? moduleChanges : '-'}
-                    loading={loading}
-                  />
-                  <DashboardKpiCard
-                    label="Security Signals"
-                    value={canListAudit ? securitySignals : '-'}
-                    loading={loading}
-                  />
-                  <DashboardKpiCard
-                    label="Active Users (sampled)"
-                    value={canReadUsers ? (users.data?.meta.totalRecords ?? 0) : '-'}
-                    loading={loading}
-                  />
-                  <DashboardKpiCard
-                    label="Roles"
-                    value={canReadRoles ? (roles.data?.meta.totalRecords ?? 0) : '-'}
-                    loading={loading}
-                  />
-                </div>
-                <DashboardExportActions
-                  filenamePrefix="it-dashboard"
-                  disabled={!scope}
-                  rows={[
-                    {
-                      metric: 'Audit Events',
-                      value: canListAudit ? (auditLogs.data?.meta.totalRecords ?? 0) : '-',
-                    },
-                    {
-                      metric: 'Role/Permission Changes',
-                      value: canListAudit ? rolePermissionChanges : '-',
-                    },
-                    { metric: 'Module Changes', value: canListAudit ? moduleChanges : '-' },
-                    { metric: 'Security Signals', value: canListAudit ? securitySignals : '-' },
-                    {
-                      metric: 'Active Users (sampled)',
-                      value: canReadUsers ? (users.data?.meta.totalRecords ?? 0) : '-',
-                    },
-                    {
-                      metric: 'Roles',
-                      value: canReadRoles ? (roles.data?.meta.totalRecords ?? 0) : '-',
-                    },
-                  ]}
-                />
 
-                <div className="grid gap-3 lg:grid-cols-2">
-                  <DashboardBarChartCard
-                    title="Security Activity Chart"
-                    description="Key IT governance activity counts."
-                    seriesName="Events"
-                    data={securityActivityData}
-                  />
-                  <DashboardDonutChartCard
-                    title="Module State Chart"
-                    description="Enabled/disabled/core module composition."
-                    data={moduleStateData}
-                  />
-                </div>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <DashboardBarChartCard
+                      title="Security Activity Chart"
+                      description="Key IT governance activity counts."
+                      seriesName="Events"
+                      data={securityActivityData}
+                    />
+                    <DashboardDonutChartCard
+                      title="Module State Chart"
+                      description="Enabled/disabled/core module composition."
+                      data={moduleStateData}
+                    />
+                  </div>
 
-                <div className="grid gap-3 lg:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Access and Module State</CardTitle>
-                      <CardDescription>
-                        Current control-plane state in selected scope window.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Users loaded</span>
-                        <span>{canReadUsers ? (users.data?.data.length ?? 0) : '-'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Roles loaded</span>
-                        <span>{canReadRoles ? (roles.data?.data.length ?? 0) : '-'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Enabled modules</span>
-                        <span>
-                          {canManageModules
-                            ? moduleRows.filter((module) => module.isEnabled).length
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Disabled modules</span>
-                        <span>
-                          {canManageModules
-                            ? moduleRows.filter((module) => !module.isEnabled).length
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Core modules</span>
-                        <span>
-                          {canManageModules
-                            ? moduleRows.filter((module) => module.isCore).length
-                            : '-'}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Recent Tech Audit Events</CardTitle>
-                      <CardDescription>
-                        Latest user, role, permission, and module related events.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      {!recentTechEvents.length ? (
-                        <div className="text-muted-foreground">
-                          No technical audit events for current scope.
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Access and Module State</CardTitle>
+                        <CardDescription>
+                          Current control-plane state in selected scope window.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Users loaded</span>
+                          <span>{canReadUsers ? (users.data?.data.length ?? 0) : '-'}</span>
                         </div>
-                      ) : (
-                        recentTechEvents.map((row) => (
-                          <div key={row.id} className="rounded-md border p-2">
-                            <div className="font-medium">
-                              {row.entityType} • {row.action}
-                            </div>
-                            <div className="text-muted-foreground">{row.message ?? '-'}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(row.createdAt).toLocaleString()}
-                            </div>
+                        <div className="flex justify-between">
+                          <span>Roles loaded</span>
+                          <span>{canReadRoles ? (roles.data?.data.length ?? 0) : '-'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Enabled modules</span>
+                          <span>
+                            {canManageModules
+                              ? moduleRows.filter((module) => module.isEnabled).length
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Disabled modules</span>
+                          <span>
+                            {canManageModules
+                              ? moduleRows.filter((module) => !module.isEnabled).length
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Core modules</span>
+                          <span>
+                            {canManageModules
+                              ? moduleRows.filter((module) => module.isCore).length
+                              : '-'}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Recent Tech Audit Events</CardTitle>
+                        <CardDescription>
+                          Latest user, role, permission, and module related events.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        {!recentTechEvents.length ? (
+                          <div className="text-muted-foreground">
+                            No technical audit events for current scope.
                           </div>
-                        ))
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                        ) : (
+                          recentTechEvents.map((row) => (
+                            <div key={row.id} className="rounded-md border p-2">
+                              <div className="font-medium">
+                                {row.entityType} • {row.action}
+                              </div>
+                              <div className="text-muted-foreground">{row.message ?? '-'}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(row.createdAt).toLocaleString()}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </ScrollableWrapper>
       </div>
     </RoleDashboardGuard>
   );

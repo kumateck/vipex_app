@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
   SelectContent,
@@ -423,190 +424,196 @@ function AccountingTaxPageContent({ user }: { user: AuthUser }) {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Tax Items in View</CardDescription>
-            <CardTitle>{taxItems.length}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Total Tax</CardDescription>
-            <CardTitle>{formatMoney(totalTaxPsw)}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Ready for Filing</CardDescription>
-            <CardTitle>{readyCount}</CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Create Filing Period</CardTitle>
-          <CardDescription>
-            Filing periods help you review and group tax items before they are marked as filed.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="tax-period-name">Period Name</Label>
-              <Input
-                id="tax-period-name"
-                value={periodName}
-                onChange={(event) => setPeriodName(event.target.value)}
-                placeholder="March 2026 VAT Filing"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tax-period-date-from">Date From</Label>
-              <DateRangePicker
-                value={periodRange}
-                onChange={(value) => {
-                  setPeriodDateFrom(toDateInputValue(value?.from));
-                  setPeriodDateTo(toDateInputValue(value?.to));
-                }}
-                placeholder="Select filing period range"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tax-period-filter">Current Filing Period</Label>
-              <Select
-                value={selectedPeriodId || 'all'}
-                onValueChange={(value) => setSelectedPeriodId(value === 'all' ? '' : value)}
-              >
-                <SelectTrigger id="tax-period-filter">
-                  <SelectValue placeholder="All periods" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All periods</SelectItem>
-                  {filingPeriods.map((period) => (
-                    <SelectItem key={period.id} value={period.id}>
-                      {period.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2 xl:col-span-4">
-              <Label htmlFor="tax-period-notes">Notes</Label>
-              <Input
-                id="tax-period-notes"
-                value={periodNotes}
-                onChange={(event) => setPeriodNotes(event.target.value)}
-                placeholder="Optional notes for the filing review pack"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={() => void handleCreatePeriod()} disabled={isMutating}>
-              Create Filing Period
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Filing Periods</CardTitle>
-          <CardDescription>
-            Keep filing periods visible so accounting and audit users can reconcile what was
-            reviewed and filed.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            mode="client"
-            data={filingPeriods}
-            columns={periodColumns}
-            loading={isLoadingPeriods}
-            showSearch
-            searchPlaceholder="Search filing periods"
-            pageSizeOptions={[10, 20, 50]}
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Tax Journal Items</CardTitle>
-          <CardDescription>
-            These items come from recorded taxable operations. Filing only changes review status and
-            does not alter the underlying tax calculation.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="tax-branch-filter">Branch</Label>
-              <Select
-                value={branchId || 'all'}
-                onValueChange={(value) => setBranchId(value === 'all' ? '' : value)}
-              >
-                <SelectTrigger id="tax-branch-filter">
-                  <SelectValue placeholder="All branches" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All branches</SelectItem>
-                  {branchOptions.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tax-status-filter">Filing Status</Label>
-              <Select value={filingStatus} onValueChange={setFilingStatus}>
-                <SelectTrigger id="tax-status-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value={String(TaxFilingStatus.UNFILED)}>Unfiled</SelectItem>
-                  <SelectItem value={String(TaxFilingStatus.READY_FOR_FILING)}>Ready</SelectItem>
-                  <SelectItem value={String(TaxFilingStatus.FILED)}>Filed</SelectItem>
-                  <SelectItem value={String(TaxFilingStatus.EXCLUDED)}>Excluded</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tax-selected-period">Assign Ready Items To</Label>
-              <Select
-                value={selectedPeriodId || 'all'}
-                onValueChange={(value) => setSelectedPeriodId(value === 'all' ? '' : value)}
-              >
-                <SelectTrigger id="tax-selected-period">
-                  <SelectValue placeholder="Choose a filing period first" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">No selected period</SelectItem>
-                  {filingPeriods.map((period) => (
-                    <SelectItem key={period.id} value={period.id}>
-                      {period.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <ScrollableWrapper>
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Tax Items in View</CardDescription>
+                <CardTitle>{taxItems.length}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Total Tax</CardDescription>
+                <CardTitle>{formatMoney(totalTaxPsw)}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Ready for Filing</CardDescription>
+                <CardTitle>{readyCount}</CardTitle>
+              </CardHeader>
+            </Card>
           </div>
 
-          <DataTable
-            mode="client"
-            data={taxItems}
-            columns={itemColumns}
-            loading={isLoadingItems}
-            showSearch
-            searchPlaceholder="Search tax journal items"
-            pageSizeOptions={[10, 20, 50]}
-          />
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Create Filing Period</CardTitle>
+              <CardDescription>
+                Filing periods help you review and group tax items before they are marked as filed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="space-y-2">
+                  <Label htmlFor="tax-period-name">Period Name</Label>
+                  <Input
+                    id="tax-period-name"
+                    value={periodName}
+                    onChange={(event) => setPeriodName(event.target.value)}
+                    placeholder="March 2026 VAT Filing"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tax-period-date-from">Date From</Label>
+                  <DateRangePicker
+                    value={periodRange}
+                    onChange={(value) => {
+                      setPeriodDateFrom(toDateInputValue(value?.from));
+                      setPeriodDateTo(toDateInputValue(value?.to));
+                    }}
+                    placeholder="Select filing period range"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tax-period-filter">Current Filing Period</Label>
+                  <Select
+                    value={selectedPeriodId || 'all'}
+                    onValueChange={(value) => setSelectedPeriodId(value === 'all' ? '' : value)}
+                  >
+                    <SelectTrigger id="tax-period-filter">
+                      <SelectValue placeholder="All periods" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All periods</SelectItem>
+                      {filingPeriods.map((period) => (
+                        <SelectItem key={period.id} value={period.id}>
+                          {period.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 xl:col-span-4">
+                  <Label htmlFor="tax-period-notes">Notes</Label>
+                  <Input
+                    id="tax-period-notes"
+                    value={periodNotes}
+                    onChange={(event) => setPeriodNotes(event.target.value)}
+                    placeholder="Optional notes for the filing review pack"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={() => void handleCreatePeriod()} disabled={isMutating}>
+                  Create Filing Period
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Filing Periods</CardTitle>
+              <CardDescription>
+                Keep filing periods visible so accounting and audit users can reconcile what was
+                reviewed and filed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                mode="client"
+                data={filingPeriods}
+                columns={periodColumns}
+                loading={isLoadingPeriods}
+                showSearch
+                searchPlaceholder="Search filing periods"
+                pageSizeOptions={[10, 20, 50]}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tax Journal Items</CardTitle>
+              <CardDescription>
+                These items come from recorded taxable operations. Filing only changes review status
+                and does not alter the underlying tax calculation.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="tax-branch-filter">Branch</Label>
+                  <Select
+                    value={branchId || 'all'}
+                    onValueChange={(value) => setBranchId(value === 'all' ? '' : value)}
+                  >
+                    <SelectTrigger id="tax-branch-filter">
+                      <SelectValue placeholder="All branches" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All branches</SelectItem>
+                      {branchOptions.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tax-status-filter">Filing Status</Label>
+                  <Select value={filingStatus} onValueChange={setFilingStatus}>
+                    <SelectTrigger id="tax-status-filter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All statuses</SelectItem>
+                      <SelectItem value={String(TaxFilingStatus.UNFILED)}>Unfiled</SelectItem>
+                      <SelectItem value={String(TaxFilingStatus.READY_FOR_FILING)}>
+                        Ready
+                      </SelectItem>
+                      <SelectItem value={String(TaxFilingStatus.FILED)}>Filed</SelectItem>
+                      <SelectItem value={String(TaxFilingStatus.EXCLUDED)}>Excluded</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tax-selected-period">Assign Ready Items To</Label>
+                  <Select
+                    value={selectedPeriodId || 'all'}
+                    onValueChange={(value) => setSelectedPeriodId(value === 'all' ? '' : value)}
+                  >
+                    <SelectTrigger id="tax-selected-period">
+                      <SelectValue placeholder="Choose a filing period first" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">No selected period</SelectItem>
+                      {filingPeriods.map((period) => (
+                        <SelectItem key={period.id} value={period.id}>
+                          {period.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <DataTable
+                mode="client"
+                data={taxItems}
+                columns={itemColumns}
+                loading={isLoadingItems}
+                showSearch
+                searchPlaceholder="Search tax journal items"
+                pageSizeOptions={[10, 20, 50]}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </ScrollableWrapper>
 
       <ReasonDialog
         open={Boolean(excludingRow)}

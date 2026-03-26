@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
   SelectContent,
@@ -255,27 +256,29 @@ export function ParcelSenderPaymentsPage() {
   return (
     <div className="w-full p-4 space-y-4">
       <ParcelSessionGuard>
-        <Card>
-          <CardHeader>
-            <CardTitle>Sender Cashier Payments</CardTitle>
-            <CardDescription>
-              Parcels created at your branch and ready for sender payment collection.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DataTable
-              mode="server"
-              data={data?.data ?? []}
-              columns={columns}
-              meta={data?.meta ?? EMPTY_META}
-              loading={isLoading}
-              serverFilters={{ companyId, sourceId: branchId, status: ParcelStatus.CREATED }}
-              onRequestChange={setQuery}
-              searchPlaceholder="Search by tracking, booking, sender or receiver"
-              enableVirtualization={false}
-            />
-          </CardContent>
-        </Card>
+        <ScrollableWrapper>
+          <Card>
+            <CardHeader>
+              <CardTitle>Sender Cashier Payments</CardTitle>
+              <CardDescription>
+                Parcels created at your branch and ready for sender payment collection.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                mode="server"
+                data={data?.data ?? []}
+                columns={columns}
+                meta={data?.meta ?? EMPTY_META}
+                loading={isLoading}
+                serverFilters={{ companyId, sourceId: branchId, status: ParcelStatus.CREATED }}
+                onRequestChange={setQuery}
+                searchPlaceholder="Search by tracking, booking, sender or receiver"
+                enableVirtualization={false}
+              />
+            </CardContent>
+          </Card>
+        </ScrollableWrapper>
 
         <Dialog
           open={Boolean(selectedParcel)}

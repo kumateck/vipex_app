@@ -1,0 +1,54 @@
+import type { PrintLayout } from '../types';
+
+const BASE_STYLE = `
+  @media print {
+    html, body {
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  }
+`;
+
+export const PAGE_STYLES: Record<PrintLayout, string> = {
+  'thermal-sticker': `
+    ${BASE_STYLE}
+    @media print {
+      @page {
+        size: 80mm auto;
+        margin: 0;
+      }
+      body {
+        margin: 0;
+      }
+    }
+  `,
+  'invoice-a5': `
+    ${BASE_STYLE}
+    @media print {
+      @page {
+        size: A5 portrait;
+        margin: 8mm;
+      }
+    }
+  `,
+  'invoice-a5-receipt': `
+    ${BASE_STYLE}
+    @media print {
+      @page {
+        size: A5 landscape;
+        margin: 6mm;
+      }
+    }
+  `,
+  'report-a4': `
+    ${BASE_STYLE}
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 10mm;
+      }
+    }
+  `,
+};

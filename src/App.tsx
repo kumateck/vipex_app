@@ -1,5 +1,3 @@
-import '@/index.css';
-
 import { useEffect } from 'react';
 import MainRoutes from './pages';
 import { ThemeProvider } from './components/providers/theme';

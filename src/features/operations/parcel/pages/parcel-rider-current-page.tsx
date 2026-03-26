@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ReactSignature } from '@/components/ui/react-signature';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
   SelectContent,
@@ -237,33 +238,35 @@ export function ParcelRiderCurrentPage() {
 
   return (
     <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Rider Current Deliveries</CardTitle>
-          <CardDescription>
-            Current dispatched parcels assigned to you. Confirm signature on handover.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex gap-2 text-sm">
-            <p>
-              <strong>Expected Delivery Fee:</strong> GHS{' '}
-              {((data?.totals.expectedDeliveryFeePsw ?? 0) / 100).toFixed(2)}
-            </p>
-            <p>
-              <strong>Expected To Be Paid:</strong> GHS{' '}
-              {((data?.totals.expectedToBePaidPsw ?? 0) / 100).toFixed(2)}
-            </p>
-          </div>
-          <DataTable
-            mode="client"
-            data={data?.rows ?? []}
-            columns={columns}
-            loading={false}
-            enableVirtualization={false}
-          />
-        </CardContent>
-      </Card>
+      <ScrollableWrapper>
+        <Card>
+          <CardHeader>
+            <CardTitle>Rider Current Deliveries</CardTitle>
+            <CardDescription>
+              Current dispatched parcels assigned to you. Confirm signature on handover.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex gap-2 text-sm">
+              <p>
+                <strong>Expected Delivery Fee:</strong> GHS{' '}
+                {((data?.totals.expectedDeliveryFeePsw ?? 0) / 100).toFixed(2)}
+              </p>
+              <p>
+                <strong>Expected To Be Paid:</strong> GHS{' '}
+                {((data?.totals.expectedToBePaidPsw ?? 0) / 100).toFixed(2)}
+              </p>
+            </div>
+            <DataTable
+              mode="client"
+              data={data?.rows ?? []}
+              columns={columns}
+              loading={false}
+              enableVirtualization={false}
+            />
+          </CardContent>
+        </Card>
+      </ScrollableWrapper>
 
       <Dialog open={Boolean(selected)} onOpenChange={(open) => (!open ? setSelected(null) : null)}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">

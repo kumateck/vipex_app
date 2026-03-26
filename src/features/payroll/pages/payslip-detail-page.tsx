@@ -2,6 +2,14 @@ import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import {
+  PAGE_STYLES,
+  createPrintableHtmlDocument,
+  getPrintRuntime,
+  printViaBrowserPopup,
+  printViaDesktop,
+} from '@/features/printing';
 import {
   Table,
   TableBody,
@@ -22,7 +30,7 @@ function formatMoneyPsw(amountPsw: number, currencyCode = 'GHS') {
   }).format(Number(amountPsw ?? 0) / 100);
 }
 
-function printPayslipHtml(input: {
+function buildPayslipHtml(input: {
   companyName: string;
   payslipNumber: string;
   employeeName: string;
@@ -44,12 +52,60 @@ function printPayslipHtml(input: {
     source?: string | null;
   }>;
 }) {
-  if (typeof window === 'undefined') return;
-  const html = `<!doctype html>
-<html>
-  <head>
-    <title>${input.payslipNumber}</title>
-    <style>
+  const bodyHtml = `
+    <div>
+      <h1>${input.companyName}</h1>
+      <h2>Payslip ${input.payslipNumber}</h2>
+      <div class="meta">
+        <div class="meta-box">
+          <strong>Employee</strong><br />
+          ${input.employeeName}<br />
+          ${input.employeeNumber}
+        </div>
+        <div class="meta-box">
+          <strong>Payroll Period</strong><br />
+          ${input.payrollCycleName}<br />
+          ${input.periodStart?.slice(0, 10) ?? '-'} to ${input.periodEnd?.slice(0, 10) ?? '-'}<br />
+          Payment date: ${input.paymentDate?.slice(0, 10) ?? '-'}
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Description</th>
+            <th>Source</th>
+            <th>Type</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${input.items
+            .map(
+              (item) => `<tr>
+            <td>${item.code}</td>
+            <td>${item.name}</td>
+            <td>${item.source ?? '-'}</td>
+            <td>${item.itemType === 1 ? 'Deduction' : 'Earning'}</td>
+            <td>${item.amount}</td>
+          </tr>`,
+            )
+            .join('')}
+        </tbody>
+      </table>
+      <div class="summary">
+        <div class="summary-row"><span>Base Pay</span><strong>${formatMoneyPsw(input.basePayPsw, input.currencyCode)}</strong></div>
+        <div class="summary-row"><span>Gross Pay</span><strong>${formatMoneyPsw(input.grossPayPsw, input.currencyCode)}</strong></div>
+        <div class="summary-row"><span>Total Deductions</span><strong>${formatMoneyPsw(input.totalDeductionsPsw, input.currencyCode)}</strong></div>
+        <div class="summary-row"><span>Net Pay</span><strong>${formatMoneyPsw(input.netPayPsw, input.currencyCode)}</strong></div>
+      </div>
+    </div>
+  `;
+
+  return createPrintableHtmlDocument({
+    title: input.payslipNumber,
+    pageStyle: `
+      ${PAGE_STYLES['invoice-a5']}
       body { font-family: Arial, sans-serif; padding: 24px; color: #111827; }
       h1, h2, h3 { margin: 0 0 12px; }
       .meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
@@ -59,63 +115,9 @@ function printPayslipHtml(input: {
       th { background: #f3f4f6; }
       .summary { margin-top: 24px; width: 320px; margin-left: auto; }
       .summary-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb; }
-    </style>
-  </head>
-  <body>
-    <h1>${input.companyName}</h1>
-    <h2>Payslip ${input.payslipNumber}</h2>
-    <div class="meta">
-      <div class="meta-box">
-        <strong>Employee</strong><br />
-        ${input.employeeName}<br />
-        ${input.employeeNumber}
-      </div>
-      <div class="meta-box">
-        <strong>Payroll Period</strong><br />
-        ${input.payrollCycleName}<br />
-        ${input.periodStart?.slice(0, 10) ?? '-'} to ${input.periodEnd?.slice(0, 10) ?? '-'}<br />
-        Payment date: ${input.paymentDate?.slice(0, 10) ?? '-'}
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Code</th>
-          <th>Description</th>
-          <th>Source</th>
-          <th>Type</th>
-          <th>Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${input.items
-          .map(
-            (item) => `<tr>
-          <td>${item.code}</td>
-          <td>${item.name}</td>
-          <td>${item.source ?? '-'}</td>
-          <td>${item.itemType === 1 ? 'Deduction' : 'Earning'}</td>
-          <td>${item.amount}</td>
-        </tr>`,
-          )
-          .join('')}
-      </tbody>
-    </table>
-    <div class="summary">
-      <div class="summary-row"><span>Base Pay</span><strong>${formatMoneyPsw(input.basePayPsw, input.currencyCode)}</strong></div>
-      <div class="summary-row"><span>Gross Pay</span><strong>${formatMoneyPsw(input.grossPayPsw, input.currencyCode)}</strong></div>
-      <div class="summary-row"><span>Total Deductions</span><strong>${formatMoneyPsw(input.totalDeductionsPsw, input.currencyCode)}</strong></div>
-      <div class="summary-row"><span>Net Pay</span><strong>${formatMoneyPsw(input.netPayPsw, input.currencyCode)}</strong></div>
-    </div>
-  </body>
-</html>`;
-
-  const printWindow = window.open('', '_blank', 'noopener,noreferrer');
-  if (!printWindow) return;
-  printWindow.document.write(html);
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
+    `,
+    bodyHtml,
+  });
 }
 
 export function PayslipDetailPage() {
@@ -154,8 +156,8 @@ export function PayslipDetailPage() {
             <Link to="/payroll/cycles">Back to payroll</Link>
           </Button>
           <Button
-            onClick={() =>
-              printPayslipHtml({
+            onClick={async () => {
+              const html = buildPayslipHtml({
                 companyName: authUser?.company?.name ?? 'Company',
                 payslipNumber: data.payslipNumber,
                 employeeName: data.employeeName,
@@ -176,127 +178,142 @@ export function PayslipDetailPage() {
                   itemType: item.itemType,
                   source: item.source,
                 })),
-              })
-            }
+              });
+
+              if (getPrintRuntime() === 'desktop') {
+                const result = await printViaDesktop({
+                  html,
+                  layout: 'invoice-a5',
+                  title: data.payslipNumber,
+                });
+                if (result.ok) return;
+              }
+
+              printViaBrowserPopup(html);
+            }}
           >
             Print payslip
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Employee</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1 text-sm">
-            <div>{data.employeeName}</div>
-            <div>{data.employeeNumber}</div>
-            <div>{data.departmentName ?? '-'}</div>
-            <div>{data.jobTitleName ?? '-'}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Payroll Period</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1 text-sm">
-            <div>{data.payrollCycleName}</div>
-            <div>
-              {data.periodStart?.slice(0, 10)} to {data.periodEnd?.slice(0, 10)}
-            </div>
-            <div>Payment Date: {data.paymentDate?.slice(0, 10) ?? '-'}</div>
-            <div>Issued: {data.issuedAt?.slice(0, 10) ?? '-'}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1 text-sm">
-            <div>Base Pay: {formatMoneyPsw(data.basePayPsw, data.currencyCode)}</div>
-            <div>Gross Pay: {formatMoneyPsw(data.grossPayPsw, data.currencyCode)}</div>
-            <div>
-              Total Deductions: {formatMoneyPsw(data.totalDeductionsPsw, data.currencyCode)}
-            </div>
-            <div className="font-semibold">
-              Net Pay: {formatMoneyPsw(data.netPayPsw, data.currencyCode)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <ScrollableWrapper>
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle>Employee</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                <div>{data.employeeName}</div>
+                <div>{data.employeeNumber}</div>
+                <div>{data.departmentName ?? '-'}</div>
+                <div>{data.jobTitleName ?? '-'}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Payroll Period</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                <div>{data.payrollCycleName}</div>
+                <div>
+                  {data.periodStart?.slice(0, 10)} to {data.periodEnd?.slice(0, 10)}
+                </div>
+                <div>Payment Date: {data.paymentDate?.slice(0, 10) ?? '-'}</div>
+                <div>Issued: {data.issuedAt?.slice(0, 10) ?? '-'}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                <div>Base Pay: {formatMoneyPsw(data.basePayPsw, data.currencyCode)}</div>
+                <div>Gross Pay: {formatMoneyPsw(data.grossPayPsw, data.currencyCode)}</div>
+                <div>
+                  Total Deductions: {formatMoneyPsw(data.totalDeductionsPsw, data.currencyCode)}
+                </div>
+                <div className="font-semibold">
+                  Net Pay: {formatMoneyPsw(data.netPayPsw, data.currencyCode)}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Earnings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {earnings.length ? (
-                earnings.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.code}</TableCell>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.source ?? '-'}</TableCell>
-                    <TableCell className="text-right">
-                      {formatMoneyPsw(item.amountPsw, data.currencyCode)}
-                    </TableCell>
+          <Card>
+            <CardHeader>
+              <CardTitle>Earnings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4}>No earnings found on this payslip.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {earnings.length ? (
+                    earnings.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.code}</TableCell>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell>{item.source ?? '-'}</TableCell>
+                        <TableCell className="text-right">
+                          {formatMoneyPsw(item.amountPsw, data.currencyCode)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4}>No earnings found on this payslip.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Deductions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {deductions.length ? (
-                deductions.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.code}</TableCell>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.source ?? '-'}</TableCell>
-                    <TableCell className="text-right">
-                      {formatMoneyPsw(item.amountPsw, data.currencyCode)}
-                    </TableCell>
+          <Card>
+            <CardHeader>
+              <CardTitle>Deductions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4}>No deductions found on this payslip.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {deductions.length ? (
+                    deductions.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.code}</TableCell>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell>{item.source ?? '-'}</TableCell>
+                        <TableCell className="text-right">
+                          {formatMoneyPsw(item.amountPsw, data.currencyCode)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4}>No deductions found on this payslip.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      </ScrollableWrapper>
     </div>
   );
 }

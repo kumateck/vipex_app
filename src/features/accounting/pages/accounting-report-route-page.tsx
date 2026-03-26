@@ -4,6 +4,7 @@ import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
   SelectContent,
@@ -675,342 +676,348 @@ export function AccountingReportRoutePage({ report }: { report: AccountingRouteR
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Button
-          onClick={() => setAppliedFilters({ branchId, locationId, accountId, dateFrom, dateTo })}
-          disabled={!hasPendingFilterChanges}
-        >
-          Load report
-        </Button>
-        <Button
-          variant="outline"
-          disabled={!appliedFilters}
-          onClick={() =>
-            downloadCsv(
-              exportConfig.filename,
-              exportConfig.sections.flatMap((section, index) => {
-                const rows = [section.headers, ...section.rows];
-                return index === 0 ? rows : [[''], section.headers, ...section.rows];
-              }),
-            )
-          }
-        >
-          Export CSV
-        </Button>
-        <Button
-          variant="outline"
-          disabled={!appliedFilters}
-          onClick={() => printHtml(exportConfig.title, exportConfig.sections)}
-        >
-          Print Report
-        </Button>
-      </div>
+      <ScrollableWrapper>
+        <div className="space-y-6">
+          <div className="flex flex-wrap gap-3">
+            <Button
+              onClick={() =>
+                setAppliedFilters({ branchId, locationId, accountId, dateFrom, dateTo })
+              }
+              disabled={!hasPendingFilterChanges}
+            >
+              Load report
+            </Button>
+            <Button
+              variant="outline"
+              disabled={!appliedFilters}
+              onClick={() =>
+                downloadCsv(
+                  exportConfig.filename,
+                  exportConfig.sections.flatMap((section, index) => {
+                    const rows = [section.headers, ...section.rows];
+                    return index === 0 ? rows : [[''], section.headers, ...section.rows];
+                  }),
+                )
+              }
+            >
+              Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              disabled={!appliedFilters}
+              onClick={() => printHtml(exportConfig.title, exportConfig.sections)}
+            >
+              Print Report
+            </Button>
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Report Filters</CardTitle>
-          <CardDescription>
-            Filter by branch, location, date range, and account where needed.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!appliedFilters ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              Select filters and click Load report.
-            </div>
-          ) : null}
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="reports-branch">Branch</Label>
-              <Select
-                value={branchId || 'all'}
-                onValueChange={(value) => setBranchId(value === 'all' ? '' : value)}
-              >
-                <SelectTrigger id="reports-branch">
-                  <SelectValue placeholder="All branches" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All branches</SelectItem>
-                  {branchOptions.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Report Filters</CardTitle>
+              <CardDescription>
+                Filter by branch, location, date range, and account where needed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!appliedFilters ? (
+                <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                  Select filters and click Load report.
+                </div>
+              ) : null}
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reports-branch">Branch</Label>
+                  <Select
+                    value={branchId || 'all'}
+                    onValueChange={(value) => setBranchId(value === 'all' ? '' : value)}
+                  >
+                    <SelectTrigger id="reports-branch">
+                      <SelectValue placeholder="All branches" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All branches</SelectItem>
+                      {branchOptions.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="reports-location">Location</Label>
-              <Select
-                value={locationId || 'all'}
-                onValueChange={(value) => setLocationId(value === 'all' ? '' : value)}
-              >
-                <SelectTrigger id="reports-location">
-                  <SelectValue placeholder="All locations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All locations</SelectItem>
-                  {locationOptions.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {location.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reports-location">Location</Label>
+                  <Select
+                    value={locationId || 'all'}
+                    onValueChange={(value) => setLocationId(value === 'all' ? '' : value)}
+                  >
+                    <SelectTrigger id="reports-location">
+                      <SelectValue placeholder="All locations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All locations</SelectItem>
+                      {locationOptions.map((location) => (
+                        <SelectItem key={location.id} value={location.id}>
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {reportMode === 'account-statement' ? (
-              <div className="space-y-2 xl:col-span-2">
-                <Label htmlFor="reports-account">Account</Label>
-                <Select
-                  value={accountId || 'none'}
-                  onValueChange={(value) => setAccountId(value === 'none' ? '' : value)}
-                >
-                  <SelectTrigger id="reports-account">
-                    <SelectValue placeholder="Select an account" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No account selected</SelectItem>
-                    {accounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.code} - {account.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {reportMode === 'account-statement' ? (
+                  <div className="space-y-2 xl:col-span-2">
+                    <Label htmlFor="reports-account">Account</Label>
+                    <Select
+                      value={accountId || 'none'}
+                      onValueChange={(value) => setAccountId(value === 'none' ? '' : value)}
+                    >
+                      <SelectTrigger id="reports-account">
+                        <SelectValue placeholder="Select an account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No account selected</SelectItem>
+                        {accounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.code} - {account.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </div>
 
-          <DateRangeFields
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-            onDateFromChange={setDateFrom}
-            onDateToChange={setDateTo}
-          />
-        </CardContent>
-      </Card>
-
-      {reportMode === 'trial-balance' ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Trial Balance</CardTitle>
-            <CardDescription>{REPORT_META[report].description}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DataTable
-              mode="client"
-              data={trialBalance.data?.rows ?? []}
-              columns={trialBalanceColumns}
-              loading={trialBalance.isFetching}
-              showSearch
-              searchPlaceholder="Search trial balance"
-              pageSizeOptions={[10, 20, 50]}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {reportMode === 'income-statement' || reportMode === 'profit-loss' ? (
-        <>
-          <SummaryCards
-            income={reportMode === 'income-statement' ? incomeStatement.data : profitLoss.data}
-          />
-          <div className="grid gap-4 xl:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Income</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <StatementLinesTable
-                  rows={
-                    (reportMode === 'income-statement' ? incomeStatement.data : profitLoss.data)
-                      ?.income ?? []
-                  }
-                />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Expenses</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <StatementLinesTable
-                  rows={
-                    (reportMode === 'income-statement' ? incomeStatement.data : profitLoss.data)
-                      ?.expenses ?? []
-                  }
-                />
-              </CardContent>
-            </Card>
-          </div>
-        </>
-      ) : null}
-
-      {reportMode === 'balance-sheet' ? (
-        <>
-          <SummaryCards balance={balanceSheet.data} />
-          <div className="grid gap-4 xl:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Assets</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <StatementLinesTable rows={balanceSheet.data?.assets ?? []} />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Liabilities</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <StatementLinesTable rows={balanceSheet.data?.liabilities ?? []} />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Equity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <StatementLinesTable rows={balanceSheet.data?.equity ?? []} />
-              </CardContent>
-            </Card>
-          </div>
-        </>
-      ) : null}
-
-      {reportMode === 'cash-flow' ? (
-        <>
-          <SummaryCards cash={cashFlow.data} />
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Operating</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span>Inflows</span>
-                  <span>{formatMoney(cashFlow.data?.operating.inflowsPsw ?? 0)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Outflows</span>
-                  <span>{formatMoney(cashFlow.data?.operating.outflowsPsw ?? 0)}</span>
-                </div>
-                <div className="flex items-center justify-between font-medium">
-                  <span>Net</span>
-                  <span>{formatMoney(cashFlow.data?.operating.netPsw ?? 0)}</span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Investing</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm">
-                <div className="flex items-center justify-between font-medium">
-                  <span>Net</span>
-                  <span>{formatMoney(cashFlow.data?.investing.netPsw ?? 0)}</span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Financing</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm">
-                <div className="flex items-center justify-between font-medium">
-                  <span>Net</span>
-                  <span>{formatMoney(cashFlow.data?.financing.netPsw ?? 0)}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </>
-      ) : null}
-
-      {reportMode === 'monthly-branch-summary' ? (
-        <>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>Total Income</CardDescription>
-                <CardTitle>
-                  {formatMoney(monthlyBranchSummary.data?.totals.totalIncomePsw ?? 0)}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>Total Expenses</CardDescription>
-                <CardTitle>
-                  {formatMoney(monthlyBranchSummary.data?.totals.totalExpensePsw ?? 0)}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>Branches In View</CardDescription>
-                <CardTitle>{monthlyBranchSummary.data?.branches.length ?? 0}</CardTitle>
-              </CardHeader>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Income By Branch</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                mode="client"
-                data={monthlyBranchSummary.data?.incomeRows ?? []}
-                columns={monthlyColumns}
-                loading={monthlyBranchSummary.isFetching}
-                showSearch
-                searchPlaceholder="Search branch income summary"
-                pageSizeOptions={[10, 20, 50]}
+              <DateRangeFields
+                dateFrom={dateFrom}
+                dateTo={dateTo}
+                onDateFromChange={setDateFrom}
+                onDateToChange={setDateTo}
               />
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Expenses By Branch</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                mode="client"
-                data={monthlyBranchSummary.data?.expenseRows ?? []}
-                columns={monthlyColumns}
-                loading={monthlyBranchSummary.isFetching}
-                showSearch
-                searchPlaceholder="Search branch expense summary"
-                pageSizeOptions={[10, 20, 50]}
-              />
-            </CardContent>
-          </Card>
-        </>
-      ) : null}
+          {reportMode === 'trial-balance' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Trial Balance</CardTitle>
+                <CardDescription>{REPORT_META[report].description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  mode="client"
+                  data={trialBalance.data?.rows ?? []}
+                  columns={trialBalanceColumns}
+                  loading={trialBalance.isFetching}
+                  showSearch
+                  searchPlaceholder="Search trial balance"
+                  pageSizeOptions={[10, 20, 50]}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
 
-      {reportMode === 'account-statement' ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Account Statement</CardTitle>
-            <CardDescription>{REPORT_META[report].description}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DataTable
-              mode="client"
-              data={accountStatement.data?.rows ?? []}
-              columns={accountStatementColumns}
-              loading={accountStatement.isFetching}
-              showSearch
-              searchPlaceholder="Search account statement"
-              pageSizeOptions={[10, 20, 50]}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
+          {reportMode === 'income-statement' || reportMode === 'profit-loss' ? (
+            <>
+              <SummaryCards
+                income={reportMode === 'income-statement' ? incomeStatement.data : profitLoss.data}
+              />
+              <div className="grid gap-4 xl:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Income</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <StatementLinesTable
+                      rows={
+                        (reportMode === 'income-statement' ? incomeStatement.data : profitLoss.data)
+                          ?.income ?? []
+                      }
+                    />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Expenses</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <StatementLinesTable
+                      rows={
+                        (reportMode === 'income-statement' ? incomeStatement.data : profitLoss.data)
+                          ?.expenses ?? []
+                      }
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          ) : null}
+
+          {reportMode === 'balance-sheet' ? (
+            <>
+              <SummaryCards balance={balanceSheet.data} />
+              <div className="grid gap-4 xl:grid-cols-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Assets</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <StatementLinesTable rows={balanceSheet.data?.assets ?? []} />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Liabilities</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <StatementLinesTable rows={balanceSheet.data?.liabilities ?? []} />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Equity</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <StatementLinesTable rows={balanceSheet.data?.equity ?? []} />
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          ) : null}
+
+          {reportMode === 'cash-flow' ? (
+            <>
+              <SummaryCards cash={cashFlow.data} />
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Operating</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span>Inflows</span>
+                      <span>{formatMoney(cashFlow.data?.operating.inflowsPsw ?? 0)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Outflows</span>
+                      <span>{formatMoney(cashFlow.data?.operating.outflowsPsw ?? 0)}</span>
+                    </div>
+                    <div className="flex items-center justify-between font-medium">
+                      <span>Net</span>
+                      <span>{formatMoney(cashFlow.data?.operating.netPsw ?? 0)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Investing</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm">
+                    <div className="flex items-center justify-between font-medium">
+                      <span>Net</span>
+                      <span>{formatMoney(cashFlow.data?.investing.netPsw ?? 0)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Financing</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm">
+                    <div className="flex items-center justify-between font-medium">
+                      <span>Net</span>
+                      <span>{formatMoney(cashFlow.data?.financing.netPsw ?? 0)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          ) : null}
+
+          {reportMode === 'monthly-branch-summary' ? (
+            <>
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardDescription>Total Income</CardDescription>
+                    <CardTitle>
+                      {formatMoney(monthlyBranchSummary.data?.totals.totalIncomePsw ?? 0)}
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardDescription>Total Expenses</CardDescription>
+                    <CardTitle>
+                      {formatMoney(monthlyBranchSummary.data?.totals.totalExpensePsw ?? 0)}
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardDescription>Branches In View</CardDescription>
+                    <CardTitle>{monthlyBranchSummary.data?.branches.length ?? 0}</CardTitle>
+                  </CardHeader>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Income By Branch</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <DataTable
+                    mode="client"
+                    data={monthlyBranchSummary.data?.incomeRows ?? []}
+                    columns={monthlyColumns}
+                    loading={monthlyBranchSummary.isFetching}
+                    showSearch
+                    searchPlaceholder="Search branch income summary"
+                    pageSizeOptions={[10, 20, 50]}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Expenses By Branch</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <DataTable
+                    mode="client"
+                    data={monthlyBranchSummary.data?.expenseRows ?? []}
+                    columns={monthlyColumns}
+                    loading={monthlyBranchSummary.isFetching}
+                    showSearch
+                    searchPlaceholder="Search branch expense summary"
+                    pageSizeOptions={[10, 20, 50]}
+                  />
+                </CardContent>
+              </Card>
+            </>
+          ) : null}
+
+          {reportMode === 'account-statement' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Account Statement</CardTitle>
+                <CardDescription>{REPORT_META[report].description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  mode="client"
+                  data={accountStatement.data?.rows ?? []}
+                  columns={accountStatementColumns}
+                  loading={accountStatement.isFetching}
+                  showSearch
+                  searchPlaceholder="Search account statement"
+                  pageSizeOptions={[10, 20, 50]}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      </ScrollableWrapper>
     </div>
   );
 }

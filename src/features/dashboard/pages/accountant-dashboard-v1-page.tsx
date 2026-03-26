@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useGetBalanceSheetReportQuery,
   useGetCashFlowReportQuery,
@@ -130,249 +131,257 @@ export function AccountantDashboardV1Page() {
   return (
     <RoleDashboardGuard role="accountant">
       <div className="w-full p-4 space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Accountant Dashboard</CardTitle>
-            <CardDescription>
-              Cash confirmations, expense lifecycle, reconciliation status, and accounting report
-              health.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <DashboardScopeFilterBar onApply={setScope} />
+        <ScrollableWrapper>
+          <Card>
+            <CardHeader>
+              <CardTitle>Accountant Dashboard</CardTitle>
+              <CardDescription>
+                Cash confirmations, expense lifecycle, reconciliation status, and accounting report
+                health.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <DashboardScopeFilterBar onApply={setScope} />
 
-            {!scope ? (
-              <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
-                Apply scope to load accountant analytics.
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <Badge variant="secondary">Branch: {branchId ?? 'All'}</Badge>
-                  <Badge variant="secondary">Location: {locationId ?? 'All'}</Badge>
-                  <Badge variant="secondary">
-                    Date: {from}
-                    {to !== from ? ` to ${to}` : ''}
-                  </Badge>
-                  {loading ? <Badge>Loading...</Badge> : null}
+              {!scope ? (
+                <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
+                  Apply scope to load accountant analytics.
                 </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <Badge variant="secondary">Branch: {branchId ?? 'All'}</Badge>
+                    <Badge variant="secondary">Location: {locationId ?? 'All'}</Badge>
+                    <Badge variant="secondary">
+                      Date: {from}
+                      {to !== from ? ` to ${to}` : ''}
+                    </Badge>
+                    {loading ? <Badge>Loading...</Badge> : null}
+                  </div>
 
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  <DashboardKpiCard
-                    label="Net Profit"
-                    value={
-                      canReadAccounting
-                        ? formatMoneyPsw(incomeStatement.data?.totals.netProfitPsw)
-                        : '-'
-                    }
-                    loading={loading}
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <DashboardKpiCard
+                      label="Net Profit"
+                      value={
+                        canReadAccounting
+                          ? formatMoneyPsw(incomeStatement.data?.totals.netProfitPsw)
+                          : '-'
+                      }
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Cash Net Change"
+                      value={
+                        canReadAccounting
+                          ? formatMoneyPsw(cashFlow.data?.totals.netChangeInCashPsw)
+                          : '-'
+                      }
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Trial Balance Gap"
+                      value={canReadAccounting ? formatMoneyPsw(trialBalanceGapPsw) : '-'}
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Expense Requests"
+                      value={
+                        canReadAccounting ? (expenseByCategory.data?.totals.requests ?? 0) : '-'
+                      }
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Cash Confirmations"
+                      value={
+                        canReadAccounting
+                          ? (cashConfirmations.data?.totals.confirmations ?? 0)
+                          : '-'
+                      }
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Balance Sheet Assets"
+                      value={
+                        canReadAccounting
+                          ? formatMoneyPsw(balanceSheet.data?.totals.assetsPsw)
+                          : '-'
+                      }
+                      loading={loading}
+                    />
+                  </div>
+                  <DashboardExportActions
+                    filenamePrefix="accountant-dashboard"
+                    disabled={!scope}
+                    rows={[
+                      {
+                        metric: 'Net Profit',
+                        value: canReadAccounting
+                          ? formatMoneyPsw(incomeStatement.data?.totals.netProfitPsw)
+                          : '-',
+                      },
+                      {
+                        metric: 'Cash Net Change',
+                        value: canReadAccounting
+                          ? formatMoneyPsw(cashFlow.data?.totals.netChangeInCashPsw)
+                          : '-',
+                      },
+                      {
+                        metric: 'Trial Balance Gap',
+                        value: canReadAccounting ? formatMoneyPsw(trialBalanceGapPsw) : '-',
+                      },
+                      {
+                        metric: 'Expense Requests',
+                        value: canReadAccounting
+                          ? (expenseByCategory.data?.totals.requests ?? 0)
+                          : '-',
+                      },
+                      {
+                        metric: 'Cash Confirmations',
+                        value: canReadAccounting
+                          ? (cashConfirmations.data?.totals.confirmations ?? 0)
+                          : '-',
+                      },
+                      {
+                        metric: 'Balance Sheet Assets',
+                        value: canReadAccounting
+                          ? formatMoneyPsw(balanceSheet.data?.totals.assetsPsw)
+                          : '-',
+                      },
+                    ]}
                   />
-                  <DashboardKpiCard
-                    label="Cash Net Change"
-                    value={
-                      canReadAccounting
-                        ? formatMoneyPsw(cashFlow.data?.totals.netChangeInCashPsw)
-                        : '-'
-                    }
-                    loading={loading}
-                  />
-                  <DashboardKpiCard
-                    label="Trial Balance Gap"
-                    value={canReadAccounting ? formatMoneyPsw(trialBalanceGapPsw) : '-'}
-                    loading={loading}
-                  />
-                  <DashboardKpiCard
-                    label="Expense Requests"
-                    value={canReadAccounting ? (expenseByCategory.data?.totals.requests ?? 0) : '-'}
-                    loading={loading}
-                  />
-                  <DashboardKpiCard
-                    label="Cash Confirmations"
-                    value={
-                      canReadAccounting ? (cashConfirmations.data?.totals.confirmations ?? 0) : '-'
-                    }
-                    loading={loading}
-                  />
-                  <DashboardKpiCard
-                    label="Balance Sheet Assets"
-                    value={
-                      canReadAccounting ? formatMoneyPsw(balanceSheet.data?.totals.assetsPsw) : '-'
-                    }
-                    loading={loading}
-                  />
-                </div>
-                <DashboardExportActions
-                  filenamePrefix="accountant-dashboard"
-                  disabled={!scope}
-                  rows={[
-                    {
-                      metric: 'Net Profit',
-                      value: canReadAccounting
-                        ? formatMoneyPsw(incomeStatement.data?.totals.netProfitPsw)
-                        : '-',
-                    },
-                    {
-                      metric: 'Cash Net Change',
-                      value: canReadAccounting
-                        ? formatMoneyPsw(cashFlow.data?.totals.netChangeInCashPsw)
-                        : '-',
-                    },
-                    {
-                      metric: 'Trial Balance Gap',
-                      value: canReadAccounting ? formatMoneyPsw(trialBalanceGapPsw) : '-',
-                    },
-                    {
-                      metric: 'Expense Requests',
-                      value: canReadAccounting
-                        ? (expenseByCategory.data?.totals.requests ?? 0)
-                        : '-',
-                    },
-                    {
-                      metric: 'Cash Confirmations',
-                      value: canReadAccounting
-                        ? (cashConfirmations.data?.totals.confirmations ?? 0)
-                        : '-',
-                    },
-                    {
-                      metric: 'Balance Sheet Assets',
-                      value: canReadAccounting
-                        ? formatMoneyPsw(balanceSheet.data?.totals.assetsPsw)
-                        : '-',
-                    },
-                  ]}
-                />
 
-                <div className="grid gap-3 lg:grid-cols-2">
-                  <DashboardBarChartCard
-                    title="P&L Chart"
-                    description="Income vs expense vs net for current scope."
-                    seriesName="Amount (major units)"
-                    data={financialChartData}
-                  />
-                  <DashboardDonutChartCard
-                    title="Balance Sheet Mix Chart"
-                    description="Asset/liability/equity composition."
-                    data={balanceMixChartData}
-                  />
-                </div>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <DashboardBarChartCard
+                      title="P&L Chart"
+                      description="Income vs expense vs net for current scope."
+                      seriesName="Amount (major units)"
+                      data={financialChartData}
+                    />
+                    <DashboardDonutChartCard
+                      title="Balance Sheet Mix Chart"
+                      description="Asset/liability/equity composition."
+                      data={balanceMixChartData}
+                    />
+                  </div>
 
-                <div className="grid gap-3 lg:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Cash and Expense Controls</CardTitle>
-                      <CardDescription>
-                        Tracking confirmation and posting lifecycle quality.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Expected cash</span>
-                        <span>
-                          {canReadAccounting
-                            ? formatMoneyPsw(cashConfirmations.data?.totals.expectedCashPsw)
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Counted cash</span>
-                        <span>
-                          {canReadAccounting
-                            ? formatMoneyPsw(cashConfirmations.data?.totals.countedCashPsw)
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Shortage</span>
-                        <span>
-                          {canReadAccounting
-                            ? formatMoneyPsw(cashConfirmations.data?.totals.shortagePsw)
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Overage</span>
-                        <span>
-                          {canReadAccounting
-                            ? formatMoneyPsw(cashConfirmations.data?.totals.overagePsw)
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Expense approved</span>
-                        <span>
-                          {canReadAccounting
-                            ? formatMoneyPsw(expenseByCategory.data?.totals.approvedPsw)
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Expense posted</span>
-                        <span>
-                          {canPostAccounting
-                            ? formatMoneyPsw(expenseByCategory.data?.totals.postedPsw)
-                            : '-'}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Cash and Expense Controls</CardTitle>
+                        <CardDescription>
+                          Tracking confirmation and posting lifecycle quality.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Expected cash</span>
+                          <span>
+                            {canReadAccounting
+                              ? formatMoneyPsw(cashConfirmations.data?.totals.expectedCashPsw)
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Counted cash</span>
+                          <span>
+                            {canReadAccounting
+                              ? formatMoneyPsw(cashConfirmations.data?.totals.countedCashPsw)
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Shortage</span>
+                          <span>
+                            {canReadAccounting
+                              ? formatMoneyPsw(cashConfirmations.data?.totals.shortagePsw)
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Overage</span>
+                          <span>
+                            {canReadAccounting
+                              ? formatMoneyPsw(cashConfirmations.data?.totals.overagePsw)
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Expense approved</span>
+                          <span>
+                            {canReadAccounting
+                              ? formatMoneyPsw(expenseByCategory.data?.totals.approvedPsw)
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Expense posted</span>
+                          <span>
+                            {canPostAccounting
+                              ? formatMoneyPsw(expenseByCategory.data?.totals.postedPsw)
+                              : '-'}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Branch and Ledger Snapshot</CardTitle>
-                      <CardDescription>
-                        Quick view for consolidation and branch contribution.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Total income</span>
-                        <span>
-                          {canReadAccounting
-                            ? formatMoneyPsw(incomeStatement.data?.totals.totalIncomePsw)
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Total expenses</span>
-                        <span>
-                          {canReadAccounting
-                            ? formatMoneyPsw(incomeStatement.data?.totals.totalExpensePsw)
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Liabilities</span>
-                        <span>
-                          {canReadAccounting
-                            ? formatMoneyPsw(balanceSheet.data?.totals.liabilitiesPsw)
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Equity</span>
-                        <span>
-                          {canReadAccounting
-                            ? formatMoneyPsw(balanceSheet.data?.totals.equityPsw)
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Best branch</span>
-                        <span>{canReadAccounting ? (bestBranch?.branchName ?? '-') : '-'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Best branch net</span>
-                        <span>
-                          {canReadAccounting ? formatMoneyPsw(bestBranch?.netPsw ?? 0) : '-'}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Branch and Ledger Snapshot</CardTitle>
+                        <CardDescription>
+                          Quick view for consolidation and branch contribution.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Total income</span>
+                          <span>
+                            {canReadAccounting
+                              ? formatMoneyPsw(incomeStatement.data?.totals.totalIncomePsw)
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total expenses</span>
+                          <span>
+                            {canReadAccounting
+                              ? formatMoneyPsw(incomeStatement.data?.totals.totalExpensePsw)
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Liabilities</span>
+                          <span>
+                            {canReadAccounting
+                              ? formatMoneyPsw(balanceSheet.data?.totals.liabilitiesPsw)
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Equity</span>
+                          <span>
+                            {canReadAccounting
+                              ? formatMoneyPsw(balanceSheet.data?.totals.equityPsw)
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Best branch</span>
+                          <span>{canReadAccounting ? (bestBranch?.branchName ?? '-') : '-'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Best branch net</span>
+                          <span>
+                            {canReadAccounting ? formatMoneyPsw(bestBranch?.netPsw ?? 0) : '-'}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </ScrollableWrapper>
       </div>
     </RoleDashboardGuard>
   );

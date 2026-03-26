@@ -1,6 +1,12 @@
 @import 'tailwindcss';
+@import './shadcn-style-recipes/style-vega.css' layer(components);
+@import './shadcn-style-recipes/style-nova.css' layer(components);
+@import './shadcn-style-recipes/style-maia.css' layer(components);
+@import './shadcn-style-recipes/style-lyra.css' layer(components);
+@import './shadcn-style-recipes/style-mira.css' layer(components);
 
 @plugin "tailwindcss-animate";
+@source "../src/**/*.{ts,tsx,js,jsx}";
 
 @font-face {
   font-family: 'Geist';
@@ -39,12 +45,6 @@
 @utility font-heading {
   font-family: var(--font-heading);
 }
-
-@import './shadcn-style-recipes/style-vega.css' layer(components);
-@import './shadcn-style-recipes/style-nova.css' layer(components);
-@import './shadcn-style-recipes/style-maia.css' layer(components);
-@import './shadcn-style-recipes/style-lyra.css' layer(components);
-@import './shadcn-style-recipes/style-mira.css' layer(components);
 
 @custom-variant dark (&:is(.dark *));
 

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { ParcelStatus } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
@@ -145,57 +146,59 @@ export function ParcelHomeDeliveryAddressPage() {
 
   return (
     <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Home Delivery Address Collection</CardTitle>
-          <CardDescription>
-            Call receiver, collect home address and delivery fee, then move to address collected.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form
-            className="flex items-center gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const term = searchInput.trim();
-              setQuery((prev) => ({ ...prev, page: 1, search: term.length ? term : undefined }));
-            }}
-          >
-            <Input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search by tracking, booking, receiver"
+      <ScrollableWrapper>
+        <Card>
+          <CardHeader>
+            <CardTitle>Home Delivery Address Collection</CardTitle>
+            <CardDescription>
+              Call receiver, collect home address and delivery fee, then move to address collected.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form
+              className="flex items-center gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const term = searchInput.trim();
+                setQuery((prev) => ({ ...prev, page: 1, search: term.length ? term : undefined }));
+              }}
+            >
+              <Input
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Search by tracking, booking, receiver"
+              />
+              <Button type="submit">Search</Button>
+            </form>
+            <DataTable
+              mode="server"
+              data={listQuery.data?.data ?? []}
+              columns={columns}
+              meta={listQuery.data?.meta ?? EMPTY_META}
+              loading={listQuery.isLoading}
+              showSearch={false}
+              serverFilters={{
+                companyId,
+                destinationId: branchId,
+                status: ParcelStatus.HOME_DELIVERY_REQUESTED,
+              }}
+              onRequestChange={(next) =>
+                setQuery((prev) => ({
+                  ...prev,
+                  ...next,
+                  search: prev.search,
+                  filters: {
+                    companyId,
+                    destinationId: branchId,
+                    status: ParcelStatus.HOME_DELIVERY_REQUESTED,
+                  },
+                }))
+              }
+              enableVirtualization={false}
             />
-            <Button type="submit">Search</Button>
-          </form>
-          <DataTable
-            mode="server"
-            data={listQuery.data?.data ?? []}
-            columns={columns}
-            meta={listQuery.data?.meta ?? EMPTY_META}
-            loading={listQuery.isLoading}
-            showSearch={false}
-            serverFilters={{
-              companyId,
-              destinationId: branchId,
-              status: ParcelStatus.HOME_DELIVERY_REQUESTED,
-            }}
-            onRequestChange={(next) =>
-              setQuery((prev) => ({
-                ...prev,
-                ...next,
-                search: prev.search,
-                filters: {
-                  companyId,
-                  destinationId: branchId,
-                  status: ParcelStatus.HOME_DELIVERY_REQUESTED,
-                },
-              }))
-            }
-            enableVirtualization={false}
-          />
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </ScrollableWrapper>
 
       <Dialog
         open={Boolean(selectedParcel)}

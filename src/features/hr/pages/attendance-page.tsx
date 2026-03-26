@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
   SelectContent,
@@ -75,114 +76,118 @@ export function AttendancePage() {
 
   return (
     <div className="w-full space-y-4 p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Attendance</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-5">
-            <Select value={employeeId} onValueChange={setEmployeeId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Employee" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All employees</SelectItem>
-                {employees.map((employee) => (
-                  <SelectItem key={employee.id} value={employee.id}>
-                    {employee.displayName} ({employee.employeeNumber})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={branchId} onValueChange={setBranchId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Branch" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All branches</SelectItem>
-                {branchOptions.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <DateRangePicker
-              value={attendanceRange}
-              onChange={(value) => {
-                setFrom(toDateInputValue(value?.from));
-                setTo(toDateInputValue(value?.to));
-              }}
-              placeholder="Select attendance range"
-            />
-            <div className="flex gap-2">
-              <Button
-                disabled={!selectedEmployeeId || isCheckingIn}
-                onClick={async () => {
-                  const selectedEmployee = employees.find((item) => item.id === selectedEmployeeId);
-                  await checkInAttendance({
-                    employeeId: selectedEmployeeId,
-                    branchId: selectedEmployee?.branchId ?? null,
-                    locationId: selectedEmployee?.locationId ?? null,
-                  }).unwrap();
+      <ScrollableWrapper>
+        <Card>
+          <CardHeader>
+            <CardTitle>Attendance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-5">
+              <Select value={employeeId} onValueChange={setEmployeeId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All employees</SelectItem>
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.displayName} ({employee.employeeNumber})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={branchId} onValueChange={setBranchId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All branches</SelectItem>
+                  {branchOptions.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <DateRangePicker
+                value={attendanceRange}
+                onChange={(value) => {
+                  setFrom(toDateInputValue(value?.from));
+                  setTo(toDateInputValue(value?.to));
                 }}
-              >
-                Check in
-              </Button>
-              <Button
-                variant="outline"
-                disabled={!selectedEmployeeId || isCheckingOut}
-                onClick={async () => {
-                  await checkOutAttendance({ employeeId: selectedEmployeeId }).unwrap();
-                }}
-              >
-                Check out
-              </Button>
+                placeholder="Select attendance range"
+              />
+              <div className="flex gap-2">
+                <Button
+                  disabled={!selectedEmployeeId || isCheckingIn}
+                  onClick={async () => {
+                    const selectedEmployee = employees.find(
+                      (item) => item.id === selectedEmployeeId,
+                    );
+                    await checkInAttendance({
+                      employeeId: selectedEmployeeId,
+                      branchId: selectedEmployee?.branchId ?? null,
+                      locationId: selectedEmployee?.locationId ?? null,
+                    }).unwrap();
+                  }}
+                >
+                  Check in
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={!selectedEmployeeId || isCheckingOut}
+                  onClick={async () => {
+                    await checkOutAttendance({ employeeId: selectedEmployeeId }).unwrap();
+                  }}
+                >
+                  Check out
+                </Button>
+              </div>
             </div>
-          </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Employee</TableHead>
-                <TableHead>Branch</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Check in</TableHead>
-                <TableHead>Check out</TableHead>
-                <TableHead>Worked</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7}>Loading attendance...</TableCell>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Check in</TableHead>
+                  <TableHead>Check out</TableHead>
+                  <TableHead>Worked</TableHead>
                 </TableRow>
-              ) : rows.length ? (
-                rows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>{row.attendanceDate.slice(0, 10)}</TableCell>
-                    <TableCell>{row.employeeName ?? '-'}</TableCell>
-                    <TableCell>{row.branchName ?? '-'}</TableCell>
-                    <TableCell>{row.locationName ?? '-'}</TableCell>
-                    <TableCell>
-                      {row.checkInAt ? new Date(row.checkInAt).toLocaleTimeString() : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {row.checkOutAt ? new Date(row.checkOutAt).toLocaleTimeString() : '-'}
-                    </TableCell>
-                    <TableCell>{formatMinutes(row.minutesWorked)}</TableCell>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7}>Loading attendance...</TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7}>No attendance records found.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                ) : rows.length ? (
+                  rows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>{row.attendanceDate.slice(0, 10)}</TableCell>
+                      <TableCell>{row.employeeName ?? '-'}</TableCell>
+                      <TableCell>{row.branchName ?? '-'}</TableCell>
+                      <TableCell>{row.locationName ?? '-'}</TableCell>
+                      <TableCell>
+                        {row.checkInAt ? new Date(row.checkInAt).toLocaleTimeString() : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {row.checkOutAt ? new Date(row.checkOutAt).toLocaleTimeString() : '-'}
+                      </TableCell>
+                      <TableCell>{formatMinutes(row.minutesWorked)}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7}>No attendance records found.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </ScrollableWrapper>
     </div>
   );
 }
