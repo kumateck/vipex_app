@@ -9,7 +9,8 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 
 async function cleanupDevServiceWorkers() {
-  if (!import.meta.env.DEV || typeof window === 'undefined') return;
+  const isDev = Boolean((import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV);
+  if (!isDev || typeof window === 'undefined') return;
   if (!('serviceWorker' in navigator)) return;
 
   try {
