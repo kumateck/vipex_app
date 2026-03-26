@@ -1,5 +1,6 @@
 import { serve } from 'bun';
 import { apiFetch } from './server/app';
+import { logger as devLogger } from './server/utils/logger';
 import index from './index.html';
 
 // One Bun server for Frontend + API + Swagger
@@ -23,4 +24,4 @@ const server = serve({
   },
 });
 
-console.log(`🚀 Server running at ${server.url}`);
+devLogger.info(`🚀 Server running at ${server.url}`);

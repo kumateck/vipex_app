@@ -1,4 +1,5 @@
 import { sql } from '@/db/config';
+import { logger as devLogger } from '@/server/utils/logger';
 
 let initialized = false;
 let available = false;
@@ -39,7 +40,7 @@ async function initAuditStorage(): Promise<boolean> {
     available = true;
   } catch (error) {
     available = false;
-    console.warn('audit-storage-unavailable', error);
+    devLogger.warn('audit-storage-unavailable', error);
   }
 
   initialized = true;

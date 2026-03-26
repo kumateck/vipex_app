@@ -6,7 +6,7 @@ on:
 env:
   DOCKER_IMAGE_NAME: kumateck/vipex_app_staging
   CONTAINER_NAME: vipex_app_staging
-  HOST_PORT: 11001
+  HOST_PORT: 11002
   CONTAINER_PORT: 3000
 
 jobs:
@@ -74,11 +74,6 @@ jobs:
 
             echo "Pruning unused Docker images"
             docker image prune -a -f
-
-            echo "Running database migrations"
-            docker run --rm --net sail \
-              -e DATABASE_URL='postgres://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@postgres_db:5432/vipexstagingdb' \
-              "${DOCKER_IMAGE_NAME}:latest" bun run migrate
 
             echo "Running the new Docker container with env vars"
             docker run -d --restart always --net sail \

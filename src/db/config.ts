@@ -12,7 +12,7 @@ export const sql = postgres(DATABASE_URL, {
   connect_timeout: 30,
   idle_timeout: 20,
   max_lifetime: 60 * 30,
-  backoff: (retries) => Math.min(0.5 * 2 ** retries, 30),
+  backoff: (retries) => Math.max(0.5, Math.min(0.5 * 2 ** retries, 30)),
 });
 
 // Drizzle ORM instance

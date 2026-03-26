@@ -1,6 +1,7 @@
 import { swagger } from '@elysiajs/swagger';
 import type { Elysia } from 'elysia';
 import { env } from '../utils/env';
+import { logger as devLogger } from '../utils/logger';
 
 export const swaggerPlugin = (app: Elysia) => {
   // Default enabled unless explicitly set to 'false'
@@ -10,7 +11,7 @@ export const swaggerPlugin = (app: Elysia) => {
       : String(env.SWAGGER_ENABLED).toLowerCase() !== 'false';
 
   if (!enabled) {
-    console.log('Swagger disabled (SWAGGER_ENABLED=false)');
+    devLogger.info('Swagger disabled (SWAGGER_ENABLED=false)');
     return app;
   }
 

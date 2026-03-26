@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { env } from '../../utils/env';
+import { logger as devLogger } from '../../utils/logger';
 
 let transporter: nodemailer.Transporter | null = null;
 let verifiedOnce = false;
@@ -54,7 +55,7 @@ async function getTransporter(): Promise<nodemailer.Transporter> {
 
     // DO NOT log secrets. Only log non-sensitive basics if you must debug.
     if (parseBool(env.SMTP_DEBUG, false)) {
-      console.info('SMTP config:', {
+      devLogger.info('SMTP config:', {
         host: env.SMTP_HOST,
         port,
         secure,
@@ -96,9 +97,9 @@ async function getTransporter(): Promise<nodemailer.Transporter> {
     try {
       await transporter.verify();
       verifiedOnce = true;
-      console.log('📬 SMTP transporter verified');
+      devLogger.info('📬 SMTP transporter verified');
     } catch (err) {
-      console.error('SMTP verification failed:', err);
+      devLogger.error('SMTP verification failed:', err);
       throw err;
     }
   }
@@ -128,11 +129,11 @@ export async function sendMail(input: SendMailInput) {
     replyTo: input.replyTo,
   });
 
-  console.log('📬 Email sent:', info.messageId);
+  devLogger.info('📬 Email sent:', info.messageId);
 
   if ((env.SMTP_HOST as string | undefined)?.includes('ethereal.email')) {
     const url = nodemailer.getTestMessageUrl(info);
-    if (url) console.log('🔗 Ethereal preview URL:', url);
+    if (url) devLogger.info('🔗 Ethereal preview URL:', url);
   }
 
   return info;
