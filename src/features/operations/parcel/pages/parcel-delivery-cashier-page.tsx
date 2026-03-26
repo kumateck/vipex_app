@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
   SelectContent,
@@ -170,57 +171,63 @@ export function ParcelDeliveryCashierPage() {
   return (
     <div className="w-full p-4 space-y-4">
       <ParcelSessionGuard>
-        <Card>
-          <CardHeader>
-            <CardTitle>Delivery Cashier Finalization</CardTitle>
-            <CardDescription>
-              Receive rider money for successful handovers and finalize to delivered at home.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <form
-              className="flex items-center gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const term = searchInput.trim();
-                setQuery((prev) => ({ ...prev, page: 1, search: term.length ? term : undefined }));
-              }}
-            >
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Search by tracking, booking, receiver"
+        <ScrollableWrapper>
+          <Card>
+            <CardHeader>
+              <CardTitle>Delivery Cashier Finalization</CardTitle>
+              <CardDescription>
+                Receive rider money for successful handovers and finalize to delivered at home.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <form
+                className="flex items-center gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const term = searchInput.trim();
+                  setQuery((prev) => ({
+                    ...prev,
+                    page: 1,
+                    search: term.length ? term : undefined,
+                  }));
+                }}
+              >
+                <Input
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder="Search by tracking, booking, receiver"
+                />
+                <Button type="submit">Search</Button>
+              </form>
+              <DataTable
+                mode="server"
+                data={listQuery.data?.data ?? []}
+                columns={columns}
+                meta={listQuery.data?.meta ?? EMPTY_META}
+                loading={listQuery.isLoading}
+                showSearch={false}
+                serverFilters={{
+                  companyId,
+                  destinationId: branchId,
+                  status: ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER,
+                }}
+                onRequestChange={(next) =>
+                  setQuery((prev) => ({
+                    ...prev,
+                    ...next,
+                    search: prev.search,
+                    filters: {
+                      companyId,
+                      destinationId: branchId,
+                      status: ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER,
+                    },
+                  }))
+                }
+                enableVirtualization={false}
               />
-              <Button type="submit">Search</Button>
-            </form>
-            <DataTable
-              mode="server"
-              data={listQuery.data?.data ?? []}
-              columns={columns}
-              meta={listQuery.data?.meta ?? EMPTY_META}
-              loading={listQuery.isLoading}
-              showSearch={false}
-              serverFilters={{
-                companyId,
-                destinationId: branchId,
-                status: ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER,
-              }}
-              onRequestChange={(next) =>
-                setQuery((prev) => ({
-                  ...prev,
-                  ...next,
-                  search: prev.search,
-                  filters: {
-                    companyId,
-                    destinationId: branchId,
-                    status: ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER,
-                  },
-                }))
-              }
-              enableVirtualization={false}
-            />
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </ScrollableWrapper>
 
         <Dialog
           open={Boolean(selectedParcel)}

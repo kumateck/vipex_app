@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
   SelectContent,
@@ -418,70 +419,72 @@ export function ParcelReceiverCashierPage() {
   return (
     <div className="w-full p-4 space-y-4">
       <ParcelSessionGuard>
-        <Card>
-          <CardHeader>
-            <CardTitle>Receiver Cashier</CardTitle>
-            <CardDescription>
-              Receiver-pay parcels awaiting payment collection and office handover.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <form
-              className="flex items-center gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const term = searchInput.trim();
-                setQuery((prev) => ({
-                  ...prev,
-                  page: 1,
-                  search: term.length > 0 ? term : undefined,
-                  filters: {
-                    companyId,
-                    destinationId: branchId,
-                    status: ParcelStatus.AWAITING_PICKUP,
-                    senderPaid: false,
-                  },
-                }));
-              }}
-            >
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Search by tracking, booking, telephone, or receiver name"
-              />
-              <Button type="submit">Search</Button>
-            </form>
+        <ScrollableWrapper>
+          <Card>
+            <CardHeader>
+              <CardTitle>Receiver Cashier</CardTitle>
+              <CardDescription>
+                Receiver-pay parcels awaiting payment collection and office handover.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <form
+                className="flex items-center gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const term = searchInput.trim();
+                  setQuery((prev) => ({
+                    ...prev,
+                    page: 1,
+                    search: term.length > 0 ? term : undefined,
+                    filters: {
+                      companyId,
+                      destinationId: branchId,
+                      status: ParcelStatus.AWAITING_PICKUP,
+                      senderPaid: false,
+                    },
+                  }));
+                }}
+              >
+                <Input
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder="Search by tracking, booking, telephone, or receiver name"
+                />
+                <Button type="submit">Search</Button>
+              </form>
 
-            <DataTable
-              mode="server"
-              data={rows}
-              columns={columns}
-              meta={listQuery.data?.meta ?? EMPTY_META}
-              loading={listQuery.isLoading}
-              showSearch={false}
-              serverFilters={{
-                companyId,
-                destinationId: branchId,
-                status: ParcelStatus.AWAITING_PICKUP,
-                senderPaid: false,
-              }}
-              onRequestChange={(next) =>
-                setQuery((prev) => ({
-                  ...prev,
-                  ...next,
-                  search: prev.search,
-                  filters: {
-                    companyId,
-                    destinationId: branchId,
-                    status: ParcelStatus.AWAITING_PICKUP,
-                    senderPaid: false,
-                  },
-                }))
-              }
-              enableVirtualization={false}
-            />
-          </CardContent>
-        </Card>
+              <DataTable
+                mode="server"
+                data={rows}
+                columns={columns}
+                meta={listQuery.data?.meta ?? EMPTY_META}
+                loading={listQuery.isLoading}
+                showSearch={false}
+                serverFilters={{
+                  companyId,
+                  destinationId: branchId,
+                  status: ParcelStatus.AWAITING_PICKUP,
+                  senderPaid: false,
+                }}
+                onRequestChange={(next) =>
+                  setQuery((prev) => ({
+                    ...prev,
+                    ...next,
+                    search: prev.search,
+                    filters: {
+                      companyId,
+                      destinationId: branchId,
+                      status: ParcelStatus.AWAITING_PICKUP,
+                      senderPaid: false,
+                    },
+                  }))
+                }
+                enableVirtualization={false}
+              />
+            </CardContent>
+          </Card>
+        </ScrollableWrapper>
 
         <Dialog
           open={Boolean(selectedParcel)}

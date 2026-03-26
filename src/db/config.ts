@@ -8,7 +8,12 @@ if (!DATABASE_URL) {
 }
 
 // One shared connection pool for the app and scripts
-export const sql = postgres(DATABASE_URL);
+export const sql = postgres(DATABASE_URL, {
+  connect_timeout: 30,
+  idle_timeout: 20,
+  max_lifetime: 60 * 30,
+  backoff: (retries) => Math.max(0.5, Math.min(0.5 * 2 ** retries, 30)),
+});
 
 // Drizzle ORM instance
 export const db = drizzle(sql);

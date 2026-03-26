@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useReactToPrint } from 'react-to-print';
-import { QRCode } from 'react-qrcode-logo';
 import { Button } from '@/components/ui/button';
 import { computeGhanaTaxesFromPrincipal } from '@/server/utils/tax/ghana';
+import {
+  InvoiceA5Template,
+  PAGE_STYLES,
+  ThermalStickerTemplate,
+  useManagedReactPrint,
+} from '@/features/printing';
 
 export type ReceiptPrintData = {
   bookingCode: string;
@@ -133,9 +137,10 @@ export function ParcelReceiptActions({
   const [queueInvoiceAfterSticker, setQueueInvoiceAfterSticker] = useState(false);
 
   const qrUrl = useMemo(
-    () => `https://vipexparcel.com/tracker/${encodeURIComponent(data.trackingCode)}`,
+    () => `https://vipexparcel.com/tracking/${encodeURIComponent(data.trackingCode)}`,
     [data.trackingCode],
   );
+  const isSenderPaid = (data.amountPaidCedis ?? data.senderPaidCedis) > 0;
 
   const tax = useMemo(() => {
     const amountPaid = data.amountPaidCedis ?? data.senderPaidCedis;
@@ -154,19 +159,24 @@ export function ParcelReceiptActions({
     return computeGhanaTaxesFromPrincipal(amountPaid);
   }, [data.amountPaidCedis, data.senderPaidCedis, data.taxBreakdown]);
 
-  const printInvoice = useReactToPrint({
+  const printInvoice = useManagedReactPrint({
     contentRef: invoiceRef,
     documentTitle: `invoice-${data.bookingCode}`,
+    pageStyle: PAGE_STYLES['invoice-a5-receipt'],
     onAfterPrint: () => {
       onAutoPrintComplete?.();
     },
   });
 
-  const printSticker = useReactToPrint({
+  const printSticker = useManagedReactPrint({
     contentRef: stickerRef,
     documentTitle: `sticker-${data.bookingCode}`,
+    pageStyle: PAGE_STYLES['thermal-sticker'],
     onAfterPrint: () => {
-      if (!queueInvoiceAfterSticker) return;
+      if (!queueInvoiceAfterSticker) {
+        onAutoPrintComplete?.();
+        return;
+      }
       setQueueInvoiceAfterSticker(false);
       setTimeout(() => {
         void printInvoice();
@@ -175,6 +185,10 @@ export function ParcelReceiptActions({
   });
 
   const handlePrintBoth = () => {
+    if (!isSenderPaid) {
+      void printSticker();
+      return;
+    }
     setQueueInvoiceAfterSticker(true);
     void printSticker();
   };
@@ -190,169 +204,56 @@ export function ParcelReceiptActions({
   return (
     <>
       <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '80mm' }}>
-        <div
-          ref={stickerRef}
-          className="bg-white text-black"
-          style={{ width: '76mm', padding: '2mm', fontFamily: 'Arial, sans-serif' }}
-        >
-          <style>
-            {`@media print { @page { size: 80mm auto; margin: 2mm; } body { margin: 0; } }`}
-          </style>
-
-          <div style={{ textAlign: 'center', marginBottom: '2mm' }}>
-            <div style={{ fontWeight: 700, fontSize: '12px' }}>VIPEX PARCEL STICKER</div>
-            <QRCode value={qrUrl} size={84} quietZone={2} ecLevel="M" />
-          </div>
-
-          <div style={{ fontSize: '11px', lineHeight: 1.35 }}>
-            <div>
-              <strong>Booking:</strong> {data.bookingCode}
-            </div>
-            <div>
-              <strong>Receiver:</strong> {data.receiverName}
-            </div>
-            <div>
-              <strong>Phone:</strong> {data.receiverTelephone || '-'}
-            </div>
-            <div>
-              <strong>Destination:</strong> {data.destinationBranchName}
-            </div>
-            <div>
-              <strong>Location:</strong> {data.destinationLocationName}
-            </div>
-            {data.receiverToPayCedis > 0 ? (
-              <div style={{ marginTop: '2mm', fontWeight: 700 }}>
-                TO PAY: {formatMoney(data.receiverToPayCedis)}
-              </div>
-            ) : null}
-          </div>
+        <div ref={stickerRef}>
+          <ThermalStickerTemplate
+            senderName={data.senderName}
+            senderTelephone={data.senderTelephone}
+            bookingCode={data.bookingCode}
+            parcelDetails={data.parcelDetails}
+            destinationBranchName={data.destinationBranchName}
+            destinationLocationName={data.destinationLocationName}
+            toBePaidCedis={isSenderPaid ? undefined : data.receiverToPayCedis}
+            qrValue={qrUrl}
+            formatMoney={formatMoney}
+          />
         </div>
       </div>
 
       <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '148mm' }}>
-        <div
-          ref={invoiceRef}
-          className="bg-white text-black"
-          style={{
-            width: '148mm',
-            minHeight: '210mm',
-            padding: '10mm',
-            fontFamily: 'Arial, sans-serif',
-          }}
-        >
-          <style>
-            {`@media print { @page { size: A5 portrait; margin: 8mm; } body { margin: 0; } }`}
-          </style>
-
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              marginBottom: '8mm',
+        <div ref={invoiceRef}>
+          <InvoiceA5Template
+            bookingCode={data.bookingCode}
+            issuedAtLabel={formatDate(data.issuedAt)}
+            parcelDetails={data.parcelDetails}
+            destinationBranchName={data.destinationBranchName}
+            destinationLocationName={data.destinationLocationName}
+            senderName={data.senderName}
+            senderTelephone={data.senderTelephone}
+            receiverName={data.receiverName}
+            receiverTelephone={data.receiverTelephone}
+            paymentModeLabel={getPaymentModeLabel(data.senderPaidCedis, data.receiverToPayCedis)}
+            totalChargeCedis={data.totalChargeCedis}
+            senderPaidCedis={data.senderPaidCedis}
+            receiverToPayCedis={data.receiverToPayCedis}
+            amountPaidCedis={amountPaidCedis}
+            amountInWords={toAmountWords(amountPaidCedis)}
+            tax={{
+              vat: tax.vat,
+              getfund: tax.getfund,
+              nhil: tax.nhil,
+              covid: tax.covid,
+              totalTax: tax.totalTax,
             }}
-          >
-            <div>
-              <h1 style={{ margin: 0, fontSize: '18px' }}>Invoice Receipt</h1>
-              <div style={{ fontSize: '12px', marginTop: '2mm' }}>
-                Issued: {formatDate(data.issuedAt)}
-              </div>
-            </div>
-            <QRCode value={qrUrl} size={88} quietZone={2} ecLevel="M" />
-          </div>
-
-          <div style={{ fontSize: '12px', lineHeight: 1.5, marginBottom: '6mm' }}>
-            <div>
-              <strong>Booking Code:</strong> {data.bookingCode}
-            </div>
-            <div>
-              <strong>Parcel Details:</strong> {data.parcelDetails}
-            </div>
-            <div>
-              <strong>Destination Branch:</strong> {data.destinationBranchName}
-            </div>
-            <div>
-              <strong>Sender:</strong> {data.senderName}
-            </div>
-            <div>
-              <strong>Sender Phone:</strong> {data.senderTelephone || '-'}
-            </div>
-            <div>
-              <strong>Payment Mode:</strong>{' '}
-              {getPaymentModeLabel(data.senderPaidCedis, data.receiverToPayCedis)}
-            </div>
-          </div>
-
-          <div
-            style={{
-              borderTop: '1px solid #111',
-              borderBottom: '1px solid #111',
-              padding: '4mm 0',
-              marginBottom: '6mm',
-              fontSize: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Total Charge</span>
-              <strong>{formatMoney(data.totalChargeCedis)}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Sender Paid</span>
-              <strong>{formatMoney(data.senderPaidCedis)}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Receiver To Pay</span>
-              <strong>{formatMoney(data.receiverToPayCedis)}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Amount Received</span>
-              <strong>{formatMoney(amountPaidCedis)}</strong>
-            </div>
-            <div style={{ marginTop: '2mm', fontStyle: 'italic' }}>
-              Amount in words: {toAmountWords(amountPaidCedis)}
-            </div>
-          </div>
-
-          <div style={{ fontSize: '12px' }}>
-            <div style={{ fontWeight: 700, marginBottom: '2mm' }}>
-              Tax Breakdown (Amount Received)
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>VAT</span>
-              <span>{formatMoney(tax.vat)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>GETFund</span>
-              <span>{formatMoney(tax.getfund)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>NHIL</span>
-              <span>{formatMoney(tax.nhil)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>COVID Levy</span>
-              <span>{formatMoney(tax.covid)}</span>
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                borderTop: '1px dashed #777',
-                marginTop: '2mm',
-                paddingTop: '2mm',
-              }}
-            >
-              <strong>Total Tax</strong>
-              <strong>{formatMoney(tax.totalTax)}</strong>
-            </div>
-          </div>
+            qrValue={qrUrl}
+            formatMoney={formatMoney}
+          />
         </div>
       </div>
 
       {!autoPrint ? (
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" onClick={handlePrintBoth}>
-            {triggerLabel}
+            {isSenderPaid ? triggerLabel : 'Print Sticker'}
           </Button>
         </div>
       ) : null}

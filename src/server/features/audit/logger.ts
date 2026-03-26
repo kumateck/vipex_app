@@ -1,4 +1,5 @@
 import { createAuditLogSvc } from './service';
+import { logger as devLogger } from '@/server/utils/logger';
 
 export async function recordAuditLog(input: {
   companyId?: string | null;
@@ -22,6 +23,6 @@ export async function recordAuditLog(input: {
       metadata: input.metadata,
     });
   } catch (error) {
-    console.error('audit-log-failed', error);
+    devLogger.error('audit-log-failed', error);
   }
 }

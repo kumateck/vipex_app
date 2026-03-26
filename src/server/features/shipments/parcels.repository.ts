@@ -70,6 +70,7 @@ export type ListParcelsParams = {
   companyId?: string | null;
   sourceId?: string | null;
   destinationId?: string | null;
+  locationId?: string | null;
   status?: number | null;
   statuses?: number[] | null;
   senderPaid?: boolean | null;
@@ -92,6 +93,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     receiverPhone: string | null;
     dropoffAddress: string | null;
     deliveryFeePsw: number | null;
+    pickupLocationName: string | null;
     pickupQueueId: string | null;
     pickupQueueCode: string | null;
     pickupQueueNumber: number | null;
@@ -133,8 +135,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   const hb = alias(branches, 'hb');
   const ci = alias(consignmentItems, 'ci');
   const cg = alias(consignments, 'cg');
+  const pl = alias(locations, 'pl');
   const hl = alias(locations, 'hl');
   const hw = alias(warehouses, 'hw');
+
+  if (p.locationId) whereParts.push(eq(parcels.pickupLocationId, p.locationId));
 
   const sort = p.sort ?? [];
   const orderBy = sort.length
@@ -229,6 +234,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       receiverPhone: r.telephone,
       dropoffAddress: deliveries.dropoffAddress,
       deliveryFeePsw: deliveries.chargePsw,
+      pickupLocationName: pl.name,
       pickupQueueId: pickupQueues.id,
       pickupQueueCode: pickupQueues.queueCode,
       pickupQueueNumber: pickupQueues.queueNumber,
@@ -247,6 +253,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(s, eq(parcels.senderId, s.id))
     .leftJoin(r, eq(parcels.receiverId, r.id))
     .leftJoin(d, eq(parcels.destinationId, d.id))
+    .leftJoin(pl, eq(pl.id, parcels.pickupLocationId))
     .leftJoin(ci, and(eq(ci.parcelId, parcels.id), isNull(ci.removedAt)))
     .leftJoin(cg, eq(cg.id, ci.consignmentId))
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))

@@ -2,6 +2,7 @@ import type { Elysia } from 'elysia';
 import { HttpStatus } from '../utils/http-status';
 import { isHttpError, type ErrorDetails } from '../utils/http-error';
 import { isDev } from '../utils/env';
+import { logger as devLogger } from '../utils/logger';
 
 type FrameworkErrorCode = 'NOT_FOUND' | 'VALIDATION' | 'PARSE' | 'UNKNOWN';
 
@@ -38,8 +39,10 @@ type InfraMapping = {
 
 const INTERNAL_MESSAGE = 'Something went wrong. Please try again.';
 
-const pickRequestId = (headerRequestId: string | null, responseRequestId: string | undefined): string =>
-  headerRequestId || responseRequestId || crypto.randomUUID();
+const pickRequestId = (
+  headerRequestId: string | null,
+  responseRequestId: string | undefined,
+): string => headerRequestId || responseRequestId || crypto.randomUUID();
 
 const toErrorLike = (error: object | null | undefined): ErrorLike => {
   if (!error) return {};
@@ -60,7 +63,9 @@ const toInfraMapping = (err: ErrorLike): InfraMapping => {
   const infraCommand =
     typeof err.command === 'string'
       ? err.command
-      : err.cause && typeof err.cause === 'object' && 'command' in (err.cause as Record<string, unknown>)
+      : err.cause &&
+          typeof err.cause === 'object' &&
+          'command' in (err.cause as Record<string, unknown>)
         ? String((err.cause as Record<string, unknown>).command ?? '')
         : '';
 
@@ -217,18 +222,18 @@ export function errorHandler(app: Elysia) {
     // Log detailed error information only in development mode for debugging.
     // In production/test, avoid exposing sensitive internal details.
     if (isDev) {
-      console.error(
+      devLogger.error(
         JSON.stringify({
           t: new Date().toISOString(),
           requestId,
           path,
-      method,
-      code: mapped.code,
-      originalMessage: err.message || null,
-      originalCode: err.code ?? readNestedCode(err.cause) ?? null,
-      stack: err.stack || null,
-    }),
-  );
+          method,
+          code: mapped.code,
+          originalMessage: err.message || null,
+          originalCode: err.code ?? readNestedCode(err.cause) ?? null,
+          stack: err.stack || null,
+        }),
+      );
     }
 
     return buildErrorBody({

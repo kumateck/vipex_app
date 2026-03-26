@@ -35,6 +35,7 @@ export type SenderCashierParcel = {
   destinationId: string;
   destinationName?: string | null;
   pickupLocationId: string | null;
+  pickupLocationName?: string | null;
   bookingCode: string;
   trackingCode: string;
   parcelDetails: string;
@@ -82,6 +83,7 @@ export type ParcelSearchRow = {
   secondCardId: string | null;
   secondCardNumber: string | null;
   pickupLocationId: string | null;
+  pickupLocationName?: string | null;
   plannedToBePaidPsw: number;
   method: number;
   taxReportConfirmation: boolean;
@@ -359,6 +361,7 @@ export type SenderCashierParcelFilters = {
   companyId?: string | null;
   sourceId?: string | null;
   destinationId?: string | null;
+  locationId?: string | null;
   status?: number | null;
   includeDeleted?: boolean | null;
 };
@@ -367,6 +370,7 @@ export type ParcelSearchFilters = {
   companyId?: string | null;
   sourceId?: string | null;
   destinationId?: string | null;
+  locationId?: string | null;
   status?: number | null;
   statuses?: number[] | null;
   senderPaid?: boolean | null;

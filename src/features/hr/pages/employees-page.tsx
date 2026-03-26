@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
   SelectContent,
@@ -201,271 +202,275 @@ export function EmployeesPage() {
 
   return (
     <div className="w-full space-y-4 p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Employees</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-4">
-            <Input
-              placeholder="Employee number"
-              value={employeeNumber}
-              onChange={(e) => setEmployeeNumber(e.target.value)}
-            />
-            <Input
-              placeholder="First name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-            />
-            <Input
-              placeholder="Last name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-            />
-            <Input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <Input
-              placeholder="Telephone"
-              value={telephone}
-              onChange={(e) => setTelephone(e.target.value)}
-            />
-            <div className="md:col-span-2">
-              <ImageUploadField
-                id="employee-create-profile-image"
-                label="Profile image"
-                value={profileImageUrl}
-                onChange={setProfileImageUrl}
-                helperText="Optional employee profile photo."
-                disabled={isCreating || isUploadingImage}
+      <ScrollableWrapper>
+        <Card>
+          <CardHeader>
+            <CardTitle>Employees</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-4">
+              <Input
+                placeholder="Employee number"
+                value={employeeNumber}
+                onChange={(e) => setEmployeeNumber(e.target.value)}
               />
-            </div>
-            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger>
-                <SelectValue placeholder="Payment method" />
-              </SelectTrigger>
-              <SelectContent>
-                {paymentMethodOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              placeholder="Bank name"
-              value={bankName}
-              onChange={(e) => setBankName(e.target.value)}
-              disabled={paymentMethod !== 'bank'}
-            />
-            <Input
-              placeholder="Account name"
-              value={bankAccountName}
-              onChange={(e) => setBankAccountName(e.target.value)}
-              disabled={paymentMethod !== 'bank'}
-            />
-            <Input
-              placeholder="Account number"
-              value={bankAccountNumber}
-              onChange={(e) => setBankAccountNumber(e.target.value)}
-              disabled={paymentMethod !== 'bank'}
-            />
-            <Input
-              placeholder="Mobile money number"
-              value={mobileMoneyNumber}
-              onChange={(e) => setMobileMoneyNumber(e.target.value)}
-              disabled={paymentMethod !== 'mobile_money'}
-            />
-            <Select
-              value={branchId}
-              onValueChange={(value) => {
-                setBranchId(value);
-                setLocationId('');
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Branch" />
-              </SelectTrigger>
-              <SelectContent>
-                {branchOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={locationId} onValueChange={setLocationId}>
-              <SelectTrigger disabled={!branchId}>
-                <SelectValue placeholder="Location" />
-              </SelectTrigger>
-              <SelectContent>
-                {locationOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={departmentId} onValueChange={setDepartmentId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Department" />
-              </SelectTrigger>
-              <SelectContent>
-                {departmentOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={jobTitleId} onValueChange={setJobTitleId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Job title" />
-              </SelectTrigger>
-              <SelectContent>
-                {jobTitleOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              disabled={
-                !employeeNumber.trim() ||
-                !firstName.trim() ||
-                !lastName.trim() ||
-                !telephone.trim() ||
-                (paymentMethod === 'bank' &&
-                  (!bankName.trim() || !bankAccountName.trim() || !bankAccountNumber.trim())) ||
-                (paymentMethod === 'mobile_money' && !mobileMoneyNumber.trim()) ||
-                isCreating ||
-                isUploadingImage
-              }
-              onClick={async () => {
-                try {
-                  const created = await createEmployee({
-                    employeeNumber: employeeNumber.trim(),
-                    firstName: firstName.trim(),
-                    lastName: lastName.trim(),
-                    email: email.trim() || null,
-                    telephone: telephone.trim(),
-                    paymentMethod: paymentMethod || null,
-                    bankName: bankName.trim() || null,
-                    bankAccountName: bankAccountName.trim() || null,
-                    bankAccountNumber: bankAccountNumber.trim() || null,
-                    mobileMoneyNumber: mobileMoneyNumber.trim() || null,
-                    branchId: branchId || null,
-                    locationId: locationId || null,
-                    departmentId: departmentId || null,
-                    jobTitleId: jobTitleId || null,
-                    hireDate: new Date().toISOString().slice(0, 10),
-                  }).unwrap();
-
-                  if (created.id && profileImageUrl) {
-                    const uploadedProfileImageUrl = await resolveEmployeeProfileImage(
-                      created.id,
-                      profileImageUrl,
-                    );
-                    await updateEmployee({
-                      id: created.id,
-                      body: { profileImageUrl: uploadedProfileImageUrl },
-                    }).unwrap();
-                  }
-
-                  setEmployeeNumber('');
-                  setFirstName('');
-                  setLastName('');
-                  setEmail('');
-                  setProfileImageUrl(null);
-                  setTelephone('');
-                  setPaymentMethod('');
-                  setBankName('');
-                  setBankAccountName('');
-                  setBankAccountNumber('');
-                  setMobileMoneyNumber('');
-                  setBranchId('');
+              <Input
+                placeholder="First name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
+              <Input
+                placeholder="Last name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+              <Input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input
+                placeholder="Telephone"
+                value={telephone}
+                onChange={(e) => setTelephone(e.target.value)}
+              />
+              <div className="md:col-span-2">
+                <ImageUploadField
+                  id="employee-create-profile-image"
+                  label="Profile image"
+                  value={profileImageUrl}
+                  onChange={setProfileImageUrl}
+                  helperText="Optional employee profile photo."
+                  disabled={isCreating || isUploadingImage}
+                />
+              </div>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentMethodOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Bank name"
+                value={bankName}
+                onChange={(e) => setBankName(e.target.value)}
+                disabled={paymentMethod !== 'bank'}
+              />
+              <Input
+                placeholder="Account name"
+                value={bankAccountName}
+                onChange={(e) => setBankAccountName(e.target.value)}
+                disabled={paymentMethod !== 'bank'}
+              />
+              <Input
+                placeholder="Account number"
+                value={bankAccountNumber}
+                onChange={(e) => setBankAccountNumber(e.target.value)}
+                disabled={paymentMethod !== 'bank'}
+              />
+              <Input
+                placeholder="Mobile money number"
+                value={mobileMoneyNumber}
+                onChange={(e) => setMobileMoneyNumber(e.target.value)}
+                disabled={paymentMethod !== 'mobile_money'}
+              />
+              <Select
+                value={branchId}
+                onValueChange={(value) => {
+                  setBranchId(value);
                   setLocationId('');
-                  setDepartmentId('');
-                  setJobTitleId('');
-                  toast.success('Employee created');
-                } catch (error) {
-                  toast.error(error instanceof Error ? error.message : 'Failed to create employee');
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branchOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={locationId} onValueChange={setLocationId}>
+                <SelectTrigger disabled={!branchId}>
+                  <SelectValue placeholder="Location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locationOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={departmentId} onValueChange={setDepartmentId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departmentOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={jobTitleId} onValueChange={setJobTitleId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Job title" />
+                </SelectTrigger>
+                <SelectContent>
+                  {jobTitleOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                disabled={
+                  !employeeNumber.trim() ||
+                  !firstName.trim() ||
+                  !lastName.trim() ||
+                  !telephone.trim() ||
+                  (paymentMethod === 'bank' &&
+                    (!bankName.trim() || !bankAccountName.trim() || !bankAccountNumber.trim())) ||
+                  (paymentMethod === 'mobile_money' && !mobileMoneyNumber.trim()) ||
+                  isCreating ||
+                  isUploadingImage
                 }
-              }}
-            >
-              Add employee
-            </Button>
-          </div>
+                onClick={async () => {
+                  try {
+                    const created = await createEmployee({
+                      employeeNumber: employeeNumber.trim(),
+                      firstName: firstName.trim(),
+                      lastName: lastName.trim(),
+                      email: email.trim() || null,
+                      telephone: telephone.trim(),
+                      paymentMethod: paymentMethod || null,
+                      bankName: bankName.trim() || null,
+                      bankAccountName: bankAccountName.trim() || null,
+                      bankAccountNumber: bankAccountNumber.trim() || null,
+                      mobileMoneyNumber: mobileMoneyNumber.trim() || null,
+                      branchId: branchId || null,
+                      locationId: locationId || null,
+                      departmentId: departmentId || null,
+                      jobTitleId: jobTitleId || null,
+                      hireDate: new Date().toISOString().slice(0, 10),
+                    }).unwrap();
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>No.</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Job title</TableHead>
-                <TableHead>Branch</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+                    if (created.id && profileImageUrl) {
+                      const uploadedProfileImageUrl = await resolveEmployeeProfileImage(
+                        created.id,
+                        profileImageUrl,
+                      );
+                      await updateEmployee({
+                        id: created.id,
+                        body: { profileImageUrl: uploadedProfileImageUrl },
+                      }).unwrap();
+                    }
+
+                    setEmployeeNumber('');
+                    setFirstName('');
+                    setLastName('');
+                    setEmail('');
+                    setProfileImageUrl(null);
+                    setTelephone('');
+                    setPaymentMethod('');
+                    setBankName('');
+                    setBankAccountName('');
+                    setBankAccountNumber('');
+                    setMobileMoneyNumber('');
+                    setBranchId('');
+                    setLocationId('');
+                    setDepartmentId('');
+                    setJobTitleId('');
+                    toast.success('Employee created');
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : 'Failed to create employee',
+                    );
+                  }
+                }}
+              >
+                Add employee
+              </Button>
+            </div>
+
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8}>Loading employees...</TableCell>
+                  <TableHead>No.</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Job title</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : rows.length ? (
-                rows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>{row.employeeNumber}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage
-                            src={row.profileImageUrl ?? undefined}
-                            alt={row.displayName}
-                          />
-                          <AvatarFallback>
-                            {row.displayName.slice(0, 1).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{row.displayName}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{row.departmentName ?? '-'}</TableCell>
-                    <TableCell>{row.jobTitleName ?? '-'}</TableCell>
-                    <TableCell>{row.branchName ?? '-'}</TableCell>
-                    <TableCell>{row.email ?? '-'}</TableCell>
-                    <TableCell>{row.hasUserAccount ? 'Linked' : 'Not linked'}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedEmployee(row)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          disabled={row.hasUserAccount || !row.email}
-                          onClick={() => setLinkEmployee(row)}
-                        >
-                          {row.hasUserAccount ? 'Linked' : 'Create user'}
-                        </Button>
-                      </div>
-                    </TableCell>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8}>Loading employees...</TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={8}>No employees found.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                ) : rows.length ? (
+                  rows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>{row.employeeNumber}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage
+                              src={row.profileImageUrl ?? undefined}
+                              alt={row.displayName}
+                            />
+                            <AvatarFallback>
+                              {row.displayName.slice(0, 1).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{row.displayName}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{row.departmentName ?? '-'}</TableCell>
+                      <TableCell>{row.jobTitleName ?? '-'}</TableCell>
+                      <TableCell>{row.branchName ?? '-'}</TableCell>
+                      <TableCell>{row.email ?? '-'}</TableCell>
+                      <TableCell>{row.hasUserAccount ? 'Linked' : 'Not linked'}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedEmployee(row)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            disabled={row.hasUserAccount || !row.email}
+                            onClick={() => setLinkEmployee(row)}
+                          >
+                            {row.hasUserAccount ? 'Linked' : 'Create user'}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={8}>No employees found.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </ScrollableWrapper>
 
       <Dialog
         open={Boolean(selectedEmployee)}

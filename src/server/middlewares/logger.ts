@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia';
+import { logger as devLogger } from '../utils/logger';
 
 export const logger = new Elysia({ name: 'logger' })
   .derive(() => ({ _start: performance.now() }))
@@ -10,7 +11,7 @@ export const logger = new Elysia({ name: 'logger' })
     const ms = Number((performance.now() - _start).toFixed(1));
     const status = (response as Response | undefined)?.status ?? 0;
 
-    console.log(
+    devLogger.info(
       JSON.stringify({
         t: new Date().toISOString(),
         rid,

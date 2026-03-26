@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
   SelectContent,
@@ -2079,633 +2080,638 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
         </div>
       </div>
 
-      <Tabs
-        value={activeReport}
-        onValueChange={(value) => setActiveReport(value as ReportKey)}
-        className="space-y-4"
-      >
-        {!standalone ? (
-          <TabsList className="flex h-auto flex-wrap justify-start gap-2">
-            {availableReports.map((reportKey) => (
-              <TabsTrigger key={reportKey} value={reportKey}>
-                {REPORT_LABELS[reportKey]}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        ) : null}
+      <ScrollableWrapper>
+        <Tabs
+          value={activeReport}
+          onValueChange={(value) => setActiveReport(value as ReportKey)}
+          className="space-y-4"
+        >
+          {!standalone ? (
+            <TabsList className="flex h-auto flex-wrap justify-start gap-2">
+              {availableReports.map((reportKey) => (
+                <TabsTrigger key={reportKey} value={reportKey}>
+                  {REPORT_LABELS[reportKey]}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          ) : null}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{currentReport.title}</CardTitle>
-            <CardDescription>{currentReport.description}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {!isLoadedForActiveReport ? (
-              <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-                Select filters and click Load report.
-              </div>
-            ) : null}
-            {activeReport === 'employees' ? (
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="space-y-2">
-                  <Label>Branch</Label>
-                  <Select value={branchId} onValueChange={setBranchId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All branches</SelectItem>
-                      {branchOptions.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          <Card>
+            <CardHeader>
+              <CardTitle>{currentReport.title}</CardTitle>
+              <CardDescription>{currentReport.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!isLoadedForActiveReport ? (
+                <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                  Select filters and click Load report.
                 </div>
-                <div className="space-y-2">
-                  <Label>Department</Label>
-                  <Select value={departmentId} onValueChange={setDepartmentId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All departments" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All departments</SelectItem>
-                      {departmentOptions.map((department) => (
-                        <SelectItem key={department.id} value={department.id}>
-                          {department.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              ) : null}
+              {activeReport === 'employees' ? (
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label>Branch</Label>
+                    <Select value={branchId} onValueChange={setBranchId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All branches</SelectItem>
+                        {branchOptions.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Department</Label>
+                    <Select value={departmentId} onValueChange={setDepartmentId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All departments" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All departments</SelectItem>
+                        {departmentOptions.map((department) => (
+                          <SelectItem key={department.id} value={department.id}>
+                            {department.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select value={employeeStatus} onValueChange={setEmployeeStatus}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All statuses</SelectItem>
+                        {Object.entries(EMPLOYMENT_STATUS_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Search</Label>
+                    <Input
+                      value={employeeSearch}
+                      onChange={(event) => setEmployeeSearch(event.target.value)}
+                      placeholder="Employee name, number, phone..."
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={employeeStatus} onValueChange={setEmployeeStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All statuses</SelectItem>
-                      {Object.entries(EMPLOYMENT_STATUS_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Search</Label>
-                  <Input
-                    value={employeeSearch}
-                    onChange={(event) => setEmployeeSearch(event.target.value)}
-                    placeholder="Employee name, number, phone..."
-                  />
-                </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeReport === 'attendance' ? (
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="space-y-2">
-                  <Label>Employee</Label>
-                  <Select value={employeeId} onValueChange={setEmployeeId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All employees" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All employees</SelectItem>
-                      {employeeOptions.map((employee) => (
-                        <SelectItem key={employee.id} value={employee.id}>
-                          {employee.displayName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {activeReport === 'attendance' ? (
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label>Employee</Label>
+                    <Select value={employeeId} onValueChange={setEmployeeId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All employees" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All employees</SelectItem>
+                        {employeeOptions.map((employee) => (
+                          <SelectItem key={employee.id} value={employee.id}>
+                            {employee.displayName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Branch</Label>
+                    <Select value={branchId} onValueChange={setBranchId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All branches</SelectItem>
+                        {branchOptions.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Date range</Label>
+                    <DateRangePicker
+                      value={reportDateRange}
+                      onChange={setReportDateRange}
+                      placeholder="Select date range"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Branch</Label>
-                  <Select value={branchId} onValueChange={setBranchId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All branches</SelectItem>
-                      {branchOptions.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Date range</Label>
-                  <DateRangePicker
-                    value={reportDateRange}
-                    onChange={setReportDateRange}
-                    placeholder="Select date range"
-                  />
-                </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeReport === 'leave' ? (
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="space-y-2">
-                  <Label>Employee</Label>
-                  <Select value={employeeId} onValueChange={setEmployeeId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All employees" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All employees</SelectItem>
-                      {employeeOptions.map((employee) => (
-                        <SelectItem key={employee.id} value={employee.id}>
-                          {employee.displayName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {activeReport === 'leave' ? (
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label>Employee</Label>
+                    <Select value={employeeId} onValueChange={setEmployeeId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All employees" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All employees</SelectItem>
+                        {employeeOptions.map((employee) => (
+                          <SelectItem key={employee.id} value={employee.id}>
+                            {employee.displayName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select value={leaveStatus} onValueChange={setLeaveStatus}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All statuses</SelectItem>
+                        {Object.entries(LEAVE_STATUS_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Date range</Label>
+                    <DateRangePicker
+                      value={reportDateRange}
+                      onChange={setReportDateRange}
+                      placeholder="Select date range"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={leaveStatus} onValueChange={setLeaveStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All statuses</SelectItem>
-                      {Object.entries(LEAVE_STATUS_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Date range</Label>
-                  <DateRangePicker
-                    value={reportDateRange}
-                    onChange={setReportDateRange}
-                    placeholder="Select date range"
-                  />
-                </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeReport === 'payroll-register' ||
-            activeReport === 'payroll-overtime' ||
-            activeReport === 'payroll-adjustments' ||
-            activeReport === 'payroll-journal-reconciliation' ? (
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Payroll cycle</Label>
-                  <Select value={payrollCycleId} onValueChange={setPayrollCycleId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select payroll cycle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">Select payroll cycle</SelectItem>
-                      {payrollCycleOptions.map((cycle) => (
-                        <SelectItem key={cycle.id} value={cycle.id}>
-                          {cycle.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {activeReport === 'payroll-register' ||
+              activeReport === 'payroll-overtime' ||
+              activeReport === 'payroll-adjustments' ||
+              activeReport === 'payroll-journal-reconciliation' ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Payroll cycle</Label>
+                    <Select value={payrollCycleId} onValueChange={setPayrollCycleId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select payroll cycle" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Select payroll cycle</SelectItem>
+                        {payrollCycleOptions.map((cycle) => (
+                          <SelectItem key={cycle.id} value={cycle.id}>
+                            {cycle.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeReport === 'customer-statement' ? (
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Customer</Label>
-                  <Select value={customerId} onValueChange={setCustomerId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">Select customer</SelectItem>
-                      {customerOptions.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.fullname}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {activeReport === 'customer-statement' ? (
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Customer</Label>
+                    <Select value={customerId} onValueChange={setCustomerId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select customer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Select customer</SelectItem>
+                        {customerOptions.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id}>
+                            {customer.fullname}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Date range</Label>
+                    <DateRangePicker
+                      value={reportDateRange}
+                      onChange={setReportDateRange}
+                      placeholder="Select date range"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Date range</Label>
-                  <DateRangePicker
-                    value={reportDateRange}
-                    onChange={setReportDateRange}
-                    placeholder="Select date range"
-                  />
-                </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeReport === 'parcel-status' ? (
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Branch</Label>
-                  <Select value={branchId} onValueChange={setBranchId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All branches</SelectItem>
-                      {branchOptions.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {activeReport === 'parcel-status' ? (
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Branch</Label>
+                    <Select value={branchId} onValueChange={setBranchId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All branches</SelectItem>
+                        {branchOptions.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Date range</Label>
+                    <DateRangePicker
+                      value={reportDateRange}
+                      onChange={setReportDateRange}
+                      placeholder="Select date range"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Date range</Label>
-                  <DateRangePicker
-                    value={reportDateRange}
-                    onChange={setReportDateRange}
-                    placeholder="Select date range"
-                  />
-                </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeReport === 'delivery-performance' ? (
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="space-y-2">
-                  <Label>Destination branch</Label>
-                  <Select value={branchId} onValueChange={setBranchId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All branches</SelectItem>
-                      {branchOptions.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {activeReport === 'delivery-performance' ? (
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label>Destination branch</Label>
+                    <Select value={branchId} onValueChange={setBranchId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All branches</SelectItem>
+                        {branchOptions.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Rider</Label>
+                    <Select value={riderUserId} onValueChange={setRiderUserId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All riders" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All riders</SelectItem>
+                        {riderOptions.map((rider) => (
+                          <SelectItem key={rider.id} value={rider.id}>
+                            {rider.fullname}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Date range</Label>
+                    <DateRangePicker
+                      value={reportDateRange}
+                      onChange={setReportDateRange}
+                      placeholder="Select date range"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Rider</Label>
-                  <Select value={riderUserId} onValueChange={setRiderUserId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All riders" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All riders</SelectItem>
-                      {riderOptions.map((rider) => (
-                        <SelectItem key={rider.id} value={rider.id}>
-                          {rider.fullname}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Date range</Label>
-                  <DateRangePicker
-                    value={reportDateRange}
-                    onChange={setReportDateRange}
-                    placeholder="Select date range"
-                  />
-                </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeReport === 'shift-revenue' || activeReport === 'branch-profitability' ? (
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Branch</Label>
-                  <Select value={branchId} onValueChange={setBranchId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All branches</SelectItem>
-                      {branchOptions.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {activeReport === 'shift-revenue' || activeReport === 'branch-profitability' ? (
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Branch</Label>
+                    <Select value={branchId} onValueChange={setBranchId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All branches</SelectItem>
+                        {branchOptions.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Date range</Label>
+                    <DateRangePicker
+                      value={reportDateRange}
+                      onChange={setReportDateRange}
+                      placeholder="Select date range"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Date range</Label>
-                  <DateRangePicker
-                    value={reportDateRange}
-                    onChange={setReportDateRange}
-                    placeholder="Select date range"
-                  />
-                </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeReport === 'daily-cash-confirmations' ? (
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="space-y-2">
-                  <Label>Branch</Label>
-                  <Select value={branchId} onValueChange={setBranchId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All branches</SelectItem>
-                      {branchOptions.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {activeReport === 'daily-cash-confirmations' ? (
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label>Branch</Label>
+                    <Select value={branchId} onValueChange={setBranchId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All branches</SelectItem>
+                        {branchOptions.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select
+                      value={cashConfirmationStatus}
+                      onValueChange={setCashConfirmationStatus}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All statuses</SelectItem>
+                        {Object.entries(CASH_CONFIRMATION_STATUS_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Date range</Label>
+                    <DateRangePicker
+                      value={reportDateRange}
+                      onChange={setReportDateRange}
+                      placeholder="Select date range"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={cashConfirmationStatus} onValueChange={setCashConfirmationStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All statuses</SelectItem>
-                      {Object.entries(CASH_CONFIRMATION_STATUS_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Date range</Label>
-                  <DateRangePicker
-                    value={reportDateRange}
-                    onChange={setReportDateRange}
-                    placeholder="Select date range"
-                  />
-                </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeReport === 'expense-by-category' ? (
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="space-y-2">
-                  <Label>Branch</Label>
-                  <Select value={branchId} onValueChange={setBranchId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All branches</SelectItem>
-                      {branchOptions.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {activeReport === 'expense-by-category' ? (
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label>Branch</Label>
+                    <Select value={branchId} onValueChange={setBranchId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All branches</SelectItem>
+                        {branchOptions.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select value={expenseRequestStatus} onValueChange={setExpenseRequestStatus}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All statuses</SelectItem>
+                        {Object.entries(EXPENSE_REQUEST_STATUS_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Date range</Label>
+                    <DateRangePicker
+                      value={reportDateRange}
+                      onChange={setReportDateRange}
+                      placeholder="Select date range"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={expenseRequestStatus} onValueChange={setExpenseRequestStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All statuses</SelectItem>
-                      {Object.entries(EXPENSE_REQUEST_STATUS_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Date range</Label>
-                  <DateRangePicker
-                    value={reportDateRange}
-                    onChange={setReportDateRange}
-                    placeholder="Select date range"
-                  />
-                </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeReport === 'credit-exposure' ? (
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Aging bucket</Label>
-                  <Select value={creditAgingBucket} onValueChange={setCreditAgingBucket}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All buckets" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All buckets</SelectItem>
-                      {Object.entries(CREDIT_AGING_BUCKET_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {activeReport === 'credit-exposure' ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Aging bucket</Label>
+                    <Select value={creditAgingBucket} onValueChange={setCreditAgingBucket}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All buckets" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All buckets</SelectItem>
+                        {Object.entries(CREDIT_AGING_BUCKET_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeReport === 'customer-credit-aging-detail' ? (
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="space-y-2">
-                  <Label>Customer</Label>
-                  <Select value={customerId} onValueChange={setCustomerId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All customers" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All customers</SelectItem>
-                      {customerOptions.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.fullname}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {activeReport === 'customer-credit-aging-detail' ? (
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label>Customer</Label>
+                    <Select value={customerId} onValueChange={setCustomerId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All customers" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All customers</SelectItem>
+                        {customerOptions.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id}>
+                            {customer.fullname}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Aging bucket</Label>
+                    <Select value={creditAgingBucket} onValueChange={setCreditAgingBucket}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All buckets" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All buckets</SelectItem>
+                        {Object.entries(CREDIT_AGING_BUCKET_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Date range</Label>
+                    <DateRangePicker
+                      value={reportDateRange}
+                      onChange={setReportDateRange}
+                      placeholder="Select date range"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Aging bucket</Label>
-                  <Select value={creditAgingBucket} onValueChange={setCreditAgingBucket}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All buckets" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All buckets</SelectItem>
-                      {Object.entries(CREDIT_AGING_BUCKET_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Date range</Label>
-                  <DateRangePicker
-                    value={reportDateRange}
-                    onChange={setReportDateRange}
-                    placeholder="Select date range"
-                  />
-                </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeReport === 'tobepaid-outstanding' ? (
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="space-y-2">
-                  <Label>Source branch</Label>
-                  <Select value={branchId} onValueChange={setBranchId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All branches</SelectItem>
-                      {branchOptions.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {activeReport === 'tobepaid-outstanding' ? (
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label>Source branch</Label>
+                    <Select value={branchId} onValueChange={setBranchId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All branches</SelectItem>
+                        {branchOptions.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Destination branch</Label>
+                    <Select value={destinationBranchId} onValueChange={setDestinationBranchId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All branches</SelectItem>
+                        {branchOptions.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Date range</Label>
+                    <DateRangePicker
+                      value={reportDateRange}
+                      onChange={setReportDateRange}
+                      placeholder="Select date range"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Destination branch</Label>
-                  <Select value={destinationBranchId} onValueChange={setDestinationBranchId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All branches</SelectItem>
-                      {branchOptions.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Date range</Label>
-                  <DateRangePicker
-                    value={reportDateRange}
-                    onChange={setReportDateRange}
-                    placeholder="Select date range"
-                  />
-                </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {activeReport === 'tobepaid-collections-reconciliation' ? (
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="space-y-2">
-                  <Label>Source branch</Label>
-                  <Select value={branchId} onValueChange={setBranchId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All branches</SelectItem>
-                      {branchOptions.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {activeReport === 'tobepaid-collections-reconciliation' ? (
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label>Source branch</Label>
+                    <Select value={branchId} onValueChange={setBranchId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All branches</SelectItem>
+                        {branchOptions.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Destination branch</Label>
+                    <Select value={destinationBranchId} onValueChange={setDestinationBranchId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All branches</SelectItem>
+                        {branchOptions.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Date range</Label>
+                    <DateRangePicker
+                      value={reportDateRange}
+                      onChange={setReportDateRange}
+                      placeholder="Select date range"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Destination branch</Label>
-                  <Select value={destinationBranchId} onValueChange={setDestinationBranchId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All branches" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All branches</SelectItem>
-                      {branchOptions.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              ) : null}
+
+              <SummaryGrid items={currentReport.summary} />
+
+              {currentReport.generatedAt ? (
+                <div className="text-xs text-muted-foreground">
+                  Generated {formatDateTime(currentReport.generatedAt)}
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Date range</Label>
-                  <DateRangePicker
-                    value={reportDateRange}
-                    onChange={setReportDateRange}
-                    placeholder="Select date range"
-                  />
-                </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            <SummaryGrid items={currentReport.summary} />
-
-            {currentReport.generatedAt ? (
-              <div className="text-xs text-muted-foreground">
-                Generated {formatDateTime(currentReport.generatedAt)}
-              </div>
-            ) : null}
-
-            {currentReport.sections.map((section) => (
-              <div key={section.heading} className="space-y-3">
-                <div className="font-medium">{section.heading}</div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {section.headers.map((header) => (
-                        <TableHead key={header}>{header}</TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {currentReport.loading ? (
+              {currentReport.sections.map((section) => (
+                <div key={section.heading} className="space-y-3">
+                  <div className="font-medium">{section.heading}</div>
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={section.headers.length}>Loading report...</TableCell>
+                        {section.headers.map((header) => (
+                          <TableHead key={header}>{header}</TableHead>
+                        ))}
                       </TableRow>
-                    ) : section.rows.length ? (
-                      section.rows.map((row, rowIndex) => (
-                        <TableRow key={`${section.heading}-${rowIndex}`}>
-                          {row.map((cell, cellIndex) => (
-                            <TableCell key={`${section.heading}-${rowIndex}-${cellIndex}`}>
-                              {cell}
-                            </TableCell>
-                          ))}
+                    </TableHeader>
+                    <TableBody>
+                      {currentReport.loading ? (
+                        <TableRow>
+                          <TableCell colSpan={section.headers.length}>Loading report...</TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={section.headers.length}>
-                          {currentReport.emptyMessage}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </Tabs>
+                      ) : section.rows.length ? (
+                        section.rows.map((row, rowIndex) => (
+                          <TableRow key={`${section.heading}-${rowIndex}`}>
+                            {row.map((cell, cellIndex) => (
+                              <TableCell key={`${section.heading}-${rowIndex}-${cellIndex}`}>
+                                {cell}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={section.headers.length}>
+                            {currentReport.emptyMessage}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </Tabs>
+      </ScrollableWrapper>
 
       <div className="absolute -left-[10000px] top-0 w-[8.5in]">
         <PrintableReportDocument

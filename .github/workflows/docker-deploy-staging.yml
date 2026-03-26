@@ -1,9 +1,7 @@
 name: Build and Deploy Docker Image
 
 on:
-  push:
-    branches:
-      - staging
+  workflow_dispatch:
 
 env:
   DOCKER_IMAGE_NAME: kumateck/vipex_app_staging

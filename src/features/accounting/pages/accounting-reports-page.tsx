@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
 import { AccountingDisabledState, AccountingUnauthorizedState } from './accounting-shared';
@@ -117,29 +118,33 @@ function AccountingReportsPageContent() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Financial Reports</CardTitle>
-          <CardDescription>
-            Open each report using its dedicated route from the reports center navigation.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ReportGrid reports={FINANCIAL_REPORT_ROUTES} />
-        </CardContent>
-      </Card>
+      <ScrollableWrapper>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Financial Reports</CardTitle>
+              <CardDescription>
+                Open each report using its dedicated route from the reports center navigation.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ReportGrid reports={FINANCIAL_REPORT_ROUTES} />
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Branch & Performance</CardTitle>
-          <CardDescription>
-            Open branch-level accounting summaries from their dedicated report routes.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ReportGrid reports={BRANCH_REPORT_ROUTES} />
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Branch & Performance</CardTitle>
+              <CardDescription>
+                Open branch-level accounting summaries from their dedicated report routes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ReportGrid reports={BRANCH_REPORT_ROUTES} />
+            </CardContent>
+          </Card>
+        </div>
+      </ScrollableWrapper>
     </div>
   );
 }

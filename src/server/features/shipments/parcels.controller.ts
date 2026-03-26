@@ -16,6 +16,7 @@ export async function listParcelsCtrl(
     companyId?: string | null;
     sourceId?: string | null;
     destinationId?: string | null;
+    locationId?: string | null;
     status?: number | null;
     statuses?: number[] | null;
     senderPaid?: boolean | null;
@@ -30,6 +31,7 @@ export async function listParcelsCtrl(
     companyId: q.filters?.companyId ?? null,
     sourceId: q.filters?.sourceId ?? null,
     destinationId: q.filters?.destinationId ?? null,
+    locationId: q.filters?.locationId ?? null,
     status: q.filters?.status ?? null,
     statuses: q.filters?.statuses ?? null,
     senderPaid: q.filters?.senderPaid ?? null,
