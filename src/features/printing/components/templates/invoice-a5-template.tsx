@@ -1,4 +1,5 @@
 import { QRCode } from 'react-qrcode-logo';
+import logoPng from '@/assets/logo.png';
 
 type InvoiceA5TemplateProps = {
   bookingCode: string;
@@ -79,6 +80,11 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
           }}
         >
           <div>
+            <img
+              src={logoPng}
+              alt="Vipex logo"
+              style={{ width: '13mm', height: '13mm', objectFit: 'contain', marginBottom: '0.9mm' }}
+            />
             <div style={{ fontSize: '5.7mm', fontWeight: 700, lineHeight: 1 }}>VIPEX CO. LTD</div>
             <div style={{ fontSize: '5.7mm', fontWeight: 700, lineHeight: 1 }}>PARCELS</div>
             <div style={{ marginTop: '0.7mm', fontSize: '3mm' }}>
