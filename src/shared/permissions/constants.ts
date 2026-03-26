@@ -191,4 +191,21 @@ export const PermissionCatalog: ReadonlyArray<{
   group: string;
 }> = catalog.map(([key, description, group]) => ({ key, description, group }));
 
+export const HiddenPermissionKeysInUi = new Set<PermissionKey>([
+  PermissionKeys.CanReadStatuses,
+  PermissionKeys.CanCreateStatuses,
+  PermissionKeys.CanUpdateStatuses,
+  PermissionKeys.CanDeleteStatuses,
+]);
+
+export const PermissionCatalogUi = PermissionCatalog.filter(
+  (permission) => !HiddenPermissionKeysInUi.has(permission.key),
+);
+
+const SIDEBAR_READ_PERMISSION_PATTERN = /^Can(Read|List|Get|View)/;
+
+export function isSidebarReadablePermission(permissionKey: string): boolean {
+  return SIDEBAR_READ_PERMISSION_PATTERN.test(permissionKey);
+}
+
 export const PermissionKeySet = new Set<string>(PermissionCatalog.map((p) => p.key));

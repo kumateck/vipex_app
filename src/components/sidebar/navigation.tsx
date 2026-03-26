@@ -6,6 +6,7 @@ interface SubItem {
   url?: string;
   icon?: LucideIconProps;
   permissionKey?: string;
+  hiddenInSidebar?: boolean;
   children?: SubItem[];
 }
 
@@ -16,6 +17,7 @@ export interface MenuItem {
   icon: LucideIconProps;
   isActive?: boolean;
   permissionKey?: string;
+  hiddenInSidebar?: boolean;
   items?: SubItem[]; // Optional array of sub-items.
 }
 
@@ -437,6 +439,7 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Status Management',
             url: '/statuses',
+            hiddenInSidebar: true,
           },
           {
             title: 'Card Management',
