@@ -8,6 +8,11 @@ WORKDIR /app
 FROM base AS install
 RUN mkdir -p /temp/dev
 COPY package.json bun.lock /temp/dev/
+COPY apps/web/package.json /temp/dev/apps/web/package.json
+COPY apps/desktop/package.json /temp/dev/apps/desktop/package.json
+COPY packages/ui/package.json /temp/dev/packages/ui/package.json
+COPY packages/lib/package.json /temp/dev/packages/lib/package.json
+COPY backend/package.json /temp/dev/backend/package.json
 RUN cd /temp/dev && bun install
 
 # install with --production (exclude devDependencies)
