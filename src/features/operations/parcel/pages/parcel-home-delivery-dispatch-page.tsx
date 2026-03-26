@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
   SelectContent,
@@ -201,77 +202,79 @@ export function ParcelHomeDeliveryDispatchPage() {
 
   return (
     <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Home Delivery Dispatch</CardTitle>
-          <CardDescription>
-            Load address-collected and returned parcels, then dispatch/reassign to rider by area.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form
-            className="flex items-center gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const term = searchInput.trim();
-              setQuery((prev) => ({ ...prev, page: 1, search: term.length ? term : undefined }));
-            }}
-          >
-            <input
-              className="h-10 rounded-md border px-3 w-full"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search by tracking, booking, receiver or area"
+      <ScrollableWrapper>
+        <Card>
+          <CardHeader>
+            <CardTitle>Home Delivery Dispatch</CardTitle>
+            <CardDescription>
+              Load address-collected and returned parcels, then dispatch/reassign to rider by area.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form
+              className="flex items-center gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const term = searchInput.trim();
+                setQuery((prev) => ({ ...prev, page: 1, search: term.length ? term : undefined }));
+              }}
+            >
+              <input
+                className="h-10 rounded-md border px-3 w-full"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Search by tracking, booking, receiver or area"
+              />
+              <Button type="submit">Search</Button>
+            </form>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={riderUserId} onValueChange={setRiderUserId}>
+                <SelectTrigger className="w-72">
+                  <SelectValue placeholder="Select rider" />
+                </SelectTrigger>
+                <SelectContent>
+                  {riderOptions.map((rider) => (
+                    <SelectItem key={rider.id} value={rider.id}>
+                      {rider.fullname}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={onDispatch} disabled={isDispatching}>
+                {isDispatching ? 'Dispatching...' : `Dispatch Selected (${selectedIds.length})`}
+              </Button>
+            </div>
+
+            <DataTable
+              mode="server"
+              data={listQuery.data?.data ?? []}
+              columns={columns}
+              meta={listQuery.data?.meta ?? EMPTY_META}
+              loading={listQuery.isLoading}
+              showSearch={false}
+              serverFilters={{
+                companyId,
+                destinationId: branchId,
+                statuses: [ParcelStatus.ADDRESS_COLLECTED, ParcelStatus.RETURNED_TO_OFFICE],
+              }}
+              onRequestChange={(next) =>
+                setQuery((prev) => ({
+                  ...prev,
+                  ...next,
+                  search: prev.search,
+                  filters: {
+                    companyId,
+                    destinationId: branchId,
+                    statuses: [ParcelStatus.ADDRESS_COLLECTED, ParcelStatus.RETURNED_TO_OFFICE],
+                  },
+                }))
+              }
+              enableVirtualization={false}
             />
-            <Button type="submit">Search</Button>
-          </form>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Select value={riderUserId} onValueChange={setRiderUserId}>
-              <SelectTrigger className="w-72">
-                <SelectValue placeholder="Select rider" />
-              </SelectTrigger>
-              <SelectContent>
-                {riderOptions.map((rider) => (
-                  <SelectItem key={rider.id} value={rider.id}>
-                    {rider.fullname}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={onDispatch} disabled={isDispatching}>
-              {isDispatching ? 'Dispatching...' : `Dispatch Selected (${selectedIds.length})`}
-            </Button>
-          </div>
-
-          <DataTable
-            mode="server"
-            data={listQuery.data?.data ?? []}
-            columns={columns}
-            meta={listQuery.data?.meta ?? EMPTY_META}
-            loading={listQuery.isLoading}
-            showSearch={false}
-            serverFilters={{
-              companyId,
-              destinationId: branchId,
-              statuses: [ParcelStatus.ADDRESS_COLLECTED, ParcelStatus.RETURNED_TO_OFFICE],
-            }}
-            onRequestChange={(next) =>
-              setQuery((prev) => ({
-                ...prev,
-                ...next,
-                search: prev.search,
-                filters: {
-                  companyId,
-                  destinationId: branchId,
-                  statuses: [ParcelStatus.ADDRESS_COLLECTED, ParcelStatus.RETURNED_TO_OFFICE],
-                },
-              }))
-            }
-            enableVirtualization={false}
-          />
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </ScrollableWrapper>
     </div>
   );
 }

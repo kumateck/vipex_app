@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useGetBranchProfitabilityReportQuery,
   useGetCreditExposureReportQuery,
@@ -121,209 +122,213 @@ export function AdminDashboardV1Page() {
   return (
     <RoleDashboardGuard role="admin">
       <div className="w-full p-4 space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Admin Dashboard</CardTitle>
-            <CardDescription>
-              Consolidated operational and financial visibility with branch and location scope
-              controls.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <DashboardScopeFilterBar onApply={setScope} />
+        <ScrollableWrapper>
+          <Card>
+            <CardHeader>
+              <CardTitle>Admin Dashboard</CardTitle>
+              <CardDescription>
+                Consolidated operational and financial visibility with branch and location scope
+                controls.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <DashboardScopeFilterBar onApply={setScope} />
 
-            {!scope ? (
-              <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
-                Apply scope to load admin analytics.
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <Badge variant="secondary">Branch: {branchId ?? 'All'}</Badge>
-                  <Badge variant="secondary">Location: {locationId ?? 'All'}</Badge>
-                  <Badge variant="secondary">
-                    Date: {from}
-                    {to !== from ? ` to ${to}` : ''}
-                  </Badge>
-                  {loading ? <Badge>Loading...</Badge> : null}
+              {!scope ? (
+                <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
+                  Apply scope to load admin analytics.
                 </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <Badge variant="secondary">Branch: {branchId ?? 'All'}</Badge>
+                    <Badge variant="secondary">Location: {locationId ?? 'All'}</Badge>
+                    <Badge variant="secondary">
+                      Date: {from}
+                      {to !== from ? ` to ${to}` : ''}
+                    </Badge>
+                    {loading ? <Badge>Loading...</Badge> : null}
+                  </div>
 
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  <DashboardKpiCard
-                    label="Parcels"
-                    value={canViewParcel ? (parcelStatus.data?.totals.parcels ?? 0) : '-'}
-                    loading={loading}
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <DashboardKpiCard
+                      label="Parcels"
+                      value={canViewParcel ? (parcelStatus.data?.totals.parcels ?? 0) : '-'}
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Delivery Success"
+                      value={canViewParcel ? formatPercent(deliveryRate) : '-'}
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Shift Revenue (Net)"
+                      value={
+                        canViewShiftRevenue ? formatMoneyPsw(shiftRevenue.data?.totals.netPsw) : '-'
+                      }
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Branch Net Profit"
+                      value={
+                        canViewProfitability
+                          ? formatMoneyPsw(branchProfitability.data?.totals.netProfitPsw)
+                          : '-'
+                      }
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="Credit Exposure"
+                      value={
+                        canViewCredit
+                          ? formatMoneyPsw(creditExposure.data?.totals.outstandingPsw)
+                          : '-'
+                      }
+                      loading={loading}
+                    />
+                    <DashboardKpiCard
+                      label="To-Be-Paid Outstanding"
+                      value={
+                        canViewOutstanding
+                          ? formatMoneyPsw(outstanding.data?.totals.outstandingPsw)
+                          : '-'
+                      }
+                      loading={loading}
+                    />
+                  </div>
+                  <DashboardExportActions
+                    filenamePrefix="admin-dashboard"
+                    disabled={!scope}
+                    rows={[
+                      {
+                        metric: 'Parcels',
+                        value: canViewParcel ? (parcelStatus.data?.totals.parcels ?? 0) : '-',
+                      },
+                      {
+                        metric: 'Delivery Success',
+                        value: canViewParcel ? formatPercent(deliveryRate) : '-',
+                      },
+                      {
+                        metric: 'Shift Revenue (Net)',
+                        value: canViewShiftRevenue
+                          ? formatMoneyPsw(shiftRevenue.data?.totals.netPsw)
+                          : '-',
+                      },
+                      {
+                        metric: 'Branch Net Profit',
+                        value: canViewProfitability
+                          ? formatMoneyPsw(branchProfitability.data?.totals.netProfitPsw)
+                          : '-',
+                      },
+                      {
+                        metric: 'Credit Exposure',
+                        value: canViewCredit
+                          ? formatMoneyPsw(creditExposure.data?.totals.outstandingPsw)
+                          : '-',
+                      },
+                      {
+                        metric: 'To-Be-Paid Outstanding',
+                        value: canViewOutstanding
+                          ? formatMoneyPsw(outstanding.data?.totals.outstandingPsw)
+                          : '-',
+                      },
+                    ]}
                   />
-                  <DashboardKpiCard
-                    label="Delivery Success"
-                    value={canViewParcel ? formatPercent(deliveryRate) : '-'}
-                    loading={loading}
-                  />
-                  <DashboardKpiCard
-                    label="Shift Revenue (Net)"
-                    value={
-                      canViewShiftRevenue ? formatMoneyPsw(shiftRevenue.data?.totals.netPsw) : '-'
-                    }
-                    loading={loading}
-                  />
-                  <DashboardKpiCard
-                    label="Branch Net Profit"
-                    value={
-                      canViewProfitability
-                        ? formatMoneyPsw(branchProfitability.data?.totals.netProfitPsw)
-                        : '-'
-                    }
-                    loading={loading}
-                  />
-                  <DashboardKpiCard
-                    label="Credit Exposure"
-                    value={
-                      canViewCredit
-                        ? formatMoneyPsw(creditExposure.data?.totals.outstandingPsw)
-                        : '-'
-                    }
-                    loading={loading}
-                  />
-                  <DashboardKpiCard
-                    label="To-Be-Paid Outstanding"
-                    value={
-                      canViewOutstanding
-                        ? formatMoneyPsw(outstanding.data?.totals.outstandingPsw)
-                        : '-'
-                    }
-                    loading={loading}
-                  />
-                </div>
-                <DashboardExportActions
-                  filenamePrefix="admin-dashboard"
-                  disabled={!scope}
-                  rows={[
-                    {
-                      metric: 'Parcels',
-                      value: canViewParcel ? (parcelStatus.data?.totals.parcels ?? 0) : '-',
-                    },
-                    {
-                      metric: 'Delivery Success',
-                      value: canViewParcel ? formatPercent(deliveryRate) : '-',
-                    },
-                    {
-                      metric: 'Shift Revenue (Net)',
-                      value: canViewShiftRevenue
-                        ? formatMoneyPsw(shiftRevenue.data?.totals.netPsw)
-                        : '-',
-                    },
-                    {
-                      metric: 'Branch Net Profit',
-                      value: canViewProfitability
-                        ? formatMoneyPsw(branchProfitability.data?.totals.netProfitPsw)
-                        : '-',
-                    },
-                    {
-                      metric: 'Credit Exposure',
-                      value: canViewCredit
-                        ? formatMoneyPsw(creditExposure.data?.totals.outstandingPsw)
-                        : '-',
-                    },
-                    {
-                      metric: 'To-Be-Paid Outstanding',
-                      value: canViewOutstanding
-                        ? formatMoneyPsw(outstanding.data?.totals.outstandingPsw)
-                        : '-',
-                    },
-                  ]}
-                />
 
-                <div className="grid gap-3 lg:grid-cols-2">
-                  <DashboardBarChartCard
-                    title="Top Branch Profit Chart"
-                    description="Net profitability ranking for top branches."
-                    seriesName="Net Profit (major units)"
-                    data={topBranchChartData}
-                  />
-                  <DashboardDonutChartCard
-                    title="Exception Mix Chart"
-                    description="Operational exception categories in selected scope."
-                    data={exceptionChartData}
-                  />
-                </div>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <DashboardBarChartCard
+                      title="Top Branch Profit Chart"
+                      description="Net profitability ranking for top branches."
+                      seriesName="Net Profit (major units)"
+                      data={topBranchChartData}
+                    />
+                    <DashboardDonutChartCard
+                      title="Exception Mix Chart"
+                      description="Operational exception categories in selected scope."
+                      data={exceptionChartData}
+                    />
+                  </div>
 
-                <div className="grid gap-3 lg:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Top Branches by Net Profit</CardTitle>
-                      <CardDescription>
-                        Based on selected date range and branch scope.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      {!topBranches.length ? (
-                        <div className="text-muted-foreground">
-                          No profitability data for current scope.
-                        </div>
-                      ) : (
-                        topBranches.map((row, index) => (
-                          <div key={row.branchId} className="flex justify-between">
-                            <span>
-                              {index + 1}. {row.branchName}
-                            </span>
-                            <span>{formatMoneyPsw(row.netProfitPsw)}</span>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Top Branches by Net Profit</CardTitle>
+                        <CardDescription>
+                          Based on selected date range and branch scope.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        {!topBranches.length ? (
+                          <div className="text-muted-foreground">
+                            No profitability data for current scope.
                           </div>
-                        ))
-                      )}
-                    </CardContent>
-                  </Card>
+                        ) : (
+                          topBranches.map((row, index) => (
+                            <div key={row.branchId} className="flex justify-between">
+                              <span>
+                                {index + 1}. {row.branchName}
+                              </span>
+                              <span>{formatMoneyPsw(row.netProfitPsw)}</span>
+                            </div>
+                          ))
+                        )}
+                      </CardContent>
+                    </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Exception Snapshot</CardTitle>
-                      <CardDescription>Operational and cash exception indicators.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Undelivered parcels</span>
-                        <span>
-                          {canViewParcel
-                            ? Math.max(
-                                (deliveryPerformance.data?.totals.deliveries ?? 0) -
-                                  (deliveryPerformance.data?.totals.delivered ?? 0),
-                                0,
-                              )
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Cash exception lines</span>
-                        <span>{canViewCashConfirmations ? cashExceptionCount : '-'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Total shortage</span>
-                        <span>
-                          {canViewCashConfirmations
-                            ? formatMoneyPsw(cashConfirmations.data?.totals.shortagePsw)
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Total overage</span>
-                        <span>
-                          {canViewCashConfirmations
-                            ? formatMoneyPsw(cashConfirmations.data?.totals.overagePsw)
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Credit customers</span>
-                        <span>
-                          {canViewCredit ? (creditExposure.data?.totals.customers ?? 0) : '-'}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Exception Snapshot</CardTitle>
+                        <CardDescription>
+                          Operational and cash exception indicators.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Undelivered parcels</span>
+                          <span>
+                            {canViewParcel
+                              ? Math.max(
+                                  (deliveryPerformance.data?.totals.deliveries ?? 0) -
+                                    (deliveryPerformance.data?.totals.delivered ?? 0),
+                                  0,
+                                )
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Cash exception lines</span>
+                          <span>{canViewCashConfirmations ? cashExceptionCount : '-'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total shortage</span>
+                          <span>
+                            {canViewCashConfirmations
+                              ? formatMoneyPsw(cashConfirmations.data?.totals.shortagePsw)
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total overage</span>
+                          <span>
+                            {canViewCashConfirmations
+                              ? formatMoneyPsw(cashConfirmations.data?.totals.overagePsw)
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Credit customers</span>
+                          <span>
+                            {canViewCredit ? (creditExposure.data?.totals.customers ?? 0) : '-'}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </ScrollableWrapper>
       </div>
     </RoleDashboardGuard>
   );

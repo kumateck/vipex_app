@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { useCreateCustomerMutation } from '@/features/customers/api';
 import { useAuthStore } from '@/stores/auth-store';
@@ -246,44 +247,46 @@ export function ParcelStatusPage() {
 
   return (
     <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Parcel Status (Call Receivers)</CardTitle>
-          <CardDescription>
-            Queue includes parcels at arrival, contacted, awaiting pickup, home delivery requested,
-            address collected, and returned to office so staff can switch between pickup and
-            delivery when needed.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form
-            className="flex items-center gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setSubmittedSearch(searchInput.trim());
-            }}
-          >
-            <Input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search by tracking, booking, receiver name or phone"
-              className="h-11 text-base"
-            />
-            <Button type="submit" className="h-11 px-6" disabled={!companyId || !branchId}>
-              Search
-            </Button>
-          </form>
+      <ScrollableWrapper>
+        <Card>
+          <CardHeader>
+            <CardTitle>Parcel Status (Call Receivers)</CardTitle>
+            <CardDescription>
+              Queue includes parcels at arrival, contacted, awaiting pickup, home delivery
+              requested, address collected, and returned to office so staff can switch between
+              pickup and delivery when needed.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form
+              className="flex items-center gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setSubmittedSearch(searchInput.trim());
+              }}
+            >
+              <Input
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Search by tracking, booking, receiver name or phone"
+                className="h-11 text-base"
+              />
+              <Button type="submit" className="h-11 px-6" disabled={!companyId || !branchId}>
+                Search
+              </Button>
+            </form>
 
-          <DataTable
-            mode="client"
-            data={rows}
-            columns={columns}
-            loading={loading}
-            showSearch={false}
-            enableVirtualization={false}
-          />
-        </CardContent>
-      </Card>
+            <DataTable
+              mode="client"
+              data={rows}
+              columns={columns}
+              loading={loading}
+              showSearch={false}
+              enableVirtualization={false}
+            />
+          </CardContent>
+        </Card>
+      </ScrollableWrapper>
 
       <Dialog
         open={Boolean(selectedParcel)}

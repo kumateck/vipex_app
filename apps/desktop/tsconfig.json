@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "electron"],
+    "baseUrl": "."
+  },
+  "include": ["src", "forge.config.js", "vite.main.config.ts", "vite.preload.config.ts"]
+}

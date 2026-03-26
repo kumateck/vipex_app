@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
@@ -165,58 +166,60 @@ export function ParcelSuperSearchPage() {
 
   return (
     <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>All Parcels Super Search</CardTitle>
-          <CardDescription>
-            Search by sender/receiver name or phone, booking code, or tracking code.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form
-            className="flex items-center gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (!companyId || searchInput.trim().length === 0) return;
-              submitSearch();
-            }}
-          >
-            <Input
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Enter sender/receiver name, telephone, booking code, or tracking code"
-              className="h-11 text-base"
-            />
-            <Button
-              type="submit"
-              className="h-11 px-6"
-              onClick={submitSearch}
-              disabled={!companyId || searchInput.trim().length === 0}
+      <ScrollableWrapper>
+        <Card>
+          <CardHeader>
+            <CardTitle>All Parcels Super Search</CardTitle>
+            <CardDescription>
+              Search by sender/receiver name or phone, booking code, or tracking code.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form
+              className="flex items-center gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!companyId || searchInput.trim().length === 0) return;
+                submitSearch();
+              }}
             >
-              <Search className="mr-2 h-4 w-4" />
-              Search
-            </Button>
-          </form>
+              <Input
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Enter sender/receiver name, telephone, booking code, or tracking code"
+                className="h-11 text-base"
+              />
+              <Button
+                type="submit"
+                className="h-11 px-6"
+                onClick={submitSearch}
+                disabled={!companyId || searchInput.trim().length === 0}
+              >
+                <Search className="mr-2 h-4 w-4" />
+                Search
+              </Button>
+            </form>
 
-          {shouldSearch ? (
-            <DataTable
-              mode="server"
-              data={rows}
-              columns={columns}
-              meta={data?.meta ?? EMPTY_META}
-              loading={isLoading}
-              showSearch={false}
-              serverFilters={{ companyId }}
-              onRequestChange={setQuery}
-              enableVirtualization={false}
-            />
-          ) : (
-            <div className="rounded-md border border-dashed p-8 text-center text-muted-foreground">
-              Enter a search term and click Search to see parcel records.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            {shouldSearch ? (
+              <DataTable
+                mode="server"
+                data={rows}
+                columns={columns}
+                meta={data?.meta ?? EMPTY_META}
+                loading={isLoading}
+                showSearch={false}
+                serverFilters={{ companyId }}
+                onRequestChange={setQuery}
+                enableVirtualization={false}
+              />
+            ) : (
+              <div className="rounded-md border border-dashed p-8 text-center text-muted-foreground">
+                Enter a search term and click Search to see parcel records.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </ScrollableWrapper>
 
       <Dialog
         open={Boolean(selectedParcelId)}

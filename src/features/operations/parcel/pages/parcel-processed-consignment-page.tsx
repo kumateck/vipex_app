@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
   SelectContent,
@@ -355,173 +356,175 @@ export function ParcelProcessedConsignmentPage() {
 
   return (
     <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Processed Parcels for Consignment</CardTitle>
-          <CardDescription>
-            {isHeadOffice
-              ? 'Filter by agency branch, destination branch, and optionally destination location.'
-              : 'Use destination filters and create one consignment per destination branch.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div
-            className={`grid gap-3 rounded-md border p-3 ${
-              isHeadOffice ? 'md:grid-cols-3' : 'md:grid-cols-2'
-            }`}
-          >
-            {isHeadOffice ? (
+      <ScrollableWrapper>
+        <Card>
+          <CardHeader>
+            <CardTitle>Processed Parcels for Consignment</CardTitle>
+            <CardDescription>
+              {isHeadOffice
+                ? 'Filter by agency branch, destination branch, and optionally destination location.'
+                : 'Use destination filters and create one consignment per destination branch.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div
+              className={`grid gap-3 rounded-md border p-3 ${
+                isHeadOffice ? 'md:grid-cols-3' : 'md:grid-cols-2'
+              }`}
+            >
+              {isHeadOffice ? (
+                <div className="space-y-2">
+                  <Label htmlFor="processed-consignment-branch-filter">Agency Filter</Label>
+                  <Select
+                    value={selectedBranchFilter}
+                    onValueChange={(value) => {
+                      setSelectedBranchFilter(value);
+                      if (
+                        selectedDestinationFilter !== ALL_VALUE &&
+                        selectedDestinationFilter === value
+                      ) {
+                        setSelectedDestinationFilter(ALL_VALUE);
+                        setSelectedDestinationLocationFilter(ALL_VALUE);
+                      }
+                      setHasLoaded(false);
+                      resetSelection();
+                    }}
+                  >
+                    <SelectTrigger id="processed-consignment-branch-filter">
+                      <SelectValue placeholder="All agencies" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_VALUE}>All agencies</SelectItem>
+                      {agencyBranchOptions.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
               <div className="space-y-2">
-                <Label htmlFor="processed-consignment-branch-filter">Agency Filter</Label>
+                <Label htmlFor="processed-consignment-destination-filter">Destination Filter</Label>
                 <Select
-                  value={selectedBranchFilter}
+                  value={selectedDestinationFilter}
                   onValueChange={(value) => {
-                    setSelectedBranchFilter(value);
-                    if (
-                      selectedDestinationFilter !== ALL_VALUE &&
-                      selectedDestinationFilter === value
-                    ) {
-                      setSelectedDestinationFilter(ALL_VALUE);
-                      setSelectedDestinationLocationFilter(ALL_VALUE);
-                    }
+                    setSelectedDestinationFilter(value);
+                    setSelectedDestinationLocationFilter(ALL_VALUE);
                     setHasLoaded(false);
                     resetSelection();
                   }}
                 >
-                  <SelectTrigger id="processed-consignment-branch-filter">
-                    <SelectValue placeholder="All agencies" />
+                  <SelectTrigger id="processed-consignment-destination-filter">
+                    <SelectValue placeholder="All destinations" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ALL_VALUE}>All agencies</SelectItem>
+                    <SelectItem value={ALL_VALUE}>All destinations</SelectItem>
                     {agencyBranchOptions.map((branch) => (
-                      <SelectItem key={branch.id} value={branch.id}>
+                      <SelectItem
+                        key={branch.id}
+                        value={branch.id}
+                        disabled={
+                          Boolean(disallowedDestinationId) && branch.id === disallowedDestinationId
+                        }
+                      >
                         {branch.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            ) : null}
-            <div className="space-y-2">
-              <Label htmlFor="processed-consignment-destination-filter">Destination Filter</Label>
-              <Select
-                value={selectedDestinationFilter}
-                onValueChange={(value) => {
-                  setSelectedDestinationFilter(value);
-                  setSelectedDestinationLocationFilter(ALL_VALUE);
-                  setHasLoaded(false);
-                  resetSelection();
-                }}
-              >
-                <SelectTrigger id="processed-consignment-destination-filter">
-                  <SelectValue placeholder="All destinations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_VALUE}>All destinations</SelectItem>
-                  {agencyBranchOptions.map((branch) => (
-                    <SelectItem
-                      key={branch.id}
-                      value={branch.id}
-                      disabled={
-                        Boolean(disallowedDestinationId) && branch.id === disallowedDestinationId
-                      }
-                    >
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="processed-consignment-destination-location-filter">
-                Destination Location Filter
-              </Label>
-              <Select
-                value={selectedDestinationLocationFilter}
-                onValueChange={(value) => {
-                  if (!appliedDestinationId) return;
-                  setSelectedDestinationLocationFilter(value);
-                  setHasLoaded(false);
-                  resetSelection();
-                }}
-              >
-                <SelectTrigger
-                  id="processed-consignment-destination-location-filter"
-                  disabled={!appliedDestinationId}
+              <div className="space-y-2">
+                <Label htmlFor="processed-consignment-destination-location-filter">
+                  Destination Location Filter
+                </Label>
+                <Select
+                  value={selectedDestinationLocationFilter}
+                  onValueChange={(value) => {
+                    if (!appliedDestinationId) return;
+                    setSelectedDestinationLocationFilter(value);
+                    setHasLoaded(false);
+                    resetSelection();
+                  }}
                 >
-                  <SelectValue placeholder="All destination locations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_VALUE}>All destination locations</SelectItem>
-                  {locationOptions.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {location.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <SelectTrigger
+                    id="processed-consignment-destination-location-filter"
+                    disabled={!appliedDestinationId}
+                  >
+                    <SelectValue placeholder="All destination locations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_VALUE}>All destination locations</SelectItem>
+                    {locationOptions.map((location) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                <Button onClick={loadData} className="w-full md:w-auto">
+                  Load Data
+                </Button>
+              </div>
             </div>
-            <div className="flex items-end">
-              <Button onClick={loadData} className="w-full md:w-auto">
-                Load Data
-              </Button>
-            </div>
-          </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
-            <div className="space-y-1 text-sm">
-              <p className="font-medium">Selected: {selectedIds.size}</p>
-              <p className="text-muted-foreground">
-                Destination Lock: {lockedDestinationName ?? 'Not selected'}
-              </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
+              <div className="space-y-1 text-sm">
+                <p className="font-medium">Selected: {selectedIds.size}</p>
+                <p className="text-muted-foreground">
+                  Destination Lock: {lockedDestinationName ?? 'Not selected'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedIds(new Set());
+                    setLockedDestinationId(null);
+                  }}
+                  disabled={selectedIds.size === 0 || isSubmitting}
+                >
+                  Clear Selection
+                </Button>
+                <Button
+                  onClick={handleCreateConsignment}
+                  disabled={
+                    selectedIds.size === 0 ||
+                    !lockedDestinationId ||
+                    !appliedSourceId ||
+                    !hasLoaded ||
+                    isSubmitting
+                  }
+                >
+                  {isSubmitting ? 'Creating...' : 'Create Consignment'}
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSelectedIds(new Set());
-                  setLockedDestinationId(null);
-                }}
-                disabled={selectedIds.size === 0 || isSubmitting}
-              >
-                Clear Selection
-              </Button>
-              <Button
-                onClick={handleCreateConsignment}
-                disabled={
-                  selectedIds.size === 0 ||
-                  !lockedDestinationId ||
-                  !appliedSourceId ||
-                  !hasLoaded ||
-                  isSubmitting
-                }
-              >
-                {isSubmitting ? 'Creating...' : 'Create Consignment'}
-              </Button>
-            </div>
-          </div>
 
-          <DataTable
-            mode="server"
-            data={rows}
-            columns={columns}
-            meta={hasLoaded ? (data?.meta ?? EMPTY_META) : EMPTY_META}
-            loading={hasLoaded ? isLoading : false}
-            serverFilters={{
-              ...serverFilters,
-            }}
-            onRequestChange={(next) =>
-              setQuery((prev) => ({
-                ...prev,
-                ...next,
-                filters: serverFilters,
-              }))
-            }
-            searchPlaceholder="Search by tracking, booking, sender or receiver"
-            enableVirtualization={false}
-          />
-        </CardContent>
-      </Card>
+            <DataTable
+              mode="server"
+              data={rows}
+              columns={columns}
+              meta={hasLoaded ? (data?.meta ?? EMPTY_META) : EMPTY_META}
+              loading={hasLoaded ? isLoading : false}
+              serverFilters={{
+                ...serverFilters,
+              }}
+              onRequestChange={(next) =>
+                setQuery((prev) => ({
+                  ...prev,
+                  ...next,
+                  filters: serverFilters,
+                }))
+              }
+              searchPlaceholder="Search by tracking, booking, sender or receiver"
+              enableVirtualization={false}
+            />
+          </CardContent>
+        </Card>
+      </ScrollableWrapper>
     </div>
   );
 }
