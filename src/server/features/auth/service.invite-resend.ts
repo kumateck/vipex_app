@@ -40,7 +40,7 @@ export async function resendSetupInviteSvc(userId: string, opts?: { force?: bool
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
   await setUserResetTokenRepo({ userId: user.id, tokenHash, expiresAt });
 
-  const setupUrlObj = new URL('/open-invite.html', env.APP_BASE_URL);
+  const setupUrlObj = new URL('/open-invite.html', env.INVITE_LINK_BASE_URL);
   setupUrlObj.searchParams.set('token', tokenPlain);
   const setupUrl = setupUrlObj.toString();
   try {

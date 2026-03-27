@@ -37,6 +37,25 @@ bun test
 - Appearance system: `docs/APPEARANCE_SYSTEM.md`
 - Style recipe status: `docs/APPEARANCE_STYLE_PARITY_PLAN.md`
 
+## Environment URLs (Mail Links)
+
+Password reset and invite emails now support dedicated link base URLs.
+
+- `APP_BASE_URL` (required in production)
+- `RESET_LINK_BASE_URL` (optional, falls back to `APP_BASE_URL`)
+- `INVITE_LINK_BASE_URL` (optional, falls back to `APP_BASE_URL`)
+
+Recommended values:
+
+- Staging:
+  - `APP_BASE_URL=https://staging.app.vipexparcel.com`
+  - `RESET_LINK_BASE_URL=https://staging.app.vipexparcel.com`
+  - `INVITE_LINK_BASE_URL=https://staging.app.vipexparcel.com`
+- Production:
+  - `APP_BASE_URL=https://app.vipexparcel.com`
+  - `RESET_LINK_BASE_URL=https://app.vipexparcel.com`
+  - `INVITE_LINK_BASE_URL=https://app.vipexparcel.com`
+
 ## Accounting Enablement
 
 Accounting is optional per company.
