@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 let mainWindow: BrowserWindow | null = null;
-const PACKAGED_WEB_BASE_URL = 'https://testing.app.vipexparcel.com/';
+const PACKAGED_WEB_BASE_URL = 'https://test.app.vipexparcel.com/';
 const DEV_WEB_BASE_URL = 'http://localhost:5173/';
 let pendingDeepLink: string | null = null;
 
@@ -191,7 +191,7 @@ function createWindow() {
 
   if (!app.isPackaged) {
     void mainWindow.webContents.session.clearCache();
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL(DEV_WEB_BASE_URL);
     mainWindow.webContents.openDevTools({ mode: 'detach' });
     mainWindow.webContents.once('did-finish-load', () => {
       if (!pendingDeepLink) return;

@@ -6,7 +6,7 @@
 import 'dotenv/config';
 
 // Force NODE_ENV to test
-process.env.NODE_ENV = 'test';
+Reflect.set(process.env, 'NODE_ENV', 'test');
 
 // Disable Swagger UI during tests to avoid polluting the app routes
 process.env.SWAGGER_ENABLED = 'false';

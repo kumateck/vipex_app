@@ -10,7 +10,7 @@ import type {
 const extra = (Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string };
 
 function normalizeBaseUrl(raw?: string): string {
-  const fallback = 'https://testing.app.vipexparcel.com';
+  const fallback = 'https://test.app.vipexparcel.com';
   const base = (raw && raw.trim().length > 0 ? raw : fallback).replace(/\/+$/, '');
   return `${base}/v1`;
 }

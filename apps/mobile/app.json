@@ -40,7 +40,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiBaseUrl": "https://testing.app.vipexparcel.com",
+      "apiBaseUrl": "https://test.app.vipexparcel.com",
       "eas": {
         "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
       }

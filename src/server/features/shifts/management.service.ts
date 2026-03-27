@@ -1,4 +1,4 @@
-import { db } from '@/db/client';
+import { db } from '@/db/config';
 import { cashierSessions } from '@/db/schemas';
 import { shiftTypes } from '@/db/schemas/shifts';
 import { eq, and, desc, gte, lte, inArray } from 'drizzle-orm';
