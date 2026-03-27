@@ -1,6 +1,8 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Link } from 'react-router-dom';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
 import { Button } from '@/components/ui/button';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import type { InventoryProduct } from '../types/inventory-product.types';
 
 export const UNIT_OF_MEASURE_OPTIONS = [
@@ -32,7 +34,7 @@ export function createInventoryProductColumns(
     },
     {
       accessorFn: (row) =>
-        row.categoryId ? categoryNameById?.get(row.categoryId) ?? row.categoryId : '-',
+        row.categoryId ? (categoryNameById?.get(row.categoryId) ?? row.categoryId) : '-',
       id: 'categoryName',
       header: 'Category',
     },
@@ -52,9 +54,11 @@ export function createInventoryProductColumns(
       size: 100,
       enableSorting: false,
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/inventory/products/edit/${row.original.id}`}>Edit</Link>
-        </Button>
+        <PermissionGuard permissionKey={PermissionKeys.CanUpdateProduct}>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/inventory/products/edit/${row.original.id}`}>Edit</Link>
+          </Button>
+        </PermissionGuard>
       ),
     },
   ];

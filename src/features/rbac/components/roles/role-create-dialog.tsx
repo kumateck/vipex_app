@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -15,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { PermissionCatalogItem, RoleOption } from '../../api/rbac.api';
+import type { RoleOption } from '../../api/rbac.api';
 
 interface RoleCreateDialogProps {
   open: boolean;
@@ -29,16 +28,6 @@ interface RoleCreateDialogProps {
   loadingDuplicatePermissions: boolean;
   roleName: string;
   onRoleNameChange: (value: string) => void;
-  selectedPermissionKeys: string[];
-  onTogglePermission: (key: string, checked: boolean) => void;
-  permissionPresets: Array<{
-    key: string;
-    label: string;
-    description: string;
-    onApply: () => void;
-  }>;
-  groupedPermissionCatalog: Array<[string, PermissionCatalogItem[]]>;
-  loadingPermissions: boolean;
   submitting: boolean;
   onSubmit: () => void;
 }
@@ -55,11 +44,6 @@ export function RoleCreateDialog({
   loadingDuplicatePermissions,
   roleName,
   onRoleNameChange,
-  selectedPermissionKeys,
-  onTogglePermission,
-  permissionPresets,
-  groupedPermissionCatalog,
-  loadingPermissions,
   submitting,
   onSubmit,
 }: RoleCreateDialogProps) {
@@ -121,65 +105,13 @@ export function RoleCreateDialog({
           {createMode === 'duplicate' && duplicateRoleId ? (
             <p className="text-xs text-muted-foreground">
               {loadingDuplicatePermissions
-                ? 'Loading permissions from selected role...'
-                : 'Permissions loaded from selected role. You can still add or remove before saving.'}
+                ? 'Preparing selected role details...'
+                : 'You are creating a new role based on the selected role name.'}
             </p>
           ) : null}
-          <div className="space-y-2 rounded-md border p-3">
-            <p className="text-sm font-medium">Quick role presets</p>
-            <div className="flex flex-wrap gap-2">
-              {permissionPresets.map((preset) => (
-                <Button
-                  key={preset.key}
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={preset.onApply}
-                >
-                  {preset.label}
-                </Button>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Use these to quickly assign common accounting, warehouse, and internal-transfer
-              permission bundles, then adjust any individual permissions below if needed.
-            </p>
-          </div>
-          <div className="max-h-[360px] overflow-auto space-y-4 rounded-md border p-3">
-            {loadingPermissions ? (
-              <p className="text-sm text-muted-foreground">Loading permissions...</p>
-            ) : (
-              groupedPermissionCatalog.map(([group, items]) => (
-                <div key={group} className="space-y-2">
-                  <p className="text-sm font-medium">{group}</p>
-                  <div className="grid gap-2 md:grid-cols-2">
-                    {items.map((item) => {
-                      const checkboxId = `create-role-${item.key}`;
-                      return (
-                        <label
-                          key={item.key}
-                          htmlFor={checkboxId}
-                          className="flex items-start gap-2 rounded border p-2"
-                        >
-                          <Checkbox
-                            id={checkboxId}
-                            checked={selectedPermissionKeys.includes(item.key)}
-                            onCheckedChange={(value) =>
-                              onTogglePermission(item.key, value === true)
-                            }
-                          />
-                          <span className="text-sm">
-                            <span className="block font-medium">{item.key}</span>
-                            <span className="text-muted-foreground">{item.description}</span>
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Permission assignment is now managed on the dedicated Permissions page.
+          </p>
         </div>
         <DialogFooter>
           <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>

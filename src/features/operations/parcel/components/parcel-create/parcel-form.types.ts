@@ -3,6 +3,7 @@ export type SenderSettlementMode = 'PAY_NOW' | 'CREDIT';
 
 export type CustomerFormValues = {
   telephone: string;
+  telephone2: string;
   customerId: string;
   fullname: string;
 };

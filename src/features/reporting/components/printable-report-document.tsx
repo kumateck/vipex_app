@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import logoPng from '@/assets/logo.png';
 
 export interface PrintableReportSection {
   heading: string;
@@ -44,7 +45,23 @@ export const PrintableReportDocument = forwardRef<HTMLDivElement, PrintableRepor
               marginBottom: '18px',
             }}
           >
-            <div style={{ fontSize: '24px', fontWeight: 700 }}>{companyName}</div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <img
+                  src={logoPng}
+                  alt="Vipex logo"
+                  style={{ width: '42px', height: '42px', objectFit: 'contain' }}
+                />
+                <div style={{ fontSize: '24px', fontWeight: 700 }}>{companyName}</div>
+              </div>
+            </div>
             <div style={{ fontSize: '18px', marginTop: '8px', fontWeight: 600 }}>{title}</div>
             {subtitle ? <div style={{ marginTop: '4px', color: '#4b5563' }}>{subtitle}</div> : null}
             <div style={{ marginTop: '6px', fontSize: '12px', color: '#4b5563' }}>

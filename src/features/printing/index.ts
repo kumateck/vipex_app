@@ -5,6 +5,7 @@ export * from './hooks/use-print-scenarios';
 export * from './services/desktop-print';
 export * from './services/html-document';
 export * from './services/browser-print';
+export * from './services/printer-preferences';
 export * from './components/templates/invoice-a5-template';
 export * from './components/templates/thermal-sticker-template';
 export * from './components/templates/report-a4-template';

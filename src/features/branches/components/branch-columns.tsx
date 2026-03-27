@@ -1,7 +1,9 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Link } from 'react-router-dom';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
 import { Button } from '@/components/ui/button';
 import { BRANCH_TYPE_LABELS } from '@/shared/access/constants';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import type { Branch } from '../types/branch.types';
 
 export function createBranchColumns(): ColumnDef<Branch>[] {
@@ -31,9 +33,11 @@ export function createBranchColumns(): ColumnDef<Branch>[] {
       size: 100,
       enableSorting: false,
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/branches/edit/${row.original.id}`}>Edit</Link>
-        </Button>
+        <PermissionGuard permissionKey={PermissionKeys.CanUpdateBranches}>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/branches/edit/${row.original.id}`}>Edit</Link>
+          </Button>
+        </PermissionGuard>
       ),
     },
   ];

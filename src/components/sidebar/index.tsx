@@ -9,14 +9,60 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/ui/sidebar';
+import { inferRequiredPermissionByPath } from '@/shared/permissions/path-access';
 import { useAuthStore } from '@/stores/auth-store';
-import { useGetCurrentUserReadOnlyPermissionsQuery } from '@/features/auth/api';
 
 // import { NavMain } from './nav-main';
 import { TeamSwitcher } from './team';
 import { NavUser } from './user';
-import { ROUTES } from './navigation';
+import { ROUTES, type MenuItem } from './navigation';
 import { NavMain } from './menu';
+
+type SidebarNode = {
+  title: string;
+  url?: string;
+  permissionKey?: string;
+  hiddenInSidebar?: boolean;
+  items?: SidebarNode[];
+  children?: SidebarNode[];
+};
+
+function hasAccountingUrl(node: SidebarNode): boolean {
+  if (node.url?.startsWith('/accounting')) return true;
+  const descendants = [...(node.items ?? []), ...(node.children ?? [])];
+  return descendants.some(hasAccountingUrl);
+}
+
+function canRenderSidebarNode(node: SidebarNode, allowedPermissions: Set<string>): boolean {
+  if (node.hiddenInSidebar) return false;
+  const effectivePermissionKey = node.permissionKey ?? inferRequiredPermissionByPath(node.url);
+  if (!effectivePermissionKey) return true;
+  return allowedPermissions.has(effectivePermissionKey);
+}
+
+function filterSidebarTreeByPermissions(
+  node: SidebarNode,
+  allowedPermissions: Set<string>,
+  accountingEnabled: boolean,
+): SidebarNode | null {
+  if (!accountingEnabled && hasAccountingUrl(node)) return null;
+
+  const filteredChildren = (node.children ?? [])
+    .map((child) => filterSidebarTreeByPermissions(child, allowedPermissions, accountingEnabled))
+    .filter((child): child is SidebarNode => child !== null);
+  const filteredItems = (node.items ?? [])
+    .map((item) => filterSidebarTreeByPermissions(item, allowedPermissions, accountingEnabled))
+    .filter((item): item is SidebarNode => item !== null);
+  const isDirectlyVisible = canRenderSidebarNode(node, allowedPermissions);
+  const hasVisibleDescendant = filteredChildren.length > 0 || filteredItems.length > 0;
+
+  if (!isDirectlyVisible && !hasVisibleDescendant) return null;
+  return {
+    ...node,
+    ...(node.children ? { children: filteredChildren } : {}),
+    ...(node.items ? { items: filteredItems } : {}),
+  };
+}
 
 function filterRoutesByPermissions(
   routes: typeof ROUTES,
@@ -24,43 +70,20 @@ function filterRoutesByPermissions(
   accountingEnabled: boolean,
 ) {
   return routes
-    .map((group) => ({
-      ...group,
-      menu: group.menu
-        .map((item) => {
-          const containsAccounting =
-            item.url?.startsWith('/accounting') ||
-            item.items?.some((subItem) => subItem.url?.startsWith('/accounting'));
-          if (containsAccounting && !accountingEnabled) return null;
-
-          const directAllowed = !item.permissionKey || allowedPermissions.has(item.permissionKey);
-          const childItems = (item.items ?? []).filter(
-            (subItem) =>
-              (!subItem.permissionKey || allowedPermissions.has(subItem.permissionKey)) &&
-              (accountingEnabled || !subItem.url?.startsWith('/accounting')),
-          );
-
-          if (item.items?.length) {
-            if (!childItems.length) return null;
-            return { ...item, items: childItems };
-          }
-
-          return directAllowed ? item : null;
-        })
-        .filter((item): item is NonNullable<typeof item> => item !== null),
-    }))
+    .map((group) => {
+      const menu = group.menu
+        .map((item) => filterSidebarTreeByPermissions(item, allowedPermissions, accountingEnabled))
+        .filter((item): item is MenuItem => item !== null);
+      return { ...group, menu };
+    })
     .filter((group) => group.menu.length > 0);
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const storePermissions = useAuthStore((state) => state.user?.permissions ?? []);
   const accountingEnabled = useAuthStore((state) => state.user?.company?.useAccounting ?? false);
-  const { data: sidebarPermissions } = useGetCurrentUserReadOnlyPermissionsQuery(undefined, {
-    skip: !isAuthenticated,
-  });
 
-  const allowedPermissions = new Set(sidebarPermissions?.readOnlyPermissions ?? storePermissions);
+  const allowedPermissions = new Set(storePermissions);
   const filteredRoutes = filterRoutesByPermissions(ROUTES, allowedPermissions, accountingEnabled);
 
   return (

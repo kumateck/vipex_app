@@ -220,6 +220,8 @@ export function ParcelSenderPaymentsPage() {
         bookingCode: selectedParcel.bookingCode,
         trackingCode: selectedParcel.trackingCode,
         parcelDetails: selectedParcel.parcelDetails,
+        parcelContent: selectedParcel.parcelContent,
+        parcelValueCedis: Number(selectedParcel.parcelValuePsw ?? 0) / 100,
         senderName: selectedParcel.senderName ?? '-',
         senderTelephone: selectedParcel.senderPhone ?? '-',
         receiverName: selectedParcel.receiverName ?? '-',
@@ -364,6 +366,7 @@ export function ParcelSenderPaymentsPage() {
           <ParcelReceiptActions
             data={lastPrintedReceipt}
             autoPrint
+            mode="sender-payment"
             onAutoPrintComplete={() => setLastPrintedReceipt(null)}
           />
         ) : null}

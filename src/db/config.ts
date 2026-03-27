@@ -6,14 +6,29 @@ const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
   throw new Error('DATABASE_URL is not set');
 }
+const databaseUrl: string = DATABASE_URL;
 
-// One shared connection pool for the app and scripts
-export const sql = postgres(DATABASE_URL, {
-  connect_timeout: 30,
-  idle_timeout: 20,
-  max_lifetime: 60 * 30,
-  backoff: (retries) => Math.max(0.5, Math.min(0.5 * 2 ** retries, 30)),
-});
+type PostgresClient = ReturnType<typeof postgres>;
+type GlobalWithDb = typeof globalThis & { __vipex_sql__?: PostgresClient };
+
+const globalDb = globalThis as GlobalWithDb;
+
+function createSqlClient() {
+  return postgres(databaseUrl, {
+    connect_timeout: 30,
+    idle_timeout: 20,
+    max_lifetime: 60 * 30,
+    backoff: (retries) => Math.max(0.5, Math.min(0.5 * 2 ** retries, 30)),
+  });
+}
+
+// One shared connection pool for the app and scripts.
+// In dev/hot-reload, persist on globalThis to avoid duplicate pools and reconnect churn.
+export const sql = globalDb.__vipex_sql__ ?? createSqlClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalDb.__vipex_sql__ = sql;
+}
 
 // Drizzle ORM instance
 export const db = drizzle(sql);
@@ -26,4 +41,7 @@ export async function enablePgcrypto() {
 // Optional: cleanly close the pool (useful in short-lived scripts)
 export async function closeSql() {
   await sql.end({ timeout: 5 });
+  if (process.env.NODE_ENV !== 'production') {
+    delete globalDb.__vipex_sql__;
+  }
 }

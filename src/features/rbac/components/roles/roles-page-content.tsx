@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
 import {
@@ -14,26 +15,20 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BranchType } from '@/db/schemas/enums';
-import { PermissionKeys } from '@/shared/permissions/constants';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   type Role,
-  useGetRolePermissionsQuery,
   useCreateRoleMutation,
   useDeleteRoleMutation,
-  useListPermissionCatalogQuery,
   useListRoleOptionsQuery,
   useListRolesQuery,
-  useSetRolePermissionsMutation,
   useUpdateRoleMutation,
 } from '../../api/rbac.api';
 import { createRoleColumns } from '../role-columns';
 import { RoleCreateDialog } from './role-create-dialog';
-import { RolePermissionsDialog } from './role-permissions-dialog';
 import { RoleRenameDialog } from './role-rename-dialog';
-import { groupPermissions } from './roles-utils';
 
 const EMPTY_META: PaginationMeta = {
   totalRecords: 0,
@@ -44,105 +39,8 @@ const EMPTY_META: PaginationMeta = {
   hasPreviousPage: false,
 };
 
-const ACCOUNTING_PERMISSION_PRESETS = [
-  {
-    key: 'accounting-viewer',
-    label: 'Accounting Viewer',
-    description: 'Reports and accounting reads only',
-    permissionKeys: [PermissionKeys.CanReadAccounting],
-  },
-  {
-    key: 'accounting-setup',
-    label: 'Accounting Setup Admin',
-    description: 'Manage chart, categories, bank, policies, and tax setup',
-    permissionKeys: [PermissionKeys.CanReadAccounting, PermissionKeys.CanManageAccountingSetup],
-  },
-  {
-    key: 'accounting-tax',
-    label: 'Tax Filing Officer',
-    description: 'Manage tax filing periods and filing actions',
-    permissionKeys: [PermissionKeys.CanReadAccounting, PermissionKeys.CanManageTaxFiling],
-  },
-  {
-    key: 'accounting-operations',
-    label: 'Accounting Operations',
-    description: 'Daily cash and expense workflow posting',
-    permissionKeys: [PermissionKeys.CanReadAccounting, PermissionKeys.CanPostAccountingEntries],
-  },
-  {
-    key: 'accounting-full',
-    label: 'Accounting Full Access',
-    description: 'Full accounting setup, tax, and posting access',
-    permissionKeys: [
-      PermissionKeys.CanReadAccounting,
-      PermissionKeys.CanManageAccountingSetup,
-      PermissionKeys.CanManageTaxFiling,
-      PermissionKeys.CanPostAccountingEntries,
-      PermissionKeys.CanComputeTaxes,
-    ],
-  },
-] as const;
-
-const OPERATIONS_PERMISSION_PRESETS = [
-  {
-    key: 'warehouse-viewer',
-    label: 'Warehouse Viewer',
-    description: 'View warehouse records only',
-    permissionKeys: [PermissionKeys.CanReadWarehouses],
-  },
-  {
-    key: 'warehouse-manager',
-    label: 'Warehouse Manager',
-    description: 'Create, update, and retire warehouses',
-    permissionKeys: [
-      PermissionKeys.CanReadWarehouses,
-      PermissionKeys.CanCreateWarehouses,
-      PermissionKeys.CanUpdateWarehouses,
-      PermissionKeys.CanDeleteWarehouses,
-    ],
-  },
-  {
-    key: 'internal-transfer-clerk',
-    label: 'Internal Transfer Clerk',
-    description: 'Create and view internal parcel transfers',
-    permissionKeys: [
-      PermissionKeys.CanReadParcelInternalTransfers,
-      PermissionKeys.CanCreateParcelInternalTransfers,
-    ],
-  },
-  {
-    key: 'internal-transfer-receiver',
-    label: 'Transfer Acknowledgement Officer',
-    description: 'Acknowledge or cancel internal parcel transfers',
-    permissionKeys: [
-      PermissionKeys.CanReadParcelInternalTransfers,
-      PermissionKeys.CanAcknowledgeParcelInternalTransfers,
-      PermissionKeys.CanCancelParcelInternalTransfers,
-    ],
-  },
-  {
-    key: 'internal-transfer-full',
-    label: 'Internal Transfer Full Access',
-    description: 'Full warehouse and parcel internal transfer operations',
-    permissionKeys: [
-      PermissionKeys.CanReadWarehouses,
-      PermissionKeys.CanCreateWarehouses,
-      PermissionKeys.CanUpdateWarehouses,
-      PermissionKeys.CanDeleteWarehouses,
-      PermissionKeys.CanReadParcelInternalTransfers,
-      PermissionKeys.CanCreateParcelInternalTransfers,
-      PermissionKeys.CanAcknowledgeParcelInternalTransfers,
-      PermissionKeys.CanCancelParcelInternalTransfers,
-    ],
-  },
-] as const;
-
-const ROLE_PERMISSION_PRESETS = [
-  ...ACCOUNTING_PERMISSION_PRESETS,
-  ...OPERATIONS_PERMISSION_PRESETS,
-] as const;
-
 export function RolesPageContent() {
+  const navigate = useNavigate();
   const authUser = useAuthStore((state) => state.user);
   const companyId = authUser?.company?.id ?? null;
   const canManageRoles = authUser?.branch?.type === BranchType.HEADOFFICE;
@@ -155,15 +53,11 @@ export function RolesPageContent() {
   const [createRole, { isLoading: isCreatingRole }] = useCreateRoleMutation();
   const [updateRole, { isLoading: isUpdatingRole }] = useUpdateRoleMutation();
   const [deleteRole] = useDeleteRoleMutation();
-  const [setRolePermissions, { isLoading: isSavingPermissions }] = useSetRolePermissionsMutation();
-
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
-  const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
   const [roleNameInput, setRoleNameInput] = useState('');
-  const [selectedPermissionKeys, setSelectedPermissionKeys] = useState<string[]>([]);
   const [createMode, setCreateMode] = useState<'blank' | 'duplicate'>('blank');
   const [duplicateRoleId, setDuplicateRoleId] = useState('');
 
@@ -174,23 +68,8 @@ export function RolesPageContent() {
     { companyId, includeDeleted: false },
     { skip: !companyId },
   );
-  const { data: permissionCatalogData, isLoading: isLoadingPermissions } =
-    useListPermissionCatalogQuery(undefined, {
-      skip: !companyId,
-    });
-  const { data: duplicateRolePermissionsData, isFetching: isLoadingDuplicatePermissions } =
-    useGetRolePermissionsQuery(duplicateRoleId, {
-      skip: createMode !== 'duplicate' || !duplicateRoleId,
-    });
+  const isLoadingDuplicatePermissions = false;
 
-  const allPermissionKeys = useMemo(
-    () => (permissionCatalogData?.data ?? []).map((permission) => permission.key),
-    [permissionCatalogData],
-  );
-  const groupedPermissionCatalog = useMemo(
-    () => groupPermissions(permissionCatalogData?.data ?? []),
-    [permissionCatalogData],
-  );
   const roleOptions = roleOptionsData ?? [];
   const duplicateRoleName = useMemo(
     () => roleOptions.find((role) => role.id === duplicateRoleId)?.name ?? '',
@@ -209,23 +88,8 @@ export function RolesPageContent() {
     setCreateMode('blank');
     setDuplicateRoleId('');
     setRoleNameInput('');
-    setSelectedPermissionKeys([]);
     setIsCreateOpen(true);
   };
-
-  useEffect(() => {
-    if (!isCreateOpen) return;
-    if (createMode === 'blank') {
-      setSelectedPermissionKeys([]);
-      return;
-    }
-    if (!duplicateRoleId) {
-      setSelectedPermissionKeys([]);
-      return;
-    }
-    if (!duplicateRolePermissionsData) return;
-    setSelectedPermissionKeys(duplicateRolePermissionsData.permissionKeys);
-  }, [createMode, duplicateRoleId, duplicateRolePermissionsData, isCreateOpen]);
 
   useEffect(() => {
     if (createMode !== 'duplicate') return;
@@ -239,24 +103,8 @@ export function RolesPageContent() {
     setIsRenameOpen(true);
   };
 
-  const openPermissionsDialog = (role: Role) => {
-    setSelectedRole(role);
-    setSelectedPermissionKeys(role.permissions);
-    setIsPermissionsOpen(true);
-  };
-
-  const handleTogglePermission = (key: string, checked: boolean) => {
-    setSelectedPermissionKeys((current) =>
-      checked
-        ? current.includes(key)
-          ? current
-          : [...current, key]
-        : current.filter((value) => value !== key),
-    );
-  };
-
-  const applyPermissionPreset = (permissionKeys: string[]) => {
-    setSelectedPermissionKeys((current) => Array.from(new Set([...current, ...permissionKeys])));
+  const openPermissionsPage = (role: Role) => {
+    navigate(`/permissions?roleId=${encodeURIComponent(role.id)}`);
   };
 
   const handleCreateRole = async () => {
@@ -264,7 +112,7 @@ export function RolesPageContent() {
     if (!name) return toast.error('Role name is required');
 
     try {
-      await createRole({ name, permissionKeys: selectedPermissionKeys }).unwrap();
+      await createRole({ name }).unwrap();
       toast.success('Role created');
       setIsCreateOpen(false);
     } catch (error) {
@@ -296,29 +144,15 @@ export function RolesPageContent() {
     }
   };
 
-  const handleSavePermissions = async () => {
-    if (!selectedRole) return;
-    try {
-      await setRolePermissions({
-        roleId: selectedRole.id,
-        permissionKeys: selectedPermissionKeys,
-      }).unwrap();
-      toast.success('Role permissions updated');
-      setIsPermissionsOpen(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update permissions');
-    }
-  };
-
   const columns = useMemo(
     () =>
       createRoleColumns({
         onRename: openRenameDialog,
-        onManagePermissions: openPermissionsDialog,
+        onManagePermissions: openPermissionsPage,
         onDelete: setRoleToDelete,
         canManage: canManageRoles,
       }),
-    [canManageRoles],
+    [canManageRoles, navigate],
   );
 
   return (
@@ -355,14 +189,6 @@ export function RolesPageContent() {
         loadingDuplicatePermissions={isLoadingDuplicatePermissions}
         roleName={roleNameInput}
         onRoleNameChange={setRoleNameInput}
-        selectedPermissionKeys={selectedPermissionKeys}
-        onTogglePermission={handleTogglePermission}
-        permissionPresets={ROLE_PERMISSION_PRESETS.map((preset) => ({
-          ...preset,
-          onApply: () => applyPermissionPreset([...preset.permissionKeys]),
-        }))}
-        groupedPermissionCatalog={groupedPermissionCatalog}
-        loadingPermissions={isLoadingPermissions}
         submitting={isCreatingRole}
         onSubmit={handleCreateRole}
       />
@@ -374,24 +200,6 @@ export function RolesPageContent() {
         onRoleNameChange={setRoleNameInput}
         submitting={isUpdatingRole}
         onSubmit={handleRenameRole}
-      />
-
-      <RolePermissionsDialog
-        open={isPermissionsOpen}
-        onOpenChange={setIsPermissionsOpen}
-        roleName={selectedRole?.name}
-        selectedPermissionKeys={selectedPermissionKeys}
-        groupedPermissionCatalog={groupedPermissionCatalog}
-        allPermissionKeys={allPermissionKeys}
-        onTogglePermission={handleTogglePermission}
-        permissionPresets={ROLE_PERMISSION_PRESETS.map((preset) => ({
-          ...preset,
-          onApply: () => applyPermissionPreset([...preset.permissionKeys]),
-        }))}
-        onSelectAll={() => setSelectedPermissionKeys(allPermissionKeys)}
-        onClearAll={() => setSelectedPermissionKeys([])}
-        submitting={isSavingPermissions}
-        onSubmit={handleSavePermissions}
       />
 
       <AlertDialog

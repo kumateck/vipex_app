@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
 import {
   branches,
@@ -72,7 +73,8 @@ export async function getParcelInternalHolderByParcelRepo(parcelId: string) {
 
 export async function getParcelHolderSnapshotsRepo(parcelIds: string[]) {
   if (parcelIds.length === 0) return [];
-  const [destinationBranch, currentBranch] = [branches, branches];
+  const destinationBranch = alias(branches, 'pit_destination_branch');
+  const currentBranch = alias(branches, 'pit_current_branch');
 
   return db
     .select({
@@ -136,14 +138,13 @@ export async function createParcelInternalTransferItemsRepo(
 }
 
 export async function getParcelInternalTransferRepo(id: string, companyId?: string | null) {
-  const [sourceBranch, transferredByUser, acknowledgedByUser, sourceLocation, sourceWarehouse] = [
-    branches,
-    users,
-    users,
-    locations,
-    warehouses,
-  ];
-  const [destinationLocation, destinationWarehouse] = [locations, warehouses];
+  const sourceBranch = alias(branches, 'pit_transfer_source_branch');
+  const transferredByUser = alias(users, 'pit_transfer_transferred_by');
+  const acknowledgedByUser = alias(users, 'pit_transfer_acknowledged_by');
+  const sourceLocation = alias(locations, 'pit_transfer_source_location');
+  const sourceWarehouse = alias(warehouses, 'pit_transfer_source_warehouse');
+  const destinationLocation = alias(locations, 'pit_transfer_destination_location');
+  const destinationWarehouse = alias(warehouses, 'pit_transfer_destination_warehouse');
 
   const where = [eq(parcelInternalTransfers.id, id)];
   if (companyId) where.push(eq(parcelInternalTransfers.companyId, companyId));
@@ -208,12 +209,12 @@ export async function listParcelInternalTransfersRepo(input: {
   sourceLocationId?: string | null;
   sourceWarehouseId?: string | null;
 }) {
-  const [branch, sourceLocation, sourceWarehouse] = [branches, locations, warehouses];
-  const [destinationLocation, destinationWarehouse, transferredByUser] = [
-    locations,
-    warehouses,
-    users,
-  ];
+  const branch = alias(branches, 'pit_list_branch');
+  const sourceLocation = alias(locations, 'pit_list_source_location');
+  const sourceWarehouse = alias(warehouses, 'pit_list_source_warehouse');
+  const destinationLocation = alias(locations, 'pit_list_destination_location');
+  const destinationWarehouse = alias(warehouses, 'pit_list_destination_warehouse');
+  const transferredByUser = alias(users, 'pit_list_transferred_by');
 
   const where = [eq(parcelInternalTransfers.companyId, input.companyId)];
   if (input.branchId) where.push(eq(parcelInternalTransfers.branchId, input.branchId));

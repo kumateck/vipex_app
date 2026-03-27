@@ -173,6 +173,11 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
     { companyId },
     { skip: !companyId },
   );
+  const rowById = useMemo(
+    () => new Map((data?.data ?? []).map((row) => [row.id, row])),
+    [data?.data],
+  );
+  const selectedParcelRow = selectedParcelId ? rowById.get(selectedParcelId) : undefined;
   const branchNameById = useMemo(
     () => new Map(branchOptions.map((branch) => [branch.id, branch.name])),
     [branchOptions],
@@ -523,6 +528,9 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
                   <p>
                     <strong>Destination:</strong>{' '}
                     {branchNameById.get(details.parcel.destinationId) ?? '-'}
+                  </p>
+                  <p>
+                    <strong>Location:</strong> {selectedParcelRow?.pickupLocationName ?? '-'}
                   </p>
                   <div className="flex items-center gap-2">
                     <strong>Current Holder:</strong>

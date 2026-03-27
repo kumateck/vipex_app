@@ -1,6 +1,8 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Link } from 'react-router-dom';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
 import { Button } from '@/components/ui/button';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import type { Location } from '../types/location.types';
 
 export function createLocationColumns(): ColumnDef<Location>[] {
@@ -20,9 +22,11 @@ export function createLocationColumns(): ColumnDef<Location>[] {
       size: 100,
       enableSorting: false,
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/locations/edit/${row.original.id}`}>Edit</Link>
-        </Button>
+        <PermissionGuard permissionKey={PermissionKeys.CanUpdateLocations}>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/locations/edit/${row.original.id}`}>Edit</Link>
+          </Button>
+        </PermissionGuard>
       ),
     },
   ];

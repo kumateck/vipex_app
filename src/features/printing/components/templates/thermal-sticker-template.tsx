@@ -1,4 +1,5 @@
 import { QRCode } from 'react-qrcode-logo';
+import logoPng from '@/assets/logo.png';
 
 type ThermalStickerTemplateProps = {
   senderName: string;
@@ -130,8 +131,13 @@ export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <QRCode value={qrValue} size={102} quietZone={1} ecLevel="M" />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.2mm' }}>
+        <img
+          src={logoPng}
+          alt="Vipex logo"
+          style={{ width: '14mm', height: '14mm', objectFit: 'contain' }}
+        />
+        <QRCode value={qrValue} size={88} quietZone={1} ecLevel="M" />
       </div>
     </div>
   );

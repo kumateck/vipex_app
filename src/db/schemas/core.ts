@@ -70,7 +70,6 @@ export const locations = pgTable(
     companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
-    employeeId: varchar('employee_id', { length: 25 }),
     branchId: varchar('branch_id', { length: 25 })
       .notNull()
       .references(() => branches.id),

@@ -23,17 +23,22 @@ import type { ParcelBookingFormValues } from './parcel-form.types';
 type CustomerLookupSectionProps = {
   label: string;
   phoneName: FieldPathByValue<ParcelBookingFormValues, string>;
+  secondaryPhoneName: FieldPathByValue<ParcelBookingFormValues, string>;
   customerIdName: FieldPathByValue<ParcelBookingFormValues, string>;
   fullnameName: FieldPathByValue<ParcelBookingFormValues, string>;
   helperText?: string;
   layout?: 'stacked' | 'split';
 };
 
-const PHONE_LOOKUP_DELAY_MS = 3000;
+const PHONE_LOOKUP_DELAY_MS = 1000;
+const PHONE_DIGITS = 10;
+
+const normalizePhoneDigits = (value: string) => value.replace(/\D/g, '');
 
 export function CustomerLookupSection({
   label,
   phoneName,
+  secondaryPhoneName,
   customerIdName,
   fullnameName,
   helperText,
@@ -43,8 +48,9 @@ export function CustomerLookupSection({
   const phone = String(useWatch({ control, name: phoneName }) ?? '');
   const selectedCustomerId = String(useWatch({ control, name: customerIdName }) ?? '');
 
-  const debouncedPhone = useDebouncedValue(phone, PHONE_LOOKUP_DELAY_MS);
-  const canLookup = debouncedPhone.trim().length >= 10;
+  const normalizedPhone = normalizePhoneDigits(phone);
+  const debouncedPhone = useDebouncedValue(normalizedPhone, PHONE_LOOKUP_DELAY_MS);
+  const canLookup = debouncedPhone.length === PHONE_DIGITS;
 
   const { data: customers = [], isFetching } = useFindCustomersByTelephoneQuery(
     { telephone: debouncedPhone, limit: 10 },
@@ -60,6 +66,7 @@ export function CustomerLookupSection({
       if (selectedCustomerId) {
         setValue(customerIdName, '', { shouldDirty: true, shouldValidate: true });
         setValue(fullnameName, '', { shouldDirty: true, shouldValidate: true });
+        setValue(secondaryPhoneName, '', { shouldDirty: true, shouldValidate: true });
       }
       return;
     }
@@ -68,6 +75,7 @@ export function CustomerLookupSection({
       if (selectedCustomerId) {
         setValue(customerIdName, '', { shouldDirty: true, shouldValidate: true });
         setValue(fullnameName, '', { shouldDirty: true, shouldValidate: true });
+        setValue(secondaryPhoneName, '', { shouldDirty: true, shouldValidate: true });
       }
       return;
     }
@@ -79,23 +87,26 @@ export function CustomerLookupSection({
     if (nextCustomer?.fullname) {
       setValue(fullnameName, nextCustomer.fullname, { shouldDirty: true, shouldValidate: true });
     }
+    setValue(secondaryPhoneName, nextCustomer?.telephone2 ?? '', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
   }, [
     canLookup,
     customerIdName,
     customers,
     fullnameName,
+    secondaryPhoneName,
     selectedCustomer,
     selectedCustomerId,
     setValue,
   ]);
 
-  const nameDescription = isExistingCustomer
-    ? 'Using existing customer record.'
-    : shouldEnableName
-      ? 'No match found. A new customer will be created on save.'
-      : 'Enter 10+ digits to enable name entry.';
-
-  const nameDisabled = isExistingCustomer || !shouldEnableName;
+  const showExistingUserSelect = customers.length > 0;
+  const showFullnameInput = !showExistingUserSelect;
+  const nameDescription = shouldEnableName
+    ? 'No match found. A new customer will be created on save.'
+    : 'Enter exactly 10 digits to enable name entry.';
 
   const fieldLayoutClass = layout === 'split' ? 'grid gap-4 md:grid-cols-2' : 'flex flex-col gap-4';
 
@@ -108,8 +119,8 @@ export function CustomerLookupSection({
           rules={{
             required: `${label} telephone is required`,
             validate: (value) =>
-              String(value ?? '').trim().length >= 10 ||
-              `${label} telephone must be at least 10 digits`,
+              normalizePhoneDigits(String(value ?? '')).length === PHONE_DIGITS ||
+              `${label} telephone must be exactly ${PHONE_DIGITS} digits`,
           }}
           render={({ field }) => (
             <FormItem>
@@ -127,7 +138,8 @@ export function CustomerLookupSection({
                 />
               </FormControl>
               <FormDescription>
-                {helperText ?? 'Lookup starts after 3 seconds when 10+ digits are entered.'}
+                {helperText ??
+                  `Lookup starts after 1 second when exactly ${PHONE_DIGITS} digits are entered.`}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -136,16 +148,24 @@ export function CustomerLookupSection({
 
         <FormField
           control={control}
-          name={fullnameName}
+          name={secondaryPhoneName}
           rules={{
             validate: (value) => {
-              if (!shouldEnableName && !isExistingCustomer) return true;
-              return String(value ?? '').trim().length ? true : `${label} fullname is required`;
+              const digits = normalizePhoneDigits(String(value ?? ''));
+              const primaryDigits = normalizePhoneDigits(phone);
+              if (!digits.length) return true;
+              if (digits.length !== PHONE_DIGITS) {
+                return `${label} secondary telephone must be exactly ${PHONE_DIGITS} digits`;
+              }
+              if (digits === primaryDigits) {
+                return 'Primary and secondary telephone cannot be the same';
+              }
+              return true;
             },
           }}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{label} Fullname</FormLabel>
+              <FormLabel>{label} Telephone 2 (Optional)</FormLabel>
               <FormControl>
                 <Input
                   name={field.name}
@@ -153,28 +173,65 @@ export function CustomerLookupSection({
                   onBlur={field.onBlur}
                   onChange={field.onChange}
                   value={String(field.value ?? '')}
-                  disabled={nameDisabled}
-                  placeholder={`Enter ${label.toLowerCase()} fullname`}
+                  disabled={isExistingCustomer}
+                  placeholder="0240000001"
+                  inputMode="numeric"
+                  autoComplete="tel"
                 />
               </FormControl>
-              <FormDescription>{nameDescription}</FormDescription>
+              <FormDescription>
+                {isExistingCustomer
+                  ? 'Secondary telephone is managed from the selected customer record.'
+                  : 'Optional secondary telephone for new customer creation.'}
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        {showFullnameInput ? (
+          <FormField
+            control={control}
+            name={fullnameName}
+            rules={{
+              validate: (value) => {
+                if (!shouldEnableName && !isExistingCustomer) return true;
+                return String(value ?? '').trim().length ? true : `${label} fullname is required`;
+              },
+            }}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{label} Fullname</FormLabel>
+                <FormControl>
+                  <Input
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
+                    onChange={field.onChange}
+                    value={String(field.value ?? '')}
+                    disabled={!shouldEnableName}
+                    placeholder={`Enter ${label.toLowerCase()} fullname`}
+                  />
+                </FormControl>
+                <FormDescription>{nameDescription}</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : null}
       </div>
 
       {canLookup && isFetching ? (
         <p className="text-xs text-muted-foreground">Searching customer records...</p>
       ) : null}
 
-      {customers.length ? (
+      {showExistingUserSelect ? (
         <FormField
           control={control}
           name={customerIdName}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{label} Customer</FormLabel>
+              <FormLabel>{label} Fullname</FormLabel>
               <Select
                 value={String(field.value ?? '')}
                 onValueChange={(value) => {
@@ -186,11 +243,15 @@ export function CustomerLookupSection({
                       shouldValidate: true,
                     });
                   }
+                  setValue(secondaryPhoneName, matched?.telephone2 ?? '', {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
                 }}
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder={`Select ${label.toLowerCase()} customer`} />
+                    <SelectValue placeholder={`Select ${label.toLowerCase()} fullname`} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>

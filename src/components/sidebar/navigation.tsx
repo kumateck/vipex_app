@@ -6,6 +6,7 @@ interface SubItem {
   url?: string;
   icon?: LucideIconProps;
   permissionKey?: string;
+  hiddenInSidebar?: boolean;
   children?: SubItem[];
 }
 
@@ -16,6 +17,7 @@ export interface MenuItem {
   icon: LucideIconProps;
   isActive?: boolean;
   permissionKey?: string;
+  hiddenInSidebar?: boolean;
   items?: SubItem[]; // Optional array of sub-items.
 }
 
@@ -90,6 +92,7 @@ const BASE_ROUTES: Route[] = [
         title: 'All Parcels',
         url: '/parcels',
         icon: 'Package',
+        permissionKey: 'CanReadParcels',
       },
     ],
   },
@@ -103,18 +106,22 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Create Parcel',
             url: '/parcels/create',
+            permissionKey: 'CanCreateBookingWithParcels',
           },
           {
             title: 'Sender Payments',
             url: '/parcels/sender-payments',
+            permissionKey: 'CanReadParcels',
           },
           {
             title: 'Processed Consignments',
             url: '/parcels/processed',
+            permissionKey: 'CanReadParcels',
           },
           {
             title: 'In Transit (Outgoing)',
             url: '/parcels/in-transit/outgoing',
+            permissionKey: 'CanReadParcels',
           },
         ],
       },
@@ -125,10 +132,12 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'In Transit (Incoming)',
             url: '/parcels/in-transit/incoming',
+            permissionKey: 'CanReadParcels',
           },
           {
             title: 'Scan to Receive',
             url: '/parcels/receive',
+            permissionKey: 'CanReadParcels',
           },
           {
             title: 'Internal Transfers',
@@ -143,22 +152,27 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Pickup Queue',
             url: '/parcels/pickup-queue',
+            permissionKey: 'CanReadParcels',
           },
           {
             title: 'Queue Board (Sender)',
             url: '/parcels/pickup-queue/sender',
+            permissionKey: 'CanReadParcels',
           },
           {
             title: 'Waiting for Pickup',
             url: '/parcels/waiting-pickup',
+            permissionKey: 'CanReadParcels',
           },
           {
             title: 'Queue Board (Receiver)',
             url: '/parcels/pickup-queue/receiver',
+            permissionKey: 'CanReadParcels',
           },
           {
             title: 'Receiver Cashier',
             url: '/parcels/receiver-cashier',
+            permissionKey: 'CanReadParcels',
           },
         ],
       },
@@ -169,10 +183,12 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Dispatch Parcels',
             url: '/parcels/home-delivery/dispatch',
+            permissionKey: 'CanReadParcels',
           },
           {
             title: 'Delivery Cashier',
             url: '/parcels/delivery-cashier',
+            permissionKey: 'CanReadParcels',
           },
         ],
       },
@@ -183,10 +199,12 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Parcel Status',
             url: '/parcels/status',
+            permissionKey: 'CanReadParcels',
           },
           {
             title: 'Address Collection',
             url: '/parcels/home-delivery/address',
+            permissionKey: 'CanReadParcels',
           },
         ],
       },
@@ -202,10 +220,12 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'All Customers',
             url: '/customers',
+            permissionKey: 'CanReadCustomers',
           },
           {
             title: 'Add Customer',
             url: '/customers/create',
+            permissionKey: 'CanCreateCustomers',
           },
         ],
       },
@@ -214,11 +234,11 @@ const BASE_ROUTES: Route[] = [
   {
     title: 'Finance',
     menu: [
-      {
-        title: 'Reports Center',
-        url: '/reports',
-        icon: 'FileText',
-      },
+      // {
+      //   title: 'Reports Center',
+      //   url: '/reports',
+      //   icon: 'FileText',
+      // },
       {
         title: 'Accounting',
         icon: 'BookOpen',
@@ -226,22 +246,22 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Daily Cash',
             url: '/accounting/daily-cash',
-            // permissionKey: 'CanPostAccountingEntries',
+            permissionKey: 'CanReadAccounting',
           },
           {
             title: 'Expenses',
             url: '/accounting/expenses',
-            // permissionKey: 'CanPostAccountingEntries',
+            permissionKey: 'CanReadAccounting',
           },
           {
             title: 'Reports',
             url: '/accounting/reports',
-            // permissionKey: 'CanReadAccounting',
+            permissionKey: 'CanReadAccounting',
           },
           {
             title: 'Accounting Setup',
             url: '/accounting/setup',
-            // permissionKey: 'CanManageAccountingSetup',
+            permissionKey: 'CanReadAccounting',
           },
         ],
       },
@@ -252,7 +272,7 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Tax Filing',
             url: '/accounting/tax',
-            // permissionKey: 'CanManageTaxFiling',
+            permissionKey: 'CanReadAccounting',
           },
         ],
       },
@@ -263,22 +283,22 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Compensation Setup',
             url: '/payroll/compensation',
-            // permissionKey: 'CanReadCompensation',
+            permissionKey: 'CanReadCompensation',
           },
           {
             title: 'Payroll Groups',
             url: '/payroll/groups',
-            // permissionKey: 'CanReadPayrollGroups',
+            permissionKey: 'CanReadPayrollGroups',
           },
           {
             title: 'Payroll Cycles',
             url: '/payroll/cycles',
-            // permissionKey: 'CanListPayrollCycles',
+            permissionKey: 'CanListPayrollCycles',
           },
           {
             title: 'Payroll Inputs',
             url: '/payroll/inputs',
-            // permissionKey: 'CanReadPayrollInputs',
+            permissionKey: 'CanReadPayrollInputs',
           },
         ],
       },
@@ -289,26 +309,30 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Active Sessions',
             url: '/cashier/sessions/active',
+            permissionKey: 'CanReadCashierSessions',
           },
           {
             title: 'Session History',
             url: '/cashier/sessions/history',
+            permissionKey: 'CanReadCashierSessions',
           },
           {
             title: 'Open Session',
             url: '/cashier/sessions/open',
+            permissionKey: 'CanReadCashierSessions',
           },
           {
             title: 'Close Session',
             url: '/cashier/sessions/close',
+            permissionKey: 'CanReadCashierSessions',
           },
         ],
       },
-      {
-        title: 'Cashiers',
-        url: '/cashiers',
-        icon: 'UsersRound',
-      },
+      // {
+      //   title: 'Cashiers',
+      //   url: '/cashiers',
+      //   icon: 'UsersRound',
+      // },
     ],
   },
   {
@@ -318,31 +342,31 @@ const BASE_ROUTES: Route[] = [
         title: 'Employees',
         url: '/hr/employees',
         icon: 'Briefcase',
-        // permissionKey: 'CanListEmployees',
+        permissionKey: 'CanListEmployees',
       },
       {
         title: 'Departments',
         url: '/hr/departments',
         icon: 'Network',
-        // permissionKey: 'CanReadDepartments',
+        permissionKey: 'CanReadDepartments',
       },
       {
         title: 'Job Titles',
         url: '/hr/job-titles',
         icon: 'UserCog',
-        // permissionKey: 'CanReadJobTitles',
+        permissionKey: 'CanReadJobTitles',
       },
       {
         title: 'Attendance',
         url: '/hr/attendance',
         icon: 'Clock3',
-        // permissionKey: 'CanListAttendance',
+        permissionKey: 'CanListAttendance',
       },
       {
         title: 'Leave Mgt',
         url: '/hr/leave',
         icon: 'CalendarDays',
-        // permissionKey: 'CanListLeaveRequests',
+        permissionKey: 'CanListLeaveRequests',
       },
     ],
   },
@@ -356,22 +380,27 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'All Users',
             url: '/users',
+            permissionKey: 'CanReadUsers',
           },
           {
             title: 'Add User',
             url: '/users/create',
+            permissionKey: 'CanCreateUsers',
           },
           {
             title: 'Active Users',
             url: '/users/active',
+            permissionKey: 'CanReadUsers',
           },
           {
             title: 'Inactive Users',
             url: '/users/inactive',
+            permissionKey: 'CanReadUsers',
           },
           {
             title: 'User Invites',
             url: '/users/invites',
+            permissionKey: 'CanReadUsers',
           },
         ],
       },
@@ -382,10 +411,12 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Manage Roles',
             url: '/roles',
+            permissionKey: 'CanReadRoles',
           },
           {
             title: 'Permissions',
             url: '/permissions',
+            permissionKey: 'CanReadPermissions',
           },
         ],
       },
@@ -396,10 +427,12 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Current Status',
             url: '/parcels/rider/current',
+            permissionKey: 'CanReadParcels',
           },
           {
             title: 'History',
             url: '/parcels/rider/history',
+            permissionKey: 'CanReadParcels',
           },
         ],
       },
@@ -424,10 +457,12 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Branch Management',
             url: '/branches',
+            permissionKey: 'CanReadBranches',
           },
           {
             title: 'Location Management',
             url: '/locations',
+            permissionKey: 'CanReadLocations',
           },
           {
             title: 'Warehouse Management',
@@ -437,10 +472,12 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Status Management',
             url: '/statuses',
+            hiddenInSidebar: true,
           },
           {
             title: 'Card Management',
             url: '/settings/cards',
+            permissionKey: 'CanReadCards',
           },
           {
             title: 'Appearance',
@@ -455,40 +492,42 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'All Inventory',
             url: '/inventory',
+            permissionKey: 'CanListProducts',
           },
           {
             title: 'Products',
             url: '/inventory/products',
+            permissionKey: 'CanListProducts',
           },
           {
             title: 'Categories',
             url: '/inventory/categories',
-            // permissionKey: 'CanListProductCategories',
+            permissionKey: 'CanListProductCategories',
           },
           {
             title: 'Locations',
             url: '/inventory/locations',
-            // permissionKey: 'CanListProductLocations',
+            permissionKey: 'CanListInventoryLocations',
           },
           {
             title: 'Stock Levels',
             url: '/inventory/stock-levels',
-            // permissionKey: 'CanListStockLevels',
+            permissionKey: 'CanListStockLevels',
           },
           {
             title: 'Stock Movements',
             url: '/inventory/stock-movements',
-            // permissionKey: 'CanListStockMovements',
+            permissionKey: 'CanListStockMovements',
           },
           {
             title: 'Stock Adjustments',
             url: '/inventory/stock-adjustments',
-            // permissionKey: 'CanListStockAdjustments',
+            permissionKey: 'CanListStockAdjustments',
           },
           {
             title: 'Stock Transfers',
             url: '/inventory/stock-transfers',
-            // permissionKey: 'CanListStockTransfers',
+            permissionKey: 'CanListStockTransfers',
           },
         ],
       },

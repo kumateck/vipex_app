@@ -1,6 +1,7 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,6 +13,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import type { User } from '../types/user.types';
 import { USER_TYPE_LABELS } from '@/shared/access/constants';
 
@@ -98,26 +100,32 @@ function UserActionsCell({
   return (
     <>
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/users/edit/${user.id}`}>Edit</Link>
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={isUpdatingStatus}
-          onClick={() => setIsStatusDialogOpen(true)}
-        >
-          {statusActionLabel}
-        </Button>
-        {canResendInvite ? (
+        <PermissionGuard permissionKey={PermissionKeys.CanUpdateUsers}>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/users/edit/${user.id}`}>Edit</Link>
+          </Button>
+        </PermissionGuard>
+        <PermissionGuard permissionKey={PermissionKeys.CanUpdateUsers}>
           <Button
             variant="secondary"
             size="sm"
-            disabled={isResendingInvite}
-            onClick={() => onResendInvite?.(user)}
+            disabled={isUpdatingStatus}
+            onClick={() => setIsStatusDialogOpen(true)}
           >
-            Resend invite
+            {statusActionLabel}
           </Button>
+        </PermissionGuard>
+        {canResendInvite ? (
+          <PermissionGuard permissionKey={PermissionKeys.CanResendSetupInvite}>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={isResendingInvite}
+              onClick={() => onResendInvite?.(user)}
+            >
+              Resend invite
+            </Button>
+          </PermissionGuard>
         ) : null}
       </div>
       <AlertDialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
@@ -128,15 +136,17 @@ function UserActionsCell({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isUpdatingStatus}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isUpdatingStatus}
-              onClick={() => {
-                onToggleStatus?.(user);
-                setIsStatusDialogOpen(false);
-              }}
-            >
-              {isUpdatingStatus ? 'Saving...' : statusActionLabel}
-            </AlertDialogAction>
+            <PermissionGuard permissionKey={PermissionKeys.CanUpdateUsers}>
+              <AlertDialogAction
+                disabled={isUpdatingStatus}
+                onClick={() => {
+                  onToggleStatus?.(user);
+                  setIsStatusDialogOpen(false);
+                }}
+              >
+                {isUpdatingStatus ? 'Saving...' : statusActionLabel}
+              </AlertDialogAction>
+            </PermissionGuard>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

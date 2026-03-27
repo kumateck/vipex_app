@@ -1,6 +1,8 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Link } from 'react-router-dom';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
 import { Button } from '@/components/ui/button';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import type { StockTransfer } from '../types/inventory-stock.types';
 import { stockTransferStatusLabelByValue } from '../constants/stock-options';
 
@@ -44,9 +46,11 @@ export function createStockTransferColumns(
       size: 100,
       enableSorting: false,
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/inventory/stock-transfers/edit/${row.original.id}`}>Edit</Link>
-        </Button>
+        <PermissionGuard permissionKey={PermissionKeys.CanUpdateStockTransfer}>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/inventory/stock-transfers/edit/${row.original.id}`}>Edit</Link>
+          </Button>
+        </PermissionGuard>
       ),
     },
   ];

@@ -190,7 +190,9 @@ export async function forgotPasswordSvc(email: string) {
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
   await insertPasswordResetRepo({ userId: user.id, tokenHash, expiresAt });
 
-  const resetUrl = `${env.APP_BASE_URL}/reset-password?token=${tokenPlain}`;
+  const resetUrlObj = new URL('/open-reset-password.html', env.APP_BASE_URL);
+  resetUrlObj.searchParams.set('token', tokenPlain);
+  const resetUrl = resetUrlObj.toString();
 
   try {
     await sendPasswordResetEmail(user.email, resetUrl);

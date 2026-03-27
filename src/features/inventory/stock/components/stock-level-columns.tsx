@@ -1,6 +1,8 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Link } from 'react-router-dom';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
 import { Button } from '@/components/ui/button';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import type { StockLevel } from '../types/inventory-stock.types';
 
 export function createStockLevelColumns(
@@ -34,9 +36,15 @@ export function createStockLevelColumns(
       size: 100,
       enableSorting: false,
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/inventory/stock-levels/${row.original.productId}/${row.original.locationId}`}>View</Link>
-        </Button>
+        <PermissionGuard permissionKey={PermissionKeys.CanGetStockLevel}>
+          <Button variant="outline" size="sm" asChild>
+            <Link
+              to={`/inventory/stock-levels/${row.original.productId}/${row.original.locationId}`}
+            >
+              View
+            </Link>
+          </Button>
+        </PermissionGuard>
       ),
     },
   ];

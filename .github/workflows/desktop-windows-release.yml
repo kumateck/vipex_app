@@ -1,0 +1,41 @@
+name: Desktop Windows Release (PR to desktop)
+
+on:
+  pull_request:
+    branches:
+      - desktop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows-desktop:
+    name: Build Windows Desktop Artifact
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Windows Desktop Release (Squirrel)
+        run: bun run --cwd apps/desktop make -- --targets @electron-forge/maker-squirrel
+
+      - name: Upload Windows Desktop Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vipex-desktop-windows-${{ github.event.pull_request.number || github.run_number }}
+          path: apps/desktop/out/make/**
+          if-no-files-found: error
+          retention-days: 14

@@ -13,4 +13,19 @@ export type DesktopPrintResult = {
   reason?: string;
 };
 
+export type DesktopParallelPrintRequest = {
+  jobs: [DesktopPrintRequest, DesktopPrintRequest];
+};
+
+export type DesktopParallelPrintResult = {
+  ok: boolean;
+  jobs: Array<
+    DesktopPrintResult & {
+      layout: PrintLayout;
+      deviceName?: string;
+      title?: string;
+    }
+  >;
+};
+
 export type PrintRuntime = 'web' | 'desktop';

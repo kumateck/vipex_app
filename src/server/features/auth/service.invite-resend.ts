@@ -40,7 +40,9 @@ export async function resendSetupInviteSvc(userId: string, opts?: { force?: bool
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
   await setUserResetTokenRepo({ userId: user.id, tokenHash, expiresAt });
 
-  const setupUrl = `${env.APP_BASE_URL}/set-password?token=${tokenPlain}`;
+  const setupUrlObj = new URL('/open-invite.html', env.APP_BASE_URL);
+  setupUrlObj.searchParams.set('token', tokenPlain);
+  const setupUrl = setupUrlObj.toString();
   try {
     await sendPasswordSetupEmail(user.email, setupUrl);
   } catch (err) {

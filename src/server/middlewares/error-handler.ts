@@ -1,8 +1,7 @@
 import type { Elysia } from 'elysia';
 import { HttpStatus } from '../utils/http-status';
 import { isHttpError, type ErrorDetails } from '../utils/http-error';
-import { isDev } from '../utils/env';
-import { logger as devLogger } from '../utils/logger';
+import { isProd } from '../utils/env';
 
 type FrameworkErrorCode = 'NOT_FOUND' | 'VALIDATION' | 'PARSE' | 'UNKNOWN';
 
@@ -153,6 +152,57 @@ const sanitizeMessage = (value: string | undefined, fallback: string): string =>
   return trimmed.length > 0 ? trimmed : fallback;
 };
 
+const toPlainRecord = (value: unknown): Record<string, unknown> | undefined => {
+  if (!value || typeof value !== 'object') return undefined;
+  try {
+    return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  } catch {
+    return {
+      text: String(value),
+    };
+  }
+};
+
+const logLocalServerError = (params: {
+  status: number;
+  requestId: string;
+  path: string;
+  method: string;
+  frameworkCode: FrameworkErrorCode;
+  publicCode: string;
+  publicMessage: string;
+  originalMessage?: string;
+  originalCode?: string;
+  stack?: string;
+  details?: ErrorDetails;
+  cause?: unknown;
+}) => {
+  if (isProd || params.status < HttpStatus.INTERNAL_SERVER_ERROR) return;
+
+  console.log(
+    '[LOCAL_500]',
+    JSON.stringify(
+      {
+        t: new Date().toISOString(),
+        requestId: params.requestId,
+        path: params.path,
+        method: params.method,
+        frameworkCode: params.frameworkCode,
+        status: params.status,
+        publicCode: params.publicCode,
+        publicMessage: params.publicMessage,
+        originalCode: params.originalCode ?? null,
+        originalMessage: params.originalMessage ?? null,
+        details: params.details ?? null,
+        stack: params.stack ?? null,
+        cause: toPlainRecord(params.cause) ?? null,
+      },
+      null,
+      2,
+    ),
+  );
+};
+
 export function errorHandler(app: Elysia) {
   return app.onError(({ code, error, set, request }) => {
     const path = new URL(request.url).pathname;
@@ -204,6 +254,19 @@ export function errorHandler(app: Elysia) {
     if (typeof error === 'object' && isHttpError(error)) {
       const message = sanitizeMessage(error.message, 'Request failed.');
       set.status = error.status;
+      logLocalServerError({
+        status: error.status,
+        requestId,
+        path,
+        method,
+        frameworkCode,
+        publicCode: 'HTTP_ERROR',
+        publicMessage: message,
+        originalMessage: error.message,
+        details: error.details,
+        stack: (error as { stack?: string }).stack,
+        cause: (error as { cause?: unknown }).cause,
+      });
       return buildErrorBody({
         code: 'HTTP_ERROR',
         message,
@@ -218,23 +281,20 @@ export function errorHandler(app: Elysia) {
     const err = toErrorLike(typeof error === 'object' ? error : null);
     const mapped = toInfraMapping(err);
     set.status = mapped.status;
-
-    // Log detailed error information only in development mode for debugging.
-    // In production/test, avoid exposing sensitive internal details.
-    if (isDev) {
-      devLogger.error(
-        JSON.stringify({
-          t: new Date().toISOString(),
-          requestId,
-          path,
-          method,
-          code: mapped.code,
-          originalMessage: err.message || null,
-          originalCode: err.code ?? readNestedCode(err.cause) ?? null,
-          stack: err.stack || null,
-        }),
-      );
-    }
+    logLocalServerError({
+      status: mapped.status,
+      requestId,
+      path,
+      method,
+      frameworkCode,
+      publicCode: mapped.code,
+      publicMessage: mapped.message,
+      originalMessage: err.message,
+      originalCode: err.code ?? readNestedCode(err.cause),
+      stack: err.stack,
+      details: err.details,
+      cause: err.cause,
+    });
 
     return buildErrorBody({
       code: mapped.code,
