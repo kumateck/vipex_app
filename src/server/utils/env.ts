@@ -1,38 +1,3 @@
-// import "dotenv/config";
-// import { z } from "zod";
-
-// const EnvSchema = z.object({
-//   NODE_ENV: z
-//     .enum(["development", "test", "production"])
-//     .default("development"),
-//   PORT: z.coerce.number().int().positive().default(3000),
-//   DATABASE_URL: z.string().url().min(1, "DATABASE_URL is required"),
-//   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
-//   JWT_ACCESS_EXPIRES: z.string().default("15m"), // e.g. 15m, 7d
-//   JWT_REFRESH_EXPIRES: z.string().default("7d"), // e.g. 15m, 7d
-//   // Sentry (optional; if DSN missing, integration is a no-op)
-//   SENTRY_DSN: z.string().url().optional(),
-//   SENTRY_ENV: z.string().default(process.env.NODE_ENV || "development"),
-//   SENTRY_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(1), // error events
-//   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0), // performance traces
-//   SENTRY_PROFILES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0), // profiling
-//   RELEASE: z.string().optional(), // e.g., git sha
-// });
-
-// const parsed = EnvSchema.safeParse(process.env);
-
-// if (!parsed.success) {
-//   console.error("Invalid environment configuration:");
-//   for (const issue of parsed.error.issues) {
-//     console.error(`- ${issue.path.join(".")}: ${issue.message}`);
-//   }
-//   process.exit(1);
-// }
-
-// export const env = parsed.data;
-// export const isProd = env.NODE_ENV === "production";
-// export const isDev = env.NODE_ENV === "development";
-
 import 'dotenv/config';
 import { z } from 'zod';
 
@@ -98,6 +63,8 @@ const EnvSchema = z.object({
   SMTP_DEBUG: toBoolean.default(false), // Log SMTP traffic (no credentials)
   // App URLs
   APP_BASE_URL: z.string().optional(),
+  RESET_LINK_BASE_URL: z.string().optional(),
+  INVITE_LINK_BASE_URL: z.string().optional(),
   // MinIO / S3-compatible object storage (optional)
   MINIO_ENDPOINT: z.string().url().optional(),
   MINIO_REGION: z.string().default('us-east-1'),
@@ -130,6 +97,10 @@ const inferredAppBaseUrl =
 
 const fallbackLocalAppBaseUrl = `http://localhost:${parsed.data.PORT || 3000}`;
 const resolvedAppBaseUrl = inferredAppBaseUrl ?? fallbackLocalAppBaseUrl;
+const resolvedResetLinkBaseUrl =
+  normalizeAppBaseUrl(process.env.RESET_LINK_BASE_URL) ?? resolvedAppBaseUrl;
+const resolvedInviteLinkBaseUrl =
+  normalizeAppBaseUrl(process.env.INVITE_LINK_BASE_URL) ?? resolvedAppBaseUrl;
 
 if (parsed.data.NODE_ENV === 'production' && !inferredAppBaseUrl) {
   console.error(
@@ -141,6 +112,8 @@ if (parsed.data.NODE_ENV === 'production' && !inferredAppBaseUrl) {
 export const env = {
   ...parsed.data,
   APP_BASE_URL: resolvedAppBaseUrl,
+  RESET_LINK_BASE_URL: resolvedResetLinkBaseUrl,
+  INVITE_LINK_BASE_URL: resolvedInviteLinkBaseUrl,
 };
 export const isProd = env.NODE_ENV === 'production';
 export const isDev = env.NODE_ENV === 'development';

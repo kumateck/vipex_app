@@ -22,20 +22,31 @@ cp .env .env.local
 ```
 
 3. Ensure your `.env`/`.env.local` has a valid `DATABASE_URL`.
-4. Apply committed migrations:
+4. For mail-link correctness in non-local environments, configure:
+
+- `APP_BASE_URL`
+- `RESET_LINK_BASE_URL` (optional; defaults to `APP_BASE_URL`)
+- `INVITE_LINK_BASE_URL` (optional; defaults to `APP_BASE_URL`)
+
+Example values:
+
+- Staging: `https://staging.app.vipexparcel.com`
+- Production: `https://app.vipexparcel.com`
+
+5. Apply committed migrations:
 
 ```bash
 bun run migrate
 ```
 
-5. Run required seeds for an existing database with users (in order):
+6. Run required seeds for an existing database with users (in order):
 
 ```bash
 bun run seed:init
 bun run seed:sessions
 ```
 
-6. Only if you explicitly need a demo/login user that does not already exist, run one of:
+7. Only if you explicitly need a demo/login user that does not already exist, run one of:
 
 ```bash
 bun run seed:users

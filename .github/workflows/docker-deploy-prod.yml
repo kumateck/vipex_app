@@ -8,6 +8,9 @@ env:
   CONTAINER_NAME: vipex_app_prod
   HOST_PORT: 11003
   CONTAINER_PORT: 3000
+  APP_BASE_URL: https://app.vipexparcel.com
+  RESET_LINK_BASE_URL: https://app.vipexparcel.com
+  INVITE_LINK_BASE_URL: https://app.vipexparcel.com
 
 jobs:
   build:
@@ -49,7 +52,9 @@ jobs:
           CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
           HOST_PORT: ${{ env.HOST_PORT }}
           CONTAINER_PORT: ${{ env.CONTAINER_PORT }}
-          NEXT_PUBLIC_BASE_URL: ${{ env.NEXT_PUBLIC_BASE_URL }}
+          APP_BASE_URL: ${{ env.APP_BASE_URL }}
+          RESET_LINK_BASE_URL: ${{ env.RESET_LINK_BASE_URL }}
+          INVITE_LINK_BASE_URL: ${{ env.INVITE_LINK_BASE_URL }}
 
         run: |
           mkdir -p ~/.ssh
@@ -84,5 +89,8 @@ jobs:
               -e EMAIL_USER='dkadusei@kumateck.com' \
               -e EMAIL_PASSWORD='Password' \
               -e NODE_ENV='production' \
+              -e APP_BASE_URL='${APP_BASE_URL}' \
+              -e RESET_LINK_BASE_URL='${RESET_LINK_BASE_URL}' \
+              -e INVITE_LINK_BASE_URL='${INVITE_LINK_BASE_URL}' \
               "${DOCKER_IMAGE_NAME}:latest"
           EOF
