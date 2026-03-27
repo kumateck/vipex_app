@@ -40,6 +40,13 @@ export const PAGE_STYLES: Record<PrintLayout, string> = {
         size: A5 landscape;
         margin: 6mm;
       }
+      html, body {
+        width: 210mm;
+        height: 148mm;
+      }
+      body {
+        margin: 0;
+      }
     }
   `,
   'report-a4': `

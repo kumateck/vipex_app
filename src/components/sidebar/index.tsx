@@ -9,7 +9,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/ui/sidebar';
-import { isSidebarReadablePermission } from '@/shared/permissions/constants';
+import { inferRequiredPermissionByPath } from '@/shared/permissions/path-access';
 import { useAuthStore } from '@/stores/auth-store';
 
 // import { NavMain } from './nav-main';
@@ -35,10 +35,9 @@ function hasAccountingUrl(node: SidebarNode): boolean {
 
 function canRenderSidebarNode(node: SidebarNode, allowedPermissions: Set<string>): boolean {
   if (node.hiddenInSidebar) return false;
-  if (!node.permissionKey) return true;
-  return (
-    isSidebarReadablePermission(node.permissionKey) && allowedPermissions.has(node.permissionKey)
-  );
+  const effectivePermissionKey = node.permissionKey ?? inferRequiredPermissionByPath(node.url);
+  if (!effectivePermissionKey) return true;
+  return allowedPermissions.has(effectivePermissionKey);
 }
 
 function filterSidebarTreeByPermissions(

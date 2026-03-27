@@ -5,6 +5,9 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 let mainWindow: BrowserWindow | null = null;
+const PACKAGED_WEB_BASE_URL = 'https://testing.app.vipexparcel.com/';
+const DEV_WEB_BASE_URL = 'http://localhost:5173/';
+let pendingDeepLink: string | null = null;
 
 type PrintLayout = 'thermal-sticker' | 'invoice-a5' | 'invoice-a5-receipt' | 'report-a4';
 
@@ -16,9 +19,53 @@ type PrintHtmlRequest = {
   deviceName?: string;
 };
 
+type ParallelPrintRequest = {
+  jobs: [PrintHtmlRequest, PrintHtmlRequest];
+};
+
 if (!app.isPackaged) {
   // Avoid stale CSS/asset cache during desktop dev.
   app.commandLine.appendSwitch('disable-http-cache');
+}
+
+function getWebBaseUrl() {
+  return app.isPackaged ? PACKAGED_WEB_BASE_URL : DEV_WEB_BASE_URL;
+}
+
+function extractDeepLinkUrl(argv: string[]) {
+  return argv.find((arg) => typeof arg === 'string' && arg.startsWith('vipex://')) ?? null;
+}
+
+function mapDeepLinkToHash(deepLinkUrl: string) {
+  try {
+    const parsed = new URL(deepLinkUrl);
+    const routePath = `${parsed.hostname}${parsed.pathname === '/' ? '' : parsed.pathname}`
+      .replace(/^\/+/, '')
+      .toLowerCase();
+
+    if (routePath === 'reset-password') {
+      const token = parsed.searchParams.get('token') ?? '';
+      return `#/reset-password${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+    }
+
+    if (routePath === 'set-password' || routePath === 'invite') {
+      const token = parsed.searchParams.get('token') ?? '';
+      return `#/set-password${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function navigateToDeepLink(deepLinkUrl: string) {
+  const hashPath = mapDeepLinkToHash(deepLinkUrl);
+  if (!hashPath || !mainWindow || mainWindow.isDestroyed()) return;
+
+  const base = getWebBaseUrl().replace(/\/+$/, '');
+  const target = `${base}/${hashPath}`;
+  await mainWindow.loadURL(target);
 }
 
 function getPrintOptions(request: PrintHtmlRequest): WebContentsPrintOptions {
@@ -89,6 +136,44 @@ function registerIpcHandlers() {
     if (!mainWindow) return [];
     return mainWindow.webContents.getPrintersAsync();
   });
+
+  ipcMain.handle('print:parallel', async (_event, request: ParallelPrintRequest) => {
+    const jobs = Array.isArray(request?.jobs) ? request.jobs : [];
+    if (jobs.length !== 2) {
+      return {
+        ok: false,
+        jobs: [],
+        reason: 'Parallel print expects exactly two jobs.',
+      };
+    }
+
+    const results = await Promise.all(
+      jobs.map(async (job) => {
+        if (!job?.html) {
+          return {
+            ok: false,
+            reason: 'No printable HTML payload was provided.',
+            layout: job?.layout,
+            deviceName: job?.deviceName,
+            title: job?.title,
+          };
+        }
+
+        const result = await printHtmlWithNativeDialog(job);
+        return {
+          ...result,
+          layout: job.layout,
+          deviceName: job.deviceName,
+          title: job.title,
+        };
+      }),
+    );
+
+    return {
+      ok: results.every((entry) => entry.ok),
+      jobs: results,
+    };
+  });
 }
 
 function createWindow() {
@@ -108,13 +193,64 @@ function createWindow() {
     void mainWindow.webContents.session.clearCache();
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools({ mode: 'detach' });
+    mainWindow.webContents.once('did-finish-load', () => {
+      if (!pendingDeepLink) return;
+      const link = pendingDeepLink;
+      pendingDeepLink = null;
+      void navigateToDeepLink(link);
+    });
     return;
   }
 
-  mainWindow.loadFile(path.resolve(process.cwd(), '../web/dist/index.html'));
+  mainWindow.loadURL(PACKAGED_WEB_BASE_URL);
+  mainWindow.webContents.once('did-finish-load', () => {
+    if (!pendingDeepLink) return;
+    const link = pendingDeepLink;
+    pendingDeepLink = null;
+    void navigateToDeepLink(link);
+  });
 }
 
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+}
+
+pendingDeepLink = extractDeepLinkUrl(process.argv);
+
+app.on('second-instance', (_event, argv) => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+  }
+
+  const link = extractDeepLinkUrl(argv);
+  if (link) {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      pendingDeepLink = link;
+      return;
+    }
+    void navigateToDeepLink(link);
+  }
+});
+
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  if (!url.startsWith('vipex://')) return;
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    pendingDeepLink = url;
+    return;
+  }
+  void navigateToDeepLink(url);
+});
+
 app.whenReady().then(() => {
+  if (app.isPackaged) {
+    app.setAsDefaultProtocolClient('vipex');
+  }
+
   registerIpcHandlers();
   createWindow();
 

@@ -1,6 +1,8 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Link } from 'react-router-dom';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
 import { Button } from '@/components/ui/button';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import type { Status } from '../types/status.types';
 
 export function createStatusColumns(): ColumnDef<Status>[] {
@@ -32,9 +34,11 @@ export function createStatusColumns(): ColumnDef<Status>[] {
       size: 100,
       enableSorting: false,
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/statuses/edit/${row.original.id}`}>Edit</Link>
-        </Button>
+        <PermissionGuard permissionKey={PermissionKeys.CanUpdateStatuses}>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/statuses/edit/${row.original.id}`}>Edit</Link>
+          </Button>
+        </PermissionGuard>
       ),
     },
   ];

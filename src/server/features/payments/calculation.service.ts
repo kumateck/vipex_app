@@ -8,9 +8,17 @@ import {
   DeliveryFeeBasis,
 } from '../../../db/schemas';
 import { createHash } from 'crypto';
+import {
+  computeTaxFromProfilePrincipalPsw,
+  sumComponentByKey,
+} from '@/server/utils/tax/profile-engine';
+import { getActiveTaxProfileWithComponentsRepo } from '../accounting/repository';
 
 type PaymentRuleRow = typeof paymentRules.$inferSelect;
 type PaymentCalculationRow = typeof paymentCalculations.$inferSelect;
+type ActiveTaxProfileWithComponents = Awaited<
+  ReturnType<typeof getActiveTaxProfileWithComponentsRepo>
+>;
 
 export interface PaymentCalculationInput {
   companyId: string;
@@ -66,6 +74,8 @@ export interface PaymentCalculationResult {
   paymentResponsibility: PaymentResponsibility;
   splitType?: SplitPaymentType;
   calculationHash: string;
+  appliedTaxProfileName: string | null;
+  appliedTaxProfileId: string | null;
 }
 
 /**
@@ -87,9 +97,11 @@ export async function calculatePayment(
   } = input;
 
   const parcelValuePsw = parseFloat(parcelValue) * 100;
+  const activeTaxProfile = await getActiveTaxProfileWithComponentsRepo({ companyId });
+  const taxProfileSignature = buildTaxProfileSignature(activeTaxProfile);
 
   // Check for cached calculation
-  const hash = generateCalculationHash(input);
+  const hash = generateCalculationHash(input, taxProfileSignature);
   const [cached] = await db
     .select()
     .from(paymentCalculations)
@@ -97,7 +109,11 @@ export async function calculatePayment(
     .limit(1);
 
   if (cached) {
-    return mapDbResultToCalculation(cached);
+    return mapDbResultToCalculation(
+      cached,
+      activeTaxProfile?.profileName ?? null,
+      activeTaxProfile?.profileId ?? null,
+    );
   }
 
   // Get applicable payment rules
@@ -111,13 +127,13 @@ export async function calculatePayment(
 
   if (rules.length === 0) {
     // Create default calculation if no rules found
-    return createDefaultCalculation(input, parcelValuePsw, hash);
+    return createDefaultCalculation(input, parcelValuePsw, hash, activeTaxProfile);
   }
   // Apply first matching rule (priority: most specific > general)
   const rule = rules[0];
 
   if (!rule) {
-    return createDefaultCalculation(input, parcelValuePsw, hash);
+    return createDefaultCalculation(input, parcelValuePsw, hash, activeTaxProfile);
   }
 
   // Calculate base charges
@@ -130,8 +146,8 @@ export async function calculatePayment(
   // Total charge (taxable amount)
   const totalChargePsw = baseChargePsw + deliveryFeePsw + serviceChargePsw + insurancePsw;
 
-  // Calculate taxes (Ghana tax system)
-  const taxBreakdown = calculateGhanaTaxes(totalChargePsw);
+  // Calculate taxes from active DB tax profile/components
+  const taxBreakdown = computeProfileTaxBreakdown(totalChargePsw, activeTaxProfile);
 
   // Calculate payment responsibility
   const responsibility = paymentResponsibility ?? PaymentResponsibility.SENDER;
@@ -184,6 +200,8 @@ export async function calculatePayment(
     paymentResponsibility: responsibility,
     splitType: rule.splitPaymentType,
     calculationHash: hash,
+    appliedTaxProfileName: activeTaxProfile?.profileName ?? null,
+    appliedTaxProfileId: activeTaxProfile?.profileId ?? null,
   };
 
   // Cache the calculation
@@ -255,6 +273,7 @@ function createDefaultCalculation(
   input: PaymentCalculationInput,
   parcelValuePsw: number,
   hash: string,
+  activeTaxProfile: ActiveTaxProfileWithComponents,
 ): PaymentCalculationResult {
   // Default rates (should be configurable per company)
   const baseCharge = 500; // GHS 5.00
@@ -262,7 +281,7 @@ function createDefaultCalculation(
   const serviceCharge = 300; // GHS 3.00
   const totalCharge = baseCharge + deliveryFee + serviceCharge;
 
-  const taxBreakdown = calculateGhanaTaxes(totalCharge);
+  const taxBreakdown = computeProfileTaxBreakdown(totalCharge, activeTaxProfile);
 
   // Default 50/50 split
   const half = totalCharge / 2;
@@ -303,6 +322,83 @@ function createDefaultCalculation(
     paymentResponsibility: input.paymentResponsibility ?? PaymentResponsibility.SENDER,
     splitType: SplitPaymentType.PERCENTAGE,
     calculationHash: hash,
+    appliedTaxProfileName: activeTaxProfile?.profileName ?? null,
+    appliedTaxProfileId: activeTaxProfile?.profileId ?? null,
+  };
+}
+
+function normalizeTaxKey(value: string): string {
+  return value
+    .replace(/[\s_-]+/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function buildTaxProfileSignature(activeProfile: ActiveTaxProfileWithComponents): string {
+  if (!activeProfile) return 'no-active-profile';
+  const componentSignature = activeProfile.components.map((component) => ({
+    key: component.key,
+    numerator: component.numerator,
+    denominator: component.denominator,
+    inclusive: component.inclusive,
+    sortOrder: component.sortOrder ?? 0,
+  }));
+
+  return JSON.stringify({
+    id: activeProfile.profileId,
+    name: activeProfile.profileName,
+    components: componentSignature,
+  });
+}
+
+function computeProfileTaxBreakdown(
+  amountPsw: number,
+  activeProfile: ActiveTaxProfileWithComponents,
+): {
+  vatPsw: number;
+  getfundPsw: number;
+  nhilPsw: number;
+  covidPsw: number;
+  taxTotalPsw: number;
+} {
+  if (!activeProfile || activeProfile.components.length === 0) {
+    return {
+      vatPsw: 0,
+      getfundPsw: 0,
+      nhilPsw: 0,
+      covidPsw: 0,
+      taxTotalPsw: 0,
+    };
+  }
+
+  const breakdown = computeTaxFromProfilePrincipalPsw(BigInt(amountPsw), activeProfile.components);
+  const normalizedComponents = breakdown.components.map((component) => ({
+    key: normalizeTaxKey(component.key),
+    amountPsw: component.amountPsw,
+  }));
+
+  const vatPsw = Number(sumComponentByKey(normalizedComponents, 'vat'));
+  const getfundPsw = Number(
+    sumComponentByKey(normalizedComponents, 'getfund') +
+      sumComponentByKey(normalizedComponents, 'getfl') +
+      sumComponentByKey(normalizedComponents, 'getfundlevy'),
+  );
+  const nhilPsw = Number(
+    sumComponentByKey(normalizedComponents, 'nhil') +
+      sumComponentByKey(normalizedComponents, 'nhillevy'),
+  );
+  const covidPsw = Number(
+    sumComponentByKey(normalizedComponents, 'covid') +
+      sumComponentByKey(normalizedComponents, 'covid19levy') +
+      sumComponentByKey(normalizedComponents, 'covidlevy'),
+  );
+
+  return {
+    vatPsw,
+    getfundPsw,
+    nhilPsw,
+    covidPsw,
+    taxTotalPsw: Number(breakdown.totalTax),
   };
 }
 
@@ -458,44 +554,18 @@ function calculateSplitAmounts(
 }
 
 /**
- * Calculate Ghana taxes (VAT 3/23, GETFUND 2.5%, NHIL 2.5%, COVID 1%)
- * Note: VAT is inclusive (3/23 = 13.04%), others are exclusive
- */
-function calculateGhanaTaxes(amountPsw: number): {
-  vatPsw: number;
-  getfundPsw: number;
-  nhilPsw: number;
-  covidPsw: number;
-  taxTotalPsw: number;
-} {
-  // VAT is 3/23 of the amount (inclusive)
-  const vatPsw = Math.round((amountPsw * 3) / 23);
-
-  // GETFUND, NHIL, COVID are percentages of the amount (exclusive)
-  const getfundPsw = Math.round((amountPsw * 25) / 1000); // 2.5%
-  const nhilPsw = Math.round((amountPsw * 25) / 1000); // 2.5%
-  const covidPsw = Math.round((amountPsw * 10) / 1000); // 1%
-
-  const taxTotalPsw = vatPsw + getfundPsw + nhilPsw + covidPsw;
-
-  return {
-    vatPsw,
-    getfundPsw,
-    nhilPsw,
-    covidPsw,
-    taxTotalPsw,
-  };
-}
-
-/**
  * Generate hash for payment calculation caching
  */
-function generateCalculationHash(input: PaymentCalculationInput): string {
+function generateCalculationHash(
+  input: PaymentCalculationInput,
+  taxProfileSignature: string,
+): string {
   // Convert BigInt values to strings for serialization
   const hashInput = JSON.stringify({
     ...input,
     // Handle any BigInt values by converting to strings
     parcelValue: input.parcelValue,
+    taxProfileSignature,
   });
   return createHash('sha256').update(hashInput).digest('hex');
 }
@@ -503,7 +573,11 @@ function generateCalculationHash(input: PaymentCalculationInput): string {
 /**
  * Map database calculation result to API response format
  */
-function mapDbResultToCalculation(dbResult: PaymentCalculationRow): PaymentCalculationResult {
+function mapDbResultToCalculation(
+  dbResult: PaymentCalculationRow,
+  appliedTaxProfileName: string | null,
+  appliedTaxProfileId: string | null,
+): PaymentCalculationResult {
   return {
     parcelValue: (Number(dbResult.parcelValuePsw) / 100).toFixed(2),
     parcelValuePsw: dbResult.parcelValuePsw,
@@ -541,5 +615,7 @@ function mapDbResultToCalculation(dbResult: PaymentCalculationRow): PaymentCalcu
     paymentResponsibility: PaymentResponsibility.SENDER,
     splitType: undefined,
     calculationHash: dbResult.calculationHash,
+    appliedTaxProfileName,
+    appliedTaxProfileId,
   };
 }

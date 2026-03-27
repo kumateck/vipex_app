@@ -19,7 +19,9 @@ export async function sendPasswordSetupInvite(userId: string, email: string) {
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
   await setUserResetTokenRepo({ userId, tokenHash, expiresAt });
 
-  const setupUrl = `${env.APP_BASE_URL}/set-password?token=${tokenPlain}`;
+  const setupUrlObj = new URL('/open-invite.html', env.APP_BASE_URL);
+  setupUrlObj.searchParams.set('token', tokenPlain);
+  const setupUrl = setupUrlObj.toString();
   try {
     await sendPasswordSetupEmail(email, setupUrl);
   } catch (err) {

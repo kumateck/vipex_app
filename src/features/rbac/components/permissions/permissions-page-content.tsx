@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { PermissionCatalogUi } from '@/shared/permissions/constants';
 import {
   useGetRolePermissionsQuery,
@@ -38,6 +40,7 @@ export function PermissionsPageContent() {
   const [roleId, setRoleId] = useState(searchParams.get('roleId') ?? '');
   const [search, setSearch] = useState('');
   const [selectedPermissionKeys, setSelectedPermissionKeys] = useState<string[]>([]);
+  const [activeGroupTab, setActiveGroupTab] = useState('');
 
   const { data: roleOptionsData, isLoading: isLoadingRoles } = useListRoleOptionsQuery(
     { companyId, includeDeleted: false },
@@ -64,11 +67,31 @@ export function PermissionsPageContent() {
     () => PermissionCatalogUi.map((permission) => permission.key),
     [],
   );
+  const tabGroups = useMemo(
+    () =>
+      grouped.map(([group, permissions], index) => ({
+        group,
+        permissions,
+        value: `${group.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'module'}-${index}`,
+      })),
+    [grouped],
+  );
 
   useEffect(() => {
     if (!rolePermissionsData) return;
     setSelectedPermissionKeys(rolePermissionsData.permissionKeys);
   }, [rolePermissionsData]);
+
+  useEffect(() => {
+    if (!tabGroups.length) {
+      setActiveGroupTab('');
+      return;
+    }
+    const exists = tabGroups.some((tab) => tab.value === activeGroupTab);
+    if (!exists) {
+      setActiveGroupTab(tabGroups[0]!.value);
+    }
+  }, [tabGroups, activeGroupTab]);
 
   const roleOptions = roleOptionsData ?? [];
 
@@ -180,32 +203,44 @@ export function PermissionsPageContent() {
           ) : grouped.length === 0 ? (
             <p className="text-sm text-muted-foreground">No permissions found.</p>
           ) : (
-            <div className="space-y-4">
-              {grouped.map(([group, permissions]) => (
-                <div key={group} className="space-y-2 rounded-md border p-3">
-                  <h3 className="text-sm font-semibold">{group}</h3>
-                  <div className="grid gap-2">
-                    {permissions.map((permission) => (
-                      <div
-                        key={permission.key}
-                        className="flex items-start justify-between gap-3 rounded border p-3 text-sm"
-                      >
-                        <div>
-                          <div className="font-medium">{permission.key}</div>
-                          <div className="text-muted-foreground">{permission.description}</div>
-                        </div>
-                        <Checkbox
-                          checked={selectedPermissionKeys.includes(permission.key)}
-                          onCheckedChange={(checked) =>
-                            handleTogglePermission(permission.key, checked === true)
-                          }
-                        />
+            <Tabs value={activeGroupTab} onValueChange={setActiveGroupTab} className="space-y-4">
+              <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2">
+                {tabGroups.map((tab) => (
+                  <TabsTrigger key={tab.value} value={tab.value}>
+                    {tab.group}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {tabGroups.map((tab) => (
+                <TabsContent key={tab.value} value={tab.value}>
+                  <ScrollableWrapper>
+                    <div className="space-y-2 rounded-md border p-3">
+                      <h3 className="text-sm font-semibold">{tab.group}</h3>
+                      <div className="grid gap-2">
+                        {tab.permissions.map((permission) => (
+                          <div
+                            key={permission.key}
+                            className="flex items-start justify-between gap-3 rounded border p-3 text-sm"
+                          >
+                            <div>
+                              <div className="font-medium">{permission.key}</div>
+                              <div className="text-muted-foreground">{permission.description}</div>
+                            </div>
+                            <Checkbox
+                              checked={selectedPermissionKeys.includes(permission.key)}
+                              onCheckedChange={(checked) =>
+                                handleTogglePermission(permission.key, checked === true)
+                              }
+                            />
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                  </ScrollableWrapper>
+                </TabsContent>
               ))}
-            </div>
+            </Tabs>
           )}
         </CardContent>
       </Card>

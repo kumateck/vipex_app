@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
   accountingApprovalPolicies,
@@ -169,6 +169,50 @@ export async function listTaxComponentsRepo(input: {
     .innerJoin(taxProfiles, eq(taxProfiles.id, taxComponents.profileId))
     .where(and(...where))
     .orderBy(asc(taxComponents.profileId), asc(taxComponents.sortOrder), asc(taxComponents.key));
+}
+
+export async function getActiveTaxProfileWithComponentsRepo(
+  input: { companyId: string; at?: Date },
+  executor: DbExecutor = db,
+) {
+  const at = input.at ?? new Date();
+
+  const [profile] = await executor
+    .select({
+      id: taxProfiles.id,
+      name: taxProfiles.name,
+    })
+    .from(taxProfiles)
+    .where(and(eq(taxProfiles.companyId, input.companyId), eq(taxProfiles.active, true)))
+    .orderBy(desc(taxProfiles.updatedAt), asc(taxProfiles.name))
+    .limit(1);
+
+  if (!profile) return null;
+
+  const components = await executor
+    .select({
+      key: taxComponents.key,
+      numerator: taxComponents.numerator,
+      denominator: taxComponents.denominator,
+      inclusive: taxComponents.inclusive,
+      sortOrder: taxComponents.sortOrder,
+    })
+    .from(taxComponents)
+    .where(
+      and(
+        eq(taxComponents.profileId, profile.id),
+        eq(taxComponents.active, true),
+        lte(taxComponents.startsAt, at),
+        or(isNull(taxComponents.endsAt), gte(taxComponents.endsAt, at)),
+      ),
+    )
+    .orderBy(asc(taxComponents.sortOrder), asc(taxComponents.key));
+
+  return {
+    profileId: profile.id,
+    profileName: profile.name,
+    components,
+  };
 }
 
 export async function getCompanyAccountingSettingsRepo(

@@ -1,6 +1,8 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Link } from 'react-router-dom';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
 import { Button } from '@/components/ui/button';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import type { InventoryCategory } from '../types/inventory-category.types';
 
 export function createInventoryCategoryColumns(): ColumnDef<InventoryCategory>[] {
@@ -20,9 +22,11 @@ export function createInventoryCategoryColumns(): ColumnDef<InventoryCategory>[]
       size: 100,
       enableSorting: false,
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/inventory/categories/edit/${row.original.id}`}>Edit</Link>
-        </Button>
+        <PermissionGuard permissionKey={PermissionKeys.CanUpdateProductCategory}>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/inventory/categories/edit/${row.original.id}`}>Edit</Link>
+          </Button>
+        </PermissionGuard>
       ),
     },
   ];

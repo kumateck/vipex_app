@@ -51,6 +51,9 @@ function toNumber(value: string, fallback = 0) {
   return n;
 }
 
+const PHONE_DIGITS = 10;
+const toPhoneDigits = (value: string) => value.replace(/\D/g, '');
+
 interface CustomerUpsertFormProps {
   mode: Mode;
   customerId?: string;
@@ -88,10 +91,29 @@ export function CustomerUpsertForm({ mode, customerId, initialData }: CustomerUp
       toast.error('Customer name is required');
       return;
     }
+
+    const primaryPhone = toPhoneDigits(form.telephone);
+    const secondaryPhone = toPhoneDigits(form.telephone2);
+
+    if (primaryPhone.length > 0 && primaryPhone.length !== PHONE_DIGITS) {
+      toast.error(`Telephone must be exactly ${PHONE_DIGITS} digits`);
+      return;
+    }
+
+    if (secondaryPhone.length > 0 && secondaryPhone.length !== PHONE_DIGITS) {
+      toast.error(`Telephone 2 must be exactly ${PHONE_DIGITS} digits`);
+      return;
+    }
+
+    if (primaryPhone && secondaryPhone && primaryPhone === secondaryPhone) {
+      toast.error('Primary and secondary telephone cannot be the same');
+      return;
+    }
+
     const payload = {
       fullname: form.fullname.trim(),
-      telephone: form.telephone.trim() || null,
-      telephone2: form.telephone2.trim() || null,
+      telephone: primaryPhone || null,
+      telephone2: secondaryPhone || null,
       address: form.address.trim() || null,
       email: form.email.trim() || null,
       customerType: form.customerType,
@@ -142,6 +164,8 @@ export function CustomerUpsertForm({ mode, customerId, initialData }: CustomerUp
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, telephone: event.target.value }))
                 }
+                inputMode="numeric"
+                placeholder="0240000000"
               />
             </div>
             <div className="space-y-1.5">
@@ -151,6 +175,8 @@ export function CustomerUpsertForm({ mode, customerId, initialData }: CustomerUp
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, telephone2: event.target.value }))
                 }
+                inputMode="numeric"
+                placeholder="0240000001"
               />
             </div>
           </div>

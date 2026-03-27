@@ -42,6 +42,7 @@ const createEmptyParcel = (): ParcelFormValues => ({
   senderSettlementMode: 'PAY_NOW',
   receiver: {
     telephone: '',
+    telephone2: '',
     customerId: '',
     fullname: '',
   },
@@ -50,6 +51,7 @@ const createEmptyParcel = (): ParcelFormValues => ({
 const createInitialFormValues = (): ParcelBookingFormValues => ({
   sender: {
     telephone: '',
+    telephone2: '',
     customerId: '',
     fullname: '',
   },
@@ -68,6 +70,15 @@ const parseAmount = (value: string, label: string) => {
   }
   return amount;
 };
+
+const isApiRejectionError = (error: unknown): boolean =>
+  Boolean(
+    error &&
+      typeof error === 'object' &&
+      ('status' in (error as Record<string, unknown>) ||
+        'data' in (error as Record<string, unknown>) ||
+        'error' in (error as Record<string, unknown>)),
+  );
 
 export function ParcelCreateForm() {
   const user = useAuthStore((state) => state.user);
@@ -111,7 +122,13 @@ export function ParcelCreateForm() {
   const isSaving = isSubmitting || isCreatingCustomer || form.formState.isSubmitting;
 
   const resolveCustomerId = async (
-    params: { customerId: string; fullname: string; telephone: string; label: string },
+    params: {
+      customerId: string;
+      fullname: string;
+      telephone: string;
+      telephone2?: string;
+      label: string;
+    },
     cache: Map<string, string>,
   ) => {
     if (params.customerId) return params.customerId;
@@ -125,7 +142,12 @@ export function ParcelCreateForm() {
     const cachedId = cache.get(phone);
     if (cachedId) return cachedId;
 
-    const created = await createCustomer({ fullname: name, telephone: phone }).unwrap();
+    const secondaryPhone = String(params.telephone2 ?? '').trim();
+    const created = await createCustomer({
+      fullname: name,
+      telephone: phone,
+      telephone2: secondaryPhone || null,
+    }).unwrap();
     cache.set(phone, created.id);
     return created.id;
   };
@@ -172,6 +194,7 @@ export function ParcelCreateForm() {
             customerId: values.sender.customerId,
             fullname: values.sender.fullname,
             telephone: values.sender.telephone,
+            telephone2: values.sender.telephone2,
             label: 'Sender',
           },
           customerCache,
@@ -183,6 +206,7 @@ export function ParcelCreateForm() {
                 customerId: parcel.receiver.customerId,
                 fullname: parcel.receiver.fullname,
                 telephone: parcel.receiver.telephone,
+                telephone2: parcel.receiver.telephone2,
                 label: `Recipient for parcel ${index + 1}`,
               },
               customerCache,
@@ -267,6 +291,10 @@ export function ParcelCreateForm() {
       form.reset(createInitialFormValues());
       toast.success('Parcel transaction created successfully');
     } catch (error) {
+      if (isApiRejectionError(error)) {
+        // Global API handler already raised a toast for this response.
+        return;
+      }
       toast.error(error instanceof Error ? error.message : 'Failed to create parcel transaction');
     }
   };
@@ -312,9 +340,10 @@ export function ParcelCreateForm() {
                       <CustomerLookupSection
                         label="Sender"
                         phoneName="sender.telephone"
+                        secondaryPhoneName="sender.telephone2"
                         customerIdName="sender.customerId"
                         fullnameName="sender.fullname"
-                        helperText="Lookup starts after 3 seconds when 10+ digits are entered."
+                        helperText="Lookup starts after 1 second when exactly 10 digits are entered."
                         layout="split"
                       />
                     </div>

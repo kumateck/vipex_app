@@ -113,6 +113,8 @@ export function ParcelSuperSearchPage() {
   );
 
   const rows = data?.data ?? [];
+  const rowById = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
+  const selectedParcelRow = selectedParcelId ? rowById.get(selectedParcelId) : undefined;
 
   const submitSearch = () => {
     setSubmittedSearch(searchInput.trim());
@@ -248,14 +250,13 @@ export function ParcelSuperSearchPage() {
                   )}
                   {detailRow(
                     'Source Branch',
-                    branchNameById.get(parcelDetails.parcel.sourceId) ??
-                      parcelDetails.parcel.sourceId,
+                    branchNameById.get(parcelDetails.parcel.sourceId) ?? '-',
                   )}
                   {detailRow(
                     'Destination Branch',
-                    branchNameById.get(parcelDetails.parcel.destinationId) ??
-                      parcelDetails.parcel.destinationId,
+                    branchNameById.get(parcelDetails.parcel.destinationId) ?? '-',
                   )}
+                  {detailRow('Destination Location', selectedParcelRow?.pickupLocationName ?? '-')}
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <span className="text-muted-foreground">Current Holder</span>
                     <div className="col-span-2">

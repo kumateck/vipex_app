@@ -140,9 +140,8 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
       }
     }
 
-    if (result.error && result.error.status !== 401) {
-      TheAduseiErrorResponse(result.error);
-    }
+    // Non-401 API errors are handled by feature-level mutation/query consumers.
+    // Avoid global duplicate toasts (feature toast + global toast).
 
     return result as QueryReturnValue<unknown, FetchBaseQueryError, QueryMeta>;
   };

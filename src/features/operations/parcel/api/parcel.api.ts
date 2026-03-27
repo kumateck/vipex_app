@@ -39,6 +39,8 @@ export type SenderCashierParcel = {
   bookingCode: string;
   trackingCode: string;
   parcelDetails: string;
+  parcelContent?: string | null;
+  parcelValuePsw?: number | null;
   senderName: string | null;
   senderPhone: string | null;
   receiverName: string | null;

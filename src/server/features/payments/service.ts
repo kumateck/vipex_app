@@ -10,7 +10,10 @@ import {
   type PaymentRow,
 } from './repository';
 import { toPesewas } from '@/server/utils/gh-money';
-import { computeGhanaTaxesFromPesewas } from '@/server/utils/tax/ghana';
+import {
+  computeTaxFromProfilePrincipalPsw,
+  sumComponentByKey,
+} from '@/server/utils/tax/profile-engine';
 import { assertActiveSessionSvc } from '../cashiers/service';
 import { recordAuditLog } from '../audit/logger';
 import { getParcelSvc } from '../shipments/parcels.service';
@@ -21,6 +24,7 @@ import {
 import { updateParcelRepo } from '../shipments/parcels.repository';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
 import { recordPaymentTaxJournalItemSvc } from '../accounting/service';
+import { getActiveTaxProfileWithComponentsRepo } from '../accounting/repository';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 export type PaymentCreateInput = {
@@ -158,6 +162,73 @@ function toPaymentAmounts(tax: {
   };
 }
 
+function normalizeTaxKey(value: string) {
+  return value
+    .replace(/[\s_-]+/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+async function computeProfileTaxBreakdown(input: {
+  companyId: string;
+  principalPsw: bigint;
+  executor: DbExecutor;
+  at?: Date;
+}) {
+  const activeProfile = await getActiveTaxProfileWithComponentsRepo(
+    { companyId: input.companyId, at: input.at },
+    input.executor,
+  );
+
+  if (!activeProfile || activeProfile.components.length === 0) {
+    return {
+      principal: input.principalPsw,
+      net: input.principalPsw,
+      vat: 0n,
+      getfund: 0n,
+      nhil: 0n,
+      covid: 0n,
+      totalTax: 0n,
+      profileId: activeProfile?.profileId ?? null,
+      profileName: activeProfile?.profileName ?? null,
+    };
+  }
+
+  const breakdown = computeTaxFromProfilePrincipalPsw(input.principalPsw, activeProfile.components);
+  const normalized = breakdown.components.map((component) => ({
+    ...component,
+    normalizedKey: normalizeTaxKey(component.key),
+  }));
+  const normalizedView = normalized.map((component) => ({
+    key: component.normalizedKey,
+    amountPsw: component.amountPsw,
+  }));
+
+  const vat = sumComponentByKey(normalizedView, 'vat');
+  const getfund =
+    sumComponentByKey(normalizedView, 'getfund') +
+    sumComponentByKey(normalizedView, 'getfl') +
+    sumComponentByKey(normalizedView, 'getfundlevy');
+  const nhil =
+    sumComponentByKey(normalizedView, 'nhil') + sumComponentByKey(normalizedView, 'nhillevy');
+  const covid =
+    sumComponentByKey(normalizedView, 'covid') +
+    sumComponentByKey(normalizedView, 'covid19levy') +
+    sumComponentByKey(normalizedView, 'covidlevy');
+
+  return {
+    principal: breakdown.principal,
+    net: breakdown.net,
+    vat,
+    getfund,
+    nhil,
+    covid,
+    totalTax: breakdown.totalTax,
+    profileId: activeProfile.profileId,
+    profileName: activeProfile.profileName,
+  };
+}
+
 async function createPaymentCore(input: PaymentCreateInput, executor: DbExecutor) {
   if (!input.amountCedis && input.amountCedis !== 0) throw BadRequest('Amount is required');
   if (!input.companyId || !input.branchId || !input.cashierUserId) {
@@ -288,7 +359,12 @@ async function createPaymentCore(input: PaymentCreateInput, executor: DbExecutor
 
   const tax =
     input.component === PaymentComponent.PRINCIPAL
-      ? computeGhanaTaxesFromPesewas(grossPsw)
+      ? await computeProfileTaxBreakdown({
+          companyId: input.companyId,
+          principalPsw: grossPsw,
+          executor,
+          at: receivedAt,
+        })
       : {
           principal: grossPsw,
           net: grossPsw,

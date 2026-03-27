@@ -384,11 +384,20 @@ export function ParcelReceiverCashierPage() {
       branchOptions.find((branch) => branch.id === selectedParcel.destinationId)?.name ??
       selectedParcel.destinationId;
     const destinationLocationName = pickupLocation?.name ?? selectedParcel.pickupLocationId ?? '-';
+    const linkedSecondReceiverName =
+      (selectedParcel as { secondReceiverName?: string | null }).secondReceiverName ?? null;
+    const receivedByName =
+      handoverTarget === 'second'
+        ? secondNewName.trim() || linkedSecondReceiverName || 'Second Receiver'
+        : (selectedParcel.receiverName ?? '-');
 
     setLastPrintedReceipt({
       bookingCode: selectedParcel.bookingCode,
       trackingCode: selectedParcel.trackingCode,
       parcelDetails: selectedParcel.parcelDetails,
+      parcelContent: selectedParcel.parcelContent,
+      parcelValueCedis: Number(selectedParcel.parcelValuePsw ?? 0) / 100,
+      receivedByName,
       senderName: selectedParcel.senderName ?? '-',
       senderTelephone: selectedParcel.senderPhone ?? '-',
       receiverName: selectedParcel.receiverName ?? '-',
@@ -791,6 +800,7 @@ export function ParcelReceiverCashierPage() {
           <ParcelReceiptActions
             data={lastPrintedReceipt}
             autoPrint
+            mode="receiver-payment"
             onAutoPrintComplete={() => setLastPrintedReceipt(null)}
           />
         ) : null}

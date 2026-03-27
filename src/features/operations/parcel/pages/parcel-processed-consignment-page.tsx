@@ -27,6 +27,8 @@ import {
   useCreateConsignmentMutation,
   useListProcessedParcelsForConsignmentQuery,
 } from '../api/parcel.api';
+import { ParcelReceiptActions, type ReceiptPrintData } from '../components/parcel-receipt-actions';
+import { printConsignmentSlip } from '../utils/consignment-print';
 
 const EMPTY_META: PaginationMeta = {
   totalRecords: 0,
@@ -50,6 +52,38 @@ function getTodayDateOnlyLocal() {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function toReceiptPrintData(
+  parcel: ProcessedParcel,
+  destinationBranchName: string,
+): ReceiptPrintData {
+  const totalChargeCedis = Number(parcel.chargePsw ?? 0) / 100;
+  const receiverToPayCedis = Number(parcel.plannedToBePaidPsw ?? 0) / 100;
+  const senderPaidCedis = Math.max(totalChargeCedis - receiverToPayCedis, 0);
+  const amountPaidCedis = senderPaidCedis > 0 ? senderPaidCedis : receiverToPayCedis;
+
+  return {
+    bookingCode: parcel.bookingCode ?? '-',
+    trackingCode: parcel.trackingCode ?? '-',
+    parcelDetails: parcel.parcelDetails ?? '-',
+    parcelContent: parcel.parcelContent ?? null,
+    parcelValueCedis:
+      parcel.parcelValuePsw === null || parcel.parcelValuePsw === undefined
+        ? null
+        : Number(parcel.parcelValuePsw) / 100,
+    senderName: parcel.senderName ?? '-',
+    senderTelephone: parcel.senderPhone ?? '-',
+    receiverName: parcel.receiverName ?? '-',
+    receiverTelephone: parcel.receiverPhone ?? '-',
+    destinationBranchName,
+    destinationLocationName: parcel.pickupLocationName ?? '-',
+    totalChargeCedis,
+    senderPaidCedis,
+    receiverToPayCedis,
+    amountPaidCedis,
+    issuedAt: parcel.createdAt ?? new Date().toISOString(),
+  };
 }
 
 export function ParcelProcessedConsignmentPage() {
@@ -268,6 +302,25 @@ export function ParcelProcessedConsignmentPage() {
         header: 'Processed At',
         cell: ({ row }) => formatDate(row.original.createdAt),
       },
+      {
+        id: 'reprint',
+        header: 'Reprint',
+        cell: ({ row }) => {
+          const parcel = row.original;
+          const destinationName =
+            parcel.destinationName ?? branchNameById.get(parcel.destinationId) ?? '-';
+          const printData = toReceiptPrintData(parcel, destinationName);
+
+          return (
+            <ParcelReceiptActions
+              data={printData}
+              triggerLabel="Reprint"
+              mode="reprint"
+              showSelectionMenu
+            />
+          );
+        },
+      },
     ],
     [
       allEligibleSelected,
@@ -287,6 +340,7 @@ export function ParcelProcessedConsignmentPage() {
     }
 
     const parcelIds = Array.from(selectedIds);
+    const selectedParcels = rows.filter((row) => selectedIds.has(row.id));
     if (parcelIds.length === 0) {
       toast.error('Select at least one processed parcel');
       return;
@@ -323,6 +377,18 @@ export function ParcelProcessedConsignmentPage() {
         consignmentId: created.id,
         parcelIds,
       }).unwrap();
+
+      const sourceBranchName = (appliedSourceId && branchNameById.get(appliedSourceId)) ?? '-';
+      const destinationBranchName = branchNameById.get(lockedDestinationId) ?? '-';
+      const createdByLabel = user?.id ?? 'SYSTEM';
+      printConsignmentSlip({
+        consignmentCode: created.code,
+        consignmentDate: `${getTodayDateOnlyLocal()}T00:00:00.000Z`,
+        sourceBranchName,
+        destinationBranchName,
+        createdByLabel,
+        items: selectedParcels,
+      });
 
       toast.success(`Consignment ${created.code} created with ${added.added} parcel(s)`);
       setSelectedIds(new Set());

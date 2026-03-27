@@ -1,6 +1,8 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Link } from 'react-router-dom';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
 import { Button } from '@/components/ui/button';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import type { InventoryLocation } from '../types/inventory-location.types';
 
 export function createInventoryLocationColumns(
@@ -15,7 +17,10 @@ export function createInventoryLocationColumns(
       accessorFn: (row) => row.branch?.name ?? branchNameById?.get(row.branchId) ?? row.branchId,
       id: 'branchName',
       header: 'Branch',
-      cell: ({ row }) => row.original.branch?.name ?? branchNameById?.get(row.original.branchId) ?? row.original.branchId,
+      cell: ({ row }) =>
+        row.original.branch?.name ??
+        branchNameById?.get(row.original.branchId) ??
+        row.original.branchId,
     },
     {
       accessorKey: 'description',
@@ -28,9 +33,11 @@ export function createInventoryLocationColumns(
       size: 100,
       enableSorting: false,
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/inventory/locations/edit/${row.original.id}`}>Edit</Link>
-        </Button>
+        <PermissionGuard permissionKey={PermissionKeys.CanUpdateInventoryLocation}>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/inventory/locations/edit/${row.original.id}`}>Edit</Link>
+          </Button>
+        </PermissionGuard>
       ),
     },
   ];
