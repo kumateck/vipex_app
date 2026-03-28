@@ -235,7 +235,7 @@ export function ParcelCard({
                 control={control}
                 name={destinationBranchName}
                 rules={{ required: 'Destination branch is required' }}
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel>Destination Branch</FormLabel>
                     <Select value={String(field.value ?? '')} onValueChange={field.onChange}>
@@ -261,7 +261,7 @@ export function ParcelCard({
                 control={control}
                 name={destinationLocationName}
                 rules={{ required: 'Pickup location is required' }}
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel>Pickup Location</FormLabel>
                     <Select
@@ -325,7 +325,7 @@ export function ParcelCard({
                   validate: (value) =>
                     String(value ?? '').trim().length ? true : 'Parcel details are required',
                 }}
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel>Parcel Details</FormLabel>
                     <FormControl>
@@ -367,6 +367,7 @@ export function ParcelCard({
                         placeholder="Select or create packaging style"
                         searchPlaceholder="Search packaging style..."
                         emptyMessage="No packaging style found."
+                        allowCreate={parcelPackagingModuleEnabled}
                       />
                     </FormControl>
                     <FormDescription>
