@@ -1,5 +1,11 @@
 import { Elysia, t } from 'elysia';
-import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
+import {
+  authPlugin,
+  type AuthUser,
+  requireAnyPermissions,
+  requireAuth,
+  requirePermissions,
+} from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { HttpStatus } from '../../utils/http-status';
 import { UUID } from '../../schemas/common';
@@ -220,6 +226,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         notes: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
         branchId: t.Optional(t.Union([UUID, t.Null()])),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
       detail: { tags: ['Shipments'], summary: 'Log parcel discrepancy for incoming transit' },
     },
   )
@@ -237,6 +244,13 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         receivedAt: t.Optional(t.String({ format: 'date-time' })),
         status: t.Optional(t.Number()),
       }),
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanReadParcelIncoming,
+          PermissionKeys.CanReadParcelScan,
+        ),
+      ],
       detail: { tags: ['Shipments'], summary: 'Mark parcel received' },
     },
   )

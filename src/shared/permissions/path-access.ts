@@ -5,6 +5,9 @@ export function inferReadPermissionByPath(pathname?: string): PermissionKey | un
   const exactRoutePermission = RoutePermissionOverrides[pathname];
   if (exactRoutePermission) return exactRoutePermission;
 
+  if (pathname.startsWith('/parcels/in-transit/outgoing')) return 'CanReadParcelOutgoing';
+  if (pathname.startsWith('/parcels/in-transit/incoming')) return 'CanReadParcelIncoming';
+  if (pathname.startsWith('/parcels/receive')) return 'CanReadParcelScan';
   if (pathname === '/parcels' || pathname.startsWith('/parcels/')) return 'CanReadParcels';
   if (pathname === '/customers' || pathname.startsWith('/customers/')) return 'CanReadCustomers';
   if (pathname === '/accounting' || pathname.startsWith('/accounting/')) return 'CanReadAccounting';
@@ -92,7 +95,8 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
     pathname.startsWith('/parcels/sender-payments') ||
     pathname.startsWith('/parcels/receiver-cashier')
   ) {
-    return 'CanCreatePayments';
+    if (pathname.startsWith('/parcels/sender-payments')) return 'CanCreateSenderPayments';
+    return 'CanCreateReceiverPayments';
   }
   if (pathname.startsWith('/parcels/internal-transfers/acknowledge')) {
     return 'CanAcknowledgeParcelInternalTransfers';

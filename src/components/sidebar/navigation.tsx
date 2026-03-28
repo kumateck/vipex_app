@@ -125,6 +125,7 @@ const BASE_ROUTES: Route[] = [
       {
         title: 'Sending',
         icon: 'PackagePlus',
+        permissionKey: PermissionKeys.CanReadParcelSendingModule,
         items: [
           {
             title: 'Create Parcel',
@@ -134,7 +135,7 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Sender Payments',
             url: '/parcels/sender-payments',
-            permissionKey: PermissionKeys.CanCreatePayments,
+            permissionKey: PermissionKeys.CanCreateSenderPayments,
           },
           {
             title: 'Processed Consignments',
@@ -144,23 +145,24 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'In Transit (Outgoing)',
             url: '/parcels/in-transit/outgoing',
-            permissionKey: PermissionKeys.CanReadParcels,
+            permissionKey: PermissionKeys.CanReadParcelOutgoing,
           },
         ],
       },
       {
         title: 'Receiving',
         icon: 'PackageCheck',
+        permissionKey: PermissionKeys.CanReadParcelReceivingModule,
         items: [
           {
             title: 'In Transit (Incoming)',
             url: '/parcels/in-transit/incoming',
-            permissionKey: PermissionKeys.CanReadParcels,
+            permissionKey: PermissionKeys.CanReadParcelIncoming,
           },
           {
             title: 'Scan to Receive',
             url: '/parcels/receive',
-            permissionKey: PermissionKeys.CanReadParcels,
+            permissionKey: PermissionKeys.CanReadParcelScan,
           },
           {
             title: 'Internal Transfers',
@@ -195,7 +197,7 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Receiver Cashier',
             url: '/parcels/receiver-cashier',
-            permissionKey: PermissionKeys.CanCreatePayments,
+            permissionKey: PermissionKeys.CanCreateReceiverPayments,
           },
         ],
       },

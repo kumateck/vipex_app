@@ -55,8 +55,17 @@ function filterSidebarTreeByPermissions(
     .filter((item): item is SidebarNode => item !== null);
   const isDirectlyVisible = canRenderSidebarNode(node, allowedPermissions);
   const hasVisibleDescendant = filteredChildren.length > 0 || filteredItems.length > 0;
+  const isContainerNode = Boolean(
+    (node.children?.length ?? 0) > 0 || (node.items?.length ?? 0) > 0,
+  );
+
+  // For container group nodes with explicit permission key (e.g. Sending/Receiving),
+  // require that permission regardless of descendant permissions.
+  if (isContainerNode && !node.url && node.permissionKey && !isDirectlyVisible) return null;
 
   if (!isDirectlyVisible && !hasVisibleDescendant) return null;
+  if (isContainerNode && !hasVisibleDescendant) return null;
+  if (!node.url && !hasVisibleDescendant) return null;
   return {
     ...node,
     ...(node.children ? { children: filteredChildren } : {}),

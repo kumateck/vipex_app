@@ -6,13 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches';
 import { useListRoleOptionsQuery } from '@/features/rbac';
 import { useListLocationOptionsQuery } from '@/features/locations';
-import { BRANCH_TYPE_LABELS, USER_TYPE_LABELS, USER_TYPES } from '@/shared/access/constants';
+import { USER_TYPE_LABELS, USER_TYPES } from '@/shared/access/constants';
 import { BranchType, UserType } from '@/db/schemas/enums';
 import { userFormSchema, type UserFormValues } from '../schemas/user-form.schema';
 import type { User } from '../types/user.types';
@@ -38,6 +44,7 @@ export function UserForm({
   const navigate = useNavigate();
   const authUser = useAuthStore((state) => state.user);
   const companyId = authUser?.company?.id ?? null;
+  const effectiveCompanyId = companyId ?? initialData?.companyId ?? null;
   const actorBranchId = authUser?.branch?.id ?? null;
   const actorBranchType = authUser?.branch?.type ?? null;
   const actorLocationId = authUser?.locationId ?? null;
@@ -46,12 +53,12 @@ export function UserForm({
   const isBranchManagerActor = !isHeadOfficeActor && !actorLocationId;
 
   const { data: branchesData, isLoading: isLoadingBranches } = useListBranchOptionsQuery(
-    { companyId },
-    { skip: !companyId },
+    { companyId: effectiveCompanyId },
+    { skip: !effectiveCompanyId },
   );
   const { data: rolesData, isLoading: isLoadingRoles } = useListRoleOptionsQuery(
-    { companyId },
-    { skip: !companyId },
+    { companyId: effectiveCompanyId },
+    { skip: !effectiveCompanyId },
   );
 
   const {
@@ -86,10 +93,10 @@ export function UserForm({
     isFetching: isFetchingLocations,
   } = useListLocationOptionsQuery(
     {
-      companyId,
+      companyId: effectiveCompanyId,
       branchId: effectiveBranchId || null,
     },
-    { skip: !companyId || !effectiveBranchId },
+    { skip: !effectiveCompanyId || !effectiveBranchId },
   );
 
   const branchOptions = (branchesData ?? []).filter((branch) => {
@@ -145,7 +152,9 @@ export function UserForm({
     if (isHydratingEditLocation) {
       return;
     }
-    const hasCurrentLocation = locationOptions.some((location) => location.id === selectedLocationId);
+    const hasCurrentLocation = locationOptions.some(
+      (location) => location.id === selectedLocationId,
+    );
     if (!hasCurrentLocation) {
       setValue('locationId', '', { shouldValidate: false });
     }
@@ -172,11 +181,22 @@ export function UserForm({
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="fullname">Full name</FieldLabel>
-                <Input id="fullname" placeholder="Full name" aria-invalid={!!errors.fullname} {...register('fullname')} />
+                <Input
+                  id="fullname"
+                  placeholder="Full name"
+                  aria-invalid={!!errors.fullname}
+                  {...register('fullname')}
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input id="email" type="email" placeholder="Email" aria-invalid={!!errors.email} {...register('email')} />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Email"
+                  aria-invalid={!!errors.email}
+                  {...register('email')}
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="telephone">Telephone</FieldLabel>
@@ -193,7 +213,10 @@ export function UserForm({
                   control={control}
                   name="status"
                   render={({ field }) => (
-                    <Select value={String(field.value)} onValueChange={(value) => field.onChange(Number(value))}>
+                    <Select
+                      value={String(field.value)}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                    >
                       <SelectTrigger id="status" aria-invalid={!!errors.status}>
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
@@ -215,8 +238,14 @@ export function UserForm({
                   name="roleId"
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="roleId" aria-invalid={!!errors.roleId} disabled={isLoadingRoles}>
-                        <SelectValue placeholder={isLoadingRoles ? 'Loading roles...' : 'Select role'} />
+                      <SelectTrigger
+                        id="roleId"
+                        aria-invalid={!!errors.roleId}
+                        disabled={isLoadingRoles}
+                      >
+                        <SelectValue
+                          placeholder={isLoadingRoles ? 'Loading roles...' : 'Select role'}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {(rolesData ?? []).map((role) => (
@@ -239,17 +268,18 @@ export function UserForm({
                       <SelectTrigger
                         id="branchId"
                         aria-invalid={!!errors.branchId}
-                        disabled={isLoadingBranches || isBranchManagerActor || isLocationManagerActor}
+                        disabled={
+                          isLoadingBranches || isBranchManagerActor || isLocationManagerActor
+                        }
                       >
-                        <SelectValue placeholder={isLoadingBranches ? 'Loading branches...' : 'Select branch'} />
+                        <SelectValue
+                          placeholder={isLoadingBranches ? 'Loading branches...' : 'Select branch'}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {branchOptions.map((branch) => (
                           <SelectItem key={branch.id} value={branch.id}>
                             {branch.name}
-                            {branch.type !== null && branch.type !== undefined
-                              ? ` (${BRANCH_TYPE_LABELS[branch.type] ?? branch.type})`
-                              : ''}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -272,7 +302,9 @@ export function UserForm({
                         aria-invalid={!!errors.locationId}
                         disabled={!effectiveBranchId || isLocationManagerActor}
                       >
-                        <SelectValue placeholder={!effectiveBranchId ? 'Select branch first' : 'Any location'} />
+                        <SelectValue
+                          placeholder={!effectiveBranchId ? 'Select branch first' : 'Any location'}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {isLocationManagerActor ? null : (
@@ -316,7 +348,9 @@ export function UserForm({
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? <Spinner /> : null}
-                  {isSubmitting ? `${mode === 'create' ? 'Creating...' : 'Saving...'}` : submitButtonText}
+                  {isSubmitting
+                    ? `${mode === 'create' ? 'Creating...' : 'Saving...'}`
+                    : submitButtonText}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => navigate('/users')}>
                   Cancel

@@ -41,6 +41,11 @@ const catalog = [
   ['CanDeleteShipments', 'Delete shipments', 'Shipments'],
   ['CanCreateBookingWithParcels', 'Create booking with parcels', 'Shipments'],
   ['CanReadParcels', 'List and view parcels', 'Shipments'],
+  ['CanReadParcelSendingModule', 'View parcel sending module', 'Shipments'],
+  ['CanReadParcelReceivingModule', 'View parcel receiving module', 'Shipments'],
+  ['CanReadParcelOutgoing', 'View in-transit outgoing parcels', 'Shipments'],
+  ['CanReadParcelIncoming', 'View in-transit incoming parcels', 'Shipments'],
+  ['CanReadParcelScan', 'View and use parcel scan-to-receive', 'Shipments'],
   ['CanCreateParcels', 'Create parcels', 'Shipments'],
   ['CanUpdateParcels', 'Update parcels', 'Shipments'],
   ['CanDeleteParcels', 'Delete parcels', 'Shipments'],
@@ -90,6 +95,8 @@ const catalog = [
 
   // Payments / Accounting
   ['CanCreatePayments', 'Create payments', 'Payments'],
+  ['CanCreateSenderPayments', 'Collect sender payments', 'Payments'],
+  ['CanCreateReceiverPayments', 'Collect receiver payments', 'Payments'],
   ['CanReadPayments', 'List and view payments', 'Payments'],
   ['CanReadAccounting', 'View accounting pages, lists, and reports', 'Accounting'],
   ['CanReadAccountingSetup', 'View accounting setup masters', 'Accounting'],
@@ -357,13 +364,16 @@ export function isSidebarReadablePermission(permissionKey: string): boolean {
 export const PermissionKeySet = new Set<string>(PermissionCatalog.map((p) => p.key));
 
 export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> = Object.freeze({
-  '/parcels/sender-payments': PermissionKeys.CanCreatePayments,
+  '/parcels/sender-payments': PermissionKeys.CanCreateSenderPayments,
   '/parcels/processed': PermissionKeys.CanReadConsignments,
   '/parcels/pickup-queue': PermissionKeys.CanCreatePickupQueue,
   '/parcels/pickup-queue/sender': PermissionKeys.CanReadSenderPickupQueue,
   '/parcels/waiting-pickup': PermissionKeys.CanCompleteOfficePickup,
   '/parcels/pickup-queue/receiver': PermissionKeys.CanReadReceiverPickupQueue,
-  '/parcels/receiver-cashier': PermissionKeys.CanCreatePayments,
+  '/parcels/receiver-cashier': PermissionKeys.CanCreateReceiverPayments,
+  '/parcels/in-transit/outgoing': PermissionKeys.CanReadParcelOutgoing,
+  '/parcels/in-transit/incoming': PermissionKeys.CanReadParcelIncoming,
+  '/parcels/receive': PermissionKeys.CanReadParcelScan,
   '/parcels/home-delivery/dispatch': PermissionKeys.CanDispatchForDelivery,
   '/parcels/delivery-cashier': PermissionKeys.CanCompleteDoorstepDelivery,
   '/parcels/status': PermissionKeys.CanReadCallCenterParcelStatus,
