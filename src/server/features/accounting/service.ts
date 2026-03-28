@@ -18,6 +18,7 @@ import {
   createDailyCashConfirmationRepo,
   createExpenseCategoryRepo,
   createExpenseRequestRepo,
+  createServiceChargeRepo,
   createTaxComponentRepo,
   createTaxProfileRepo,
   createTaxFilingAuditLogRepo,
@@ -40,6 +41,7 @@ import {
   getExpenseCategoryByAccountRepo,
   getExpenseCategoryUsageSummaryRepo,
   getExpenseRequestRepo,
+  getServiceChargeRepo,
   getPettyCashFundByBranchRepo,
   getTaxComponentRepo,
   getTaxFilingPeriodRepo,
@@ -53,12 +55,14 @@ import {
   listExpenseCategoriesByAccountRepo,
   listExpenseCategoriesRepo,
   listExpenseRequestsRepo,
+  listServiceChargesRepo,
   listJournalLinesForReportingRepo,
   listTaxComponentsRepo,
   listTaxFilingPeriodsRepo,
   listTaxJournalItemsRepo,
   listTaxProfilesRepo,
   updateApprovalPolicyRepo,
+  updateServiceChargeRepo,
   updateTaxFilingPeriodRepo,
   updateTaxJournalItemRepo,
   updateAccountRepo,
@@ -569,6 +573,154 @@ export async function listApprovalPoliciesSvc(input: {
   active?: boolean | null;
 }) {
   return listApprovalPoliciesRepo(input);
+}
+
+export async function listServiceChargesSvc(input: { companyId: string; active?: boolean | null }) {
+  return listServiceChargesRepo(input);
+}
+
+export async function createServiceChargeSvc(input: {
+  companyId: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  amountPsw: number;
+  taxable?: boolean;
+  active?: boolean;
+  sortOrder?: number;
+  payableAccountId?: string | null;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  createdBy?: string | null;
+}) {
+  const code = input.code.trim();
+  const name = input.name.trim();
+  if (!code || !name) throw BadRequest('Service charge code and name are required');
+  if (!Number.isFinite(input.amountPsw) || input.amountPsw < 0) {
+    throw BadRequest('Service charge amount must be a non-negative number');
+  }
+  if (input.payableAccountId) {
+    const account = await getAccountRepo(input.companyId, input.payableAccountId);
+    if (!account) throw NotFound('Linked payable account not found');
+  }
+
+  const created = await createServiceChargeRepo({
+    companyId: input.companyId,
+    code,
+    name,
+    description: input.description?.trim() || null,
+    amountPsw: Math.round(input.amountPsw),
+    taxable: input.taxable ?? false,
+    active: input.active ?? true,
+    sortOrder: input.sortOrder ?? 0,
+    payableAccountId: input.payableAccountId ?? null,
+    effectiveFrom: input.effectiveFrom ? new Date(input.effectiveFrom) : new Date(),
+    effectiveTo: input.effectiveTo ? new Date(input.effectiveTo) : null,
+    createdBy: input.createdBy ?? null,
+  });
+
+  if (!created) throw NotFound('Failed to create service charge');
+  const after = await getServiceChargeRepo(input.companyId, created.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.createdBy ?? null,
+    entityType: 'service_charge',
+    entityId: created.id,
+    action: 'SERVICE_CHARGE_CREATED',
+    message: 'Service charge created',
+    metadata: { after },
+  });
+  return { id: created.id };
+}
+
+export async function updateServiceChargeSvc(input: {
+  companyId: string;
+  id: string;
+  code?: string;
+  name?: string;
+  description?: string | null;
+  amountPsw?: number;
+  taxable?: boolean;
+  active?: boolean;
+  sortOrder?: number;
+  payableAccountId?: string | null;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  actorUserId?: string | null;
+}) {
+  const existing = await getServiceChargeRepo(input.companyId, input.id);
+  if (!existing) throw NotFound('Service charge not found');
+  if (input.code !== undefined && !input.code.trim()) {
+    throw BadRequest('Service charge code is required');
+  }
+  if (input.name !== undefined && !input.name.trim()) {
+    throw BadRequest('Service charge name is required');
+  }
+  if (
+    input.amountPsw !== undefined &&
+    (!Number.isFinite(input.amountPsw) || Number(input.amountPsw) < 0)
+  ) {
+    throw BadRequest('Service charge amount must be a non-negative number');
+  }
+
+  const nextPayableAccountId =
+    input.payableAccountId !== undefined ? input.payableAccountId : existing.payableAccountId;
+  if (nextPayableAccountId) {
+    const account = await getAccountRepo(input.companyId, nextPayableAccountId);
+    if (!account) throw NotFound('Linked payable account not found');
+  }
+
+  const updated = await updateServiceChargeRepo(input.id, {
+    code: input.code?.trim() || existing.code,
+    name: input.name?.trim() || existing.name,
+    description:
+      input.description !== undefined ? input.description?.trim() || null : existing.description,
+    amountPsw:
+      input.amountPsw !== undefined ? Math.round(input.amountPsw) : Number(existing.amountPsw),
+    taxable: input.taxable ?? existing.taxable,
+    active: input.active ?? existing.active,
+    sortOrder: input.sortOrder ?? existing.sortOrder,
+    payableAccountId: nextPayableAccountId ?? null,
+    effectiveFrom:
+      input.effectiveFrom !== undefined
+        ? input.effectiveFrom
+          ? new Date(input.effectiveFrom)
+          : existing.effectiveFrom
+        : existing.effectiveFrom,
+    effectiveTo:
+      input.effectiveTo !== undefined
+        ? input.effectiveTo
+          ? new Date(input.effectiveTo)
+          : null
+        : existing.effectiveTo,
+  });
+  if (!updated) throw NotFound('Service charge not found');
+  const after = await getServiceChargeRepo(input.companyId, input.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'service_charge',
+    entityId: input.id,
+    action: 'SERVICE_CHARGE_UPDATED',
+    message: 'Service charge updated',
+    metadata: {
+      before: existing,
+      patch: {
+        code: input.code,
+        name: input.name,
+        description: input.description,
+        amountPsw: input.amountPsw,
+        taxable: input.taxable,
+        active: input.active,
+        sortOrder: input.sortOrder,
+        payableAccountId: input.payableAccountId,
+        effectiveFrom: input.effectiveFrom,
+        effectiveTo: input.effectiveTo,
+      },
+      after,
+    },
+  });
+  return { id: updated.id };
 }
 
 export async function createApprovalPolicySvc(input: {

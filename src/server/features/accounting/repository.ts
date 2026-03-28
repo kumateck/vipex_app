@@ -14,6 +14,7 @@ import {
   journalEntries,
   journalLines,
   locations,
+  serviceCharges,
   pettyCashFunds,
   payments,
   employeeCompensation,
@@ -98,6 +99,35 @@ export async function listApprovalPoliciesRepo(input: {
     .from(accountingApprovalPolicies)
     .where(and(...where))
     .orderBy(asc(accountingApprovalPolicies.policyCode));
+}
+
+export async function listServiceChargesRepo(input: {
+  companyId: string;
+  active?: boolean | null;
+}) {
+  const where = [eq(serviceCharges.companyId, input.companyId)];
+  if (input.active != null) where.push(eq(serviceCharges.active, input.active));
+
+  return db
+    .select({
+      id: serviceCharges.id,
+      companyId: serviceCharges.companyId,
+      code: serviceCharges.code,
+      name: serviceCharges.name,
+      description: serviceCharges.description,
+      amountPsw: serviceCharges.amountPsw,
+      taxable: serviceCharges.taxable,
+      active: serviceCharges.active,
+      sortOrder: serviceCharges.sortOrder,
+      payableAccountId: serviceCharges.payableAccountId,
+      effectiveFrom: serviceCharges.effectiveFrom,
+      effectiveTo: serviceCharges.effectiveTo,
+      createdAt: serviceCharges.createdAt,
+      updatedAt: serviceCharges.updatedAt,
+    })
+    .from(serviceCharges)
+    .where(and(...where))
+    .orderBy(asc(serviceCharges.sortOrder), asc(serviceCharges.code), asc(serviceCharges.name));
 }
 
 export async function listCompanyBankAccountsRepo(input: {
@@ -213,6 +243,33 @@ export async function getActiveTaxProfileWithComponentsRepo(
     profileName: profile.name,
     components,
   };
+}
+
+export async function listActiveServiceChargesRepo(
+  input: { companyId: string; at?: Date },
+  executor: DbExecutor = db,
+) {
+  const at = input.at ?? new Date();
+  return executor
+    .select({
+      id: serviceCharges.id,
+      code: serviceCharges.code,
+      name: serviceCharges.name,
+      amountPsw: serviceCharges.amountPsw,
+      taxable: serviceCharges.taxable,
+      sortOrder: serviceCharges.sortOrder,
+      payableAccountId: serviceCharges.payableAccountId,
+    })
+    .from(serviceCharges)
+    .where(
+      and(
+        eq(serviceCharges.companyId, input.companyId),
+        eq(serviceCharges.active, true),
+        lte(serviceCharges.effectiveFrom, at),
+        or(isNull(serviceCharges.effectiveTo), gte(serviceCharges.effectiveTo, at)),
+      ),
+    )
+    .orderBy(asc(serviceCharges.sortOrder), asc(serviceCharges.code), asc(serviceCharges.name));
 }
 
 export async function getCompanyAccountingSettingsRepo(
@@ -365,6 +422,35 @@ export async function getApprovalPolicyRepo(
       ),
     )
     .limit(1);
+  return row ?? null;
+}
+
+export async function getServiceChargeRepo(
+  companyId: string,
+  serviceChargeId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      id: serviceCharges.id,
+      companyId: serviceCharges.companyId,
+      code: serviceCharges.code,
+      name: serviceCharges.name,
+      description: serviceCharges.description,
+      amountPsw: serviceCharges.amountPsw,
+      taxable: serviceCharges.taxable,
+      active: serviceCharges.active,
+      sortOrder: serviceCharges.sortOrder,
+      payableAccountId: serviceCharges.payableAccountId,
+      effectiveFrom: serviceCharges.effectiveFrom,
+      effectiveTo: serviceCharges.effectiveTo,
+      createdAt: serviceCharges.createdAt,
+      updatedAt: serviceCharges.updatedAt,
+    })
+    .from(serviceCharges)
+    .where(and(eq(serviceCharges.companyId, companyId), eq(serviceCharges.id, serviceChargeId)))
+    .limit(1);
+
   return row ?? null;
 }
 
@@ -591,6 +677,17 @@ export async function createApprovalPolicyRepo(
   return row ?? null;
 }
 
+export async function createServiceChargeRepo(
+  values: typeof serviceCharges.$inferInsert,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .insert(serviceCharges)
+    .values(values)
+    .returning({ id: serviceCharges.id });
+  return row ?? null;
+}
+
 export async function updateApprovalPolicyRepo(
   approvalPolicyId: string,
   patch: Partial<typeof accountingApprovalPolicies.$inferInsert>,
@@ -601,6 +698,19 @@ export async function updateApprovalPolicyRepo(
     .set({ ...patch, updatedAt: new Date() })
     .where(eq(accountingApprovalPolicies.id, approvalPolicyId))
     .returning({ id: accountingApprovalPolicies.id });
+  return row ?? null;
+}
+
+export async function updateServiceChargeRepo(
+  serviceChargeId: string,
+  patch: Partial<typeof serviceCharges.$inferInsert>,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .update(serviceCharges)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(eq(serviceCharges.id, serviceChargeId))
+    .returning({ id: serviceCharges.id });
   return row ?? null;
 }
 

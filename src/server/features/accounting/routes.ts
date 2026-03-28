@@ -19,6 +19,7 @@ import {
   createDailyCashConfirmationCtrl,
   createExpenseCategoryCtrl,
   createExpenseRequestCtrl,
+  createServiceChargeCtrl,
   createTaxComponentCtrl,
   createTaxProfileCtrl,
   createTaxFilingPeriodCtrl,
@@ -38,6 +39,7 @@ import {
   listDailyCashConfirmationsCtrl,
   listExpenseCategoriesCtrl,
   listExpenseRequestsCtrl,
+  listServiceChargesCtrl,
   listTaxComponentsCtrl,
   listTaxFilingPeriodsCtrl,
   listTaxJournalItemsCtrl,
@@ -55,6 +57,7 @@ import {
   updateApprovalPolicyCtrl,
   updateCompanyBankAccountCtrl,
   updateExpenseCategoryCtrl,
+  updateServiceChargeCtrl,
   updateTaxComponentCtrl,
   updateTaxProfileCtrl,
 } from './controller';
@@ -347,6 +350,103 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         active: t.Optional(t.Boolean()),
       }),
       detail: { tags: ['Accounting'], summary: 'Update accounting approval policy' },
+    },
+  )
+  .get(
+    '/service-charges',
+    async ({ query, user }) =>
+      listServiceChargesCtrl({
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        active: query.active,
+      }),
+    {
+      beforeHandle: canReadOrManageAccountingSetup,
+      query: t.Object({ companyId: t.String(), active: t.Optional(t.Boolean()) }),
+      detail: { tags: ['Accounting'], summary: 'List service charges for a company' },
+    },
+  )
+  .post(
+    '/service-charges',
+    async ({ body, user }) =>
+      createServiceChargeCtrl({
+        ...(body as {
+          companyId: string;
+          code: string;
+          name: string;
+          description?: string | null;
+          amountPsw: number;
+          taxable?: boolean;
+          active?: boolean;
+          sortOrder?: number;
+          payableAccountId?: string | null;
+          effectiveFrom?: string | null;
+          effectiveTo?: string | null;
+        }),
+        companyId: resolveCompanyId(
+          user as AuthUser | null,
+          (body as { companyId: string }).companyId,
+        ),
+        createdBy: (user as AuthUser).sub,
+      }),
+    {
+      beforeHandle: canManageAccountingSetup,
+      body: t.Object({
+        companyId: t.String(),
+        code: t.String(),
+        name: t.String(),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+        amountPsw: t.Number(),
+        taxable: t.Optional(t.Boolean()),
+        active: t.Optional(t.Boolean()),
+        sortOrder: t.Optional(t.Number()),
+        payableAccountId: t.Optional(t.Union([t.String(), t.Null()])),
+        effectiveFrom: t.Optional(t.Union([t.String(), t.Null()])),
+        effectiveTo: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+      detail: { tags: ['Accounting'], summary: 'Create service charge' },
+    },
+  )
+  .patch(
+    '/service-charges/:id',
+    async ({ params, body, user }) =>
+      updateServiceChargeCtrl({
+        ...(body as {
+          companyId: string;
+          code?: string;
+          name?: string;
+          description?: string | null;
+          amountPsw?: number;
+          taxable?: boolean;
+          active?: boolean;
+          sortOrder?: number;
+          payableAccountId?: string | null;
+          effectiveFrom?: string | null;
+          effectiveTo?: string | null;
+        }),
+        id: params.id,
+        companyId: resolveCompanyId(
+          user as AuthUser | null,
+          (body as { companyId: string }).companyId,
+        ),
+        actorUserId: (user as AuthUser).sub,
+      }),
+    {
+      beforeHandle: canManageAccountingSetup,
+      params: t.Object({ id: t.String() }),
+      body: t.Object({
+        companyId: t.String(),
+        code: t.Optional(t.String()),
+        name: t.Optional(t.String()),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+        amountPsw: t.Optional(t.Number()),
+        taxable: t.Optional(t.Boolean()),
+        active: t.Optional(t.Boolean()),
+        sortOrder: t.Optional(t.Number()),
+        payableAccountId: t.Optional(t.Union([t.String(), t.Null()])),
+        effectiveFrom: t.Optional(t.Union([t.String(), t.Null()])),
+        effectiveTo: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+      detail: { tags: ['Accounting'], summary: 'Update service charge' },
     },
   )
   .get(

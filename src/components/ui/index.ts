@@ -20,6 +20,8 @@ export * from './date-range-picker';
 // export * from "./calendar"
 export * from './checkbox';
 export * from './collapsible';
+export * from './command';
+export * from './creatable-combobox';
 export * from './scroll-area';
 export * from './separator';
 // export * from "./switch"

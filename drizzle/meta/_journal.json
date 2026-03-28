@@ -134,6 +134,27 @@
       "when": 1775074800000,
       "tag": "0018_employee_profile_customer_card_images",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1775161200000,
+      "tag": "0019_account_labels",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1775247600000,
+      "tag": "0020_service_charges_module",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1775334000000,
+      "tag": "0021_parcel_masters",
+      "breakpoints": true
     }
   ]
 }

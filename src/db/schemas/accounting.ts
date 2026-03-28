@@ -14,6 +14,8 @@ import {
 import { sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { companies, branches, locations, users } from './core';
+import { parcels } from './shipments';
+import { payments } from './payments';
 import {
   AccountClass,
   CashConfirmationStatus,
@@ -154,6 +156,85 @@ export const expenseCategories = pgTable(
       t.companyId,
       sql`lower(${t.name})`,
     ),
+  }),
+);
+
+export const serviceCharges = pgTable(
+  'service_charges',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    code: varchar('code', { length: 60 }).notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    amountPsw: bigint('amount_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    taxable: boolean('taxable').notNull().default(false),
+    active: boolean('active').notNull().default(true),
+    sortOrder: integer('sort_order').notNull().default(0),
+    payableAccountId: varchar('payable_account_id', { length: 25 }).references(
+      () => chartOfAccounts.id,
+    ),
+    effectiveFrom: timestamp('effective_from', { withTimezone: false }).notNull().defaultNow(),
+    effectiveTo: timestamp('effective_to', { withTimezone: false }),
+    createdBy: varchar('created_by', { length: 25 }).references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompany: index('service_charges_company_idx').on(t.companyId),
+    byActive: index('service_charges_active_idx').on(t.companyId, t.active),
+    byEffective: index('service_charges_effective_idx').on(
+      t.companyId,
+      t.effectiveFrom,
+      t.effectiveTo,
+    ),
+    uqCompanyLowerCode: uniqueIndex('service_charges_company_lower_code_uq').on(
+      t.companyId,
+      sql`lower(${t.code})`,
+    ),
+  }),
+);
+
+export const paymentServiceCharges = pgTable(
+  'payment_service_charges',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    paymentId: varchar('payment_id', { length: 25 })
+      .notNull()
+      .references(() => payments.id),
+    parcelId: varchar('parcel_id', { length: 25 })
+      .notNull()
+      .references(() => parcels.id),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    serviceChargeId: varchar('service_charge_id', { length: 25 })
+      .notNull()
+      .references(() => serviceCharges.id),
+    code: varchar('code', { length: 60 }).notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    amountPsw: bigint('amount_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    taxable: boolean('taxable').notNull().default(false),
+    settledPsw: bigint('settled_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompany: index('payment_service_charges_company_idx').on(t.companyId),
+    byPayment: index('payment_service_charges_payment_idx').on(t.paymentId),
+    byParcel: index('payment_service_charges_parcel_idx').on(t.parcelId),
+    byCharge: index('payment_service_charges_charge_idx').on(t.serviceChargeId),
   }),
 );
 

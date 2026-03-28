@@ -8,6 +8,7 @@ import {
   createDailyCashConfirmationSvc,
   createExpenseCategorySvc,
   createExpenseRequestSvc,
+  createServiceChargeSvc,
   createTaxComponentSvc,
   createTaxProfileSvc,
   createTaxFilingPeriodSvc,
@@ -26,6 +27,7 @@ import {
   listDailyCashConfirmationsSvc,
   listExpenseCategoriesSvc,
   listExpenseRequestsSvc,
+  listServiceChargesSvc,
   listTaxComponentsSvc,
   listTaxFilingPeriodsSvc,
   listTaxJournalItemsSvc,
@@ -45,6 +47,7 @@ import {
   updateExpenseCategorySvc,
   updateTaxComponentSvc,
   updateTaxProfileSvc,
+  updateServiceChargeSvc,
 } from './service';
 
 function toIsoRows<T extends { createdAt?: Date; updatedAt?: Date }>(rows: T[]) {
@@ -82,6 +85,16 @@ export async function listApprovalPoliciesCtrl(input: {
 
 export const createApprovalPolicyCtrl = createApprovalPolicySvc;
 export const updateApprovalPolicyCtrl = updateApprovalPolicySvc;
+
+export async function listServiceChargesCtrl(input: {
+  companyId: string;
+  active?: boolean | null;
+}) {
+  return toIsoRows(await listServiceChargesSvc(input));
+}
+
+export const createServiceChargeCtrl = createServiceChargeSvc;
+export const updateServiceChargeCtrl = updateServiceChargeSvc;
 
 export async function listCompanyBankAccountsCtrl(input: {
   companyId: string;

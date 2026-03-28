@@ -16,6 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useGetCurrentActiveSessionQuery } from '@/features/cashiers/api/cashiers.api';
 import { useCreateCustomerMutation } from '@/features/customers/api';
+import { useListCompanyModulesQuery } from '@/features/company-modules/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { BranchType, PaymentMethod } from '@/db/schemas/enums';
 import { useCreateBookingWithParcelsMutation } from '../api/parcel.api';
@@ -34,8 +35,11 @@ import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 const createEmptyParcel = (): ParcelFormValues => ({
   destinationBranchId: '',
   destinationLocationId: '',
+  parcelDetailOptionId: '',
+  parcelContentOptionId: '',
   parcelDetails: '',
   parcelContent: '',
+  extraWeightCharge: '',
   parcelValue: '',
   charge: '',
   paymentResponsibility: 'SENDER',
@@ -90,12 +94,19 @@ export function ParcelCreateForm() {
   const [latestReceipt, setLatestReceipt] = useState<ReceiptSummary | null>(null);
 
   const { data: activeSession } = useGetCurrentActiveSessionQuery();
+  const { data: companyModules = [] } = useListCompanyModulesQuery();
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
     { companyId },
     { skip: !companyId },
   );
   const destinationBranchOptions = branchOptions.filter(
     (branch) => branch.id !== userBranchId && branch.type !== BranchType.HEADOFFICE,
+  );
+  const parcelContentModuleEnabled = companyModules.some(
+    (module) => module.code === 'parcel_content_pricing' && module.isEnabled,
+  );
+  const parcelPackagingModuleEnabled = companyModules.some(
+    (module) => module.code === 'parcel_packaging_styles' && module.isEnabled,
   );
 
   const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
@@ -379,6 +390,8 @@ export function ParcelCreateForm() {
                         onRemove={() => remove(index)}
                         companyId={companyId}
                         branchOptions={destinationBranchOptions}
+                        parcelContentModuleEnabled={parcelContentModuleEnabled}
+                        parcelPackagingModuleEnabled={parcelPackagingModuleEnabled}
                       />
                     ))}
                   </div>
