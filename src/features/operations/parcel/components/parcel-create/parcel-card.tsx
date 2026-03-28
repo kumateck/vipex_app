@@ -235,7 +235,7 @@ export function ParcelCard({
                 control={control}
                 name={destinationBranchName}
                 rules={{ required: 'Destination branch is required' }}
-                render={() => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>Destination Branch</FormLabel>
                     <Select value={String(field.value ?? '')} onValueChange={field.onChange}>
@@ -261,7 +261,7 @@ export function ParcelCard({
                 control={control}
                 name={destinationLocationName}
                 rules={{ required: 'Pickup location is required' }}
-                render={() => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>Pickup Location</FormLabel>
                     <Select
