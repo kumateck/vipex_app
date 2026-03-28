@@ -105,6 +105,9 @@ export const parcels = pgTable(
 
     taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
+    deletedBy: varchar('deleted_by', { length: 25 }).references(() => users.id),
+    deletedAt: timestamp('deleted_at', { withTimezone: false }),
+    deleteReason: varchar('delete_reason', { length: 1000 }),
 
     createdBy: varchar('created_by', { length: 25 }),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),

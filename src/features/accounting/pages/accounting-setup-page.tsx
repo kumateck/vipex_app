@@ -289,14 +289,21 @@ function AccountingSetupHistoryCard({
 
 export function AccountingSetupPage() {
   const user = useAuthStore((state) => state.user);
+  const permissions = new Set(user?.permissions ?? []);
+  const canAccessSetup =
+    permissions.has(PermissionKeys.CanReadAccountingSetup) ||
+    permissions.has(PermissionKeys.CanCreateAccountingSetup) ||
+    permissions.has(PermissionKeys.CanUpdateAccountingSetup) ||
+    permissions.has(PermissionKeys.CanDeleteAccountingSetup);
+
   if (!user?.company?.useAccounting) {
     return <AccountingDisabledState />;
   }
-  if (!user.permissions?.includes(PermissionKeys.CanManageAccountingSetup)) {
+  if (!canAccessSetup) {
     return (
       <AccountingUnauthorizedState
         title="Accounting Setup Restricted"
-        description="Your role does not include permission to manage accounting setup masters."
+        description="Your role does not include permission to view or manage accounting setup masters."
       />
     );
   }
@@ -306,6 +313,10 @@ export function AccountingSetupPage() {
 
 function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   const companyId = user.company?.id ?? '';
+  const permissions = new Set(user.permissions ?? []);
+  const canCreateSetup = permissions.has(PermissionKeys.CanCreateAccountingSetup);
+  const canUpdateSetup = permissions.has(PermissionKeys.CanUpdateAccountingSetup);
+  const canDeleteSetup = permissions.has(PermissionKeys.CanDeleteAccountingSetup);
   const [activeTab, setActiveTab] = useState('accounts');
   const isAccountsTab = activeTab === 'accounts';
   const isCategoriesTab = activeTab === 'categories';
@@ -454,6 +465,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   function handleEditAccount(account: AccountRow) {
+    if (!canUpdateSetup) {
+      toast.error('You do not have permission to edit accounts');
+      return;
+    }
     setActiveTab('accounts');
     setEditingAccountId(account.id);
     setRemoveLinkedCategoryOnDelete(false);
@@ -471,6 +486,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   function handleEditExpenseCategory(category: ExpenseCategoryRow) {
+    if (!canUpdateSetup) {
+      toast.error('You do not have permission to edit expense categories');
+      return;
+    }
     setActiveTab('categories');
     setEditingExpenseCategoryId(category.id);
     setExpenseCategoryForm({
@@ -483,6 +502,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   function handleEditApprovalPolicy(policy: ApprovalPolicyRow) {
+    if (!canUpdateSetup) {
+      toast.error('You do not have permission to edit approval policies');
+      return;
+    }
     setActiveTab('policies');
     setEditingApprovalPolicyId(policy.id);
     setApprovalPolicyForm({
@@ -500,6 +523,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   function handleEditBankAccount(account: CompanyBankAccountRow) {
+    if (!canUpdateSetup) {
+      toast.error('You do not have permission to edit company bank accounts');
+      return;
+    }
     setActiveTab('bank-accounts');
     setEditingBankAccountId(account.id);
     setBankAccountForm({
@@ -514,6 +541,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   function handleEditTaxProfile(profile: TaxProfileRow) {
+    if (!canUpdateSetup) {
+      toast.error('You do not have permission to edit tax profiles');
+      return;
+    }
     setActiveTab('tax-profiles');
     setSelectedTaxProfileId(profile.id);
     setEditingTaxProfileId(profile.id);
@@ -525,6 +556,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   function handleEditTaxComponent(component: TaxComponentRow) {
+    if (!canUpdateSetup) {
+      toast.error('You do not have permission to edit tax components');
+      return;
+    }
     setActiveTab('tax-components');
     setSelectedTaxProfileId(component.profileId);
     setEditingTaxComponentId(component.id);
@@ -543,6 +578,14 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   async function handleSaveAccount() {
+    if (editingAccountId ? !canUpdateSetup : !canCreateSetup) {
+      toast.error(
+        editingAccountId
+          ? 'You do not have permission to update accounts'
+          : 'You do not have permission to create accounts',
+      );
+      return;
+    }
     if (!companyId) {
       toast.error('Authenticated company is required');
       return;
@@ -578,6 +621,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   async function handleDeleteAccount() {
+    if (!canDeleteSetup) {
+      toast.error('You do not have permission to delete accounts');
+      return;
+    }
     if (!companyId || !editingAccountId) {
       toast.error('Select an account first');
       return;
@@ -599,6 +646,14 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   async function handleSaveExpenseCategory() {
+    if (editingExpenseCategoryId ? !canUpdateSetup : !canCreateSetup) {
+      toast.error(
+        editingExpenseCategoryId
+          ? 'You do not have permission to update expense categories'
+          : 'You do not have permission to create expense categories',
+      );
+      return;
+    }
     if (!companyId) {
       toast.error('Authenticated company is required');
       return;
@@ -633,6 +688,14 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   async function handleSaveApprovalPolicy() {
+    if (editingApprovalPolicyId ? !canUpdateSetup : !canCreateSetup) {
+      toast.error(
+        editingApprovalPolicyId
+          ? 'You do not have permission to update approval policies'
+          : 'You do not have permission to create approval policies',
+      );
+      return;
+    }
     if (!companyId) {
       toast.error('Authenticated company is required');
       return;
@@ -678,6 +741,14 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   async function handleSaveBankAccount() {
+    if (editingBankAccountId ? !canUpdateSetup : !canCreateSetup) {
+      toast.error(
+        editingBankAccountId
+          ? 'You do not have permission to update company bank accounts'
+          : 'You do not have permission to create company bank accounts',
+      );
+      return;
+    }
     if (!companyId) {
       toast.error('Authenticated company is required');
       return;
@@ -714,6 +785,14 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   async function handleSaveTaxProfile() {
+    if (editingTaxProfileId ? !canUpdateSetup : !canCreateSetup) {
+      toast.error(
+        editingTaxProfileId
+          ? 'You do not have permission to update tax profiles'
+          : 'You do not have permission to create tax profiles',
+      );
+      return;
+    }
     if (!companyId) {
       toast.error('Authenticated company is required');
       return;
@@ -746,6 +825,14 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   async function handleSaveTaxComponent() {
+    if (editingTaxComponentId ? !canUpdateSetup : !canCreateSetup) {
+      toast.error(
+        editingTaxComponentId
+          ? 'You do not have permission to update tax components'
+          : 'You do not have permission to create tax components',
+      );
+      return;
+    }
     if (!companyId) {
       toast.error('Authenticated company is required');
       return;
@@ -816,13 +903,18 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button size="sm" variant="outline" onClick={() => handleEditAccount(row.original)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleEditAccount(row.original)}
+            disabled={!canUpdateSetup}
+          >
             Edit
           </Button>
         ),
       },
     ],
-    [accountNameById],
+    [accountNameById, canUpdateSetup],
   );
 
   const expenseCategoryColumns = useMemo<ColumnDef<ExpenseCategoryRow>[]>(
@@ -850,13 +942,14 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
             size="sm"
             variant="outline"
             onClick={() => handleEditExpenseCategory(row.original)}
+            disabled={!canUpdateSetup}
           >
             Edit
           </Button>
         ),
       },
     ],
-    [accountNameById],
+    [accountNameById, canUpdateSetup],
   );
 
   const approvalPolicyColumns = useMemo<ColumnDef<ApprovalPolicyRow>[]>(
@@ -902,13 +995,14 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
             size="sm"
             variant="outline"
             onClick={() => handleEditApprovalPolicy(row.original)}
+            disabled={!canUpdateSetup}
           >
             Edit
           </Button>
         ),
       },
     ],
-    [],
+    [canUpdateSetup],
   );
 
   const companyBankAccountColumns = useMemo<ColumnDef<CompanyBankAccountRow>[]>(
@@ -934,13 +1028,18 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button size="sm" variant="outline" onClick={() => handleEditBankAccount(row.original)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleEditBankAccount(row.original)}
+            disabled={!canUpdateSetup}
+          >
             Edit
           </Button>
         ),
       },
     ],
-    [accountNameById],
+    [accountNameById, canUpdateSetup],
   );
 
   const taxProfileColumns = useMemo<ColumnDef<TaxProfileRow>[]>(
@@ -958,13 +1057,18 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button size="sm" variant="outline" onClick={() => handleEditTaxProfile(row.original)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleEditTaxProfile(row.original)}
+            disabled={!canUpdateSetup}
+          >
             Edit
           </Button>
         ),
       },
     ],
-    [],
+    [canUpdateSetup],
   );
 
   const taxComponentColumns = useMemo<ColumnDef<TaxComponentRow>[]>(
@@ -1009,13 +1113,18 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button size="sm" variant="outline" onClick={() => handleEditTaxComponent(row.original)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleEditTaxComponent(row.original)}
+            disabled={!canUpdateSetup}
+          >
             Edit
           </Button>
         ),
       },
     ],
-    [taxProfileNameById],
+    [taxProfileNameById, canUpdateSetup],
   );
 
   return (
@@ -1219,11 +1328,15 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                     <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={() => void handleSaveAccount()}
-                        disabled={isCreatingAccount || isUpdatingAccount}
+                        disabled={
+                          isCreatingAccount ||
+                          isUpdatingAccount ||
+                          (editingAccountId ? !canUpdateSetup : !canCreateSetup)
+                        }
                       >
                         {editingAccountId ? 'Update Account' : 'Create Account'}
                       </Button>
-                      {editingAccountId ? (
+                      {editingAccountId && canDeleteSetup ? (
                         <Button
                           variant="destructive"
                           onClick={() => setIsDeleteAccountDialogOpen(true)}
@@ -1363,7 +1476,11 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                     <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={() => void handleSaveExpenseCategory()}
-                        disabled={isCreatingExpenseCategory || isUpdatingExpenseCategory}
+                        disabled={
+                          isCreatingExpenseCategory ||
+                          isUpdatingExpenseCategory ||
+                          (editingExpenseCategoryId ? !canUpdateSetup : !canCreateSetup)
+                        }
                       >
                         {editingExpenseCategoryId ? 'Update Category' : 'Create Category'}
                       </Button>
@@ -1533,7 +1650,11 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                     <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={() => void handleSaveApprovalPolicy()}
-                        disabled={isCreatingApprovalPolicy || isUpdatingApprovalPolicy}
+                        disabled={
+                          isCreatingApprovalPolicy ||
+                          isUpdatingApprovalPolicy ||
+                          (editingApprovalPolicyId ? !canUpdateSetup : !canCreateSetup)
+                        }
                       >
                         {editingApprovalPolicyId ? 'Update Policy' : 'Create Policy'}
                       </Button>
@@ -1693,7 +1814,11 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                     <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={() => void handleSaveBankAccount()}
-                        disabled={isCreatingCompanyBankAccount || isUpdatingCompanyBankAccount}
+                        disabled={
+                          isCreatingCompanyBankAccount ||
+                          isUpdatingCompanyBankAccount ||
+                          (editingBankAccountId ? !canUpdateSetup : !canCreateSetup)
+                        }
                       >
                         {editingBankAccountId ? 'Update Bank Account' : 'Create Bank Account'}
                       </Button>
@@ -1788,7 +1913,11 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                     <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={() => void handleSaveTaxProfile()}
-                        disabled={isCreatingTaxProfile || isUpdatingTaxProfile}
+                        disabled={
+                          isCreatingTaxProfile ||
+                          isUpdatingTaxProfile ||
+                          (editingTaxProfileId ? !canUpdateSetup : !canCreateSetup)
+                        }
                       >
                         {editingTaxProfileId ? 'Update Tax Profile' : 'Create Tax Profile'}
                       </Button>
@@ -2005,6 +2134,7 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                         disabled={
                           isCreatingTaxComponent ||
                           isUpdatingTaxComponent ||
+                          (editingTaxComponentId ? !canUpdateSetup : !canCreateSetup) ||
                           !(taxComponentForm.profileId || effectiveTaxProfileId)
                         }
                       >
@@ -2096,7 +2226,7 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeletingAccount}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              disabled={isDeletingAccount}
+              disabled={isDeletingAccount || !canDeleteSetup}
               onClick={() => void handleDeleteAccount()}
             >
               {isDeletingAccount ? 'Deleting...' : 'Delete Account'}

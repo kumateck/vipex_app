@@ -42,14 +42,19 @@ import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
 export function AccountingDailyCashPage() {
   const user = useAuthStore((state) => state.user);
+  const permissions = new Set(user?.permissions ?? []);
+  const canAccessDailyCash =
+    permissions.has(PermissionKeys.CanCreateDailyCashConfirmation) ||
+    permissions.has(PermissionKeys.CanConfirmDailyCashConfirmation) ||
+    permissions.has(PermissionKeys.CanPostDailyCashConfirmation);
   if (!user?.company?.useAccounting) {
     return <AccountingDisabledState />;
   }
-  if (!user.permissions?.includes(PermissionKeys.CanPostAccountingEntries)) {
+  if (!canAccessDailyCash) {
     return (
       <AccountingUnauthorizedState
         title="Daily Cash Restricted"
-        description="Your role does not include permission to create, confirm, and post daily cash entries."
+        description="Your role does not include permission to create, confirm, or post daily cash entries."
       />
     );
   }

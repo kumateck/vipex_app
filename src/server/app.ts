@@ -94,17 +94,6 @@ export const app = new Elysia()
       .group('/rbac', (r) => r.use(rbacRoutes))
       .group('/geolocation', (r) => r.use(geolocationRoutes)),
   )
-  // .group('/v1', (v1) =>
-  //   v1
-  //     .use(api)
-  //     .use(authPasswordRoutes)
-  //     .use(usersInviteRoutes)
-  //     .group('/branches', (r) => r.use(branchesRoutes))
-  //     .group('/statuses', (r) => r.use(statusesRoutes))
-  //     .group('/locations', (r) => r.use(locationsRoutes)),
-  // )
-  // .group('/users', (r) => r.use(usersRoutes))
-
   .get('/', () => ({ name: 'vipex-api', version: 'v1' }))
   // Catch-all fallback for unmatched routes inside Elysia
   .all('/*', ({ set, request }) => {

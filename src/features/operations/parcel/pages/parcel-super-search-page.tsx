@@ -13,6 +13,7 @@ import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
+import { useListAuditLogsQuery } from '@/features/audit/api';
 import {
   type ParcelSearchRow,
   useGetParcelDetailsQuery,
@@ -78,10 +79,12 @@ export function ParcelSuperSearchPage() {
 
   const [searchInput, setSearchInput] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState('');
-  const [query, setQuery] = useState<ServerListQuery<{ companyId?: string | null }>>({
+  const [query, setQuery] = useState<
+    ServerListQuery<{ companyId?: string | null; includeDeleted?: boolean | null }>
+  >({
     page: 1,
     pageSize: 20,
-    filters: { companyId },
+    filters: { companyId, includeDeleted: true },
   });
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
 
@@ -91,7 +94,7 @@ export function ParcelSuperSearchPage() {
     {
       ...query,
       search: shouldSearch ? submittedSearch.trim() : undefined,
-      filters: { companyId },
+      filters: { companyId, includeDeleted: true },
     },
     {
       skip: !companyId || !shouldSearch,
@@ -115,10 +118,23 @@ export function ParcelSuperSearchPage() {
   const rows = data?.data ?? [];
   const rowById = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
   const selectedParcelRow = selectedParcelId ? rowById.get(selectedParcelId) : undefined;
+  const { data: deletedAuditLogs } = useListAuditLogsQuery(
+    {
+      page: 1,
+      pageSize: 1,
+      sort: [{ field: 'createdAt', direction: 'desc' }],
+      filters: {
+        entityType: 'parcel',
+        entityId: selectedParcelId ?? undefined,
+        action: 'PARCEL_SOFT_DELETED',
+      },
+    },
+    { skip: !selectedParcelId || !selectedParcelRow?.isDeleted },
+  );
 
   const submitSearch = () => {
     setSubmittedSearch(searchInput.trim());
-    setQuery((prev) => ({ ...prev, page: 1, filters: { companyId } }));
+    setQuery((prev) => ({ ...prev, page: 1, filters: { companyId, includeDeleted: true } }));
   };
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
@@ -210,7 +226,7 @@ export function ParcelSuperSearchPage() {
                 meta={data?.meta ?? EMPTY_META}
                 loading={isLoading}
                 showSearch={false}
-                serverFilters={{ companyId }}
+                serverFilters={{ companyId, includeDeleted: true }}
                 onRequestChange={setQuery}
                 enableVirtualization={false}
               />
@@ -241,6 +257,33 @@ export function ParcelSuperSearchPage() {
                   <CardTitle className="text-base">Parcel Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
+                  {parcelDetails.parcel.isDeleted ? (
+                    <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+                      {(() => {
+                        const deletedLog = deletedAuditLogs?.data?.[0];
+                        const metadata =
+                          deletedLog?.metadata && typeof deletedLog.metadata === 'object'
+                            ? (deletedLog.metadata as { reason?: unknown })
+                            : null;
+                        const reason =
+                          parcelDetails.parcel.deleteReason &&
+                          parcelDetails.parcel.deleteReason.trim().length > 0
+                            ? parcelDetails.parcel.deleteReason
+                            : typeof metadata?.reason === 'string' &&
+                                metadata.reason.trim().length > 0
+                              ? metadata.reason
+                              : 'No reason provided';
+                        const deletedBy =
+                          deletedLog?.actorUserName ?? deletedLog?.actorUserId ?? 'Unknown user';
+                        return (
+                          <span>
+                            This parcel was deleted by <strong>{deletedBy}</strong> for reason:{' '}
+                            <strong>{reason}</strong>. Please consult the person before proceeding.
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  ) : null}
                   {detailRow('Tracking', parcelDetails.parcel.trackingCode)}
                   {detailRow('Booking', parcelDetails.parcel.bookingCode)}
                   {detailRow(

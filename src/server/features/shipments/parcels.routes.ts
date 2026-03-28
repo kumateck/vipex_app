@@ -1,4 +1,6 @@
 import { Elysia, t } from 'elysia';
+import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import { HttpStatus } from '../../utils/http-status';
 import { UUID } from '../../schemas/common';
 import {
@@ -9,6 +11,7 @@ import {
   logParcelDiscrepancyCtrl,
   markParcelReceivedCtrl,
   setPlannedToBePaidCtrl,
+  softDeleteParcelCtrl,
   updateParcelCtrl,
 } from './parcels.controller';
 
@@ -30,6 +33,7 @@ function parseStatuses(value: string | number[] | undefined): number[] | null {
 }
 
 export const parcelsRoutes = new Elysia({ name: 'parcels' })
+  .use(authPlugin)
   .get(
     '/',
     async ({ query }) =>
@@ -247,5 +251,30 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       params: t.Object({ id: UUID }),
       body: t.Object({ plannedToBePaidCedis: t.Union([t.Number(), t.String()]) }),
       detail: { tags: ['Shipments'], summary: 'Set planned to-be-paid (principal)' },
+    },
+  )
+  .post(
+    '/:id/soft-delete',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return softDeleteParcelCtrl({
+        parcelId: params.id,
+        actorUserId: authUser.sub,
+        reason: (body as { reason: string }).reason,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        reason: t.String({ minLength: 3, maxLength: 500 }),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanSoftDeleteParcelsAndPayments),
+      ],
+      detail: {
+        tags: ['Shipments'],
+        summary: 'Soft delete parcel and soft-delete (void) associated payments with reason',
+      },
     },
   );

@@ -350,6 +350,7 @@ export const parcelsRelations = relations(parcels, ({ one }) => ({
   booking: one(bookings, { fields: [parcels.bookingId], references: [bookings.id] }),
   sender: one(customers, { fields: [parcels.senderId], references: [customers.id] }),
   receiver: one(customers, { fields: [parcels.receiverId], references: [customers.id] }),
+  deletedByUser: one(users, { fields: [parcels.deletedBy], references: [users.id] }),
   pickupQueue: one(pickupQueues, { fields: [parcels.id], references: [pickupQueues.parcelId] }),
 }));
 
@@ -462,6 +463,7 @@ export const deliveriesRelations = relations(deliveries, ({ one }) => ({
 // Payments
 export const paymentsRelations = relations(payments, ({ one }) => ({
   parcel: one(parcels, { fields: [payments.parcelId], references: [parcels.id] }),
+  voidedByUser: one(users, { fields: [payments.voidedBy], references: [users.id] }),
 }));
 
 // Accounting
