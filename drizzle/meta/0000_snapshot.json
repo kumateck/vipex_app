@@ -1,5 +1,5 @@
 {
-  "id": "2cd21ff0-1e5f-4706-b796-66aa6daa8734",
+  "id": "0deb02b1-f256-4fd3-857f-19fdb579bad9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -4209,6 +4209,13 @@
           "notNull": true,
           "default": "0"
         },
+        "auto_authorize_below_threshold": {
+          "name": "auto_authorize_below_threshold",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
         "requires_head_office_approval": {
           "name": "requires_head_office_approval",
           "type": "boolean",
@@ -6115,6 +6122,437 @@
           "tableFrom": "journal_lines",
           "tableTo": "users",
           "columnsFrom": ["recorded_by_user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.manual_journal_entries": {
+      "name": "manual_journal_entries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(25)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_code": {
+          "name": "policy_code",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "threshold_psw": {
+          "name": "threshold_psw",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "total_debit_psw": {
+          "name": "total_debit_psw",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "total_credit_psw": {
+          "name": "total_credit_psw",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "status": {
+          "name": "status",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "branch_id": {
+          "name": "branch_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "memo": {
+          "name": "memo",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "entry_date": {
+          "name": "entry_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "recorded_by_user_id": {
+          "name": "recorded_by_user_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approved_by_user_id": {
+          "name": "approved_by_user_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_reason": {
+          "name": "approval_reason",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rejection_reason": {
+          "name": "rejection_reason",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "posted_batch_id": {
+          "name": "posted_batch_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "posted_entry_id": {
+          "name": "posted_entry_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "manual_journal_entries_company_idx": {
+          "name": "manual_journal_entries_company_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "manual_journal_entries_company_status_idx": {
+          "name": "manual_journal_entries_company_status_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "manual_journal_entries_branch_date_idx": {
+          "name": "manual_journal_entries_branch_date_idx",
+          "columns": [
+            {
+              "expression": "branch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entry_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "manual_journal_entries_company_id_companies_id_fk": {
+          "name": "manual_journal_entries_company_id_companies_id_fk",
+          "tableFrom": "manual_journal_entries",
+          "tableTo": "companies",
+          "columnsFrom": ["company_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manual_journal_entries_branch_id_branches_id_fk": {
+          "name": "manual_journal_entries_branch_id_branches_id_fk",
+          "tableFrom": "manual_journal_entries",
+          "tableTo": "branches",
+          "columnsFrom": ["branch_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manual_journal_entries_location_id_locations_id_fk": {
+          "name": "manual_journal_entries_location_id_locations_id_fk",
+          "tableFrom": "manual_journal_entries",
+          "tableTo": "locations",
+          "columnsFrom": ["location_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manual_journal_entries_recorded_by_user_id_users_id_fk": {
+          "name": "manual_journal_entries_recorded_by_user_id_users_id_fk",
+          "tableFrom": "manual_journal_entries",
+          "tableTo": "users",
+          "columnsFrom": ["recorded_by_user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manual_journal_entries_approved_by_user_id_users_id_fk": {
+          "name": "manual_journal_entries_approved_by_user_id_users_id_fk",
+          "tableFrom": "manual_journal_entries",
+          "tableTo": "users",
+          "columnsFrom": ["approved_by_user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manual_journal_entries_posted_batch_id_journal_batches_id_fk": {
+          "name": "manual_journal_entries_posted_batch_id_journal_batches_id_fk",
+          "tableFrom": "manual_journal_entries",
+          "tableTo": "journal_batches",
+          "columnsFrom": ["posted_batch_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manual_journal_entries_posted_entry_id_journal_entries_id_fk": {
+          "name": "manual_journal_entries_posted_entry_id_journal_entries_id_fk",
+          "tableFrom": "manual_journal_entries",
+          "tableTo": "journal_entries",
+          "columnsFrom": ["posted_entry_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.manual_journal_entry_lines": {
+      "name": "manual_journal_entry_lines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(25)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "manual_entry_id": {
+          "name": "manual_entry_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "branch_id": {
+          "name": "branch_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "debit_psw": {
+          "name": "debit_psw",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "credit_psw": {
+          "name": "credit_psw",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "manual_journal_entry_lines_company_idx": {
+          "name": "manual_journal_entry_lines_company_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "manual_journal_entry_lines_entry_idx": {
+          "name": "manual_journal_entry_lines_entry_idx",
+          "columns": [
+            {
+              "expression": "manual_entry_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "manual_journal_entry_lines_account_idx": {
+          "name": "manual_journal_entry_lines_account_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "manual_journal_entry_lines_company_id_companies_id_fk": {
+          "name": "manual_journal_entry_lines_company_id_companies_id_fk",
+          "tableFrom": "manual_journal_entry_lines",
+          "tableTo": "companies",
+          "columnsFrom": ["company_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manual_journal_entry_lines_manual_entry_id_manual_journal_entries_id_fk": {
+          "name": "manual_journal_entry_lines_manual_entry_id_manual_journal_entries_id_fk",
+          "tableFrom": "manual_journal_entry_lines",
+          "tableTo": "manual_journal_entries",
+          "columnsFrom": ["manual_entry_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manual_journal_entry_lines_account_id_chart_of_accounts_id_fk": {
+          "name": "manual_journal_entry_lines_account_id_chart_of_accounts_id_fk",
+          "tableFrom": "manual_journal_entry_lines",
+          "tableTo": "chart_of_accounts",
+          "columnsFrom": ["account_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manual_journal_entry_lines_branch_id_branches_id_fk": {
+          "name": "manual_journal_entry_lines_branch_id_branches_id_fk",
+          "tableFrom": "manual_journal_entry_lines",
+          "tableTo": "branches",
+          "columnsFrom": ["branch_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "manual_journal_entry_lines_location_id_locations_id_fk": {
+          "name": "manual_journal_entry_lines_location_id_locations_id_fk",
+          "tableFrom": "manual_journal_entry_lines",
+          "tableTo": "locations",
+          "columnsFrom": ["location_id"],
           "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"

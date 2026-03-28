@@ -73,6 +73,7 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
   if (pathname === '/cashier/sessions/close') return 'CanCloseCashierSessions';
   if (pathname === '/settings/modules') return 'CanManageCompanyModules';
   if (pathname === '/settings/change-password') return 'CanChangePassword';
+  if (pathname === '/accounting/setup') return undefined;
 
   if (pathname === '/inventory/categories/new') return 'CanCreateProductCategory';
   if (pathname.startsWith('/inventory/categories/edit/')) return 'CanUpdateProductCategory';
@@ -85,7 +86,6 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
   if (pathname === '/inventory/stock-transfers/new') return 'CanCreateStockTransfer';
   if (pathname.startsWith('/inventory/stock-transfers/edit/')) return 'CanUpdateStockTransfer';
 
-  if (pathname === '/accounting/setup') return 'CanReadAccountingSetup';
   if (pathname === '/accounting/tax') return 'CanReadAccounting';
   if (pathname === '/accounting/daily-cash' || pathname === '/accounting/expenses') {
     return 'CanReadAccounting';

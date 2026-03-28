@@ -103,6 +103,54 @@ const catalog = [
   ['CanCreateAccountingSetup', 'Create accounting setup masters', 'Accounting'],
   ['CanUpdateAccountingSetup', 'Update accounting setup masters', 'Accounting'],
   ['CanDeleteAccountingSetup', 'Delete accounting setup masters', 'Accounting'],
+  ['CanReadAccountingAccounts', 'View accounting setup accounts', 'Accounting'],
+  ['CanCreateAccountingAccounts', 'Create accounting setup accounts', 'Accounting'],
+  ['CanUpdateAccountingAccounts', 'Update accounting setup accounts', 'Accounting'],
+  ['CanDeleteAccountingAccounts', 'Delete accounting setup accounts', 'Accounting'],
+  ['CanReadAccountingExpenseCategories', 'View accounting setup expense categories', 'Accounting'],
+  [
+    'CanCreateAccountingExpenseCategories',
+    'Create accounting setup expense categories',
+    'Accounting',
+  ],
+  [
+    'CanUpdateAccountingExpenseCategories',
+    'Update accounting setup expense categories',
+    'Accounting',
+  ],
+  [
+    'CanDeleteAccountingExpenseCategories',
+    'Delete accounting setup expense categories',
+    'Accounting',
+  ],
+  ['CanReadAccountingApprovalPolicies', 'View accounting setup approval policies', 'Accounting'],
+  [
+    'CanCreateAccountingApprovalPolicies',
+    'Create accounting setup approval policies',
+    'Accounting',
+  ],
+  [
+    'CanUpdateAccountingApprovalPolicies',
+    'Update accounting setup approval policies',
+    'Accounting',
+  ],
+  [
+    'CanDeleteAccountingApprovalPolicies',
+    'Delete accounting setup approval policies',
+    'Accounting',
+  ],
+  ['CanReadAccountingBankAccounts', 'View accounting setup bank accounts', 'Accounting'],
+  ['CanCreateAccountingBankAccounts', 'Create accounting setup bank accounts', 'Accounting'],
+  ['CanUpdateAccountingBankAccounts', 'Update accounting setup bank accounts', 'Accounting'],
+  ['CanDeleteAccountingBankAccounts', 'Delete accounting setup bank accounts', 'Accounting'],
+  ['CanReadAccountingTaxProfiles', 'View accounting setup tax profiles', 'Accounting'],
+  ['CanCreateAccountingTaxProfiles', 'Create accounting setup tax profiles', 'Accounting'],
+  ['CanUpdateAccountingTaxProfiles', 'Update accounting setup tax profiles', 'Accounting'],
+  ['CanDeleteAccountingTaxProfiles', 'Delete accounting setup tax profiles', 'Accounting'],
+  ['CanReadAccountingTaxComponents', 'View accounting setup tax components', 'Accounting'],
+  ['CanCreateAccountingTaxComponents', 'Create accounting setup tax components', 'Accounting'],
+  ['CanUpdateAccountingTaxComponents', 'Update accounting setup tax components', 'Accounting'],
+  ['CanDeleteAccountingTaxComponents', 'Delete accounting setup tax components', 'Accounting'],
   ['CanCreateTaxFilingPeriod', 'Create tax filing period', 'Accounting'],
   ['CanMarkTaxFilingPeriodUnderReview', 'Mark tax filing period under review', 'Accounting'],
   ['CanSubmitTaxFilingPeriod', 'Submit tax filing period', 'Accounting'],
@@ -120,6 +168,13 @@ const catalog = [
   ['CanPayExpenseRequest', 'Pay expense request', 'Accounting'],
   ['CanPostExpenseRequest', 'Post expense request', 'Accounting'],
   ['CanComputeTaxes', 'Compute taxes', 'Accounting'],
+  ['CanReadAccountingManualEntries', 'View manual accounting entries page', 'Accounting'],
+  ['CanCreateAccountingManualEntries', 'Create manual accounting entries', 'Accounting'],
+  [
+    'CanApproveAccountingManualEntries',
+    'Approve and post manual accounting entries above threshold',
+    'Accounting',
+  ],
 
   // Inventory
   ['CanReadInventoryOverview', 'View inventory overview dashboard', 'Inventory'],
@@ -363,6 +418,45 @@ export function isSidebarReadablePermission(permissionKey: string): boolean {
 
 export const PermissionKeySet = new Set<string>(PermissionCatalog.map((p) => p.key));
 
+export const AccountingSetupPermissionKeys = Object.freeze({
+  accounts: {
+    read: PermissionKeys.CanReadAccountingAccounts,
+    create: PermissionKeys.CanCreateAccountingAccounts,
+    update: PermissionKeys.CanUpdateAccountingAccounts,
+    delete: PermissionKeys.CanDeleteAccountingAccounts,
+  },
+  categories: {
+    read: PermissionKeys.CanReadAccountingExpenseCategories,
+    create: PermissionKeys.CanCreateAccountingExpenseCategories,
+    update: PermissionKeys.CanUpdateAccountingExpenseCategories,
+    delete: PermissionKeys.CanDeleteAccountingExpenseCategories,
+  },
+  policies: {
+    read: PermissionKeys.CanReadAccountingApprovalPolicies,
+    create: PermissionKeys.CanCreateAccountingApprovalPolicies,
+    update: PermissionKeys.CanUpdateAccountingApprovalPolicies,
+    delete: PermissionKeys.CanDeleteAccountingApprovalPolicies,
+  },
+  bankAccounts: {
+    read: PermissionKeys.CanReadAccountingBankAccounts,
+    create: PermissionKeys.CanCreateAccountingBankAccounts,
+    update: PermissionKeys.CanUpdateAccountingBankAccounts,
+    delete: PermissionKeys.CanDeleteAccountingBankAccounts,
+  },
+  taxProfiles: {
+    read: PermissionKeys.CanReadAccountingTaxProfiles,
+    create: PermissionKeys.CanCreateAccountingTaxProfiles,
+    update: PermissionKeys.CanUpdateAccountingTaxProfiles,
+    delete: PermissionKeys.CanDeleteAccountingTaxProfiles,
+  },
+  taxComponents: {
+    read: PermissionKeys.CanReadAccountingTaxComponents,
+    create: PermissionKeys.CanCreateAccountingTaxComponents,
+    update: PermissionKeys.CanUpdateAccountingTaxComponents,
+    delete: PermissionKeys.CanDeleteAccountingTaxComponents,
+  },
+});
+
 export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> = Object.freeze({
   '/parcels/sender-payments': PermissionKeys.CanCreateSenderPayments,
   '/parcels/processed': PermissionKeys.CanReadConsignments,
@@ -384,6 +478,8 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/accounting/expenses': PermissionKeys.CanCreateExpenseRequest,
   '/accounting/reports': PermissionKeys.CanReadAccounting,
   '/accounting/tax': PermissionKeys.CanCreateTaxFilingPeriod,
+  '/accounting/journal-entries': PermissionKeys.CanReadAccountingManualEntries,
+  '/accounting/journal-approvals': PermissionKeys.CanApproveAccountingManualEntries,
   '/settings/company': PermissionKeys.CanReadCompanyProfile,
   '/settings/modules': PermissionKeys.CanManageCompanyModules,
   '/settings/appearance': PermissionKeys.CanManageAppearance,

@@ -378,6 +378,7 @@ CREATE TABLE "accounting_approval_policies" (
 	"policy_code" varchar(60) NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"amount_limit_psw" bigint DEFAULT 0 NOT NULL,
+	"auto_authorize_below_threshold" boolean DEFAULT true NOT NULL,
 	"requires_head_office_approval" boolean DEFAULT false NOT NULL,
 	"applies_to_funding_source" smallint,
 	"active" boolean DEFAULT true NOT NULL,
@@ -532,6 +533,42 @@ CREATE TABLE "journal_lines" (
 	"credit_psw" bigint DEFAULT 0 NOT NULL,
 	"description" varchar(500),
 	"metadata" jsonb,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "manual_journal_entries" (
+	"id" varchar(25) PRIMARY KEY NOT NULL,
+	"company_id" varchar(25) NOT NULL,
+	"policy_code" varchar(60),
+	"threshold_psw" bigint DEFAULT 0 NOT NULL,
+	"total_debit_psw" bigint DEFAULT 0 NOT NULL,
+	"total_credit_psw" bigint DEFAULT 0 NOT NULL,
+	"status" smallint DEFAULT 0 NOT NULL,
+	"branch_id" varchar(25),
+	"location_id" varchar(25),
+	"memo" varchar(500),
+	"entry_date" timestamp DEFAULT now() NOT NULL,
+	"recorded_by_user_id" varchar(25),
+	"approved_by_user_id" varchar(25),
+	"approval_reason" varchar(1000),
+	"rejection_reason" varchar(1000),
+	"posted_batch_id" varchar(25),
+	"posted_entry_id" varchar(25),
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "manual_journal_entry_lines" (
+	"id" varchar(25) PRIMARY KEY NOT NULL,
+	"company_id" varchar(25) NOT NULL,
+	"manual_entry_id" varchar(25) NOT NULL,
+	"account_id" varchar(25) NOT NULL,
+	"branch_id" varchar(25),
+	"location_id" varchar(25),
+	"debit_psw" bigint DEFAULT 0 NOT NULL,
+	"credit_psw" bigint DEFAULT 0 NOT NULL,
+	"description" varchar(500),
+	"sort_order" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -1590,6 +1627,18 @@ ALTER TABLE "journal_lines" ADD CONSTRAINT "journal_lines_account_id_chart_of_ac
 ALTER TABLE "journal_lines" ADD CONSTRAINT "journal_lines_branch_id_branches_id_fk" FOREIGN KEY ("branch_id") REFERENCES "public"."branches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "journal_lines" ADD CONSTRAINT "journal_lines_location_id_locations_id_fk" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "journal_lines" ADD CONSTRAINT "journal_lines_recorded_by_user_id_users_id_fk" FOREIGN KEY ("recorded_by_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "manual_journal_entries" ADD CONSTRAINT "manual_journal_entries_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "manual_journal_entries" ADD CONSTRAINT "manual_journal_entries_branch_id_branches_id_fk" FOREIGN KEY ("branch_id") REFERENCES "public"."branches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "manual_journal_entries" ADD CONSTRAINT "manual_journal_entries_location_id_locations_id_fk" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "manual_journal_entries" ADD CONSTRAINT "manual_journal_entries_recorded_by_user_id_users_id_fk" FOREIGN KEY ("recorded_by_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "manual_journal_entries" ADD CONSTRAINT "manual_journal_entries_approved_by_user_id_users_id_fk" FOREIGN KEY ("approved_by_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "manual_journal_entries" ADD CONSTRAINT "manual_journal_entries_posted_batch_id_journal_batches_id_fk" FOREIGN KEY ("posted_batch_id") REFERENCES "public"."journal_batches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "manual_journal_entries" ADD CONSTRAINT "manual_journal_entries_posted_entry_id_journal_entries_id_fk" FOREIGN KEY ("posted_entry_id") REFERENCES "public"."journal_entries"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "manual_journal_entry_lines" ADD CONSTRAINT "manual_journal_entry_lines_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "manual_journal_entry_lines" ADD CONSTRAINT "manual_journal_entry_lines_manual_entry_id_manual_journal_entries_id_fk" FOREIGN KEY ("manual_entry_id") REFERENCES "public"."manual_journal_entries"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "manual_journal_entry_lines" ADD CONSTRAINT "manual_journal_entry_lines_account_id_chart_of_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."chart_of_accounts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "manual_journal_entry_lines" ADD CONSTRAINT "manual_journal_entry_lines_branch_id_branches_id_fk" FOREIGN KEY ("branch_id") REFERENCES "public"."branches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "manual_journal_entry_lines" ADD CONSTRAINT "manual_journal_entry_lines_location_id_locations_id_fk" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payment_service_charges" ADD CONSTRAINT "payment_service_charges_payment_id_payments_id_fk" FOREIGN KEY ("payment_id") REFERENCES "public"."payments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payment_service_charges" ADD CONSTRAINT "payment_service_charges_parcel_id_parcels_id_fk" FOREIGN KEY ("parcel_id") REFERENCES "public"."parcels"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payment_service_charges" ADD CONSTRAINT "payment_service_charges_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -1851,6 +1900,12 @@ CREATE INDEX "journal_lines_company_idx" ON "journal_lines" USING btree ("compan
 CREATE INDEX "journal_lines_entry_idx" ON "journal_lines" USING btree ("entry_id");--> statement-breakpoint
 CREATE INDEX "journal_lines_account_idx" ON "journal_lines" USING btree ("account_id");--> statement-breakpoint
 CREATE INDEX "journal_lines_branch_account_idx" ON "journal_lines" USING btree ("branch_id","account_id");--> statement-breakpoint
+CREATE INDEX "manual_journal_entries_company_idx" ON "manual_journal_entries" USING btree ("company_id");--> statement-breakpoint
+CREATE INDEX "manual_journal_entries_company_status_idx" ON "manual_journal_entries" USING btree ("company_id","status");--> statement-breakpoint
+CREATE INDEX "manual_journal_entries_branch_date_idx" ON "manual_journal_entries" USING btree ("branch_id","entry_date");--> statement-breakpoint
+CREATE INDEX "manual_journal_entry_lines_company_idx" ON "manual_journal_entry_lines" USING btree ("company_id");--> statement-breakpoint
+CREATE INDEX "manual_journal_entry_lines_entry_idx" ON "manual_journal_entry_lines" USING btree ("manual_entry_id");--> statement-breakpoint
+CREATE INDEX "manual_journal_entry_lines_account_idx" ON "manual_journal_entry_lines" USING btree ("account_id");--> statement-breakpoint
 CREATE INDEX "payment_service_charges_company_idx" ON "payment_service_charges" USING btree ("company_id");--> statement-breakpoint
 CREATE INDEX "payment_service_charges_payment_idx" ON "payment_service_charges" USING btree ("payment_id");--> statement-breakpoint
 CREATE INDEX "payment_service_charges_parcel_idx" ON "payment_service_charges" USING btree ("parcel_id");--> statement-breakpoint

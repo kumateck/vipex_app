@@ -256,6 +256,12 @@ export enum TaxFilingPeriodStatus {
   CLOSED = 3,
 }
 
+export enum ManualJournalEntryStatus {
+  PENDING_APPROVAL = 0,
+  POSTED = 1,
+  REJECTED = 2,
+}
+
 export enum ParcelHolderType {
   BRANCH = 0,
   LOCATION = 1,

@@ -103,6 +103,8 @@ export function CreatableCombobox<T extends BaseOption>({
 
   const hasOptions = mergedOptions.length > 0;
   const disableCreateItem = !canCreate || creating;
+  const showCreateInline =
+    createEnabled && createStrategy === 'inline' && Boolean(normalizedInput) && !hasOptions;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -159,6 +161,7 @@ export function CreatableCombobox<T extends BaseOption>({
                     <CommandItem
                       key={optionValue}
                       value={optionValue}
+                      className="bg-transparent data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
                       onSelect={() => handleSelect(option)}
                     >
                       <Check
@@ -172,10 +175,11 @@ export function CreatableCombobox<T extends BaseOption>({
               </CommandGroup>
             ) : null}
 
-            {createEnabled && createStrategy === 'inline' ? (
+            {showCreateInline ? (
               <CommandGroup>
                 <CommandItem
                   value={`create-${normalizedInput}`}
+                  className="bg-transparent data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
                   onSelect={() => {
                     void handleCreate();
                   }}

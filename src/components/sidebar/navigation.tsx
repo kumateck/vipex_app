@@ -283,6 +283,16 @@ const BASE_ROUTES: Route[] = [
             url: '/accounting/setup',
             permissionKey: PermissionKeys.CanReadAccountingSetup,
           },
+          {
+            title: 'Journal Entries',
+            url: '/accounting/journal-entries',
+            permissionKey: PermissionKeys.CanReadAccountingManualEntries,
+          },
+          {
+            title: 'Journal Approvals',
+            url: '/accounting/journal-approvals',
+            permissionKey: PermissionKeys.CanApproveAccountingManualEntries,
+          },
         ],
       },
       {

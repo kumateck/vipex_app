@@ -9,6 +9,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/ui/sidebar';
+import { AccountingSetupPermissionKeys, PermissionKeys } from '@/shared/permissions/constants';
 import { inferRequiredPermissionByPath } from '@/shared/permissions/path-access';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -35,6 +36,19 @@ function hasAccountingUrl(node: SidebarNode): boolean {
 
 function canRenderSidebarNode(node: SidebarNode, allowedPermissions: Set<string>): boolean {
   if (node.hiddenInSidebar) return false;
+  if (node.url === '/accounting/setup') {
+    const hasLegacySetupAccess =
+      allowedPermissions.has(PermissionKeys.CanReadAccountingSetup) ||
+      allowedPermissions.has(PermissionKeys.CanCreateAccountingSetup) ||
+      allowedPermissions.has(PermissionKeys.CanUpdateAccountingSetup) ||
+      allowedPermissions.has(PermissionKeys.CanDeleteAccountingSetup);
+    const hasGranularSetupAccess = Object.values(AccountingSetupPermissionKeys).some((scope) =>
+      [scope.read, scope.create, scope.update, scope.delete].some((permission) =>
+        allowedPermissions.has(permission),
+      ),
+    );
+    return hasLegacySetupAccess || hasGranularSetupAccess;
+  }
   const effectivePermissionKey = node.permissionKey ?? inferRequiredPermissionByPath(node.url);
   if (!effectivePermissionKey) return true;
   return allowedPermissions.has(effectivePermissionKey);

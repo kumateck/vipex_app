@@ -258,6 +258,121 @@ Implemented a full operational recovery flow for cashier mistakes:
   - validates parcel state
   - soft deletes parcel
   - voids active linked payments
+
+---
+
+## 12) Manual Journal Entries: Queue-Based Approval Workflow
+
+Implemented threshold-aware manual journal posting with a dedicated pending approval queue.
+
+### Core behavior
+
+- If entry total is **above threshold**: always queued for approval.
+- If entry total is **below threshold**:
+  - auto-posts when auto-authorize is enabled.
+  - queues when auto-authorize is disabled.
+
+### Schema
+
+Updated accounting policy model and added queue persistence:
+
+- `accounting_approval_policies.auto_authorize_below_threshold` (boolean)
+- `manual_journal_entries`
+- `manual_journal_entry_lines`
+
+Files:
+
+- `src/db/schemas/accounting.ts`
+- `drizzle/0000_tan_tinkerer.sql` (fresh baseline generation)
+
+### Backend
+
+Added queue-aware manual journal APIs:
+
+- `GET /accounting/manual-journal/policy`
+- `POST /accounting/manual-journal/post`
+- `GET /accounting/manual-journal/pending`
+- `POST /accounting/manual-journal/:id/approve-and-post`
+- `POST /accounting/manual-journal/:id/reject`
+
+Files:
+
+- `src/server/features/accounting/repository.ts`
+- `src/server/features/accounting/service.ts`
+- `src/server/features/accounting/controller.ts`
+- `src/server/features/accounting/routes.ts`
+
+### Frontend
+
+Added API types/hooks and queue mutations:
+
+- `src/features/accounting/api.ts`
+
+---
+
+## 13) Split Pages: Journal Entries vs Journal Approvals
+
+Separated the manual journal workflows into two focused pages:
+
+1. **Journal Entries**
+
+- URL: `/accounting/journal-entries`
+- Purpose: create/submit entries only
+- Permission: `CanReadAccountingManualEntries` (and action permissions for submit)
+
+2. **Journal Approvals**
+
+- URL: `/accounting/journal-approvals`
+- Purpose: review pending queue, approve/post, reject
+- Permission: `CanApproveAccountingManualEntries`
+
+Files:
+
+- `src/features/accounting/pages/accounting-journal-entries-page.tsx`
+- `src/features/accounting/pages/accounting-journal-approvals-page.tsx`
+- `src/pages/(private)/accounting/journal-approvals/page.tsx`
+- `src/features/accounting/index.ts`
+- `src/components/sidebar/navigation.tsx`
+- `src/shared/permissions/constants.ts`
+
+---
+
+## 14) Accounting Setup: Policy Code via Creatable Combobox + Intent Defaults
+
+Changed approval policy code entry from free-text to curated combobox selection for consistency.
+
+### What changed
+
+- `Policy Code` now uses `CreatableCombobox` with standard options.
+- Selecting a policy code now applies intended defaults (name + suggested funding scope).
+- Manual journal policy codes hide `Funding Scope` in setup UI.
+- Manual journal policy codes are enforced server-side to store `appliesToFundingSource = null`.
+
+Standard codes configured:
+
+- `MANUAL_JOURNAL`
+- `EXPENSE_REQUEST`
+- `PETTY_CASH_REPLENISHMENT`
+- `CASH_TO_BANK_TRANSFER`
+- `DAILY_CASH_CONFIRMATION`
+- `TAX_FILING`
+- `PAYMENT_REVERSAL`
+- `PARCEL_DELETE`
+
+Files:
+
+- `src/features/accounting/pages/accounting-setup-page.tsx`
+- `src/server/features/accounting/service.ts`
+
+---
+
+## 15) Validation Run
+
+Executed successfully after these changes:
+
+- `bun run routes:generate`
+- `bunx tsc -p tsconfig.json --noEmit`
+- `bunx eslint` on touched accounting files
   - writes audit log action `PARCEL_SOFT_DELETED`
 
 ### Frontend behavior
