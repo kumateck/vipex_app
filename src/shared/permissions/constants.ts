@@ -172,8 +172,6 @@ const catalog = [
   // Auth / account setup
   ['CanChangePassword', 'Change password', 'Auth'],
   ['CanResendSetupInvite', 'Resend setup invite', 'Auth'],
-  ['CanValidateResetPasswordToken', 'Validate reset token', 'Auth'],
-  ['CanResetPasswordWithToken', 'Reset password with token', 'Auth'],
 ] as const;
 
 type Entry = (typeof catalog)[number];

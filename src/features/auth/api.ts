@@ -37,11 +37,22 @@ export interface ForgotPasswordResponse {
 }
 
 export interface ResetPasswordRequest {
-  token: string;
+  email: string;
+  otp: string;
+  password: string;
+}
+
+export interface SetPasswordRequest {
+  email: string;
+  otp: string;
   password: string;
 }
 
 export interface ResetPasswordResponse {
+  success: boolean;
+}
+
+export interface SetPasswordResponse {
   success: boolean;
 }
 
@@ -156,6 +167,14 @@ export const authApi = api.injectEndpoints({
       }),
     }),
 
+    setPassword: builder.mutation<SetPasswordResponse, SetPasswordRequest>({
+      query: (body) => ({
+        url: '/auth/set-password',
+        method: 'POST',
+        body,
+      }),
+    }),
+
     changePassword: builder.mutation<ChangePasswordResponse, ChangePasswordRequest>({
       query: (body) => ({
         url: '/auth/change-password',
@@ -187,6 +206,7 @@ export const {
   useRefreshTokenMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
+  useSetPasswordMutation,
   useChangePasswordMutation,
   useGetCurrentUserPermissionsQuery,
   useGetCurrentUserReadOnlyPermissionsQuery,

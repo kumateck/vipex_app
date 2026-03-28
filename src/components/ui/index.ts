@@ -26,5 +26,6 @@ export * from './separator';
 // export * from "./table"
 export * from './textarea';
 export * from './react-signature';
+export * from './input-otp';
 // export * from "./tooltip"
 // export * from "./typography"
