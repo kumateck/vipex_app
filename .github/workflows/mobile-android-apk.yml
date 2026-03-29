@@ -26,6 +26,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Remove non-Bun lockfiles for EAS
+        run: |
+          rm -f package-lock.json pnpm-lock.yaml
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -38,6 +42,9 @@ jobs:
 
       - name: Install Dependencies
         run: bun install
+
+      - name: Sync Brand Assets
+        run: bun run assets:sync
 
       - name: Verify Expo Token
         run: |

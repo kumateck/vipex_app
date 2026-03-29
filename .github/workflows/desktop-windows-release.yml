@@ -29,6 +29,9 @@ jobs:
       - name: Install Dependencies
         run: bun install
 
+      - name: Sync Brand Assets
+        run: bun run assets:sync
+
       - name: Build Windows Desktop Release (Squirrel)
         run: bun run --cwd apps/desktop make -- --targets @electron-forge/maker-squirrel
 

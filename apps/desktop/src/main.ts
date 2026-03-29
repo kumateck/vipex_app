@@ -8,6 +8,8 @@ const __dirname = path.dirname(__filename);
 let mainWindow: BrowserWindow | null = null;
 const PACKAGED_WEB_BASE_URL = 'https://test.app.vipexparcel.com/';
 const DEV_WEB_BASE_URL = 'http://localhost:5173/';
+const DEFAULT_DESKTOP_UPDATE_FEED_URL =
+  'http://164.90.142.68:9000/vipex-uploads/desktop/windows/latest/';
 let pendingDeepLink: string | null = null;
 let updateStatus: {
   state:
@@ -74,7 +76,8 @@ function configureAutoUpdater() {
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.logger = null;
 
-  const genericFeedUrl = process.env.DESKTOP_UPDATE_FEED_URL?.trim();
+  const genericFeedUrl =
+    process.env.DESKTOP_UPDATE_FEED_URL?.trim() || DEFAULT_DESKTOP_UPDATE_FEED_URL;
   if (genericFeedUrl) {
     autoUpdater.setFeedURL({
       provider: 'generic',
