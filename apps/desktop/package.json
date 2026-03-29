@@ -1,5 +1,5 @@
 {
-  "name": "@vipex/desktop",
+  "name": "vipex-desktop",
   "private": true,
   "version": "0.0.1",
   "main": ".vite/build/main.js",
