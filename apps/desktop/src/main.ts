@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, type WebContentsPrintOptions } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell, type WebContentsPrintOptions } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { autoUpdater } from 'electron-updater';
@@ -6,8 +6,10 @@ import { autoUpdater } from 'electron-updater';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 let mainWindow: BrowserWindow | null = null;
-const PACKAGED_WEB_BASE_URL = 'https://test.app.vipexparcel.com/';
+const PACKAGED_WEB_BASE_URL = 'https://testing.app.vipexparcel.com/';
 const DEV_WEB_BASE_URL = 'http://localhost:5173/';
+const DEFAULT_DESKTOP_UPDATE_FEED_URL =
+  'http://164.90.142.68:9000/vipex-uploads/desktop/windows/latest/';
 let pendingDeepLink: string | null = null;
 let updateStatus: {
   state:
@@ -46,6 +48,124 @@ function getWebBaseUrl() {
   return app.isPackaged ? PACKAGED_WEB_BASE_URL : DEV_WEB_BASE_URL;
 }
 
+function getPackagedWebBaseUrlCandidates() {
+  const override = process.env.DESKTOP_WEB_BASE_URL?.trim();
+  const urls = [override, PACKAGED_WEB_BASE_URL].filter((entry): entry is string =>
+    Boolean(entry && entry.length > 0),
+  );
+  return [...new Set(urls)];
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function buildDesktopLoadErrorHtml(baseUrl: string, details: string) {
+  const safeBase = escapeHtml(baseUrl);
+  const safeDetails = escapeHtml(details);
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vipex Desktop</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0b1020;
+        color: #f8fafc;
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
+        padding: 24px;
+      }
+      .card {
+        width: min(720px, 100%);
+        border: 1px solid #334155;
+        border-radius: 14px;
+        background: #111827;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+      h1 { margin: 0 0 8px; font-size: 24px; }
+      p { margin: 0 0 8px; color: #cbd5e1; }
+      .muted { color: #94a3b8; font-size: 13px; margin-bottom: 14px; }
+      code {
+        display: block;
+        background: #0f172a;
+        color: #cbd5e1;
+        border-radius: 8px;
+        padding: 10px;
+        margin: 10px 0 14px;
+        word-break: break-all;
+      }
+      .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+      button {
+        appearance: none;
+        border: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .primary { background: #f59e0b; color: #111827; }
+      .secondary { background: #1f2937; color: #f8fafc; border: 1px solid #334155; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Unable to load Vipex</h1>
+      <p>The desktop shell could not open the hosted app.</p>
+      <p class="muted">Check internet access or server availability, then retry.</p>
+      <code>App URL: ${safeBase}</code>
+      <code>Error: ${safeDetails}</code>
+      <div class="actions">
+        <button class="primary" id="retry">Retry</button>
+        <button class="secondary" id="open">Open in Browser</button>
+      </div>
+    </main>
+    <script>
+      const retryBtn = document.getElementById('retry');
+      const openBtn = document.getElementById('open');
+      retryBtn?.addEventListener('click', () => window.api?.retryDesktopLoad?.());
+      openBtn?.addEventListener('click', () => window.api?.openInBrowser?.(${JSON.stringify(baseUrl)}));
+    </script>
+  </body>
+</html>`;
+}
+
+async function showDesktopLoadError(baseUrl: string, details: string) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const html = buildDesktopLoadErrorHtml(baseUrl, details);
+  const encoded = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+  await mainWindow.loadURL(encoded);
+}
+
+async function loadPackagedMainContent() {
+  const candidates = getPackagedWebBaseUrlCandidates();
+  let lastError = 'Unknown load failure';
+
+  for (const baseUrl of candidates) {
+    try {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      await mainWindow.loadURL(baseUrl);
+      return;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : 'Unknown load failure';
+    }
+  }
+
+  const primaryBase = candidates[0] ?? PACKAGED_WEB_BASE_URL;
+  await showDesktopLoadError(primaryBase, lastError);
+}
+
 function setUpdateStatus(
   next: Partial<{
     state:
@@ -74,7 +194,8 @@ function configureAutoUpdater() {
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.logger = null;
 
-  const genericFeedUrl = process.env.DESKTOP_UPDATE_FEED_URL?.trim();
+  const genericFeedUrl =
+    process.env.DESKTOP_UPDATE_FEED_URL?.trim() || DEFAULT_DESKTOP_UPDATE_FEED_URL;
   if (genericFeedUrl) {
     autoUpdater.setFeedURL({
       provider: 'generic',
@@ -237,6 +358,24 @@ async function printHtmlWithNativeDialog(request: PrintHtmlRequest) {
 }
 
 function registerIpcHandlers() {
+  ipcMain.handle('app:retry-load', async () => {
+    if (!app.isPackaged) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        await mainWindow.reload();
+      }
+      return { ok: true };
+    }
+
+    await loadPackagedMainContent();
+    return { ok: true };
+  });
+
+  ipcMain.handle('app:open-external', async (_event, url: string) => {
+    if (!url || typeof url !== 'string') return { ok: false, reason: 'Invalid URL' };
+    await shell.openExternal(url);
+    return { ok: true };
+  });
+
   ipcMain.handle('print:html', async (_event, request: PrintHtmlRequest) => {
     if (!request?.html) {
       return { ok: false, reason: 'No printable HTML payload was provided.' };
@@ -368,7 +507,34 @@ function createWindow() {
     return;
   }
 
-  mainWindow.loadURL(PACKAGED_WEB_BASE_URL);
+  mainWindow.webContents.on(
+    'did-fail-load',
+    (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      if (!isMainFrame) return;
+      const details = `${errorDescription} (code: ${errorCode}) while loading ${validatedURL}`;
+      void showDesktopLoadError(
+        getPackagedWebBaseUrlCandidates()[0] ?? PACKAGED_WEB_BASE_URL,
+        details,
+      );
+    },
+  );
+
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    const reason = `${details.reason}${details.exitCode ? ` (exit: ${details.exitCode})` : ''}`;
+    void showDesktopLoadError(
+      getPackagedWebBaseUrlCandidates()[0] ?? PACKAGED_WEB_BASE_URL,
+      `Renderer process crashed: ${reason}`,
+    );
+  });
+
+  mainWindow.on('unresponsive', () => {
+    void showDesktopLoadError(
+      getPackagedWebBaseUrlCandidates()[0] ?? PACKAGED_WEB_BASE_URL,
+      'The renderer became unresponsive.',
+    );
+  });
+
+  void loadPackagedMainContent();
   mainWindow.webContents.once('did-finish-load', () => {
     if (!pendingDeepLink) return;
     const link = pendingDeepLink;

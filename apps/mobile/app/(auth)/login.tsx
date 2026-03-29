@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, router } from 'expo-router';
 import { ActivityIndicator, Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import Constants from 'expo-constants';
 import { AppScreen } from '@/components/screen';
 import { useAuth } from '@/providers/auth-provider';
+import { getApiDebugInfo } from '@/lib/api';
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -10,6 +12,10 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const apiDebug = getApiDebugInfo();
+  const appVersion = Constants.expoConfig?.version ?? 'unknown';
+  const configuredApiBase =
+    ((Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string }).apiBaseUrl ?? 'not-set';
 
   async function handleLogin() {
     setError(null);
@@ -38,6 +44,7 @@ export default function LoginScreen() {
           autoCapitalize="none"
           keyboardType="email-address"
           placeholder="you@company.com"
+          placeholderTextColor="#667085"
         />
       </View>
 
@@ -49,6 +56,7 @@ export default function LoginScreen() {
           onChangeText={setPassword}
           secureTextEntry
           placeholder="••••••••"
+          placeholderTextColor="#667085"
         />
       </View>
 
@@ -69,6 +77,13 @@ export default function LoginScreen() {
           <Text>Set password (invite)</Text>
         </Link>
       </View>
+
+      <View style={styles.debugBox}>
+        <Text style={styles.debugTitle}>Debug Info</Text>
+        <Text style={styles.debugText}>App version: {appVersion}</Text>
+        <Text style={styles.debugText}>Configured API: {configuredApiBase}</Text>
+        <Text style={styles.debugText}>Active API: {apiDebug.activeApiBaseUrl}</Text>
+      </View>
     </AppScreen>
   );
 }
@@ -84,7 +99,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     backgroundColor: '#fff',
+    color: '#101828',
   },
   error: { color: '#b42318' },
   links: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
+  debugBox: {
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#d0d5dd',
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: '#f8f9fc',
+    gap: 2,
+  },
+  debugTitle: { fontSize: 12, fontWeight: '700', color: '#344054' },
+  debugText: { fontSize: 12, color: '#475467' },
 });

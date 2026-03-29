@@ -17,6 +17,8 @@ type UpdateStatus = {
 contextBridge.exposeInMainWorld('api', {
   platform: async () => process.platform,
   ping: async () => 'pong',
+  retryDesktopLoad: async () => ipcRenderer.invoke('app:retry-load'),
+  openInBrowser: async (url: string) => ipcRenderer.invoke('app:open-external', url),
   printHtml: async (request: {
     html: string;
     layout: 'thermal-sticker' | 'invoice-a5' | 'invoice-a5-receipt' | 'report-a4';

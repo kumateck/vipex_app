@@ -23,15 +23,11 @@
     "android": {
       "package": "com.vipex.mobile",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
         "backgroundColor": "#ffffff"
       },
-      "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
-      ]
+      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -56,7 +52,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiBaseUrl": "https://test.app.vipexparcel.com",
+      "apiBaseUrl": "https://testing.app.vipexparcel.com",
       "eas": {
         "projectId": "d081f35d-fbde-4a00-aae8-93cb34abc07c"
       }

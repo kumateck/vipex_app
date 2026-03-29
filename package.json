@@ -1,6 +1,6 @@
 {
   "name": "bun-react-template",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -18,6 +18,7 @@
     "mobile:android": "bun run --cwd apps/mobile android",
     "mobile:ios": "bun run --cwd apps/mobile ios",
     "build:web": "bun run --cwd apps/web build",
+    "assets:sync": "bash scripts/sync_brand_assets.sh",
     "start": "NODE_ENV=production bun src/index.tsx",
     "dev:legacy": "bun run routes:generate && bun --hot src/index.tsx",
     "dev:watch": "bun run routes:watch & bun --hot src/index.tsx",
