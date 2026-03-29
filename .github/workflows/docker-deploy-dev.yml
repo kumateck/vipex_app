@@ -10,6 +10,9 @@ env:
   CONTAINER_NAME: vipex_app_dev
   HOST_PORT: 11000
   CONTAINER_PORT: 3000
+  APP_BASE_URL: https://test.app.vipexparcel.com
+  RESET_LINK_BASE_URL: https://test.app.vipexparcel.com
+  INVITE_LINK_BASE_URL: https://test.app.vipexparcel.com
 
 jobs:
   build:
@@ -51,7 +54,16 @@ jobs:
           CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
           HOST_PORT: ${{ env.HOST_PORT }}
           CONTAINER_PORT: ${{ env.CONTAINER_PORT }}
-          NEXT_PUBLIC_BASE_URL: ${{ env.NEXT_PUBLIC_BASE_URL }}
+          APP_BASE_URL: ${{ env.APP_BASE_URL }}
+          RESET_LINK_BASE_URL: ${{ env.RESET_LINK_BASE_URL }}
+          INVITE_LINK_BASE_URL: ${{ env.INVITE_LINK_BASE_URL }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          MINIO_REGION: ${{ secrets.MINIO_REGION }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
+          MINIO_FORCE_PATH_STYLE: ${{ secrets.MINIO_FORCE_PATH_STYLE }}
 
         run: |
           mkdir -p ~/.ssh
@@ -86,5 +98,15 @@ jobs:
               -e EMAIL_USER='dkadusei@kumateck.com' \
               -e EMAIL_PASSWORD='Password' \
               -e NODE_ENV='production' \
+              -e APP_BASE_URL='${APP_BASE_URL}' \
+              -e RESET_LINK_BASE_URL='${RESET_LINK_BASE_URL}' \
+              -e INVITE_LINK_BASE_URL='${INVITE_LINK_BASE_URL}' \
+              -e SENTRY_DSN='${SENTRY_DSN}' \
+              -e MINIO_ENDPOINT='${MINIO_ENDPOINT}' \
+              -e MINIO_REGION='${MINIO_REGION}' \
+              -e MINIO_ACCESS_KEY='${MINIO_ACCESS_KEY}' \
+              -e MINIO_SECRET_KEY='${MINIO_SECRET_KEY}' \
+              -e MINIO_BUCKET='${MINIO_BUCKET}' \
+              -e MINIO_FORCE_PATH_STYLE='${MINIO_FORCE_PATH_STYLE}' \
               "${DOCKER_IMAGE_NAME}:latest"
           EOF

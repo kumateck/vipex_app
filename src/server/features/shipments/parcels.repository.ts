@@ -54,6 +54,9 @@ export type ParcelRow = {
   method: number;
   taxReportConfirmation: boolean;
   isDeleted: boolean;
+  deletedBy: string | null;
+  deletedAt: Date | null;
+  deleteReason: string | null;
   createdBy: string | null;
   createdAt: Date;
   receivedBy: string | null;
@@ -215,6 +218,9 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       method: parcels.method,
       taxReportConfirmation: parcels.taxReportConfirmation,
       isDeleted: parcels.isDeleted,
+      deletedBy: parcels.deletedBy,
+      deletedAt: parcels.deletedAt,
+      deleteReason: parcels.deleteReason,
       createdBy: parcels.createdBy,
       createdAt: parcels.createdAt,
       receivedBy: parcels.receivedBy,
@@ -318,6 +324,9 @@ export async function getParcelRepo(
       method: parcels.method,
       taxReportConfirmation: parcels.taxReportConfirmation,
       isDeleted: parcels.isDeleted,
+      deletedBy: parcels.deletedBy,
+      deletedAt: parcels.deletedAt,
+      deleteReason: parcels.deleteReason,
       createdBy: parcels.createdBy,
       createdAt: parcels.createdAt,
       receivedBy: parcels.receivedBy,

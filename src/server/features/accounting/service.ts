@@ -1,5 +1,6 @@
 import { db } from '@/db/config';
 import {
+  ApprovalStatus,
   AccountClass,
   CashConfirmationStatus,
   ExpenseFundingSource,
@@ -18,13 +19,20 @@ import {
   createDailyCashConfirmationRepo,
   createExpenseCategoryRepo,
   createExpenseRequestRepo,
+  createManualJournalEntryLinesRepo,
+  createManualJournalEntryRepo,
+  createServiceChargeRepo,
   createTaxComponentRepo,
   createTaxProfileRepo,
   createTaxFilingAuditLogRepo,
   createTaxFilingPeriodRepo,
   createTaxJournalItemRepo,
   deleteAccountRepo,
+  deleteApprovalPolicyRepo,
+  deleteCompanyBankAccountRepo,
   deleteExpenseCategoryRepo,
+  deleteTaxComponentRepo,
+  deleteTaxProfileRepo,
   getAccountByCodeRepo,
   getAccountRepo,
   getAccountUsageSummaryRepo,
@@ -40,8 +48,11 @@ import {
   getExpenseCategoryByAccountRepo,
   getExpenseCategoryUsageSummaryRepo,
   getExpenseRequestRepo,
+  getManualJournalEntryRepo,
+  getServiceChargeRepo,
   getPettyCashFundByBranchRepo,
   getTaxComponentRepo,
+  getTaxComponentUsageSummaryRepo,
   getTaxFilingPeriodRepo,
   getTaxJournalItemRepo,
   getTaxProfileRepo,
@@ -53,12 +64,16 @@ import {
   listExpenseCategoriesByAccountRepo,
   listExpenseCategoriesRepo,
   listExpenseRequestsRepo,
+  listManualJournalEntryLinesRepo,
+  listPendingManualJournalEntriesRepo,
+  listServiceChargesRepo,
   listJournalLinesForReportingRepo,
   listTaxComponentsRepo,
   listTaxFilingPeriodsRepo,
   listTaxJournalItemsRepo,
   listTaxProfilesRepo,
   updateApprovalPolicyRepo,
+  updateServiceChargeRepo,
   updateTaxFilingPeriodRepo,
   updateTaxJournalItemRepo,
   updateAccountRepo,
@@ -67,6 +82,7 @@ import {
   updateDailyCashConfirmationRepo,
   updateExpenseCategoryRepo,
   updateExpenseRequestRepo,
+  updateManualJournalEntryRepo,
   updateTaxProfileRepo,
 } from './repository';
 import { type JournalLineInput, postJournalEntrySvc } from './posting.service';
@@ -564,6 +580,37 @@ export async function updateExpenseCategorySvc(input: {
   return { id: updated.id };
 }
 
+export async function deleteExpenseCategorySvc(input: {
+  companyId: string;
+  id: string;
+  actorUserId?: string | null;
+}) {
+  const existing = await getExpenseCategoryRepo(input.companyId, input.id);
+  if (!existing) throw NotFound('Expense category not found');
+
+  const usage = await getExpenseCategoryUsageSummaryRepo(input.companyId, input.id);
+  if (usage.totalRequestCount > 0) {
+    throw Conflict(
+      'Expense category cannot be deleted because it is already used by expense requests',
+    );
+  }
+
+  const deleted = await deleteExpenseCategoryRepo(input.companyId, input.id);
+  if (!deleted) throw NotFound('Expense category not found');
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'expense_category',
+    entityId: input.id,
+    action: 'EXPENSE_CATEGORY_DELETED',
+    message: 'Expense category deleted',
+    metadata: { before: existing },
+  });
+
+  return { id: deleted.id };
+}
+
 export async function listApprovalPoliciesSvc(input: {
   companyId: string;
   active?: boolean | null;
@@ -571,11 +618,471 @@ export async function listApprovalPoliciesSvc(input: {
   return listApprovalPoliciesRepo(input);
 }
 
+const MANUAL_ENTRY_POLICY_CODES = new Set([
+  'MANUAL_JOURNAL',
+  'MANUAL_JOURNAL_ENTRY',
+  'MANUAL_ENTRY',
+]);
+
+function isManualJournalPolicyCode(policyCode: string) {
+  return MANUAL_ENTRY_POLICY_CODES.has(policyCode.trim().toUpperCase());
+}
+
+export type ManualJournalApprovalPolicy = {
+  policyCode: string | null;
+  amountLimitPsw: number;
+  requiresApprovalAboveThreshold: boolean;
+  autoAuthorizeBelowThreshold: boolean;
+  configured: boolean;
+};
+
+export async function getManualJournalApprovalPolicySvc(input: { companyId: string }) {
+  const policies = await listApprovalPoliciesRepo({ companyId: input.companyId, active: true });
+  const matched = policies.find((policy) =>
+    MANUAL_ENTRY_POLICY_CODES.has(policy.policyCode.trim().toUpperCase()),
+  );
+  if (!matched) {
+    return {
+      policyCode: null,
+      amountLimitPsw: Number.MAX_SAFE_INTEGER,
+      requiresApprovalAboveThreshold: false,
+      autoAuthorizeBelowThreshold: true,
+      configured: false,
+    } satisfies ManualJournalApprovalPolicy;
+  }
+
+  return {
+    policyCode: matched.policyCode,
+    amountLimitPsw: Number(matched.amountLimitPsw ?? 0),
+    requiresApprovalAboveThreshold: Boolean(matched.requiresHeadOfficeApproval),
+    autoAuthorizeBelowThreshold: Boolean(matched.autoAuthorizeBelowThreshold ?? true),
+    configured: true,
+  } satisfies ManualJournalApprovalPolicy;
+}
+
+export async function postManualJournalEntrySvc(input: {
+  companyId: string;
+  actorUserId: string;
+  branchId?: string | null;
+  locationId?: string | null;
+  memo?: string | null;
+  entryDate?: string | null;
+  lines: JournalLineInput[];
+}) {
+  const totalDebitPsw = input.lines.reduce((sum, line) => sum + Number(line.debitPsw ?? 0), 0);
+  const totalCreditPsw = input.lines.reduce((sum, line) => sum + Number(line.creditPsw ?? 0), 0);
+  const policy = await getManualJournalApprovalPolicySvc({ companyId: input.companyId });
+  const exceedsThreshold = totalDebitPsw > policy.amountLimitPsw;
+  const shouldQueue = exceedsThreshold || !policy.autoAuthorizeBelowThreshold;
+
+  if (shouldQueue) {
+    const created = await db.transaction(async (tx) => {
+      const manualEntry = await createManualJournalEntryRepo(
+        {
+          companyId: input.companyId,
+          policyCode: policy.policyCode,
+          thresholdPsw: policy.amountLimitPsw,
+          totalDebitPsw,
+          totalCreditPsw,
+          status: ApprovalStatus.PENDING,
+          branchId: input.branchId ?? null,
+          locationId: input.locationId ?? null,
+          memo: input.memo ?? null,
+          entryDate: input.entryDate ? new Date(input.entryDate) : new Date(),
+          recordedByUserId: input.actorUserId,
+        },
+        tx,
+      );
+      if (!manualEntry) throw NotFound('Failed to queue manual journal entry for approval');
+
+      await createManualJournalEntryLinesRepo(
+        input.lines.map((line, index) => ({
+          companyId: input.companyId,
+          manualEntryId: manualEntry.id,
+          accountId: line.accountId,
+          branchId: line.branchId ?? input.branchId ?? null,
+          locationId: line.locationId ?? input.locationId ?? null,
+          debitPsw: Number(line.debitPsw ?? 0),
+          creditPsw: Number(line.creditPsw ?? 0),
+          description: line.description ?? null,
+          sortOrder: index,
+        })),
+        tx,
+      );
+      return manualEntry;
+    });
+
+    await recordAuditLog({
+      companyId: input.companyId,
+      actorUserId: input.actorUserId,
+      entityType: 'manual_journal_entry',
+      entityId: created.id,
+      action: exceedsThreshold
+        ? 'MANUAL_JOURNAL_ENTRY_QUEUED_OVER_THRESHOLD'
+        : 'MANUAL_JOURNAL_ENTRY_QUEUED_AUTO_AUTHORIZE_DISABLED',
+      message: exceedsThreshold
+        ? 'Manual journal entry queued because it exceeded threshold'
+        : 'Manual journal entry queued because auto-authorize is disabled',
+      metadata: {
+        totalDebitPsw,
+        totalCreditPsw,
+        threshold: {
+          policyCode: policy.policyCode,
+          amountLimitPsw: policy.amountLimitPsw,
+          requiresApprovalAboveThreshold: policy.requiresApprovalAboveThreshold,
+          autoAuthorizeBelowThreshold: policy.autoAuthorizeBelowThreshold,
+          configured: policy.configured,
+        },
+        lineCount: input.lines.length,
+      },
+    });
+
+    return {
+      batchId: null,
+      entryId: null,
+      manualEntryId: created.id,
+      approvalMode: 'pending_approval',
+      thresholdPsw: policy.amountLimitPsw,
+      policyConfigured: policy.configured,
+      policyCode: policy.policyCode,
+    } as const;
+  }
+
+  const posted = await postJournalEntrySvc({
+    companyId: input.companyId,
+    sourceType: JournalSourceType.MANUAL,
+    sourceId: null,
+    entryDate: input.entryDate ? new Date(input.entryDate) : new Date(),
+    memo: input.memo ?? null,
+    branchId: input.branchId ?? null,
+    locationId: input.locationId ?? null,
+    recordedByUserId: input.actorUserId,
+    approvedByUserId: input.actorUserId,
+    postedBy: input.actorUserId,
+    lines: input.lines,
+  });
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'manual_journal_entry',
+    entityId: posted.entryId,
+    action: 'MANUAL_JOURNAL_ENTRY_AUTO_AUTHORIZED_AND_POSTED',
+    message: 'Manual journal entry auto-authorized and posted',
+    metadata: {
+      batchId: posted.batchId,
+      entryId: posted.entryId,
+      totalDebitPsw,
+      totalCreditPsw,
+      threshold: {
+        policyCode: policy.policyCode,
+        amountLimitPsw: policy.amountLimitPsw,
+        requiresApprovalAboveThreshold: policy.requiresApprovalAboveThreshold,
+        autoAuthorizeBelowThreshold: policy.autoAuthorizeBelowThreshold,
+        configured: policy.configured,
+      },
+      lineCount: input.lines.length,
+    },
+  });
+
+  return {
+    ...posted,
+    manualEntryId: null,
+    approvalMode: 'auto_authorized',
+    thresholdPsw: policy.amountLimitPsw,
+    policyConfigured: policy.configured,
+    policyCode: policy.policyCode,
+  } as const;
+}
+
+export async function listPendingManualJournalEntriesSvc(input: { companyId: string }) {
+  return listPendingManualJournalEntriesRepo({ companyId: input.companyId });
+}
+
+export async function approveAndPostManualJournalEntrySvc(input: {
+  companyId: string;
+  manualEntryId: string;
+  actorUserId: string;
+  approvalReason?: string | null;
+}) {
+  const manualEntry = await getManualJournalEntryRepo({
+    companyId: input.companyId,
+    id: input.manualEntryId,
+  });
+  if (!manualEntry) throw NotFound('Manual journal entry not found');
+  if (manualEntry.status !== ApprovalStatus.PENDING) {
+    throw Conflict('Manual journal entry is not pending approval');
+  }
+
+  const lines = await listManualJournalEntryLinesRepo({
+    companyId: input.companyId,
+    manualEntryId: input.manualEntryId,
+  });
+  if (lines.length < 2) throw BadRequest('Pending manual journal entry has no valid lines');
+
+  const posted = await postJournalEntrySvc({
+    companyId: input.companyId,
+    sourceType: JournalSourceType.MANUAL,
+    sourceId: manualEntry.id,
+    entryDate: manualEntry.entryDate ?? new Date(),
+    memo: manualEntry.memo ?? null,
+    branchId: manualEntry.branchId ?? null,
+    locationId: manualEntry.locationId ?? null,
+    recordedByUserId: manualEntry.recordedByUserId ?? null,
+    approvedByUserId: input.actorUserId,
+    postedBy: input.actorUserId,
+    lines: lines.map((line) => ({
+      accountId: line.accountId,
+      debitPsw: Number(line.debitPsw ?? 0),
+      creditPsw: Number(line.creditPsw ?? 0),
+      branchId: line.branchId ?? null,
+      locationId: line.locationId ?? null,
+      description: line.description ?? null,
+      metadata: { queuedManualEntryId: manualEntry.id },
+    })),
+  });
+
+  const updated = await updateManualJournalEntryRepo({
+    id: manualEntry.id,
+    patch: {
+      status: ApprovalStatus.APPROVED,
+      approvedByUserId: input.actorUserId,
+      approvalReason: input.approvalReason?.trim() || null,
+      postedBatchId: posted.batchId,
+      postedEntryId: posted.entryId,
+      rejectionReason: null,
+    },
+  });
+  if (!updated) throw NotFound('Manual journal entry not found');
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'manual_journal_entry',
+    entityId: manualEntry.id,
+    action: 'MANUAL_JOURNAL_ENTRY_APPROVED_AND_POSTED',
+    message: 'Manual journal entry approved and posted from approval queue',
+    metadata: {
+      postedBatchId: posted.batchId,
+      postedEntryId: posted.entryId,
+      approvalReason: input.approvalReason?.trim() || null,
+      totalDebitPsw: Number(manualEntry.totalDebitPsw ?? 0),
+      totalCreditPsw: Number(manualEntry.totalCreditPsw ?? 0),
+      policyCode: manualEntry.policyCode,
+      thresholdPsw: Number(manualEntry.thresholdPsw ?? 0),
+    },
+  });
+
+  return {
+    id: manualEntry.id,
+    status: ApprovalStatus.APPROVED,
+    postedBatchId: posted.batchId,
+    postedEntryId: posted.entryId,
+  };
+}
+
+export async function rejectManualJournalEntrySvc(input: {
+  companyId: string;
+  manualEntryId: string;
+  actorUserId: string;
+  rejectionReason: string;
+}) {
+  const manualEntry = await getManualJournalEntryRepo({
+    companyId: input.companyId,
+    id: input.manualEntryId,
+  });
+  if (!manualEntry) throw NotFound('Manual journal entry not found');
+  if (manualEntry.status !== ApprovalStatus.PENDING) {
+    throw Conflict('Manual journal entry is not pending approval');
+  }
+
+  const rejectionReason = input.rejectionReason.trim();
+  if (!rejectionReason) throw BadRequest('Rejection reason is required');
+
+  const updated = await updateManualJournalEntryRepo({
+    id: manualEntry.id,
+    patch: {
+      status: ApprovalStatus.REJECTED,
+      approvedByUserId: input.actorUserId,
+      rejectionReason,
+      approvalReason: null,
+    },
+  });
+  if (!updated) throw NotFound('Manual journal entry not found');
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'manual_journal_entry',
+    entityId: manualEntry.id,
+    action: 'MANUAL_JOURNAL_ENTRY_REJECTED',
+    message: 'Manual journal entry rejected from approval queue',
+    metadata: {
+      rejectionReason,
+      totalDebitPsw: Number(manualEntry.totalDebitPsw ?? 0),
+      totalCreditPsw: Number(manualEntry.totalCreditPsw ?? 0),
+      policyCode: manualEntry.policyCode,
+      thresholdPsw: Number(manualEntry.thresholdPsw ?? 0),
+    },
+  });
+
+  return { id: manualEntry.id, status: ApprovalStatus.REJECTED };
+}
+
+export async function listServiceChargesSvc(input: { companyId: string; active?: boolean | null }) {
+  return listServiceChargesRepo(input);
+}
+
+export async function createServiceChargeSvc(input: {
+  companyId: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  amountPsw: number;
+  taxable?: boolean;
+  active?: boolean;
+  sortOrder?: number;
+  payableAccountId?: string | null;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  createdBy?: string | null;
+}) {
+  const code = input.code.trim();
+  const name = input.name.trim();
+  if (!code || !name) throw BadRequest('Service charge code and name are required');
+  if (!Number.isFinite(input.amountPsw) || input.amountPsw < 0) {
+    throw BadRequest('Service charge amount must be a non-negative number');
+  }
+  if (input.payableAccountId) {
+    const account = await getAccountRepo(input.companyId, input.payableAccountId);
+    if (!account) throw NotFound('Linked payable account not found');
+  }
+
+  const created = await createServiceChargeRepo({
+    companyId: input.companyId,
+    code,
+    name,
+    description: input.description?.trim() || null,
+    amountPsw: Math.round(input.amountPsw),
+    taxable: input.taxable ?? false,
+    active: input.active ?? true,
+    sortOrder: input.sortOrder ?? 0,
+    payableAccountId: input.payableAccountId ?? null,
+    effectiveFrom: input.effectiveFrom ? new Date(input.effectiveFrom) : new Date(),
+    effectiveTo: input.effectiveTo ? new Date(input.effectiveTo) : null,
+    createdBy: input.createdBy ?? null,
+  });
+
+  if (!created) throw NotFound('Failed to create service charge');
+  const after = await getServiceChargeRepo(input.companyId, created.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.createdBy ?? null,
+    entityType: 'service_charge',
+    entityId: created.id,
+    action: 'SERVICE_CHARGE_CREATED',
+    message: 'Service charge created',
+    metadata: { after },
+  });
+  return { id: created.id };
+}
+
+export async function updateServiceChargeSvc(input: {
+  companyId: string;
+  id: string;
+  code?: string;
+  name?: string;
+  description?: string | null;
+  amountPsw?: number;
+  taxable?: boolean;
+  active?: boolean;
+  sortOrder?: number;
+  payableAccountId?: string | null;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  actorUserId?: string | null;
+}) {
+  const existing = await getServiceChargeRepo(input.companyId, input.id);
+  if (!existing) throw NotFound('Service charge not found');
+  if (input.code !== undefined && !input.code.trim()) {
+    throw BadRequest('Service charge code is required');
+  }
+  if (input.name !== undefined && !input.name.trim()) {
+    throw BadRequest('Service charge name is required');
+  }
+  if (
+    input.amountPsw !== undefined &&
+    (!Number.isFinite(input.amountPsw) || Number(input.amountPsw) < 0)
+  ) {
+    throw BadRequest('Service charge amount must be a non-negative number');
+  }
+
+  const nextPayableAccountId =
+    input.payableAccountId !== undefined ? input.payableAccountId : existing.payableAccountId;
+  if (nextPayableAccountId) {
+    const account = await getAccountRepo(input.companyId, nextPayableAccountId);
+    if (!account) throw NotFound('Linked payable account not found');
+  }
+
+  const updated = await updateServiceChargeRepo(input.id, {
+    code: input.code?.trim() || existing.code,
+    name: input.name?.trim() || existing.name,
+    description:
+      input.description !== undefined ? input.description?.trim() || null : existing.description,
+    amountPsw:
+      input.amountPsw !== undefined ? Math.round(input.amountPsw) : Number(existing.amountPsw),
+    taxable: input.taxable ?? existing.taxable,
+    active: input.active ?? existing.active,
+    sortOrder: input.sortOrder ?? existing.sortOrder,
+    payableAccountId: nextPayableAccountId ?? null,
+    effectiveFrom:
+      input.effectiveFrom !== undefined
+        ? input.effectiveFrom
+          ? new Date(input.effectiveFrom)
+          : existing.effectiveFrom
+        : existing.effectiveFrom,
+    effectiveTo:
+      input.effectiveTo !== undefined
+        ? input.effectiveTo
+          ? new Date(input.effectiveTo)
+          : null
+        : existing.effectiveTo,
+  });
+  if (!updated) throw NotFound('Service charge not found');
+  const after = await getServiceChargeRepo(input.companyId, input.id);
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'service_charge',
+    entityId: input.id,
+    action: 'SERVICE_CHARGE_UPDATED',
+    message: 'Service charge updated',
+    metadata: {
+      before: existing,
+      patch: {
+        code: input.code,
+        name: input.name,
+        description: input.description,
+        amountPsw: input.amountPsw,
+        taxable: input.taxable,
+        active: input.active,
+        sortOrder: input.sortOrder,
+        payableAccountId: input.payableAccountId,
+        effectiveFrom: input.effectiveFrom,
+        effectiveTo: input.effectiveTo,
+      },
+      after,
+    },
+  });
+  return { id: updated.id };
+}
+
 export async function createApprovalPolicySvc(input: {
   companyId: string;
   policyCode: string;
   name: string;
   amountLimitPsw?: number;
+  autoAuthorizeBelowThreshold?: boolean;
   requiresHeadOfficeApproval?: boolean;
   appliesToFundingSource?: number | null;
   active?: boolean;
@@ -584,14 +1091,16 @@ export async function createApprovalPolicySvc(input: {
   const policyCode = input.policyCode.trim();
   const name = input.name.trim();
   if (!policyCode || !name) throw BadRequest('Policy code and name are required');
+  const isManualPolicy = isManualJournalPolicyCode(policyCode);
 
   const created = await createApprovalPolicyRepo({
     companyId: input.companyId,
     policyCode,
     name,
     amountLimitPsw: Number(input.amountLimitPsw ?? 0),
+    autoAuthorizeBelowThreshold: input.autoAuthorizeBelowThreshold ?? true,
     requiresHeadOfficeApproval: input.requiresHeadOfficeApproval ?? false,
-    appliesToFundingSource: input.appliesToFundingSource ?? null,
+    appliesToFundingSource: isManualPolicy ? null : (input.appliesToFundingSource ?? null),
     active: input.active ?? true,
     createdBy: input.createdBy ?? null,
   });
@@ -616,6 +1125,7 @@ export async function updateApprovalPolicySvc(input: {
   policyCode?: string;
   name?: string;
   amountLimitPsw?: number;
+  autoAuthorizeBelowThreshold?: boolean;
   requiresHeadOfficeApproval?: boolean;
   appliesToFundingSource?: number | null;
   active?: boolean;
@@ -629,15 +1139,20 @@ export async function updateApprovalPolicySvc(input: {
   if (input.name !== undefined && !input.name.trim()) {
     throw BadRequest('Policy name is required');
   }
+  const nextPolicyCode = input.policyCode?.trim() || existing.policyCode;
+  const isManualPolicy = isManualJournalPolicyCode(nextPolicyCode);
 
   const updated = await updateApprovalPolicyRepo(input.id, {
-    policyCode: input.policyCode?.trim() || existing.policyCode,
+    policyCode: nextPolicyCode,
     name: input.name?.trim() || existing.name,
     amountLimitPsw: Number(input.amountLimitPsw ?? existing.amountLimitPsw),
+    autoAuthorizeBelowThreshold:
+      input.autoAuthorizeBelowThreshold ?? existing.autoAuthorizeBelowThreshold,
     requiresHeadOfficeApproval:
       input.requiresHeadOfficeApproval ?? existing.requiresHeadOfficeApproval,
-    appliesToFundingSource:
-      input.appliesToFundingSource !== undefined
+    appliesToFundingSource: isManualPolicy
+      ? null
+      : input.appliesToFundingSource !== undefined
         ? input.appliesToFundingSource
         : existing.appliesToFundingSource,
     active: input.active ?? existing.active,
@@ -658,6 +1173,7 @@ export async function updateApprovalPolicySvc(input: {
         policyCode: input.policyCode,
         name: input.name,
         amountLimitPsw: input.amountLimitPsw,
+        autoAuthorizeBelowThreshold: input.autoAuthorizeBelowThreshold,
         requiresHeadOfficeApproval: input.requiresHeadOfficeApproval,
         appliesToFundingSource: input.appliesToFundingSource,
         active: input.active,
@@ -666,6 +1182,30 @@ export async function updateApprovalPolicySvc(input: {
     },
   });
   return { id: updated.id };
+}
+
+export async function deleteApprovalPolicySvc(input: {
+  companyId: string;
+  id: string;
+  actorUserId?: string | null;
+}) {
+  const existing = await getApprovalPolicyRepo(input.companyId, input.id);
+  if (!existing) throw NotFound('Approval policy not found');
+
+  const deleted = await deleteApprovalPolicyRepo(input.companyId, input.id);
+  if (!deleted) throw NotFound('Approval policy not found');
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'accounting_approval_policy',
+    entityId: input.id,
+    action: 'ACCOUNTING_APPROVAL_POLICY_DELETED',
+    message: 'Accounting approval policy deleted',
+    metadata: { before: existing },
+  });
+
+  return { id: deleted.id };
 }
 
 export async function listCompanyBankAccountsSvc(input: {
@@ -789,6 +1329,50 @@ export async function updateCompanyBankAccountSvc(input: {
   return { id: updated.id };
 }
 
+function describeBankAccountUsage(usage: {
+  totalRequestCount: number;
+  cashToBankTransferCount: number;
+  pettyCashReplenishmentCount: number;
+}) {
+  const parts: string[] = [];
+  if (usage.totalRequestCount > 0) parts.push(`${usage.totalRequestCount} expense requests`);
+  if (usage.cashToBankTransferCount > 0)
+    parts.push(`${usage.cashToBankTransferCount} cash-to-bank transfers`);
+  if (usage.pettyCashReplenishmentCount > 0)
+    parts.push(`${usage.pettyCashReplenishmentCount} petty cash replenishments`);
+  return parts.join(', ');
+}
+
+export async function deleteCompanyBankAccountSvc(input: {
+  companyId: string;
+  id: string;
+  actorUserId?: string | null;
+}) {
+  const existing = await getCompanyBankAccountRepoById(input.companyId, input.id);
+  if (!existing) throw NotFound('Company bank account not found');
+
+  const usage = await getCompanyBankAccountUsageSummaryRepo(input.companyId, input.id);
+  const usageText = describeBankAccountUsage(usage);
+  if (usageText) {
+    throw Conflict(`Company bank account cannot be deleted because it is in use by ${usageText}`);
+  }
+
+  const deleted = await deleteCompanyBankAccountRepo(input.companyId, input.id);
+  if (!deleted) throw NotFound('Company bank account not found');
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'company_bank_account',
+    entityId: input.id,
+    action: 'COMPANY_BANK_ACCOUNT_DELETED',
+    message: 'Company bank account deleted',
+    metadata: { before: existing },
+  });
+
+  return { id: deleted.id };
+}
+
 export async function listTaxProfilesSvc(input: { companyId: string; active?: boolean | null }) {
   return listTaxProfilesRepo(input);
 }
@@ -877,6 +1461,37 @@ export async function updateTaxProfileSvc(input: {
     },
   });
   return { id: updated.id };
+}
+
+export async function deleteTaxProfileSvc(input: {
+  companyId: string;
+  id: string;
+  actorUserId?: string | null;
+}) {
+  const existing = await getTaxProfileRepo(input.companyId, input.id);
+  if (!existing) throw NotFound('Tax profile not found');
+
+  const usage = await getTaxProfileUsageSummaryRepo(input.companyId, input.id);
+  if (usage.compensationCount > 0 || usage.taxJournalItemCount > 0 || usage.taxComponentCount > 0) {
+    throw Conflict(
+      'Tax profile cannot be deleted while it is still referenced by payroll, tax journals, or tax components',
+    );
+  }
+
+  const deleted = await deleteTaxProfileRepo(input.companyId, input.id);
+  if (!deleted) throw NotFound('Tax profile not found');
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'tax_profile',
+    entityId: input.id,
+    action: 'TAX_PROFILE_DELETED',
+    message: 'Tax profile deleted',
+    metadata: { before: existing },
+  });
+
+  return { id: deleted.id };
 }
 
 export async function createTaxComponentSvc(input: {
@@ -997,6 +1612,33 @@ export async function updateTaxComponentSvc(input: {
     },
   });
   return { id: updated.id };
+}
+
+export async function deleteTaxComponentSvc(input: {
+  companyId: string;
+  id: string;
+  actorUserId?: string | null;
+}) {
+  const existing = await getTaxComponentRepo(input.companyId, input.id);
+  if (!existing) throw NotFound('Tax component not found');
+
+  const usage = await getTaxComponentUsageSummaryRepo(input.companyId, input.id);
+  if (usage.taxProfileCount === 0) throw NotFound('Tax component not found');
+
+  const deleted = await deleteTaxComponentRepo(input.companyId, input.id);
+  if (!deleted) throw NotFound('Tax component not found');
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId ?? null,
+    entityType: 'tax_component',
+    entityId: input.id,
+    action: 'TAX_COMPONENT_DELETED',
+    message: 'Tax component deleted',
+    metadata: { before: existing },
+  });
+
+  return { id: deleted.id };
 }
 
 export async function listDailyCashConfirmationsSvc(input: {

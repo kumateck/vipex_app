@@ -20,11 +20,14 @@ export * from './date-range-picker';
 // export * from "./calendar"
 export * from './checkbox';
 export * from './collapsible';
+export * from './command';
+export * from './creatable-combobox';
 export * from './scroll-area';
 export * from './separator';
 // export * from "./switch"
 // export * from "./table"
 export * from './textarea';
 export * from './react-signature';
+export * from './input-otp';
 // export * from "./tooltip"
 // export * from "./typography"

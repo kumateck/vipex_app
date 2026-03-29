@@ -9,6 +9,7 @@ export interface EntityAuditLog {
   id: string;
   companyId: string;
   actorUserId?: string | null;
+  actorUserName?: string | null;
   entityType: string;
   entityId?: string | null;
   action: string;

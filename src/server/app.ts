@@ -12,7 +12,6 @@ import { HttpStatus } from './utils/http-status';
 import { devMailRoutes } from './routes/dev-mail';
 import { isDev } from './utils/env';
 import { corsPlugin } from './plugins/cors';
-// import { authPasswordRoutes } from './features/auth/routes.reset-password';
 import { usersInviteRoutes } from './features/auth/routes.invite-resend';
 import { branchesRoutes } from './features/branches/routes';
 import { locationsRoutes } from './features/locations/routes';
@@ -42,6 +41,7 @@ import { companyModulesRoutes } from './features/company-modules/routes';
 import { warehousesRoutes } from './features/warehouses/routes';
 import { parcelInternalTransfersRoutes } from './features/parcel-internal-transfers/routes';
 import { uploadsRoutes } from './features/uploads/routes';
+import { parcelMastersRoutes } from './features/parcel-masters/routes';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -73,6 +73,7 @@ export const app = new Elysia()
           s
             .group('/bookings', (r) => r.use(bookingsRoutes).use(bookingWithParcelsRoutes))
             .group('/parcels', (r) => r.use(parcelsRoutes))
+            .group('/parcel-masters', (r) => r.use(parcelMastersRoutes))
             .group('/parcel-internal-transfers', (r) => r.use(parcelInternalTransfersRoutes))
             .group('/consignments', (r) => r.use(consignmentsRoutes))
             .group('/auto-grouping', (r) => r.use(autoGroupingRoutes)),
@@ -93,17 +94,6 @@ export const app = new Elysia()
       .group('/rbac', (r) => r.use(rbacRoutes))
       .group('/geolocation', (r) => r.use(geolocationRoutes)),
   )
-  // .group('/v1', (v1) =>
-  //   v1
-  //     .use(api)
-  //     .use(authPasswordRoutes)
-  //     .use(usersInviteRoutes)
-  //     .group('/branches', (r) => r.use(branchesRoutes))
-  //     .group('/statuses', (r) => r.use(statusesRoutes))
-  //     .group('/locations', (r) => r.use(locationsRoutes)),
-  // )
-  // .group('/users', (r) => r.use(usersRoutes))
-
   .get('/', () => ({ name: 'vipex-api', version: 'v1' }))
   // Catch-all fallback for unmatched routes inside Elysia
   .all('/*', ({ set, request }) => {

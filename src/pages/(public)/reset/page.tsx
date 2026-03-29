@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -13,11 +13,14 @@ import { toast } from 'sonner';
 import { PasswordField } from '@/features/auth/components/password-field';
 import { useResetPasswordMutation } from '@/features/auth/api';
 import ThrowErrorMessage from '@/lib/throw-error';
-import { Spinner } from '@/components/ui';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { InputOTP, InputOTPGroup, InputOTPSlot, Spinner, InputOTPSeparator } from '@/components/ui';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token') ?? '';
+  const [email, setEmail] = useState<string>(searchParams.get('email') ?? '');
+  const [otp, setOtp] = useState<string>('');
   const navigate = useNavigate();
   const [resetPassword, { isLoading }] = useResetPasswordMutation();
 
@@ -27,8 +30,8 @@ export default function ResetPassword() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!token) {
-      toast.error('Reset token is missing. Please request a new reset link.');
+    if (otp.length !== 6) {
+      toast.error('Enter the 6-digit OTP sent to your email.');
       return;
     }
 
@@ -38,7 +41,7 @@ export default function ResetPassword() {
     }
 
     try {
-      await resetPassword({ token, password }).unwrap();
+      await resetPassword({ email, otp, password }).unwrap();
       toast.success('Password reset successful. Please login.');
       navigate('/login');
     } catch (err) {
@@ -51,10 +54,49 @@ export default function ResetPassword() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Reset Password</CardTitle>
-          <CardDescription>Enter a new password to complete your reset</CardDescription>
+          <CardDescription>Enter your email, 6-digit OTP, and new password</CardDescription>
         </CardHeader>
         <form onSubmit={submit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>OTP Code</Label>
+              <InputOTP maxLength={6} value={otp} onChange={setOtp} pattern="^[0-9]+$">
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                </InputOTPGroup>
+                <InputOTPSeparator className="mx-0.5" />
+                <InputOTPGroup>
+                  <InputOTPSlot index={1} />
+                </InputOTPGroup>
+                <InputOTPSeparator className="mx-0.5" />
+                <InputOTPGroup>
+                  <InputOTPSlot index={2} />
+                </InputOTPGroup>
+                <InputOTPSeparator className="mx-0.5" />
+                <InputOTPGroup>
+                  <InputOTPSlot index={3} />
+                </InputOTPGroup>
+                <InputOTPSeparator className="mx-0.5" />
+                <InputOTPGroup>
+                  <InputOTPSlot index={4} />
+                </InputOTPGroup>
+                <InputOTPSeparator className="mx-0.5" />
+                <InputOTPGroup>
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
             <PasswordField
               id="password"
               label="New Password"
@@ -74,11 +116,20 @@ export default function ResetPassword() {
               required
             />
           </CardContent>
-          <CardFooter>
-            <Button type="submit" className="w-full flex gap-2" disabled={isLoading || !token}>
-              {isLoading && <Spinner />}
-              {isLoading ? 'Resetting...' : 'Reset Password'}
-            </Button>
+          <CardFooter className="py-5">
+            <div className="w-full space-y-2">
+              <Button
+                type="submit"
+                className="w-full flex gap-2"
+                disabled={isLoading || otp.length !== 6 || !email.trim()}
+              >
+                {isLoading && <Spinner />}
+                {isLoading ? 'Resetting...' : 'Reset Password'}
+              </Button>
+              <Button asChild type="button" variant="outline" className="w-full">
+                <Link to="/login">Return to login</Link>
+              </Button>
+            </div>
           </CardFooter>
         </form>
       </Card>

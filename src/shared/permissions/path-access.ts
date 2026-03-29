@@ -1,8 +1,13 @@
-import type { PermissionKey } from './constants';
+import { RoutePermissionOverrides, type PermissionKey } from './constants';
 
 export function inferReadPermissionByPath(pathname?: string): PermissionKey | undefined {
   if (!pathname) return undefined;
+  const exactRoutePermission = RoutePermissionOverrides[pathname];
+  if (exactRoutePermission) return exactRoutePermission;
 
+  if (pathname.startsWith('/parcels/in-transit/outgoing')) return 'CanReadParcelOutgoing';
+  if (pathname.startsWith('/parcels/in-transit/incoming')) return 'CanReadParcelIncoming';
+  if (pathname.startsWith('/parcels/receive')) return 'CanReadParcelScan';
   if (pathname === '/parcels' || pathname.startsWith('/parcels/')) return 'CanReadParcels';
   if (pathname === '/customers' || pathname.startsWith('/customers/')) return 'CanReadCustomers';
   if (pathname === '/accounting' || pathname.startsWith('/accounting/')) return 'CanReadAccounting';
@@ -52,13 +57,13 @@ export function inferReadPermissionByPath(pathname?: string): PermissionKey | un
 
 export function inferRequiredPermissionByPath(pathname?: string): PermissionKey | undefined {
   if (!pathname) return undefined;
+  const exactRoutePermission = RoutePermissionOverrides[pathname];
+  if (exactRoutePermission) return exactRoutePermission;
 
   if (pathname === '/branches/new') return 'CanCreateBranches';
   if (pathname.startsWith('/branches/edit/')) return 'CanUpdateBranches';
   if (pathname === '/locations/new') return 'CanCreateLocations';
   if (pathname.startsWith('/locations/edit/')) return 'CanUpdateLocations';
-  if (pathname === '/statuses/new') return 'CanCreateStatuses';
-  if (pathname.startsWith('/statuses/edit/')) return 'CanUpdateStatuses';
   if (pathname === '/users/new') return 'CanCreateUsers';
   if (pathname.startsWith('/users/edit/')) return 'CanUpdateUsers';
   if (pathname === '/customers/new' || pathname === '/customers/create')
@@ -68,6 +73,7 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
   if (pathname === '/cashier/sessions/close') return 'CanCloseCashierSessions';
   if (pathname === '/settings/modules') return 'CanManageCompanyModules';
   if (pathname === '/settings/change-password') return 'CanChangePassword';
+  if (pathname === '/accounting/setup') return undefined;
 
   if (pathname === '/inventory/categories/new') return 'CanCreateProductCategory';
   if (pathname.startsWith('/inventory/categories/edit/')) return 'CanUpdateProductCategory';
@@ -80,17 +86,17 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
   if (pathname === '/inventory/stock-transfers/new') return 'CanCreateStockTransfer';
   if (pathname.startsWith('/inventory/stock-transfers/edit/')) return 'CanUpdateStockTransfer';
 
-  if (pathname === '/accounting/setup') return 'CanManageAccountingSetup';
-  if (pathname === '/accounting/tax') return 'CanManageTaxFiling';
+  if (pathname === '/accounting/tax') return 'CanReadAccounting';
   if (pathname === '/accounting/daily-cash' || pathname === '/accounting/expenses') {
-    return 'CanPostAccountingEntries';
+    return 'CanReadAccounting';
   }
 
   if (
     pathname.startsWith('/parcels/sender-payments') ||
     pathname.startsWith('/parcels/receiver-cashier')
   ) {
-    return 'CanCreatePayments';
+    if (pathname.startsWith('/parcels/sender-payments')) return 'CanCreateSenderPayments';
+    return 'CanCreateReceiverPayments';
   }
   if (pathname.startsWith('/parcels/internal-transfers/acknowledge')) {
     return 'CanAcknowledgeParcelInternalTransfers';

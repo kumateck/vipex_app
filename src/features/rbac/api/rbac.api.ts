@@ -75,7 +75,10 @@ export const rbacApi = api.injectEndpoints({
         method: 'PATCH',
         body: { name },
       }),
-      invalidatesTags: (_result, _err, { id }) => [{ type: 'RBAC', id }, ...invalidateEntityListTag('RBAC')],
+      invalidatesTags: (_result, _err, { id }) => [
+        { type: 'RBAC', id },
+        ...invalidateEntityListTag('RBAC'),
+      ],
     }),
 
     deleteRole: builder.mutation<{ success: boolean }, string>({
@@ -83,7 +86,10 @@ export const rbacApi = api.injectEndpoints({
         url: `/rbac/roles/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: (_result, _err, id) => [{ type: 'RBAC', id }, ...invalidateEntityListTag('RBAC')],
+      invalidatesTags: (_result, _err, id) => [
+        { type: 'RBAC', id },
+        ...invalidateEntityListTag('RBAC'),
+      ],
     }),
 
     getRolePermissions: builder.query<{ permissionKeys: string[] }, string>({
@@ -93,13 +99,20 @@ export const rbacApi = api.injectEndpoints({
       providesTags: (_result, _err, id) => [{ type: 'RBAC', id }],
     }),
 
-    setRolePermissions: builder.mutation<{ success: boolean }, { roleId: string; permissionKeys: string[] }>({
+    setRolePermissions: builder.mutation<
+      { success: boolean },
+      { roleId: string; permissionKeys: string[] }
+    >({
       query: ({ roleId, permissionKeys }) => ({
         url: `/rbac/roles/${roleId}/permissions`,
         method: 'PUT',
         body: { permissionKeys },
       }),
-      invalidatesTags: () => [...invalidateEntityListTag('RBAC'), { type: 'RBAC', id: 'PERMISSIONS' }],
+      invalidatesTags: () => [
+        ...invalidateEntityListTag('RBAC'),
+        { type: 'RBAC', id: 'PERMISSIONS' },
+        'Auth',
+      ],
     }),
   }),
 });

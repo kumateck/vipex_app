@@ -16,7 +16,7 @@ export default function ForgotPasswordScreen() {
     setStatus(null);
     try {
       await forgotPassword(email.trim());
-      setStatus('If the account exists, a reset link has been sent.');
+      setStatus('If the account exists, a 6-digit OTP has been sent.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit request');
     } finally {
@@ -39,7 +39,7 @@ export default function ForgotPasswordScreen() {
       </View>
       {status ? <Text style={styles.success}>{status}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title={loading ? 'Submitting...' : 'Send reset link'} onPress={handleSubmit} />
+      <Button title={loading ? 'Submitting...' : 'Send OTP'} onPress={handleSubmit} />
       <Link href="/(auth)/login" style={{ marginTop: 12 }}>
         <Text>Back to login</Text>
       </Link>

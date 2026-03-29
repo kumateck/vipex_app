@@ -24,13 +24,16 @@ import {
 import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useGetLocationQuery } from '@/features/locations/api/locations.api';
+import { Textarea } from '@/components/ui/textarea';
 import {
   type SenderCashierParcel,
   useCollectSenderAndProcessMutation,
   useListSenderCashierParcelsQuery,
+  useSoftDeleteParcelMutation,
 } from '../api/parcel.api';
 import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 import { ParcelReceiptActions, type ReceiptPrintData } from '../components/parcel-receipt-actions';
@@ -68,6 +71,9 @@ export function ParcelSenderPaymentsPage() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
+  const canDeleteParcel = (user?.permissions ?? []).includes(
+    PermissionKeys.CanSoftDeleteParcelsAndPayments,
+  );
 
   const [query, setQuery] = useState<
     ServerListQuery<{ companyId?: string | null; sourceId?: string | null; status?: number | null }>
@@ -82,6 +88,8 @@ export function ParcelSenderPaymentsPage() {
   });
 
   const [selectedParcel, setSelectedParcel] = useState<SenderCashierParcel | null>(null);
+  const [deleteTargetParcel, setDeleteTargetParcel] = useState<SenderCashierParcel | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
   const [lastPrintedReceipt, setLastPrintedReceipt] = useState<ReceiptPrintData | null>(null);
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<string>(String(PaymentMethod.CASH));
@@ -110,6 +118,7 @@ export function ParcelSenderPaymentsPage() {
   });
   const [collectSenderAndProcess, { isLoading: isCollecting }] =
     useCollectSenderAndProcessMutation();
+  const [softDeleteParcel, { isLoading: isDeletingParcel }] = useSoftDeleteParcelMutation();
 
   const columns = useMemo<ColumnDef<SenderCashierParcel>[]>(
     () => [
@@ -147,21 +156,35 @@ export function ParcelSenderPaymentsPage() {
         header: 'Actions',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            onClick={() => {
-              const parcel = row.original;
-              setSelectedParcel(parcel);
-              setAmount((getSenderDuePsw(parcel) / 100).toFixed(2));
-              setPaymentMethod(String(PaymentMethod.CASH));
-            }}
-          >
-            {getSenderDuePsw(row.original) > 0 ? 'Collect Payment' : 'Print Receipts'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                const parcel = row.original;
+                setSelectedParcel(parcel);
+                setAmount((getSenderDuePsw(parcel) / 100).toFixed(2));
+                setPaymentMethod(String(PaymentMethod.CASH));
+              }}
+            >
+              {getSenderDuePsw(row.original) > 0 ? 'Collect Payment' : 'Print Receipts'}
+            </Button>
+            {canDeleteParcel ? (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => {
+                  setDeleteTargetParcel(row.original);
+                  setDeleteReason('');
+                }}
+              >
+                Delete Parcel
+              </Button>
+            ) : null}
+          </div>
         ),
       },
     ],
-    [],
+    [canDeleteParcel],
   );
 
   const handleCollectPayment = async () => {
@@ -254,6 +277,30 @@ export function ParcelSenderPaymentsPage() {
   };
 
   const isSubmitting = isCollecting;
+
+  const handleDeleteParcel = async () => {
+    if (!deleteTargetParcel) return;
+    const reason = deleteReason.trim();
+    if (!reason) {
+      toast.error('Deletion reason is required');
+      return;
+    }
+
+    try {
+      const result = await softDeleteParcel({ id: deleteTargetParcel.id, reason }).unwrap();
+      toast.success(
+        `Parcel deleted. Payments voided ${result.payments.totalVoided}/${result.payments.total}.`,
+      );
+      setDeleteTargetParcel(null);
+      setDeleteReason('');
+      if (selectedParcel?.id === deleteTargetParcel.id) {
+        setSelectedParcel(null);
+      }
+      await refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete parcel');
+    }
+  };
 
   return (
     <div className="w-full p-4 space-y-4">
@@ -357,6 +404,56 @@ export function ParcelSenderPaymentsPage() {
                   : selectedParcel && getSenderDuePsw(selectedParcel) > 0
                     ? 'Collect Payment'
                     : 'Print Receipts'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={Boolean(deleteTargetParcel)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeleteTargetParcel(null);
+              setDeleteReason('');
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Parcel (Soft Delete)</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Tracking: <strong>{deleteTargetParcel?.trackingCode ?? '-'}</strong>
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="delete-parcel-reason">Reason</Label>
+                <Textarea
+                  id="delete-parcel-reason"
+                  value={deleteReason}
+                  onChange={(event) => setDeleteReason(event.target.value)}
+                  placeholder="Why are you deleting this parcel?"
+                  rows={4}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  setDeleteTargetParcel(null);
+                  setDeleteReason('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteParcel}
+                disabled={isDeletingParcel}
+              >
+                {isDeletingParcel ? 'Deleting...' : 'Delete Parcel'}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -46,14 +46,22 @@ import { useAuthStore, type AuthUser } from '@/stores/auth-store';
 
 export function AccountingExpensesPage() {
   const user = useAuthStore((state) => state.user);
+  const permissions = new Set(user?.permissions ?? []);
+  const canAccessExpenses =
+    permissions.has(PermissionKeys.CanCreateExpenseRequest) ||
+    permissions.has(PermissionKeys.CanSubmitExpenseRequest) ||
+    permissions.has(PermissionKeys.CanApproveExpenseRequest) ||
+    permissions.has(PermissionKeys.CanRejectExpenseRequest) ||
+    permissions.has(PermissionKeys.CanPayExpenseRequest) ||
+    permissions.has(PermissionKeys.CanPostExpenseRequest);
   if (!user?.company?.useAccounting) {
     return <AccountingDisabledState />;
   }
-  if (!user.permissions?.includes(PermissionKeys.CanPostAccountingEntries)) {
+  if (!canAccessExpenses) {
     return (
       <AccountingUnauthorizedState
         title="Expense Workflow Restricted"
-        description="Your role does not include permission to create, approve, pay, and post accounting expense entries."
+        description="Your role does not include permission to process expense workflow actions."
       />
     );
   }

@@ -11,6 +11,13 @@ import { PaymentMethod } from '@/db/schemas';
 import { assertActiveSessionSvc } from '../cashiers/service';
 import { recordAuditLog } from '../audit/logger';
 import { getCustomerCreditSummarySvc, getCustomerSvc } from '../customers/service';
+import {
+  createParcelContentRepo,
+  createParcelDetailRepo,
+  findParcelContentByNameRepo,
+  findParcelDetailByNameRepo,
+  getParcelContentRepo,
+} from '../parcel-masters/repository';
 
 export type CreateBookingWithParcelsBody = {
   senderId: string;
@@ -54,7 +61,9 @@ export async function createBookingWithParcelsSvc(
     throw BadRequest('At least one parcel is required');
   }
 
-  const creditParcels = body.parcels.filter(
+  const normalizedParcels = await linkParcelMastersAndNormalizeParcels(body);
+
+  const creditParcels = normalizedParcels.filter(
     (parcel) => parcel.method === PaymentMethod.CREDIT && Number(parcel.chargeCedis ?? 0) > 0,
   );
 
@@ -116,7 +125,7 @@ export async function createBookingWithParcelsSvc(
     createdBy: body.createdBy,
     cashierSessionId: resolvedCashierSessionId,
     // bookingCode: body.bookingCode ?? null,
-    parcels: body.parcels.map((p) => ({
+    parcels: normalizedParcels.map((p) => ({
       destinationId: p.destinationId,
       receiverId: p.receiverId,
       status: p.status,
@@ -170,4 +179,97 @@ export async function createBookingWithParcelsSvc(
   });
 
   return created;
+}
+
+async function linkParcelMastersAndNormalizeParcels(body: CreateBookingWithParcelsBody) {
+  const contentCache = new Map<string, { name: string; basePricePsw: number }>();
+  const detailCache = new Map<string, { name: string }>();
+
+  return Promise.all(
+    body.parcels.map(async (parcel) => {
+      const normalizedContent = parcel.parcelContent.trim();
+      const normalizedDetails = parcel.parcelDetails.trim();
+      let normalizedChargeCedis = parcel.chargeCedis;
+
+      if (normalizedContent.length > 0) {
+        const contentKey = normalizedContent.toLowerCase();
+        let cachedContent = contentCache.get(contentKey);
+
+        if (!cachedContent) {
+          const existing = await findParcelContentByNameRepo(body.companyId, normalizedContent);
+          if (existing) {
+            const current = await getParcelContentRepo(body.companyId, existing.id);
+            cachedContent = {
+              name: current?.name ?? normalizedContent,
+              basePricePsw: Number(current?.basePricePsw ?? 0),
+            };
+          } else {
+            const chargePsw = Number(
+              toPesewas(
+                parcel.chargeCedis != null && String(parcel.chargeCedis).trim().length > 0
+                  ? parcel.chargeCedis
+                  : 0,
+              ),
+            );
+            const created = await createParcelContentRepo({
+              companyId: body.companyId,
+              name: normalizedContent,
+              description: null,
+              basePricePsw: chargePsw,
+              taxInclusive: true,
+              active: true,
+              sortOrder: 0,
+              createdBy: body.createdBy,
+            });
+            if (created) {
+              cachedContent = { name: normalizedContent, basePricePsw: chargePsw };
+            }
+          }
+
+          if (cachedContent) {
+            contentCache.set(contentKey, cachedContent);
+          }
+        }
+
+        if (
+          cachedContent &&
+          (normalizedChargeCedis == null || String(normalizedChargeCedis).trim().length === 0)
+        ) {
+          normalizedChargeCedis = (cachedContent.basePricePsw / 100).toFixed(2);
+        }
+      }
+
+      if (normalizedDetails.length > 0) {
+        const detailsKey = normalizedDetails.toLowerCase();
+        let cachedDetails = detailCache.get(detailsKey);
+
+        if (!cachedDetails) {
+          const existing = await findParcelDetailByNameRepo(body.companyId, normalizedDetails);
+          if (existing) {
+            cachedDetails = { name: normalizedDetails };
+          } else {
+            const created = await createParcelDetailRepo({
+              companyId: body.companyId,
+              name: normalizedDetails,
+              description: null,
+              active: true,
+              sortOrder: 0,
+              createdBy: body.createdBy,
+            });
+            if (created) {
+              cachedDetails = { name: normalizedDetails };
+            }
+          }
+          if (cachedDetails) detailCache.set(detailsKey, cachedDetails);
+        }
+      }
+
+      return {
+        ...parcel,
+        parcelContent: normalizedContent,
+        parcelDetails: normalizedDetails,
+        chargeCedis: normalizedChargeCedis,
+      };
+    }),
+  );
 }

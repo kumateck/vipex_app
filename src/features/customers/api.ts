@@ -258,7 +258,7 @@ export const customersApi = api.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'Customers', id },
-        { type: 'Customers', id: 'LIST' },
+        ...invalidateEntityListTag('Customers'),
       ],
     }),
     updateCustomerCrm: builder.mutation<{ id: string }, UpdateCustomerInput>({
@@ -269,7 +269,7 @@ export const customersApi = api.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'Customers', id },
-        { type: 'Customers', id: 'LIST' },
+        ...invalidateEntityListTag('Customers'),
       ],
     }),
     deleteCustomer: builder.mutation<{ success: true }, { id: string }>({
