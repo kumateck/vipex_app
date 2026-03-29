@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain, type WebContentsPrintOptions } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, type WebContentsPrintOptions } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { autoUpdater } from 'electron-updater';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -8,6 +9,19 @@ let mainWindow: BrowserWindow | null = null;
 const PACKAGED_WEB_BASE_URL = 'https://test.app.vipexparcel.com/';
 const DEV_WEB_BASE_URL = 'http://localhost:5173/';
 let pendingDeepLink: string | null = null;
+let updateStatus: {
+  state:
+    | 'idle'
+    | 'checking'
+    | 'available'
+    | 'downloading'
+    | 'downloaded'
+    | 'not-available'
+    | 'error';
+  version?: string;
+  progress?: number;
+  message?: string;
+} = { state: 'idle', version: app.getVersion() };
 
 type PrintLayout = 'thermal-sticker' | 'invoice-a5' | 'invoice-a5-receipt' | 'report-a4';
 
@@ -30,6 +44,105 @@ if (!app.isPackaged) {
 
 function getWebBaseUrl() {
   return app.isPackaged ? PACKAGED_WEB_BASE_URL : DEV_WEB_BASE_URL;
+}
+
+function setUpdateStatus(
+  next: Partial<{
+    state:
+      | 'idle'
+      | 'checking'
+      | 'available'
+      | 'downloading'
+      | 'downloaded'
+      | 'not-available'
+      | 'error';
+    version?: string;
+    progress?: number;
+    message?: string;
+  }>,
+) {
+  updateStatus = { ...updateStatus, ...next };
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('updates:status', updateStatus);
+  }
+}
+
+function configureAutoUpdater() {
+  if (!app.isPackaged) return;
+
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.logger = null;
+
+  const genericFeedUrl = process.env.DESKTOP_UPDATE_FEED_URL?.trim();
+  if (genericFeedUrl) {
+    autoUpdater.setFeedURL({
+      provider: 'generic',
+      url: genericFeedUrl,
+    });
+  }
+
+  autoUpdater.on('checking-for-update', () => {
+    setUpdateStatus({ state: 'checking', message: undefined, progress: undefined });
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    setUpdateStatus({
+      state: 'available',
+      version: info.version,
+      message: 'Update is available for download.',
+      progress: undefined,
+    });
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    setUpdateStatus({
+      state: 'not-available',
+      message: 'You are on the latest version.',
+      progress: undefined,
+    });
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    setUpdateStatus({
+      state: 'downloading',
+      progress: progress.percent,
+      message: `Downloading update (${Math.round(progress.percent)}%).`,
+    });
+  });
+
+  autoUpdater.on('update-downloaded', async (info) => {
+    setUpdateStatus({
+      state: 'downloaded',
+      version: info.version,
+      progress: 100,
+      message: 'Update downloaded. Restart to install.',
+    });
+
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+
+    const response = await dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      buttons: ['Install now', 'Later'],
+      defaultId: 0,
+      cancelId: 1,
+      title: 'Update ready',
+      message: 'A new version has been downloaded.',
+      detail: 'Restart the app now to install the update.',
+    });
+
+    if (response.response === 0) {
+      autoUpdater.quitAndInstall();
+    }
+  });
+
+  autoUpdater.on('error', (error) => {
+    setUpdateStatus({
+      state: 'error',
+      message: error.message || 'Unable to check for updates.',
+      progress: undefined,
+    });
+  });
 }
 
 function extractDeepLinkUrl(argv: string[]) {
@@ -174,6 +287,59 @@ function registerIpcHandlers() {
       jobs: results,
     };
   });
+
+  ipcMain.handle('updates:get-status', async () => updateStatus);
+
+  ipcMain.handle('updates:check', async () => {
+    if (!app.isPackaged) {
+      return {
+        ok: false,
+        reason: 'Auto update is only available in packaged builds.',
+        status: { state: 'idle', message: 'Development build.' },
+      };
+    }
+
+    try {
+      setUpdateStatus({ state: 'checking', message: undefined, progress: undefined });
+      await autoUpdater.checkForUpdates();
+      return { ok: true, status: updateStatus };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to check for updates.';
+      setUpdateStatus({ state: 'error', message });
+      return { ok: false, reason: message, status: updateStatus };
+    }
+  });
+
+  ipcMain.handle('updates:download', async () => {
+    if (!app.isPackaged) {
+      return {
+        ok: false,
+        reason: 'Auto update is only available in packaged builds.',
+        status: { state: 'idle', message: 'Development build.' },
+      };
+    }
+
+    try {
+      await autoUpdater.downloadUpdate();
+      return { ok: true, status: updateStatus };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to download update.';
+      setUpdateStatus({ state: 'error', message });
+      return { ok: false, reason: message, status: updateStatus };
+    }
+  });
+
+  ipcMain.handle('updates:install', async () => {
+    if (!app.isPackaged) {
+      return { ok: false, reason: 'Install is only available in packaged builds.' };
+    }
+    if (updateStatus.state !== 'downloaded') {
+      return { ok: false, reason: 'No downloaded update available.' };
+    }
+
+    autoUpdater.quitAndInstall();
+    return { ok: true };
+  });
 }
 
 function createWindow() {
@@ -251,8 +417,17 @@ app.whenReady().then(() => {
     app.setAsDefaultProtocolClient('vipex');
   }
 
+  configureAutoUpdater();
   registerIpcHandlers();
   createWindow();
+
+  if (app.isPackaged) {
+    setTimeout(() => {
+      void autoUpdater.checkForUpdates().catch(() => {
+        // keep current status state handling via updater events/error callback
+      });
+    }, 8000);
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

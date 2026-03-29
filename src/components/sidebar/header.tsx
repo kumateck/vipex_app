@@ -2,6 +2,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { CashierSessionControls } from './cashier-session-controls';
 import { UserProfile } from '../user-profile';
 import { ModeToggle } from '@/components/ui/mode-toggle';
+import { UpdateIndicator } from './update-indicator';
 
 export function SiteHeader() {
   return (
@@ -11,6 +12,7 @@ export function SiteHeader() {
         {/* <Separator orientation="vertical" className=" data-[orientation=vertical]:h-4" /> */}
         {/* <h1 className="text-base font-medium">Documents</h1> */}
         <div className="ml-auto flex items-center gap-2">
+          <UpdateIndicator />
           <ModeToggle />
           <CashierSessionControls />
           <UserProfile variant="header" />

@@ -10,6 +10,20 @@ type DesktopPrinterInfo = {
   isDefault?: boolean;
 };
 
+type DesktopUpdateStatus = {
+  state:
+    | 'idle'
+    | 'checking'
+    | 'available'
+    | 'downloading'
+    | 'downloaded'
+    | 'not-available'
+    | 'error';
+  version?: string;
+  progress?: number;
+  message?: string;
+};
+
 declare global {
   interface Window {
     api?: {
@@ -41,6 +55,21 @@ declare global {
         }>;
       }>;
       listPrinters: () => Promise<DesktopPrinterInfo[]>;
+      updates: {
+        getStatus: () => Promise<DesktopUpdateStatus>;
+        check: () => Promise<{
+          ok: boolean;
+          reason?: string;
+          status: DesktopUpdateStatus;
+        }>;
+        download: () => Promise<{
+          ok: boolean;
+          reason?: string;
+          status: DesktopUpdateStatus;
+        }>;
+        install: () => Promise<{ ok: boolean; reason?: string }>;
+        onStatus: (handler: (status: DesktopUpdateStatus) => void) => () => void;
+      };
     };
   }
 }

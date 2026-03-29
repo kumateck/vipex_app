@@ -1,0 +1,79 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: vipex-api-errors
+    folder: Vipex
+    interval: 1m
+    rules:
+      - uid: vipex_api_error_rate_prod
+        title: Vipex API 5xx (production)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: loki
+            model:
+              expr: sum(count_over_time({job="vipex-api",environment="production"} |= "INTERNAL_SERVER_ERROR" [5m]))
+              queryType: range
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              expression: A
+              refId: C
+              type: threshold
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+        noDataState: OK
+        execErrState: Alerting
+        for: 0m
+        labels:
+          service: vipex-api
+          environment: production
+          severity: critical
+        annotations:
+          summary: Production errors are occurring in vipex-api.
+
+      - uid: vipex_api_error_rate_dev
+        title: Vipex API 5xx (development)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: loki
+            model:
+              expr: sum(count_over_time({job="vipex-api",environment="development"} |= "INTERNAL_SERVER_ERROR" [5m]))
+              queryType: range
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              expression: A
+              refId: C
+              type: threshold
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+        noDataState: OK
+        execErrState: Alerting
+        for: 0m
+        labels:
+          service: vipex-api
+          environment: development
+          severity: warning
+        annotations:
+          summary: Development errors are occurring in vipex-api.

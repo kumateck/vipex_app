@@ -58,6 +58,8 @@ jobs:
           RESET_LINK_BASE_URL: ${{ env.RESET_LINK_BASE_URL }}
           INVITE_LINK_BASE_URL: ${{ env.INVITE_LINK_BASE_URL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          DISCORD_WEBHOOK_PRODUCTION: ${{ secrets.DISCORD_WEBHOOK_PRODUCTION }}
+          DISCORD_WEBHOOK_DEVELOPMENT: ${{ secrets.DISCORD_WEBHOOK_DEVELOPMENT }}
           MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
           MINIO_REGION: ${{ secrets.MINIO_REGION }}
           MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
@@ -98,10 +100,13 @@ jobs:
               -e EMAIL_USER='dkadusei@kumateck.com' \
               -e EMAIL_PASSWORD='Password' \
               -e NODE_ENV='production' \
+              -e APP_ENV='development' \
               -e APP_BASE_URL='${APP_BASE_URL}' \
               -e RESET_LINK_BASE_URL='${RESET_LINK_BASE_URL}' \
               -e INVITE_LINK_BASE_URL='${INVITE_LINK_BASE_URL}' \
               -e SENTRY_DSN='${SENTRY_DSN}' \
+              -e DISCORD_WEBHOOK_PRODUCTION='${DISCORD_WEBHOOK_PRODUCTION}' \
+              -e DISCORD_WEBHOOK_DEVELOPMENT='${DISCORD_WEBHOOK_DEVELOPMENT}' \
               -e MINIO_ENDPOINT='${MINIO_ENDPOINT}' \
               -e MINIO_REGION='${MINIO_REGION}' \
               -e MINIO_ACCESS_KEY='${MINIO_ACCESS_KEY}' \
