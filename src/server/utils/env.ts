@@ -27,6 +27,9 @@ const toBoolean = z.preprocess((value) => {
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  APP_ENV: z.enum(['development', 'staging', 'production', 'test']).optional(),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  LOG_PRETTY: toBoolean.optional(),
   PORT: z.coerce.number().int().positive().default(3000),
   PASSWORD_COST: z.coerce.number().int().positive().default(10),
   DATABASE_URL: z.string().url().min(1, 'DATABASE_URL is required'),
@@ -40,6 +43,11 @@ const EnvSchema = z.object({
   SENTRY_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(1),
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0),
   RELEASE: z.string().optional(), // e.g., git sha
+  DISCORD_WEBHOOK_URL: z.string().url().optional(),
+  DISCORD_WEBHOOK_DEVELOPMENT: z.string().url().optional(),
+  DISCORD_WEBHOOK_PRODUCTION: z.string().url().optional(),
+  DISCORD_ALERT_MIN_STATUS: z.coerce.number().int().min(100).max(599).default(500),
+  DISCORD_ALERT_COOLDOWN_MS: z.coerce.number().int().positive().default(60000),
 
   // Swagger toggle
   SWAGGER_ENABLED: z.string().default('true'),
@@ -111,6 +119,8 @@ if (parsed.data.NODE_ENV === 'production' && !inferredAppBaseUrl) {
 
 export const env = {
   ...parsed.data,
+  APP_ENV: parsed.data.APP_ENV ?? parsed.data.NODE_ENV,
+  LOG_PRETTY: parsed.data.LOG_PRETTY ?? parsed.data.NODE_ENV !== 'production',
   APP_BASE_URL: resolvedAppBaseUrl,
   RESET_LINK_BASE_URL: resolvedResetLinkBaseUrl,
   INVITE_LINK_BASE_URL: resolvedInviteLinkBaseUrl,

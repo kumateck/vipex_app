@@ -503,6 +503,12 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Appearance',
             url: '/settings/appearance',
+            permissionKey: PermissionKeys.CanManageAppearance,
+          },
+          {
+            title: 'App Updates',
+            url: '/settings/app-updates',
+            permissionKey: PermissionKeys.CanManageDesktopUpdates,
           },
         ],
       },
