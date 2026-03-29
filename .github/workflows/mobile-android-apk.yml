@@ -132,11 +132,27 @@ jobs:
         run: |
           set -euo pipefail
           PREFIX="${MOBILE_MINIO_PREFIX:-mobile/android}"
-          LATEST_PATH="s3://${MINIO_BUCKET}/${PREFIX}/latest/"
-          VERSION_PATH="s3://${MINIO_BUCKET}/${PREFIX}/v${VERSION}/"
+          LATEST_PREFIX="${PREFIX}/latest"
+          VERSION_PREFIX="${PREFIX}/v${VERSION}"
 
-          aws --endpoint-url "${MINIO_ENDPOINT}" s3 cp artifacts/ "${LATEST_PATH}" --recursive --exclude "*" --include "*.apk"
-          aws --endpoint-url "${MINIO_ENDPOINT}" s3 cp artifacts/ "${VERSION_PATH}" --recursive --exclude "*" --include "*.apk"
+          mapfile -t APK_FILES < <(find artifacts -maxdepth 1 -type f -name "*.apk")
+          if [ "${#APK_FILES[@]}" -eq 0 ]; then
+            echo "No APK files found in artifacts/"
+            exit 1
+          fi
+
+          for file in "${APK_FILES[@]}"; do
+            base=$(basename "${file}")
+            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+              --bucket "${MINIO_BUCKET}" \
+              --key "${LATEST_PREFIX}/${base}" \
+              --body "${file}" >/dev/null
+
+            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+              --bucket "${MINIO_BUCKET}" \
+              --key "${VERSION_PREFIX}/${base}" \
+              --body "${file}" >/dev/null
+          done
 
       - name: Distribution summary
         run: |
