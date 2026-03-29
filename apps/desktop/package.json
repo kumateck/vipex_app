@@ -2,6 +2,8 @@
   "name": "vipex-desktop",
   "private": true,
   "version": "0.0.1",
+  "description": "Vipex desktop shell for parcel operations and native integrations.",
+  "author": "Vipex Co. LTD",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
