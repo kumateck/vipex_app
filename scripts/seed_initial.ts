@@ -2,7 +2,16 @@ import 'dotenv/config';
 import { createId } from '@paralleldrive/cuid2';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../src/db/config';
-import { branches, companies, companyModules, moduleCatalog, roles, users } from '@/db/schemas';
+import {
+  branches,
+  companies,
+  companyModules,
+  moduleCatalog,
+  parcelContentCatalog,
+  parcelDetailCatalog,
+  roles,
+  users,
+} from '@/db/schemas';
 import { BranchType, UserStatus, UserType } from '@/db/schemas/enums';
 import { hashPassword } from '../src/server/utils/password';
 
@@ -25,10 +34,19 @@ const MODULES = [
   ['customers', 'Customers', true],
   ['payments', 'Payments', true],
   ['accounting', 'Accounting', true],
+  ['parcel_content_pricing', 'Parcel Content Pricing', false],
+  ['parcel_packaging_styles', 'Parcel Packaging Styles', false],
   ['inventory', 'Inventory', true],
   ['shifts', 'Shifts', true],
   ['hr', 'HR', false],
   ['payroll', 'Payroll', false],
+] as const;
+
+const DEFAULT_PARCEL_PACKAGING = ['Box', 'Envelope', 'Sack', 'Crate'] as const;
+const DEFAULT_PARCEL_CONTENTS = [
+  { name: 'General Goods', basePricePsw: 3000, taxInclusive: true, sortOrder: 10 },
+  { name: 'Documents', basePricePsw: 2000, taxInclusive: true, sortOrder: 20 },
+  { name: 'Spare Parts', basePricePsw: 50000, taxInclusive: true, sortOrder: 30 },
 ] as const;
 
 async function main() {
@@ -208,6 +226,58 @@ async function main() {
         configuredBy: creatorId,
       });
       console.log(`Created company module state: ${code}`);
+    }
+  }
+
+  for (const style of DEFAULT_PARCEL_PACKAGING) {
+    const [existing] = await db
+      .select({ id: parcelDetailCatalog.id })
+      .from(parcelDetailCatalog)
+      .where(
+        and(
+          eq(parcelDetailCatalog.companyId, companyId),
+          sql`lower(${parcelDetailCatalog.name}) = lower(${style})`,
+        ),
+      )
+      .limit(1);
+
+    if (!existing) {
+      await db.insert(parcelDetailCatalog).values({
+        id: createId(),
+        companyId,
+        name: style,
+        active: true,
+        sortOrder: DEFAULT_PARCEL_PACKAGING.indexOf(style) + 1,
+        createdBy: creatorId,
+      });
+      console.log(`Created parcel packaging style: ${style}`);
+    }
+  }
+
+  for (const content of DEFAULT_PARCEL_CONTENTS) {
+    const [existing] = await db
+      .select({ id: parcelContentCatalog.id })
+      .from(parcelContentCatalog)
+      .where(
+        and(
+          eq(parcelContentCatalog.companyId, companyId),
+          sql`lower(${parcelContentCatalog.name}) = lower(${content.name})`,
+        ),
+      )
+      .limit(1);
+
+    if (!existing) {
+      await db.insert(parcelContentCatalog).values({
+        id: createId(),
+        companyId,
+        name: content.name,
+        basePricePsw: content.basePricePsw,
+        taxInclusive: content.taxInclusive,
+        active: true,
+        sortOrder: content.sortOrder,
+        createdBy: creatorId,
+      });
+      console.log(`Created parcel content: ${content.name}`);
     }
   }
 

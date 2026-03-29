@@ -1,5 +1,6 @@
 import {
   approveExpenseRequestSvc,
+  approveAndPostManualJournalEntrySvc,
   closeTaxFilingPeriodSvc,
   confirmDailyCashConfirmationSvc,
   createAccountSvc,
@@ -8,15 +9,22 @@ import {
   createDailyCashConfirmationSvc,
   createExpenseCategorySvc,
   createExpenseRequestSvc,
+  createServiceChargeSvc,
   createTaxComponentSvc,
   createTaxProfileSvc,
   createTaxFilingPeriodSvc,
   deleteAccountSvc,
+  deleteApprovalPolicySvc,
+  deleteCompanyBankAccountSvc,
+  deleteExpenseCategorySvc,
+  deleteTaxComponentSvc,
+  deleteTaxProfileSvc,
   excludeTaxItemSvc,
   getDailyCashExpectedSummarySvc,
   getAccountStatementSvc,
   getBalanceSheetSvc,
   getCashFlowStatementSvc,
+  getManualJournalApprovalPolicySvc,
   getIncomeStatementSvc,
   getMonthlyBranchSummarySvc,
   getTrialBalanceSvc,
@@ -26,6 +34,8 @@ import {
   listDailyCashConfirmationsSvc,
   listExpenseCategoriesSvc,
   listExpenseRequestsSvc,
+  listPendingManualJournalEntriesSvc,
+  listServiceChargesSvc,
   listTaxComponentsSvc,
   listTaxFilingPeriodsSvc,
   listTaxJournalItemsSvc,
@@ -34,9 +44,11 @@ import {
   markTaxItemFiledSvc,
   markTaxItemReadyForFilingSvc,
   payExpenseRequestSvc,
+  postManualJournalEntrySvc,
   postDailyCashConfirmationSvc,
   postExpenseRequestSvc,
   rejectExpenseRequestSvc,
+  rejectManualJournalEntrySvc,
   submitTaxFilingPeriodSvc,
   submitExpenseRequestSvc,
   updateAccountSvc,
@@ -45,6 +57,7 @@ import {
   updateExpenseCategorySvc,
   updateTaxComponentSvc,
   updateTaxProfileSvc,
+  updateServiceChargeSvc,
 } from './service';
 
 function toIsoRows<T extends { createdAt?: Date; updatedAt?: Date }>(rows: T[]) {
@@ -72,6 +85,7 @@ export async function listExpenseCategoriesCtrl(input: {
 
 export const createExpenseCategoryCtrl = createExpenseCategorySvc;
 export const updateExpenseCategoryCtrl = updateExpenseCategorySvc;
+export const deleteExpenseCategoryCtrl = deleteExpenseCategorySvc;
 
 export async function listApprovalPoliciesCtrl(input: {
   companyId: string;
@@ -82,6 +96,29 @@ export async function listApprovalPoliciesCtrl(input: {
 
 export const createApprovalPolicyCtrl = createApprovalPolicySvc;
 export const updateApprovalPolicyCtrl = updateApprovalPolicySvc;
+export const deleteApprovalPolicyCtrl = deleteApprovalPolicySvc;
+
+export async function listServiceChargesCtrl(input: {
+  companyId: string;
+  active?: boolean | null;
+}) {
+  return toIsoRows(await listServiceChargesSvc(input));
+}
+
+export const createServiceChargeCtrl = createServiceChargeSvc;
+export const updateServiceChargeCtrl = updateServiceChargeSvc;
+export const getManualJournalApprovalPolicyCtrl = getManualJournalApprovalPolicySvc;
+export const postManualJournalEntryCtrl = postManualJournalEntrySvc;
+export async function listPendingManualJournalEntriesCtrl(input: { companyId: string }) {
+  return (await listPendingManualJournalEntriesSvc(input)).map((row) => ({
+    ...row,
+    entryDate: row.entryDate.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  }));
+}
+export const approveAndPostManualJournalEntryCtrl = approveAndPostManualJournalEntrySvc;
+export const rejectManualJournalEntryCtrl = rejectManualJournalEntrySvc;
 
 export async function listCompanyBankAccountsCtrl(input: {
   companyId: string;
@@ -92,6 +129,7 @@ export async function listCompanyBankAccountsCtrl(input: {
 
 export const createCompanyBankAccountCtrl = createCompanyBankAccountSvc;
 export const updateCompanyBankAccountCtrl = updateCompanyBankAccountSvc;
+export const deleteCompanyBankAccountCtrl = deleteCompanyBankAccountSvc;
 
 export async function listTaxProfilesCtrl(input: { companyId: string; active?: boolean | null }) {
   return toIsoRows(await listTaxProfilesSvc(input));
@@ -99,6 +137,7 @@ export async function listTaxProfilesCtrl(input: { companyId: string; active?: b
 
 export const createTaxProfileCtrl = createTaxProfileSvc;
 export const updateTaxProfileCtrl = updateTaxProfileSvc;
+export const deleteTaxProfileCtrl = deleteTaxProfileSvc;
 
 export async function listTaxComponentsCtrl(input: {
   companyId: string;
@@ -114,6 +153,7 @@ export async function listTaxComponentsCtrl(input: {
 
 export const createTaxComponentCtrl = createTaxComponentSvc;
 export const updateTaxComponentCtrl = updateTaxComponentSvc;
+export const deleteTaxComponentCtrl = deleteTaxComponentSvc;
 
 export async function listDailyCashConfirmationsCtrl(input: {
   companyId: string;

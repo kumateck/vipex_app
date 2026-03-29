@@ -2,9 +2,10 @@ import 'dotenv/config';
 import { createId } from '@paralleldrive/cuid2';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../src/db/config';
-import { companies, branches, roles, users } from '@/db/schemas';
+import { companies, branches, roles, rolePermissions, users } from '@/db/schemas';
 import { BranchType, UserStatus, UserType } from '@/db/schemas/enums';
 import { hashPassword } from '../src/server/utils/password';
+import { PermissionCatalog } from '@/shared/permissions/constants';
 
 const DEMO_EMAIL = 'info@kumateck.com';
 const DEMO_FULLNAME = 'gigi';
@@ -46,16 +47,56 @@ async function main() {
   console.log(`   ✓ Found branch: ${branch.name} (${branch.id})`);
 
   console.log('👤 Looking up existing role...');
+  const [companyCreator] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.companyId, company.id))
+    .limit(1);
+  const bootstrapCreatorId = companyCreator?.id ?? createId();
+
   const [role] = await db
     .select({ id: roles.id, name: roles.name })
     .from(roles)
     .where(and(eq(roles.companyId, company.id), eq(roles.name, ROLE_NAME)))
     .limit(1);
 
+  let roleId: string;
   if (!role) {
-    throw new Error(`Role '${ROLE_NAME}' not found in company ${company.id}.`);
+    roleId = createId();
+    await db.insert(roles).values({
+      id: roleId,
+      companyId: company.id,
+      name: ROLE_NAME,
+      isDeleted: false,
+      createdBy: bootstrapCreatorId,
+    });
+    console.log(`   ✓ Created role: ${ROLE_NAME} (${roleId})`);
+  } else {
+    roleId = role.id;
+    console.log(`   ✓ Found role:  ${role.name} (${role.id})`);
   }
-  console.log(`   ✓ Found role:  ${role.name} (${role.id})`);
+
+  console.log('🔐 Ensuring role permissions (bootstrap)...');
+  const permissionKeys = PermissionCatalog.map((p) => p.key);
+  const existingRolePermissions = await db
+    .select({ permission: rolePermissions.permission })
+    .from(rolePermissions)
+    .where(and(eq(rolePermissions.companyId, company.id), eq(rolePermissions.roleId, roleId)));
+  const existingSet = new Set(existingRolePermissions.map((p) => p.permission));
+  const missing = permissionKeys.filter((key) => !existingSet.has(key));
+  if (missing.length > 0) {
+    await db.insert(rolePermissions).values(
+      missing.map((permission) => ({
+        id: createId(),
+        roleId,
+        companyId: company.id,
+        permission,
+      })),
+    );
+    console.log(`   ✓ Added ${missing.length} missing permissions to role`);
+  } else {
+    console.log('   ✓ Role already has all seeded permissions');
+  }
 
   console.log('🔑 Checking/creating demo user...');
   const [existingUser] = await db
@@ -80,7 +121,7 @@ async function main() {
       email: DEMO_EMAIL,
       password: hashedPassword,
       status: UserStatus.ACTIVE,
-      roleId: role.id,
+      roleId,
       companyId: company.id,
       branchId: branch.id,
       locationId: null,
@@ -97,7 +138,7 @@ async function main() {
   console.log('═══════════════════════════════════════');
   console.log(`Company:    ${company.name} (${company.id})`);
   console.log(`Branch:     ${branch.name} (${branch.id})`);
-  console.log(`Role:       ${role.name} (${role.id})`);
+  console.log(`Role:       ${ROLE_NAME} (${roleId})`);
   console.log(`User:       ${DEMO_FULLNAME}`);
   console.log(`Email:      ${DEMO_EMAIL}`);
   console.log(`Telephone:  ${DEMO_TELEPHONE}`);

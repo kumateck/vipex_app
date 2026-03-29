@@ -75,8 +75,17 @@ export const ForgotPasswordBody = t.Object({
   email: t.String({ format: 'email' }),
 });
 
+export const OTPCode = t.String({ pattern: '^[0-9]{6}$' });
+
 export const ResetPasswordBody = t.Object({
-  token: t.String(),
+  email: t.String({ format: 'email' }),
+  otp: OTPCode,
+  password: t.String({ minLength: 8, maxLength: 128 }),
+});
+
+export const SetPasswordBody = t.Object({
+  email: t.String({ format: 'email' }),
+  otp: OTPCode,
   password: t.String({ minLength: 8, maxLength: 128 }),
 });
 

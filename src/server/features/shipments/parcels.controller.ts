@@ -8,6 +8,7 @@ import {
   logParcelDiscrepancySvc,
   markParcelReceivedSvc,
   setPlannedToBePaidSvc,
+  softDeleteParcelSvc,
   updateParcelSvc,
 } from './parcels.service';
 
@@ -47,6 +48,7 @@ export async function listParcelsCtrl(
       updatedAt: p.updatedAt.toISOString(),
       receivedAt: p.receivedAt ? p.receivedAt.toISOString() : null,
       confirmedAt: p.confirmedAt ? p.confirmedAt.toISOString() : null,
+      deletedAt: p.deletedAt ? p.deletedAt.toISOString() : null,
       bookingCreatedAt: p.bookingCreatedAt ? p.bookingCreatedAt.toISOString() : null,
       pickupQueuedAt: p.pickupQueuedAt ? p.pickupQueuedAt.toISOString() : null,
       pickupQueueEndedAt: p.pickupQueueEndedAt ? p.pickupQueueEndedAt.toISOString() : null,
@@ -69,6 +71,7 @@ export async function getParcelDetailsCtrl(id: string) {
       updatedAt: result.parcel.updatedAt.toISOString(),
       receivedAt: result.parcel.receivedAt ? result.parcel.receivedAt.toISOString() : null,
       confirmedAt: result.parcel.confirmedAt ? result.parcel.confirmedAt.toISOString() : null,
+      deletedAt: result.parcel.deletedAt ? result.parcel.deletedAt.toISOString() : null,
     },
     payments: result.payments.map((payment) => ({
       ...payment,
@@ -122,3 +125,4 @@ export const updateParcelCtrl = updateParcelSvc;
 export const markParcelReceivedCtrl = markParcelReceivedSvc;
 export const setPlannedToBePaidCtrl = setPlannedToBePaidSvc;
 export const logParcelDiscrepancyCtrl = logParcelDiscrepancySvc;
+export const softDeleteParcelCtrl = softDeleteParcelSvc;

@@ -11,8 +11,11 @@ export type CustomerFormValues = {
 export type ParcelFormValues = {
   destinationBranchId: string;
   destinationLocationId: string;
+  parcelDetailOptionId: string;
+  parcelContentOptionId: string;
   parcelDetails: string;
   parcelContent: string;
+  extraWeightCharge: string;
   parcelValue: string;
   charge: string;
   paymentResponsibility: PaymentResponsibility;

@@ -24,8 +24,7 @@ export default function ForgotPassword() {
     e.preventDefault();
     try {
       await forgotPassword({ email }).unwrap();
-      toast.success('If the email exists, a reset link has been sent');
-      setEmail('');
+      toast.success('If the email exists, a 6-digit OTP has been sent');
     } catch (err) {
       ThrowErrorMessage(err);
     }
@@ -36,7 +35,7 @@ export default function ForgotPassword() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Forgot Password</CardTitle>
-          <CardDescription>Enter your account email to receive a reset link</CardDescription>
+          <CardDescription>Enter your account email to receive a 6-digit OTP</CardDescription>
         </CardHeader>
         <form onSubmit={onSubmit}>
           <CardContent className="space-y-4 pb-5">
@@ -56,7 +55,12 @@ export default function ForgotPassword() {
             <div className="w-full space-y-2">
               <Button type="submit" className="w-full flex gap-2" disabled={isLoading}>
                 {isLoading && <Spinner />}
-                {isLoading ? 'Sending...' : 'Send reset link'}
+                {isLoading ? 'Sending...' : 'Send OTP'}
+              </Button>
+              <Button asChild type="button" variant="secondary" className="w-full">
+                <Link to={`/reset${email ? `?email=${encodeURIComponent(email)}` : ''}`}>
+                  I have an OTP
+                </Link>
               </Button>
               <Button asChild type="button" variant="outline" className="w-full">
                 <Link to="/login">Return to login</Link>

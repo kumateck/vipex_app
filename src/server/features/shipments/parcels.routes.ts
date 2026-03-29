@@ -1,4 +1,12 @@
 import { Elysia, t } from 'elysia';
+import {
+  authPlugin,
+  type AuthUser,
+  requireAnyPermissions,
+  requireAuth,
+  requirePermissions,
+} from '@/server/plugins/auth';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import { HttpStatus } from '../../utils/http-status';
 import { UUID } from '../../schemas/common';
 import {
@@ -9,6 +17,7 @@ import {
   logParcelDiscrepancyCtrl,
   markParcelReceivedCtrl,
   setPlannedToBePaidCtrl,
+  softDeleteParcelCtrl,
   updateParcelCtrl,
 } from './parcels.controller';
 
@@ -30,6 +39,7 @@ function parseStatuses(value: string | number[] | undefined): number[] | null {
 }
 
 export const parcelsRoutes = new Elysia({ name: 'parcels' })
+  .use(authPlugin)
   .get(
     '/',
     async ({ query }) =>
@@ -216,6 +226,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         notes: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
         branchId: t.Optional(t.Union([UUID, t.Null()])),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
       detail: { tags: ['Shipments'], summary: 'Log parcel discrepancy for incoming transit' },
     },
   )
@@ -233,6 +244,13 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         receivedAt: t.Optional(t.String({ format: 'date-time' })),
         status: t.Optional(t.Number()),
       }),
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanReadParcelIncoming,
+          PermissionKeys.CanReadParcelScan,
+        ),
+      ],
       detail: { tags: ['Shipments'], summary: 'Mark parcel received' },
     },
   )
@@ -247,5 +265,30 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       params: t.Object({ id: UUID }),
       body: t.Object({ plannedToBePaidCedis: t.Union([t.Number(), t.String()]) }),
       detail: { tags: ['Shipments'], summary: 'Set planned to-be-paid (principal)' },
+    },
+  )
+  .post(
+    '/:id/soft-delete',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return softDeleteParcelCtrl({
+        parcelId: params.id,
+        actorUserId: authUser.sub,
+        reason: (body as { reason: string }).reason,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        reason: t.String({ minLength: 3, maxLength: 500 }),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanSoftDeleteParcelsAndPayments),
+      ],
+      detail: {
+        tags: ['Shipments'],
+        summary: 'Soft delete parcel and soft-delete (void) associated payments with reason',
+      },
     },
   );

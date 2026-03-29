@@ -20,9 +20,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CreatableCombobox } from '@/components/ui/creatable-combobox';
 import { Textarea } from '@/components/ui/textarea';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
 import { CustomerType, useGetCustomerByIdQuery } from '@/features/customers/api';
+import {
+  useCreateParcelDetailOptionMutation,
+  useListParcelContentOptionsQuery,
+  useListParcelDetailOptionsQuery,
+} from '@/features/operations/parcel/api/parcel.api';
 import { CustomerLookupSection } from './customer-lookup-section';
 import type { ParcelBookingFormValues } from './parcel-form.types';
 
@@ -32,6 +38,18 @@ type ParcelCardProps = {
   onRemove: () => void;
   companyId: string | null;
   branchOptions: Array<{ id: string; name: string }>;
+  parcelContentModuleEnabled: boolean;
+  parcelPackagingModuleEnabled: boolean;
+};
+
+const parseCurrency = (value: string | number | null | undefined) => {
+  const normalized = String(value ?? '')
+    .replace(/,/g, '')
+    .trim();
+  if (!normalized) return 0;
+  const parsed = Number(normalized);
+  if (Number.isNaN(parsed) || parsed < 0) return 0;
+  return parsed;
 };
 
 export function ParcelCard({
@@ -40,14 +58,19 @@ export function ParcelCard({
   onRemove,
   companyId,
   branchOptions,
+  parcelContentModuleEnabled,
+  parcelPackagingModuleEnabled,
 }: ParcelCardProps) {
   const { control, setValue } = useFormContext<ParcelBookingFormValues>();
   const parcelFieldName = (
     field:
       | 'destinationBranchId'
       | 'destinationLocationId'
+      | 'parcelDetailOptionId'
+      | 'parcelContentOptionId'
       | 'parcelDetails'
       | 'parcelContent'
+      | 'extraWeightCharge'
       | 'parcelValue'
       | 'charge'
       | 'paymentResponsibility'
@@ -59,8 +82,11 @@ export function ParcelCard({
   ) => `parcels.${index}.${field}` as FieldPathByValue<ParcelBookingFormValues, string>;
   const destinationBranchName = parcelFieldName('destinationBranchId');
   const destinationLocationName = parcelFieldName('destinationLocationId');
+  const parcelDetailOptionName = parcelFieldName('parcelDetailOptionId');
+  const parcelContentOptionName = parcelFieldName('parcelContentOptionId');
   const parcelDetailsName = parcelFieldName('parcelDetails');
   const parcelContentName = parcelFieldName('parcelContent');
+  const extraWeightChargeName = parcelFieldName('extraWeightCharge');
   const parcelValueName = parcelFieldName('parcelValue');
   const parcelChargeName = parcelFieldName('charge');
   const parcelPaymentName = parcelFieldName('paymentResponsibility');
@@ -72,6 +98,13 @@ export function ParcelCard({
   const senderCustomerIdName = 'sender.customerId' as const;
 
   const destinationBranchId = String(useWatch({ control, name: destinationBranchName }) ?? '');
+  const selectedParcelDetailOptionId = String(
+    useWatch({ control, name: parcelDetailOptionName }) ?? '',
+  );
+  const selectedParcelContentOptionId = String(
+    useWatch({ control, name: parcelContentOptionName }) ?? '',
+  );
+  const extraWeightCharge = String(useWatch({ control, name: extraWeightChargeName }) ?? '');
   const paymentResponsibility = String(useWatch({ control, name: parcelPaymentName }) ?? 'SENDER');
   const senderSettlementMode = String(
     useWatch({ control, name: parcelSettlementName }) ?? 'PAY_NOW',
@@ -87,6 +120,15 @@ export function ParcelCard({
   const { data: senderCustomer } = useGetCustomerByIdQuery(senderCustomerId, {
     skip: !senderCustomerId,
   });
+  const { data: parcelContentOptions = [] } = useListParcelContentOptionsQuery(
+    companyId ? { companyId, activeOnly: true } : undefined,
+    { skip: !companyId },
+  );
+  const { data: parcelDetailOptions = [] } = useListParcelDetailOptionsQuery(
+    companyId ? { companyId, activeOnly: true } : undefined,
+    { skip: !companyId },
+  );
+  const [createParcelDetailOption] = useCreateParcelDetailOptionMutation();
 
   const senderIsCreditEligible =
     !!senderCustomer &&
@@ -117,6 +159,33 @@ export function ParcelCard({
       shouldValidate: true,
     });
   }, [destinationBranchId, destinationLocationName, setValue]);
+
+  useEffect(() => {
+    if (!parcelContentModuleEnabled) return;
+    const selected = parcelContentOptions.find(
+      (option) => option.id === selectedParcelContentOptionId,
+    );
+    setValue(parcelContentName, selected?.name ?? '', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+
+    const baseCharge = Number(selected?.basePricePsw ?? 0) / 100;
+    const extraCharge = parseCurrency(extraWeightCharge);
+    const totalCharge = (baseCharge + extraCharge).toFixed(2);
+    setValue(parcelChargeName, totalCharge, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [
+    extraWeightCharge,
+    parcelChargeName,
+    parcelContentModuleEnabled,
+    parcelContentName,
+    parcelContentOptions,
+    selectedParcelContentOptionId,
+    setValue,
+  ]);
 
   const locationPlaceholder = !destinationBranchId
     ? 'Select destination branch first'
@@ -256,19 +325,54 @@ export function ParcelCard({
                   validate: (value) =>
                     String(value ?? '').trim().length ? true : 'Parcel details are required',
                 }}
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel>Parcel Details</FormLabel>
                     <FormControl>
-                      <Textarea
-                        name={field.name}
-                        ref={field.ref}
-                        onBlur={field.onBlur}
-                        onChange={field.onChange}
-                        value={String(field.value ?? '')}
-                        placeholder="e.g. fragile electronics"
+                      <CreatableCombobox
+                        value={selectedParcelDetailOptionId}
+                        options={parcelDetailOptions}
+                        getLabel={(option) => option.name}
+                        getValue={(option) => option.id}
+                        onChange={(nextValue, option) => {
+                          setValue(parcelDetailOptionName, nextValue, {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                          setValue(parcelDetailsName, option?.name ?? '', {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                        }}
+                        onCreate={async (input) => {
+                          const trimmed = input.trim();
+                          const existing = parcelDetailOptions.find(
+                            (option) => option.name.toLowerCase() === trimmed.toLowerCase(),
+                          );
+                          if (existing) return existing;
+                          const created = await createParcelDetailOption({
+                            companyId: companyId ?? undefined,
+                            name: trimmed,
+                            active: true,
+                            sortOrder: 0,
+                          }).unwrap();
+                          return {
+                            id: created.id ?? `new-${trimmed.toLowerCase().replace(/\s+/g, '-')}`,
+                            name: trimmed,
+                            description: null,
+                            active: true,
+                            sortOrder: 0,
+                          };
+                        }}
+                        placeholder="Select or create packaging style"
+                        searchPlaceholder="Search packaging style..."
+                        emptyMessage="No packaging style found."
+                        allowCreate={parcelPackagingModuleEnabled}
                       />
                     </FormControl>
+                    <FormDescription>
+                      Standard packaging style. New entries are saved on booking creation.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -285,20 +389,93 @@ export function ParcelCard({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Parcel Content</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        name={field.name}
-                        ref={field.ref}
-                        onBlur={field.onBlur}
-                        onChange={field.onChange}
-                        value={String(field.value ?? '')}
-                        placeholder="e.g. phone, charger"
-                      />
-                    </FormControl>
+                    {parcelContentModuleEnabled ? (
+                      <>
+                        <FormField
+                          control={control}
+                          name={parcelContentOptionName}
+                          render={({ field: optionField }) => (
+                            <FormItem>
+                              <Select
+                                value={String(optionField.value ?? '')}
+                                onValueChange={optionField.onChange}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select parcel content" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {parcelContentOptions.map((option) => (
+                                    <SelectItem key={option.id} value={option.id}>
+                                      {option.name} - GHS {(option.basePricePsw / 100).toFixed(2)} (
+                                      {option.taxInclusive ? 'tax inclusive' : 'tax exclusive'})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                        <FormDescription>
+                          Base charge comes from selected content. Add extra weight charge below.
+                        </FormDescription>
+                      </>
+                    ) : (
+                      <FormControl>
+                        <Textarea
+                          name={field.name}
+                          ref={field.ref}
+                          onBlur={(event) => {
+                            field.onBlur();
+                            const typed = event.target.value.trim().toLowerCase();
+                            if (!typed.length) return;
+                            const matched = parcelContentOptions.find(
+                              (option) => option.name.trim().toLowerCase() === typed,
+                            );
+                            if (!matched) return;
+                            setValue(parcelChargeName, (matched.basePricePsw / 100).toFixed(2), {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            });
+                          }}
+                          onChange={field.onChange}
+                          value={String(field.value ?? '')}
+                          placeholder="e.g. phone, charger"
+                        />
+                      </FormControl>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {parcelContentModuleEnabled ? (
+                <FormField
+                  control={control}
+                  name={extraWeightChargeName}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Extra Weight Charge (GHS)</FormLabel>
+                      <FormControl>
+                        <Input
+                          name={field.name}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          onChange={field.onChange}
+                          value={String(field.value ?? '')}
+                          inputMode="decimal"
+                          placeholder="0.00"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Applied only when parcel content pricing module is enabled.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : null}
 
               <FormField
                 control={control}

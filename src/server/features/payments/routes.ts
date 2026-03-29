@@ -92,7 +92,7 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
         tags: ['Payments'],
         summary: 'Atomically collect sender payment (optional) and mark parcel PROCESSED',
       },
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreatePayments)],
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateSenderPayments)],
     },
   )
   .post(
@@ -134,7 +134,10 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
       },
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanCreatePayments, PermissionKeys.CanUpdateParcels),
+        requirePermissions(
+          PermissionKeys.CanCreateReceiverPayments,
+          PermissionKeys.CanUpdateParcels,
+        ),
       ],
     },
   )

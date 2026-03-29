@@ -42,6 +42,16 @@ import {
   updatePayrollGroupCtrl,
 } from './controller';
 
+const canCreateCompensationType = requirePermissions(PermissionKeys.CanCreateCompensationType);
+const canUpdateCompensationType = requirePermissions(PermissionKeys.CanUpdateCompensationType);
+const canSetEmployeeCompensation = requirePermissions(PermissionKeys.CanSetEmployeeCompensation);
+const canCreatePayrollOvertimeEntry = requirePermissions(
+  PermissionKeys.CanCreatePayrollOvertimeEntry,
+);
+const canCreatePayrollManualAdjustment = requirePermissions(
+  PermissionKeys.CanCreatePayrollManualAdjustment,
+);
+
 export const payrollRoutes = new Elysia({ name: 'payroll' })
   .use(authPlugin)
   .get(
@@ -155,11 +165,7 @@ export const payrollRoutes = new Elysia({ name: 'payroll' })
         isTaxable: t.Optional(t.Boolean()),
         isRecurring: t.Optional(t.Boolean()),
       }),
-      beforeHandle: [
-        requireAuth(),
-        requirePermissions(PermissionKeys.CanManageCompensation),
-        requireModuleEnabled('payroll'),
-      ],
+      beforeHandle: [requireAuth(), canCreateCompensationType, requireModuleEnabled('payroll')],
       detail: {
         tags: ['Payroll'],
         summary: 'Create earning type',
@@ -186,11 +192,7 @@ export const payrollRoutes = new Elysia({ name: 'payroll' })
         isRecurring: t.Optional(t.Boolean()),
         isActive: t.Optional(t.Boolean()),
       }),
-      beforeHandle: [
-        requireAuth(),
-        requirePermissions(PermissionKeys.CanManageCompensation),
-        requireModuleEnabled('payroll'),
-      ],
+      beforeHandle: [requireAuth(), canUpdateCompensationType, requireModuleEnabled('payroll')],
       detail: {
         tags: ['Payroll'],
         summary: 'Update earning type',
@@ -250,11 +252,7 @@ export const payrollRoutes = new Elysia({ name: 'payroll' })
         isStatutory: t.Optional(t.Boolean()),
         isRecurring: t.Optional(t.Boolean()),
       }),
-      beforeHandle: [
-        requireAuth(),
-        requirePermissions(PermissionKeys.CanManageCompensation),
-        requireModuleEnabled('payroll'),
-      ],
+      beforeHandle: [requireAuth(), canCreateCompensationType, requireModuleEnabled('payroll')],
       detail: {
         tags: ['Payroll'],
         summary: 'Create deduction type',
@@ -281,11 +279,7 @@ export const payrollRoutes = new Elysia({ name: 'payroll' })
         isRecurring: t.Optional(t.Boolean()),
         isActive: t.Optional(t.Boolean()),
       }),
-      beforeHandle: [
-        requireAuth(),
-        requirePermissions(PermissionKeys.CanManageCompensation),
-        requireModuleEnabled('payroll'),
-      ],
+      beforeHandle: [requireAuth(), canUpdateCompensationType, requireModuleEnabled('payroll')],
       detail: {
         tags: ['Payroll'],
         summary: 'Update deduction type',
@@ -392,11 +386,7 @@ export const payrollRoutes = new Elysia({ name: 'payroll' })
           ),
         ),
       }),
-      beforeHandle: [
-        requireAuth(),
-        requirePermissions(PermissionKeys.CanManageCompensation),
-        requireModuleEnabled('payroll'),
-      ],
+      beforeHandle: [requireAuth(), canSetEmployeeCompensation, requireModuleEnabled('payroll')],
       detail: {
         tags: ['Payroll'],
         summary: 'Set employee compensation',
@@ -546,11 +536,7 @@ export const payrollRoutes = new Elysia({ name: 'payroll' })
         multiplierPct: t.Optional(t.Number({ minimum: 1 })),
         notes: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
       }),
-      beforeHandle: [
-        requireAuth(),
-        requirePermissions(PermissionKeys.CanManagePayrollInputs),
-        requireModuleEnabled('payroll'),
-      ],
+      beforeHandle: [requireAuth(), canCreatePayrollOvertimeEntry, requireModuleEnabled('payroll')],
       detail: {
         tags: ['Payroll'],
         summary: 'Create payroll overtime entry',
@@ -649,7 +635,7 @@ export const payrollRoutes = new Elysia({ name: 'payroll' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanManagePayrollInputs),
+        canCreatePayrollManualAdjustment,
         requireModuleEnabled('payroll'),
       ],
       detail: {

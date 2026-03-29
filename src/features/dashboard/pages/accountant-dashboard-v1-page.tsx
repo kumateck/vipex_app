@@ -31,7 +31,16 @@ export function AccountantDashboardV1Page() {
   const [scope, setScope] = useState<DashboardScope | null>(null);
 
   const canReadAccounting = permissions.has(PermissionKeys.CanReadAccounting);
-  const canPostAccounting = permissions.has(PermissionKeys.CanPostAccountingEntries);
+  const canPostAccounting =
+    permissions.has(PermissionKeys.CanCreateDailyCashConfirmation) ||
+    permissions.has(PermissionKeys.CanConfirmDailyCashConfirmation) ||
+    permissions.has(PermissionKeys.CanPostDailyCashConfirmation) ||
+    permissions.has(PermissionKeys.CanCreateExpenseRequest) ||
+    permissions.has(PermissionKeys.CanSubmitExpenseRequest) ||
+    permissions.has(PermissionKeys.CanApproveExpenseRequest) ||
+    permissions.has(PermissionKeys.CanRejectExpenseRequest) ||
+    permissions.has(PermissionKeys.CanPayExpenseRequest) ||
+    permissions.has(PermissionKeys.CanPostExpenseRequest);
 
   const scopeFrom = scope?.dateRange?.from;
   const scopeTo = scope?.dateRange?.to ?? scope?.dateRange?.from;

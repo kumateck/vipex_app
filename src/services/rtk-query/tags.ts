@@ -1,4 +1,4 @@
-import { LIST_TAG_ID, type ResourceTag, type ServerListResponse } from './types';
+import { LIST_TAG_ID, OPTIONS_TAG_ID, type ResourceTag, type ServerListResponse } from './types';
 
 export function provideEntityListTags<T extends { id: string }>(
   tag: ResourceTag,
@@ -13,5 +13,5 @@ export function provideEntityListTags<T extends { id: string }>(
 }
 
 export function invalidateEntityListTag(tag: ResourceTag) {
-  return [{ type: tag, id: LIST_TAG_ID }];
+  return [{ type: tag }, { type: tag, id: LIST_TAG_ID }, { type: tag, id: OPTIONS_TAG_ID }];
 }

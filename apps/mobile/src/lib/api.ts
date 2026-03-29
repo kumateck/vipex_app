@@ -100,11 +100,19 @@ export async function forgotPassword(email: string): Promise<void> {
   });
 }
 
-export async function resetPassword(token: string, password: string): Promise<void> {
+export async function resetPassword(email: string, otp: string, password: string): Promise<void> {
   await request<{ success: boolean }>({
     path: '/auth/reset-password',
     method: 'POST',
-    body: { token, password },
+    body: { email, otp, password },
+  });
+}
+
+export async function setPassword(email: string, otp: string, password: string): Promise<void> {
+  await request<{ success: boolean }>({
+    path: '/auth/set-password',
+    method: 'POST',
+    body: { email, otp, password },
   });
 }
 

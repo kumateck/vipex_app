@@ -22,7 +22,7 @@ export const usersInviteRoutes = new Elysia({ name: 'users-invite' }).use(authPl
       tags: ['Auth'],
       summary: 'Resend account setup email',
       description:
-        'Sends a new set-password link if the user is INVITED. If an active token exists, pass force=true to invalidate and regenerate.',
+        'Sends a new 6-digit set-password OTP if the user is INVITED. If an active OTP exists, pass force=true to invalidate and regenerate.',
       operationId: 'resendSetupInvite',
     },
   },

@@ -13,6 +13,7 @@ export * from './enums';
 export * from './payroll';
 export * from './receipts';
 export * from './payments-rules';
+export * from './parcel-masters';
 export * from './shifts';
 export * from './audit';
 export * from './consignments-enhanced';

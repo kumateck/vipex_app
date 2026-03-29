@@ -30,6 +30,24 @@ export type CreateBookingWithParcelsResponse = {
   payments: Array<{ id: string }>;
 };
 
+export type ParcelContentOption = {
+  id: string;
+  name: string;
+  description?: string | null;
+  basePricePsw: number;
+  taxInclusive: boolean;
+  active: boolean;
+  sortOrder: number;
+};
+
+export type ParcelDetailOption = {
+  id: string;
+  name: string;
+  description?: string | null;
+  active: boolean;
+  sortOrder: number;
+};
+
 export type SenderCashierParcel = {
   id: string;
   destinationId: string;
@@ -90,6 +108,9 @@ export type ParcelSearchRow = {
   method: number;
   taxReportConfirmation: boolean;
   isDeleted: boolean;
+  deletedBy: string | null;
+  deletedAt: string | null;
+  deleteReason: string | null;
   createdBy: string | null;
   createdAt: string;
   receivedBy: string | null;
@@ -157,6 +178,9 @@ export type ParcelFullDetails = {
     method: number;
     taxReportConfirmation: boolean;
     isDeleted: boolean;
+    deletedBy: string | null;
+    deletedAt: string | null;
+    deleteReason: string | null;
     createdBy: string | null;
     createdAt: string;
     receivedBy: string | null;
@@ -188,6 +212,7 @@ export type ParcelFullDetails = {
     receiptNo: string | null;
     voidedAt: string | null;
     voidedBy: string | null;
+    voidReason: string | null;
     createdAt: string;
   }>;
   delivery: null | {
@@ -619,6 +644,23 @@ export const parcelApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    softDeleteParcel: builder.mutation<
+      {
+        id: string;
+        bookingCode: string;
+        trackingCode: string;
+        reason: string;
+        payments: { total: number; voidedNow: number; totalVoided: number; allVoided: boolean };
+      },
+      { id: string; reason: string }
+    >({
+      query: ({ id, reason }) => ({
+        url: `/shipments/parcels/${id}/soft-delete`,
+        method: 'POST',
+        body: { reason },
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
     logParcelDiscrepancy: builder.mutation<
       { success: boolean },
       {
@@ -824,6 +866,43 @@ export const parcelApi = api.injectEndpoints({
         { type: 'Bookings', id: `INTERNAL_TRANSFER_${id}` },
       ],
     }),
+    listParcelContentOptions: builder.query<
+      ParcelContentOption[],
+      { companyId?: string; activeOnly?: boolean } | void
+    >({
+      query: (params) => ({
+        url: '/shipments/parcel-masters/content-options',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    listParcelDetailOptions: builder.query<
+      ParcelDetailOption[],
+      { companyId?: string; activeOnly?: boolean } | void
+    >({
+      query: (params) => ({
+        url: '/shipments/parcel-masters/detail-options',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    createParcelDetailOption: builder.mutation<
+      { id?: string },
+      {
+        companyId?: string;
+        name: string;
+        description?: string | null;
+        active?: boolean;
+        sortOrder?: number;
+      }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcel-masters/details',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
   }),
 });
 
@@ -841,6 +920,7 @@ export const {
   useAddConsignmentItemsMutation,
   useUpdateParcelStatusMutation,
   useUpdateParcelMutation,
+  useSoftDeleteParcelMutation,
   useLogParcelDiscrepancyMutation,
   useCollectDoorstepAddressMutation,
   useDispatchDoorstepParcelsMutation,
@@ -855,4 +935,7 @@ export const {
   useCreateParcelInternalTransferMutation,
   useAcknowledgeParcelInternalTransferMutation,
   useCancelParcelInternalTransferMutation,
+  useListParcelContentOptionsQuery,
+  useListParcelDetailOptionsQuery,
+  useCreateParcelDetailOptionMutation,
 } = parcelApi;

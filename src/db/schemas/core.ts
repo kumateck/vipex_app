@@ -9,7 +9,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { BranchType, CashierType, UserStatus, UserType } from './enums';
+import { BranchType, UserStatus, UserType } from './enums';
 import { createId } from '@paralleldrive/cuid2';
 
 // Companies
@@ -143,33 +143,6 @@ export const uploads = pgTable(
   (t) => ({
     byCompanyModel: index('uploads_company_model_idx').on(t.companyId, t.modelType, t.modelId),
     byObjectKey: uniqueIndex('uploads_object_key_uq').on(t.objectKey),
-  }),
-);
-
-// Statuses (unique per company, case-insensitive)
-export const statuses = pgTable(
-  'statuses',
-  {
-    id: varchar('id', { length: 25 })
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    companyId: varchar('company_id', { length: 25 })
-      .notNull()
-      .references(() => companies.id),
-    type: smallint('type').notNull().default(CashierType.SENDING),
-    name: varchar('name', { length: 255 }).notNull(),
-    color: varchar('color', { length: 255 }).notNull(),
-    isDeleted: boolean('is_deleted').notNull().default(false),
-    createdBy: varchar('created_by', { length: 25 }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
-  },
-  (t) => ({
-    byCompany: index('statuses_company_idx').on(t.companyId),
-    uqCompanyLowerName: uniqueIndex('statuses_company_lower_name_uq').on(
-      t.companyId,
-      sql`lower(${t.name})`,
-    ),
   }),
 );
 

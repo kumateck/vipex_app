@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,24 +11,27 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { PasswordField } from '@/features/auth/components/password-field';
-import { useResetPasswordMutation } from '@/features/auth/api';
+import { useSetPasswordMutation } from '@/features/auth/api';
 import ThrowErrorMessage from '@/lib/throw-error';
-import { Spinner } from '@/components/ui';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot, Spinner } from '@/components/ui';
 
 export default function SetPasswordPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const token = searchParams.get('token') ?? '';
-  const [resetPassword, { isLoading }] = useResetPasswordMutation();
+  const [email, setEmail] = useState<string>(searchParams.get('email') ?? '');
+  const [otp, setOtp] = useState<string>('');
+  const [submitSetPassword, { isLoading }] = useSetPasswordMutation();
   const [password, setPassword] = useState<string>('');
   const [confirm, setConfirm] = useState<string>('');
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!token) {
-      toast.error('Invitation token is missing. Please request a new invite link.');
+    if (otp.length !== 6) {
+      toast.error('Enter the 6-digit OTP sent to your email.');
       return;
     }
 
@@ -38,7 +41,7 @@ export default function SetPasswordPage() {
     }
 
     try {
-      await resetPassword({ token, password }).unwrap();
+      await submitSetPassword({ email, otp, password }).unwrap();
 
       toast.success('Password set successfully. Please login.');
       navigate('/login');
@@ -52,11 +55,52 @@ export default function SetPasswordPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Set Password</CardTitle>
-          <CardDescription>Create your password to activate your invited account</CardDescription>
+          <CardDescription>Enter your email, invitation OTP, and your new password</CardDescription>
         </CardHeader>
 
         <form onSubmit={submit}>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="set-email">Email</Label>
+              <Input
+                id="set-email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>OTP Code</Label>
+              <InputOTP maxLength={6} value={otp} onChange={setOtp} pattern="^[0-9]+$">
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                </InputOTPGroup>
+                <InputOTPSeparator className="mx-0.5" />
+                <InputOTPGroup>
+                  <InputOTPSlot index={1} />
+                </InputOTPGroup>
+                <InputOTPSeparator className="mx-0.5" />
+                <InputOTPGroup>
+                  <InputOTPSlot index={2} />
+                </InputOTPGroup>
+                <InputOTPSeparator className="mx-0.5" />
+                <InputOTPGroup>
+                  <InputOTPSlot index={3} />
+                </InputOTPGroup>
+                <InputOTPSeparator className="mx-0.5" />
+                <InputOTPGroup>
+                  <InputOTPSlot index={4} />
+                </InputOTPGroup>
+                <InputOTPSeparator className="mx-0.5" />
+                <InputOTPGroup>
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+
             <PasswordField
               id="password"
               label="Password"
@@ -79,10 +123,19 @@ export default function SetPasswordPage() {
           </CardContent>
 
           <CardFooter>
-            <Button type="submit" className="w-full flex gap-2" disabled={isLoading || !token}>
-              {isLoading && <Spinner />}
-              {isLoading ? 'Setting password...' : 'Set Password'}
-            </Button>
+            <div className="w-full space-y-2">
+              <Button
+                type="submit"
+                className="w-full flex gap-2"
+                disabled={isLoading || otp.length !== 6 || !email.trim()}
+              >
+                {isLoading && <Spinner />}
+                {isLoading ? 'Setting password...' : 'Set Password'}
+              </Button>
+              <Button asChild type="button" variant="outline" className="w-full">
+                <Link to="/login">Return to login</Link>
+              </Button>
+            </div>
           </CardFooter>
         </form>
       </Card>

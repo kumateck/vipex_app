@@ -14,7 +14,10 @@ import {
 import { sql } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { companies, branches, locations, users } from './core';
+import { parcels } from './shipments';
+import { payments } from './payments';
 import {
+  ApprovalStatus,
   AccountClass,
   CashConfirmationStatus,
   ExpenseFundingSource,
@@ -157,6 +160,85 @@ export const expenseCategories = pgTable(
   }),
 );
 
+export const serviceCharges = pgTable(
+  'service_charges',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    code: varchar('code', { length: 60 }).notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    amountPsw: bigint('amount_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    taxable: boolean('taxable').notNull().default(false),
+    active: boolean('active').notNull().default(true),
+    sortOrder: integer('sort_order').notNull().default(0),
+    payableAccountId: varchar('payable_account_id', { length: 25 }).references(
+      () => chartOfAccounts.id,
+    ),
+    effectiveFrom: timestamp('effective_from', { withTimezone: false }).notNull().defaultNow(),
+    effectiveTo: timestamp('effective_to', { withTimezone: false }),
+    createdBy: varchar('created_by', { length: 25 }).references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompany: index('service_charges_company_idx').on(t.companyId),
+    byActive: index('service_charges_active_idx').on(t.companyId, t.active),
+    byEffective: index('service_charges_effective_idx').on(
+      t.companyId,
+      t.effectiveFrom,
+      t.effectiveTo,
+    ),
+    uqCompanyLowerCode: uniqueIndex('service_charges_company_lower_code_uq').on(
+      t.companyId,
+      sql`lower(${t.code})`,
+    ),
+  }),
+);
+
+export const paymentServiceCharges = pgTable(
+  'payment_service_charges',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    paymentId: varchar('payment_id', { length: 25 })
+      .notNull()
+      .references(() => payments.id),
+    parcelId: varchar('parcel_id', { length: 25 })
+      .notNull()
+      .references(() => parcels.id),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    serviceChargeId: varchar('service_charge_id', { length: 25 })
+      .notNull()
+      .references(() => serviceCharges.id),
+    code: varchar('code', { length: 60 }).notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    amountPsw: bigint('amount_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    taxable: boolean('taxable').notNull().default(false),
+    settledPsw: bigint('settled_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompany: index('payment_service_charges_company_idx').on(t.companyId),
+    byPayment: index('payment_service_charges_payment_idx').on(t.paymentId),
+    byParcel: index('payment_service_charges_parcel_idx').on(t.parcelId),
+    byCharge: index('payment_service_charges_charge_idx').on(t.serviceChargeId),
+  }),
+);
+
 export const accountingApprovalPolicies = pgTable(
   'accounting_approval_policies',
   {
@@ -171,6 +253,7 @@ export const accountingApprovalPolicies = pgTable(
     amountLimitPsw: bigint('amount_limit_psw', { mode: 'number' })
       .notNull()
       .default(sql`0`),
+    autoAuthorizeBelowThreshold: boolean('auto_authorize_below_threshold').notNull().default(true),
     requiresHeadOfficeApproval: boolean('requires_head_office_approval').notNull().default(false),
     appliesToFundingSource: smallint('applies_to_funding_source'),
     active: boolean('active').notNull().default(true),
@@ -304,6 +387,80 @@ export const journalLines = pgTable(
     byEntry: index('journal_lines_entry_idx').on(t.entryId),
     byAccount: index('journal_lines_account_idx').on(t.accountId),
     byBranchAccount: index('journal_lines_branch_account_idx').on(t.branchId, t.accountId),
+  }),
+);
+
+export const manualJournalEntries = pgTable(
+  'manual_journal_entries',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    policyCode: varchar('policy_code', { length: 60 }),
+    thresholdPsw: bigint('threshold_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    totalDebitPsw: bigint('total_debit_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    totalCreditPsw: bigint('total_credit_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    status: smallint('status').notNull().default(ApprovalStatus.PENDING),
+    branchId: varchar('branch_id', { length: 25 }).references(() => branches.id),
+    locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
+    memo: varchar('memo', { length: 500 }),
+    entryDate: timestamp('entry_date', { withTimezone: false }).notNull().defaultNow(),
+    recordedByUserId: varchar('recorded_by_user_id', { length: 25 }).references(() => users.id),
+    approvedByUserId: varchar('approved_by_user_id', { length: 25 }).references(() => users.id),
+    approvalReason: varchar('approval_reason', { length: 1000 }),
+    rejectionReason: varchar('rejection_reason', { length: 1000 }),
+    postedBatchId: varchar('posted_batch_id', { length: 25 }).references(() => journalBatches.id),
+    postedEntryId: varchar('posted_entry_id', { length: 25 }).references(() => journalEntries.id),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompany: index('manual_journal_entries_company_idx').on(t.companyId),
+    byCompanyStatus: index('manual_journal_entries_company_status_idx').on(t.companyId, t.status),
+    byBranchDate: index('manual_journal_entries_branch_date_idx').on(t.branchId, t.entryDate),
+  }),
+);
+
+export const manualJournalEntryLines = pgTable(
+  'manual_journal_entry_lines',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    manualEntryId: varchar('manual_entry_id', { length: 25 })
+      .notNull()
+      .references(() => manualJournalEntries.id),
+    accountId: varchar('account_id', { length: 25 })
+      .notNull()
+      .references(() => chartOfAccounts.id),
+    branchId: varchar('branch_id', { length: 25 }).references(() => branches.id),
+    locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
+    debitPsw: bigint('debit_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    creditPsw: bigint('credit_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    description: varchar('description', { length: 500 }),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompany: index('manual_journal_entry_lines_company_idx').on(t.companyId),
+    byManualEntry: index('manual_journal_entry_lines_entry_idx').on(t.manualEntryId),
+    byAccount: index('manual_journal_entry_lines_account_idx').on(t.accountId),
   }),
 );
 
