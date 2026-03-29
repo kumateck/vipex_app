@@ -121,15 +121,33 @@ jobs:
         run: |
           set -euo pipefail
           PREFIX="${DESKTOP_MINIO_PREFIX:-desktop/windows}"
-          LATEST_PATH="s3://${MINIO_BUCKET}/${PREFIX}/latest/"
-          VERSION_PATH="s3://${MINIO_BUCKET}/${PREFIX}/v${VERSION}/"
+          LATEST_PREFIX="${PREFIX}/latest"
+          VERSION_PREFIX="${PREFIX}/v${VERSION}"
 
           echo "Publishing to:"
-          echo "  ${LATEST_PATH}"
-          echo "  ${VERSION_PATH}"
+          echo "  s3://${MINIO_BUCKET}/${LATEST_PREFIX}/"
+          echo "  s3://${MINIO_BUCKET}/${VERSION_PREFIX}/"
 
-          aws --endpoint-url "${MINIO_ENDPOINT}" s3 sync "${RELEASE_DIR}/" "${LATEST_PATH}" --delete
-          aws --endpoint-url "${MINIO_ENDPOINT}" s3 sync "${RELEASE_DIR}/" "${VERSION_PATH}"
+          mapfile -t FILES < <(find "${RELEASE_DIR}" -maxdepth 1 -type f)
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "No release files found in ${RELEASE_DIR}"
+            exit 1
+          fi
+
+          # Upload each file with s3api put-object (single PUT) to avoid multipart checksum
+          # compatibility issues seen with some MinIO setups.
+          for file in "${FILES[@]}"; do
+            base=$(basename "${file}")
+            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+              --bucket "${MINIO_BUCKET}" \
+              --key "${LATEST_PREFIX}/${base}" \
+              --body "${file}" >/dev/null
+
+            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+              --bucket "${MINIO_BUCKET}" \
+              --key "${VERSION_PREFIX}/${base}" \
+              --body "${file}" >/dev/null
+          done
 
       - name: Feed URL hint
         run: |
