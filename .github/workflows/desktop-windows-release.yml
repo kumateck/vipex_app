@@ -58,6 +58,8 @@ jobs:
       MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
       MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
       DESKTOP_MINIO_PREFIX: desktop/windows
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
 
     steps:
       - name: Checkout
