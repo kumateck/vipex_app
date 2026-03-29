@@ -2,6 +2,7 @@ import type { Elysia } from 'elysia';
 import { HttpStatus } from '../utils/http-status';
 import { isHttpError, type ErrorDetails } from '../utils/http-error';
 import { isProd } from '../utils/env';
+import { sendDiscordErrorAlert } from '../services/observability/discord-alert';
 
 type FrameworkErrorCode = 'NOT_FOUND' | 'VALIDATION' | 'PARSE' | 'UNKNOWN';
 
@@ -267,6 +268,17 @@ export function errorHandler(app: Elysia) {
         stack: (error as { stack?: string }).stack,
         cause: (error as { cause?: unknown }).cause,
       });
+      void sendDiscordErrorAlert({
+        status: error.status,
+        requestId,
+        path,
+        method,
+        frameworkCode,
+        publicCode: 'HTTP_ERROR',
+        publicMessage: message,
+        originalMessage: error.message,
+        timestamp: new Date().toISOString(),
+      });
       return buildErrorBody({
         code: 'HTTP_ERROR',
         message,
@@ -294,6 +306,18 @@ export function errorHandler(app: Elysia) {
       stack: err.stack,
       details: err.details,
       cause: err.cause,
+    });
+    void sendDiscordErrorAlert({
+      status: mapped.status,
+      requestId,
+      path,
+      method,
+      frameworkCode,
+      publicCode: mapped.code,
+      publicMessage: mapped.message,
+      originalCode: err.code ?? readNestedCode(err.cause),
+      originalMessage: err.message,
+      timestamp: new Date().toISOString(),
     });
 
     return buildErrorBody({

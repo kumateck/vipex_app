@@ -15,6 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+      MINIO_REGION: ${{ secrets.MINIO_REGION }}
+      MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+      MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+      MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
+      MOBILE_MINIO_PREFIX: mobile/android
 
     steps:
       - name: Checkout
@@ -31,7 +37,7 @@ jobs:
           bun-version: latest
 
       - name: Install Dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Verify Expo Token
         run: |
@@ -39,6 +45,29 @@ jobs:
             echo "EXPO_TOKEN is missing. Add it in GitHub repo secrets."
             exit 1
           fi
+
+      - name: Resolve Mobile Version
+        id: mobile_version
+        run: |
+          VERSION=$(node -p "require('./apps/mobile/app.json').expo.version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Validate EAS project id
+        run: |
+          set -euo pipefail
+          PROJECT_ID=$(node -p "require('./apps/mobile/app.json').expo?.extra?.eas?.projectId || ''")
+          if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "REPLACE_WITH_EAS_PROJECT_ID" ]; then
+            echo "apps/mobile/app.json expo.extra.eas.projectId must be set to a real EAS project id."
+            exit 1
+          fi
+
+      - name: Publish OTA Update (Preview Channel)
+        id: ota_publish
+        working-directory: apps/mobile
+        run: |
+          set -euo pipefail
+          bunx eas-cli whoami
+          bunx eas-cli update --channel preview --non-interactive --message "PR #${{ github.event.pull_request.number || github.run_number }} (${GITHUB_SHA::7})"
 
       - name: Trigger and Wait for EAS Android APK Build
         id: eas_build
@@ -73,3 +102,40 @@ jobs:
           path: artifacts/*.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Configure AWS CLI for MinIO
+        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        run: |
+          mkdir -p ~/.aws
+          cat <<EOF > ~/.aws/credentials
+          [default]
+          aws_access_key_id=${MINIO_ACCESS_KEY}
+          aws_secret_access_key=${MINIO_SECRET_KEY}
+          EOF
+          cat <<EOF > ~/.aws/config
+          [default]
+          region=${MINIO_REGION:-us-east-1}
+          output=json
+          EOF
+
+      - name: Mirror APK to MinIO (optional)
+        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        env:
+          VERSION: ${{ steps.mobile_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          PREFIX="${MOBILE_MINIO_PREFIX:-mobile/android}"
+          LATEST_PATH="s3://${MINIO_BUCKET}/${PREFIX}/latest/"
+          VERSION_PATH="s3://${MINIO_BUCKET}/${PREFIX}/v${VERSION}/"
+
+          aws --endpoint-url "${MINIO_ENDPOINT}" s3 cp artifacts/ "${LATEST_PATH}" --recursive --exclude "*" --include "*.apk"
+          aws --endpoint-url "${MINIO_ENDPOINT}" s3 cp artifacts/ "${VERSION_PATH}" --recursive --exclude "*" --include "*.apk"
+
+      - name: Distribution summary
+        run: |
+          echo "OTA channel published: preview"
+          echo "APK artifact uploaded to GitHub artifacts."
+          if [ -n "${MINIO_ENDPOINT}" ] && [ -n "${MINIO_BUCKET}" ]; then
+            PREFIX="${MOBILE_MINIO_PREFIX:-mobile/android}"
+            echo "MinIO mirror base: ${MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/"
+          fi
