@@ -35,6 +35,7 @@ export default function ForgotPasswordScreen() {
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
+          placeholderTextColor="#667085"
         />
       </View>
       {status ? <Text style={styles.success}>{status}</Text> : null}
@@ -57,6 +58,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     backgroundColor: '#fff',
+    color: '#101828',
   },
   success: { color: '#067647' },
   error: { color: '#b42318' },

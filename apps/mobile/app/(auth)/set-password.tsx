@@ -36,6 +36,7 @@ export default function SetPasswordScreen() {
           autoCapitalize="none"
           keyboardType="email-address"
           placeholder="you@example.com"
+          placeholderTextColor="#667085"
         />
       </View>
       <View style={styles.formGroup}>
@@ -47,6 +48,7 @@ export default function SetPasswordScreen() {
           keyboardType="number-pad"
           placeholder="123456"
           maxLength={6}
+          placeholderTextColor="#667085"
         />
       </View>
       <TextInput
@@ -55,6 +57,7 @@ export default function SetPasswordScreen() {
         onChangeText={setPassword}
         secureTextEntry
         placeholder="New password"
+        placeholderTextColor="#667085"
       />
       <TextInput
         style={styles.input}
@@ -62,6 +65,7 @@ export default function SetPasswordScreen() {
         onChangeText={setConfirm}
         secureTextEntry
         placeholder="Confirm new password"
+        placeholderTextColor="#667085"
       />
       {status ? <Text style={styles.success}>{status}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -80,6 +84,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     backgroundColor: '#fff',
+    color: '#101828',
   },
   success: { color: '#067647' },
   error: { color: '#b42318' },

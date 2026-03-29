@@ -1,4 +1,4 @@
-name: Desktop Windows Release (PR to desktop)
+name: Desktop Release (Windows + macOS) (PR to desktop)
 
 on:
   pull_request:
@@ -48,6 +48,104 @@ jobs:
           path: apps/desktop/out/make/**
           if-no-files-found: error
           retention-days: 14
+
+  build-macos-desktop:
+    name: Build macOS Desktop Artifact
+    runs-on: macos-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+      MINIO_REGION: ${{ secrets.MINIO_REGION }}
+      MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+      MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+      MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
+      DESKTOP_MINIO_PREFIX: desktop/macos
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Sync Brand Assets
+        run: bun run assets:sync
+
+      - name: Build macOS Desktop Release (ZIP)
+        run: bun run --cwd apps/desktop make -- --targets @electron-forge/maker-zip
+
+      - name: Resolve Desktop Version
+        id: desktop_version
+        run: |
+          VERSION=$(node -p "require('./apps/desktop/package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Upload macOS Desktop Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vipex-desktop-macos-${{ github.event.pull_request.number || github.run_number }}
+          path: apps/desktop/out/make/**
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Configure AWS CLI for MinIO
+        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        run: |
+          mkdir -p ~/.aws
+          cat <<EOF > ~/.aws/credentials
+          [default]
+          aws_access_key_id=${MINIO_ACCESS_KEY}
+          aws_secret_access_key=${MINIO_SECRET_KEY}
+          EOF
+          cat <<EOF > ~/.aws/config
+          [default]
+          region=${MINIO_REGION:-us-east-1}
+          output=json
+          EOF
+
+      - name: Mirror macOS build to MinIO (optional)
+        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        env:
+          VERSION: ${{ steps.desktop_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          PREFIX="${DESKTOP_MINIO_PREFIX:-desktop/macos}"
+          LATEST_PREFIX="${PREFIX}/latest"
+          VERSION_PREFIX="${PREFIX}/v${VERSION}"
+
+          mapfile -t FILES < <(find apps/desktop/out/make -type f \( -name "*.zip" -o -name "*.dmg" \))
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "No macOS distributables found under apps/desktop/out/make"
+            exit 1
+          fi
+
+          for file in "${FILES[@]}"; do
+            base=$(basename "${file}")
+            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+              --bucket "${MINIO_BUCKET}" \
+              --key "${LATEST_PREFIX}/${base}" \
+              --body "${file}" >/dev/null
+
+            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+              --bucket "${MINIO_BUCKET}" \
+              --key "${VERSION_PREFIX}/${base}" \
+              --body "${file}" >/dev/null
+          done
+
+      - name: Distribution summary
+        run: |
+          echo "macOS artifact uploaded to GitHub Actions artifacts."
+          if [ -n "${MINIO_ENDPOINT}" ] && [ -n "${MINIO_BUCKET}" ]; then
+            PREFIX="${DESKTOP_MINIO_PREFIX:-desktop/macos}"
+            echo "MinIO mirror base: ${MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/"
+          fi
 
   publish-windows-feed:
     name: Publish Windows Feed to MinIO
