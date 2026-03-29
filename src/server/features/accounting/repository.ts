@@ -8,12 +8,17 @@ import {
   dailyCashConfirmations,
   branches,
   companyBankAccounts,
+  cashToBankTransfers,
   expenseCategories,
   expenseRequests,
   journalBatches,
   journalEntries,
   journalLines,
+  manualJournalEntries,
+  manualJournalEntryLines,
   locations,
+  serviceCharges,
+  pettyCashReplenishments,
   pettyCashFunds,
   payments,
   employeeCompensation,
@@ -25,7 +30,7 @@ import {
   users,
 } from '@/db/schemas';
 import type { SQL } from 'drizzle-orm';
-import { CashierType, PaymentComponent, PaymentMethod } from '@/db/schemas/enums';
+import { ApprovalStatus, CashierType, PaymentComponent, PaymentMethod } from '@/db/schemas/enums';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
@@ -89,6 +94,7 @@ export async function listApprovalPoliciesRepo(input: {
       policyCode: accountingApprovalPolicies.policyCode,
       name: accountingApprovalPolicies.name,
       amountLimitPsw: accountingApprovalPolicies.amountLimitPsw,
+      autoAuthorizeBelowThreshold: accountingApprovalPolicies.autoAuthorizeBelowThreshold,
       requiresHeadOfficeApproval: accountingApprovalPolicies.requiresHeadOfficeApproval,
       appliesToFundingSource: accountingApprovalPolicies.appliesToFundingSource,
       active: accountingApprovalPolicies.active,
@@ -98,6 +104,35 @@ export async function listApprovalPoliciesRepo(input: {
     .from(accountingApprovalPolicies)
     .where(and(...where))
     .orderBy(asc(accountingApprovalPolicies.policyCode));
+}
+
+export async function listServiceChargesRepo(input: {
+  companyId: string;
+  active?: boolean | null;
+}) {
+  const where = [eq(serviceCharges.companyId, input.companyId)];
+  if (input.active != null) where.push(eq(serviceCharges.active, input.active));
+
+  return db
+    .select({
+      id: serviceCharges.id,
+      companyId: serviceCharges.companyId,
+      code: serviceCharges.code,
+      name: serviceCharges.name,
+      description: serviceCharges.description,
+      amountPsw: serviceCharges.amountPsw,
+      taxable: serviceCharges.taxable,
+      active: serviceCharges.active,
+      sortOrder: serviceCharges.sortOrder,
+      payableAccountId: serviceCharges.payableAccountId,
+      effectiveFrom: serviceCharges.effectiveFrom,
+      effectiveTo: serviceCharges.effectiveTo,
+      createdAt: serviceCharges.createdAt,
+      updatedAt: serviceCharges.updatedAt,
+    })
+    .from(serviceCharges)
+    .where(and(...where))
+    .orderBy(asc(serviceCharges.sortOrder), asc(serviceCharges.code), asc(serviceCharges.name));
 }
 
 export async function listCompanyBankAccountsRepo(input: {
@@ -213,6 +248,33 @@ export async function getActiveTaxProfileWithComponentsRepo(
     profileName: profile.name,
     components,
   };
+}
+
+export async function listActiveServiceChargesRepo(
+  input: { companyId: string; at?: Date },
+  executor: DbExecutor = db,
+) {
+  const at = input.at ?? new Date();
+  return executor
+    .select({
+      id: serviceCharges.id,
+      code: serviceCharges.code,
+      name: serviceCharges.name,
+      amountPsw: serviceCharges.amountPsw,
+      taxable: serviceCharges.taxable,
+      sortOrder: serviceCharges.sortOrder,
+      payableAccountId: serviceCharges.payableAccountId,
+    })
+    .from(serviceCharges)
+    .where(
+      and(
+        eq(serviceCharges.companyId, input.companyId),
+        eq(serviceCharges.active, true),
+        lte(serviceCharges.effectiveFrom, at),
+        or(isNull(serviceCharges.effectiveTo), gte(serviceCharges.effectiveTo, at)),
+      ),
+    )
+    .orderBy(asc(serviceCharges.sortOrder), asc(serviceCharges.code), asc(serviceCharges.name));
 }
 
 export async function getCompanyAccountingSettingsRepo(
@@ -353,6 +415,7 @@ export async function getApprovalPolicyRepo(
       policyCode: accountingApprovalPolicies.policyCode,
       name: accountingApprovalPolicies.name,
       amountLimitPsw: accountingApprovalPolicies.amountLimitPsw,
+      autoAuthorizeBelowThreshold: accountingApprovalPolicies.autoAuthorizeBelowThreshold,
       requiresHeadOfficeApproval: accountingApprovalPolicies.requiresHeadOfficeApproval,
       appliesToFundingSource: accountingApprovalPolicies.appliesToFundingSource,
       active: accountingApprovalPolicies.active,
@@ -365,6 +428,35 @@ export async function getApprovalPolicyRepo(
       ),
     )
     .limit(1);
+  return row ?? null;
+}
+
+export async function getServiceChargeRepo(
+  companyId: string,
+  serviceChargeId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      id: serviceCharges.id,
+      companyId: serviceCharges.companyId,
+      code: serviceCharges.code,
+      name: serviceCharges.name,
+      description: serviceCharges.description,
+      amountPsw: serviceCharges.amountPsw,
+      taxable: serviceCharges.taxable,
+      active: serviceCharges.active,
+      sortOrder: serviceCharges.sortOrder,
+      payableAccountId: serviceCharges.payableAccountId,
+      effectiveFrom: serviceCharges.effectiveFrom,
+      effectiveTo: serviceCharges.effectiveTo,
+      createdAt: serviceCharges.createdAt,
+      updatedAt: serviceCharges.updatedAt,
+    })
+    .from(serviceCharges)
+    .where(and(eq(serviceCharges.companyId, companyId), eq(serviceCharges.id, serviceChargeId)))
+    .limit(1);
+
   return row ?? null;
 }
 
@@ -500,8 +592,9 @@ export async function getExpenseCategoryUsageSummaryRepo(
 export async function getCompanyBankAccountUsageSummaryRepo(
   companyId: string,
   bankAccountId: string,
+  executor: DbExecutor = db,
 ) {
-  const [row] = await db
+  const [row] = await executor
     .select({
       totalRequestCount: sql<number>`count(*)`,
       openRequestCount: sql<number>`count(*) filter (where ${expenseRequests.status} not in (3, 5))`,
@@ -514,7 +607,32 @@ export async function getCompanyBankAccountUsageSummaryRepo(
         eq(expenseRequests.companyBankAccountId, bankAccountId),
       ),
     );
-  return row ?? { totalRequestCount: 0, openRequestCount: 0, postedRequestCount: 0 };
+  const [transferRow] = await executor
+    .select({
+      cashToBankTransferCount: sql<number>`count(*)`,
+      pettyCashReplenishmentCount: sql<number>`count(*)`,
+    })
+    .from(companyBankAccounts)
+    .leftJoin(
+      cashToBankTransfers,
+      eq(cashToBankTransfers.companyBankAccountId, companyBankAccounts.id),
+    )
+    .leftJoin(
+      pettyCashReplenishments,
+      eq(pettyCashReplenishments.companyBankAccountId, companyBankAccounts.id),
+    )
+    .where(
+      and(eq(companyBankAccounts.companyId, companyId), eq(companyBankAccounts.id, bankAccountId)),
+    )
+    .groupBy(companyBankAccounts.id);
+
+  return {
+    totalRequestCount: Number(row?.totalRequestCount ?? 0),
+    openRequestCount: Number(row?.openRequestCount ?? 0),
+    postedRequestCount: Number(row?.postedRequestCount ?? 0),
+    cashToBankTransferCount: Number(transferRow?.cashToBankTransferCount ?? 0),
+    pettyCashReplenishmentCount: Number(transferRow?.pettyCashReplenishmentCount ?? 0),
+  };
 }
 
 export async function getTaxProfileUsageSummaryRepo(companyId: string, taxProfileId: string) {
@@ -531,6 +649,22 @@ export async function getTaxProfileUsageSummaryRepo(companyId: string, taxProfil
     .where(and(eq(taxProfiles.companyId, companyId), eq(taxProfiles.id, taxProfileId)))
     .groupBy(taxProfiles.id);
   return row ?? { compensationCount: 0, taxJournalItemCount: 0, taxComponentCount: 0 };
+}
+
+export async function getTaxComponentUsageSummaryRepo(
+  companyId: string,
+  taxComponentId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      taxProfileCount: sql<number>`count(distinct ${taxProfiles.id})`,
+    })
+    .from(taxComponents)
+    .innerJoin(taxProfiles, eq(taxProfiles.id, taxComponents.profileId))
+    .where(and(eq(taxProfiles.companyId, companyId), eq(taxComponents.id, taxComponentId)));
+
+  return { taxProfileCount: Number(row?.taxProfileCount ?? 0) };
 }
 
 export async function createAccountRepo(
@@ -591,6 +725,17 @@ export async function createApprovalPolicyRepo(
   return row ?? null;
 }
 
+export async function createServiceChargeRepo(
+  values: typeof serviceCharges.$inferInsert,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .insert(serviceCharges)
+    .values(values)
+    .returning({ id: serviceCharges.id });
+  return row ?? null;
+}
+
 export async function updateApprovalPolicyRepo(
   approvalPolicyId: string,
   patch: Partial<typeof accountingApprovalPolicies.$inferInsert>,
@@ -601,6 +746,19 @@ export async function updateApprovalPolicyRepo(
     .set({ ...patch, updatedAt: new Date() })
     .where(eq(accountingApprovalPolicies.id, approvalPolicyId))
     .returning({ id: accountingApprovalPolicies.id });
+  return row ?? null;
+}
+
+export async function updateServiceChargeRepo(
+  serviceChargeId: string,
+  patch: Partial<typeof serviceCharges.$inferInsert>,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .update(serviceCharges)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(eq(serviceCharges.id, serviceChargeId))
+    .returning({ id: serviceCharges.id });
   return row ?? null;
 }
 
@@ -700,6 +858,61 @@ export async function deleteExpenseCategoryRepo(
   return row ?? null;
 }
 
+export async function deleteApprovalPolicyRepo(
+  companyId: string,
+  approvalPolicyId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .delete(accountingApprovalPolicies)
+    .where(
+      and(
+        eq(accountingApprovalPolicies.companyId, companyId),
+        eq(accountingApprovalPolicies.id, approvalPolicyId),
+      ),
+    )
+    .returning({ id: accountingApprovalPolicies.id });
+  return row ?? null;
+}
+
+export async function deleteCompanyBankAccountRepo(
+  companyId: string,
+  bankAccountId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .delete(companyBankAccounts)
+    .where(
+      and(eq(companyBankAccounts.companyId, companyId), eq(companyBankAccounts.id, bankAccountId)),
+    )
+    .returning({ id: companyBankAccounts.id });
+  return row ?? null;
+}
+
+export async function deleteTaxProfileRepo(
+  companyId: string,
+  taxProfileId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .delete(taxProfiles)
+    .where(and(eq(taxProfiles.companyId, companyId), eq(taxProfiles.id, taxProfileId)))
+    .returning({ id: taxProfiles.id });
+  return row ?? null;
+}
+
+export async function deleteTaxComponentRepo(
+  _companyId: string,
+  taxComponentId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .delete(taxComponents)
+    .where(eq(taxComponents.id, taxComponentId))
+    .returning({ id: taxComponents.id });
+  return row ?? null;
+}
+
 export async function createJournalBatchRepo(
   values: typeof journalBatches.$inferInsert,
   executor: DbExecutor = db,
@@ -727,6 +940,143 @@ export async function createJournalLinesRepo(
   executor: DbExecutor = db,
 ) {
   return executor.insert(journalLines).values(values).returning({ id: journalLines.id });
+}
+
+export async function createManualJournalEntryRepo(
+  values: typeof manualJournalEntries.$inferInsert,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .insert(manualJournalEntries)
+    .values(values)
+    .returning({ id: manualJournalEntries.id });
+  return row ?? null;
+}
+
+export async function createManualJournalEntryLinesRepo(
+  values: Array<typeof manualJournalEntryLines.$inferInsert>,
+  executor: DbExecutor = db,
+) {
+  return executor
+    .insert(manualJournalEntryLines)
+    .values(values)
+    .returning({ id: manualJournalEntryLines.id });
+}
+
+export async function listPendingManualJournalEntriesRepo(
+  input: { companyId: string },
+  executor: DbExecutor = db,
+) {
+  return executor
+    .select({
+      id: manualJournalEntries.id,
+      companyId: manualJournalEntries.companyId,
+      policyCode: manualJournalEntries.policyCode,
+      thresholdPsw: manualJournalEntries.thresholdPsw,
+      totalDebitPsw: manualJournalEntries.totalDebitPsw,
+      totalCreditPsw: manualJournalEntries.totalCreditPsw,
+      status: manualJournalEntries.status,
+      branchId: manualJournalEntries.branchId,
+      locationId: manualJournalEntries.locationId,
+      memo: manualJournalEntries.memo,
+      entryDate: manualJournalEntries.entryDate,
+      recordedByUserId: manualJournalEntries.recordedByUserId,
+      approvedByUserId: manualJournalEntries.approvedByUserId,
+      approvalReason: manualJournalEntries.approvalReason,
+      rejectionReason: manualJournalEntries.rejectionReason,
+      postedBatchId: manualJournalEntries.postedBatchId,
+      postedEntryId: manualJournalEntries.postedEntryId,
+      createdAt: manualJournalEntries.createdAt,
+      updatedAt: manualJournalEntries.updatedAt,
+    })
+    .from(manualJournalEntries)
+    .where(
+      and(
+        eq(manualJournalEntries.companyId, input.companyId),
+        eq(manualJournalEntries.status, ApprovalStatus.PENDING),
+      ),
+    )
+    .orderBy(desc(manualJournalEntries.createdAt));
+}
+
+export async function getManualJournalEntryRepo(
+  input: { companyId: string; id: string },
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      id: manualJournalEntries.id,
+      companyId: manualJournalEntries.companyId,
+      policyCode: manualJournalEntries.policyCode,
+      thresholdPsw: manualJournalEntries.thresholdPsw,
+      totalDebitPsw: manualJournalEntries.totalDebitPsw,
+      totalCreditPsw: manualJournalEntries.totalCreditPsw,
+      status: manualJournalEntries.status,
+      branchId: manualJournalEntries.branchId,
+      locationId: manualJournalEntries.locationId,
+      memo: manualJournalEntries.memo,
+      entryDate: manualJournalEntries.entryDate,
+      recordedByUserId: manualJournalEntries.recordedByUserId,
+      approvedByUserId: manualJournalEntries.approvedByUserId,
+      approvalReason: manualJournalEntries.approvalReason,
+      rejectionReason: manualJournalEntries.rejectionReason,
+      postedBatchId: manualJournalEntries.postedBatchId,
+      postedEntryId: manualJournalEntries.postedEntryId,
+      createdAt: manualJournalEntries.createdAt,
+      updatedAt: manualJournalEntries.updatedAt,
+    })
+    .from(manualJournalEntries)
+    .where(
+      and(
+        eq(manualJournalEntries.companyId, input.companyId),
+        eq(manualJournalEntries.id, input.id),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+export async function listManualJournalEntryLinesRepo(
+  input: { companyId: string; manualEntryId: string },
+  executor: DbExecutor = db,
+) {
+  return executor
+    .select({
+      id: manualJournalEntryLines.id,
+      companyId: manualJournalEntryLines.companyId,
+      manualEntryId: manualJournalEntryLines.manualEntryId,
+      accountId: manualJournalEntryLines.accountId,
+      branchId: manualJournalEntryLines.branchId,
+      locationId: manualJournalEntryLines.locationId,
+      debitPsw: manualJournalEntryLines.debitPsw,
+      creditPsw: manualJournalEntryLines.creditPsw,
+      description: manualJournalEntryLines.description,
+      sortOrder: manualJournalEntryLines.sortOrder,
+      createdAt: manualJournalEntryLines.createdAt,
+    })
+    .from(manualJournalEntryLines)
+    .where(
+      and(
+        eq(manualJournalEntryLines.companyId, input.companyId),
+        eq(manualJournalEntryLines.manualEntryId, input.manualEntryId),
+      ),
+    )
+    .orderBy(asc(manualJournalEntryLines.sortOrder), asc(manualJournalEntryLines.createdAt));
+}
+
+export async function updateManualJournalEntryRepo(
+  input: {
+    id: string;
+    patch: Partial<typeof manualJournalEntries.$inferInsert>;
+  },
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .update(manualJournalEntries)
+    .set({ ...input.patch, updatedAt: new Date() })
+    .where(eq(manualJournalEntries.id, input.id))
+    .returning({ id: manualJournalEntries.id });
+  return row ?? null;
 }
 
 export async function listJournalLinesByBatchRepo(batchId: string, executor: DbExecutor = db) {

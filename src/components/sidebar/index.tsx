@@ -9,6 +9,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/ui/sidebar';
+import { AccountingSetupPermissionKeys, PermissionKeys } from '@/shared/permissions/constants';
 import { inferRequiredPermissionByPath } from '@/shared/permissions/path-access';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -35,6 +36,19 @@ function hasAccountingUrl(node: SidebarNode): boolean {
 
 function canRenderSidebarNode(node: SidebarNode, allowedPermissions: Set<string>): boolean {
   if (node.hiddenInSidebar) return false;
+  if (node.url === '/accounting/setup') {
+    const hasLegacySetupAccess =
+      allowedPermissions.has(PermissionKeys.CanReadAccountingSetup) ||
+      allowedPermissions.has(PermissionKeys.CanCreateAccountingSetup) ||
+      allowedPermissions.has(PermissionKeys.CanUpdateAccountingSetup) ||
+      allowedPermissions.has(PermissionKeys.CanDeleteAccountingSetup);
+    const hasGranularSetupAccess = Object.values(AccountingSetupPermissionKeys).some((scope) =>
+      [scope.read, scope.create, scope.update, scope.delete].some((permission) =>
+        allowedPermissions.has(permission),
+      ),
+    );
+    return hasLegacySetupAccess || hasGranularSetupAccess;
+  }
   const effectivePermissionKey = node.permissionKey ?? inferRequiredPermissionByPath(node.url);
   if (!effectivePermissionKey) return true;
   return allowedPermissions.has(effectivePermissionKey);
@@ -55,8 +69,17 @@ function filterSidebarTreeByPermissions(
     .filter((item): item is SidebarNode => item !== null);
   const isDirectlyVisible = canRenderSidebarNode(node, allowedPermissions);
   const hasVisibleDescendant = filteredChildren.length > 0 || filteredItems.length > 0;
+  const isContainerNode = Boolean(
+    (node.children?.length ?? 0) > 0 || (node.items?.length ?? 0) > 0,
+  );
+
+  // For container group nodes with explicit permission key (e.g. Sending/Receiving),
+  // require that permission regardless of descendant permissions.
+  if (isContainerNode && !node.url && node.permissionKey && !isDirectlyVisible) return null;
 
   if (!isDirectlyVisible && !hasVisibleDescendant) return null;
+  if (isContainerNode && !hasVisibleDescendant) return null;
+  if (!node.url && !hasVisibleDescendant) return null;
   return {
     ...node,
     ...(node.children ? { children: filteredChildren } : {}),

@@ -1,4 +1,4 @@
-import { eq, and, gt } from 'drizzle-orm';
+import { eq, and, gt, sql } from 'drizzle-orm';
 import { db } from '../../../db/config';
 import { users } from '@/db/schemas';
 import { UserStatus } from '@/db/schemas/enums';
@@ -25,6 +25,24 @@ export async function findUserByResetTokenRepo(tokenHash: string) {
     .select()
     .from(users)
     .where(and(eq(users.resetToken, tokenHash), gt(users.resetTokenExpires, now)))
+    .limit(1);
+  return row ?? null;
+}
+
+// Find a user by email + hashed OTP that hasn't expired
+export async function findUserByEmailAndResetTokenRepo(email: string, tokenHash: string) {
+  const now = new Date();
+  const normalizedEmail = email.trim().toLowerCase();
+  const [row] = await db
+    .select()
+    .from(users)
+    .where(
+      and(
+        sql`lower(${users.email}) = ${normalizedEmail}`,
+        eq(users.resetToken, tokenHash),
+        gt(users.resetTokenExpires, now),
+      ),
+    )
     .limit(1);
   return row ?? null;
 }

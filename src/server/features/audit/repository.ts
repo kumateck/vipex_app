@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, gte, ilike, lte, or } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { auditLogs } from '@/db/schemas';
+import { auditLogs, users } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
 import { ensureAuditStorageReady } from './storage';
 
@@ -8,6 +8,7 @@ export type AuditLogRow = {
   id: string;
   companyId: string;
   actorUserId: string | null;
+  actorUserName: string | null;
   entityType: string;
   entityId: string | null;
   action: string;
@@ -30,7 +31,9 @@ export type ListAuditLogsParams = {
   sort?: SortField[] | null;
 };
 
-export async function createAuditLogRepo(values: typeof auditLogs.$inferInsert): Promise<{ id: string }> {
+export async function createAuditLogRepo(
+  values: typeof auditLogs.$inferInsert,
+): Promise<{ id: string }> {
   const enabled = await ensureAuditStorageReady();
   if (!enabled) return { id: 'audit-unavailable' };
   const [row] = await db.insert(auditLogs).values(values).returning({ id: auditLogs.id });
@@ -93,6 +96,7 @@ export async function listAuditLogsRepo(
       id: auditLogs.id,
       companyId: auditLogs.companyId,
       actorUserId: auditLogs.actorUserId,
+      actorUserName: users.fullname,
       entityType: auditLogs.entityType,
       entityId: auditLogs.entityId,
       action: auditLogs.action,
@@ -101,6 +105,7 @@ export async function listAuditLogsRepo(
       createdAt: auditLogs.createdAt,
     })
     .from(auditLogs)
+    .leftJoin(users, eq(users.id, auditLogs.actorUserId))
     .where(and(...where))
     .orderBy(...orderBy)
     .limit(p.limit)
@@ -118,6 +123,7 @@ export async function getAuditLogRepo(id: string, companyId: string): Promise<Au
       id: auditLogs.id,
       companyId: auditLogs.companyId,
       actorUserId: auditLogs.actorUserId,
+      actorUserName: users.fullname,
       entityType: auditLogs.entityType,
       entityId: auditLogs.entityId,
       action: auditLogs.action,
@@ -126,6 +132,7 @@ export async function getAuditLogRepo(id: string, companyId: string): Promise<Au
       createdAt: auditLogs.createdAt,
     })
     .from(auditLogs)
+    .leftJoin(users, eq(users.id, auditLogs.actorUserId))
     .where(and(eq(auditLogs.id, id), eq(auditLogs.companyId, companyId)))
     .limit(1);
 

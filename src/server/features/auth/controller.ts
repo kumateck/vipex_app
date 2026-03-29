@@ -5,6 +5,7 @@ import {
   logoutSvc,
   refreshSvc,
   resetPasswordSvc,
+  setPasswordSvc,
   getCurrentUserPermissionsSvc,
 } from './service';
 
@@ -38,8 +39,13 @@ export async function forgotPasswordCtrl(email: string) {
   return { success: true };
 }
 
-export async function resetPasswordCtrl(token: string, password: string) {
-  await resetPasswordSvc(token, password);
+export async function resetPasswordCtrl(email: string, otp: string, password: string) {
+  await resetPasswordSvc(email, otp, password);
+  return { success: true };
+}
+
+export async function setPasswordCtrl(email: string, otp: string, password: string) {
+  await setPasswordSvc(email, otp, password);
   return { success: true };
 }
 

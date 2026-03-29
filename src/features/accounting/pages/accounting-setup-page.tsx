@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
@@ -19,6 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CreatableCombobox } from '@/components/ui/creatable-combobox';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -30,7 +31,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AccountClass, ExpenseFundingSource } from '@/db/schemas/enums';
-import { PermissionKeys } from '@/shared/permissions/constants';
+import { AccountingSetupPermissionKeys, PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore, type AuthUser } from '@/stores/auth-store';
 import { useGetEntityAuditHistoryQuery } from '@/features/audit/api';
 import {
@@ -53,6 +54,11 @@ import {
   useCreateTaxComponentMutation,
   useCreateTaxProfileMutation,
   useDeleteAccountMutation,
+  useDeleteApprovalPolicyMutation,
+  useDeleteCompanyBankAccountMutation,
+  useDeleteExpenseCategoryMutation,
+  useDeleteTaxComponentMutation,
+  useDeleteTaxProfileMutation,
   useListAccountsQuery,
   useListApprovalPoliciesQuery,
   useListCompanyBankAccountsQuery,
@@ -92,6 +98,87 @@ const FUNDING_SOURCE_OPTIONS = [
   { value: String(ExpenseFundingSource.SALES_CASH), label: 'Sales Cash' },
   { value: String(ExpenseFundingSource.COMPANY_BANK), label: 'Company Bank' },
 ];
+
+const MANUAL_JOURNAL_POLICY_CODES = new Set([
+  'MANUAL_JOURNAL',
+  'MANUAL_JOURNAL_ENTRY',
+  'MANUAL_ENTRY',
+]);
+
+type PolicyCodeOption = {
+  value: string;
+  label: string;
+  defaultName: string;
+  description: string;
+  defaultFundingScope: string;
+};
+
+const APPROVAL_POLICY_CODE_OPTIONS: PolicyCodeOption[] = [
+  {
+    value: 'MANUAL_JOURNAL',
+    label: 'Manual Journal Entries',
+    defaultName: 'Manual journal posting approval',
+    description: 'Uses threshold + auto-authorize toggle; above-threshold always queues.',
+    defaultFundingScope: ALL_FUNDING_SOURCES,
+  },
+  {
+    value: 'EXPENSE_REQUEST',
+    label: 'Expense Request Approval',
+    defaultName: 'Expense request approval policy',
+    description: 'Controls expense approval limits and escalation behavior.',
+    defaultFundingScope: ALL_FUNDING_SOURCES,
+  },
+  {
+    value: 'PETTY_CASH_REPLENISHMENT',
+    label: 'Petty Cash Replenishment',
+    defaultName: 'Petty cash replenishment approval',
+    description: 'Used for petty cash top-up approvals.',
+    defaultFundingScope: String(ExpenseFundingSource.PETTY_CASH),
+  },
+  {
+    value: 'CASH_TO_BANK_TRANSFER',
+    label: 'Cash To Bank Transfer',
+    defaultName: 'Cash to bank transfer approval',
+    description: 'Used for branch cash lodgement controls.',
+    defaultFundingScope: String(ExpenseFundingSource.SALES_CASH),
+  },
+  {
+    value: 'DAILY_CASH_CONFIRMATION',
+    label: 'Daily Cash Confirmation',
+    defaultName: 'Daily cash confirmation approval',
+    description: 'Used for daily cash confirmation and posting controls.',
+    defaultFundingScope: String(ExpenseFundingSource.SALES_CASH),
+  },
+  {
+    value: 'TAX_FILING',
+    label: 'Tax Filing',
+    defaultName: 'Tax filing approval policy',
+    description: 'Used for filing review/closure approval flow.',
+    defaultFundingScope: ALL_FUNDING_SOURCES,
+  },
+  {
+    value: 'PAYMENT_REVERSAL',
+    label: 'Payment Reversal',
+    defaultName: 'Payment reversal approval policy',
+    description: 'Used for high-risk payment reversal actions.',
+    defaultFundingScope: ALL_FUNDING_SOURCES,
+  },
+  {
+    value: 'PARCEL_DELETE',
+    label: 'Parcel Delete Approval',
+    defaultName: 'Parcel deletion approval policy',
+    description: 'Used for soft-delete parcel approval controls.',
+    defaultFundingScope: ALL_FUNDING_SOURCES,
+  },
+];
+
+function toPolicyCodeLabel(code: string) {
+  return code
+    .split('_')
+    .filter(Boolean)
+    .map((segment) => `${segment.slice(0, 1)}${segment.slice(1).toLowerCase()}`)
+    .join(' ');
+}
 
 function accountClassLabel(accountClass: number) {
   switch (accountClass) {
@@ -154,6 +241,7 @@ function createEmptyApprovalPolicyForm(companyId: string) {
     policyCode: '',
     name: '',
     amountLimitCedis: '',
+    autoAuthorizeBelowThreshold: true,
     requiresHeadOfficeApproval: false,
     appliesToFundingSource: ALL_FUNDING_SOURCES,
     active: true,
@@ -203,6 +291,15 @@ function parseMoneyToPesewas(value: string) {
   const amount = Number(value);
   if (!Number.isFinite(amount) || amount < 0) return null;
   return Math.round(amount * 100);
+}
+
+function isManualJournalPolicyCode(policyCode: string) {
+  return MANUAL_JOURNAL_POLICY_CODES.has(policyCode.trim().toUpperCase());
+}
+
+function getPolicyTemplate(policyCode: string) {
+  const normalized = policyCode.trim().toUpperCase();
+  return APPROVAL_POLICY_CODE_OPTIONS.find((option) => option.value === normalized);
 }
 
 function formatAuditDateTime(value: string) {
@@ -289,14 +386,25 @@ function AccountingSetupHistoryCard({
 
 export function AccountingSetupPage() {
   const user = useAuthStore((state) => state.user);
+  const permissions = new Set(user?.permissions ?? []);
+  const hasLegacySetupAccess =
+    permissions.has(PermissionKeys.CanReadAccountingSetup) ||
+    permissions.has(PermissionKeys.CanCreateAccountingSetup) ||
+    permissions.has(PermissionKeys.CanUpdateAccountingSetup) ||
+    permissions.has(PermissionKeys.CanDeleteAccountingSetup);
+  const hasAnyGranularSetupAccess = Object.values(AccountingSetupPermissionKeys).some((scope) =>
+    [scope.read, scope.create, scope.update, scope.delete].some((key) => permissions.has(key)),
+  );
+  const canAccessSetup = hasLegacySetupAccess || hasAnyGranularSetupAccess;
+
   if (!user?.company?.useAccounting) {
     return <AccountingDisabledState />;
   }
-  if (!user.permissions?.includes(PermissionKeys.CanManageAccountingSetup)) {
+  if (!canAccessSetup) {
     return (
       <AccountingUnauthorizedState
         title="Accounting Setup Restricted"
-        description="Your role does not include permission to manage accounting setup masters."
+        description="Your role does not include permission to view or manage accounting setup masters."
       />
     );
   }
@@ -306,6 +414,33 @@ export function AccountingSetupPage() {
 
 function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   const companyId = user.company?.id ?? '';
+  const permissions = new Set(user.permissions ?? []);
+  const canCreateSetup = permissions.has(PermissionKeys.CanCreateAccountingSetup);
+  const canUpdateSetup = permissions.has(PermissionKeys.CanUpdateAccountingSetup);
+  const canDeleteSetup = permissions.has(PermissionKeys.CanDeleteAccountingSetup);
+  const canReadSetup = permissions.has(PermissionKeys.CanReadAccountingSetup);
+  const accessByScope = (
+    scope: (typeof AccountingSetupPermissionKeys)[keyof typeof AccountingSetupPermissionKeys],
+  ) => ({
+    canRead:
+      canReadSetup ||
+      canCreateSetup ||
+      canUpdateSetup ||
+      canDeleteSetup ||
+      permissions.has(scope.read) ||
+      permissions.has(scope.create) ||
+      permissions.has(scope.update) ||
+      permissions.has(scope.delete),
+    canCreate: canCreateSetup || permissions.has(scope.create),
+    canUpdate: canUpdateSetup || permissions.has(scope.update),
+    canDelete: canDeleteSetup || permissions.has(scope.delete),
+  });
+  const accountsAccess = accessByScope(AccountingSetupPermissionKeys.accounts);
+  const categoriesAccess = accessByScope(AccountingSetupPermissionKeys.categories);
+  const policiesAccess = accessByScope(AccountingSetupPermissionKeys.policies);
+  const bankAccountsAccess = accessByScope(AccountingSetupPermissionKeys.bankAccounts);
+  const taxProfilesAccess = accessByScope(AccountingSetupPermissionKeys.taxProfiles);
+  const taxComponentsAccess = accessByScope(AccountingSetupPermissionKeys.taxComponents);
   const [activeTab, setActiveTab] = useState('accounts');
   const isAccountsTab = activeTab === 'accounts';
   const isCategoriesTab = activeTab === 'categories';
@@ -313,8 +448,13 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   const isBankAccountsTab = activeTab === 'bank-accounts';
   const isTaxProfilesTab = activeTab === 'tax-profiles';
   const isTaxComponentsTab = activeTab === 'tax-components';
-  const needsAccounts = isAccountsTab || isCategoriesTab || isBankAccountsTab;
-  const needsTaxProfiles = isTaxProfilesTab || isTaxComponentsTab;
+  const needsAccounts =
+    (isAccountsTab && accountsAccess.canRead) ||
+    (isCategoriesTab && categoriesAccess.canRead) ||
+    (isBankAccountsTab && bankAccountsAccess.canRead);
+  const needsTaxProfiles =
+    (isTaxProfilesTab && taxProfilesAccess.canRead) ||
+    (isTaxComponentsTab && taxComponentsAccess.canRead);
 
   const [accountForm, setAccountForm] = useState(() => createEmptyAccountForm(companyId));
   const [expenseCategoryForm, setExpenseCategoryForm] = useState(() =>
@@ -322,6 +462,9 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   );
   const [approvalPolicyForm, setApprovalPolicyForm] = useState(() =>
     createEmptyApprovalPolicyForm(companyId),
+  );
+  const [policyCodeOptions, setPolicyCodeOptions] = useState<PolicyCodeOption[]>(
+    APPROVAL_POLICY_CODE_OPTIONS,
   );
   const [bankAccountForm, setBankAccountForm] = useState(() =>
     createEmptyBankAccountForm(companyId),
@@ -351,22 +494,39 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
     data: expenseCategories = [],
     isFetching: isFetchingExpenseCategories,
     refetch: refetchExpenseCategories,
-  } = useListExpenseCategoriesQuery({ companyId }, { skip: !companyId || !isCategoriesTab });
+  } = useListExpenseCategoriesQuery(
+    { companyId },
+    { skip: !companyId || !isCategoriesTab || !categoriesAccess.canRead },
+  );
   const {
     data: approvalPolicies = [],
     isFetching: isFetchingApprovalPolicies,
     refetch: refetchApprovalPolicies,
-  } = useListApprovalPoliciesQuery({ companyId }, { skip: !companyId || !isPoliciesTab });
+  } = useListApprovalPoliciesQuery(
+    { companyId },
+    { skip: !companyId || !isPoliciesTab || !policiesAccess.canRead },
+  );
   const {
     data: companyBankAccounts = [],
     isFetching: isFetchingCompanyBankAccounts,
     refetch: refetchCompanyBankAccounts,
-  } = useListCompanyBankAccountsQuery({ companyId }, { skip: !companyId || !isBankAccountsTab });
+  } = useListCompanyBankAccountsQuery(
+    { companyId },
+    { skip: !companyId || !isBankAccountsTab || !bankAccountsAccess.canRead },
+  );
   const {
     data: taxProfiles = [],
     isFetching: isFetchingTaxProfiles,
     refetch: refetchTaxProfiles,
-  } = useListTaxProfilesQuery({ companyId }, { skip: !companyId || !needsTaxProfiles });
+  } = useListTaxProfilesQuery(
+    { companyId },
+    {
+      skip:
+        !companyId ||
+        !needsTaxProfiles ||
+        (!taxProfilesAccess.canRead && !taxComponentsAccess.canRead),
+    },
+  );
   const effectiveTaxProfileId = selectedTaxProfileId || taxProfiles[0]?.id || '';
   const {
     data: taxComponents = [],
@@ -377,7 +537,7 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
       companyId,
       profileId: viewingTaxProfileId === ALL_TAX_PROFILES ? undefined : viewingTaxProfileId,
     },
-    { skip: !companyId || !isTaxComponentsTab },
+    { skip: !companyId || !isTaxComponentsTab || !taxComponentsAccess.canRead },
   );
 
   const [createAccount, { isLoading: isCreatingAccount }] = useCreateAccountMutation();
@@ -385,20 +545,29 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   const [updateAccount, { isLoading: isUpdatingAccount }] = useUpdateAccountMutation();
   const [createExpenseCategory, { isLoading: isCreatingExpenseCategory }] =
     useCreateExpenseCategoryMutation();
+  const [deleteExpenseCategory, { isLoading: isDeletingExpenseCategory }] =
+    useDeleteExpenseCategoryMutation();
   const [updateExpenseCategory, { isLoading: isUpdatingExpenseCategory }] =
     useUpdateExpenseCategoryMutation();
   const [createApprovalPolicy, { isLoading: isCreatingApprovalPolicy }] =
     useCreateApprovalPolicyMutation();
+  const [deleteApprovalPolicy, { isLoading: isDeletingApprovalPolicy }] =
+    useDeleteApprovalPolicyMutation();
   const [updateApprovalPolicy, { isLoading: isUpdatingApprovalPolicy }] =
     useUpdateApprovalPolicyMutation();
   const [createCompanyBankAccount, { isLoading: isCreatingCompanyBankAccount }] =
     useCreateCompanyBankAccountMutation();
+  const [deleteCompanyBankAccount, { isLoading: isDeletingCompanyBankAccount }] =
+    useDeleteCompanyBankAccountMutation();
   const [updateCompanyBankAccount, { isLoading: isUpdatingCompanyBankAccount }] =
     useUpdateCompanyBankAccountMutation();
   const [createTaxProfile, { isLoading: isCreatingTaxProfile }] = useCreateTaxProfileMutation();
+  const [deleteTaxProfile, { isLoading: isDeletingTaxProfile }] = useDeleteTaxProfileMutation();
   const [updateTaxProfile, { isLoading: isUpdatingTaxProfile }] = useUpdateTaxProfileMutation();
   const [createTaxComponent, { isLoading: isCreatingTaxComponent }] =
     useCreateTaxComponentMutation();
+  const [deleteTaxComponent, { isLoading: isDeletingTaxComponent }] =
+    useDeleteTaxComponentMutation();
   const [updateTaxComponent, { isLoading: isUpdatingTaxComponent }] =
     useUpdateTaxComponentMutation();
 
@@ -421,6 +590,33 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   const parentAccountOptions = accounts.filter((account) => account.active);
   const canLinkExpenseCategory =
     accountForm.accountClass === AccountClass.EXPENSE && Boolean(accountForm.isPostable);
+  const availableTabs = useMemo(
+    () =>
+      [
+        accountsAccess.canRead ? 'accounts' : null,
+        categoriesAccess.canRead ? 'categories' : null,
+        policiesAccess.canRead ? 'policies' : null,
+        bankAccountsAccess.canRead ? 'bank-accounts' : null,
+        taxProfilesAccess.canRead ? 'tax-profiles' : null,
+        taxComponentsAccess.canRead ? 'tax-components' : null,
+      ].filter((value): value is string => Boolean(value)),
+    [
+      accountsAccess.canRead,
+      bankAccountsAccess.canRead,
+      categoriesAccess.canRead,
+      policiesAccess.canRead,
+      taxComponentsAccess.canRead,
+      taxProfilesAccess.canRead,
+    ],
+  );
+
+  useEffect(() => {
+    if (availableTabs.length === 0) return;
+    if (!availableTabs.includes(activeTab)) {
+      const firstTab = availableTabs[0];
+      if (firstTab) setActiveTab(firstTab);
+    }
+  }, [activeTab, availableTabs]);
 
   function resetAccountForm() {
     setEditingAccountId(null);
@@ -454,6 +650,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   function handleEditAccount(account: AccountRow) {
+    if (!accountsAccess.canUpdate) {
+      toast.error('You do not have permission to edit accounts');
+      return;
+    }
     setActiveTab('accounts');
     setEditingAccountId(account.id);
     setRemoveLinkedCategoryOnDelete(false);
@@ -471,6 +671,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   function handleEditExpenseCategory(category: ExpenseCategoryRow) {
+    if (!categoriesAccess.canUpdate) {
+      toast.error('You do not have permission to edit expense categories');
+      return;
+    }
     setActiveTab('categories');
     setEditingExpenseCategoryId(category.id);
     setExpenseCategoryForm({
@@ -483,6 +687,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   function handleEditApprovalPolicy(policy: ApprovalPolicyRow) {
+    if (!policiesAccess.canUpdate) {
+      toast.error('You do not have permission to edit approval policies');
+      return;
+    }
     setActiveTab('policies');
     setEditingApprovalPolicyId(policy.id);
     setApprovalPolicyForm({
@@ -490,6 +698,7 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
       policyCode: policy.policyCode,
       name: policy.name,
       amountLimitCedis: ((policy.amountLimitPsw ?? 0) / 100).toFixed(2),
+      autoAuthorizeBelowThreshold: policy.autoAuthorizeBelowThreshold,
       requiresHeadOfficeApproval: policy.requiresHeadOfficeApproval,
       appliesToFundingSource:
         policy.appliesToFundingSource == null
@@ -500,6 +709,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   function handleEditBankAccount(account: CompanyBankAccountRow) {
+    if (!bankAccountsAccess.canUpdate) {
+      toast.error('You do not have permission to edit company bank accounts');
+      return;
+    }
     setActiveTab('bank-accounts');
     setEditingBankAccountId(account.id);
     setBankAccountForm({
@@ -514,6 +727,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   function handleEditTaxProfile(profile: TaxProfileRow) {
+    if (!taxProfilesAccess.canUpdate) {
+      toast.error('You do not have permission to edit tax profiles');
+      return;
+    }
     setActiveTab('tax-profiles');
     setSelectedTaxProfileId(profile.id);
     setEditingTaxProfileId(profile.id);
@@ -525,6 +742,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   function handleEditTaxComponent(component: TaxComponentRow) {
+    if (!taxComponentsAccess.canUpdate) {
+      toast.error('You do not have permission to edit tax components');
+      return;
+    }
     setActiveTab('tax-components');
     setSelectedTaxProfileId(component.profileId);
     setEditingTaxComponentId(component.id);
@@ -543,6 +764,14 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   async function handleSaveAccount() {
+    if (editingAccountId ? !accountsAccess.canUpdate : !accountsAccess.canCreate) {
+      toast.error(
+        editingAccountId
+          ? 'You do not have permission to update accounts'
+          : 'You do not have permission to create accounts',
+      );
+      return;
+    }
     if (!companyId) {
       toast.error('Authenticated company is required');
       return;
@@ -578,6 +807,10 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   async function handleDeleteAccount() {
+    if (!accountsAccess.canDelete) {
+      toast.error('You do not have permission to delete accounts');
+      return;
+    }
     if (!companyId || !editingAccountId) {
       toast.error('Select an account first');
       return;
@@ -599,6 +832,14 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
   }
 
   async function handleSaveExpenseCategory() {
+    if (editingExpenseCategoryId ? !categoriesAccess.canUpdate : !categoriesAccess.canCreate) {
+      toast.error(
+        editingExpenseCategoryId
+          ? 'You do not have permission to update expense categories'
+          : 'You do not have permission to create expense categories',
+      );
+      return;
+    }
     if (!companyId) {
       toast.error('Authenticated company is required');
       return;
@@ -632,7 +873,36 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
     }
   }
 
+  async function handleDeleteExpenseCategory() {
+    if (!categoriesAccess.canDelete) {
+      toast.error('You do not have permission to delete expense categories');
+      return;
+    }
+    if (!companyId || !editingExpenseCategoryId) {
+      toast.error('Select an expense category first');
+      return;
+    }
+    if (!globalThis.confirm('Delete this expense category?')) return;
+
+    try {
+      await deleteExpenseCategory({ id: editingExpenseCategoryId, companyId }).unwrap();
+      toast.success('Expense category deleted');
+      resetExpenseCategoryForm();
+      await refetchExpenseCategories();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete expense category');
+    }
+  }
+
   async function handleSaveApprovalPolicy() {
+    if (editingApprovalPolicyId ? !policiesAccess.canUpdate : !policiesAccess.canCreate) {
+      toast.error(
+        editingApprovalPolicyId
+          ? 'You do not have permission to update approval policies'
+          : 'You do not have permission to create approval policies',
+      );
+      return;
+    }
     if (!companyId) {
       toast.error('Authenticated company is required');
       return;
@@ -644,14 +914,19 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
       return;
     }
 
+    const normalizedPolicyCode = approvalPolicyForm.policyCode.trim().toUpperCase();
+    const isManualJournalPolicy = isManualJournalPolicyCode(normalizedPolicyCode);
+
     const payload: ApprovalPolicyMutationInput = {
       companyId,
-      policyCode: approvalPolicyForm.policyCode.trim(),
+      policyCode: normalizedPolicyCode,
       name: approvalPolicyForm.name.trim(),
       amountLimitPsw,
+      autoAuthorizeBelowThreshold: approvalPolicyForm.autoAuthorizeBelowThreshold,
       requiresHeadOfficeApproval: approvalPolicyForm.requiresHeadOfficeApproval,
-      appliesToFundingSource:
-        approvalPolicyForm.appliesToFundingSource === ALL_FUNDING_SOURCES
+      appliesToFundingSource: isManualJournalPolicy
+        ? null
+        : approvalPolicyForm.appliesToFundingSource === ALL_FUNDING_SOURCES
           ? null
           : Number(approvalPolicyForm.appliesToFundingSource),
       active: approvalPolicyForm.active,
@@ -677,7 +952,36 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
     }
   }
 
+  async function handleDeleteApprovalPolicy() {
+    if (!policiesAccess.canDelete) {
+      toast.error('You do not have permission to delete approval policies');
+      return;
+    }
+    if (!companyId || !editingApprovalPolicyId) {
+      toast.error('Select an approval policy first');
+      return;
+    }
+    if (!globalThis.confirm('Delete this approval policy?')) return;
+
+    try {
+      await deleteApprovalPolicy({ id: editingApprovalPolicyId, companyId }).unwrap();
+      toast.success('Approval policy deleted');
+      resetApprovalPolicyForm();
+      await refetchApprovalPolicies();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete approval policy');
+    }
+  }
+
   async function handleSaveBankAccount() {
+    if (editingBankAccountId ? !bankAccountsAccess.canUpdate : !bankAccountsAccess.canCreate) {
+      toast.error(
+        editingBankAccountId
+          ? 'You do not have permission to update company bank accounts'
+          : 'You do not have permission to create company bank accounts',
+      );
+      return;
+    }
     if (!companyId) {
       toast.error('Authenticated company is required');
       return;
@@ -713,7 +1017,36 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
     }
   }
 
+  async function handleDeleteBankAccount() {
+    if (!bankAccountsAccess.canDelete) {
+      toast.error('You do not have permission to delete company bank accounts');
+      return;
+    }
+    if (!companyId || !editingBankAccountId) {
+      toast.error('Select a company bank account first');
+      return;
+    }
+    if (!globalThis.confirm('Delete this company bank account?')) return;
+
+    try {
+      await deleteCompanyBankAccount({ id: editingBankAccountId, companyId }).unwrap();
+      toast.success('Company bank account deleted');
+      resetBankAccountForm();
+      await refetchCompanyBankAccounts();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete company bank account');
+    }
+  }
+
   async function handleSaveTaxProfile() {
+    if (editingTaxProfileId ? !taxProfilesAccess.canUpdate : !taxProfilesAccess.canCreate) {
+      toast.error(
+        editingTaxProfileId
+          ? 'You do not have permission to update tax profiles'
+          : 'You do not have permission to create tax profiles',
+      );
+      return;
+    }
     if (!companyId) {
       toast.error('Authenticated company is required');
       return;
@@ -745,7 +1078,43 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
     }
   }
 
+  async function handleDeleteTaxProfile() {
+    if (!taxProfilesAccess.canDelete) {
+      toast.error('You do not have permission to delete tax profiles');
+      return;
+    }
+    if (!companyId || !editingTaxProfileId) {
+      toast.error('Select a tax profile first');
+      return;
+    }
+    if (
+      !globalThis.confirm(
+        'Delete this tax profile? This only works when no components, journals, or payroll rows reference it.',
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await deleteTaxProfile({ id: editingTaxProfileId, companyId }).unwrap();
+      toast.success('Tax profile deleted');
+      resetTaxProfileForm();
+      await refetchTaxProfiles();
+      await refetchTaxComponents();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete tax profile');
+    }
+  }
+
   async function handleSaveTaxComponent() {
+    if (editingTaxComponentId ? !taxComponentsAccess.canUpdate : !taxComponentsAccess.canCreate) {
+      toast.error(
+        editingTaxComponentId
+          ? 'You do not have permission to update tax components'
+          : 'You do not have permission to create tax components',
+      );
+      return;
+    }
     if (!companyId) {
       toast.error('Authenticated company is required');
       return;
@@ -776,6 +1145,27 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
       await refetchTaxComponents();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to save tax component');
+    }
+  }
+
+  async function handleDeleteTaxComponent() {
+    if (!taxComponentsAccess.canDelete) {
+      toast.error('You do not have permission to delete tax components');
+      return;
+    }
+    if (!companyId || !editingTaxComponentId) {
+      toast.error('Select a tax component first');
+      return;
+    }
+    if (!globalThis.confirm('Delete this tax component?')) return;
+
+    try {
+      await deleteTaxComponent({ id: editingTaxComponentId, companyId }).unwrap();
+      toast.success('Tax component deleted');
+      resetTaxComponentForm();
+      await refetchTaxComponents();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete tax component');
     }
   }
 
@@ -816,13 +1206,18 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button size="sm" variant="outline" onClick={() => handleEditAccount(row.original)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleEditAccount(row.original)}
+            disabled={!accountsAccess.canUpdate}
+          >
             Edit
           </Button>
         ),
       },
     ],
-    [accountNameById],
+    [accountNameById, accountsAccess.canUpdate],
   );
 
   const expenseCategoryColumns = useMemo<ColumnDef<ExpenseCategoryRow>[]>(
@@ -850,13 +1245,14 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
             size="sm"
             variant="outline"
             onClick={() => handleEditExpenseCategory(row.original)}
+            disabled={!categoriesAccess.canUpdate}
           >
             Edit
           </Button>
         ),
       },
     ],
-    [accountNameById],
+    [accountNameById, categoriesAccess.canUpdate],
   );
 
   const approvalPolicyColumns = useMemo<ColumnDef<ApprovalPolicyRow>[]>(
@@ -887,6 +1283,16 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         ),
       },
       {
+        id: 'autoAuthorize',
+        header: 'Auto Authorize',
+        cell: ({ row }) => (
+          <StatusBadge
+            label={row.original.autoAuthorizeBelowThreshold ? 'Enabled' : 'Disabled'}
+            tone={row.original.autoAuthorizeBelowThreshold ? 'secondary' : 'outline'}
+          />
+        ),
+      },
+      {
         id: 'active',
         header: 'Status',
         cell: ({ row }) => (
@@ -902,13 +1308,14 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
             size="sm"
             variant="outline"
             onClick={() => handleEditApprovalPolicy(row.original)}
+            disabled={!policiesAccess.canUpdate}
           >
             Edit
           </Button>
         ),
       },
     ],
-    [],
+    [policiesAccess.canUpdate],
   );
 
   const companyBankAccountColumns = useMemo<ColumnDef<CompanyBankAccountRow>[]>(
@@ -934,13 +1341,18 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button size="sm" variant="outline" onClick={() => handleEditBankAccount(row.original)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleEditBankAccount(row.original)}
+            disabled={!bankAccountsAccess.canUpdate}
+          >
             Edit
           </Button>
         ),
       },
     ],
-    [accountNameById],
+    [accountNameById, bankAccountsAccess.canUpdate],
   );
 
   const taxProfileColumns = useMemo<ColumnDef<TaxProfileRow>[]>(
@@ -958,13 +1370,18 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button size="sm" variant="outline" onClick={() => handleEditTaxProfile(row.original)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleEditTaxProfile(row.original)}
+            disabled={!taxProfilesAccess.canUpdate}
+          >
             Edit
           </Button>
         ),
       },
     ],
-    [],
+    [taxProfilesAccess.canUpdate],
   );
 
   const taxComponentColumns = useMemo<ColumnDef<TaxComponentRow>[]>(
@@ -1009,13 +1426,18 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button size="sm" variant="outline" onClick={() => handleEditTaxComponent(row.original)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleEditTaxComponent(row.original)}
+            disabled={!taxComponentsAccess.canUpdate}
+          >
             Edit
           </Button>
         ),
       },
     ],
-    [taxProfileNameById],
+    [taxProfileNameById, taxComponentsAccess.canUpdate],
   );
 
   return (
@@ -1049,12 +1471,20 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
       <ScrollableWrapper>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full gap-1 md:grid-cols-6">
-            <TabsTrigger value="accounts">Accounts</TabsTrigger>
-            <TabsTrigger value="categories">Categories</TabsTrigger>
-            <TabsTrigger value="policies">Policies</TabsTrigger>
-            <TabsTrigger value="bank-accounts">Bank Accounts</TabsTrigger>
-            <TabsTrigger value="tax-profiles">Tax Profiles</TabsTrigger>
-            <TabsTrigger value="tax-components">Tax Components</TabsTrigger>
+            {accountsAccess.canRead ? <TabsTrigger value="accounts">Accounts</TabsTrigger> : null}
+            {categoriesAccess.canRead ? (
+              <TabsTrigger value="categories">Categories</TabsTrigger>
+            ) : null}
+            {policiesAccess.canRead ? <TabsTrigger value="policies">Policies</TabsTrigger> : null}
+            {bankAccountsAccess.canRead ? (
+              <TabsTrigger value="bank-accounts">Bank Accounts</TabsTrigger>
+            ) : null}
+            {taxProfilesAccess.canRead ? (
+              <TabsTrigger value="tax-profiles">Tax Profiles</TabsTrigger>
+            ) : null}
+            {taxComponentsAccess.canRead ? (
+              <TabsTrigger value="tax-components">Tax Components</TabsTrigger>
+            ) : null}
           </TabsList>
 
           <TabsContent value="accounts" className="space-y-4">
@@ -1219,11 +1649,15 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                     <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={() => void handleSaveAccount()}
-                        disabled={isCreatingAccount || isUpdatingAccount}
+                        disabled={
+                          isCreatingAccount ||
+                          isUpdatingAccount ||
+                          (editingAccountId ? !accountsAccess.canUpdate : !accountsAccess.canCreate)
+                        }
                       >
                         {editingAccountId ? 'Update Account' : 'Create Account'}
                       </Button>
-                      {editingAccountId ? (
+                      {editingAccountId && accountsAccess.canDelete ? (
                         <Button
                           variant="destructive"
                           onClick={() => setIsDeleteAccountDialogOpen(true)}
@@ -1363,10 +1797,25 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                     <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={() => void handleSaveExpenseCategory()}
-                        disabled={isCreatingExpenseCategory || isUpdatingExpenseCategory}
+                        disabled={
+                          isCreatingExpenseCategory ||
+                          isUpdatingExpenseCategory ||
+                          (editingExpenseCategoryId
+                            ? !categoriesAccess.canUpdate
+                            : !categoriesAccess.canCreate)
+                        }
                       >
                         {editingExpenseCategoryId ? 'Update Category' : 'Create Category'}
                       </Button>
+                      {editingExpenseCategoryId && categoriesAccess.canDelete ? (
+                        <Button
+                          variant="destructive"
+                          onClick={() => void handleDeleteExpenseCategory()}
+                          disabled={isDeletingExpenseCategory}
+                        >
+                          Delete Category
+                        </Button>
+                      ) : null}
                       <Button variant="outline" onClick={resetExpenseCategoryForm}>
                         Clear
                       </Button>
@@ -1420,123 +1869,215 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
-                      <div className="space-y-2">
-                        <Label htmlFor="policy-code">Policy Code</Label>
-                        <Input
-                          id="policy-code"
-                          value={approvalPolicyForm.policyCode}
-                          onChange={(event) =>
-                            setApprovalPolicyForm((current) => ({
-                              ...current,
-                              policyCode: event.target.value,
-                            }))
-                          }
-                          placeholder="PETTY_LIMIT"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="policy-name">Name</Label>
-                        <Input
-                          id="policy-name"
-                          value={approvalPolicyForm.name}
-                          onChange={(event) =>
-                            setApprovalPolicyForm((current) => ({
-                              ...current,
-                              name: event.target.value,
-                            }))
-                          }
-                          placeholder="Branch petty cash limit"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="policy-amount-limit">Amount Limit (GHS)</Label>
-                        <Input
-                          id="policy-amount-limit"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={approvalPolicyForm.amountLimitCedis}
-                          onChange={(event) =>
-                            setApprovalPolicyForm((current) => ({
-                              ...current,
-                              amountLimitCedis: event.target.value,
-                            }))
-                          }
-                          placeholder="0.00"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Funding Scope</Label>
-                        <Select
-                          value={approvalPolicyForm.appliesToFundingSource}
-                          onValueChange={(value) =>
-                            setApprovalPolicyForm((current) => ({
-                              ...current,
-                              appliesToFundingSource: value,
-                            }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {FUNDING_SOURCE_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Approval Level</Label>
-                        <Select
-                          value={String(approvalPolicyForm.requiresHeadOfficeApproval)}
-                          onValueChange={(value) =>
-                            setApprovalPolicyForm((current) => ({
-                              ...current,
-                              requiresHeadOfficeApproval: value === 'true',
-                            }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="false">Branch can approve</SelectItem>
-                            <SelectItem value="true">Head office approval required</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Status</Label>
-                        <Select
-                          value={String(approvalPolicyForm.active)}
-                          onValueChange={(value) =>
-                            setApprovalPolicyForm((current) => ({
-                              ...current,
-                              active: value === 'true',
-                            }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="true">Active</SelectItem>
-                            <SelectItem value="false">Inactive</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                    {(() => {
+                      const selectedPolicyTemplate = getPolicyTemplate(
+                        approvalPolicyForm.policyCode,
+                      );
+                      const isManualJournalPolicy = isManualJournalPolicyCode(
+                        approvalPolicyForm.policyCode,
+                      );
+                      return (
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+                          <div className="space-y-2">
+                            <Label htmlFor="policy-code">Policy Code</Label>
+                            <CreatableCombobox<PolicyCodeOption>
+                              value={approvalPolicyForm.policyCode}
+                              onChange={(value, selectedOption) =>
+                                setApprovalPolicyForm((current) => ({
+                                  ...current,
+                                  policyCode: value.trim().toUpperCase(),
+                                  name:
+                                    selectedOption &&
+                                    (!current.name.trim() || current.name === current.policyCode)
+                                      ? selectedOption.defaultName
+                                      : current.name,
+                                  appliesToFundingSource: selectedOption
+                                    ? selectedOption.defaultFundingScope
+                                    : isManualJournalPolicyCode(value)
+                                      ? ALL_FUNDING_SOURCES
+                                      : current.appliesToFundingSource,
+                                  autoAuthorizeBelowThreshold: isManualJournalPolicyCode(value)
+                                    ? current.autoAuthorizeBelowThreshold
+                                    : true,
+                                }))
+                              }
+                              getLabel={(item) => item.label}
+                              getValue={(item) => item.value}
+                              options={policyCodeOptions}
+                              allowCreate
+                              onCreate={async (input) => {
+                                const normalizedValue = input
+                                  .trim()
+                                  .toUpperCase()
+                                  .replace(/\s+/g, '_');
+                                const existing = policyCodeOptions.find(
+                                  (option) => option.value === normalizedValue,
+                                );
+                                if (existing) return existing;
+
+                                const created: PolicyCodeOption = {
+                                  value: normalizedValue,
+                                  label: toPolicyCodeLabel(normalizedValue),
+                                  defaultName: toPolicyCodeLabel(normalizedValue),
+                                  description: 'Custom policy code created from setup form.',
+                                  defaultFundingScope: ALL_FUNDING_SOURCES,
+                                };
+                                setPolicyCodeOptions((current) => [created, ...current]);
+                                return created;
+                              }}
+                              placeholder="Select policy code"
+                              searchPlaceholder="Search policy code..."
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              {selectedPolicyTemplate?.description ??
+                                'Select a standard policy code to auto-apply intended defaults.'}
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="policy-name">Name</Label>
+                            <Input
+                              id="policy-name"
+                              value={approvalPolicyForm.name}
+                              onChange={(event) =>
+                                setApprovalPolicyForm((current) => ({
+                                  ...current,
+                                  name: event.target.value,
+                                }))
+                              }
+                              placeholder="Branch petty cash limit"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="policy-amount-limit">Amount Limit (GHS)</Label>
+                            <Input
+                              id="policy-amount-limit"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={approvalPolicyForm.amountLimitCedis}
+                              onChange={(event) =>
+                                setApprovalPolicyForm((current) => ({
+                                  ...current,
+                                  amountLimitCedis: event.target.value,
+                                }))
+                              }
+                              placeholder="0.00"
+                            />
+                          </div>
+                          {!isManualJournalPolicy ? (
+                            <div className="space-y-2">
+                              <Label>Funding Scope</Label>
+                              <Select
+                                value={approvalPolicyForm.appliesToFundingSource}
+                                onValueChange={(value) =>
+                                  setApprovalPolicyForm((current) => ({
+                                    ...current,
+                                    appliesToFundingSource: value,
+                                  }))
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {FUNDING_SOURCE_OPTIONS.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : null}
+                          {isManualJournalPolicy ? (
+                            <div className="space-y-2">
+                              <Label>Auto Authorize (Below Threshold)</Label>
+                              <Select
+                                value={String(approvalPolicyForm.autoAuthorizeBelowThreshold)}
+                                onValueChange={(value) =>
+                                  setApprovalPolicyForm((current) => ({
+                                    ...current,
+                                    autoAuthorizeBelowThreshold: value === 'true',
+                                  }))
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="true">Enabled</SelectItem>
+                                  <SelectItem value="false">
+                                    Disabled (queue all for approval)
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : null}
+                          <div className="space-y-2">
+                            <Label>Approval Level</Label>
+                            <Select
+                              value={String(approvalPolicyForm.requiresHeadOfficeApproval)}
+                              onValueChange={(value) =>
+                                setApprovalPolicyForm((current) => ({
+                                  ...current,
+                                  requiresHeadOfficeApproval: value === 'true',
+                                }))
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="false">Branch can approve</SelectItem>
+                                <SelectItem value="true">Head office approval required</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Status</Label>
+                            <Select
+                              value={String(approvalPolicyForm.active)}
+                              onValueChange={(value) =>
+                                setApprovalPolicyForm((current) => ({
+                                  ...current,
+                                  active: value === 'true',
+                                }))
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="true">Active</SelectItem>
+                                <SelectItem value="false">Inactive</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={() => void handleSaveApprovalPolicy()}
-                        disabled={isCreatingApprovalPolicy || isUpdatingApprovalPolicy}
+                        disabled={
+                          isCreatingApprovalPolicy ||
+                          isUpdatingApprovalPolicy ||
+                          (editingApprovalPolicyId
+                            ? !policiesAccess.canUpdate
+                            : !policiesAccess.canCreate)
+                        }
                       >
                         {editingApprovalPolicyId ? 'Update Policy' : 'Create Policy'}
                       </Button>
+                      {editingApprovalPolicyId && policiesAccess.canDelete ? (
+                        <Button
+                          variant="destructive"
+                          onClick={() => void handleDeleteApprovalPolicy()}
+                          disabled={isDeletingApprovalPolicy}
+                        >
+                          Delete Policy
+                        </Button>
+                      ) : null}
                       <Button variant="outline" onClick={resetApprovalPolicyForm}>
                         Clear
                       </Button>
@@ -1693,10 +2234,25 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                     <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={() => void handleSaveBankAccount()}
-                        disabled={isCreatingCompanyBankAccount || isUpdatingCompanyBankAccount}
+                        disabled={
+                          isCreatingCompanyBankAccount ||
+                          isUpdatingCompanyBankAccount ||
+                          (editingBankAccountId
+                            ? !bankAccountsAccess.canUpdate
+                            : !bankAccountsAccess.canCreate)
+                        }
                       >
                         {editingBankAccountId ? 'Update Bank Account' : 'Create Bank Account'}
                       </Button>
+                      {editingBankAccountId && bankAccountsAccess.canDelete ? (
+                        <Button
+                          variant="destructive"
+                          onClick={() => void handleDeleteBankAccount()}
+                          disabled={isDeletingCompanyBankAccount}
+                        >
+                          Delete Bank Account
+                        </Button>
+                      ) : null}
                       <Button variant="outline" onClick={resetBankAccountForm}>
                         Clear
                       </Button>
@@ -1788,10 +2344,25 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                     <div className="flex flex-wrap gap-2">
                       <Button
                         onClick={() => void handleSaveTaxProfile()}
-                        disabled={isCreatingTaxProfile || isUpdatingTaxProfile}
+                        disabled={
+                          isCreatingTaxProfile ||
+                          isUpdatingTaxProfile ||
+                          (editingTaxProfileId
+                            ? !taxProfilesAccess.canUpdate
+                            : !taxProfilesAccess.canCreate)
+                        }
                       >
                         {editingTaxProfileId ? 'Update Tax Profile' : 'Create Tax Profile'}
                       </Button>
+                      {editingTaxProfileId && taxProfilesAccess.canDelete ? (
+                        <Button
+                          variant="destructive"
+                          onClick={() => void handleDeleteTaxProfile()}
+                          disabled={isDeletingTaxProfile}
+                        >
+                          Delete Tax Profile
+                        </Button>
+                      ) : null}
                       <Button variant="outline" onClick={resetTaxProfileForm}>
                         Clear
                       </Button>
@@ -2005,11 +2576,23 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
                         disabled={
                           isCreatingTaxComponent ||
                           isUpdatingTaxComponent ||
+                          (editingTaxComponentId
+                            ? !taxComponentsAccess.canUpdate
+                            : !taxComponentsAccess.canCreate) ||
                           !(taxComponentForm.profileId || effectiveTaxProfileId)
                         }
                       >
                         {editingTaxComponentId ? 'Update Tax Component' : 'Create Tax Component'}
                       </Button>
+                      {editingTaxComponentId && taxComponentsAccess.canDelete ? (
+                        <Button
+                          variant="destructive"
+                          onClick={() => void handleDeleteTaxComponent()}
+                          disabled={isDeletingTaxComponent}
+                        >
+                          Delete Tax Component
+                        </Button>
+                      ) : null}
                       <Button variant="outline" onClick={() => resetTaxComponentForm()}>
                         Clear
                       </Button>
@@ -2096,7 +2679,7 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeletingAccount}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              disabled={isDeletingAccount}
+              disabled={isDeletingAccount || !accountsAccess.canDelete}
               onClick={() => void handleDeleteAccount()}
             >
               {isDeletingAccount ? 'Deleting...' : 'Delete Account'}

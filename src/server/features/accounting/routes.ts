@@ -4,6 +4,7 @@ import {
   type AuthUser,
   requireAnyPermissions,
   requireAuth,
+  requireModuleEnabled,
   requirePermissions,
 } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
@@ -11,6 +12,7 @@ import { fromPesewas, toPesewas } from '@/server/utils/gh-money';
 import { computeGhanaTaxesFromPesewas } from '../../utils/tax/ghana';
 import {
   approveExpenseRequestCtrl,
+  approveAndPostManualJournalEntryCtrl,
   closeTaxFilingPeriodCtrl,
   confirmDailyCashConfirmationCtrl,
   createAccountCtrl,
@@ -19,15 +21,22 @@ import {
   createDailyCashConfirmationCtrl,
   createExpenseCategoryCtrl,
   createExpenseRequestCtrl,
+  createServiceChargeCtrl,
   createTaxComponentCtrl,
   createTaxProfileCtrl,
   createTaxFilingPeriodCtrl,
   deleteAccountCtrl,
+  deleteApprovalPolicyCtrl,
+  deleteCompanyBankAccountCtrl,
+  deleteExpenseCategoryCtrl,
+  deleteTaxComponentCtrl,
+  deleteTaxProfileCtrl,
   excludeTaxItemCtrl,
   getDailyCashExpectedSummaryCtrl,
   getAccountStatementCtrl,
   getBalanceSheetCtrl,
   getCashFlowStatementCtrl,
+  getManualJournalApprovalPolicyCtrl,
   getIncomeStatementCtrl,
   getMonthlyBranchSummaryCtrl,
   getProfitAndLossCtrl,
@@ -38,6 +47,8 @@ import {
   listDailyCashConfirmationsCtrl,
   listExpenseCategoriesCtrl,
   listExpenseRequestsCtrl,
+  listPendingManualJournalEntriesCtrl,
+  listServiceChargesCtrl,
   listTaxComponentsCtrl,
   listTaxFilingPeriodsCtrl,
   listTaxJournalItemsCtrl,
@@ -46,15 +57,18 @@ import {
   markTaxItemFiledCtrl,
   markTaxItemReadyForFilingCtrl,
   payExpenseRequestCtrl,
+  postManualJournalEntryCtrl,
   postDailyCashConfirmationCtrl,
   postExpenseRequestCtrl,
   rejectExpenseRequestCtrl,
+  rejectManualJournalEntryCtrl,
   submitTaxFilingPeriodCtrl,
   submitExpenseRequestCtrl,
   updateAccountCtrl,
   updateApprovalPolicyCtrl,
   updateCompanyBankAccountCtrl,
   updateExpenseCategoryCtrl,
+  updateServiceChargeCtrl,
   updateTaxComponentCtrl,
   updateTaxProfileCtrl,
 } from './controller';
@@ -65,16 +79,230 @@ function resolveCompanyId(user: AuthUser | null, fallback?: string) {
 }
 
 const canReadAccounting = [requirePermissions(PermissionKeys.CanReadAccounting)];
-const canManageAccountingSetup = [requirePermissions(PermissionKeys.CanManageAccountingSetup)];
-const canManageTaxFiling = [requirePermissions(PermissionKeys.CanManageTaxFiling)];
-const canPostAccountingEntries = [requirePermissions(PermissionKeys.CanPostAccountingEntries)];
-const canReadOrManageAccountingSetup = [
-  requireAnyPermissions(PermissionKeys.CanReadAccounting, PermissionKeys.CanManageAccountingSetup),
+const canReadAccountsSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanReadAccountingAccounts,
+    PermissionKeys.CanCreateAccountingAccounts,
+    PermissionKeys.CanUpdateAccountingAccounts,
+    PermissionKeys.CanDeleteAccountingAccounts,
+    PermissionKeys.CanReadAccountingSetup,
+    PermissionKeys.CanCreateAccountingSetup,
+    PermissionKeys.CanUpdateAccountingSetup,
+    PermissionKeys.CanDeleteAccountingSetup,
+  ),
+];
+const canCreateAccountsSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanCreateAccountingAccounts,
+    PermissionKeys.CanCreateAccountingSetup,
+  ),
+];
+const canUpdateAccountsSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanUpdateAccountingAccounts,
+    PermissionKeys.CanUpdateAccountingSetup,
+  ),
+];
+const canDeleteAccountsSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanDeleteAccountingAccounts,
+    PermissionKeys.CanDeleteAccountingSetup,
+  ),
+];
+const canReadExpenseCategoriesSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanReadAccountingExpenseCategories,
+    PermissionKeys.CanCreateAccountingExpenseCategories,
+    PermissionKeys.CanUpdateAccountingExpenseCategories,
+    PermissionKeys.CanDeleteAccountingExpenseCategories,
+    PermissionKeys.CanReadAccountingSetup,
+    PermissionKeys.CanCreateAccountingSetup,
+    PermissionKeys.CanUpdateAccountingSetup,
+    PermissionKeys.CanDeleteAccountingSetup,
+  ),
+];
+const canCreateExpenseCategoriesSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanCreateAccountingExpenseCategories,
+    PermissionKeys.CanCreateAccountingSetup,
+  ),
+];
+const canUpdateExpenseCategoriesSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanUpdateAccountingExpenseCategories,
+    PermissionKeys.CanUpdateAccountingSetup,
+  ),
+];
+const canDeleteExpenseCategoriesSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanDeleteAccountingExpenseCategories,
+    PermissionKeys.CanDeleteAccountingSetup,
+  ),
+];
+const canReadApprovalPoliciesSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanReadAccountingApprovalPolicies,
+    PermissionKeys.CanCreateAccountingApprovalPolicies,
+    PermissionKeys.CanUpdateAccountingApprovalPolicies,
+    PermissionKeys.CanDeleteAccountingApprovalPolicies,
+    PermissionKeys.CanReadAccountingSetup,
+    PermissionKeys.CanCreateAccountingSetup,
+    PermissionKeys.CanUpdateAccountingSetup,
+    PermissionKeys.CanDeleteAccountingSetup,
+  ),
+];
+const canCreateApprovalPoliciesSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanCreateAccountingApprovalPolicies,
+    PermissionKeys.CanCreateAccountingSetup,
+  ),
+];
+const canUpdateApprovalPoliciesSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanUpdateAccountingApprovalPolicies,
+    PermissionKeys.CanUpdateAccountingSetup,
+  ),
+];
+const canDeleteApprovalPoliciesSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanDeleteAccountingApprovalPolicies,
+    PermissionKeys.CanDeleteAccountingSetup,
+  ),
+];
+const canReadBankAccountsSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanReadAccountingBankAccounts,
+    PermissionKeys.CanCreateAccountingBankAccounts,
+    PermissionKeys.CanUpdateAccountingBankAccounts,
+    PermissionKeys.CanDeleteAccountingBankAccounts,
+    PermissionKeys.CanReadAccountingSetup,
+    PermissionKeys.CanCreateAccountingSetup,
+    PermissionKeys.CanUpdateAccountingSetup,
+    PermissionKeys.CanDeleteAccountingSetup,
+  ),
+];
+const canCreateBankAccountsSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanCreateAccountingBankAccounts,
+    PermissionKeys.CanCreateAccountingSetup,
+  ),
+];
+const canUpdateBankAccountsSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanUpdateAccountingBankAccounts,
+    PermissionKeys.CanUpdateAccountingSetup,
+  ),
+];
+const canDeleteBankAccountsSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanDeleteAccountingBankAccounts,
+    PermissionKeys.CanDeleteAccountingSetup,
+  ),
+];
+const canReadTaxProfilesSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanReadAccountingTaxProfiles,
+    PermissionKeys.CanCreateAccountingTaxProfiles,
+    PermissionKeys.CanUpdateAccountingTaxProfiles,
+    PermissionKeys.CanDeleteAccountingTaxProfiles,
+    PermissionKeys.CanReadAccountingSetup,
+    PermissionKeys.CanCreateAccountingSetup,
+    PermissionKeys.CanUpdateAccountingSetup,
+    PermissionKeys.CanDeleteAccountingSetup,
+  ),
+];
+const canCreateTaxProfilesSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanCreateAccountingTaxProfiles,
+    PermissionKeys.CanCreateAccountingSetup,
+  ),
+];
+const canUpdateTaxProfilesSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanUpdateAccountingTaxProfiles,
+    PermissionKeys.CanUpdateAccountingSetup,
+  ),
+];
+const canDeleteTaxProfilesSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanDeleteAccountingTaxProfiles,
+    PermissionKeys.CanDeleteAccountingSetup,
+  ),
+];
+const canReadTaxComponentsSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanReadAccountingTaxComponents,
+    PermissionKeys.CanCreateAccountingTaxComponents,
+    PermissionKeys.CanUpdateAccountingTaxComponents,
+    PermissionKeys.CanDeleteAccountingTaxComponents,
+    PermissionKeys.CanReadAccountingSetup,
+    PermissionKeys.CanCreateAccountingSetup,
+    PermissionKeys.CanUpdateAccountingSetup,
+    PermissionKeys.CanDeleteAccountingSetup,
+  ),
+];
+const canCreateTaxComponentsSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanCreateAccountingTaxComponents,
+    PermissionKeys.CanCreateAccountingSetup,
+  ),
+];
+const canUpdateTaxComponentsSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanUpdateAccountingTaxComponents,
+    PermissionKeys.CanUpdateAccountingSetup,
+  ),
+];
+const canDeleteTaxComponentsSetup = [
+  requireAnyPermissions(
+    PermissionKeys.CanDeleteAccountingTaxComponents,
+    PermissionKeys.CanDeleteAccountingSetup,
+  ),
+];
+const canCreateTaxFilingPeriod = [requirePermissions(PermissionKeys.CanCreateTaxFilingPeriod)];
+const canMarkTaxFilingPeriodUnderReview = [
+  requirePermissions(PermissionKeys.CanMarkTaxFilingPeriodUnderReview),
+];
+const canSubmitTaxFilingPeriod = [requirePermissions(PermissionKeys.CanSubmitTaxFilingPeriod)];
+const canCloseTaxFilingPeriod = [requirePermissions(PermissionKeys.CanCloseTaxFilingPeriod)];
+const canMarkTaxItemReadyForFiling = [
+  requirePermissions(PermissionKeys.CanMarkTaxItemReadyForFiling),
+];
+const canMarkTaxItemFiled = [requirePermissions(PermissionKeys.CanMarkTaxItemFiled)];
+const canExcludeTaxItemFromFiling = [
+  requirePermissions(PermissionKeys.CanExcludeTaxItemFromFiling),
+];
+const canCreateDailyCashConfirmation = [
+  requirePermissions(PermissionKeys.CanCreateDailyCashConfirmation),
+];
+const canConfirmDailyCashConfirmation = [
+  requirePermissions(PermissionKeys.CanConfirmDailyCashConfirmation),
+];
+const canPostDailyCashConfirmation = [
+  requirePermissions(PermissionKeys.CanPostDailyCashConfirmation),
+];
+const canCreateExpenseRequest = [requirePermissions(PermissionKeys.CanCreateExpenseRequest)];
+const canSubmitExpenseRequest = [requirePermissions(PermissionKeys.CanSubmitExpenseRequest)];
+const canApproveExpenseRequest = [requirePermissions(PermissionKeys.CanApproveExpenseRequest)];
+const canRejectExpenseRequest = [requirePermissions(PermissionKeys.CanRejectExpenseRequest)];
+const canPayExpenseRequest = [requirePermissions(PermissionKeys.CanPayExpenseRequest)];
+const canPostExpenseRequest = [requirePermissions(PermissionKeys.CanPostExpenseRequest)];
+const canCreateOrApproveAccountingManualEntries = [
+  requireAnyPermissions(
+    PermissionKeys.CanCreateAccountingManualEntries,
+    PermissionKeys.CanApproveAccountingManualEntries,
+  ),
+];
+const canApproveAccountingManualEntries = [
+  requirePermissions(PermissionKeys.CanApproveAccountingManualEntries),
 ];
 
 export const accountingRoutes = new Elysia({ name: 'accounting' })
   .use(authPlugin)
   .onBeforeHandle(({ user }) => requireAuth()({ user }))
+  .onBeforeHandle(({ user }) =>
+    requireModuleEnabled('accounting')({ user: user as AuthUser | null }),
+  )
   .onBeforeHandle(async ({ user }) => {
     const authUser = user as AuthUser | null;
     await assertAccountingEnabledSvc(resolveCompanyId(authUser));
@@ -100,7 +328,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
       }
     },
     {
-      beforeHandle: canReadOrManageAccountingSetup,
+      beforeHandle: canReadAccountsSetup,
       query: t.Object({ companyId: t.String(), active: t.Optional(t.Boolean()) }),
       detail: { tags: ['Accounting'], summary: 'List chart of accounts for a company' },
     },
@@ -126,7 +354,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         createdBy: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageAccountingSetup,
+      beforeHandle: canCreateAccountsSetup,
       body: t.Object({
         companyId: t.String(),
         code: t.String(),
@@ -163,7 +391,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         actorUserId: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageAccountingSetup,
+      beforeHandle: canUpdateAccountsSetup,
       params: t.Object({ id: t.String() }),
       body: t.Object({
         companyId: t.String(),
@@ -189,7 +417,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         actorUserId: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageAccountingSetup,
+      beforeHandle: canDeleteAccountsSetup,
       params: t.Object({ id: t.String() }),
       query: t.Object({ companyId: t.String(), removeLinkedCategory: t.Optional(t.Boolean()) }),
       detail: { tags: ['Accounting'], summary: 'Delete chart of account item' },
@@ -203,7 +431,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         active: query.active,
       }),
     {
-      beforeHandle: canReadOrManageAccountingSetup,
+      beforeHandle: canReadExpenseCategoriesSetup,
       query: t.Object({ companyId: t.String(), active: t.Optional(t.Boolean()) }),
       detail: { tags: ['Accounting'], summary: 'List expense categories for a company' },
     },
@@ -226,7 +454,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         createdBy: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageAccountingSetup,
+      beforeHandle: canCreateExpenseCategoriesSetup,
       body: t.Object({
         companyId: t.String(),
         code: t.String(),
@@ -256,7 +484,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         actorUserId: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageAccountingSetup,
+      beforeHandle: canUpdateExpenseCategoriesSetup,
       params: t.Object({ id: t.String() }),
       body: t.Object({
         companyId: t.String(),
@@ -268,6 +496,21 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
       detail: { tags: ['Accounting'], summary: 'Update expense category' },
     },
   )
+  .delete(
+    '/expense-categories/:id',
+    async ({ params, query, user }) =>
+      deleteExpenseCategoryCtrl({
+        id: params.id,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        actorUserId: (user as AuthUser).sub,
+      }),
+    {
+      beforeHandle: canDeleteExpenseCategoriesSetup,
+      params: t.Object({ id: t.String() }),
+      query: t.Object({ companyId: t.String() }),
+      detail: { tags: ['Accounting'], summary: 'Delete expense category' },
+    },
+  )
   .get(
     '/approval-policies',
     async ({ query, user }) =>
@@ -276,7 +519,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         active: query.active,
       }),
     {
-      beforeHandle: canReadOrManageAccountingSetup,
+      beforeHandle: canReadApprovalPoliciesSetup,
       query: t.Object({ companyId: t.String(), active: t.Optional(t.Boolean()) }),
       detail: { tags: ['Accounting'], summary: 'List accounting approval policies for a company' },
     },
@@ -290,6 +533,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
           policyCode: string;
           name: string;
           amountLimitPsw?: number;
+          autoAuthorizeBelowThreshold?: boolean;
           requiresHeadOfficeApproval?: boolean;
           appliesToFundingSource?: number | null;
           active?: boolean;
@@ -301,12 +545,13 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         createdBy: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageAccountingSetup,
+      beforeHandle: canCreateApprovalPoliciesSetup,
       body: t.Object({
         companyId: t.String(),
         policyCode: t.String(),
         name: t.String(),
         amountLimitPsw: t.Optional(t.Number()),
+        autoAuthorizeBelowThreshold: t.Optional(t.Boolean()),
         requiresHeadOfficeApproval: t.Optional(t.Boolean()),
         appliesToFundingSource: t.Optional(t.Union([t.Number(), t.Null()])),
         active: t.Optional(t.Boolean()),
@@ -323,6 +568,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
           policyCode?: string;
           name?: string;
           amountLimitPsw?: number;
+          autoAuthorizeBelowThreshold?: boolean;
           requiresHeadOfficeApproval?: boolean;
           appliesToFundingSource?: number | null;
           active?: boolean;
@@ -335,18 +581,131 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         actorUserId: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageAccountingSetup,
+      beforeHandle: canUpdateApprovalPoliciesSetup,
       params: t.Object({ id: t.String() }),
       body: t.Object({
         companyId: t.String(),
         policyCode: t.Optional(t.String()),
         name: t.Optional(t.String()),
         amountLimitPsw: t.Optional(t.Number()),
+        autoAuthorizeBelowThreshold: t.Optional(t.Boolean()),
         requiresHeadOfficeApproval: t.Optional(t.Boolean()),
         appliesToFundingSource: t.Optional(t.Union([t.Number(), t.Null()])),
         active: t.Optional(t.Boolean()),
       }),
       detail: { tags: ['Accounting'], summary: 'Update accounting approval policy' },
+    },
+  )
+  .delete(
+    '/approval-policies/:id',
+    async ({ params, query, user }) =>
+      deleteApprovalPolicyCtrl({
+        id: params.id,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        actorUserId: (user as AuthUser).sub,
+      }),
+    {
+      beforeHandle: canDeleteApprovalPoliciesSetup,
+      params: t.Object({ id: t.String() }),
+      query: t.Object({ companyId: t.String() }),
+      detail: { tags: ['Accounting'], summary: 'Delete accounting approval policy' },
+    },
+  )
+  .get(
+    '/service-charges',
+    async ({ query, user }) =>
+      listServiceChargesCtrl({
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        active: query.active,
+      }),
+    {
+      beforeHandle: canReadBankAccountsSetup,
+      query: t.Object({ companyId: t.String(), active: t.Optional(t.Boolean()) }),
+      detail: { tags: ['Accounting'], summary: 'List service charges for a company' },
+    },
+  )
+  .post(
+    '/service-charges',
+    async ({ body, user }) =>
+      createServiceChargeCtrl({
+        ...(body as {
+          companyId: string;
+          code: string;
+          name: string;
+          description?: string | null;
+          amountPsw: number;
+          taxable?: boolean;
+          active?: boolean;
+          sortOrder?: number;
+          payableAccountId?: string | null;
+          effectiveFrom?: string | null;
+          effectiveTo?: string | null;
+        }),
+        companyId: resolveCompanyId(
+          user as AuthUser | null,
+          (body as { companyId: string }).companyId,
+        ),
+        createdBy: (user as AuthUser).sub,
+      }),
+    {
+      beforeHandle: canCreateBankAccountsSetup,
+      body: t.Object({
+        companyId: t.String(),
+        code: t.String(),
+        name: t.String(),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+        amountPsw: t.Number(),
+        taxable: t.Optional(t.Boolean()),
+        active: t.Optional(t.Boolean()),
+        sortOrder: t.Optional(t.Number()),
+        payableAccountId: t.Optional(t.Union([t.String(), t.Null()])),
+        effectiveFrom: t.Optional(t.Union([t.String(), t.Null()])),
+        effectiveTo: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+      detail: { tags: ['Accounting'], summary: 'Create service charge' },
+    },
+  )
+  .patch(
+    '/service-charges/:id',
+    async ({ params, body, user }) =>
+      updateServiceChargeCtrl({
+        ...(body as {
+          companyId: string;
+          code?: string;
+          name?: string;
+          description?: string | null;
+          amountPsw?: number;
+          taxable?: boolean;
+          active?: boolean;
+          sortOrder?: number;
+          payableAccountId?: string | null;
+          effectiveFrom?: string | null;
+          effectiveTo?: string | null;
+        }),
+        id: params.id,
+        companyId: resolveCompanyId(
+          user as AuthUser | null,
+          (body as { companyId: string }).companyId,
+        ),
+        actorUserId: (user as AuthUser).sub,
+      }),
+    {
+      beforeHandle: canUpdateBankAccountsSetup,
+      params: t.Object({ id: t.String() }),
+      body: t.Object({
+        companyId: t.String(),
+        code: t.Optional(t.String()),
+        name: t.Optional(t.String()),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+        amountPsw: t.Optional(t.Number()),
+        taxable: t.Optional(t.Boolean()),
+        active: t.Optional(t.Boolean()),
+        sortOrder: t.Optional(t.Number()),
+        payableAccountId: t.Optional(t.Union([t.String(), t.Null()])),
+        effectiveFrom: t.Optional(t.Union([t.String(), t.Null()])),
+        effectiveTo: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+      detail: { tags: ['Accounting'], summary: 'Update service charge' },
     },
   )
   .get(
@@ -357,7 +716,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         active: query.active,
       }),
     {
-      beforeHandle: canReadOrManageAccountingSetup,
+      beforeHandle: canReadBankAccountsSetup,
       query: t.Object({ companyId: t.String(), active: t.Optional(t.Boolean()) }),
       detail: { tags: ['Accounting'], summary: 'List company bank accounts for a company' },
     },
@@ -382,7 +741,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         createdBy: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageAccountingSetup,
+      beforeHandle: canCreateBankAccountsSetup,
       body: t.Object({
         companyId: t.String(),
         accountId: t.String(),
@@ -416,7 +775,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         actorUserId: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageAccountingSetup,
+      beforeHandle: canUpdateBankAccountsSetup,
       params: t.Object({ id: t.String() }),
       body: t.Object({
         companyId: t.String(),
@@ -430,6 +789,21 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
       detail: { tags: ['Accounting'], summary: 'Update company bank account' },
     },
   )
+  .delete(
+    '/bank-accounts/:id',
+    async ({ params, query, user }) =>
+      deleteCompanyBankAccountCtrl({
+        id: params.id,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        actorUserId: (user as AuthUser).sub,
+      }),
+    {
+      beforeHandle: canDeleteBankAccountsSetup,
+      params: t.Object({ id: t.String() }),
+      query: t.Object({ companyId: t.String() }),
+      detail: { tags: ['Accounting'], summary: 'Delete company bank account' },
+    },
+  )
   .get(
     '/tax-profiles',
     async ({ query, user }) =>
@@ -438,7 +812,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         active: query.active,
       }),
     {
-      beforeHandle: canReadOrManageAccountingSetup,
+      beforeHandle: canReadTaxProfilesSetup,
       query: t.Object({ companyId: t.String(), active: t.Optional(t.Boolean()) }),
       detail: { tags: ['Accounting'], summary: 'List tax profiles for a company' },
     },
@@ -452,7 +826,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         active: query.active,
       }),
     {
-      beforeHandle: canReadOrManageAccountingSetup,
+      beforeHandle: canReadTaxComponentsSetup,
       query: t.Object({
         companyId: t.String(),
         profileId: t.Optional(t.String()),
@@ -477,7 +851,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         actorUserId: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageAccountingSetup,
+      beforeHandle: canCreateTaxProfilesSetup,
       body: t.Object({
         companyId: t.String(),
         name: t.String(),
@@ -503,7 +877,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         actorUserId: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageAccountingSetup,
+      beforeHandle: canUpdateTaxProfilesSetup,
       params: t.Object({ id: t.String() }),
       body: t.Object({
         companyId: t.String(),
@@ -511,6 +885,21 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         active: t.Optional(t.Boolean()),
       }),
       detail: { tags: ['Accounting'], summary: 'Update tax profile' },
+    },
+  )
+  .delete(
+    '/tax-profiles/:id',
+    async ({ params, query, user }) =>
+      deleteTaxProfileCtrl({
+        id: params.id,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        actorUserId: (user as AuthUser).sub,
+      }),
+    {
+      beforeHandle: canDeleteTaxProfilesSetup,
+      params: t.Object({ id: t.String() }),
+      query: t.Object({ companyId: t.String() }),
+      detail: { tags: ['Accounting'], summary: 'Delete tax profile' },
     },
   )
   .post(
@@ -536,7 +925,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         actorUserId: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageAccountingSetup,
+      beforeHandle: canCreateTaxComponentsSetup,
       body: t.Object({
         companyId: t.String(),
         profileId: t.String(),
@@ -575,7 +964,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         actorUserId: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageAccountingSetup,
+      beforeHandle: canUpdateTaxComponentsSetup,
       params: t.Object({ id: t.String() }),
       body: t.Object({
         companyId: t.String(),
@@ -589,6 +978,164 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         active: t.Optional(t.Boolean()),
       }),
       detail: { tags: ['Accounting'], summary: 'Update tax component' },
+    },
+  )
+  .delete(
+    '/tax-components/:id',
+    async ({ params, query, user }) =>
+      deleteTaxComponentCtrl({
+        id: params.id,
+        companyId: resolveCompanyId(user as AuthUser | null, query.companyId),
+        actorUserId: (user as AuthUser).sub,
+      }),
+    {
+      beforeHandle: canDeleteTaxComponentsSetup,
+      params: t.Object({ id: t.String() }),
+      query: t.Object({ companyId: t.String() }),
+      detail: { tags: ['Accounting'], summary: 'Delete tax component' },
+    },
+  )
+  .get(
+    '/manual-journal/policy',
+    async ({ query }) =>
+      getManualJournalApprovalPolicyCtrl({
+        companyId: query.companyId,
+      }),
+    {
+      beforeHandle: [
+        requireAnyPermissions(
+          PermissionKeys.CanReadAccountingManualEntries,
+          PermissionKeys.CanCreateAccountingManualEntries,
+          PermissionKeys.CanApproveAccountingManualEntries,
+        ),
+      ],
+      query: t.Object({ companyId: t.String() }),
+      detail: {
+        tags: ['Accounting'],
+        summary: 'Get manual journal auto-authorization threshold policy',
+      },
+    },
+  )
+  .post(
+    '/manual-journal/post',
+    async ({ body, user }) =>
+      postManualJournalEntryCtrl({
+        companyId: resolveCompanyId(
+          user as AuthUser | null,
+          (body as { companyId: string }).companyId,
+        ),
+        actorUserId: (user as AuthUser).sub,
+        branchId: (body as { branchId?: string | null }).branchId ?? null,
+        locationId: (body as { locationId?: string | null }).locationId ?? null,
+        memo: (body as { memo?: string | null }).memo ?? null,
+        entryDate: (body as { entryDate?: string | null }).entryDate ?? null,
+        lines: (
+          body as {
+            lines: Array<{
+              accountId: string;
+              debitPsw?: number;
+              creditPsw?: number;
+              branchId?: string | null;
+              locationId?: string | null;
+              description?: string | null;
+            }>;
+          }
+        ).lines,
+      }),
+    {
+      beforeHandle: canCreateOrApproveAccountingManualEntries,
+      body: t.Object({
+        companyId: t.String(),
+        branchId: t.Optional(t.Union([t.String(), t.Null()])),
+        locationId: t.Optional(t.Union([t.String(), t.Null()])),
+        memo: t.Optional(t.Union([t.String(), t.Null()])),
+        entryDate: t.Optional(t.Union([t.String(), t.Null()])),
+        lines: t.Array(
+          t.Object({
+            accountId: t.String(),
+            debitPsw: t.Optional(t.Number()),
+            creditPsw: t.Optional(t.Number()),
+            branchId: t.Optional(t.Union([t.String(), t.Null()])),
+            locationId: t.Optional(t.Union([t.String(), t.Null()])),
+            description: t.Optional(t.Union([t.String(), t.Null()])),
+          }),
+        ),
+      }),
+      detail: {
+        tags: ['Accounting'],
+        summary: 'Submit manual journal entry (auto-authorize below threshold or queue)',
+      },
+    },
+  )
+  .get(
+    '/manual-journal/pending',
+    async ({ query }) =>
+      listPendingManualJournalEntriesCtrl({
+        companyId: query.companyId,
+      }),
+    {
+      beforeHandle: [
+        requireAnyPermissions(
+          PermissionKeys.CanReadAccountingManualEntries,
+          PermissionKeys.CanCreateAccountingManualEntries,
+          PermissionKeys.CanApproveAccountingManualEntries,
+        ),
+      ],
+      query: t.Object({ companyId: t.String() }),
+      detail: {
+        tags: ['Accounting'],
+        summary: 'List pending manual journal entries awaiting approval',
+      },
+    },
+  )
+  .post(
+    '/manual-journal/:id/approve-and-post',
+    async ({ params, body, user }) =>
+      approveAndPostManualJournalEntryCtrl({
+        companyId: resolveCompanyId(
+          user as AuthUser | null,
+          (body as { companyId: string }).companyId,
+        ),
+        manualEntryId: params.id,
+        actorUserId: (user as AuthUser).sub,
+        approvalReason: (body as { approvalReason?: string | null }).approvalReason ?? null,
+      }),
+    {
+      beforeHandle: canApproveAccountingManualEntries,
+      params: t.Object({ id: t.String() }),
+      body: t.Object({
+        companyId: t.String(),
+        approvalReason: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+      detail: {
+        tags: ['Accounting'],
+        summary: 'Approve pending manual journal entry and post it to ledger',
+      },
+    },
+  )
+  .post(
+    '/manual-journal/:id/reject',
+    async ({ params, body, user }) =>
+      rejectManualJournalEntryCtrl({
+        companyId: resolveCompanyId(
+          user as AuthUser | null,
+          (body as { companyId: string }).companyId,
+        ),
+        manualEntryId: params.id,
+        actorUserId: (user as AuthUser).sub,
+        rejectionReason: (body as { rejectionReason: string }).rejectionReason,
+      }),
+    {
+      beforeHandle: canApproveAccountingManualEntries,
+      params: t.Object({ id: t.String() }),
+      body: t.Object({
+        companyId: t.String(),
+        rejectionReason: t.String(),
+      }),
+      detail: {
+        tags: ['Accounting'],
+        summary: 'Reject pending manual journal entry',
+      },
     },
   )
   .get(
@@ -629,7 +1176,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         createdByUserId: string;
       }),
     {
-      beforeHandle: canManageTaxFiling,
+      beforeHandle: canCreateTaxFilingPeriod,
       body: t.Object({
         companyId: t.String(),
         name: t.String(),
@@ -665,7 +1212,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
     '/tax-filing-periods/:id/review',
     async ({ params }) => markTaxFilingPeriodUnderReviewCtrl({ id: params.id }),
     {
-      beforeHandle: canManageTaxFiling,
+      beforeHandle: canMarkTaxFilingPeriodUnderReview,
       params: t.Object({ id: t.String() }),
       detail: { tags: ['Accounting'], summary: 'Mark tax filing period under review' },
     },
@@ -674,7 +1221,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
     '/tax-filing-periods/:id/submit',
     async ({ params }) => submitTaxFilingPeriodCtrl({ id: params.id }),
     {
-      beforeHandle: canManageTaxFiling,
+      beforeHandle: canSubmitTaxFilingPeriod,
       params: t.Object({ id: t.String() }),
       detail: { tags: ['Accounting'], summary: 'Submit tax filing period' },
     },
@@ -683,7 +1230,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
     '/tax-filing-periods/:id/close',
     async ({ params }) => closeTaxFilingPeriodCtrl({ id: params.id }),
     {
-      beforeHandle: canManageTaxFiling,
+      beforeHandle: canCloseTaxFilingPeriod,
       params: t.Object({ id: t.String() }),
       detail: { tags: ['Accounting'], summary: 'Close tax filing period' },
     },
@@ -697,7 +1244,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         actedByUserId: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageTaxFiling,
+      beforeHandle: canMarkTaxItemReadyForFiling,
       params: t.Object({ id: t.String() }),
       body: t.Object({ filingPeriodId: t.String(), actedByUserId: t.String() }),
       detail: { tags: ['Accounting'], summary: 'Mark tax item ready for filing' },
@@ -712,7 +1259,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         actedByUserId: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageTaxFiling,
+      beforeHandle: canMarkTaxItemFiled,
       params: t.Object({ id: t.String() }),
       body: t.Object({
         filingPeriodId: t.Optional(t.Union([t.String(), t.Null()])),
@@ -730,7 +1277,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         actedByUserId: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canManageTaxFiling,
+      beforeHandle: canExcludeTaxItemFromFiling,
       params: t.Object({ id: t.String() }),
       body: t.Object({ reason: t.String(), actedByUserId: t.String() }),
       detail: { tags: ['Accounting'], summary: 'Exclude tax item from filing with reason' },
@@ -808,7 +1355,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         createdBy: string;
       }),
     {
-      beforeHandle: canPostAccountingEntries,
+      beforeHandle: canCreateDailyCashConfirmation,
       body: t.Object({
         companyId: t.String(),
         branchId: t.String(),
@@ -832,7 +1379,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         accountantUserId: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canPostAccountingEntries,
+      beforeHandle: canConfirmDailyCashConfirmation,
       params: t.Object({ id: t.String() }),
       body: t.Object({ accountantUserId: t.String() }),
       detail: { tags: ['Accounting'], summary: 'Confirm daily cash confirmation' },
@@ -846,7 +1393,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         postedBy: (user as AuthUser).sub,
       }),
     {
-      beforeHandle: canPostAccountingEntries,
+      beforeHandle: canPostDailyCashConfirmation,
       params: t.Object({ id: t.String() }),
       body: t.Object({ postedBy: t.String() }),
       detail: { tags: ['Accounting'], summary: 'Post daily cash confirmation to ledger' },
@@ -900,7 +1447,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         recordedByUserId: string;
       }),
     {
-      beforeHandle: canPostAccountingEntries,
+      beforeHandle: canCreateExpenseRequest,
       body: t.Object({
         companyId: t.String(),
         branchId: t.String(),
@@ -920,7 +1467,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
     '/expense-requests/:id/submit',
     async ({ params }) => submitExpenseRequestCtrl({ id: params.id }),
     {
-      beforeHandle: canPostAccountingEntries,
+      beforeHandle: canSubmitExpenseRequest,
       params: t.Object({ id: t.String() }),
       detail: { tags: ['Accounting'], summary: 'Submit expense request for approval' },
     },
@@ -934,7 +1481,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         approvalReason: (body as { approvalReason?: string | null }).approvalReason ?? null,
       }),
     {
-      beforeHandle: canPostAccountingEntries,
+      beforeHandle: canApproveExpenseRequest,
       params: t.Object({ id: t.String() }),
       body: t.Object({
         approvedByUserId: t.String(),
@@ -952,7 +1499,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         rejectionReason: (body as { rejectionReason: string }).rejectionReason,
       }),
     {
-      beforeHandle: canPostAccountingEntries,
+      beforeHandle: canRejectExpenseRequest,
       params: t.Object({ id: t.String() }),
       body: t.Object({ approvedByUserId: t.String(), rejectionReason: t.String() }),
       detail: { tags: ['Accounting'], summary: 'Reject expense request' },
@@ -968,7 +1515,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
           (body as { companyBankAccountId?: string | null }).companyBankAccountId ?? null,
       }),
     {
-      beforeHandle: canPostAccountingEntries,
+      beforeHandle: canPayExpenseRequest,
       params: t.Object({ id: t.String() }),
       body: t.Object({
         paidByUserId: t.String(),
@@ -982,7 +1529,7 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
     async ({ params, user }) =>
       postExpenseRequestCtrl({ id: params.id, postedBy: (user as AuthUser).sub }),
     {
-      beforeHandle: canPostAccountingEntries,
+      beforeHandle: canPostExpenseRequest,
       params: t.Object({ id: t.String() }),
       body: t.Object({ postedBy: t.String() }),
       detail: { tags: ['Accounting'], summary: 'Post expense request to ledger' },

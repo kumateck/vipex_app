@@ -1,5 +1,3 @@
-import { randomBytes } from 'node:crypto';
-import { env } from '../../utils/env';
 import { sendPasswordSetupEmail } from '../../services/mail/templates/password-setup';
 import { setUserResetTokenRepo } from './repository.tokens';
 
@@ -13,17 +11,14 @@ function sha256Hex(input: string) {
 }
 
 export async function sendPasswordSetupInvite(userId: string, email: string) {
-  const tokenPlain = randomBytes(32).toString('hex');
-  const tokenHash = await sha256Hex(tokenPlain);
+  const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
+  const tokenHash = await sha256Hex(`${email.trim().toLowerCase()}:${otp}`);
 
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
   await setUserResetTokenRepo({ userId, tokenHash, expiresAt });
 
-  const setupUrlObj = new URL('/open-invite.html', env.INVITE_LINK_BASE_URL);
-  setupUrlObj.searchParams.set('token', tokenPlain);
-  const setupUrl = setupUrlObj.toString();
   try {
-    await sendPasswordSetupEmail(email, setupUrl);
+    await sendPasswordSetupEmail(email, otp);
   } catch (err) {
     console.error('Failed to send password setup email:', err);
   }

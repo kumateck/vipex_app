@@ -10,6 +10,7 @@ import {
   companyBankAccounts,
   expenseCategories,
   pettyCashFunds,
+  serviceCharges,
   taxComponents,
   taxProfiles,
   users,
@@ -19,6 +20,7 @@ import { AccountClass, ExpenseFundingSource } from '@/db/schemas/enums';
 type SeedAccount = {
   code: string;
   name: string;
+  label?: string;
   accountClass: AccountClass;
   parentCode?: string;
   isPostable?: boolean;
@@ -68,6 +70,8 @@ const ACCOUNT_DEFINITIONS: SeedAccount[] = [
   { code: '2000', name: 'Accounts Payable', accountClass: AccountClass.LIABILITY },
   { code: '2100', name: 'Accrued Expenses', accountClass: AccountClass.LIABILITY },
   { code: '2200', name: 'Taxes Payable', accountClass: AccountClass.LIABILITY },
+  { code: '2210', name: 'Courier Commission Payable', accountClass: AccountClass.LIABILITY },
+  { code: '2220', name: 'IT Support Fee Payable', accountClass: AccountClass.LIABILITY },
   { code: '2300', name: 'Inter-Office Clearing', accountClass: AccountClass.LIABILITY },
   { code: '3000', name: 'Owner Capital', accountClass: AccountClass.EQUITY },
   { code: '3100', name: 'Retained Earnings', accountClass: AccountClass.EQUITY },
@@ -124,6 +128,19 @@ const EXPENSE_CATEGORY_MAP = [
   ['INSURANCE', 'Insurance', '5200'],
 ] as const;
 
+const EXPENSE_LABEL_BY_ACCOUNT_CODE = new Map<string, string>(
+  EXPENSE_CATEGORY_MAP.map(([, name, accountCode]) => [accountCode, name]),
+);
+
+function resolveSeedAccountLabel(account: SeedAccount): string {
+  const explicit = account.label?.trim();
+  if (explicit) return explicit;
+  if (account.accountClass === AccountClass.EXPENSE) {
+    return EXPENSE_LABEL_BY_ACCOUNT_CODE.get(account.code) ?? account.name;
+  }
+  return account.name;
+}
+
 async function ensureTaxProfile(companyId: string) {
   const [existing] = await db
     .select({ id: taxProfiles.id })
@@ -142,12 +159,15 @@ async function ensureTaxProfile(companyId: string) {
     });
   }
 
+  // Inclusive tax fractions against principal (total charge):
+  // VAT 15% of base => 15/120 of principal
+  // GETFund 2.5% of base => 25/1200 of principal
+  // NHIL 2.5% of base => 25/1200 of principal
   const components = [
-    { key: 'VAT', numerator: 3, denominator: 23, sortOrder: 1 },
-    { key: 'GETFUND', numerator: 25, denominator: 2300, sortOrder: 2 },
-    { key: 'NHIL', numerator: 25, denominator: 2300, sortOrder: 3 },
-    { key: 'COVID', numerator: 1, denominator: 100, sortOrder: 4 },
-  ];
+    { key: 'VAT', numerator: 15, denominator: 120, sortOrder: 1 },
+    { key: 'GETFUND', numerator: 25, denominator: 1200, sortOrder: 2 },
+    { key: 'NHIL', numerator: 25, denominator: 1200, sortOrder: 3 },
+  ] as const;
 
   for (const component of components) {
     const [existingComponent] = await db
@@ -167,8 +187,30 @@ async function ensureTaxProfile(companyId: string) {
         sortOrder: component.sortOrder,
         active: true,
       });
+    } else {
+      await db
+        .update(taxComponents)
+        .set({
+          numerator: component.numerator,
+          denominator: component.denominator,
+          inclusive: true,
+          sortOrder: component.sortOrder,
+          active: true,
+        })
+        .where(eq(taxComponents.id, existingComponent.id));
     }
   }
+
+  // Legacy component retirement: keep historical rows but disable COVID-family keys.
+  await db
+    .update(taxComponents)
+    .set({ active: false })
+    .where(
+      and(
+        eq(taxComponents.profileId, profileId),
+        sql`lower(${taxComponents.key}) in ('covid', 'covid19levy', 'covidlevy')`,
+      ),
+    );
 }
 
 async function main() {
@@ -187,10 +229,11 @@ async function main() {
 
     const createdBy = creator?.id ?? null;
     const accountIds = new Map<string, string>();
+    const accountLabelsByCode = new Map<string, string>();
 
     for (const account of ACCOUNT_DEFINITIONS) {
       const [existing] = await db
-        .select({ id: chartOfAccounts.id })
+        .select({ id: chartOfAccounts.id, label: chartOfAccounts.label })
         .from(chartOfAccounts)
         .where(
           and(
@@ -204,6 +247,7 @@ async function main() {
         .limit(1);
 
       let id = existing?.id;
+      const desiredLabel = resolveSeedAccountLabel(account);
       if (!id) {
         id = createId();
         await db.insert(chartOfAccounts).values({
@@ -211,6 +255,7 @@ async function main() {
           companyId: company.id,
           code: account.code,
           name: account.name,
+          label: desiredLabel,
           accountClass: account.accountClass,
           parentAccountId: account.parentCode ? (accountIds.get(account.parentCode) ?? null) : null,
           isPostable: account.isPostable ?? true,
@@ -219,9 +264,18 @@ async function main() {
         });
         console.log(`Created account ${account.code} for company ${company.id}`);
       } else {
+        const existingLabel = existing?.label?.trim() ?? '';
+        if (!existingLabel) {
+          await db
+            .update(chartOfAccounts)
+            .set({ label: desiredLabel })
+            .where(eq(chartOfAccounts.id, id));
+          console.log(`Backfilled account label for ${account.code} -> ${desiredLabel}`);
+        }
         console.log(`Reusing existing account ${account.code} (${account.name}) for ${company.id}`);
       }
       accountIds.set(account.code, id);
+      accountLabelsByCode.set(account.code, desiredLabel);
     }
 
     const bankDefinitions = [
@@ -257,6 +311,8 @@ async function main() {
     }
 
     for (const [code, name, accountCode] of EXPENSE_CATEGORY_MAP) {
+      const linkedAccountId = accountIds.get(accountCode)!;
+      const linkedCategoryName = accountLabelsByCode.get(accountCode) ?? name;
       const [existing] = await db
         .select({ id: expenseCategories.id })
         .from(expenseCategories)
@@ -276,11 +332,21 @@ async function main() {
           id: createId(),
           companyId: company.id,
           code,
-          name,
-          accountId: accountIds.get(accountCode)!,
+          name: linkedCategoryName,
+          accountId: linkedAccountId,
           active: true,
           createdBy,
         });
+      } else {
+        await db
+          .update(expenseCategories)
+          .set({
+            code,
+            name: linkedCategoryName,
+            accountId: linkedAccountId,
+            active: true,
+          })
+          .where(eq(expenseCategories.id, existing!.id));
       }
     }
 
@@ -332,6 +398,72 @@ async function main() {
           active: true,
           createdBy,
         });
+      }
+    }
+
+    const chargeDefinitions = [
+      {
+        code: 'COURIER_COMMISSION',
+        name: 'Courier Commission',
+        description: 'Per-parcel courier commission charge',
+        amountPsw: 100,
+        taxable: false,
+        sortOrder: 1,
+        payableAccountCode: '2210',
+      },
+      {
+        code: 'IT_SUPPORT_FEE',
+        name: 'IT Support Fee',
+        description: 'Per-parcel IT support charge',
+        amountPsw: 100,
+        taxable: false,
+        sortOrder: 2,
+        payableAccountCode: '2220',
+      },
+    ] as const;
+
+    for (const charge of chargeDefinitions) {
+      const payableAccountId =
+        accountIds.get(charge.payableAccountCode) ?? accountIds.get('2300') ?? null;
+      const [existingCharge] = await db
+        .select({ id: serviceCharges.id })
+        .from(serviceCharges)
+        .where(
+          and(
+            eq(serviceCharges.companyId, company.id),
+            sql`lower(${serviceCharges.code}) = lower(${charge.code})`,
+          ),
+        )
+        .limit(1);
+
+      if (!existingCharge) {
+        await db.insert(serviceCharges).values({
+          id: createId(),
+          companyId: company.id,
+          code: charge.code,
+          name: charge.name,
+          description: charge.description,
+          amountPsw: charge.amountPsw,
+          taxable: charge.taxable,
+          active: true,
+          sortOrder: charge.sortOrder,
+          payableAccountId,
+          createdBy,
+        });
+      } else {
+        await db
+          .update(serviceCharges)
+          .set({
+            name: charge.name,
+            description: charge.description,
+            amountPsw: charge.amountPsw,
+            taxable: charge.taxable,
+            active: true,
+            sortOrder: charge.sortOrder,
+            payableAccountId,
+            updatedAt: new Date(),
+          })
+          .where(eq(serviceCharges.id, existingCharge.id));
       }
     }
 

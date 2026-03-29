@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Button, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AppScreen } from '@/components/screen';
 import { listRiderParcels, riderGivenToCustomer, riderReturnedToOffice } from '@/lib/api';
 import { notifyError, notifySuccess } from '@/lib/notify';

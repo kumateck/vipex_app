@@ -1,6 +1,7 @@
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 
 export const LIST_TAG_ID = 'LIST' as const;
+export const OPTIONS_TAG_ID = 'OPTIONS' as const;
 
 export type ResourceTag =
   | 'Auth'

@@ -51,6 +51,7 @@ export interface ApprovalPolicyRow {
   policyCode: string;
   name: string;
   amountLimitPsw: number;
+  autoAuthorizeBelowThreshold: boolean;
   requiresHeadOfficeApproval: boolean;
   appliesToFundingSource?: number | null;
   active: boolean;
@@ -63,6 +64,7 @@ export interface ApprovalPolicyMutationInput {
   policyCode: string;
   name: string;
   amountLimitPsw?: number;
+  autoAuthorizeBelowThreshold?: boolean;
   requiresHeadOfficeApproval?: boolean;
   appliesToFundingSource?: number | null;
   active?: boolean;
@@ -130,6 +132,64 @@ export interface TaxComponentMutationInput {
   startsAt?: string | null;
   endsAt?: string | null;
   active?: boolean;
+}
+
+export interface ManualJournalLineInput {
+  accountId: string;
+  debitPsw?: number;
+  creditPsw?: number;
+  branchId?: string | null;
+  locationId?: string | null;
+  description?: string | null;
+}
+
+export interface ManualJournalApprovalPolicy {
+  policyCode: string | null;
+  amountLimitPsw: number;
+  requiresApprovalAboveThreshold: boolean;
+  autoAuthorizeBelowThreshold: boolean;
+  configured: boolean;
+}
+
+export interface PostManualJournalEntryInput {
+  companyId: string;
+  branchId?: string | null;
+  locationId?: string | null;
+  memo?: string | null;
+  entryDate?: string | null;
+  lines: ManualJournalLineInput[];
+}
+
+export interface PostManualJournalEntryResult {
+  batchId: string | null;
+  entryId: string | null;
+  manualEntryId: string | null;
+  approvalMode: 'auto_authorized' | 'pending_approval';
+  thresholdPsw: number;
+  policyConfigured: boolean;
+  policyCode: string | null;
+}
+
+export interface PendingManualJournalEntryRow {
+  id: string;
+  companyId: string;
+  policyCode?: string | null;
+  thresholdPsw: number;
+  totalDebitPsw: number;
+  totalCreditPsw: number;
+  status: number;
+  branchId?: string | null;
+  locationId?: string | null;
+  memo?: string | null;
+  entryDate: string;
+  recordedByUserId?: string | null;
+  approvedByUserId?: string | null;
+  approvalReason?: string | null;
+  rejectionReason?: string | null;
+  postedBatchId?: string | null;
+  postedEntryId?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DailyCashConfirmationRow {
@@ -385,6 +445,14 @@ export const accountingApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Accounting', id: 'EXPENSE_CATEGORIES' }],
     }),
+    deleteExpenseCategory: builder.mutation<{ id: string }, { id: string; companyId: string }>({
+      query: ({ id, companyId }) => ({
+        url: `/accounting/expense-categories/${id}`,
+        method: 'DELETE',
+        params: { companyId },
+      }),
+      invalidatesTags: [{ type: 'Accounting', id: 'EXPENSE_CATEGORIES' }],
+    }),
     listApprovalPolicies: builder.query<
       ApprovalPolicyRow[],
       { companyId: string; active?: boolean }
@@ -404,6 +472,14 @@ export const accountingApi = api.injectEndpoints({
         url: `/accounting/approval-policies/${id}`,
         method: 'PATCH',
         body,
+      }),
+      invalidatesTags: [{ type: 'Accounting', id: 'APPROVAL_POLICIES' }],
+    }),
+    deleteApprovalPolicy: builder.mutation<{ id: string }, { id: string; companyId: string }>({
+      query: ({ id, companyId }) => ({
+        url: `/accounting/approval-policies/${id}`,
+        method: 'DELETE',
+        params: { companyId },
       }),
       invalidatesTags: [{ type: 'Accounting', id: 'APPROVAL_POLICIES' }],
     }),
@@ -429,6 +505,14 @@ export const accountingApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Accounting', id: 'BANK_ACCOUNTS' }],
     }),
+    deleteCompanyBankAccount: builder.mutation<{ id: string }, { id: string; companyId: string }>({
+      query: ({ id, companyId }) => ({
+        url: `/accounting/bank-accounts/${id}`,
+        method: 'DELETE',
+        params: { companyId },
+      }),
+      invalidatesTags: [{ type: 'Accounting', id: 'BANK_ACCOUNTS' }],
+    }),
     listTaxProfiles: builder.query<TaxProfileRow[], { companyId: string; active?: boolean }>({
       query: (params) => ({ url: '/accounting/tax-profiles', params }),
       providesTags: [{ type: 'Accounting', id: 'TAX_PROFILES' }],
@@ -439,6 +523,55 @@ export const accountingApi = api.injectEndpoints({
     >({
       query: (params) => ({ url: '/accounting/tax-components', params }),
       providesTags: [{ type: 'Accounting', id: 'TAX_COMPONENTS' }],
+    }),
+    getManualJournalApprovalPolicy: builder.query<
+      ManualJournalApprovalPolicy,
+      { companyId: string }
+    >({
+      query: (params) => ({ url: '/accounting/manual-journal/policy', params }),
+      providesTags: [{ type: 'Accounting', id: 'MANUAL_JOURNAL_POLICY' }],
+    }),
+    postManualJournalEntry: builder.mutation<
+      PostManualJournalEntryResult,
+      PostManualJournalEntryInput
+    >({
+      query: (body) => ({ url: '/accounting/manual-journal/post', method: 'POST', body }),
+      invalidatesTags: [
+        { type: 'Accounting', id: 'REPORTS' },
+        { type: 'Accounting', id: 'MANUAL_JOURNAL_PENDING' },
+      ],
+    }),
+    listPendingManualJournalEntries: builder.query<
+      PendingManualJournalEntryRow[],
+      { companyId: string }
+    >({
+      query: (params) => ({ url: '/accounting/manual-journal/pending', params }),
+      providesTags: [{ type: 'Accounting', id: 'MANUAL_JOURNAL_PENDING' }],
+    }),
+    approveAndPostManualJournalEntry: builder.mutation<
+      { id: string; status: number; postedBatchId: string; postedEntryId: string },
+      { id: string; companyId: string; approvalReason?: string | null }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/accounting/manual-journal/${id}/approve-and-post`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [
+        { type: 'Accounting', id: 'MANUAL_JOURNAL_PENDING' },
+        { type: 'Accounting', id: 'REPORTS' },
+      ],
+    }),
+    rejectManualJournalEntry: builder.mutation<
+      { id: string; status: number },
+      { id: string; companyId: string; rejectionReason: string }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/accounting/manual-journal/${id}/reject`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Accounting', id: 'MANUAL_JOURNAL_PENDING' }],
     }),
     createTaxProfile: builder.mutation<{ id: string }, TaxProfileMutationInput>({
       query: (body) => ({ url: '/accounting/tax-profiles', method: 'POST', body }),
@@ -455,6 +588,17 @@ export const accountingApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Accounting', id: 'TAX_PROFILES' }],
     }),
+    deleteTaxProfile: builder.mutation<{ id: string }, { id: string; companyId: string }>({
+      query: ({ id, companyId }) => ({
+        url: `/accounting/tax-profiles/${id}`,
+        method: 'DELETE',
+        params: { companyId },
+      }),
+      invalidatesTags: [
+        { type: 'Accounting', id: 'TAX_PROFILES' },
+        { type: 'Accounting', id: 'TAX_COMPONENTS' },
+      ],
+    }),
     createTaxComponent: builder.mutation<{ id: string }, TaxComponentMutationInput>({
       query: (body) => ({ url: '/accounting/tax-components', method: 'POST', body }),
       invalidatesTags: [
@@ -470,6 +614,17 @@ export const accountingApi = api.injectEndpoints({
         url: `/accounting/tax-components/${id}`,
         method: 'PATCH',
         body,
+      }),
+      invalidatesTags: [
+        { type: 'Accounting', id: 'TAX_COMPONENTS' },
+        { type: 'Accounting', id: 'TAX_PROFILES' },
+      ],
+    }),
+    deleteTaxComponent: builder.mutation<{ id: string }, { id: string; companyId: string }>({
+      query: ({ id, companyId }) => ({
+        url: `/accounting/tax-components/${id}`,
+        method: 'DELETE',
+        params: { companyId },
       }),
       invalidatesTags: [
         { type: 'Accounting', id: 'TAX_COMPONENTS' },
@@ -698,18 +853,28 @@ export const {
   useListExpenseCategoriesQuery,
   useCreateExpenseCategoryMutation,
   useUpdateExpenseCategoryMutation,
+  useDeleteExpenseCategoryMutation,
   useListApprovalPoliciesQuery,
   useCreateApprovalPolicyMutation,
   useUpdateApprovalPolicyMutation,
+  useDeleteApprovalPolicyMutation,
   useListCompanyBankAccountsQuery,
   useCreateCompanyBankAccountMutation,
   useUpdateCompanyBankAccountMutation,
+  useDeleteCompanyBankAccountMutation,
   useListTaxProfilesQuery,
   useListTaxComponentsQuery,
+  useGetManualJournalApprovalPolicyQuery,
+  usePostManualJournalEntryMutation,
+  useListPendingManualJournalEntriesQuery,
+  useApproveAndPostManualJournalEntryMutation,
+  useRejectManualJournalEntryMutation,
   useCreateTaxProfileMutation,
   useUpdateTaxProfileMutation,
+  useDeleteTaxProfileMutation,
   useCreateTaxComponentMutation,
   useUpdateTaxComponentMutation,
+  useDeleteTaxComponentMutation,
   useListDailyCashConfirmationsQuery,
   useGetDailyCashExpectedSummaryQuery,
   useCreateDailyCashConfirmationMutation,

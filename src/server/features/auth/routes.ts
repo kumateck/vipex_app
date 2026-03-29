@@ -11,6 +11,7 @@ import {
   RefreshBody,
   TokenPair,
   AuthUserResponse,
+  SetPasswordBody,
 } from './schemas';
 import {
   changePasswordCtrl,
@@ -21,6 +22,7 @@ import {
   logoutCtrl,
   refreshCtrl,
   resetPasswordCtrl,
+  setPasswordCtrl,
 } from './controller';
 
 export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/auth', (app) =>
@@ -91,19 +93,32 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
     .post(
       '/reset-password',
       async ({ body }) => {
-        await resetPasswordCtrl(body.token, body.password);
+        await resetPasswordCtrl(body.email, body.otp, body.password);
         return { success: true };
       },
       {
-        body: t.Object({
-          token: t.String(),
-          password: t.String({ minLength: 8, maxLength: 128 }),
-        }),
+        body: SetPasswordBody,
         response: t.Object({ success: t.Boolean() }),
         detail: {
           tags: ['Auth'],
-          summary: 'Reset password',
+          summary: 'Reset password with OTP',
           operationId: 'resetPassword',
+        },
+      },
+    )
+    .post(
+      '/set-password',
+      async ({ body }) => {
+        await setPasswordCtrl(body.email, body.otp, body.password);
+        return { success: true };
+      },
+      {
+        body: SetPasswordBody,
+        response: t.Object({ success: t.Boolean() }),
+        detail: {
+          tags: ['Auth'],
+          summary: 'Set password with invitation OTP',
+          operationId: 'setPassword',
         },
       },
     )

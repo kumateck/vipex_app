@@ -4,6 +4,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { useBreadcrumbSync } from '@/hooks/useBreadcrumbSync';
 import { useEffect, useMemo } from 'react';
 import { useGetCurrentUserPermissionsQuery } from '@/features/auth/api';
+import { useListCompanyModulesQuery } from '@/features/company-modules/api';
 import { useAuthStore } from '@/stores/auth-store';
 import NoAccess from '@/components/permissions/no-access';
 import { inferRequiredPermissionByPath } from '@/shared/permissions/path-access';
@@ -11,10 +12,14 @@ import { inferRequiredPermissionByPath } from '@/shared/permissions/path-access'
 const MainLayout = () => {
   useBreadcrumbSync();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
   const userPermissions = useAuthStore((state) => state.user?.permissions ?? []);
   const updateUser = useAuthStore((state) => state.updateUser);
   const location = useLocation();
   const { data, isFetching } = useGetCurrentUserPermissionsQuery(undefined, {
+    skip: !isAuthenticated,
+  });
+  const { data: companyModules } = useListCompanyModulesQuery(undefined, {
     skip: !isAuthenticated,
   });
   const grantedPermissions = useMemo(() => new Set(userPermissions), [userPermissions]);
@@ -25,6 +30,23 @@ const MainLayout = () => {
     if (!data?.permissions) return;
     updateUser({ permissions: data.permissions });
   }, [data, updateUser]);
+
+  useEffect(() => {
+    if (!companyModules?.length) return;
+    const accountingModule = companyModules.find((module) => module.code === 'accounting');
+    if (!accountingModule) return;
+
+    const currentCompany = user?.company;
+    if (!currentCompany) return;
+    if (currentCompany.useAccounting === accountingModule.isEnabled) return;
+
+    updateUser({
+      company: {
+        ...currentCompany,
+        useAccounting: accountingModule.isEnabled,
+      },
+    });
+  }, [companyModules, updateUser, user?.company]);
 
   if (!hasPermissionAccess) {
     if (isFetching && userPermissions.length === 0) {

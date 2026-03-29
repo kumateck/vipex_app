@@ -50,9 +50,9 @@ export function WarehousesPage() {
   const companyId = user?.company?.id ?? '';
   const defaultBranchId = user?.branch?.id ?? '';
   const canRead = user?.permissions?.includes(PermissionKeys.CanReadWarehouses);
-  const canManage =
-    user?.permissions?.includes(PermissionKeys.CanCreateWarehouses) ||
-    user?.permissions?.includes(PermissionKeys.CanUpdateWarehouses);
+  const canCreate = user?.permissions?.includes(PermissionKeys.CanCreateWarehouses);
+  const canUpdate = user?.permissions?.includes(PermissionKeys.CanUpdateWarehouses);
+  const canDelete = user?.permissions?.includes(PermissionKeys.CanDeleteWarehouses);
 
   const [form, setForm] = useState(() => emptyForm(defaultBranchId));
   const [editing, setEditing] = useState<Warehouse | null>(null);
@@ -80,6 +80,10 @@ export function WarehousesPage() {
   }
 
   function handleEdit(row: Warehouse) {
+    if (!canUpdate) {
+      toast.error('You do not have permission to edit warehouses');
+      return;
+    }
     setEditing(row);
     setForm({
       branchId: row.branchId,
@@ -90,6 +94,14 @@ export function WarehousesPage() {
   }
 
   async function handleSave() {
+    if (editing ? !canUpdate : !canCreate) {
+      toast.error(
+        editing
+          ? 'You do not have permission to update warehouses'
+          : 'You do not have permission to create warehouses',
+      );
+      return;
+    }
     if (!form.branchId || !form.name.trim()) {
       toast.error('Branch and warehouse name are required');
       return;
@@ -111,6 +123,10 @@ export function WarehousesPage() {
   }
 
   async function handleDelete() {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete warehouses');
+      return;
+    }
     if (!deleteTarget) return;
     try {
       await deleteWarehouse(deleteTarget.id).unwrap();
@@ -151,17 +167,21 @@ export function WarehousesPage() {
         header: 'Action',
         cell: ({ row }) => (
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => handleEdit(row.original)}>
-              Edit
-            </Button>
-            <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(row.original)}>
-              Delete
-            </Button>
+            {canUpdate ? (
+              <Button size="sm" variant="outline" onClick={() => handleEdit(row.original)}>
+                Edit
+              </Button>
+            ) : null}
+            {canDelete ? (
+              <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(row.original)}>
+                Delete
+              </Button>
+            ) : null}
           </div>
         ),
       },
     ],
-    [branchNameById],
+    [branchNameById, canDelete, canUpdate],
   );
 
   if (!canRead) {
@@ -205,7 +225,7 @@ export function WarehousesPage() {
                     onValueChange={(value) =>
                       setForm((current) => ({ ...current, branchId: value }))
                     }
-                    disabled={!canManage}
+                    disabled={editing ? !canUpdate : !canCreate}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select branch" />
@@ -228,7 +248,7 @@ export function WarehousesPage() {
                       setForm((current) => ({ ...current, name: event.target.value }))
                     }
                     placeholder="Main Receiving Store"
-                    disabled={!canManage}
+                    disabled={editing ? !canUpdate : !canCreate}
                   />
                 </div>
                 <div className="space-y-2">
@@ -240,7 +260,7 @@ export function WarehousesPage() {
                       setForm((current) => ({ ...current, description: event.target.value }))
                     }
                     placeholder="Optional note"
-                    disabled={!canManage}
+                    disabled={editing ? !canUpdate : !canCreate}
                   />
                 </div>
                 <div className="space-y-2">
@@ -250,7 +270,7 @@ export function WarehousesPage() {
                     onValueChange={(value) =>
                       setForm((current) => ({ ...current, active: value === 'true' }))
                     }
-                    disabled={!canManage}
+                    disabled={editing ? !canUpdate : !canCreate}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -261,9 +281,12 @@ export function WarehousesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                {canManage ? (
+                {canCreate || canUpdate ? (
                   <div className="flex gap-2">
-                    <Button onClick={() => void handleSave()} disabled={isCreating || isUpdating}>
+                    <Button
+                      onClick={() => void handleSave()}
+                      disabled={isCreating || isUpdating || (editing ? !canUpdate : !canCreate)}
+                    >
                       {editing ? 'Update Warehouse' : 'Create Warehouse'}
                     </Button>
                     <Button variant="outline" onClick={resetForm}>
@@ -307,7 +330,10 @@ export function WarehousesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction disabled={isDeleting} onClick={() => void handleDelete()}>
+            <AlertDialogAction
+              disabled={isDeleting || !canDelete}
+              onClick={() => void handleDelete()}
+            >
               {isDeleting ? 'Deleting...' : 'Delete Warehouse'}
             </AlertDialogAction>
           </AlertDialogFooter>

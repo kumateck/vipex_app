@@ -2,14 +2,11 @@ import { randomBytes } from 'node:crypto';
 import { hashPassword, verifyPassword } from '../../utils/password';
 import { signAccessToken } from '../../utils/jwt';
 import {
-  findPasswordResetRepo,
   findRefreshTokenRepo,
   getUserByEmailRepo,
   getUserByIdRepo,
-  insertPasswordResetRepo,
   insertRefreshTokenRepo,
   listRolePermissionKeysRepo,
-  markPasswordResetUsedRepo,
   revokeAllUserTokensRepo,
   revokeRefreshTokenRepo,
   rotateRefreshTokenRepo,
@@ -22,6 +19,12 @@ import { UserStatus } from '@/db/schemas/enums';
 import { HttpError } from '@/server/utils/http-error';
 import { HttpStatus } from '@/server/utils/http-status';
 import { PermissionCatalog } from '@/shared/permissions/constants';
+import {
+  clearUserResetTokenRepo,
+  findUserByEmailAndResetTokenRepo,
+  setPasswordAndActivateUserRepo,
+  setUserResetTokenRepo,
+} from './repository.tokens';
 
 async function sha256HexAsync(input: string): Promise<string> {
   const enc = new TextEncoder().encode(input);
@@ -33,6 +36,18 @@ async function sha256HexAsync(input: string): Promise<string> {
 
 function generateOpaqueToken(bytes = 32): string {
   return randomBytes(bytes).toString('hex'); // 64 hex chars
+}
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function generateOtpCode() {
+  return `${Math.floor(100000 + Math.random() * 900000)}`;
+}
+
+async function hashEmailOtp(email: string, otp: string) {
+  return sha256HexAsync(`${normalizeEmail(email)}:${otp.trim()}`);
 }
 
 export async function loginSvc(email: string, password: string, ua?: string, ip?: string) {
@@ -155,47 +170,20 @@ export async function logoutSvc(refreshToken: string) {
   }
 }
 
-// export async function forgotPasswordSvc(email: string) {
-//   const user = await getUserByEmailRepo(email);
-//   // Always respond success to avoid user enumeration
-//   if (!user) return;
-
-//   const tokenPlain = generateOpaqueToken(32);
-//   const tokenHash = await sha256HexAsync(tokenPlain);
-//   const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-
-//   await insertPasswordResetRepo({ userId: user.id, tokenHash, expiresAt });
-
-//   // Send email with token link
-//   const resetUrl = `${
-//     process.env.APP_BASE_URL || 'http://localhost:3000'
-//   }/reset-password?token=${tokenPlain}`;
-//   // Replace with real mailer integration later
-//   console.log(`Password reset link for ${email}: ${resetUrl}`);
-// }
-
 export async function forgotPasswordSvc(email: string) {
-  const user = await getUserByEmailRepo(email);
+  const normalizedEmail = normalizeEmail(email);
+  const user = await getUserByEmailRepo(normalizedEmail);
 
   // Always respond success to avoid user enumeration
   if (!user) return;
 
-  const tokenPlain = randomBytes(32).toString('hex');
-  const enc = new TextEncoder().encode(tokenPlain);
-  const digest = await crypto.subtle.digest('SHA-256', enc);
-  const tokenHash = Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-  await insertPasswordResetRepo({ userId: user.id, tokenHash, expiresAt });
-
-  const resetUrlObj = new URL('/open-reset-password.html', env.RESET_LINK_BASE_URL);
-  resetUrlObj.searchParams.set('token', tokenPlain);
-  const resetUrl = resetUrlObj.toString();
+  const otp = generateOtpCode();
+  const tokenHash = await hashEmailOtp(normalizedEmail, otp);
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+  await setUserResetTokenRepo({ userId: user.id, tokenHash, expiresAt });
 
   try {
-    await sendPasswordResetEmail(user.email, resetUrl);
+    await sendPasswordResetEmail(user.email, otp);
   } catch (err) {
     // Do not leak details to the client; log for operators
     console.error('Failed to send password reset email:', err);
@@ -203,18 +191,30 @@ export async function forgotPasswordSvc(email: string) {
     // Sentry.captureException(err);
   }
 }
-export async function resetPasswordSvc(token: string, newPassword: string) {
-  const tokenHash = await sha256HexAsync(token);
-  const record = await findPasswordResetRepo(tokenHash);
-  if (!record) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid token');
-  if (record.usedAt) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token already used');
-  if (record.expiresAt.getTime() <= Date.now())
-    throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token expired');
+export async function resetPasswordSvc(email: string, otp: string, newPassword: string) {
+  const normalizedEmail = normalizeEmail(email);
+  const tokenHash = await hashEmailOtp(normalizedEmail, otp);
+  const user = await findUserByEmailAndResetTokenRepo(normalizedEmail, tokenHash);
+  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid or expired OTP');
+  const passwordHash = await hashPassword(newPassword);
+  await updateUserPasswordRepo(user.id, passwordHash);
+  await clearUserResetTokenRepo(user.id);
+  await revokeAllUserTokensRepo(user.id);
+}
+
+export async function setPasswordSvc(email: string, otp: string, newPassword: string) {
+  const normalizedEmail = normalizeEmail(email);
+  const tokenHash = await hashEmailOtp(normalizedEmail, otp);
+  const user = await findUserByEmailAndResetTokenRepo(normalizedEmail, tokenHash);
+  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid or expired OTP');
+  if (user.status !== UserStatus.INVITED) {
+    throw new HttpError(HttpStatus.BAD_REQUEST, 'User is not in invited state');
+  }
 
   const passwordHash = await hashPassword(newPassword);
-  await updateUserPasswordRepo(record.userId, passwordHash);
-  await markPasswordResetUsedRepo(tokenHash);
-  await revokeAllUserTokensRepo(record.userId);
+  await setPasswordAndActivateUserRepo({ userId: user.id, passwordHash, setActiveIfInvited: true });
+  await clearUserResetTokenRepo(user.id);
+  await revokeAllUserTokensRepo(user.id);
 }
 
 export async function changePasswordSvc(userId: string, oldPassword: string, newPassword: string) {

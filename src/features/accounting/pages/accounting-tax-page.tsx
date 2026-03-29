@@ -48,14 +48,24 @@ import type { DateRange } from 'react-day-picker';
 
 export function AccountingTaxPage() {
   const user = useAuthStore((state) => state.user);
+  const permissions = new Set(user?.permissions ?? []);
+  const canAccessTaxFiling =
+    permissions.has(PermissionKeys.CanCreateTaxFilingPeriod) ||
+    permissions.has(PermissionKeys.CanMarkTaxFilingPeriodUnderReview) ||
+    permissions.has(PermissionKeys.CanSubmitTaxFilingPeriod) ||
+    permissions.has(PermissionKeys.CanCloseTaxFilingPeriod) ||
+    permissions.has(PermissionKeys.CanMarkTaxItemReadyForFiling) ||
+    permissions.has(PermissionKeys.CanMarkTaxItemFiled) ||
+    permissions.has(PermissionKeys.CanExcludeTaxItemFromFiling);
+
   if (!user?.company?.useAccounting) {
     return <AccountingDisabledState />;
   }
-  if (!user.permissions?.includes(PermissionKeys.CanManageTaxFiling)) {
+  if (!canAccessTaxFiling) {
     return (
       <AccountingUnauthorizedState
         title="Tax Filing Restricted"
-        description="Your role does not include permission to manage tax filing periods and tax filing actions."
+        description="Your role does not include permission to manage tax filing actions."
       />
     );
   }

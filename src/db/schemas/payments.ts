@@ -46,7 +46,8 @@ export const payments = pgTable(
     receiptNo: varchar('receipt_no', { length: 255 }),
 
     voidedAt: timestamp('voided_at', { withTimezone: false }),
-    voidedBy: varchar('voided_by', { length: 25 }),
+    voidedBy: varchar('voided_by', { length: 25 }).references(() => users.id),
+    voidReason: varchar('void_reason', { length: 1000 }),
 
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   },
