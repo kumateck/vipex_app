@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DatePicker } from '@/components/ui/date-picker';
 import {
   Dialog,
   DialogContent,
@@ -30,154 +30,78 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import { useListBranchOptionsQuery } from '@/features/branches';
 import { useListLocationOptionsQuery } from '@/features/locations';
 import { useListRoleOptionsQuery } from '@/features/rbac';
-import { EmploymentStatus, EmploymentType } from '@/db/schemas/enums';
-import { ImageUploadField } from '@/features/uploads/components/image-upload-field';
-import { useUploadImageMutation } from '@/features/uploads/api/uploads.api';
 import {
-  useCreateEmployeeMutation,
   useCreateEmployeeUserAccountMutation,
   useListDepartmentOptionsQuery,
   useListEmployeesQuery,
   useListJobTitleOptionsQuery,
-  useUpdateEmployeeMutation,
   type Employee,
 } from '../api/hr.api';
 
-const employmentStatusOptions = [
-  { value: EmploymentStatus.ACTIVE, label: 'Active' },
-  { value: EmploymentStatus.PROBATION, label: 'Probation' },
-  { value: EmploymentStatus.SUSPENDED, label: 'Suspended' },
-  { value: EmploymentStatus.RESIGNED, label: 'Resigned' },
-  { value: EmploymentStatus.TERMINATED, label: 'Terminated' },
-  { value: EmploymentStatus.INACTIVE, label: 'Inactive' },
-];
-
-const employmentTypeOptions = [
-  { value: EmploymentType.FULL_TIME, label: 'Full-time' },
-  { value: EmploymentType.PART_TIME, label: 'Part-time' },
-  { value: EmploymentType.CONTRACT, label: 'Contract' },
-  { value: EmploymentType.INTERN, label: 'Intern' },
-  { value: EmploymentType.CASUAL, label: 'Casual' },
-];
-
-const paymentMethodOptions = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'bank', label: 'Bank' },
-  { value: 'mobile_money', label: 'Mobile Money' },
-];
-
-function dateInputValue(value?: string | null) {
-  return value ? value.slice(0, 10) : '';
-}
-
-function parseDateInputValue(value?: string | null) {
-  if (!value) return undefined;
-  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? undefined : date;
-}
-
-function toDateInputValue(date?: Date) {
-  if (!date) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+const PAGE_SIZE_OPTIONS = ['10', '20', '50', '100'] as const;
 
 export function EmployeesPage() {
-  const [employeeNumber, setEmployeeNumber] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
-  const [telephone, setTelephone] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [bankAccountName, setBankAccountName] = useState('');
-  const [bankAccountNumber, setBankAccountNumber] = useState('');
-  const [mobileMoneyNumber, setMobileMoneyNumber] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [branchId, setBranchId] = useState('');
-  const [locationId, setLocationId] = useState('');
   const [departmentId, setDepartmentId] = useState('');
   const [jobTitleId, setJobTitleId] = useState('');
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [reportingOfficerId, setReportingOfficerId] = useState('');
+
   const [linkEmployee, setLinkEmployee] = useState<Employee | null>(null);
-  const [editForm, setEditForm] = useState({
-    firstName: '',
-    middleName: '',
-    lastName: '',
-    email: '',
-    profileImageUrl: '',
-    telephone: '',
-    paymentMethod: '',
-    bankName: '',
-    bankAccountName: '',
-    bankAccountNumber: '',
-    mobileMoneyNumber: '',
-    branchId: '',
-    locationId: '',
-    departmentId: '',
-    jobTitleId: '',
-    employmentStatus: String(EmploymentStatus.ACTIVE),
-    employmentType: String(EmploymentType.FULL_TIME),
-    confirmationDate: '',
-    terminationDate: '',
-    terminationReason: '',
-  });
   const [userRoleId, setUserRoleId] = useState('');
   const [userBranchId, setUserBranchId] = useState('');
   const [userLocationId, setUserLocationId] = useState('');
 
-  const { data, isLoading } = useListEmployeesQuery({ pageSize: 100 });
+  const listQuery = useMemo(
+    () => ({
+      page,
+      pageSize,
+      search: search.trim() || undefined,
+      filters: {
+        branchId: branchId || undefined,
+        departmentId: departmentId || undefined,
+        jobTitleId: jobTitleId || undefined,
+        officerEmployeeId: reportingOfficerId || undefined,
+      },
+    }),
+    [branchId, departmentId, jobTitleId, page, pageSize, reportingOfficerId, search],
+  );
+
+  const { data, isLoading } = useListEmployeesQuery(listQuery);
+  const { data: reportingOfficerData } = useListEmployeesQuery({
+    pageSize: 500,
+    sort: [{ field: 'displayName', direction: 'asc' }],
+  });
   const { data: departmentOptions = [] } = useListDepartmentOptionsQuery();
   const { data: jobTitleOptions = [] } = useListJobTitleOptionsQuery();
   const { data: branchOptions = [] } = useListBranchOptionsQuery();
-  const { data: locationOptions = [] } = useListLocationOptionsQuery(
-    { branchId: branchId || undefined },
-    { skip: !branchId },
-  );
+  const { data: roleOptions = [] } = useListRoleOptionsQuery();
   const { data: userLocationOptions = [] } = useListLocationOptionsQuery(
     { branchId: userBranchId || undefined },
     { skip: !userBranchId },
   );
-  const { data: roleOptions = [] } = useListRoleOptionsQuery();
 
-  const [createEmployee, { isLoading: isCreating }] = useCreateEmployeeMutation();
-  const [updateEmployee, { isLoading: isUpdating }] = useUpdateEmployeeMutation();
-  const [uploadImage, { isLoading: isUploadingImage }] = useUploadImageMutation();
   const [createEmployeeUserAccount, { isLoading: isLinking }] =
     useCreateEmployeeUserAccountMutation();
 
   const rows = data?.data ?? [];
+  const meta = data?.meta;
+  const reportingOfficerOptions = reportingOfficerData?.data ?? [];
+  const jobTitleNameById = useMemo(
+    () => new Map(jobTitleOptions.map((jobTitle) => [jobTitle.id, jobTitle.name] as const)),
+    [jobTitleOptions],
+  );
 
   useEffect(() => {
-    if (!selectedEmployee) return;
-    setEditForm({
-      firstName: selectedEmployee.firstName ?? '',
-      middleName: selectedEmployee.middleName ?? '',
-      lastName: selectedEmployee.lastName ?? '',
-      email: selectedEmployee.email ?? '',
-      profileImageUrl: selectedEmployee.profileImageUrl ?? '',
-      telephone: selectedEmployee.telephone ?? '',
-      paymentMethod: selectedEmployee.paymentMethod ?? '',
-      bankName: selectedEmployee.bankName ?? '',
-      bankAccountName: selectedEmployee.bankAccountName ?? '',
-      bankAccountNumber: selectedEmployee.bankAccountNumber ?? '',
-      mobileMoneyNumber: selectedEmployee.mobileMoneyNumber ?? '',
-      branchId: selectedEmployee.branchId ?? '',
-      locationId: selectedEmployee.locationId ?? '',
-      departmentId: selectedEmployee.departmentId ?? '',
-      jobTitleId: selectedEmployee.jobTitleId ?? '',
-      employmentStatus: String(selectedEmployee.employmentStatus ?? EmploymentStatus.ACTIVE),
-      employmentType: String(selectedEmployee.employmentType ?? EmploymentType.FULL_TIME),
-      confirmationDate: dateInputValue(selectedEmployee.confirmationDate),
-      terminationDate: dateInputValue(selectedEmployee.terminationDate),
-      terminationReason: selectedEmployee.terminationReason ?? '',
-    });
-  }, [selectedEmployee]);
+    setPage(1);
+  }, [search, branchId, departmentId, jobTitleId, reportingOfficerId]);
 
   useEffect(() => {
     if (!linkEmployee) return;
@@ -186,107 +110,39 @@ export function EmployeesPage() {
     setUserLocationId(linkEmployee.locationId ?? '');
   }, [linkEmployee]);
 
-  async function resolveEmployeeProfileImage(nextEmployeeId: string, value?: string | null) {
-    if (!value) return null;
-    if (!value.startsWith('data:')) return value;
-
-    const upload = await uploadImage({
-      modelType: 'employee-profile-image',
-      modelId: nextEmployeeId,
-      dataUrl: value,
-      fileName: `${nextEmployeeId}-profile-image.png`,
-    }).unwrap();
-
-    return upload.url;
-  }
-
   return (
     <div className="w-full space-y-4 p-4">
       <ScrollableWrapper>
         <Card>
           <CardHeader>
-            <CardTitle>Employees</CardTitle>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <CardTitle>Employees</CardTitle>
+              <PermissionGuard permissionKey={PermissionKeys.CanCreateEmployee}>
+                <Button asChild>
+                  <Link to="/hr/employees/new">Add employee</Link>
+                </Button>
+              </PermissionGuard>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-4">
-              <Input
-                placeholder="Employee number"
-                value={employeeNumber}
-                onChange={(e) => setEmployeeNumber(e.target.value)}
-              />
-              <Input
-                placeholder="First name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
-              <Input
-                placeholder="Last name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-              />
-              <Input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-              <Input
-                placeholder="Telephone"
-                value={telephone}
-                onChange={(e) => setTelephone(e.target.value)}
-              />
+            <div className="grid gap-3 md:grid-cols-6">
               <div className="md:col-span-2">
-                <ImageUploadField
-                  id="employee-create-profile-image"
-                  label="Profile image"
-                  value={profileImageUrl}
-                  onChange={setProfileImageUrl}
-                  helperText="Optional employee profile photo."
-                  disabled={isCreating || isUploadingImage}
+                <Input
+                  placeholder="Search by name, number, email or phone"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
                 />
               </div>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentMethodOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="Bank name"
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                disabled={paymentMethod !== 'bank'}
-              />
-              <Input
-                placeholder="Account name"
-                value={bankAccountName}
-                onChange={(e) => setBankAccountName(e.target.value)}
-                disabled={paymentMethod !== 'bank'}
-              />
-              <Input
-                placeholder="Account number"
-                value={bankAccountNumber}
-                onChange={(e) => setBankAccountNumber(e.target.value)}
-                disabled={paymentMethod !== 'bank'}
-              />
-              <Input
-                placeholder="Mobile money number"
-                value={mobileMoneyNumber}
-                onChange={(e) => setMobileMoneyNumber(e.target.value)}
-                disabled={paymentMethod !== 'mobile_money'}
-              />
+
               <Select
-                value={branchId}
-                onValueChange={(value) => {
-                  setBranchId(value);
-                  setLocationId('');
-                }}
+                value={branchId || '__all__'}
+                onValueChange={(value) => setBranchId(value === '__all__' ? '' : value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Branch" />
+                  <SelectValue placeholder="All branches" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__all__">All branches</SelectItem>
                   {branchOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
                       {option.name}
@@ -294,23 +150,16 @@ export function EmployeesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={locationId} onValueChange={setLocationId}>
-                <SelectTrigger disabled={!branchId}>
-                  <SelectValue placeholder="Location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locationOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={departmentId} onValueChange={setDepartmentId}>
+
+              <Select
+                value={departmentId || '__all__'}
+                onValueChange={(value) => setDepartmentId(value === '__all__' ? '' : value)}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Department" />
+                  <SelectValue placeholder="All departments" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__all__">All departments</SelectItem>
                   {departmentOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
                       {option.name}
@@ -318,11 +167,16 @@ export function EmployeesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={jobTitleId} onValueChange={setJobTitleId}>
+
+              <Select
+                value={jobTitleId || '__all__'}
+                onValueChange={(value) => setJobTitleId(value === '__all__' ? '' : value)}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Job title" />
+                  <SelectValue placeholder="All job titles" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__all__">All job titles</SelectItem>
                   {jobTitleOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
                       {option.name}
@@ -330,74 +184,58 @@ export function EmployeesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button
-                disabled={
-                  !employeeNumber.trim() ||
-                  !firstName.trim() ||
-                  !lastName.trim() ||
-                  !telephone.trim() ||
-                  (paymentMethod === 'bank' &&
-                    (!bankName.trim() || !bankAccountName.trim() || !bankAccountNumber.trim())) ||
-                  (paymentMethod === 'mobile_money' && !mobileMoneyNumber.trim()) ||
-                  isCreating ||
-                  isUploadingImage
-                }
-                onClick={async () => {
-                  try {
-                    const created = await createEmployee({
-                      employeeNumber: employeeNumber.trim(),
-                      firstName: firstName.trim(),
-                      lastName: lastName.trim(),
-                      email: email.trim() || null,
-                      telephone: telephone.trim(),
-                      paymentMethod: paymentMethod || null,
-                      bankName: bankName.trim() || null,
-                      bankAccountName: bankAccountName.trim() || null,
-                      bankAccountNumber: bankAccountNumber.trim() || null,
-                      mobileMoneyNumber: mobileMoneyNumber.trim() || null,
-                      branchId: branchId || null,
-                      locationId: locationId || null,
-                      departmentId: departmentId || null,
-                      jobTitleId: jobTitleId || null,
-                      hireDate: new Date().toISOString().slice(0, 10),
-                    }).unwrap();
 
-                    if (created.id && profileImageUrl) {
-                      const uploadedProfileImageUrl = await resolveEmployeeProfileImage(
-                        created.id,
-                        profileImageUrl,
-                      );
-                      await updateEmployee({
-                        id: created.id,
-                        body: { profileImageUrl: uploadedProfileImageUrl },
-                      }).unwrap();
-                    }
+              <Select
+                value={reportingOfficerId || '__all__'}
+                onValueChange={(value) => setReportingOfficerId(value === '__all__' ? '' : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All reporting officers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All reporting officers</SelectItem>
+                  {reportingOfficerOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.displayName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                    setEmployeeNumber('');
-                    setFirstName('');
-                    setLastName('');
-                    setEmail('');
-                    setProfileImageUrl(null);
-                    setTelephone('');
-                    setPaymentMethod('');
-                    setBankName('');
-                    setBankAccountName('');
-                    setBankAccountNumber('');
-                    setMobileMoneyNumber('');
+              <div className="flex gap-2">
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Rows" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value} / page
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearch('');
                     setBranchId('');
-                    setLocationId('');
                     setDepartmentId('');
                     setJobTitleId('');
-                    toast.success('Employee created');
-                  } catch (error) {
-                    toast.error(
-                      error instanceof Error ? error.message : 'Failed to create employee',
-                    );
-                  }
-                }}
-              >
-                Add employee
-              </Button>
+                    setReportingOfficerId('');
+                    setPage(1);
+                  }}
+                >
+                  Reset
+                </Button>
+              </div>
             </div>
 
             <Table>
@@ -407,6 +245,7 @@ export function EmployeesPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Department</TableHead>
                   <TableHead>Job title</TableHead>
+                  <TableHead>Reporting officer title</TableHead>
                   <TableHead>Branch</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>User</TableHead>
@@ -416,7 +255,7 @@ export function EmployeesPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8}>Loading employees...</TableCell>
+                    <TableCell colSpan={9}>Loading employees...</TableCell>
                   </TableRow>
                 ) : rows.length ? (
                   rows.map((row) => (
@@ -438,17 +277,18 @@ export function EmployeesPage() {
                       </TableCell>
                       <TableCell>{row.departmentName ?? '-'}</TableCell>
                       <TableCell>{row.jobTitleName ?? '-'}</TableCell>
+                      <TableCell>
+                        {(row.reportingOfficerTitleId &&
+                          jobTitleNameById.get(row.reportingOfficerTitleId)) ||
+                          '-'}
+                      </TableCell>
                       <TableCell>{row.branchName ?? '-'}</TableCell>
                       <TableCell>{row.email ?? '-'}</TableCell>
                       <TableCell>{row.hasUserAccount ? 'Linked' : 'Not linked'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedEmployee(row)}
-                          >
-                            Edit
+                          <Button asChild variant="outline" size="sm">
+                            <Link to={`/hr/employees/edit/${row.id}`}>Edit</Link>
                           </Button>
                           <Button
                             size="sm"
@@ -463,362 +303,40 @@ export function EmployeesPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8}>No employees found.</TableCell>
+                    <TableCell colSpan={9}>No employees found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-sm text-muted-foreground">
+                {meta
+                  ? `Showing page ${meta.page} of ${meta.totalPages} (${meta.totalRecords} total)`
+                  : 'No records'}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={!meta?.hasPreviousPage}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((current) => current + 1)}
+                  disabled={!meta?.hasNextPage}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </ScrollableWrapper>
-
-      <Dialog
-        open={Boolean(selectedEmployee)}
-        onOpenChange={(open) => !open && setSelectedEmployee(null)}
-      >
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Edit employee</DialogTitle>
-            <DialogDescription>Update employment and contact information.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 md:grid-cols-2">
-            <FieldGroup>
-              <ImageUploadField
-                id="employee-edit-profile-image"
-                label="Profile image"
-                value={editForm.profileImageUrl}
-                onChange={(value) =>
-                  setEditForm((current) => ({ ...current, profileImageUrl: value ?? '' }))
-                }
-                helperText="Upload or replace the employee photo."
-                disabled={isUpdating || isUploadingImage}
-              />
-              <Field>
-                <FieldLabel>First name</FieldLabel>
-                <Input
-                  value={editForm.firstName}
-                  onChange={(e) =>
-                    setEditForm((current) => ({ ...current, firstName: e.target.value }))
-                  }
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Middle name</FieldLabel>
-                <Input
-                  value={editForm.middleName}
-                  onChange={(e) =>
-                    setEditForm((current) => ({ ...current, middleName: e.target.value }))
-                  }
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Last name</FieldLabel>
-                <Input
-                  value={editForm.lastName}
-                  onChange={(e) =>
-                    setEditForm((current) => ({ ...current, lastName: e.target.value }))
-                  }
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Email</FieldLabel>
-                <Input
-                  value={editForm.email}
-                  onChange={(e) =>
-                    setEditForm((current) => ({ ...current, email: e.target.value }))
-                  }
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Telephone</FieldLabel>
-                <Input
-                  value={editForm.telephone}
-                  onChange={(e) =>
-                    setEditForm((current) => ({ ...current, telephone: e.target.value }))
-                  }
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Payment method</FieldLabel>
-                <Select
-                  value={editForm.paymentMethod}
-                  onValueChange={(value) =>
-                    setEditForm((current) => ({ ...current, paymentMethod: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Payment method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {paymentMethodOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field>
-                <FieldLabel>Bank name</FieldLabel>
-                <Input
-                  value={editForm.bankName}
-                  disabled={editForm.paymentMethod !== 'bank'}
-                  onChange={(e) =>
-                    setEditForm((current) => ({ ...current, bankName: e.target.value }))
-                  }
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Account name</FieldLabel>
-                <Input
-                  value={editForm.bankAccountName}
-                  disabled={editForm.paymentMethod !== 'bank'}
-                  onChange={(e) =>
-                    setEditForm((current) => ({ ...current, bankAccountName: e.target.value }))
-                  }
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Account number</FieldLabel>
-                <Input
-                  value={editForm.bankAccountNumber}
-                  disabled={editForm.paymentMethod !== 'bank'}
-                  onChange={(e) =>
-                    setEditForm((current) => ({ ...current, bankAccountNumber: e.target.value }))
-                  }
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Mobile money number</FieldLabel>
-                <Input
-                  value={editForm.mobileMoneyNumber}
-                  disabled={editForm.paymentMethod !== 'mobile_money'}
-                  onChange={(e) =>
-                    setEditForm((current) => ({ ...current, mobileMoneyNumber: e.target.value }))
-                  }
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Status</FieldLabel>
-                <Select
-                  value={editForm.employmentStatus}
-                  onValueChange={(value) =>
-                    setEditForm((current) => ({ ...current, employmentStatus: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {employmentStatusOptions.map((option) => (
-                      <SelectItem key={option.value} value={String(option.value)}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field>
-                <FieldLabel>Employment type</FieldLabel>
-                <Select
-                  value={editForm.employmentType}
-                  onValueChange={(value) =>
-                    setEditForm((current) => ({ ...current, employmentType: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Employment type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {employmentTypeOptions.map((option) => (
-                      <SelectItem key={option.value} value={String(option.value)}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </FieldGroup>
-
-            <FieldGroup>
-              <Field>
-                <FieldLabel>Branch</FieldLabel>
-                <Select
-                  value={editForm.branchId}
-                  onValueChange={(value) =>
-                    setEditForm((current) => ({ ...current, branchId: value, locationId: '' }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branchOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field>
-                <FieldLabel>Location</FieldLabel>
-                <Select
-                  value={editForm.locationId}
-                  onValueChange={(value) =>
-                    setEditForm((current) => ({ ...current, locationId: value }))
-                  }
-                >
-                  <SelectTrigger disabled={!editForm.branchId}>
-                    <SelectValue placeholder="Location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locationOptions
-                      .filter((option) => option.branchId === editForm.branchId)
-                      .map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field>
-                <FieldLabel>Department</FieldLabel>
-                <Select
-                  value={editForm.departmentId}
-                  onValueChange={(value) =>
-                    setEditForm((current) => ({ ...current, departmentId: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departmentOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field>
-                <FieldLabel>Job title</FieldLabel>
-                <Select
-                  value={editForm.jobTitleId}
-                  onValueChange={(value) =>
-                    setEditForm((current) => ({ ...current, jobTitleId: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Job title" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {jobTitleOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field>
-                <FieldLabel>Confirmation date</FieldLabel>
-                <DatePicker
-                  date={parseDateInputValue(editForm.confirmationDate)}
-                  onDateChange={(value) =>
-                    setEditForm((current) => ({
-                      ...current,
-                      confirmationDate: toDateInputValue(value),
-                    }))
-                  }
-                  placeholder="Select confirmation date"
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Termination date</FieldLabel>
-                <DatePicker
-                  date={parseDateInputValue(editForm.terminationDate)}
-                  onDateChange={(value) =>
-                    setEditForm((current) => ({
-                      ...current,
-                      terminationDate: toDateInputValue(value),
-                    }))
-                  }
-                  placeholder="Select termination date"
-                />
-              </Field>
-              <Field className="md:col-span-2">
-                <FieldLabel>Termination reason</FieldLabel>
-                <Input
-                  value={editForm.terminationReason}
-                  onChange={(e) =>
-                    setEditForm((current) => ({ ...current, terminationReason: e.target.value }))
-                  }
-                />
-              </Field>
-            </FieldGroup>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedEmployee(null)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={
-                !selectedEmployee ||
-                isUpdating ||
-                isUploadingImage ||
-                (editForm.paymentMethod === 'bank' &&
-                  (!editForm.bankName.trim() ||
-                    !editForm.bankAccountName.trim() ||
-                    !editForm.bankAccountNumber.trim())) ||
-                (editForm.paymentMethod === 'mobile_money' && !editForm.mobileMoneyNumber.trim())
-              }
-              onClick={async () => {
-                if (!selectedEmployee) return;
-                try {
-                  const uploadedProfileImageUrl = await resolveEmployeeProfileImage(
-                    selectedEmployee.id,
-                    editForm.profileImageUrl || null,
-                  );
-                  await updateEmployee({
-                    id: selectedEmployee.id,
-                    body: {
-                      firstName: editForm.firstName.trim(),
-                      middleName: editForm.middleName.trim() || null,
-                      lastName: editForm.lastName.trim(),
-                      email: editForm.email.trim() || null,
-                      profileImageUrl: uploadedProfileImageUrl,
-                      telephone: editForm.telephone.trim(),
-                      paymentMethod: editForm.paymentMethod.trim() || null,
-                      bankName: editForm.bankName.trim() || null,
-                      bankAccountName: editForm.bankAccountName.trim() || null,
-                      bankAccountNumber: editForm.bankAccountNumber.trim() || null,
-                      mobileMoneyNumber: editForm.mobileMoneyNumber.trim() || null,
-                      branchId: editForm.branchId || null,
-                      locationId: editForm.locationId || null,
-                      departmentId: editForm.departmentId || null,
-                      jobTitleId: editForm.jobTitleId || null,
-                      employmentStatus: Number(editForm.employmentStatus),
-                      employmentType: Number(editForm.employmentType),
-                      confirmationDate: editForm.confirmationDate || null,
-                      terminationDate: editForm.terminationDate || null,
-                      terminationReason: editForm.terminationReason.trim() || null,
-                    },
-                  }).unwrap();
-                  toast.success('Employee updated');
-                  setSelectedEmployee(null);
-                } catch (error) {
-                  toast.error(error instanceof Error ? error.message : 'Failed to update employee');
-                }
-              }}
-            >
-              Save changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={Boolean(linkEmployee)} onOpenChange={(open) => !open && setLinkEmployee(null)}>
         <DialogContent>
@@ -889,13 +407,18 @@ export function EmployeesPage() {
               disabled={!linkEmployee || !userRoleId || !userBranchId || isLinking}
               onClick={async () => {
                 if (!linkEmployee) return;
-                await createEmployeeUserAccount({
-                  employeeId: linkEmployee.id,
-                  roleId: userRoleId,
-                  branchId: userBranchId,
-                  locationId: userLocationId || null,
-                }).unwrap();
-                setLinkEmployee(null);
+                try {
+                  await createEmployeeUserAccount({
+                    employeeId: linkEmployee.id,
+                    roleId: userRoleId,
+                    branchId: userBranchId,
+                    locationId: userLocationId || null,
+                  }).unwrap();
+                  toast.success('User account created');
+                  setLinkEmployee(null);
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : 'Failed to create user');
+                }
               }}
             >
               Create user
