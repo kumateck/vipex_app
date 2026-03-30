@@ -1,6 +1,6 @@
 import { Redirect, Stack } from 'expo-router';
-import { useAuth } from '@/providers/auth-provider';
-import { useAppearance } from '@/providers/appearance-provider';
+import { useAuth } from '@mobile/providers/auth-provider';
+import { useAppearance } from '@mobile/providers/appearance-provider';
 
 export default function AppLayout() {
   const { bootstrapped, session } = useAuth();

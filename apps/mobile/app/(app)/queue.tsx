@@ -1,26 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Share, StyleSheet, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { AppScreen } from '@/components/screen';
-import { ParcelStatus } from '@/constants/parcel-status';
+import { AppScreen } from '@mobile/components/screen';
+import { ParcelStatus } from '@mobile/constants/parcel-status';
 import {
   createPickupQueue,
   getParcelDetails,
   listPickupQueueCards,
   searchParcels,
-} from '@/lib/api';
-import { notifyError, notifySuccess } from '@/lib/notify';
-import type { ParcelFullDetails, ParcelSearchRow, PickupQueueCard } from '@/types/parcels';
-import { useAuth } from '@/providers/auth-provider';
-import { useAppearance } from '@/providers/appearance-provider';
+} from '@mobile/lib/api';
+import { notifyError, notifySuccess } from '@mobile/lib/notify';
+import type { ParcelFullDetails, ParcelSearchRow, PickupQueueCard } from '@mobile/types/parcels';
+import { useAuth } from '@mobile/providers/auth-provider';
+import { useAppearance } from '@mobile/providers/appearance-provider';
 import {
   canCreateQueueTicket,
   canSearchParcelsForQueue,
   canViewQueueScreen,
   canViewReceiverQueueBoard,
   canViewSenderQueueBoard,
-} from '@/lib/permissions';
-import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@/lib/haptics';
+} from '@mobile/lib/permissions';
+import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@mobile/lib/haptics';
 import {
   AppButton,
   AppCard,
@@ -28,8 +28,8 @@ import {
   AppSkeletonCard,
   AppStatusChip,
   MobileNoAccess,
-} from '@/components/ui';
-import { mobileSpacing, mobileTypography } from '@/theme/layout';
+} from '@/components/ui/mobile';
+import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 function formatCedis(psw: number | null | undefined) {
   return `GH₵ ${((psw ?? 0) / 100).toFixed(2)}`;

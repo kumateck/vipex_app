@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { AppScreen } from '@/components/screen';
-import { setPassword as setPasswordApi } from '@/lib/api';
-import { useAppearance } from '@/providers/appearance-provider';
-import { AppButton, AppCard, AppInput, AppLabel } from '@/components/ui';
-import { mobileSpacing, mobileTypography } from '@/theme/layout';
+import { AppScreen } from '@mobile/components/screen';
+import { setPassword as setPasswordApi } from '@mobile/lib/api';
+import { useAppearance } from '@mobile/providers/appearance-provider';
+import { AppButton, AppCard, AppInput, AppLabel } from '@/components/ui/mobile';
+import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 export default function SetPasswordScreen() {
   const { theme } = useAppearance();
@@ -46,7 +46,7 @@ export default function SetPasswordScreen() {
           <AppLabel>Invitation OTP (6 digits)</AppLabel>
           <AppInput
             value={otp}
-            onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
+            onChangeText={(v: string) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
             keyboardType="number-pad"
             placeholder="123456"
             maxLength={6}

@@ -1,8 +1,8 @@
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { AuthProvider } from '@/providers/auth-provider';
-import { AppUpdateProvider } from '@/providers/app-update-provider';
-import { AppearanceProvider, useAppearance } from '@/providers/appearance-provider';
+import { AuthProvider } from '@mobile/providers/auth-provider';
+import { AppUpdateProvider } from '@mobile/providers/app-update-provider';
+import { AppearanceProvider, useAppearance } from '@mobile/providers/appearance-provider';
 
 function RootShell() {
   const { theme } = useAppearance();

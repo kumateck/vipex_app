@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import type { SessionState } from '@/types/auth';
+import type { SessionState } from '@mobile/types/auth';
 
 const SESSION_KEY = 'vipex_mobile_session_v1';
 const APPEARANCE_KEY = 'vipex_mobile_appearance_v1';

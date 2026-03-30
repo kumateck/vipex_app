@@ -1,21 +1,21 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { AppScreen } from '@/components/screen';
-import { ParcelStatus } from '@/constants/parcel-status';
+import { AppScreen } from '@mobile/components/screen';
+import { ParcelStatus } from '@mobile/constants/parcel-status';
 import {
   getParcelDetails,
   searchParcels,
   updateCustomer,
   updateParcel,
   updateParcelStatus,
-} from '@/lib/api';
-import { notifyError, notifySuccess } from '@/lib/notify';
-import type { ParcelFullDetails, ParcelSearchRow } from '@/types/parcels';
-import { useAuth } from '@/providers/auth-provider';
-import { useAppearance } from '@/providers/appearance-provider';
-import { canMarkParcelArrived, canViewReceiveScreen } from '@/lib/permissions';
-import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@/lib/haptics';
+} from '@mobile/lib/api';
+import { notifyError, notifySuccess } from '@mobile/lib/notify';
+import type { ParcelFullDetails, ParcelSearchRow } from '@mobile/types/parcels';
+import { useAuth } from '@mobile/providers/auth-provider';
+import { useAppearance } from '@mobile/providers/appearance-provider';
+import { canMarkParcelArrived, canViewReceiveScreen } from '@mobile/lib/permissions';
+import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@mobile/lib/haptics';
 import {
   AppButton,
   AppCard,
@@ -23,8 +23,8 @@ import {
   AppLabel,
   AppStatusChip,
   MobileNoAccess,
-} from '@/components/ui';
-import { mobileSpacing, mobileTypography } from '@/theme/layout';
+} from '@/components/ui/mobile';
+import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 function formatCedis(psw: number | null | undefined) {
   return `GH₵ ${((psw ?? 0) / 100).toFixed(2)}`;

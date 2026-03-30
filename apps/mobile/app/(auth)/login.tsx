@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Link, router } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Constants from 'expo-constants';
-import { AppScreen } from '@/components/screen';
-import { useAuth } from '@/providers/auth-provider';
-import { getApiDebugInfo } from '@/lib/api';
-import { useAppearance } from '@/providers/appearance-provider';
-import { AppButton, AppCard, AppInput, AppLabel } from '@/components/ui';
-import { mobileRadius, mobileSpacing, mobileTypography } from '@/theme/layout';
+import { AppScreen } from '@mobile/components/screen';
+import { useAuth } from '@mobile/providers/auth-provider';
+import { getApiDebugInfo } from '@mobile/lib/api';
+import { useAppearance } from '@mobile/providers/appearance-provider';
+import { AppButton, AppCard, AppInput, AppLabel } from '@/components/ui/mobile';
+import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 export default function LoginScreen() {
   const { theme } = useAppearance();

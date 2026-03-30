@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { useAppearance } from '@/providers/appearance-provider';
+import { useAppearance } from '@mobile/providers/appearance-provider';
 
 export default function AuthLayout() {
   const { theme } = useAppearance();

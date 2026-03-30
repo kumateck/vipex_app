@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Alert, StyleSheet, Text } from 'react-native';
-import { AppScreen } from '@/components/screen';
-import { changePassword } from '@/lib/api';
-import { useAuth } from '@/providers/auth-provider';
-import { useAppearance } from '@/providers/appearance-provider';
-import { AppButton, AppCard, AppInput } from '@/components/ui';
-import { mobileTypography } from '@/theme/layout';
+import { AppScreen } from '@mobile/components/screen';
+import { changePassword } from '@mobile/lib/api';
+import { useAuth } from '@mobile/providers/auth-provider';
+import { useAppearance } from '@mobile/providers/appearance-provider';
+import { AppButton, AppCard, AppInput } from '@/components/ui/mobile';
+import { mobileTypography } from '@mobile/theme/layout';
 
 export default function ChangePasswordScreen() {
   const { theme } = useAppearance();

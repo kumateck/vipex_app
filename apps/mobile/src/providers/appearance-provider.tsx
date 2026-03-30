@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { useColorScheme } from 'react-native';
-import { loadAppearanceMode, saveAppearanceMode, type AppearanceMode } from '@/lib/storage';
-import { createTheme, type AppTheme, type ThemeScheme } from '@/theme/tokens';
+import { loadAppearanceMode, saveAppearanceMode, type AppearanceMode } from '@mobile/lib/storage';
+import { createTheme, type AppTheme, type ThemeScheme } from '@mobile/theme/tokens';
 
 type AppearanceContextValue = {
   bootstrapped: boolean;

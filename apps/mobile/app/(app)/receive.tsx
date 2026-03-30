@@ -2,15 +2,15 @@ import { useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { CameraView, type BarcodeScanningResult, useCameraPermissions } from 'expo-camera';
-import { AppScreen } from '@/components/screen';
-import { ParcelStatus } from '@/constants/parcel-status';
-import { searchParcels, updateParcelStatus } from '@/lib/api';
-import { notifyError, notifySuccess } from '@/lib/notify';
-import type { ParcelSearchRow } from '@/types/parcels';
-import { useAuth } from '@/providers/auth-provider';
-import { useAppearance } from '@/providers/appearance-provider';
-import { canMarkParcelArrived, canViewReceiveScreen } from '@/lib/permissions';
-import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@/lib/haptics';
+import { AppScreen } from '@mobile/components/screen';
+import { ParcelStatus } from '@mobile/constants/parcel-status';
+import { searchParcels, updateParcelStatus } from '@mobile/lib/api';
+import { notifyError, notifySuccess } from '@mobile/lib/notify';
+import type { ParcelSearchRow } from '@mobile/types/parcels';
+import { useAuth } from '@mobile/providers/auth-provider';
+import { useAppearance } from '@mobile/providers/appearance-provider';
+import { canMarkParcelArrived, canViewReceiveScreen } from '@mobile/lib/permissions';
+import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@mobile/lib/haptics';
 import {
   AppButton,
   AppCard,
@@ -18,8 +18,8 @@ import {
   AppSkeletonCard,
   AppStatusChip,
   MobileNoAccess,
-} from '@/components/ui';
-import { mobileSpacing, mobileTypography } from '@/theme/layout';
+} from '@/components/ui/mobile';
+import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 export default function ReceiveScanScreen() {
   const { theme } = useAppearance();

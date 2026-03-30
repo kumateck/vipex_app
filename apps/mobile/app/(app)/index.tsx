@@ -1,12 +1,16 @@
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { AppScreen } from '@/components/screen';
-import type { AppearanceMode } from '@/lib/storage';
-import { canUseQueueModule, canUseRiderModule, canUseTransitReceiveScan } from '@/lib/permissions';
-import { useAuth } from '@/providers/auth-provider';
-import { useAppearance } from '@/providers/appearance-provider';
-import { AppButton, AppCard } from '@/components/ui';
-import { mobileRadius, mobileSpacing, mobileTypography } from '@/theme/layout';
+import { AppScreen } from '@mobile/components/screen';
+import type { AppearanceMode } from '@mobile/lib/storage';
+import {
+  canUseQueueModule,
+  canUseRiderModule,
+  canUseTransitReceiveScan,
+} from '@mobile/lib/permissions';
+import { useAuth } from '@mobile/providers/auth-provider';
+import { useAppearance } from '@mobile/providers/appearance-provider';
+import { AppButton, AppCard } from '@/components/ui/mobile';
+import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 export default function MobileHomeScreen() {
   const { theme, mode, setMode } = useAppearance();

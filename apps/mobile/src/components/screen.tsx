@@ -1,8 +1,8 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RefreshControl, ScrollView, StyleSheet, View, type ViewProps } from 'react-native';
 import type { PropsWithChildren } from 'react';
-import { useAppearance } from '@/providers/appearance-provider';
-import { mobileSpacing } from '@/theme/layout';
+import { useAppearance } from '@mobile/providers/appearance-provider';
+import { mobileSpacing } from '@mobile/theme/layout';
 
 type AppScreenProps = PropsWithChildren<ViewProps> & {
   scrollable?: boolean;

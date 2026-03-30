@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
-import { AppScreen } from '@/components/screen';
-import { forgotPassword } from '@/lib/api';
-import { useAppearance } from '@/providers/appearance-provider';
-import { AppButton, AppCard, AppInput, AppLabel } from '@/components/ui';
-import { mobileSpacing, mobileTypography } from '@/theme/layout';
+import { AppScreen } from '@mobile/components/screen';
+import { forgotPassword } from '@mobile/lib/api';
+import { useAppearance } from '@mobile/providers/appearance-provider';
+import { AppButton, AppCard, AppInput, AppLabel } from '@/components/ui/mobile';
+import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 export default function ForgotPasswordScreen() {
   const { theme } = useAppearance();

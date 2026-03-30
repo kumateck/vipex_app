@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { AppScreen } from '@/components/screen';
-import { listRiderParcels, riderGivenToCustomer, riderReturnedToOffice } from '@/lib/api';
-import { notifyError, notifySuccess } from '@/lib/notify';
-import type { RiderDoorstepRecord } from '@/types/parcels';
-import { useAuth } from '@/providers/auth-provider';
-import { useAppearance } from '@/providers/appearance-provider';
-import { canCompleteRiderDeliveryActions, canViewRiderScreen } from '@/lib/permissions';
-import { hapticError, hapticSuccess, hapticTap } from '@/lib/haptics';
+import { AppScreen } from '@mobile/components/screen';
+import { listRiderParcels, riderGivenToCustomer, riderReturnedToOffice } from '@mobile/lib/api';
+import { notifyError, notifySuccess } from '@mobile/lib/notify';
+import type { RiderDoorstepRecord } from '@mobile/types/parcels';
+import { useAuth } from '@mobile/providers/auth-provider';
+import { useAppearance } from '@mobile/providers/appearance-provider';
+import { canCompleteRiderDeliveryActions, canViewRiderScreen } from '@mobile/lib/permissions';
+import { hapticError, hapticSuccess, hapticTap } from '@mobile/lib/haptics';
 import {
   AppButton,
   AppCard,
@@ -15,8 +15,8 @@ import {
   AppSkeletonCard,
   AppStatusChip,
   MobileNoAccess,
-} from '@/components/ui';
-import { mobileSpacing, mobileTypography } from '@/theme/layout';
+} from '@/components/ui/mobile';
+import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 function isSameCalendarDay(dateLike?: string) {
   if (!dateLike) return false;

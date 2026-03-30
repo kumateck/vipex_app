@@ -1,4 +1,4 @@
-import type { AppearanceMode } from '@/lib/storage';
+import type { AppearanceMode } from '@mobile/lib/storage';
 
 export type ThemeScheme = 'light' | 'dark';
 
