@@ -1,4 +1,4 @@
-name: Mobile Builds (Android + iOS) (Internal)
+name: Mobile Build (Android Only) (Internal)
 
 on:
   pull_request:
@@ -164,6 +164,7 @@ jobs:
           fi
 
   build-ios:
+    if: ${{ false }} # Paused for now; keep config for quick re-enable
     name: Build iOS Artifact
     runs-on: ubuntu-latest
     env:
@@ -244,14 +245,19 @@ jobs:
       - name: Download iOS Artifact
         run: |
           mkdir -p artifacts
-          curl -L "${{ steps.eas_build.outputs.build_url }}" -o artifacts/vipex-mobile-ios-${{ github.run_number }}.ipa
+          ARTIFACT_URL="${{ steps.eas_build.outputs.build_url }}"
+          FILE_NAME=$(basename "${ARTIFACT_URL%%\?*}")
+          if [ -z "${FILE_NAME}" ] || [ "${FILE_NAME}" = "/" ] || [ "${FILE_NAME}" = "." ]; then
+            FILE_NAME="vipex-mobile-ios-${{ github.run_number }}.bin"
+          fi
+          curl -L "${ARTIFACT_URL}" -o "artifacts/${FILE_NAME}"
           ls -lah artifacts
 
       - name: Upload iOS Artifact
         uses: actions/upload-artifact@v4
         with:
           name: vipex-mobile-ios-${{ github.event.pull_request.number || github.run_number }}
-          path: artifacts/*.ipa
+          path: artifacts/*
           if-no-files-found: error
           retention-days: 14
 
@@ -280,9 +286,9 @@ jobs:
           LATEST_PREFIX="${PREFIX}/latest"
           VERSION_PREFIX="${PREFIX}/v${VERSION}"
 
-          mapfile -t FILES < <(find artifacts -maxdepth 1 -type f -name "*.ipa")
+          mapfile -t FILES < <(find artifacts -maxdepth 1 -type f)
           if [ "${#FILES[@]}" -eq 0 ]; then
-            echo "No IPA files found in artifacts/"
+            echo "No iOS artifacts found in artifacts/"
             exit 1
           fi
 
