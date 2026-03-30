@@ -228,6 +228,8 @@ export const hrApi = api.injectEndpoints({
       ServerListQuery<{
         branchId?: string | null;
         departmentId?: string | null;
+        jobTitleId?: string | null;
+        officerEmployeeId?: string | null;
         status?: number | null;
       }> | void
     >({

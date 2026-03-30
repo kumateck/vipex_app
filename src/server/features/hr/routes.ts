@@ -327,6 +327,8 @@ export const hrRoutes = new Elysia({ name: 'hr' })
           companyId: authUser.companyId!,
           branchId: isHeadOffice ? (query.branchId ?? null) : (authUser.branchId ?? null),
           departmentId: query.departmentId ?? null,
+          jobTitleId: query.jobTitleId ?? null,
+          officerEmployeeId: query.officerEmployeeId ?? null,
           status: query.status ?? null,
         },
       });
@@ -336,6 +338,8 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         ...PaginationRequestQueryProps,
         branchId: t.Optional(UUID),
         departmentId: t.Optional(UUID),
+        jobTitleId: t.Optional(UUID),
+        officerEmployeeId: t.Optional(UUID),
         status: t.Optional(t.Number()),
         search: t.Optional(t.String()),
       }),

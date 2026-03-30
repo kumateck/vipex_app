@@ -53,6 +53,12 @@ async function hashEmailOtp(email: string, otp: string) {
 export async function loginSvc(email: string, password: string, ua?: string, ip?: string) {
   const user = await getUserByEmailRepo(email);
   if (!user || user === null) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
+  if (user.status === UserStatus.INVITED) {
+    throw new HttpError(
+      HttpStatus.FORBIDDEN,
+      'Account setup pending. Use your invite OTP on the Set Password page.',
+    );
+  }
   if (user.status && user.status !== UserStatus.ACTIVE)
     throw new HttpError(HttpStatus.FORBIDDEN, 'Account disabled');
   const ok = await verifyPassword(password, user?.password);
@@ -196,6 +202,12 @@ export async function resetPasswordSvc(email: string, otp: string, newPassword: 
   const tokenHash = await hashEmailOtp(normalizedEmail, otp);
   const user = await findUserByEmailAndResetTokenRepo(normalizedEmail, tokenHash);
   if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid or expired OTP');
+  if (user.status === UserStatus.INVITED) {
+    throw new HttpError(
+      HttpStatus.BAD_REQUEST,
+      'This OTP is for account setup. Please use Set Password.',
+    );
+  }
   const passwordHash = await hashPassword(newPassword);
   await updateUserPasswordRepo(user.id, passwordHash);
   await clearUserResetTokenRepo(user.id);

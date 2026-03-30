@@ -62,6 +62,11 @@ export default function ForgotPassword() {
                   I have an OTP
                 </Link>
               </Button>
+              <Button asChild type="button" variant="secondary" className="w-full">
+                <Link to={`/set-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}>
+                  I have an invite OTP
+                </Link>
+              </Button>
               <Button asChild type="button" variant="outline" className="w-full">
                 <Link to="/login">Return to login</Link>
               </Button>

@@ -20,6 +20,8 @@ export type ListEmployeeParams = {
   companyId: string;
   branchId?: string | null;
   departmentId?: string | null;
+  jobTitleId?: string | null;
+  officerEmployeeId?: string | null;
   status?: number | null;
   search?: string | null;
   sort?: SortField[] | null;
@@ -290,6 +292,8 @@ export async function listEmployeesRepo(p: ListEmployeeParams) {
   const where = [eq(employees.companyId, p.companyId), eq(employees.isDeleted, false)];
   if (p.branchId) where.push(eq(employees.branchId, p.branchId));
   if (p.departmentId) where.push(eq(employees.departmentId, p.departmentId));
+  if (p.jobTitleId) where.push(eq(employees.jobTitleId, p.jobTitleId));
+  if (p.officerEmployeeId) where.push(eq(employees.officerEmployeeId, p.officerEmployeeId));
   if (p.status !== null && p.status !== undefined)
     where.push(eq(employees.employmentStatus, p.status));
 
