@@ -1,7 +1,7 @@
-name: Desktop Release (Windows + macOS) (PR to desktop)
+name: Desktop Release (Windows + macOS) (Push to desktop)
 
 on:
-  pull_request:
+  push:
     branches:
       - desktop
 
@@ -153,7 +153,6 @@ jobs:
     name: Publish Windows Feed to MinIO
     needs: build-windows-desktop
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' }}
     env:
       MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
       MINIO_REGION: ${{ secrets.MINIO_REGION }}
