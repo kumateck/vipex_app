@@ -1,1 +1,1 @@
-export * from '@/components/ui/mobile';
+export * from './ui/mobile';
