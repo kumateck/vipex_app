@@ -27,6 +27,5 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "exclude": ["dist", "node_modules"],
-  "extends": "expo/tsconfig.base"
+  "exclude": ["dist", "node_modules"]
 }
