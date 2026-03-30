@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AppScreen } from '@/components/screen';
 import { ParcelStatus } from '@/constants/parcel-status';
@@ -13,6 +13,18 @@ import {
 import { notifyError, notifySuccess } from '@/lib/notify';
 import type { ParcelFullDetails, ParcelSearchRow } from '@/types/parcels';
 import { useAuth } from '@/providers/auth-provider';
+import { useAppearance } from '@/providers/appearance-provider';
+import { canMarkParcelArrived, canViewReceiveScreen } from '@/lib/permissions';
+import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@/lib/haptics';
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  AppLabel,
+  AppStatusChip,
+  MobileNoAccess,
+} from '@/components/ui';
+import { mobileSpacing, mobileTypography } from '@/theme/layout';
 
 function formatCedis(psw: number | null | undefined) {
   return `GH₵ ${((psw ?? 0) / 100).toFixed(2)}`;
@@ -26,7 +38,11 @@ function formatDate(value?: string | null) {
 }
 
 export default function ReceiveProcessParcelScreen() {
+  const { theme } = useAppearance();
   const { session, withAuth } = useAuth();
+  const permissions = session.user?.permissions ?? [];
+  const canView = canViewReceiveScreen(permissions);
+  const canEdit = canMarkParcelArrived(permissions);
   const router = useRouter();
   const { parcelId } = useLocalSearchParams<{ parcelId: string }>();
   const companyId = session.user?.company?.id ?? session.user?.companyId;
@@ -35,6 +51,8 @@ export default function ReceiveProcessParcelScreen() {
   const [parcel, setParcel] = useState<ParcelSearchRow | null>(null);
   const [details, setDetails] = useState<ParcelFullDetails | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [arriveBusy, setArriveBusy] = useState(false);
   const [editParcelDetails, setEditParcelDetails] = useState('');
   const [editParcelContent, setEditParcelContent] = useState('');
   const [editReceiverName, setEditReceiverName] = useState('');
@@ -68,6 +86,7 @@ export default function ReceiveProcessParcelScreen() {
         'Load failed',
         err instanceof Error ? err.message : 'Unable to load parcel details',
       );
+      void hapticError();
     } finally {
       setBusy(false);
       setInitialLoading(false);
@@ -87,15 +106,22 @@ export default function ReceiveProcessParcelScreen() {
 
     if (!parcelDetailsValue) {
       Alert.alert('Validation', 'Parcel details is required.');
+      void hapticWarning();
       return;
     }
     if (!receiverNameValue) {
       Alert.alert('Validation', 'Receiver name is required.');
+      void hapticWarning();
+      return;
+    }
+    if (!canEdit) {
+      notifyError('Permission denied', 'You do not have permission to edit incoming fields.');
+      void hapticWarning();
       return;
     }
 
     try {
-      setBusy(true);
+      setSaveBusy(true);
       await withAuth(async (token) => {
         const tasks: Array<Promise<unknown>> = [];
         if (
@@ -130,110 +156,169 @@ export default function ReceiveProcessParcelScreen() {
         await Promise.all(tasks);
       });
       notifySuccess('Incoming parcel fields updated.');
+      void hapticSuccess();
       await loadParcel();
     } catch (err) {
       notifyError('Save failed', err instanceof Error ? err.message : 'Unable to save changes');
+      void hapticError();
     } finally {
-      setBusy(false);
+      setSaveBusy(false);
     }
   }
 
   async function markArrived() {
     if (!parcelId || !parcel) return;
+    if (!canEdit) {
+      notifyError('Permission denied', 'You do not have permission to confirm parcel arrival.');
+      void hapticWarning();
+      return;
+    }
     try {
-      setBusy(true);
+      setArriveBusy(true);
       await withAuth((token) =>
         updateParcelStatus(token, parcelId, ParcelStatus.ARRIVED_AT_DESTINATION),
       );
       notifySuccess(`Parcel ${parcel.trackingCode} marked ARRIVED_AT_DESTINATION.`);
+      void hapticSuccess();
       await loadParcel();
     } catch (err) {
       notifyError(
         'Mark arrived failed',
         err instanceof Error ? err.message : 'Unable to update parcel status',
       );
+      void hapticError();
     } finally {
-      setBusy(false);
+      setArriveBusy(false);
     }
+  }
+
+  if (!canView) {
+    return (
+      <AppScreen scrollable={false}>
+        <MobileNoAccess message="You do not have permission to process incoming parcels." />
+      </AppScreen>
+    );
   }
 
   return (
     <AppScreen>
-      <Text style={styles.title}>Process Incoming Parcel</Text>
+      <Text style={[styles.title, { color: theme.colors.text }]}>Process Incoming Parcel</Text>
+      <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
+        Review parcel information, correct incoming data, then confirm arrival.
+      </Text>
       {initialLoading ? (
-        <View style={styles.detailsCard}>
-          <View style={styles.skeletonLineLong} />
-          <View style={styles.skeletonLineMedium} />
-          <View style={styles.skeletonLineLong} />
-          <View style={styles.skeletonLineLong} />
-          <View style={styles.skeletonLineMedium} />
+        <AppCard>
+          <View style={[styles.skeletonLineLong, { backgroundColor: theme.colors.cardMuted }]} />
+          <View style={[styles.skeletonLineMedium, { backgroundColor: theme.colors.cardMuted }]} />
+          <View style={[styles.skeletonLineLong, { backgroundColor: theme.colors.cardMuted }]} />
+          <View style={[styles.skeletonLineLong, { backgroundColor: theme.colors.cardMuted }]} />
+          <View style={[styles.skeletonLineMedium, { backgroundColor: theme.colors.cardMuted }]} />
           <View style={styles.loadingRow}>
             <ActivityIndicator />
-            <Text style={styles.loadingText}>Loading parcel details...</Text>
+            <Text style={[styles.loadingText, { color: theme.colors.textSubtle }]}>
+              Loading parcel details...
+            </Text>
           </View>
-        </View>
+        </AppCard>
       ) : null}
-      {!initialLoading && !parcel ? <Text style={styles.empty}>Parcel not found.</Text> : null}
+      {!initialLoading && !parcel ? (
+        <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>Parcel not found.</Text>
+      ) : null}
       {parcel ? (
-        <View style={styles.detailsCard}>
-          <Text style={styles.detailsLine}>Tracking: {parcel.trackingCode}</Text>
-          <Text style={styles.detailsLine}>Booking: {parcel.bookingCode}</Text>
-          <Text style={styles.detailsLine}>
+        <AppCard>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Parcel Overview</Text>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+            Tracking: {parcel.trackingCode}
+          </Text>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+            Booking: {parcel.bookingCode}
+          </Text>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
             Sender: {parcel.senderName ?? '-'} ({parcel.senderPhone ?? '-'})
           </Text>
-          <Text style={styles.detailsLine}>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
             Receiver: {parcel.receiverName ?? '-'} ({parcel.receiverPhone ?? '-'})
           </Text>
-          <Text style={styles.detailsLine}>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
             Charge: {formatCedis(parcel.chargePsw)} | To Be Paid:{' '}
             {formatCedis(parcel.plannedToBePaidPsw)}
           </Text>
-          <Text style={styles.detailsLine}>Pickup Queue: {parcel.pickupQueueCode ?? '-'}</Text>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+            Pickup Queue: {parcel.pickupQueueCode ?? '-'}
+          </Text>
+          <AppStatusChip label={parcel.status} />
           {details?.pickupQueue?.queuedAt ? (
-            <Text style={styles.detailsLine}>
+            <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
               Queued At: {formatDate(details.pickupQueue.queuedAt)}
             </Text>
           ) : null}
           {details?.delivery ? (
-            <Text style={styles.detailsLine}>
+            <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
               Delivery: {details.delivery.status} | {details.delivery.dropoffAddress ?? '-'}
             </Text>
           ) : null}
-          <Text style={styles.editLabel}>Parcel Details</Text>
-          <TextInput
-            style={styles.input}
+
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            Edit Incoming Fields
+          </Text>
+          <AppLabel>Parcel Details</AppLabel>
+          <AppInput
             value={editParcelDetails}
             onChangeText={setEditParcelDetails}
+            placeholder="Parcel details"
           />
-          <Text style={styles.editLabel}>Parcel Content</Text>
-          <TextInput
-            style={styles.input}
+          <AppLabel>Parcel Content</AppLabel>
+          <AppInput
             value={editParcelContent}
             onChangeText={setEditParcelContent}
+            placeholder="Parcel content"
           />
-          <Text style={styles.editLabel}>Receiver Fullname</Text>
-          <TextInput
-            style={styles.input}
+          <AppLabel>Receiver Fullname</AppLabel>
+          <AppInput
             value={editReceiverName}
             onChangeText={setEditReceiverName}
+            placeholder="Receiver fullname"
           />
-          <Text style={styles.editLabel}>Receiver Telephone</Text>
-          <TextInput
-            style={styles.input}
+          <AppLabel>Receiver Telephone</AppLabel>
+          <AppInput
             value={editReceiverPhone}
             onChangeText={setEditReceiverPhone}
+            placeholder="Receiver telephone"
           />
-          <View style={styles.switcher}>
-            <Button
-              title="Save Incoming Edits"
-              onPress={() => void saveIncomingEdits()}
-              disabled={busy}
-            />
-            <Button title="Mark Arrived" onPress={() => void markArrived()} disabled={busy} />
-          </View>
-          <View style={styles.switcher}>
-            <Button title="Back" onPress={() => router.back()} />
-          </View>
+          {!canEdit ? (
+            <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
+              You have view-only access. Editing and arrival confirmation are disabled.
+            </Text>
+          ) : null}
+        </AppCard>
+      ) : null}
+
+      {parcel ? (
+        <View
+          style={[
+            styles.stickyFooter,
+            { borderColor: theme.colors.border, backgroundColor: theme.colors.bgElevated },
+          ]}
+        >
+          <AppButton
+            title="Back To Incoming List"
+            onPress={() => {
+              router.back();
+              void hapticTap();
+            }}
+            variant="secondary"
+          />
+          <AppButton
+            title={saveBusy ? 'Saving...' : 'Save Incoming Edits'}
+            onPress={() => void saveIncomingEdits()}
+            disabled={busy || saveBusy || arriveBusy || !canEdit}
+          />
+          <AppButton
+            title={arriveBusy ? 'Updating...' : 'Confirm Arrived'}
+            onPress={() => void markArrived()}
+            disabled={busy || saveBusy || arriveBusy || !canEdit}
+            variant="secondary"
+          />
         </View>
       ) : null}
     </AppScreen>
@@ -241,48 +326,34 @@ export default function ReceiveProcessParcelScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '700' },
-  switcher: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d0d5dd',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-  },
-  detailsCard: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e4e7ec',
-    borderRadius: 12,
-    padding: 12,
-    gap: 6,
-    marginTop: 6,
-  },
-  detailsLine: { color: '#344054' },
-  editLabel: { fontSize: 12, color: '#475467', marginTop: 2 },
-  empty: { color: '#667085', textAlign: 'center', marginTop: 18 },
+  title: { fontSize: mobileTypography.title, fontWeight: '800' },
+  subtitle: { marginTop: -2, lineHeight: 20, marginBottom: mobileSpacing.xs },
+  sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
+  detailsLine: {},
+  empty: { textAlign: 'center', marginTop: mobileSpacing.lg + 2 },
   loadingRow: {
-    marginTop: 6,
+    marginTop: mobileSpacing.sm - 2,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: mobileSpacing.sm,
   },
   loadingText: {
-    color: '#667085',
     fontSize: 13,
   },
   skeletonLineLong: {
     height: 14,
     borderRadius: 8,
-    backgroundColor: '#eaecf0',
     width: '100%',
   },
   skeletonLineMedium: {
     height: 14,
     borderRadius: 8,
-    backgroundColor: '#eaecf0',
     width: '70%',
+  },
+  stickyFooter: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: mobileSpacing.sm + 2,
+    gap: mobileSpacing.sm,
   },
 });

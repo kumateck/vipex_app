@@ -1,9 +1,13 @@
 import { useState } from 'react';
-import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@/components/screen';
 import { setPassword as setPasswordApi } from '@/lib/api';
+import { useAppearance } from '@/providers/appearance-provider';
+import { AppButton, AppCard, AppInput, AppLabel } from '@/components/ui';
+import { mobileSpacing, mobileTypography } from '@/theme/layout';
 
 export default function SetPasswordScreen() {
+  const { theme } = useAppearance();
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
@@ -26,66 +30,53 @@ export default function SetPasswordScreen() {
 
   return (
     <AppScreen>
-      <Text style={styles.title}>Set Password</Text>
-      <View style={styles.formGroup}>
-        <Text>Email</Text>
-        <TextInput
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          placeholder="you@example.com"
-          placeholderTextColor="#667085"
+      <Text style={[styles.title, { color: theme.colors.text }]}>Set Password</Text>
+      <AppCard>
+        <View style={styles.formGroup}>
+          <AppLabel>Email</AppLabel>
+          <AppInput
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            placeholder="you@example.com"
+          />
+        </View>
+        <View style={styles.formGroup}>
+          <AppLabel>Invitation OTP (6 digits)</AppLabel>
+          <AppInput
+            value={otp}
+            onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
+            keyboardType="number-pad"
+            placeholder="123456"
+            maxLength={6}
+          />
+        </View>
+        <AppInput
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          placeholder="New password"
         />
-      </View>
-      <View style={styles.formGroup}>
-        <Text>Invitation OTP (6 digits)</Text>
-        <TextInput
-          style={styles.input}
-          value={otp}
-          onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
-          keyboardType="number-pad"
-          placeholder="123456"
-          maxLength={6}
-          placeholderTextColor="#667085"
+        <AppInput
+          value={confirm}
+          onChangeText={setConfirm}
+          secureTextEntry
+          placeholder="Confirm new password"
         />
-      </View>
-      <TextInput
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        placeholder="New password"
-        placeholderTextColor="#667085"
-      />
-      <TextInput
-        style={styles.input}
-        value={confirm}
-        onChangeText={setConfirm}
-        secureTextEntry
-        placeholder="Confirm new password"
-        placeholderTextColor="#667085"
-      />
-      {status ? <Text style={styles.success}>{status}</Text> : null}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button title="Set Password" onPress={handleSetPassword} />
+        {status ? (
+          <Text style={[styles.success, { color: theme.colors.success }]}>{status}</Text>
+        ) : null}
+        {error ? <Text style={[styles.error, { color: theme.colors.danger }]}>{error}</Text> : null}
+        <AppButton title="Set Password" onPress={() => void handleSetPassword()} />
+      </AppCard>
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 24, fontWeight: '700' },
-  formGroup: { gap: 6 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d0d5dd',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-    color: '#101828',
-  },
-  success: { color: '#067647' },
-  error: { color: '#b42318' },
+  title: { fontSize: 28, fontWeight: '800' },
+  formGroup: { gap: mobileSpacing.sm - 2 },
+  success: { fontSize: mobileTypography.label, fontWeight: '600' },
+  error: { fontSize: mobileTypography.label, fontWeight: '600' },
 });

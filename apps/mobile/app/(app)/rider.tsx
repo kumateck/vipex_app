@@ -1,10 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@/components/screen';
 import { listRiderParcels, riderGivenToCustomer, riderReturnedToOffice } from '@/lib/api';
 import { notifyError, notifySuccess } from '@/lib/notify';
 import type { RiderDoorstepRecord } from '@/types/parcels';
 import { useAuth } from '@/providers/auth-provider';
+import { useAppearance } from '@/providers/appearance-provider';
+import { canCompleteRiderDeliveryActions, canViewRiderScreen } from '@/lib/permissions';
+import { hapticError, hapticSuccess, hapticTap } from '@/lib/haptics';
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  AppSkeletonCard,
+  AppStatusChip,
+  MobileNoAccess,
+} from '@/components/ui';
+import { mobileSpacing, mobileTypography } from '@/theme/layout';
 
 function isSameCalendarDay(dateLike?: string) {
   if (!dateLike) return false;
@@ -24,18 +36,24 @@ function formatCedisFromPsw(amountPsw?: number) {
 }
 
 export default function RiderScreen() {
+  const { theme } = useAppearance();
   const { session, withAuth } = useAuth();
+  const permissions = session.user?.permissions ?? [];
+  const canView = canViewRiderScreen(permissions);
+  const canCompleteDelivery = canCompleteRiderDeliveryActions(permissions);
   const riderUserId = session.user?.sub;
 
   const [currentRows, setCurrentRows] = useState<RiderDoorstepRecord[]>([]);
   const [historyRows, setHistoryRows] = useState<RiderDoorstepRecord[]>([]);
   const [search, setSearch] = useState('');
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [actionParcelId, setActionParcelId] = useState<string | null>(null);
+  const [actionType, setActionType] = useState<'given' | 'returned' | null>(null);
 
   async function load() {
     if (!riderUserId) return;
-    setLoading(true);
+    setRefreshing(true);
     try {
       const [current, history] = await withAuth(async (token) => {
         return Promise.all([
@@ -50,8 +68,9 @@ export default function RiderScreen() {
         'Load failed',
         err instanceof Error ? err.message : 'Unable to load rider parcels',
       );
+      void hapticError();
     } finally {
-      setLoading(false);
+      setRefreshing(false);
     }
   }
 
@@ -120,6 +139,8 @@ export default function RiderScreen() {
   async function markDelivered(parcelId: string) {
     if (!riderUserId) return;
     try {
+      setActionParcelId(parcelId);
+      setActionType('given');
       await withAuth((token) =>
         riderGivenToCustomer(token, {
           parcelId,
@@ -128,187 +149,285 @@ export default function RiderScreen() {
         }),
       );
       notifySuccess('Parcel marked as handed to customer.');
+      void hapticSuccess();
       await load();
       setSelectedParcelId(parcelId);
     } catch (err) {
       notifyError('Failed', err instanceof Error ? err.message : 'Unable to update parcel');
+      void hapticError();
+    } finally {
+      setActionParcelId(null);
+      setActionType(null);
     }
   }
 
   async function markReturned(parcelId: string) {
     if (!riderUserId) return;
     try {
+      setActionParcelId(parcelId);
+      setActionType('returned');
       await withAuth((token) => riderReturnedToOffice(token, { parcelId, riderUserId }));
       notifySuccess('Parcel marked as returned to office.');
+      void hapticSuccess();
       await load();
       setSelectedParcelId(parcelId);
     } catch (err) {
       notifyError('Failed', err instanceof Error ? err.message : 'Unable to update parcel');
+      void hapticError();
+    } finally {
+      setActionParcelId(null);
+      setActionType(null);
     }
   }
 
+  if (!canView) {
+    return (
+      <AppScreen scrollable={false}>
+        <MobileNoAccess message="You do not have permission to access rider operations." />
+      </AppScreen>
+    );
+  }
+
   return (
-    <AppScreen>
-      <Text style={styles.title}>Rider Operations</Text>
-      <View style={styles.switcher}>
-        <Button title={loading ? 'Loading...' : 'Refresh'} onPress={() => void load()} />
-      </View>
+    <AppScreen refreshing={refreshing} onRefresh={() => void load()}>
+      <Text style={[styles.title, { color: theme.colors.text }]}>Rider Operations</Text>
+      <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
+        Track today’s delivery performance and complete parcel actions quickly.
+      </Text>
+      <AppButton
+        title={refreshing ? 'Refreshing...' : 'Refresh Dashboard'}
+        onPress={() => void load()}
+        variant="secondary"
+        disabled={refreshing}
+      />
 
       <View style={styles.kpiGrid}>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>Successful Payment (Today)</Text>
-          <Text style={styles.kpiValue}>
+        <View
+          style={[
+            styles.kpiTile,
+            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+          ]}
+        >
+          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
+            Successful Payment (Today)
+          </Text>
+          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
             {formatCedisFromPsw(successfulPaymentReceivedTodayPsw)}
           </Text>
         </View>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>Successful Deliveries (Today)</Text>
-          <Text style={styles.kpiValue}>{successfulDeliveriesToday}</Text>
+        <View
+          style={[
+            styles.kpiTile,
+            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+          ]}
+        >
+          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
+            Successful Deliveries (Today)
+          </Text>
+          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
+            {successfulDeliveriesToday}
+          </Text>
         </View>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>Total Deliveries (Today)</Text>
-          <Text style={styles.kpiValue}>{totalDeliveriesToday}</Text>
+        <View
+          style={[
+            styles.kpiTile,
+            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+          ]}
+        >
+          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
+            Total Deliveries (Today)
+          </Text>
+          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
+            {totalDeliveriesToday}
+          </Text>
         </View>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>Outstanding Deliveries</Text>
-          <Text style={styles.kpiValue}>{outstandingDeliveries}</Text>
+        <View
+          style={[
+            styles.kpiTile,
+            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+          ]}
+        >
+          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
+            Outstanding Deliveries
+          </Text>
+          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
+            {outstandingDeliveries}
+          </Text>
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Parcels Yet To Deliver Today</Text>
-      <FlatList
-        data={pendingTodayRows}
-        keyExtractor={(item) => item.parcelId}
-        contentContainerStyle={{ gap: 10, paddingTop: 8 }}
-        renderItem={({ item }) => (
-          <View
-            style={[styles.card, selectedParcelId === item.parcelId ? styles.cardActive : null]}
-          >
-            <Text style={styles.bold}>{item.trackingCode}</Text>
-            <Text>
-              {item.receiverName ?? '-'} ({item.receiverPhone ?? '-'})
+      <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>
+        Parcels Yet To Deliver Today
+      </Text>
+      {refreshing ? (
+        <View style={styles.listWrap}>
+          <AppSkeletonCard lines={4} />
+          <AppSkeletonCard lines={4} />
+        </View>
+      ) : (
+        <FlatList
+          data={pendingTodayRows}
+          keyExtractor={(item) => item.parcelId}
+          contentContainerStyle={{ gap: 10, paddingTop: 8 }}
+          renderItem={({ item }) => (
+            <AppCard>
+              <Text style={[styles.bold, { color: theme.colors.text }]}>{item.trackingCode}</Text>
+              <Text style={{ color: theme.colors.textMuted }}>
+                {item.receiverName ?? '-'} ({item.receiverPhone ?? '-'})
+              </Text>
+              <AppStatusChip label={item.deliveryStatus} />
+              <Text style={{ color: theme.colors.textSubtle }}>
+                Address: {item.dropoffAddress ?? '-'}
+              </Text>
+              <AppButton
+                title="Open Parcel"
+                onPress={() => {
+                  setSelectedParcelId(item.parcelId);
+                  void hapticTap();
+                }}
+                variant="secondary"
+              />
+            </AppCard>
+          )}
+          ListEmptyComponent={
+            <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
+              No pending deliveries for today.
             </Text>
-            <Text>Status: {item.deliveryStatus}</Text>
-            <Text>Address: {item.dropoffAddress ?? '-'}</Text>
-            <Button title="View Details" onPress={() => setSelectedParcelId(item.parcelId)} />
-          </View>
-        )}
-        ListEmptyComponent={<Text style={styles.empty}>No pending deliveries for today.</Text>}
-      />
+          }
+        />
+      )}
 
-      <Text style={styles.sectionTitle}>Search Parcel (View + Process)</Text>
-      <TextInput
-        style={styles.input}
+      <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>Find Any Parcel</Text>
+      <AppInput
         value={search}
         onChangeText={setSearch}
         placeholder="Tracking / Booking / Receiver / Phone"
       />
-      <FlatList
-        data={filteredRows.slice(0, 20)}
-        keyExtractor={(item) => `${item.parcelId}-search`}
-        contentContainerStyle={{ gap: 10, paddingTop: 8 }}
-        renderItem={({ item }) => (
-          <View
-            style={[styles.card, selectedParcelId === item.parcelId ? styles.cardActive : null]}
-          >
-            <Text style={styles.bold}>{item.trackingCode}</Text>
-            <Text>{item.bookingCode}</Text>
-            <Text>
-              {item.receiverName ?? '-'} ({item.receiverPhone ?? '-'})
+      {refreshing ? (
+        <View style={styles.listWrap}>
+          <AppSkeletonCard lines={4} />
+          <AppSkeletonCard lines={4} />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredRows.slice(0, 20)}
+          keyExtractor={(item) => `${item.parcelId}-search`}
+          contentContainerStyle={{ gap: 10, paddingTop: 8 }}
+          renderItem={({ item }) => (
+            <AppCard>
+              <Text style={[styles.bold, { color: theme.colors.text }]}>{item.trackingCode}</Text>
+              <Text style={{ color: theme.colors.textMuted }}>{item.bookingCode}</Text>
+              <Text style={{ color: theme.colors.textMuted }}>
+                {item.receiverName ?? '-'} ({item.receiverPhone ?? '-'})
+              </Text>
+              <AppStatusChip label={item.deliveryStatus} />
+              <AppButton
+                title="Open Parcel"
+                onPress={() => {
+                  setSelectedParcelId(item.parcelId);
+                  void hapticTap();
+                }}
+                variant="secondary"
+              />
+            </AppCard>
+          )}
+          ListEmptyComponent={
+            <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
+              No parcels match your search.
             </Text>
-            <Text>Status: {item.deliveryStatus}</Text>
-            <Button title="View Details" onPress={() => setSelectedParcelId(item.parcelId)} />
-          </View>
-        )}
-        ListEmptyComponent={<Text style={styles.empty}>No parcels match your search.</Text>}
-      />
+          }
+        />
+      )}
 
       {selectedRow ? (
-        <View style={styles.detailsCard}>
-          <Text style={styles.detailsTitle}>Parcel Details</Text>
-          <Text style={styles.detailsLine}>Tracking: {selectedRow.trackingCode}</Text>
-          <Text style={styles.detailsLine}>Booking: {selectedRow.bookingCode}</Text>
-          <Text style={styles.detailsLine}>Receiver: {selectedRow.receiverName ?? '-'}</Text>
-          <Text style={styles.detailsLine}>Phone: {selectedRow.receiverPhone ?? '-'}</Text>
-          <Text style={styles.detailsLine}>Address: {selectedRow.dropoffAddress ?? '-'}</Text>
-          <Text style={styles.detailsLine}>Status: {selectedRow.deliveryStatus}</Text>
-          <Text style={styles.detailsLine}>
+        <AppCard>
+          <Text style={[styles.detailsTitle, { color: theme.colors.text }]}>Parcel Details</Text>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+            Tracking: {selectedRow.trackingCode}
+          </Text>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+            Booking: {selectedRow.bookingCode}
+          </Text>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+            Receiver: {selectedRow.receiverName ?? '-'}
+          </Text>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+            Phone: {selectedRow.receiverPhone ?? '-'}
+          </Text>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+            Address: {selectedRow.dropoffAddress ?? '-'}
+          </Text>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+            Status: {selectedRow.deliveryStatus}
+          </Text>
+          <AppStatusChip label={selectedRow.deliveryStatus} />
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
             Amount Paid: {formatCedisFromPsw(selectedRow.amountPaidPsw)}
           </Text>
-          <Text style={styles.detailsLine}>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
             Delivery Fee: {formatCedisFromPsw(selectedRow.deliveryFeePsw)}
           </Text>
-          <Text style={styles.detailsLine}>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
             To Be Paid: {formatCedisFromPsw(selectedRow.plannedToBePaidPsw)}
           </Text>
-          <Text style={styles.detailsLine}>Details: {selectedRow.parcelDetails}</Text>
+          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+            Details: {selectedRow.parcelDetails}
+          </Text>
 
           {currentParcelIdSet.has(selectedRow.parcelId) ? (
-            <View style={styles.switcher}>
-              <Button title="Given" onPress={() => void markDelivered(selectedRow.parcelId)} />
-              <Button title="Returned" onPress={() => void markReturned(selectedRow.parcelId)} />
+            <View style={styles.buttonRow}>
+              <AppButton
+                title={
+                  actionParcelId === selectedRow.parcelId && actionType === 'returned'
+                    ? 'Returning To Office...'
+                    : 'Mark Returned To Office'
+                }
+                onPress={() => void markReturned(selectedRow.parcelId)}
+                variant="secondary"
+                disabled={actionParcelId === selectedRow.parcelId || !canCompleteDelivery}
+              />
+              <AppButton
+                title={
+                  actionParcelId === selectedRow.parcelId && actionType === 'given'
+                    ? 'Marking Given...'
+                    : 'Mark Given To Customer'
+                }
+                onPress={() => void markDelivered(selectedRow.parcelId)}
+                disabled={actionParcelId === selectedRow.parcelId || !canCompleteDelivery}
+              />
             </View>
           ) : (
-            <Text style={styles.empty}>
+            <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
               This parcel is not currently outstanding for rider action.
             </Text>
           )}
-        </View>
+          {!canCompleteDelivery ? (
+            <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
+              You do not have permission to complete rider delivery actions.
+            </Text>
+          ) : null}
+        </AppCard>
       ) : null}
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '700' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', marginTop: 8 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d0d5dd',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
+  title: { fontSize: mobileTypography.title, fontWeight: '800' },
+  subtitle: { marginTop: -2, marginBottom: mobileSpacing.xs, lineHeight: 20 },
+  sectionTitle: {
+    fontSize: mobileTypography.sectionTitle,
+    fontWeight: '700',
+    marginTop: mobileSpacing.sm,
   },
-  switcher: { flexDirection: 'row', gap: 8 },
-  kpiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  kpiCard: {
-    width: '48%',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e4e7ec',
-    borderRadius: 12,
-    padding: 10,
-  },
-  kpiLabel: { fontSize: 12, color: '#475467' },
-  kpiValue: { fontSize: 18, fontWeight: '700', marginTop: 2 },
-  card: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e4e7ec',
-    borderRadius: 12,
-    padding: 12,
-    gap: 4,
-  },
-  cardActive: {
-    borderColor: '#175cd3',
-    borderWidth: 1.5,
-  },
-  detailsCard: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e4e7ec',
-    borderRadius: 12,
-    padding: 12,
-    gap: 6,
-    marginTop: 6,
-  },
-  detailsTitle: { fontSize: 16, fontWeight: '700' },
-  detailsLine: { color: '#344054' },
+  kpiGrid: { gap: mobileSpacing.sm, flexDirection: 'row', flexWrap: 'wrap' },
+  kpiTile: { width: '48%', borderWidth: 1, borderRadius: 16, padding: mobileSpacing.md },
+  kpiLabel: { fontSize: mobileTypography.caption },
+  kpiValue: { fontSize: 20, fontWeight: '800', marginTop: 2 },
+  detailsTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
+  detailsLine: {},
   bold: { fontWeight: '700' },
-  empty: { color: '#667085', textAlign: 'center', marginTop: 18 },
+  empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
+  buttonRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
+  listWrap: { gap: mobileSpacing.sm + 2, paddingTop: mobileSpacing.sm },
 });
