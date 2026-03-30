@@ -1,6 +1,6 @@
 {
   "name": "bun-react-template",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -146,7 +146,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
-      "bunx --bun eslint --fix",
+      "bunx --bun eslint --fix --no-warn-ignored",
       "bunx --bun prettier --write"
     ],
     "*.{json,md,css,scss,html,yml,yaml}": [
