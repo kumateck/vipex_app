@@ -649,8 +649,10 @@ export async function listEmployeeMasterReportRowsRepo(input: {
       departmentName: departments.name,
       jobTitleId: employees.jobTitleId,
       jobTitleName: jobTitles.name,
-      managerEmployeeId: employees.managerEmployeeId,
-      managerName: manager.displayName,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
+      supervisorName: manager.displayName,
       hasUserAccount: employees.hasUserAccount,
       paymentMethod: sql<string | null>`NULL`,
       bankName: sql<string | null>`NULL`,
@@ -662,7 +664,10 @@ export async function listEmployeeMasterReportRowsRepo(input: {
     .leftJoin(locations, eq(locations.id, employees.locationId))
     .leftJoin(departments, eq(departments.id, employees.departmentId))
     .leftJoin(jobTitles, eq(jobTitles.id, employees.jobTitleId))
-    .leftJoin(manager, eq(manager.id, employees.managerEmployeeId))
+    .leftJoin(
+      manager,
+      sql`${manager.id} = coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
+    )
     .where(and(...where))
     .orderBy(asc(employees.displayName), asc(employees.id));
 }
@@ -720,7 +725,9 @@ export async function listLeaveRequestReportRowsRepo(input: {
       employeeId: leaveRequests.employeeId,
       employeeNumber: employees.employeeNumber,
       employeeName: employees.displayName,
-      managerEmployeeId: employees.managerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
       leaveTypeId: leaveRequests.leaveTypeId,
       leaveTypeName: leaveTypes.name,
       leaveTypeIsPaid: leaveTypes.isPaid,

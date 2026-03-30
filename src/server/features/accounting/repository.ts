@@ -5,6 +5,7 @@ import {
   chartOfAccounts,
   cashierSessions,
   companies,
+  companyModules,
   dailyCashConfirmations,
   branches,
   companyBankAccounts,
@@ -285,8 +286,13 @@ export async function getCompanyAccountingSettingsRepo(
     .select({
       id: companies.id,
       useAccounting: companies.useAccounting,
+      moduleAccountingEnabled: companyModules.isEnabled,
     })
     .from(companies)
+    .leftJoin(
+      companyModules,
+      and(eq(companyModules.companyId, companies.id), eq(companyModules.moduleCode, 'accounting')),
+    )
     .where(eq(companies.id, companyId))
     .limit(1);
 

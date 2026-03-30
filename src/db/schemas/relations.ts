@@ -181,6 +181,7 @@ export const departmentsRelations = relations(departments, ({ one, many }) => ({
 
 export const jobTitlesRelations = relations(jobTitles, ({ one, many }) => ({
   company: one(companies, { fields: [jobTitles.companyId], references: [companies.id] }),
+  department: one(departments, { fields: [jobTitles.departmentId], references: [departments.id] }),
   creator: one(users, { fields: [jobTitles.createdBy], references: [users.id] }),
   employees: many(employees),
   assignments: many(employeeJobAssignments),
@@ -192,6 +193,11 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
   location: one(locations, { fields: [employees.locationId], references: [locations.id] }),
   department: one(departments, { fields: [employees.departmentId], references: [departments.id] }),
   jobTitle: one(jobTitles, { fields: [employees.jobTitleId], references: [jobTitles.id] }),
+  reportingOfficerTitle: one(jobTitles, {
+    fields: [employees.reportingOfficerTitleId],
+    references: [jobTitles.id],
+  }),
+  officer: one(employees, { fields: [employees.officerEmployeeId], references: [employees.id] }),
   manager: one(employees, { fields: [employees.managerEmployeeId], references: [employees.id] }),
   creator: one(users, { fields: [employees.createdBy], references: [users.id] }),
   userAccounts: many(users),

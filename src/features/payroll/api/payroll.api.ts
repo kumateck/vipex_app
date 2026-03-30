@@ -95,7 +95,7 @@ export interface PayrollOvertimeEntry {
   companyId: string;
   payrollPeriodId: string;
   employeeId: string;
-  managerEmployeeId?: string | null;
+  supervisorEmployeeId?: string | null;
   employeeNumber?: string | null;
   employeeName?: string | null;
   overtimeMinutes: number;
@@ -115,7 +115,7 @@ export interface PayrollManualAdjustment {
   companyId: string;
   payrollPeriodId: string;
   employeeId: string;
-  managerEmployeeId?: string | null;
+  supervisorEmployeeId?: string | null;
   employeeNumber?: string | null;
   employeeName?: string | null;
   itemType: number;

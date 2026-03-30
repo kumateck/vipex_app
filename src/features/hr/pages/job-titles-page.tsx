@@ -3,6 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -10,12 +17,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useCreateJobTitleMutation, useListJobTitlesQuery } from '../api/hr.api';
+import {
+  useCreateJobTitleMutation,
+  useListDepartmentOptionsQuery,
+  useListJobTitlesQuery,
+} from '../api/hr.api';
 
 export function JobTitlesPage() {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
   const { data, isLoading } = useListJobTitlesQuery();
+  const { data: departmentOptions = [] } = useListDepartmentOptionsQuery();
   const [createJobTitle, { isLoading: isCreating }] = useCreateJobTitleMutation();
 
   const rows = data?.data ?? [];
@@ -27,7 +40,19 @@ export function JobTitlesPage() {
           <CardTitle>Job Titles</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
+          <div className="grid gap-2 md:grid-cols-4">
+            <Select value={departmentId} onValueChange={setDepartmentId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select department" />
+              </SelectTrigger>
+              <SelectContent>
+                {departmentOptions.map((department) => (
+                  <SelectItem key={department.id} value={department.id}>
+                    {department.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input
               placeholder="Job title code"
               value={code}
@@ -39,9 +64,14 @@ export function JobTitlesPage() {
               onChange={(e) => setName(e.target.value)}
             />
             <Button
-              disabled={!name.trim() || isCreating}
+              disabled={!name.trim() || !departmentId || isCreating}
               onClick={async () => {
-                await createJobTitle({ code: code || null, name: name.trim() }).unwrap();
+                await createJobTitle({
+                  departmentId,
+                  code: code || null,
+                  name: name.trim(),
+                }).unwrap();
+                setDepartmentId('');
                 setCode('');
                 setName('');
               }}
@@ -52,6 +82,7 @@ export function JobTitlesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Department</TableHead>
                 <TableHead>Code</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Status</TableHead>
@@ -60,11 +91,12 @@ export function JobTitlesPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={3}>Loading job titles...</TableCell>
+                  <TableCell colSpan={4}>Loading job titles...</TableCell>
                 </TableRow>
               ) : rows.length ? (
                 rows.map((row) => (
                   <TableRow key={row.id}>
+                    <TableCell>{row.departmentName ?? '-'}</TableCell>
                     <TableCell>{row.code ?? '-'}</TableCell>
                     <TableCell>{row.name}</TableCell>
                     <TableCell>{row.isActive ? 'Active' : 'Inactive'}</TableCell>
@@ -72,7 +104,7 @@ export function JobTitlesPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={3}>No job titles found.</TableCell>
+                  <TableCell colSpan={4}>No job titles found.</TableCell>
                 </TableRow>
               )}
             </TableBody>

@@ -11,8 +11,14 @@ const COMPANY_CODE = 'VIPEX';
 const COMPANY_TYPE = 'COURIER';
 const COMPANY_TIN = 'GHA-VX-001234';
 
-const BRANCH_NAME = 'Head Office';
-const BRANCH_TYPE = BranchType.HEADOFFICE;
+const HEAD_OFFICE_BRANCH_NAME = 'Head Office';
+const BRANCH_SEEDS = [
+  { name: 'Head Office', type: BranchType.HEADOFFICE },
+  { name: 'Kumasi', type: BranchType.AGENCY },
+  { name: 'Accra', type: BranchType.AGENCY },
+  { name: 'Sunyani', type: BranchType.AGENCY },
+  { name: 'Tamale', type: BranchType.AGENCY },
+] as const;
 
 const ROLE_NAME = 'System Admin';
 
@@ -31,6 +37,47 @@ const MODULES = [
   ['hr', 'HR', false],
   ['payroll', 'Payroll', false],
 ] as const;
+
+async function ensureBranches(companyId: string, createdBy: string) {
+  let headOfficeBranchId: string | null = null;
+  for (const branchSeed of BRANCH_SEEDS) {
+    const [existingBranch] = await db
+      .select({ id: branches.id })
+      .from(branches)
+      .where(
+        and(
+          eq(branches.companyId, companyId),
+          sql`lower(${branches.name}) = lower(${branchSeed.name})`,
+        ),
+      )
+      .limit(1);
+
+    if (existingBranch) {
+      if (branchSeed.name === HEAD_OFFICE_BRANCH_NAME) headOfficeBranchId = existingBranch.id;
+      continue;
+    }
+
+    const newBranchId = createId();
+    await db.insert(branches).values({
+      id: newBranchId,
+      name: branchSeed.name,
+      type: branchSeed.type,
+      companyId,
+      telephone: '+233302000000',
+      address: '1 Vipex Ave, Accra, Ghana',
+      email: branchSeed.name === HEAD_OFFICE_BRANCH_NAME ? 'headoffice@vipex.local' : null,
+      isDeleted: false,
+      createdBy,
+    });
+
+    if (branchSeed.name === HEAD_OFFICE_BRANCH_NAME) headOfficeBranchId = newBranchId;
+  }
+
+  if (!headOfficeBranchId) {
+    throw new Error(`Required branch '${HEAD_OFFICE_BRANCH_NAME}' not found after branch seeding.`);
+  }
+  return { headOfficeBranchId };
+}
 
 async function main() {
   const [existingUser] = await db.select({ id: users.id }).from(users).limit(1);
@@ -65,31 +112,7 @@ async function main() {
     });
   }
 
-  let branchId: string;
-  const [existingBranch] = await db
-    .select({ id: branches.id })
-    .from(branches)
-    .where(
-      and(eq(branches.companyId, companyId), sql`lower(${branches.name}) = lower(${BRANCH_NAME})`),
-    )
-    .limit(1);
-
-  if (existingBranch) {
-    branchId = existingBranch.id;
-  } else {
-    branchId = createId();
-    await db.insert(branches).values({
-      id: branchId,
-      name: BRANCH_NAME,
-      type: BRANCH_TYPE,
-      companyId,
-      telephone: '+233302000000',
-      address: '1 Vipex Ave, Accra, Ghana',
-      email: 'headoffice@vipex.local',
-      isDeleted: false,
-      createdBy: bootstrapActorId,
-    });
-  }
+  const { headOfficeBranchId: branchId } = await ensureBranches(companyId, bootstrapActorId);
 
   let roleId: string;
   const [existingRole] = await db

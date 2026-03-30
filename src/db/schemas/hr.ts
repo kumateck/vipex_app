@@ -57,6 +57,7 @@ export const jobTitles = pgTable(
     companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
+    departmentId: varchar('department_id', { length: 25 }).references(() => departments.id),
     code: varchar('code', { length: 50 }),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
@@ -120,6 +121,10 @@ export const employees = pgTable(
     locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
     departmentId: varchar('department_id', { length: 25 }).references(() => departments.id),
     jobTitleId: varchar('job_title_id', { length: 25 }).references(() => jobTitles.id),
+    reportingOfficerTitleId: varchar('reporting_officer_title_id', { length: 25 }).references(
+      () => jobTitles.id,
+    ),
+    officerEmployeeId: varchar('officer_employee_id', { length: 25 }),
     managerEmployeeId: varchar('manager_employee_id', { length: 25 }),
     hasUserAccount: boolean('has_user_account').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),

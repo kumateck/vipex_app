@@ -253,7 +253,7 @@ export function PayrollInputsPage() {
                           <TableCell>
                             {approvalStatusLabel(
                               entry.approvalStatus,
-                              Boolean(entry.managerEmployeeId),
+                              Boolean(entry.supervisorEmployeeId),
                             )}
                           </TableCell>
                           <TableCell>{entry.notes ?? '-'}</TableCell>
@@ -264,7 +264,7 @@ export function PayrollInputsPage() {
                                 size="sm"
                                 disabled={
                                   entry.approvalStatus !== ApprovalStatus.PENDING ||
-                                  entry.managerEmployeeId !== currentEmployeeId ||
+                                  entry.supervisorEmployeeId !== currentEmployeeId ||
                                   !permissions.has('CanApproveManagedPayrollInputs') ||
                                   isApprovingOvertime
                                 }
@@ -282,7 +282,7 @@ export function PayrollInputsPage() {
                                 size="sm"
                                 disabled={
                                   entry.approvalStatus !== ApprovalStatus.PENDING ||
-                                  entry.managerEmployeeId !== currentEmployeeId ||
+                                  entry.supervisorEmployeeId !== currentEmployeeId ||
                                   !permissions.has('CanApproveManagedPayrollInputs') ||
                                   isRejectingOvertime
                                 }
@@ -464,7 +464,7 @@ export function PayrollInputsPage() {
                           <TableCell>
                             {approvalStatusLabel(
                               entry.approvalStatus,
-                              Boolean(entry.managerEmployeeId),
+                              Boolean(entry.supervisorEmployeeId),
                             )}
                           </TableCell>
                           <TableCell>{entry.notes ?? '-'}</TableCell>
@@ -475,7 +475,7 @@ export function PayrollInputsPage() {
                                 size="sm"
                                 disabled={
                                   entry.approvalStatus !== ApprovalStatus.PENDING ||
-                                  entry.managerEmployeeId !== currentEmployeeId ||
+                                  entry.supervisorEmployeeId !== currentEmployeeId ||
                                   !permissions.has('CanApproveManagedPayrollInputs') ||
                                   isApprovingAdjustment
                                 }
@@ -493,7 +493,7 @@ export function PayrollInputsPage() {
                                 size="sm"
                                 disabled={
                                   entry.approvalStatus !== ApprovalStatus.PENDING ||
-                                  entry.managerEmployeeId !== currentEmployeeId ||
+                                  entry.supervisorEmployeeId !== currentEmployeeId ||
                                   !permissions.has('CanApproveManagedPayrollInputs') ||
                                   isRejectingAdjustment
                                 }
