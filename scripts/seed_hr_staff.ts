@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import { createId } from '@paralleldrive/cuid2';
-import { and, asc, eq, ilike, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, ilike, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { branches, companies, departments, employees, jobTitles, users } from '@/db/schemas';
 import { EmploymentStatus, EmploymentType } from '@/db/schemas/enums';
