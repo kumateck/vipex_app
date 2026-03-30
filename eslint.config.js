@@ -12,6 +12,7 @@ export default [
       '**/.turbo/**',
       '**/.vercel/**',
       '**/.next/**',
+      '**/.expo/**',
       '**/coverage/**',
       'bun.lockb',
       'scripts/generate-routes.ts',
