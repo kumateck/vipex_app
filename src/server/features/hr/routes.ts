@@ -189,6 +189,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
     async ({ body, set, user }) => {
       const result = await createJobTitleCtrl({
         companyId: (user as AuthUser).companyId!,
+        departmentId: body.departmentId ?? null,
         code: body.code ?? null,
         name: body.name,
         description: body.description ?? null,
@@ -199,6 +200,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
     },
     {
       body: t.Object({
+        departmentId: t.Optional(t.Union([UUID, t.Null()])),
         code: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
         name: NonEmpty255,
         description: t.Optional(t.Union([t.String(), t.Null()])),
@@ -215,6 +217,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
     '/job-titles/:id',
     async ({ params, body, user }) =>
       updateJobTitleCtrl(params.id, (user as AuthUser).companyId!, {
+        departmentId: body.departmentId,
         code: body.code,
         name: body.name,
         description: body.description,
@@ -223,6 +226,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
     {
       params: t.Object({ id: UUID }),
       body: t.Object({
+        departmentId: t.Optional(t.Union([UUID, t.Null()])),
         code: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
         name: t.Optional(NonEmpty255),
         description: t.Optional(t.Union([t.String(), t.Null()])),
@@ -365,7 +369,9 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         locationId: body.locationId ?? null,
         departmentId: body.departmentId ?? null,
         jobTitleId: body.jobTitleId ?? null,
-        managerEmployeeId: body.managerEmployeeId ?? null,
+        reportingOfficerTitleId: body.reportingOfficerTitleId ?? null,
+        officerEmployeeId: body.officerEmployeeId ?? null,
+        supervisorEmployeeId: body.supervisorEmployeeId ?? null,
         employmentStatus: body.employmentStatus ?? undefined,
         employmentType: body.employmentType ?? undefined,
         hireDate: new Date(body.hireDate),
@@ -392,7 +398,9 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         locationId: t.Optional(t.Union([UUID, t.Null()])),
         departmentId: t.Optional(t.Union([UUID, t.Null()])),
         jobTitleId: t.Optional(t.Union([UUID, t.Null()])),
-        managerEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        reportingOfficerTitleId: t.Optional(t.Union([UUID, t.Null()])),
+        officerEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        supervisorEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
         hireDate: t.String({ format: 'date' }),
         employmentStatus: t.Optional(t.Number()),
         employmentType: t.Optional(t.Number()),
@@ -435,7 +443,9 @@ export const hrRoutes = new Elysia({ name: 'hr' })
           locationId: body.locationId,
           departmentId: body.departmentId,
           jobTitleId: body.jobTitleId,
-          managerEmployeeId: body.managerEmployeeId,
+          reportingOfficerTitleId: body.reportingOfficerTitleId,
+          officerEmployeeId: body.officerEmployeeId,
+          supervisorEmployeeId: body.supervisorEmployeeId,
           employmentStatus: body.employmentStatus,
           employmentType: body.employmentType,
           confirmationDate: body.confirmationDate ? new Date(body.confirmationDate) : undefined,
@@ -463,7 +473,9 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         locationId: t.Optional(t.Union([UUID, t.Null()])),
         departmentId: t.Optional(t.Union([UUID, t.Null()])),
         jobTitleId: t.Optional(t.Union([UUID, t.Null()])),
-        managerEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        reportingOfficerTitleId: t.Optional(t.Union([UUID, t.Null()])),
+        officerEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        supervisorEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
         employmentStatus: t.Optional(t.Number()),
         employmentType: t.Optional(t.Number()),
         confirmationDate: t.Optional(t.Union([t.String({ format: 'date' }), t.Null()])),

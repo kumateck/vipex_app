@@ -1,21 +1,42 @@
 import Constants from 'expo-constants';
-import type { LoginResponse, SessionState, TokenPair } from '@/types/auth';
+import type { LoginResponse, SessionState, TokenPair } from '@mobile/types/auth';
 import type {
   ParcelFullDetails,
   ParcelSearchRow,
   PickupQueueCard,
   RiderDoorstepResponse,
-} from '@/types/parcels';
+} from '@mobile/types/parcels';
 
 const extra = (Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string };
+const manifestExtra = ((
+  Constants as unknown as {
+    manifest2?: { extra?: { expoClient?: { extra?: { apiBaseUrl?: string } } } };
+  }
+).manifest2?.extra?.expoClient?.extra ?? {}) as { apiBaseUrl?: string };
 
 function normalizeBaseUrl(raw?: string): string {
-  const fallback = 'https://test.app.vipexparcel.com';
+  const fallback = 'https://testing.app.vipexparcel.com';
   const base = (raw && raw.trim().length > 0 ? raw : fallback).replace(/\/+$/, '');
   return `${base}/v1`;
 }
 
-const API_BASE_URL = normalizeBaseUrl(extra.apiBaseUrl ?? process.env.EXPO_PUBLIC_API_BASE_URL);
+const API_BASE_URL_CANDIDATES = [
+  extra.apiBaseUrl,
+  manifestExtra.apiBaseUrl,
+  process.env.EXPO_PUBLIC_API_BASE_URL,
+  'https://testing.app.vipexparcel.com',
+]
+  .map((entry) => normalizeBaseUrl(entry))
+  .filter((entry, index, all) => all.indexOf(entry) === index);
+
+let activeApiBaseUrl = API_BASE_URL_CANDIDATES[0] ?? normalizeBaseUrl();
+
+export function getApiDebugInfo() {
+  return {
+    activeApiBaseUrl,
+    candidates: API_BASE_URL_CANDIDATES,
+  };
+}
 
 type RequestOptions = {
   path: string;
@@ -37,22 +58,47 @@ function toQueryString(query?: RequestOptions['query']): string {
 }
 
 async function request<T>(options: RequestOptions): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${options.path}${toQueryString(options.query)}`, {
-    method: options.method ?? 'GET',
-    headers: {
-      'content-type': 'application/json',
-      ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  let lastError: Error | null = null;
+  const attemptedUrls: string[] = [];
 
-  const json = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
+  for (const baseUrl of [
+    activeApiBaseUrl,
+    ...API_BASE_URL_CANDIDATES.filter((u) => u !== activeApiBaseUrl),
+  ]) {
+    const targetUrl = `${baseUrl}${options.path}${toQueryString(options.query)}`;
+    attemptedUrls.push(targetUrl);
+    try {
+      const response = await fetch(targetUrl, {
+        method: options.method ?? 'GET',
+        headers: {
+          'content-type': 'application/json',
+          ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
 
-  if (!response.ok) {
-    throw new Error(json?.error?.message ?? `Request failed (${response.status})`);
+      const json = (await response.json().catch(() => null)) as {
+        error?: { message?: string };
+      } | null;
+
+      if (!response.ok) {
+        throw new Error(
+          json?.error?.message ?? `Request failed (${response.status}) at ${targetUrl}`,
+        );
+      }
+
+      activeApiBaseUrl = baseUrl;
+      return json as T;
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : 'Network request failed';
+      lastError = new Error(`${message} (while calling ${targetUrl})`);
+    }
   }
 
-  return json as T;
+  throw lastError ?? new Error(`Network request failed. Attempted: ${attemptedUrls.join(' | ')}`);
 }
 
 export async function login(email: string, password: string): Promise<SessionState> {

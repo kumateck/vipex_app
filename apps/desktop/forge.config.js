@@ -22,6 +22,14 @@ module.exports = {
   packagerConfig: {
     asar: true,
     icon: logoBasePath,
+    executableName: 'vipex-desktop',
+    win32metadata: {
+      CompanyName: 'Vipex Co. LTD',
+      FileDescription: 'Vipex Desktop',
+      ProductName: 'Vipex Desktop',
+      InternalName: 'vipex-desktop',
+      OriginalFilename: 'vipex-desktop.exe',
+    },
     appBundleId: 'com.vipex.desktop',
     appCategoryType: 'public.app-category.business',
     osxSign: process.env.APPLE_DEVELOPER_KEY

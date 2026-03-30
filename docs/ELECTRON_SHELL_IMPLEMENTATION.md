@@ -138,10 +138,50 @@ Exposed API:
 
 - `window.api.platform()`
 - `window.api.ping()`
+- `window.api.printHtml()`
+- `window.api.printParallel()`
+- `window.api.listPrinters()`
+- `window.api.updates.getStatus()`
+- `window.api.updates.check()`
+- `window.api.updates.download()`
+- `window.api.updates.install()`
+- `window.api.updates.onStatus()`
 
 Typing added in:
 
 - `apps/web/src/vite-env.d.ts`
+
+## Desktop Auto-Update (No Reinstall)
+
+Implemented with `electron-updater` in:
+
+- `apps/desktop/src/main.ts`
+
+Behavior:
+
+- Packaged builds can check, download, and install updates in-place.
+- Startup performs an automatic check shortly after launch.
+- Download completion prompts the user to restart and install.
+- Renderer can manage updates through `window.api.updates.*`.
+
+Status states exposed:
+
+- `idle`
+- `checking`
+- `available`
+- `downloading`
+- `downloaded`
+- `not-available`
+- `error`
+
+Environment:
+
+- `DESKTOP_UPDATE_FEED_URL` (optional generic provider URL)
+
+Notes:
+
+- In development (`electron-forge start`), update actions return a friendly "packaged builds only" response.
+- If `DESKTOP_UPDATE_FEED_URL` is not provided, packaged metadata/publish config can still drive updates.
 
 ## Shared Packages
 

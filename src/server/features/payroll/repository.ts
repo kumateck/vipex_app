@@ -605,7 +605,9 @@ export async function listPayrollOvertimeEntriesRepo(input: PayrollCycleInputPar
       employeeId: payrollOvertimeEntries.employeeId,
       employeeNumber: employees.employeeNumber,
       employeeName: employees.displayName,
-      managerEmployeeId: employees.managerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
       overtimeMinutes: payrollOvertimeEntries.overtimeMinutes,
       ratePerHourPsw: payrollOvertimeEntries.ratePerHourPsw,
       multiplierPct: payrollOvertimeEntries.multiplierPct,
@@ -646,7 +648,9 @@ export async function getPayrollOvertimeEntryRepo(id: string) {
       companyId: payrollOvertimeEntries.companyId,
       payrollPeriodId: payrollOvertimeEntries.payrollPeriodId,
       employeeId: payrollOvertimeEntries.employeeId,
-      managerEmployeeId: employees.managerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
       approvalStatus: payrollOvertimeEntries.approvalStatus,
       approvedBy: payrollOvertimeEntries.approvedBy,
       approvedAt: payrollOvertimeEntries.approvedAt,
@@ -680,7 +684,9 @@ export async function listPayrollManualAdjustmentsRepo(input: PayrollCycleInputP
       employeeId: payrollManualAdjustments.employeeId,
       employeeNumber: employees.employeeNumber,
       employeeName: employees.displayName,
-      managerEmployeeId: employees.managerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
       itemType: payrollManualAdjustments.itemType,
       earningTypeId: payrollManualAdjustments.earningTypeId,
       deductionTypeId: payrollManualAdjustments.deductionTypeId,
@@ -725,7 +731,9 @@ export async function getPayrollManualAdjustmentRepo(id: string) {
       companyId: payrollManualAdjustments.companyId,
       payrollPeriodId: payrollManualAdjustments.payrollPeriodId,
       employeeId: payrollManualAdjustments.employeeId,
-      managerEmployeeId: employees.managerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
       itemType: payrollManualAdjustments.itemType,
       approvalStatus: payrollManualAdjustments.approvalStatus,
       approvedBy: payrollManualAdjustments.approvedBy,

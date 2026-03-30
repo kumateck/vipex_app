@@ -21,6 +21,8 @@ export interface Department {
 export interface JobTitle {
   id: string;
   companyId: string;
+  departmentId?: string | null;
+  departmentName?: string | null;
   code?: string | null;
   name: string;
   description?: string | null;
@@ -54,9 +56,11 @@ export interface Employee {
   departmentName?: string | null;
   jobTitleId?: string | null;
   jobTitleName?: string | null;
+  reportingOfficerTitleId?: string | null;
+  officerEmployeeId?: string | null;
   locationId?: string | null;
   locationName?: string | null;
-  managerEmployeeId?: string | null;
+  supervisorEmployeeId?: string | null;
   alternatePhone?: string | null;
   confirmationDate?: string | null;
   terminationDate?: string | null;
@@ -97,7 +101,7 @@ export interface LeaveRequest {
   companyId: string;
   employeeId: string;
   employeeName?: string | null;
-  managerEmployeeId?: string | null;
+  supervisorEmployeeId?: string | null;
   leaveTypeId: string;
   leaveTypeName?: string | null;
   leaveTypeIsPaid?: boolean;
@@ -185,7 +189,12 @@ export const hrApi = api.injectEndpoints({
     }),
     createJobTitle: builder.mutation<
       { id?: string },
-      { code?: string | null; name: string; description?: string | null }
+      {
+        departmentId?: string | null;
+        code?: string | null;
+        name: string;
+        description?: string | null;
+      }
     >({
       query: (body) => ({
         url: '/hr/job-titles',
@@ -200,6 +209,7 @@ export const hrApi = api.injectEndpoints({
         id: string;
         body: {
           code?: string | null;
+          departmentId?: string | null;
           name?: string;
           description?: string | null;
           isActive?: boolean;
@@ -246,7 +256,9 @@ export const hrApi = api.injectEndpoints({
         locationId?: string | null;
         departmentId?: string | null;
         jobTitleId?: string | null;
-        managerEmployeeId?: string | null;
+        reportingOfficerTitleId?: string | null;
+        officerEmployeeId?: string | null;
+        supervisorEmployeeId?: string | null;
         hireDate: string;
         employmentStatus?: number;
         employmentType?: number;
@@ -285,7 +297,9 @@ export const hrApi = api.injectEndpoints({
           locationId?: string | null;
           departmentId?: string | null;
           jobTitleId?: string | null;
-          managerEmployeeId?: string | null;
+          reportingOfficerTitleId?: string | null;
+          officerEmployeeId?: string | null;
+          supervisorEmployeeId?: string | null;
           employmentStatus?: number;
           employmentType?: number;
           confirmationDate?: string | null;

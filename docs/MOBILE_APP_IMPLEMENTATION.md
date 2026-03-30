@@ -108,6 +108,37 @@ EAS profiles configured in `apps/mobile/eas.json`:
 - preview
 - production
 
+## Mobile Runtime Updates (OTA)
+
+Implemented with Expo Updates so mobile users can receive new releases without reinstalling the app.
+
+Files:
+
+- `apps/mobile/app.json`
+- `apps/mobile/eas.json`
+- `apps/mobile/src/providers/app-update-provider.tsx`
+- `apps/mobile/app/_layout.tsx`
+
+Configuration:
+
+- `runtimeVersion.policy = appVersion`
+- `updates.enabled = true`
+- `updates.checkAutomatically = ON_LOAD`
+- EAS update channels:
+  - `development`
+  - `preview`
+  - `production`
+
+Runtime behavior:
+
+- App checks for updates on launch and when app returns to foreground.
+- Check frequency is throttled to avoid excessive calls.
+- When an update is available, user is prompted to install now.
+- Install flow uses:
+  - `checkForUpdateAsync()`
+  - `fetchUpdateAsync()`
+  - `reloadAsync()`
+
 ## GitHub Android APK Build
 
 Workflow added:

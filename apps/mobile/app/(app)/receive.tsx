@@ -1,22 +1,39 @@
 import { useMemo, useState } from 'react';
-import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { CameraView, type BarcodeScanningResult, useCameraPermissions } from 'expo-camera';
-import { AppScreen } from '@/components/screen';
-import { ParcelStatus } from '@/constants/parcel-status';
-import { searchParcels, updateParcelStatus } from '@/lib/api';
-import { notifyError, notifySuccess } from '@/lib/notify';
-import type { ParcelSearchRow } from '@/types/parcels';
-import { useAuth } from '@/providers/auth-provider';
+import { AppScreen } from '@mobile/components/screen';
+import { ParcelStatus } from '@mobile/constants/parcel-status';
+import { searchParcels, updateParcelStatus } from '@mobile/lib/api';
+import { notifyError, notifySuccess } from '@mobile/lib/notify';
+import type { ParcelSearchRow } from '@mobile/types/parcels';
+import { useAuth } from '@mobile/providers/auth-provider';
+import { useAppearance } from '@mobile/providers/appearance-provider';
+import { canMarkParcelArrived, canViewReceiveScreen } from '@mobile/lib/permissions';
+import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@mobile/lib/haptics';
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  AppSkeletonCard,
+  AppStatusChip,
+  MobileNoAccess,
+} from '@/components/ui/mobile';
+import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 export default function ReceiveScanScreen() {
+  const { theme } = useAppearance();
   const { session, withAuth } = useAuth();
+  const permissions = session.user?.permissions ?? [];
+  const canView = canViewReceiveScreen(permissions);
+  const canMarkArrived = canMarkParcelArrived(permissions);
   const companyId = session.user?.company?.id ?? session.user?.companyId;
   const branchId = session.user?.branch?.id ?? session.user?.branchId;
 
   const [permission, requestPermission] = useCameraPermissions();
   const [lastCode, setLastCode] = useState<string>('');
-  const [busy, setBusy] = useState(false);
+  const [searchBusy, setSearchBusy] = useState(false);
+  const [scanBusy, setScanBusy] = useState(false);
   const [search, setSearch] = useState('');
   const [searchAllCompany, setSearchAllCompany] = useState(false);
   const [rows, setRows] = useState<ParcelSearchRow[]>([]);
@@ -26,9 +43,10 @@ export default function ReceiveScanScreen() {
   async function loadIncomingList() {
     if (!companyId) {
       Alert.alert('Missing context', 'User company is missing.');
+      void hapticWarning();
       return;
     }
-    setBusy(true);
+    setSearchBusy(true);
     try {
       const response = await withAuth((token) =>
         searchParcels(token, {
@@ -41,20 +59,28 @@ export default function ReceiveScanScreen() {
         }),
       );
       setRows(response.data ?? []);
+      void hapticTap();
     } catch (err) {
       notifyError('Search failed', err instanceof Error ? err.message : 'Unable to search parcels');
+      void hapticError();
     } finally {
-      setBusy(false);
+      setSearchBusy(false);
     }
   }
 
   async function receiveByCode(code: string) {
     if (!companyId || !branchId) {
       Alert.alert('Missing context', 'User company or branch is missing.');
+      void hapticWarning();
       return;
     }
-    if (busy) return;
-    setBusy(true);
+    if (scanBusy) return;
+    if (!canMarkArrived) {
+      notifyError('Permission denied', 'You do not have permission to mark parcels arrived.');
+      void hapticWarning();
+      return;
+    }
+    setScanBusy(true);
     setLastCode(code);
 
     try {
@@ -82,14 +108,16 @@ export default function ReceiveScanScreen() {
         updateParcelStatus(token, parcel.id, ParcelStatus.ARRIVED_AT_DESTINATION),
       );
       notifySuccess(`Parcel ${parcel.trackingCode} marked ARRIVED_AT_DESTINATION.`);
+      void hapticSuccess();
       await loadIncomingList();
     } catch (err) {
       notifyError(
         'Receive failed',
         err instanceof Error ? err.message : 'Unable to receive parcel',
       );
+      void hapticError();
     } finally {
-      setBusy(false);
+      setScanBusy(false);
     }
   }
 
@@ -99,71 +127,133 @@ export default function ReceiveScanScreen() {
     await receiveByCode(code);
   }
 
+  if (!canView) {
+    return (
+      <AppScreen scrollable={false}>
+        <MobileNoAccess message="You do not have permission to access scan-to-receive." />
+      </AppScreen>
+    );
+  }
+
   return (
-    <AppScreen>
-      <Text style={styles.title}>Scan To Receive (Incoming In-Transit)</Text>
-      <Text style={styles.meta}>Destination branch: {session.user?.branch?.name ?? '-'}</Text>
+    <AppScreen refreshing={searchBusy} onRefresh={() => void loadIncomingList()}>
+      <Text style={[styles.title, { color: theme.colors.text }]}>Scan To Receive</Text>
+      <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
+        Scan incoming in-transit parcels for {session.user?.branch?.name ?? '-'}.
+      </Text>
 
-      {!permission ? <Text>Checking camera permission...</Text> : null}
-      {permission && !canScan ? (
-        <Button title="Allow camera" onPress={() => void requestPermission()} />
-      ) : null}
+      <View style={styles.kpiRow}>
+        <View
+          style={[
+            styles.kpiTile,
+            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+          ]}
+        >
+          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
+            Incoming Parcels
+          </Text>
+          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>{rows.length}</Text>
+        </View>
+        <View
+          style={[
+            styles.kpiTile,
+            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+          ]}
+        >
+          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
+            Last Scanned Code
+          </Text>
+          <Text style={[styles.kpiLastCode, { color: theme.colors.text }]} numberOfLines={1}>
+            {lastCode || '-'}
+          </Text>
+        </View>
+      </View>
 
-      {canScan ? (
-        <View style={styles.cameraWrap}>
-          <CameraView
-            style={styles.camera}
-            facing="back"
-            onBarcodeScanned={handleBarcode}
-            barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+      <AppCard>
+        {!permission ? (
+          <Text style={{ color: theme.colors.textMuted }}>Checking camera permissions...</Text>
+        ) : null}
+        {permission && !canScan ? (
+          <AppButton title="Enable Camera Access" onPress={() => void requestPermission()} />
+        ) : null}
+
+        {canScan ? (
+          <View style={[styles.cameraWrap, { borderColor: theme.colors.border }]}>
+            <CameraView
+              style={styles.camera}
+              facing="back"
+              onBarcodeScanned={handleBarcode}
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+            />
+          </View>
+        ) : null}
+
+        {scanBusy ? (
+          <Text style={{ color: theme.colors.textSubtle }}>Processing scanned parcel...</Text>
+        ) : null}
+        <Text style={{ color: theme.colors.textSubtle }}>Most recent scan: {lastCode || '-'}</Text>
+        {!canMarkArrived ? (
+          <Text style={{ color: theme.colors.textSubtle }}>
+            You can scan and view parcels, but cannot mark arrival.
+          </Text>
+        ) : null}
+      </AppCard>
+
+      <AppCard>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>
+          Incoming List And Search
+        </Text>
+        <AppInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Tracking / Booking / Sender / Receiver / Phone"
+        />
+        <View style={styles.buttonRow}>
+          <AppButton
+            title={searchAllCompany ? 'Scope: All Branches' : 'Scope: My Branch'}
+            onPress={() => setSearchAllCompany((prev) => !prev)}
+            variant="secondary"
+          />
+          <AppButton
+            title={searchBusy ? 'Searching...' : 'Search Incoming Parcels'}
+            onPress={() => void loadIncomingList()}
+            disabled={searchBusy}
           />
         </View>
-      ) : null}
+      </AppCard>
 
-      <Text>Last scan: {lastCode || '-'}</Text>
-
-      <Text style={styles.sectionTitle}>Incoming List + Super Search</Text>
-      <TextInput
-        style={styles.input}
-        value={search}
-        onChangeText={setSearch}
-        placeholder="Tracking / Booking / Sender / Receiver / Phone"
-      />
-      <View style={styles.switcher}>
-        <Button
-          title={searchAllCompany ? 'Search Scope: All Branches' : 'Search Scope: My Branch'}
-          onPress={() => setSearchAllCompany((prev) => !prev)}
-        />
-      </View>
-      <Button
-        title={busy ? 'Searching...' : 'Search In-Transit Incoming'}
-        onPress={() => void loadIncomingList()}
-        disabled={busy}
-      />
-
-      {rows.length === 0 ? (
-        <Text style={styles.empty}>No incoming parcels yet.</Text>
+      {searchBusy ? (
+        <View style={styles.listWrap}>
+          <AppSkeletonCard lines={4} />
+          <AppSkeletonCard lines={4} />
+        </View>
+      ) : rows.length === 0 ? (
+        <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
+          No incoming in-transit parcels found yet.
+        </Text>
       ) : (
         <View style={styles.listWrap}>
           {rows.map((item) => (
-            <View key={item.id} style={styles.card}>
-              <Text style={styles.bold}>{item.trackingCode}</Text>
-              <Text>{item.bookingCode}</Text>
-              <Text>
+            <AppCard key={item.id}>
+              <Text style={[styles.bold, { color: theme.colors.text }]}>{item.trackingCode}</Text>
+              <Text style={{ color: theme.colors.textMuted }}>{item.bookingCode}</Text>
+              <Text style={{ color: theme.colors.textMuted }}>
                 {item.senderName ?? '-'} ({item.senderPhone ?? '-'})
               </Text>
-              <Text>
+              <Text style={{ color: theme.colors.textMuted }}>
                 {item.receiverName ?? '-'} ({item.receiverPhone ?? '-'})
               </Text>
-              <Text>{item.parcelDetails}</Text>
-              <Text>Status: {item.status}</Text>
-              <View style={styles.switcher}>
-                <Button
-                  title="View Details"
-                  onPress={() => router.push(`/(app)/receive-process/${item.id}`)}
-                />
-              </View>
-            </View>
+              <Text style={{ color: theme.colors.textMuted }}>{item.parcelDetails}</Text>
+              <AppStatusChip label={item.status} />
+              <AppButton
+                title="View Details"
+                onPress={() => {
+                  router.push(`/(app)/receive-process/${item.id}`);
+                  void hapticTap();
+                }}
+                variant="secondary"
+              />
+            </AppCard>
           ))}
         </View>
       )}
@@ -172,35 +262,23 @@ export default function ReceiveScanScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '700' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', marginTop: 8 },
-  meta: { color: '#475467' },
+  title: { fontSize: mobileTypography.title, fontWeight: '800' },
+  subtitle: { marginTop: -2, lineHeight: 20, marginBottom: mobileSpacing.xs },
+  kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },
+  kpiTile: { flex: 1, borderWidth: 1, borderRadius: 16, padding: mobileSpacing.md },
+  kpiLabel: { fontSize: mobileTypography.caption, fontWeight: '600' },
+  kpiValue: { fontSize: mobileTypography.kpi, fontWeight: '800', marginTop: 2 },
+  kpiLastCode: { fontSize: 14, fontWeight: '700', marginTop: 6 },
+  sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
   cameraWrap: {
     height: 280,
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#d0d5dd',
   },
   camera: { flex: 1 },
-  switcher: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  listWrap: { gap: 10, paddingTop: 8 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d0d5dd',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e4e7ec',
-    borderRadius: 12,
-    padding: 12,
-    gap: 4,
-  },
+  buttonRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
+  listWrap: { gap: mobileSpacing.sm + 2, paddingTop: mobileSpacing.sm },
   bold: { fontWeight: '700' },
-  empty: { color: '#667085', textAlign: 'center', marginTop: 18 },
+  empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
 });

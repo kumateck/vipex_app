@@ -1,0 +1,313 @@
+name: Mobile Build (Android Only) (Internal)
+
+on:
+  pull_request:
+    branches:
+      - mobile
+
+permissions:
+  contents: read
+
+jobs:
+  build-android-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+      MINIO_REGION: ${{ secrets.MINIO_REGION }}
+      MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+      MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+      MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
+      MOBILE_MINIO_PREFIX: mobile/android
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Remove non-Bun lockfiles for EAS
+        run: |
+          rm -f package-lock.json pnpm-lock.yaml
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Sync Brand Assets
+        run: bun run assets:sync
+
+      - name: Verify Expo Token
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "EXPO_TOKEN is missing. Add it in GitHub repo secrets."
+            exit 1
+          fi
+
+      - name: Resolve Mobile Version
+        id: mobile_version
+        run: |
+          VERSION=$(node -p "require('./apps/mobile/app.json').expo.version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Validate EAS project id
+        run: |
+          set -euo pipefail
+          PROJECT_ID=$(node -p "require('./apps/mobile/app.json').expo?.extra?.eas?.projectId || ''")
+          if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "REPLACE_WITH_EAS_PROJECT_ID" ]; then
+            echo "apps/mobile/app.json expo.extra.eas.projectId must be set to a real EAS project id."
+            exit 1
+          fi
+
+      - name: Publish OTA Update (Preview Channel)
+        id: ota_publish
+        working-directory: apps/mobile
+        run: |
+          set -euo pipefail
+          bunx eas-cli whoami
+          bunx eas-cli update --channel preview --non-interactive --message "PR #${{ github.event.pull_request.number || github.run_number }} (${GITHUB_SHA::7})"
+
+      - name: Trigger and Wait for EAS Android APK Build
+        id: eas_build
+        working-directory: apps/mobile
+        run: |
+          set -euo pipefail
+          bunx eas-cli whoami
+          bunx eas-cli build --platform android --profile preview --non-interactive --wait --json > eas-build.json
+          cat eas-build.json
+
+          APK_URL=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('eas-build.json','utf8'));const item=Array.isArray(j)?j[0]:j;console.log(item?.artifacts?.buildUrl||'')")
+          BUILD_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('eas-build.json','utf8'));const item=Array.isArray(j)?j[0]:j;console.log(item?.id||'')")
+
+          if [ -z "$APK_URL" ]; then
+            echo "Could not resolve APK URL from EAS output"
+            exit 1
+          fi
+
+          echo "apk_url=$APK_URL" >> "$GITHUB_OUTPUT"
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Download APK
+        run: |
+          mkdir -p artifacts
+          curl -L "${{ steps.eas_build.outputs.apk_url }}" -o artifacts/vipex-mobile-${{ github.run_number }}.apk
+          ls -lah artifacts
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vipex-mobile-android-apk-${{ github.event.pull_request.number || github.run_number }}
+          path: artifacts/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Configure AWS CLI for MinIO
+        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        run: |
+          mkdir -p ~/.aws
+          cat <<EOF > ~/.aws/credentials
+          [default]
+          aws_access_key_id=${MINIO_ACCESS_KEY}
+          aws_secret_access_key=${MINIO_SECRET_KEY}
+          EOF
+          cat <<EOF > ~/.aws/config
+          [default]
+          region=${MINIO_REGION:-us-east-1}
+          output=json
+          EOF
+
+      - name: Mirror APK to MinIO (optional)
+        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        env:
+          VERSION: ${{ steps.mobile_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          PREFIX="${MOBILE_MINIO_PREFIX:-mobile/android}"
+          LATEST_PREFIX="${PREFIX}/latest"
+          VERSION_PREFIX="${PREFIX}/v${VERSION}"
+
+          mapfile -t APK_FILES < <(find artifacts -maxdepth 1 -type f -name "*.apk")
+          if [ "${#APK_FILES[@]}" -eq 0 ]; then
+            echo "No APK files found in artifacts/"
+            exit 1
+          fi
+
+          for file in "${APK_FILES[@]}"; do
+            base=$(basename "${file}")
+            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+              --bucket "${MINIO_BUCKET}" \
+              --key "${LATEST_PREFIX}/${base}" \
+              --body "${file}" >/dev/null
+
+            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+              --bucket "${MINIO_BUCKET}" \
+              --key "${VERSION_PREFIX}/${base}" \
+              --body "${file}" >/dev/null
+          done
+
+      - name: Distribution summary
+        run: |
+          echo "OTA channel published: preview"
+          echo "APK artifact uploaded to GitHub artifacts."
+          if [ -n "${MINIO_ENDPOINT}" ] && [ -n "${MINIO_BUCKET}" ]; then
+            PREFIX="${MOBILE_MINIO_PREFIX:-mobile/android}"
+            echo "MinIO mirror base: ${MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/"
+          fi
+
+  build-ios:
+    if: ${{ false }} # Paused for now; keep config for quick re-enable
+    name: Build iOS Artifact
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+      MINIO_REGION: ${{ secrets.MINIO_REGION }}
+      MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+      MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+      MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
+      MOBILE_MINIO_PREFIX: mobile/ios
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Remove non-Bun lockfiles for EAS
+        run: |
+          rm -f package-lock.json pnpm-lock.yaml
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Sync Brand Assets
+        run: bun run assets:sync
+
+      - name: Verify Expo Token
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "EXPO_TOKEN is missing. Add it in GitHub repo secrets."
+            exit 1
+          fi
+
+      - name: Resolve Mobile Version
+        id: mobile_version
+        run: |
+          VERSION=$(node -p "require('./apps/mobile/app.json').expo.version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Validate EAS project id
+        run: |
+          set -euo pipefail
+          PROJECT_ID=$(node -p "require('./apps/mobile/app.json').expo?.extra?.eas?.projectId || ''")
+          if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "REPLACE_WITH_EAS_PROJECT_ID" ]; then
+            echo "apps/mobile/app.json expo.extra.eas.projectId must be set to a real EAS project id."
+            exit 1
+          fi
+
+      - name: Trigger and Wait for EAS iOS Build
+        id: eas_build
+        working-directory: apps/mobile
+        run: |
+          set -euo pipefail
+          bunx eas-cli whoami
+          bunx eas-cli build --platform ios --profile preview --non-interactive --wait --json > eas-build-ios.json
+          cat eas-build-ios.json
+
+          BUILD_URL=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('eas-build-ios.json','utf8'));const item=Array.isArray(j)?j[0]:j;console.log(item?.artifacts?.buildUrl||'')")
+          BUILD_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('eas-build-ios.json','utf8'));const item=Array.isArray(j)?j[0]:j;console.log(item?.id||'')")
+
+          if [ -z "$BUILD_URL" ]; then
+            echo "Could not resolve iOS build URL from EAS output"
+            exit 1
+          fi
+
+          echo "build_url=$BUILD_URL" >> "$GITHUB_OUTPUT"
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Download iOS Artifact
+        run: |
+          mkdir -p artifacts
+          ARTIFACT_URL="${{ steps.eas_build.outputs.build_url }}"
+          FILE_NAME=$(basename "${ARTIFACT_URL%%\?*}")
+          if [ -z "${FILE_NAME}" ] || [ "${FILE_NAME}" = "/" ] || [ "${FILE_NAME}" = "." ]; then
+            FILE_NAME="vipex-mobile-ios-${{ github.run_number }}.bin"
+          fi
+          curl -L "${ARTIFACT_URL}" -o "artifacts/${FILE_NAME}"
+          ls -lah artifacts
+
+      - name: Upload iOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vipex-mobile-ios-${{ github.event.pull_request.number || github.run_number }}
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Configure AWS CLI for MinIO
+        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        run: |
+          mkdir -p ~/.aws
+          cat <<EOF > ~/.aws/credentials
+          [default]
+          aws_access_key_id=${MINIO_ACCESS_KEY}
+          aws_secret_access_key=${MINIO_SECRET_KEY}
+          EOF
+          cat <<EOF > ~/.aws/config
+          [default]
+          region=${MINIO_REGION:-us-east-1}
+          output=json
+          EOF
+
+      - name: Mirror iOS artifact to MinIO (optional)
+        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        env:
+          VERSION: ${{ steps.mobile_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          PREFIX="${MOBILE_MINIO_PREFIX:-mobile/ios}"
+          LATEST_PREFIX="${PREFIX}/latest"
+          VERSION_PREFIX="${PREFIX}/v${VERSION}"
+
+          mapfile -t FILES < <(find artifacts -maxdepth 1 -type f)
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "No iOS artifacts found in artifacts/"
+            exit 1
+          fi
+
+          for file in "${FILES[@]}"; do
+            base=$(basename "${file}")
+            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+              --bucket "${MINIO_BUCKET}" \
+              --key "${LATEST_PREFIX}/${base}" \
+              --body "${file}" >/dev/null
+
+            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+              --bucket "${MINIO_BUCKET}" \
+              --key "${VERSION_PREFIX}/${base}" \
+              --body "${file}" >/dev/null
+          done
+
+      - name: Distribution summary
+        run: |
+          echo "iOS artifact uploaded to GitHub artifacts."
+          if [ -n "${MINIO_ENDPOINT}" ] && [ -n "${MINIO_BUCKET}" ]; then
+            PREFIX="${MOBILE_MINIO_PREFIX:-mobile/ios}"
+            echo "MinIO mirror base: ${MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/"
+          fi

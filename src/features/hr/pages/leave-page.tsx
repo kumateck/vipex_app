@@ -267,7 +267,7 @@ export function LeavePage() {
                         <TableCell>
                           {managerApprovalLabel(
                             row.managerApprovalStatus,
-                            Boolean(row.managerEmployeeId),
+                            Boolean(row.supervisorEmployeeId),
                           )}
                         </TableCell>
                         <TableCell>{leaveStatusLabel(row.status)}</TableCell>
@@ -286,7 +286,7 @@ export function LeavePage() {
                               disabled={
                                 row.status !== 0 ||
                                 row.managerApprovalStatus !== 0 ||
-                                row.managerEmployeeId !== currentEmployeeId ||
+                                row.supervisorEmployeeId !== currentEmployeeId ||
                                 !permissions.has('CanApproveManagedLeaveRequests') ||
                                 isManagerApprovingLeaveRequest
                               }
@@ -302,7 +302,7 @@ export function LeavePage() {
                               disabled={
                                 row.status !== 0 ||
                                 row.managerApprovalStatus !== 0 ||
-                                row.managerEmployeeId !== currentEmployeeId ||
+                                row.supervisorEmployeeId !== currentEmployeeId ||
                                 !permissions.has('CanApproveManagedLeaveRequests') ||
                                 isManagerRejectingLeaveRequest
                               }

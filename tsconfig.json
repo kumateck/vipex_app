@@ -6,30 +6,27 @@
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "allowJs": true,
-
     "types": ["bun"],
-
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
-
     "strict": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*", "./apps/mobile/src/*"],
+      "@mobile/*": ["./apps/mobile/src/*"],
       "@ui/*": ["./packages/ui/src/*"],
       "@lib/*": ["./packages/lib/src/*"]
     },
-
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules"],
+  "extends": "expo/tsconfig.base"
 }
