@@ -14,6 +14,7 @@ export const UPLOAD_MODEL_TYPES = [
   'customer-card-back-image',
   'employee-profile-image',
   'delivery-handover-signature',
+  'it-support-ticket',
 ] as const;
 
 function normalizeModelSegment(value: string) {

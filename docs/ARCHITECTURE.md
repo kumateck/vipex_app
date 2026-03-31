@@ -5,6 +5,14 @@
 The backend is a modular monolith built on Bun + Elysia + Drizzle + PostgreSQL.
 Modules are isolated by feature folders and share infrastructure plugins for auth, error handling, logging, rate limiting, and observability.
 
+Current major module families include:
+
+- operations (shipments, deliveries, queues)
+- finance (payments, accounting, procurement, fleet transport)
+- people (HR, payroll, RBAC)
+- platform (company modules, uploads, audit)
+- communication (internal communication + customer service communication)
+
 ## Runtime Components
 
 ```mermaid
@@ -14,6 +22,7 @@ flowchart LR
   API --> Shipments["Shipments/Consignments/Deliveries"]
   API --> Finance["Payments + Accounting"]
   API --> Ops["Shifts + Inventory + Reporting"]
+  API --> Comm["Communication + Customer Service"]
   API --> Geo["Geolocation (PostGIS)"]
   API --> Audit["Audit Logging"]
   API --> Rate["Rate Limiter"]
@@ -21,6 +30,7 @@ flowchart LR
   Shipments --> PG["PostgreSQL"]
   Finance --> PG
   Ops --> PG
+  Comm --> PG
   Geo --> PG
   Audit --> PG
 ```
@@ -81,6 +91,18 @@ HR and Payroll are implemented as company-scoped modules layered onto the modula
 - Payroll depends on HR and uses separate transactional tables for periods, runs, run items, and payslips.
 
 Reference: `docs/HR_PAYROLL_FOUNDATION.md`
+
+## Procurement
+
+Procurement is implemented as a company-scoped module with separated operational routes for list, create, and approvals.
+
+- Module enablement is controlled through `company_modules`.
+- Procurement endpoints require both:
+  - module enabled (`procurement`)
+  - explicit role permission per action
+- Procurement v1 includes supplier master and purchase request approval flow.
+
+Reference: `docs/PROCUREMENT_MODULE.md`
 
 ## Reporting
 

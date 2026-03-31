@@ -35,6 +35,11 @@ export function inferReadPermissionByPath(pathname?: string): PermissionKey | un
   if (pathname.startsWith('/inventory/stock-adjustments')) return 'CanListStockAdjustments';
   if (pathname.startsWith('/inventory/stock-transfers')) return 'CanListStockTransfers';
   if (pathname.startsWith('/inventory')) return 'CanListProducts';
+  if (pathname.startsWith('/procurement')) return 'CanReadProcurement';
+  if (pathname.startsWith('/fleet-transport')) return 'CanReadFleetTransport';
+  if (pathname.startsWith('/customer-wallet-credit')) return 'CanReadCustomerWalletCredit';
+  if (pathname.startsWith('/reconciliation')) return 'CanReadReconciliation';
+  if (pathname.startsWith('/it-support')) return 'CanReadItSupportTickets';
 
   if (pathname.startsWith('/reports/financial/')) return 'CanReadAccounting';
   if (pathname.startsWith('/reports/branch/')) return 'CanGetBranchProfitabilityReport';
@@ -74,6 +79,7 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
   if (pathname === '/settings/modules') return 'CanManageCompanyModules';
   if (pathname === '/settings/change-password') return 'CanChangePassword';
   if (pathname === '/accounting/setup') return undefined;
+  if (pathname.startsWith('/it-support/tickets')) return 'CanReadItSupportTickets';
 
   if (pathname === '/inventory/categories/new') return 'CanCreateProductCategory';
   if (pathname.startsWith('/inventory/categories/edit/')) return 'CanUpdateProductCategory';

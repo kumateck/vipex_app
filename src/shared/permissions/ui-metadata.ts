@@ -46,6 +46,7 @@ const GROUP_DEFAULTS: Record<string, GroupDefault> = {
   Platform: { mainTab: 'IT', module: 'Platform Control' },
   HR: { mainTab: 'HR', module: 'Human Resource' },
   Payroll: { mainTab: 'HR', module: 'Payroll' },
+  'IT Support': { mainTab: 'IT', module: 'IT Support' },
   Geolocation: { mainTab: 'Operations', module: 'Call Center' },
   Auth: { mainTab: 'IT', module: 'Authentication' },
 };

@@ -46,6 +46,20 @@ const MODULES = [
   ['shifts', 'Shifts', true],
   ['hr', 'HR', false],
   ['payroll', 'Payroll', false],
+  ['procurement', 'Procurement & Vendor Management', false],
+  ['fleet_transport', 'Fleet & Transport Operations', false],
+  ['customer_wallet_credit', 'Customer Wallet / Credit Control', false],
+  ['sla_claims', 'Service Level & Claims (SLA)', false],
+  ['reconciliation', 'Reconciliation', false],
+  ['document_compliance', 'Document & Compliance', false],
+  ['dispatch_optimization', 'Advanced Dispatch Optimization', false],
+  ['notification_hub', 'Notification & Communication Hub', false],
+  ['communication_internal', 'Communication (Internal)', false],
+  ['communication_customer_service', 'Communication (Customer Service)', false],
+  ['communication_calls_livekit', 'Communication Calls (LiveKit)', false],
+  ['it_support', 'IT Support Tickets', false],
+  ['bi_executive_dashboard', 'BI & Executive Dashboard', false],
+  ['partner_agent_portal', 'API Partner / Agent Portal', false],
 ] as const;
 
 const DEFAULT_PARCEL_PACKAGING = ['Box', 'Envelope', 'Sack', 'Crate'] as const;

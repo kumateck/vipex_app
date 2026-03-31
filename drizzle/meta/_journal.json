@@ -8,6 +8,20 @@
       "when": 1774897497480,
       "tag": "0000_old_lockheed",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1774951082907,
+      "tag": "0001_ambitious_skin",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774951923664,
+      "tag": "0002_missing_module_tables_backfill",
+      "breakpoints": true
     }
   ]
 }
