@@ -12,11 +12,26 @@ import { NotFound } from '@/server/utils/http-error';
 import { BadRequest } from '@/server/utils/http-error';
 import { env } from '@/server/utils/env';
 
-const IMAGE_MIME_EXTENSIONS: Record<string, string> = {
+const MIME_EXTENSIONS: Record<string, string> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
   'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'audio/mpeg': 'mp3',
+  'audio/mp4': 'm4a',
+  'audio/wav': 'wav',
+  'audio/webm': 'webm',
+  'audio/ogg': 'ogg',
+  'application/pdf': 'pdf',
+  'text/plain': 'txt',
+  'application/zip': 'zip',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
 };
+const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
 
 let ensureBucketPromise: Promise<void> | null = null;
 
@@ -63,18 +78,18 @@ async function ensureBucketReady() {
   return ensureBucketPromise;
 }
 
-function parseImageDataUrl(dataUrl: string) {
-  const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-  if (!match) throw BadRequest('Only base64 image data URLs are supported');
+function parseDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:([a-zA-Z0-9.+/-]+);base64,(.+)$/);
+  if (!match) throw BadRequest('Only base64 data URLs are supported');
 
   const contentType = match[1]!;
   const base64 = match[2]!;
-  const extension = IMAGE_MIME_EXTENSIONS[contentType];
-  if (!extension) throw BadRequest('Unsupported image type');
+  const extension = MIME_EXTENSIONS[contentType];
+  if (!extension) throw BadRequest('Unsupported file type');
 
   const buffer = Buffer.from(base64, 'base64');
-  if (buffer.length === 0) throw BadRequest('Image payload is empty');
-  if (buffer.length > 5 * 1024 * 1024) throw BadRequest('Image exceeds 5MB limit');
+  if (buffer.length === 0) throw BadRequest('File payload is empty');
+  if (buffer.length > MAX_UPLOAD_SIZE_BYTES) throw BadRequest('File exceeds 10MB limit');
 
   return { buffer, contentType, extension };
 }
@@ -100,7 +115,7 @@ export async function uploadImageDataUrl(input: {
 }) {
   await ensureBucketReady();
 
-  const { buffer, contentType, extension } = parseImageDataUrl(input.dataUrl);
+  const { buffer, contentType, extension } = parseDataUrl(input.dataUrl);
   const client = getClient();
   const folder = normalizeSegment(input.folder);
   const fileBase = normalizeSegment(input.fileName ?? createId());

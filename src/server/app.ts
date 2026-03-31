@@ -42,6 +42,15 @@ import { warehousesRoutes } from './features/warehouses/routes';
 import { parcelInternalTransfersRoutes } from './features/parcel-internal-transfers/routes';
 import { uploadsRoutes } from './features/uploads/routes';
 import { parcelMastersRoutes } from './features/parcel-masters/routes';
+import { moduleWorkspaceRoutes } from './features/module-workspace/routes';
+import { communicationRoutes } from './features/communication/routes';
+import { customerServiceRoutes } from './features/customer-service/routes';
+import { itSupportRoutes } from './features/it-support/routes';
+import { procurementRoutes } from './features/procurement/routes';
+import { fleetTransportRoutes } from './features/fleet-transport/routes';
+import { customerWalletCreditRoutes } from './features/customer-wallet-credit/routes';
+import { reconciliationRoutes } from './features/reconciliation/routes';
+import { notificationHubRoutes } from './features/notification-hub/routes';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -87,6 +96,15 @@ export const app = new Elysia()
       .group('/inventory', (r) => r.use(inventoryRoutes))
       .group('/shifts', (r) => r.use(shiftsRoutes))
       .group('/company-modules', (r) => r.use(companyModulesRoutes))
+      .group('/module-workspace', (r) => r.use(moduleWorkspaceRoutes))
+      .group('/procurement', (r) => r.use(procurementRoutes))
+      .group('/fleet-transport', (r) => r.use(fleetTransportRoutes))
+      .group('/customer-wallet-credit', (r) => r.use(customerWalletCreditRoutes))
+      .group('/reconciliation', (r) => r.use(reconciliationRoutes))
+      .group('/notification-hub', (r) => r.use(notificationHubRoutes))
+      .group('/communication', (r) => r.use(communicationRoutes))
+      .group('/customer-service', (r) => r.use(customerServiceRoutes))
+      .group('/it-support', (r) => r.use(itSupportRoutes))
       .group('/reports', (r) => r.use(reportingRoutes))
       .group('/audit', (r) => r.use(auditRoutes))
       .group('/hr', (r) => r.use(hrRoutes))

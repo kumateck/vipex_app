@@ -1,7 +1,7 @@
 import { sendPasswordSetupEmail } from '../../services/mail/templates/password-setup';
 import { getUserInviteStateRepo, setUserResetTokenRepo } from './repository.tokens';
 
-import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
+import { BadRequest, Conflict, NotFound, ServiceUnavailable } from '../../utils/http-error';
 import { UserStatus } from '@/db/schemas/enums';
 
 function sha256Hex(input: string) {
@@ -41,8 +41,14 @@ export async function resendSetupInviteSvc(userId: string, opts?: { force?: bool
   try {
     await sendPasswordSetupEmail(user.email, otp);
   } catch (err) {
-    // Do not expose email provider errors to client—log and continue to return 200 to avoid enumeration
     console.error('Failed to send password setup email (resend):', err);
+    // Restore prior token state so we do not invalidate a working OTP when delivery fails.
+    await setUserResetTokenRepo({
+      userId: user.id,
+      tokenHash: user.resetToken ?? null,
+      expiresAt: user.resetTokenExpires ?? null,
+    });
+    throw ServiceUnavailable('Failed to send invitation email. Please try again shortly.');
   }
 
   return { ok: true, expiresAt: expiresAt.toISOString() };

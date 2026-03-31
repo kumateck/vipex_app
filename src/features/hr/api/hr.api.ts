@@ -409,7 +409,10 @@ export const hrApi = api.injectEndpoints({
       ServerListResponse<LeaveRequest>,
       {
         employeeId?: string | null;
+        leaveTypeId?: string | null;
         status?: number | null;
+        dateFrom?: string;
+        dateTo?: string;
         page?: number;
         pageSize?: number;
       } | void

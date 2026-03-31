@@ -27,6 +27,7 @@ export default defineConfig({
       '/v1': {
         target: backendTarget,
         changeOrigin: true,
+        ws: true,
       },
       '/health': {
         target: backendTarget,

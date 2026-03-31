@@ -5,3 +5,6 @@ export * from './pages/employees-page';
 export * from './pages/employee-create-edit-page';
 export * from './pages/attendance-page';
 export * from './pages/leave-page';
+export * from './pages/leave-types-page';
+export * from './pages/leave-requests-page';
+export * from './pages/leave-history-page';

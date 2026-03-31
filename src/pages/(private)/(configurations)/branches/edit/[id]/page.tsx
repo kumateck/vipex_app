@@ -1,3 +1,3 @@
-import { BranchesEditPage } from '@/features/branches';
+import { BranchesCreateEditPage } from '@/features/branches';
 
-export default BranchesEditPage;
+export default BranchesCreateEditPage;

@@ -18,7 +18,13 @@ export type ResourceTag =
   | 'Statuses'
   | 'Users'
   | 'Cashiers'
-  | 'RBAC';
+  | 'RBAC'
+  | 'Procurement'
+  | 'FleetTransport'
+  | 'CustomerWalletCredit'
+  | 'Reconciliation'
+  | 'NotificationHub'
+  | 'ItSupport';
 
 export type ServerListQuery<TFilters = Record<string, unknown>> = PaginationRequestDto<TFilters>;
 export type ServerListResponse<TItem> = PaginatedResponseDto<TItem>;

@@ -18,14 +18,10 @@ export const companyModulesRoutes = new Elysia({ name: 'company-modules' })
       return listCompanyModulesSvc(user!.companyId!);
     },
     {
-      beforeHandle: [
-        requireAuth(),
-        requirePermissions(PermissionKeys.CanManageCompanyModules),
-        requireHeadOffice(),
-      ],
+      beforeHandle: [requireAuth()],
       detail: {
         tags: ['Company Modules'],
-        summary: 'List company module states',
+        summary: 'List company module states for authenticated company users',
         operationId: 'listCompanyModules',
       },
     },

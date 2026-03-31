@@ -601,6 +601,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         filters: {
           companyId: (user as AuthUser).companyId!,
           employeeId: query.employeeId ?? null,
+          leaveTypeId: query.leaveTypeId ?? null,
           status: query.status ?? null,
         },
       }),
@@ -608,6 +609,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
       query: t.Object({
         ...PaginationRequestQueryProps,
         employeeId: t.Optional(UUID),
+        leaveTypeId: t.Optional(UUID),
         status: t.Optional(t.Number()),
       }),
       beforeHandle: [

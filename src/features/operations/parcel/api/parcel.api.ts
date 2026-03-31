@@ -644,6 +644,23 @@ export const parcelApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    sendParcelStatusCallNotification: builder.mutation<
+      { parcelId: string; trackingCode: string; sentCount: number; failedCount: number },
+      {
+        parcelId: string;
+        outcome: string;
+        sendSms?: boolean;
+        sendEmail?: boolean;
+        includeSecondReceiver?: boolean;
+      }
+    >({
+      query: (body) => ({
+        url: '/notification-hub/events/parcel-status-call',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'NotificationHub', id: 'LIST' }],
+    }),
     softDeleteParcel: builder.mutation<
       {
         id: string;
@@ -920,6 +937,7 @@ export const {
   useAddConsignmentItemsMutation,
   useUpdateParcelStatusMutation,
   useUpdateParcelMutation,
+  useSendParcelStatusCallNotificationMutation,
   useSoftDeleteParcelMutation,
   useLogParcelDiscrepancyMutation,
   useCollectDoorstepAddressMutation,

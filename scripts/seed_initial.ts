@@ -13,6 +13,7 @@ import {
   users,
 } from '@/db/schemas';
 import { BranchType, UserStatus, UserType } from '@/db/schemas/enums';
+import { DEFAULT_MODULE_CATALOG } from '@/shared/company-modules/catalog';
 import { hashPassword } from '../src/server/utils/password';
 
 const COMPANY_NAME = 'Vipex Co. LTD';
@@ -34,19 +35,6 @@ const SYS_FULLNAME = 'System User';
 const SYS_EMAIL = 'sys@vipexparcel.com';
 const SYS_TELEPHONE = '+233200000000';
 const SYS_PASSWORD = 'ChangeMe123!';
-
-const MODULES = [
-  ['shipments', 'Shipments', true],
-  ['customers', 'Customers', true],
-  ['payments', 'Payments', true],
-  ['accounting', 'Accounting', true],
-  ['parcel_content_pricing', 'Parcel Content Pricing', false],
-  ['parcel_packaging_styles', 'Parcel Packaging Styles', false],
-  ['inventory', 'Inventory', true],
-  ['shifts', 'Shifts', true],
-  ['hr', 'HR', false],
-  ['payroll', 'Payroll', false],
-] as const;
 
 const DEFAULT_PARCEL_PACKAGING = ['Box', 'Envelope', 'Sack', 'Crate'] as const;
 const DEFAULT_PARCEL_CONTENTS = [
@@ -224,7 +212,8 @@ async function main() {
     }
   }
 
-  for (const [code, name, isCoreEnabled] of MODULES) {
+  for (const moduleDefinition of DEFAULT_MODULE_CATALOG) {
+    const { code, name, isCore: isCoreEnabled, description } = moduleDefinition;
     const [existingModule] = await db
       .select({ id: moduleCatalog.id })
       .from(moduleCatalog)
@@ -236,7 +225,7 @@ async function main() {
         id: createId(),
         code,
         name,
-        description: `${name} module`,
+        description,
         isCore: isCoreEnabled,
         isActive: true,
       });

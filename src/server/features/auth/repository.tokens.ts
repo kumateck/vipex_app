@@ -6,8 +6,8 @@ import { UserStatus } from '@/db/schemas/enums';
 // Store a hashed token and expiry on the user record
 export async function setUserResetTokenRepo(input: {
   userId: string;
-  tokenHash: string;
-  expiresAt: Date;
+  tokenHash: string | null;
+  expiresAt: Date | null;
 }) {
   await db
     .update(users)

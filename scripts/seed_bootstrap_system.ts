@@ -4,6 +4,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../src/db/config';
 import { branches, companies, companyModules, moduleCatalog, roles, users } from '@/db/schemas';
 import { BranchType, UserStatus, UserType } from '@/db/schemas/enums';
+import { DEFAULT_MODULE_CATALOG } from '@/shared/company-modules/catalog';
 import { hashPassword } from '../src/server/utils/password';
 
 const COMPANY_NAME = 'Vipex Co. LTD';
@@ -26,17 +27,6 @@ const SYS_FULLNAME = 'System User';
 const SYS_EMAIL = 'sys@vipexparcel.com';
 const SYS_TELEPHONE = '+233200000000';
 const SYS_PASSWORD = 'ChangeMe123!';
-
-const MODULES = [
-  ['shipments', 'Shipments', true],
-  ['customers', 'Customers', true],
-  ['payments', 'Payments', true],
-  ['accounting', 'Accounting', true],
-  ['inventory', 'Inventory', true],
-  ['shifts', 'Shifts', true],
-  ['hr', 'HR', false],
-  ['payroll', 'Payroll', false],
-] as const;
 
 async function ensureBranches(companyId: string, createdBy: string) {
   let headOfficeBranchId: string | null = null;
@@ -163,7 +153,8 @@ async function main() {
     });
   }
 
-  for (const [code, name, isCoreEnabled] of MODULES) {
+  for (const moduleDefinition of DEFAULT_MODULE_CATALOG) {
+    const { code, name, isCore: isCoreEnabled, description } = moduleDefinition;
     const [existingModule] = await db
       .select({ id: moduleCatalog.id })
       .from(moduleCatalog)
@@ -175,7 +166,7 @@ async function main() {
         id: createId(),
         code,
         name,
-        description: `${name} module`,
+        description,
         isCore: isCoreEnabled,
         isActive: true,
       });

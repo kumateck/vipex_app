@@ -10,3 +10,4 @@ export * from './hooks/use-branch-actions';
 export * from './pages/branches-list-page';
 export * from './pages/branches-create-page';
 export * from './pages/branches-edit-page';
+export * from './pages/branches-create-edit-page';

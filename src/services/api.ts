@@ -188,6 +188,13 @@ export const api = createApi({
     'Cashiers',
     'RBAC',
     'Accounting',
+    'Procurement',
+    'FleetTransport',
+    'CustomerWalletCredit',
+    'Reconciliation',
+    'NotificationHub',
+    'ItSupport',
+    'Communication',
   ],
   endpoints: () => ({}),
 });
