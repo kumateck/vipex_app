@@ -68,19 +68,7 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
     permissionKeys.length > 0
       ? permissionKeys
       : PermissionCatalog.map((permission) => permission.key);
-  const payload = {
-    sub: user.id,
-    email: user.email,
-    employeeId: user.employeeId ?? null,
-    roleId: user.roleId ?? null,
-    companyId: user.companyId ?? null,
-    branchId: user.branchId ?? null,
-    branchType: user.branch?.type ?? null,
-    locationId: user.locationId ?? null,
-    userType: user.userType ?? null,
-    permissions: resolvedPermissionKeys,
-  };
-  const accessToken = await signAccessToken(payload);
+  const accessToken = await signAccessToken({ sub: user.id });
   const refreshPlain = generateOpaqueToken(32);
   const refreshHash = await sha256HexAsync(refreshPlain);
   const refreshExpSec = parseDurationToSeconds(env.JWT_REFRESH_EXPIRES);
@@ -135,18 +123,7 @@ export async function refreshSvc(refreshToken: string) {
   const nextExpiresAt = new Date(Date.now() + refreshExpSec * 1000);
   await rotateRefreshTokenRepo(hash, nextHash, nextExpiresAt);
 
-  const accessToken = await signAccessToken({
-    sub: user.id,
-    email: user.email,
-    employeeId: user.employeeId ?? null,
-    roleId: user.roleId ?? null,
-    companyId: user.companyId ?? null,
-    branchId: user.branchId ?? null,
-    branchType: user.branch?.type ?? null,
-    locationId: user.locationId ?? null,
-    userType: user.userType ?? null,
-    permissions: resolvedPermissionKeys,
-  });
+  const accessToken = await signAccessToken({ sub: user.id });
 
   return {
     accessToken,
