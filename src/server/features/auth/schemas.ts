@@ -11,6 +11,8 @@ export const TokenPair = t.Object({
   refreshToken: t.String(),
 });
 
+export const PermissionsField = t.Array(t.String());
+
 export const AuthUserResponse = t.Object({
   id: UUID,
   email: t.String({ format: 'email' }),
@@ -63,6 +65,7 @@ export const AuthUserResponse = t.Object({
 export const LoginResponse = t.Object({
   tokens: TokenPair,
   user: AuthUserResponse,
+  permissions: PermissionsField,
 });
 
 export const RefreshBody = t.Object({

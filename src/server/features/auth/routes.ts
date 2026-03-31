@@ -11,6 +11,7 @@ import {
   RefreshBody,
   TokenPair,
   AuthUserResponse,
+  PermissionsField,
   SetPasswordBody,
 } from './schemas';
 import {
@@ -54,7 +55,11 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
       },
       {
         body: RefreshBody,
-        response: t.Object({ tokens: TokenPair, user: AuthUserResponse }),
+        response: t.Object({
+          tokens: TokenPair,
+          user: AuthUserResponse,
+          permissions: PermissionsField,
+        }),
         detail: {
           tags: ['Auth'],
           summary: 'Refresh',

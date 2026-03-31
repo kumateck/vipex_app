@@ -224,7 +224,6 @@ export function ItSupportTicketsPage() {
                   </TableRow>
                 ) : tickets.length ? (
                   tickets.map((ticket) => {
-                    const row = getRowState(ticket);
                     return (
                       <TableRow key={ticket.id}>
                         <TableCell>

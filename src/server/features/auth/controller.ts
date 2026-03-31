@@ -15,7 +15,11 @@ export async function loginCtrl(input: {
   ua?: string;
   ip?: string;
 }) {
-  return loginSvc(input.email, input.password, input.ua, input.ip);
+  const result = await loginSvc(input.email, input.password, input.ua, input.ip);
+  return {
+    ...result,
+    permissions: result.user.permissions ?? [],
+  };
 }
 
 export async function refreshCtrl(refreshToken: string) {
@@ -26,6 +30,7 @@ export async function refreshCtrl(refreshToken: string) {
       refreshToken: nextRefreshToken,
     },
     user,
+    permissions: user.permissions ?? [],
   };
 }
 

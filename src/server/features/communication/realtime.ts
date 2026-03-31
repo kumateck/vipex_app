@@ -1,6 +1,7 @@
 import type { Server, ServerWebSocket } from 'bun';
 import { verifyAccessToken } from '@/server/utils/jwt';
 import { ensureCompanyModuleEnabledSvc } from '@/server/features/company-modules/service';
+import { getUserByIdRepo } from '@/server/features/auth/repository';
 import type { CommunicationMessagesItem } from './messages/dto';
 import type { CommunicationCallsItem } from './calls/dto';
 import { createCommunicationPresenceRepo } from './presence/repository';
@@ -194,7 +195,8 @@ export async function upgradeCommunicationSocket(
   try {
     const payload = await verifyAccessToken(token);
     const userId = payload.sub;
-    const companyId = payload.companyId ?? '';
+    const userRecord = userId ? await getUserByIdRepo(userId) : null;
+    const companyId = userRecord?.companyId ?? '';
     if (!userId || !companyId) {
       return new Response('Invalid token context', { status: 403 });
     }
