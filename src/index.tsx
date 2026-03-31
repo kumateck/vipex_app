@@ -2,6 +2,10 @@ import { serve } from 'bun';
 import { apiFetch } from './server/app';
 import { logger as devLogger } from './server/utils/logger';
 import { join, resolve } from 'node:path';
+import {
+  communicationSocketHandlers,
+  upgradeCommunicationSocket,
+} from './server/features/communication/realtime';
 
 const webDistDir = resolve(process.cwd(), 'apps/web/dist');
 const webIndexPath = join(webDistDir, 'index.html');
@@ -39,19 +43,28 @@ async function serveWebAsset(req: Request): Promise<Response> {
 
 // One Bun server for Frontend + API + Swagger
 const server = serve({
-  routes: {
-    // Swagger / OpenAPI (must come before the catch-all)
-    '/docs': (req) => apiFetch(req),
-    '/docs/*': (req) => apiFetch(req),
-    '/dev/*': (req) => apiFetch(req),
-    // API routes (Elysia)
-    '/health': (req) => apiFetch(req),
-    '/v1/*': (req) => apiFetch(req),
+  async fetch(req, server) {
+    const { pathname } = new URL(req.url);
+
+    if (pathname === '/v1/communication/ws') {
+      return await upgradeCommunicationSocket(req, server);
+    }
+
+    // Swagger / OpenAPI and API routes
+    if (
+      pathname === '/docs' ||
+      pathname.startsWith('/docs/') ||
+      pathname.startsWith('/dev/') ||
+      pathname === '/health' ||
+      pathname.startsWith('/v1/')
+    ) {
+      return apiFetch(req);
+    }
 
     // Fallback: serve built SPA assets from apps/web/dist
-    '/*': (req) => serveWebAsset(req),
+    return serveWebAsset(req);
   },
-
+  websocket: communicationSocketHandlers,
   development: process.env.NODE_ENV !== 'production' && {
     hmr: true,
     console: true,

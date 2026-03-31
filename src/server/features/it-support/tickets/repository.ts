@@ -1,9 +1,11 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { itSupportTicketEvents, itSupportTickets, uploads } from '@/db/schemas';
+import { itSupportTicketEvents, itSupportTickets, uploads, users } from '@/db/schemas';
 import type {
   ItSupportTicketAttachment,
+  ItSupportTicketEventItem,
   ItSupportTicketItem,
+  ItSupportTicketNoteCreateInput,
   ItSupportTicketsCreateInput,
   ItSupportTicketsListInput,
   ItSupportTicketsUpdateInput,
@@ -292,6 +294,99 @@ export async function updateItSupportTicketRepo(
 
   const attachmentsByTicketId = await listAttachmentsByTicketIds(input.companyId, [updated.id]);
   return mapTicket(updated, attachmentsByTicketId.get(updated.id) ?? []);
+}
+
+export async function listItSupportTicketEventsRepo(input: {
+  companyId: string;
+  ticketId: string;
+}): Promise<ItSupportTicketEventItem[]> {
+  const rows = await db
+    .select({
+      id: itSupportTicketEvents.id,
+      ticketId: itSupportTicketEvents.ticketId,
+      eventType: itSupportTicketEvents.eventType,
+      eventNote: itSupportTicketEvents.eventNote,
+      fromStatus: itSupportTicketEvents.fromStatus,
+      toStatus: itSupportTicketEvents.toStatus,
+      performedBy: itSupportTicketEvents.performedBy,
+      performedByUserName: users.fullname,
+      createdAt: itSupportTicketEvents.createdAt,
+    })
+    .from(itSupportTicketEvents)
+    .innerJoin(itSupportTickets, eq(itSupportTicketEvents.ticketId, itSupportTickets.id))
+    .leftJoin(users, eq(itSupportTicketEvents.performedBy, users.id))
+    .where(
+      and(
+        eq(itSupportTickets.companyId, input.companyId),
+        eq(itSupportTickets.isDeleted, false),
+        eq(itSupportTicketEvents.ticketId, input.ticketId),
+      ),
+    )
+    .orderBy(asc(itSupportTicketEvents.createdAt), asc(itSupportTicketEvents.id));
+
+  return rows.map((row) => ({
+    id: row.id,
+    ticketId: row.ticketId,
+    eventType: row.eventType,
+    eventNote: row.eventNote,
+    fromStatus: row.fromStatus,
+    toStatus: row.toStatus,
+    performedBy: row.performedBy,
+    performedByUserName: row.performedByUserName ?? null,
+    createdAt: toIso(row.createdAt),
+  }));
+}
+
+export async function createItSupportTicketNoteRepo(
+  input: ItSupportTicketNoteCreateInput,
+): Promise<ItSupportTicketEventItem> {
+  const [created] = await db
+    .insert(itSupportTicketEvents)
+    .values({
+      ticketId: input.ticketId,
+      eventType: 'internal_note',
+      eventNote: input.note,
+      performedBy: input.userId,
+    })
+    .returning({
+      id: itSupportTicketEvents.id,
+      ticketId: itSupportTicketEvents.ticketId,
+      eventType: itSupportTicketEvents.eventType,
+      eventNote: itSupportTicketEvents.eventNote,
+      fromStatus: itSupportTicketEvents.fromStatus,
+      toStatus: itSupportTicketEvents.toStatus,
+      performedBy: itSupportTicketEvents.performedBy,
+      createdAt: itSupportTicketEvents.createdAt,
+    });
+
+  if (!created) throw new Error('Failed to create IT support note');
+
+  const actor = created.performedBy
+    ? (
+        await db
+          .select({ fullName: users.fullname })
+          .from(users)
+          .where(eq(users.id, created.performedBy))
+          .limit(1)
+      )[0]
+    : null;
+
+  await db
+    .update(itSupportTickets)
+    .set({ updatedAt: new Date() })
+    .where(eq(itSupportTickets.id, input.ticketId));
+
+  return {
+    id: created.id,
+    ticketId: created.ticketId,
+    eventType: created.eventType,
+    eventNote: created.eventNote,
+    fromStatus: created.fromStatus,
+    toStatus: created.toStatus,
+    performedBy: created.performedBy,
+    performedByUserName: actor?.fullName ?? null,
+    createdAt: toIso(created.createdAt),
+  };
 }
 
 export const ItSupportTicketUploadModelType = IT_SUPPORT_TICKET_UPLOAD_MODEL;

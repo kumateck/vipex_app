@@ -204,6 +204,22 @@ Implemented procurement v1, fleet transport v1, customer wallet/credit v1, recon
   - `CanRetryNotificationMessages`
   - `CanSendCallCenterNotifications`
 
+13. IT support ticket detail + timeline/internal notes
+
+- Added backend endpoints:
+  - `GET /v1/it-support/tickets/:id`
+  - `GET /v1/it-support/tickets/:id/events`
+  - `POST /v1/it-support/tickets/:id/notes`
+- Added ticket event timeline projection with actor name resolution (`users.fullname`).
+- Added internal-note event creation (`eventType=internal_note`) and ticket `updatedAt` touch on note add.
+- Added frontend detail route/page:
+  - `/it-support/tickets/:id`
+  - shows ticket metadata, attachments, timeline, and internal note composer.
+- Linked list page rows to detail page (`Open details`).
+- Route and API permissions remain:
+  - read: `CanReadItSupportTickets`
+  - update/note add: `CanUpdateItSupportTickets`
+
 ## Documentation updates completed
 
 - `docs/COMPANY_MODULES.md`

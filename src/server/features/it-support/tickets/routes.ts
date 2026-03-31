@@ -2,12 +2,16 @@ import { Elysia } from 'elysia';
 import {
   authPlugin,
   requireAuth,
+  requireAnyPermissions,
   requireModuleEnabled,
   requirePermissions,
 } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import {
+  createItSupportTicketNoteCtrl,
   createItSupportTicketsCtrl,
+  getItSupportTicketsCtrl,
+  listItSupportTicketEventsCtrl,
   listItSupportTicketsCtrl,
   updateItSupportTicketsCtrl,
 } from './controller';
@@ -15,6 +19,7 @@ import {
   ItSupportTicketsCreateBodySchema,
   ItSupportTicketsIdParamSchema,
   ItSupportTicketsListQuerySchema,
+  ItSupportTicketNoteBodySchema,
   ItSupportTicketsUpdateBodySchema,
 } from './schema';
 
@@ -55,6 +60,38 @@ export const ItSupportTicketsRoutes = new Elysia({ name: 'it-support-tickets' })
       ],
     },
   )
+  .get(
+    '/:id',
+    async ({ params, user }) =>
+      getItSupportTicketsCtrl({
+        companyId: user!.companyId!,
+        ticketId: params.id,
+      }),
+    {
+      params: ItSupportTicketsIdParamSchema,
+      beforeHandle: [
+        requireAuth(),
+        requireModuleEnabled('it_support'),
+        requirePermissions(PermissionKeys.CanReadItSupportTickets),
+      ],
+    },
+  )
+  .get(
+    '/:id/events',
+    async ({ params, user }) =>
+      listItSupportTicketEventsCtrl({
+        companyId: user!.companyId!,
+        ticketId: params.id,
+      }),
+    {
+      params: ItSupportTicketsIdParamSchema,
+      beforeHandle: [
+        requireAuth(),
+        requireModuleEnabled('it_support'),
+        requirePermissions(PermissionKeys.CanReadItSupportTickets),
+      ],
+    },
+  )
   .patch(
     '/:id',
     async ({ params, body, user }) =>
@@ -75,6 +112,31 @@ export const ItSupportTicketsRoutes = new Elysia({ name: 'it-support-tickets' })
         requireAuth(),
         requireModuleEnabled('it_support'),
         requirePermissions(PermissionKeys.CanUpdateItSupportTickets),
+      ],
+    },
+  )
+  .post(
+    '/:id/notes',
+    async ({ params, body, user }) =>
+      createItSupportTicketNoteCtrl({
+        companyId: user!.companyId!,
+        userId: user!.sub,
+        ticketId: params.id,
+        note: body.note,
+        canManageTickets: (user!.permissions ?? []).includes(
+          PermissionKeys.CanUpdateItSupportTickets,
+        ),
+      }),
+    {
+      params: ItSupportTicketsIdParamSchema,
+      body: ItSupportTicketNoteBodySchema,
+      beforeHandle: [
+        requireAuth(),
+        requireModuleEnabled('it_support'),
+        requireAnyPermissions(
+          PermissionKeys.CanUpdateItSupportTickets,
+          PermissionKeys.CanReadItSupportTickets,
+        ),
       ],
     },
   );

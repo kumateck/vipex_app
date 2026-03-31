@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useCreateJobTitleMutation,
   useListDepartmentOptionsQuery,
@@ -34,83 +35,85 @@ export function JobTitlesPage() {
   const rows = data?.data ?? [];
 
   return (
-    <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Job Titles</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-2 md:grid-cols-4">
-            <Select value={departmentId} onValueChange={setDepartmentId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select department" />
-              </SelectTrigger>
-              <SelectContent>
-                {departmentOptions.map((department) => (
-                  <SelectItem key={department.id} value={department.id}>
-                    {department.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              placeholder="Job title code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-            />
-            <Input
-              placeholder="Job title name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <Button
-              disabled={!name.trim() || !departmentId || isCreating}
-              onClick={async () => {
-                await createJobTitle({
-                  departmentId,
-                  code: code || null,
-                  name: name.trim(),
-                }).unwrap();
-                setDepartmentId('');
-                setCode('');
-                setName('');
-              }}
-            >
-              Add
-            </Button>
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Department</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+    <ScrollableWrapper>
+      <div className="w-full p-4 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Job Titles</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2 md:grid-cols-4">
+              <Select value={departmentId} onValueChange={setDepartmentId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departmentOptions.map((department) => (
+                    <SelectItem key={department.id} value={department.id}>
+                      {department.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Job title code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
+              <Input
+                placeholder="Job title name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <Button
+                disabled={!name.trim() || !departmentId || isCreating}
+                onClick={async () => {
+                  await createJobTitle({
+                    departmentId,
+                    code: code || null,
+                    name: name.trim(),
+                  }).unwrap();
+                  setDepartmentId('');
+                  setCode('');
+                  setName('');
+                }}
+              >
+                Add
+              </Button>
+            </div>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4}>Loading job titles...</TableCell>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              ) : rows.length ? (
-                rows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>{row.departmentName ?? '-'}</TableCell>
-                    <TableCell>{row.code ?? '-'}</TableCell>
-                    <TableCell>{row.name}</TableCell>
-                    <TableCell>{row.isActive ? 'Active' : 'Inactive'}</TableCell>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4}>Loading job titles...</TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4}>No job titles found.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+                ) : rows.length ? (
+                  rows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>{row.departmentName ?? '-'}</TableCell>
+                      <TableCell>{row.code ?? '-'}</TableCell>
+                      <TableCell>{row.name}</TableCell>
+                      <TableCell>{row.isActive ? 'Active' : 'Inactive'}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4}>No job titles found.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }

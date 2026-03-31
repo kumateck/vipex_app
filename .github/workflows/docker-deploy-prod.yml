@@ -46,6 +46,30 @@ jobs:
       - name: Install SSH Client
         run: sudo apt-get install -y openssh-client
 
+      - name: Validate mail secrets
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_PUBLIC_URL: ${{ secrets.LIVEKIT_PUBLIC_URL }}
+        run: |
+          missing=0
+          for key in EMAIL_USER EMAIL_PASSWORD SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS LIVEKIT_API_KEY LIVEKIT_API_SECRET LIVEKIT_URL LIVEKIT_PUBLIC_URL; do
+            if [ -z "${!key}" ]; then
+              echo "Missing required secret: $key"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
       - name: Deploy to Server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -65,6 +89,20 @@ jobs:
           MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
           MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
           MINIO_FORCE_PATH_STYLE: ${{ secrets.MINIO_FORCE_PATH_STYLE }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_SECURE: ${{ secrets.SMTP_SECURE }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          SMTP_REQUIRE_TLS: ${{ secrets.SMTP_REQUIRE_TLS }}
+          SMTP_DEBUG: ${{ secrets.SMTP_DEBUG }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_PUBLIC_URL: ${{ secrets.LIVEKIT_PUBLIC_URL }}
 
         run: |
           mkdir -p ~/.ssh
@@ -96,8 +134,20 @@ jobs:
               --name "${CONTAINER_NAME}" \
               -e DATABASE_URL='postgres://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@postgres_db:5432/vipexdb' \
               -e JWT_SECRET='${{ secrets.JWT_SECRET }}' \
-              -e EMAIL_USER='dkadusei@kumateck.com' \
-              -e EMAIL_PASSWORD='Password' \
+              -e EMAIL_USER='${EMAIL_USER}' \
+              -e EMAIL_PASSWORD='${EMAIL_PASSWORD}' \
+              -e SMTP_HOST='${SMTP_HOST}' \
+              -e SMTP_PORT='${SMTP_PORT}' \
+              -e SMTP_SECURE='${SMTP_SECURE}' \
+              -e SMTP_USER='${SMTP_USER}' \
+              -e SMTP_PASS='${SMTP_PASS}' \
+              -e SMTP_FROM='${SMTP_FROM}' \
+              -e SMTP_REQUIRE_TLS='${SMTP_REQUIRE_TLS}' \
+              -e SMTP_DEBUG='${SMTP_DEBUG}' \
+              -e LIVEKIT_API_KEY='${LIVEKIT_API_KEY}' \
+              -e LIVEKIT_API_SECRET='${LIVEKIT_API_SECRET}' \
+              -e LIVEKIT_URL='${LIVEKIT_URL}' \
+              -e LIVEKIT_PUBLIC_URL='${LIVEKIT_PUBLIC_URL}' \
               -e NODE_ENV='production' \
               -e APP_ENV='production' \
               -e APP_BASE_URL='${APP_BASE_URL}' \

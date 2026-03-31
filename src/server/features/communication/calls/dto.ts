@@ -14,6 +14,27 @@ export type CommunicationCallsCreateInput = {
   livekitRoomName?: string | null;
 };
 
+export type CommunicationCallsUpdateStatusInput = {
+  companyId: string;
+  id: string;
+  status: 'pending' | 'ringing' | 'active' | 'ended' | 'cancelled';
+};
+
+export type CommunicationCallsCreateLivekitTokenInput = {
+  companyId: string;
+  userId: string;
+  id: string;
+  requestOrigin?: string | null;
+};
+
+export type CommunicationCallsLivekitTokenItem = {
+  callId: string;
+  roomName: string;
+  livekitUrl: string;
+  token: string;
+  expiresAt: string;
+};
+
 export type CommunicationCallsItem = {
   id: string;
   companyId: string;

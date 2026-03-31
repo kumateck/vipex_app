@@ -56,6 +56,7 @@ Use this matrix for role assignment. Each listed route is guarded by its exact p
 | `/notification-hub/campaigns/approvals`      | `CanApproveNotificationCampaigns`         |
 | `/notification-hub/dispatches`               | `CanReadNotificationHub`                  |
 | `/it-support/tickets`                        | `CanReadItSupportTickets`                 |
+| `/it-support/tickets/:id`                    | `CanReadItSupportTickets`                 |
 | `/settings/company`                          | `CanReadCompanyProfile`                   |
 | `/settings/modules`                          | `CanManageCompanyModules`                 |
 | `/users/active`                              | `CanReadUsers`                            |

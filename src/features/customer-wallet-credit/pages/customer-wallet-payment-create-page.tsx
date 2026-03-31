@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useCreateCustomerWalletPaymentMutation,
   useListCustomerWalletAccountsQuery,
@@ -62,71 +63,83 @@ export function CustomerWalletPaymentCreatePage() {
   };
 
   return (
-    <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Record Wallet/Credit Payment</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <FieldGroup className="grid gap-4 md:grid-cols-2">
-            <Field className="md:col-span-2">
-              <FieldLabel>Find customer</FieldLabel>
-              <Input
-                placeholder="Search by name, phone, email"
-                value={customerSearch}
-                onChange={(event) => setCustomerSearch(event.target.value)}
-              />
-            </Field>
+    <ScrollableWrapper>
+      <div className="w-full p-4 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Record Wallet/Credit Payment</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FieldGroup className="grid gap-4 md:grid-cols-2">
+              <Field className="md:col-span-2">
+                <FieldLabel>Find customer</FieldLabel>
+                <Input
+                  placeholder="Search by name, phone, email"
+                  value={customerSearch}
+                  onChange={(event) => setCustomerSearch(event.target.value)}
+                />
+              </Field>
 
-            <Field className="md:col-span-2">
-              <FieldLabel>Customer</FieldLabel>
-              <Select value={customerId} onValueChange={setCustomerId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Select customer</SelectItem>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.customerId} value={customer.customerId}>
-                      {customer.fullname}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
+              <Field className="md:col-span-2">
+                <FieldLabel>Customer</FieldLabel>
+                <Select value={customerId} onValueChange={setCustomerId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Select customer</SelectItem>
+                    {customers.map((customer) => (
+                      <SelectItem key={customer.customerId} value={customer.customerId}>
+                        {customer.fullname}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
 
-            <Field>
-              <FieldLabel>Amount (Cedis)</FieldLabel>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={amountCedis}
-                onChange={(event) => setAmountCedis(event.target.value)}
-              />
-            </Field>
+              <Field>
+                <FieldLabel>Amount (Cedis)</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={amountCedis}
+                  onChange={(event) => setAmountCedis(event.target.value)}
+                />
+              </Field>
 
-            <Field>
-              <FieldLabel>Reference</FieldLabel>
-              <Input value={referenceId} onChange={(event) => setReferenceId(event.target.value)} />
-            </Field>
+              <Field>
+                <FieldLabel>Reference</FieldLabel>
+                <Input
+                  value={referenceId}
+                  onChange={(event) => setReferenceId(event.target.value)}
+                />
+              </Field>
 
-            <Field className="md:col-span-2">
-              <FieldLabel>Notes</FieldLabel>
-              <Textarea rows={4} value={notes} onChange={(event) => setNotes(event.target.value)} />
-            </Field>
-          </FieldGroup>
+              <Field className="md:col-span-2">
+                <FieldLabel>Notes</FieldLabel>
+                <Textarea
+                  rows={4}
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                />
+              </Field>
+            </FieldGroup>
 
-          <div className="flex gap-2">
-            <Button onClick={onSubmit} disabled={isLoading}>
-              Save payment
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/customer-wallet-credit/accounts')}>
-              Cancel
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            <div className="flex gap-2">
+              <Button onClick={onSubmit} disabled={isLoading}>
+                Save payment
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/customer-wallet-credit/accounts')}
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }

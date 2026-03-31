@@ -15,6 +15,8 @@ import {
   createNotificationCampaignCtrl,
   createNotificationProviderCtrl,
   createNotificationTemplateCtrl,
+  getNotificationProviderCtrl,
+  getNotificationTemplateCtrl,
   listCampaignDispatchSummaryCtrl,
   listNotificationCampaignsCtrl,
   listNotificationDispatchesCtrl,
@@ -95,6 +97,23 @@ export const notificationHubRoutes = new Elysia({ name: 'notification-hub' })
         requireModuleEnabled('notification_hub'),
       ],
       detail: { tags: ['Notification Hub'], summary: 'Create notification provider' },
+    },
+  )
+  .get(
+    '/providers/:id',
+    async ({ params, user }) =>
+      getNotificationProviderCtrl({
+        id: params.id,
+        companyId: (user as AuthUser).companyId!,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadNotificationHub),
+        requireModuleEnabled('notification_hub'),
+      ],
+      detail: { tags: ['Notification Hub'], summary: 'Get notification provider' },
     },
   )
   .patch(
@@ -226,6 +245,23 @@ export const notificationHubRoutes = new Elysia({ name: 'notification-hub' })
         requireModuleEnabled('notification_hub'),
       ],
       detail: { tags: ['Notification Hub'], summary: 'Create notification template' },
+    },
+  )
+  .get(
+    '/templates/:id',
+    async ({ params, user }) =>
+      getNotificationTemplateCtrl({
+        id: params.id,
+        companyId: (user as AuthUser).companyId!,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadNotificationHub),
+        requireModuleEnabled('notification_hub'),
+      ],
+      detail: { tags: ['Notification Hub'], summary: 'Get notification template' },
     },
   )
   .patch(

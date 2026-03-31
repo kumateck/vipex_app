@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useBlockCustomerWalletAccountMutation,
   useListCustomerWalletApprovalsQuery,
@@ -63,83 +64,85 @@ export function CustomerWalletApprovalsPage() {
   };
 
   return (
-    <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Wallet / Credit Approvals</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2">
-            <Input
-              placeholder="Search customer"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            <Button
-              type="button"
-              variant={overdueOnly ? 'default' : 'outline'}
-              onClick={() => setOverdueOnly((value) => !value)}
-            >
-              {overdueOnly ? 'Overdue only: ON' : 'Overdue only: OFF'}
-            </Button>
-          </div>
+    <ScrollableWrapper>
+      <div className="w-full p-4 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Wallet / Credit Approvals</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              <Input
+                placeholder="Search customer"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <Button
+                type="button"
+                variant={overdueOnly ? 'default' : 'outline'}
+                onClick={() => setOverdueOnly((value) => !value)}
+              >
+                {overdueOnly ? 'Overdue only: ON' : 'Overdue only: OFF'}
+              </Button>
+            </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead>Outstanding</TableHead>
-                <TableHead>Overdue days</TableHead>
-                <TableHead>Signal</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5}>Loading approvals...</TableCell>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Outstanding</TableHead>
+                  <TableHead>Overdue days</TableHead>
+                  <TableHead>Signal</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
-              ) : rows.length ? (
-                rows.map((row) => (
-                  <TableRow key={row.customerId}>
-                    <TableCell>
-                      <div className="font-medium">{row.fullname}</div>
-                      <div className="text-xs text-muted-foreground">{row.telephone ?? '-'}</div>
-                    </TableCell>
-                    <TableCell>{formatMoneyPsw(row.outstandingPsw)}</TableCell>
-                    <TableCell>{row.overdueDays}</TableCell>
-                    <TableCell>{row.approvalStatus.replaceAll('_', ' ')}</TableCell>
-                    <TableCell className="text-right">
-                      {row.approvalStatus === 'BLOCK_RECOMMENDED' ? (
-                        <Button
-                          disabled={isBlocking || isUnblocking}
-                          onClick={() => onBlock(row.customerId)}
-                        >
-                          Block credit
-                        </Button>
-                      ) : row.approvalStatus === 'UNBLOCK_RECOMMENDED' ? (
-                        <Button
-                          variant="outline"
-                          disabled={isBlocking || isUnblocking}
-                          onClick={() => onUnblock(row.customerId)}
-                        >
-                          Enable credit
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">No action</span>
-                      )}
-                    </TableCell>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5}>Loading approvals...</TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5}>No approval items found.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+                ) : rows.length ? (
+                  rows.map((row) => (
+                    <TableRow key={row.customerId}>
+                      <TableCell>
+                        <div className="font-medium">{row.fullname}</div>
+                        <div className="text-xs text-muted-foreground">{row.telephone ?? '-'}</div>
+                      </TableCell>
+                      <TableCell>{formatMoneyPsw(row.outstandingPsw)}</TableCell>
+                      <TableCell>{row.overdueDays}</TableCell>
+                      <TableCell>{row.approvalStatus.replaceAll('_', ' ')}</TableCell>
+                      <TableCell className="text-right">
+                        {row.approvalStatus === 'BLOCK_RECOMMENDED' ? (
+                          <Button
+                            disabled={isBlocking || isUnblocking}
+                            onClick={() => onBlock(row.customerId)}
+                          >
+                            Block credit
+                          </Button>
+                        ) : row.approvalStatus === 'UNBLOCK_RECOMMENDED' ? (
+                          <Button
+                            variant="outline"
+                            disabled={isBlocking || isUnblocking}
+                            onClick={() => onUnblock(row.customerId)}
+                          >
+                            Enable credit
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No action</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5}>No approval items found.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }

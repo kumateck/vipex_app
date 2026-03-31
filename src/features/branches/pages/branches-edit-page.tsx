@@ -5,6 +5,7 @@ import { BranchFormSkeleton } from '../components/branch-form-skeleton';
 import { BranchLoadError } from '../components/branch-load-error';
 import { useUpdateBranchAction } from '../hooks/use-branch-actions';
 import { getErrorMessage } from '../utils/branch-error';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
 export function BranchesEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -14,25 +15,50 @@ export function BranchesEditPage() {
   const { onSubmit, isSubmitting } = useUpdateBranchAction(id ?? '');
 
   if (isError) {
-    return <BranchLoadError message={getErrorMessage(error, 'Failed to load branch')} onBack={handleBack} />;
+    return (
+      <ScrollableWrapper>
+        <div className="w-full p-4">
+          <BranchLoadError
+            message={getErrorMessage(error, 'Failed to load branch')}
+            onBack={handleBack}
+          />
+        </div>
+      </ScrollableWrapper>
+    );
   }
 
   if (!id) {
-    return <BranchLoadError message="Invalid branch id" onBack={handleBack} />;
+    return (
+      <ScrollableWrapper>
+        <div className="w-full p-4">
+          <BranchLoadError message="Invalid branch id" onBack={handleBack} />
+        </div>
+      </ScrollableWrapper>
+    );
   }
 
   if (isLoading || !branch) {
-    return <BranchFormSkeleton />;
+    return (
+      <ScrollableWrapper>
+        <div className="w-full p-4">
+          <BranchFormSkeleton />
+        </div>
+      </ScrollableWrapper>
+    );
   }
 
   return (
-    <BranchForm
-      mode="edit"
-      initialData={branch}
-      onSubmit={onSubmit}
-      isSubmitting={isSubmitting}
-      title="Edit branch"
-      submitButtonText="Save changes"
-    />
+    <ScrollableWrapper>
+      <div className="w-full p-4">
+        <BranchForm
+          mode="edit"
+          initialData={branch}
+          onSubmit={onSubmit}
+          isSubmitting={isSubmitting}
+          title="Edit branch"
+          submitButtonText="Save changes"
+        />
+      </div>
+    </ScrollableWrapper>
   );
 }

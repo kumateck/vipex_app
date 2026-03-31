@@ -10,6 +10,7 @@ import { StockTransferStatusForm } from '../components/stock-transfer-status-for
 import { StockLoadError } from '../components/stock-load-error';
 import { useUpdateStockTransferAction } from '../hooks/use-stock-actions';
 import { getInventoryStockErrorMessage } from '../utils/inventory-stock-error';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
 const OPTIONS_PAGE_SIZE = 100;
 
@@ -19,7 +20,12 @@ export function StockTransfersEditPage() {
   const handleBack = () => navigate('/inventory/stock-transfers');
   const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
 
-  const { data: transfer, isLoading, isError, error } = useGetStockTransferQuery(id ?? '', {
+  const {
+    data: transfer,
+    isLoading,
+    isError,
+    error,
+  } = useGetStockTransferQuery(id ?? '', {
     skip: !id,
   });
   const { onSubmit, isSubmitting } = useUpdateStockTransferAction(id ?? '');
@@ -34,54 +40,73 @@ export function StockTransfersEditPage() {
   );
 
   const { data: productsData } = useListInventoryProductsQuery(productQuery, { skip: !companyId });
-  const { data: locationsData } = useListInventoryLocationsQuery(locationQuery, { skip: !companyId });
+  const { data: locationsData } = useListInventoryLocationsQuery(locationQuery, {
+    skip: !companyId,
+  });
 
   const productNameById = useMemo(
     () => new Map((productsData?.data ?? []).map((product) => [product.id, product.name] as const)),
     [productsData],
   );
   const locationNameById = useMemo(
-    () => new Map((locationsData?.data ?? []).map((location) => [location.id, location.name] as const)),
+    () =>
+      new Map((locationsData?.data ?? []).map((location) => [location.id, location.name] as const)),
     [locationsData],
   );
 
   if (!id) {
-    return <StockLoadError message="Invalid stock transfer id" onBack={handleBack} />;
+    return (
+      <ScrollableWrapper>
+        <div className="w-full p-4">
+          <StockLoadError message="Invalid stock transfer id" onBack={handleBack} />
+        </div>
+      </ScrollableWrapper>
+    );
   }
 
   if (isError) {
     return (
-      <StockLoadError
-        message={getInventoryStockErrorMessage(error, 'Failed to load stock transfer')}
-        onBack={handleBack}
-      />
+      <ScrollableWrapper>
+        <div className="w-full p-4">
+          <StockLoadError
+            message={getInventoryStockErrorMessage(error, 'Failed to load stock transfer')}
+            onBack={handleBack}
+          />
+        </div>
+      </ScrollableWrapper>
     );
   }
 
   if (isLoading || !transfer) {
     return (
-      <div className="w-full max-w-lg mx-auto p-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Stock transfer</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Spinner /> Loading stock transfer...
-          </CardContent>
-        </Card>
-      </div>
+      <ScrollableWrapper>
+        <div className="w-full max-w-lg mx-auto p-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Stock transfer</CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Spinner /> Loading stock transfer...
+            </CardContent>
+          </Card>
+        </div>
+      </ScrollableWrapper>
     );
   }
 
   return (
-    <StockTransferStatusForm
-      transfer={transfer}
-      onSubmit={onSubmit}
-      isSubmitting={isSubmitting}
-      title="Update stock transfer"
-      submitButtonText="Save changes"
-      productNameById={productNameById}
-      locationNameById={locationNameById}
-    />
+    <ScrollableWrapper>
+      <div className="w-full p-4">
+        <StockTransferStatusForm
+          transfer={transfer}
+          onSubmit={onSubmit}
+          isSubmitting={isSubmitting}
+          title="Update stock transfer"
+          submitButtonText="Save changes"
+          productNameById={productNameById}
+          locationNameById={locationNameById}
+        />
+      </div>
+    </ScrollableWrapper>
   );
 }

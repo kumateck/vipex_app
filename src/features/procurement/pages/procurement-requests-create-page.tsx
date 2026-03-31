@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useCreatePurchaseRequestMutation,
   useListProcurementSuppliersQuery,
@@ -54,61 +55,63 @@ export function ProcurementRequestsCreatePage() {
   };
 
   return (
-    <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create Purchase Request</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <FieldGroup className="grid gap-4 md:grid-cols-2">
-            <Field>
-              <FieldLabel>Title</FieldLabel>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-            </Field>
-            <Field>
-              <FieldLabel>Supplier</FieldLabel>
-              <Select value={supplierId} onValueChange={setSupplierId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Optional supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">No supplier</SelectItem>
-                  {suppliers.map((supplier) => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field>
-              <FieldLabel>Amount (PSW)</FieldLabel>
-              <Input
-                type="number"
-                min={0}
-                value={amountPsw}
-                onChange={(e) => setAmountPsw(e.target.value)}
-              />
-            </Field>
-            <Field className="md:col-span-2">
-              <FieldLabel>Description</FieldLabel>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-              />
-            </Field>
-          </FieldGroup>
-          <div className="flex gap-2">
-            <Button onClick={onSubmit} disabled={isLoading}>
-              Save request
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/procurement/purchase-requests')}>
-              Cancel
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <ScrollableWrapper>
+      <div className="w-full p-4 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Create Purchase Request</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FieldGroup className="grid gap-4 md:grid-cols-2">
+              <Field>
+                <FieldLabel>Title</FieldLabel>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+              </Field>
+              <Field>
+                <FieldLabel>Supplier</FieldLabel>
+                <Select value={supplierId} onValueChange={setSupplierId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Optional supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No supplier</SelectItem>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel>Amount (PSW)</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  value={amountPsw}
+                  onChange={(e) => setAmountPsw(e.target.value)}
+                />
+              </Field>
+              <Field className="md:col-span-2">
+                <FieldLabel>Description</FieldLabel>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                />
+              </Field>
+            </FieldGroup>
+            <div className="flex gap-2">
+              <Button onClick={onSubmit} disabled={isLoading}>
+                Save request
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/procurement/purchase-requests')}>
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }

@@ -24,6 +24,7 @@ import {
   useListBankSettlementsQuery,
   useListReconciliationBranchOptionsQuery,
 } from '../api/reconciliation.api';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
 function formatMoneyPsw(amountPsw: number) {
   return new Intl.NumberFormat('en-GH', {
@@ -66,125 +67,127 @@ export function ReconciliationBankSettlementsListPage() {
   const meta = data?.meta;
 
   return (
-    <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>Bank Settlements</CardTitle>
-          <PermissionGuard permissionKey={PermissionKeys.CanCreateReconciliationBankSettlements}>
-            <Button asChild>
-              <Link to="/reconciliation/bank-settlements/new">Create settlement</Link>
-            </Button>
-          </PermissionGuard>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-4">
-            <Input
-              placeholder="Search settlements"
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              className="md:col-span-2"
-            />
-            <Select
-              value={status}
-              onValueChange={(value) => {
-                setStatus(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All status</SelectItem>
-                <SelectItem value="0">Pending</SelectItem>
-                <SelectItem value="1">Approved</SelectItem>
-                <SelectItem value="2">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={branchId}
-              onValueChange={(value) => {
-                setBranchId(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Branch" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All branches</SelectItem>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Settlement No</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Branch</TableHead>
-                <TableHead>Expected</TableHead>
-                <TableHead>Banked</TableHead>
-                <TableHead>Variance</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7}>Loading bank settlements...</TableCell>
-                </TableRow>
-              ) : rows.length ? (
-                rows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>{row.settlementNo}</TableCell>
-                    <TableCell>{new Date(row.settlementDate).toLocaleString()}</TableCell>
-                    <TableCell>{row.branchName ?? '-'}</TableCell>
-                    <TableCell>{formatMoneyPsw(row.expectedAmountPsw)}</TableCell>
-                    <TableCell>{formatMoneyPsw(row.bankedAmountPsw)}</TableCell>
-                    <TableCell>{formatMoneyPsw(row.variancePsw)}</TableCell>
-                    <TableCell>{statusLabel(row.status)}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7}>No bank settlements found.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Page {meta?.page ?? 1} of {meta?.totalPages ?? 1}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                disabled={(meta?.page ?? 1) <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Previous
+    <ScrollableWrapper>
+      <div className="w-full p-4 space-y-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle>Bank Settlements</CardTitle>
+            <PermissionGuard permissionKey={PermissionKeys.CanCreateReconciliationBankSettlements}>
+              <Button asChild>
+                <Link to="/reconciliation/bank-settlements/new">Create settlement</Link>
               </Button>
-              <Button
-                variant="outline"
-                disabled={(meta?.page ?? 1) >= (meta?.totalPages ?? 1)}
-                onClick={() => setPage((p) => p + 1)}
+            </PermissionGuard>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-4">
+              <Input
+                placeholder="Search settlements"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+                className="md:col-span-2"
+              />
+              <Select
+                value={status}
+                onValueChange={(value) => {
+                  setStatus(value);
+                  setPage(1);
+                }}
               >
-                Next
-              </Button>
+                <SelectTrigger>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All status</SelectItem>
+                  <SelectItem value="0">Pending</SelectItem>
+                  <SelectItem value="1">Approved</SelectItem>
+                  <SelectItem value="2">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={branchId}
+                onValueChange={(value) => {
+                  setBranchId(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All branches</SelectItem>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Settlement No</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Expected</TableHead>
+                  <TableHead>Banked</TableHead>
+                  <TableHead>Variance</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7}>Loading bank settlements...</TableCell>
+                  </TableRow>
+                ) : rows.length ? (
+                  rows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>{row.settlementNo}</TableCell>
+                      <TableCell>{new Date(row.settlementDate).toLocaleString()}</TableCell>
+                      <TableCell>{row.branchName ?? '-'}</TableCell>
+                      <TableCell>{formatMoneyPsw(row.expectedAmountPsw)}</TableCell>
+                      <TableCell>{formatMoneyPsw(row.bankedAmountPsw)}</TableCell>
+                      <TableCell>{formatMoneyPsw(row.variancePsw)}</TableCell>
+                      <TableCell>{statusLabel(row.status)}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7}>No bank settlements found.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Page {meta?.page ?? 1} of {meta?.totalPages ?? 1}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  disabled={(meta?.page ?? 1) <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={(meta?.page ?? 1) >= (meta?.totalPages ?? 1)}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }

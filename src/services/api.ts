@@ -194,6 +194,7 @@ export const api = createApi({
     'Reconciliation',
     'NotificationHub',
     'ItSupport',
+    'Communication',
   ],
   endpoints: () => ({}),
 });

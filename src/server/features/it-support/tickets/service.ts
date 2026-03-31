@@ -1,7 +1,9 @@
-import { BadRequest, NotFound } from '@/server/utils/http-error';
+import { BadRequest, Forbidden, NotFound } from '@/server/utils/http-error';
 import { createUploadSvc } from '@/server/features/uploads/service';
 import type {
+  ItSupportTicketEventItem,
   ItSupportTicketItem,
+  ItSupportTicketNoteCreateInput,
   ItSupportTicketsCreateInput,
   ItSupportTicketsListInput,
   ItSupportTicketsUpdateInput,
@@ -10,7 +12,9 @@ import {
   createItSupportTicketRepo,
   getItSupportTicketRepo,
   ItSupportTicketUploadModelType,
+  listItSupportTicketEventsRepo,
   listItSupportTicketsRepo,
+  createItSupportTicketNoteRepo,
   updateItSupportTicketRepo,
 } from './repository';
 
@@ -96,4 +100,38 @@ export async function updateItSupportTicketSvc(
   });
   if (!updated) throw NotFound('IT support ticket not found');
   return updated;
+}
+
+export async function getItSupportTicketSvc(input: {
+  companyId: string;
+  ticketId: string;
+}): Promise<ItSupportTicketItem> {
+  const ticket = await getItSupportTicketRepo(input);
+  if (!ticket) throw NotFound('IT support ticket not found');
+  return ticket;
+}
+
+export async function listItSupportTicketEventsSvc(input: {
+  companyId: string;
+  ticketId: string;
+}): Promise<ItSupportTicketEventItem[]> {
+  const ticket = await getItSupportTicketRepo(input);
+  if (!ticket) throw NotFound('IT support ticket not found');
+  return listItSupportTicketEventsRepo(input);
+}
+
+export async function createItSupportTicketNoteSvc(
+  input: ItSupportTicketNoteCreateInput,
+): Promise<ItSupportTicketEventItem> {
+  const note = normalizeNullableString(input.note);
+  if (!note) throw BadRequest('Note is required');
+  const ticket = await getItSupportTicketRepo({
+    companyId: input.companyId,
+    ticketId: input.ticketId,
+  });
+  if (!ticket) throw NotFound('IT support ticket not found');
+  if (!input.canManageTickets && ticket.assignedToUserId !== input.userId) {
+    throw Forbidden('Only assigned personnel can add comments to this ticket');
+  }
+  return createItSupportTicketNoteRepo({ ...input, note });
 }

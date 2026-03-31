@@ -1,6 +1,18 @@
 version: '3.8'
 
 services:
+  # LiveKit (local development)
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: vipex_livekit
+    command: --dev --bind 0.0.0.0
+    environment:
+      LIVEKIT_KEYS: '${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecretdevsecretdevsecretdevsecret}'
+    ports:
+      - '7890:7880'
+      - '7881:7881/tcp'
+      - '7882:7882/udp'
+
   # Migration Service (Runs once on startup)
   migrate:
     build: .
@@ -27,6 +39,17 @@ services:
       JWT_ACCESS_EXPIRES: '15m'
       JWT_REFRESH_EXPIRES: '7d'
       SWAGGER_ENABLED: 'true'
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
+      SMTP_REQUIRE_TLS: ${SMTP_REQUIRE_TLS:-true}
+      SMTP_DEBUG: ${SMTP_DEBUG:-false}
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     depends_on:

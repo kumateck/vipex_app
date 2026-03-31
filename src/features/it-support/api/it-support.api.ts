@@ -30,6 +30,18 @@ export type ItSupportTicket = {
   attachments: ItSupportTicketAttachment[];
 };
 
+export type ItSupportTicketEvent = {
+  id: string;
+  ticketId: string;
+  eventType: string;
+  eventNote: string | null;
+  fromStatus: string | null;
+  toStatus: string | null;
+  performedBy: string | null;
+  performedByUserName: string | null;
+  createdAt: string | null;
+};
+
 export const itSupportApi = api.injectEndpoints({
   endpoints: (builder) => ({
     listItSupportTickets: builder.query<
@@ -88,6 +100,37 @@ export const itSupportApi = api.injectEndpoints({
         ...invalidateEntityListTag('ItSupport'),
       ],
     }),
+
+    getItSupportTicket: builder.query<ItSupportTicket, string>({
+      query: (id) => ({
+        url: `/it-support/tickets/${id}`,
+      }),
+      providesTags: (_result, _error, id) => [{ type: 'ItSupport', id }],
+    }),
+
+    listItSupportTicketEvents: builder.query<ItSupportTicketEvent[], string>({
+      query: (ticketId) => ({
+        url: `/it-support/tickets/${ticketId}/events`,
+      }),
+      providesTags: (_result, _error, ticketId) => [
+        { type: 'ItSupport', id: ticketId },
+        { type: 'ItSupport', id: `${ticketId}:events` },
+      ],
+    }),
+
+    createItSupportTicketNote: builder.mutation<ItSupportTicketEvent, { id: string; note: string }>(
+      {
+        query: ({ id, note }) => ({
+          url: `/it-support/tickets/${id}/notes`,
+          method: 'POST',
+          body: { note },
+        }),
+        invalidatesTags: (_result, _error, { id }) => [
+          { type: 'ItSupport', id },
+          { type: 'ItSupport', id: `${id}:events` },
+        ],
+      },
+    ),
   }),
 });
 
@@ -95,4 +138,7 @@ export const {
   useListItSupportTicketsQuery,
   useCreateItSupportTicketMutation,
   useUpdateItSupportTicketMutation,
+  useGetItSupportTicketQuery,
+  useListItSupportTicketEventsQuery,
+  useCreateItSupportTicketNoteMutation,
 } = itSupportApi;

@@ -191,6 +191,9 @@ Base URL: `/v1`
 - `/it-support`
   - `GET /it-support/tickets`
   - `POST /it-support/tickets`
+  - `GET /it-support/tickets/:id`
+  - `GET /it-support/tickets/:id/events`
+  - `POST /it-support/tickets/:id/notes`
   - `PATCH /it-support/tickets/:id`
 
 Notes:

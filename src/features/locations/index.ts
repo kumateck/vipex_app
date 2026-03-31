@@ -10,3 +10,4 @@ export * from './hooks/use-location-actions';
 export * from './pages/locations-list-page';
 export * from './pages/locations-create-page';
 export * from './pages/locations-edit-page';
+export * from './pages/locations-create-edit-page';

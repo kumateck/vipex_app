@@ -4,6 +4,7 @@ import type {
   CommunicationPresenceListInput,
 } from './dto';
 import { createCommunicationPresenceRepo, listCommunicationPresenceRepo } from './repository';
+import { emitCommunicationPresenceUpdated } from '../realtime';
 
 export async function listCommunicationPresenceSvc(
   input: CommunicationPresenceListInput,
@@ -14,5 +15,7 @@ export async function listCommunicationPresenceSvc(
 export async function createCommunicationPresenceSvc(
   input: CommunicationPresenceCreateInput,
 ): Promise<CommunicationPresenceItem> {
-  return createCommunicationPresenceRepo(input);
+  const updated = await createCommunicationPresenceRepo(input);
+  emitCommunicationPresenceUpdated(input.companyId, updated);
+  return updated;
 }

@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useApproveNotificationCampaignMutation,
   useListNotificationCampaignsQuery,
@@ -54,68 +55,70 @@ export function NotificationCampaignsApprovalsPage() {
   };
 
   return (
-    <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Campaign Approvals</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search submitted campaigns"
-          />
+    <ScrollableWrapper>
+      <div className="w-full p-4 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Campaign Approvals</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search submitted campaigns"
+            />
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Channel</TableHead>
-                <TableHead>Audience</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5}>Loading approvals...</TableCell>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Channel</TableHead>
+                  <TableHead>Audience</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : rows.length ? (
-                rows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>{row.name}</TableCell>
-                    <TableCell className="uppercase">{row.channel}</TableCell>
-                    <TableCell>{row.audienceType}</TableCell>
-                    <TableCell>{new Date(row.createdAt).toLocaleString()}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        size="sm"
-                        onClick={() => onApprove(row.id)}
-                        disabled={isApproving || isRejecting}
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onReject(row.id)}
-                        disabled={isApproving || isRejecting}
-                      >
-                        Reject
-                      </Button>
-                    </TableCell>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5}>Loading approvals...</TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5}>No campaigns pending approval.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+                ) : rows.length ? (
+                  rows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>{row.name}</TableCell>
+                      <TableCell className="uppercase">{row.channel}</TableCell>
+                      <TableCell>{row.audienceType}</TableCell>
+                      <TableCell>{new Date(row.createdAt).toLocaleString()}</TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button
+                          size="sm"
+                          onClick={() => onApprove(row.id)}
+                          disabled={isApproving || isRejecting}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onReject(row.id)}
+                          disabled={isApproving || isRejecting}
+                        >
+                          Reject
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5}>No campaigns pending approval.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }

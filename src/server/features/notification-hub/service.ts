@@ -208,6 +208,12 @@ export async function listNotificationProvidersSvc(params: ListNotificationProvi
   return listNotificationProvidersRepo(params);
 }
 
+export async function getNotificationProviderSvc(input: { id: string; companyId: string }) {
+  const provider = await getNotificationProviderByIdRepo(input.id, input.companyId);
+  if (!provider) throw NotFound('Notification provider not found');
+  return provider;
+}
+
 export async function createNotificationProviderSvc(input: {
   companyId: string;
   createdBy: string;
@@ -323,6 +329,12 @@ export async function setDefaultNotificationProviderSvc(input: {
 
 export async function listNotificationTemplatesSvc(params: ListNotificationTemplatesParams) {
   return listNotificationTemplatesRepo(params);
+}
+
+export async function getNotificationTemplateSvc(input: { id: string; companyId: string }) {
+  const template = await getNotificationTemplateByIdRepo(input.id, input.companyId);
+  if (!template) throw NotFound('Notification template not found');
+  return template;
 }
 
 export async function listNotificationTemplateOptionsSvc(input: {

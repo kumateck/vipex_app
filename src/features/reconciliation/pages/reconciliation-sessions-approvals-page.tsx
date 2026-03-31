@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useApproveReconciliationSessionMutation,
   useFinalizeReconciliationSessionMutation,
@@ -69,73 +70,75 @@ export function ReconciliationSessionsApprovalsPage() {
   };
 
   return (
-    <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Reconciliation Session Approvals</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Input
-            placeholder="Search pending sessions"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
+    <ScrollableWrapper>
+      <div className="w-full p-4 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Reconciliation Session Approvals</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              placeholder="Search pending sessions"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Branch</TableHead>
-                <TableHead>Expected</TableHead>
-                <TableHead>Counted</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6}>Loading pending approvals...</TableCell>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Expected</TableHead>
+                  <TableHead>Counted</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ) : rows.length ? (
-                rows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>{new Date(row.confirmationDate).toLocaleString()}</TableCell>
-                    <TableCell>{row.branchName ?? '-'}</TableCell>
-                    <TableCell>{formatMoneyPsw(row.expectedCashPsw)}</TableCell>
-                    <TableCell>{formatMoneyPsw(row.countedCashPsw)}</TableCell>
-                    <TableCell>{statusLabel(row.status)}</TableCell>
-                    <TableCell className="text-right">
-                      {row.status === 0 ? (
-                        <Button
-                          disabled={isApproving || isFinalizing}
-                          onClick={() => onApprove(row.id)}
-                        >
-                          Approve
-                        </Button>
-                      ) : row.status === 1 ? (
-                        <Button
-                          variant="outline"
-                          disabled={isApproving || isFinalizing}
-                          onClick={() => onFinalize(row.id)}
-                        >
-                          Finalize
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">No action</span>
-                      )}
-                    </TableCell>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6}>Loading pending approvals...</TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6}>No sessions pending approval.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+                ) : rows.length ? (
+                  rows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>{new Date(row.confirmationDate).toLocaleString()}</TableCell>
+                      <TableCell>{row.branchName ?? '-'}</TableCell>
+                      <TableCell>{formatMoneyPsw(row.expectedCashPsw)}</TableCell>
+                      <TableCell>{formatMoneyPsw(row.countedCashPsw)}</TableCell>
+                      <TableCell>{statusLabel(row.status)}</TableCell>
+                      <TableCell className="text-right">
+                        {row.status === 0 ? (
+                          <Button
+                            disabled={isApproving || isFinalizing}
+                            onClick={() => onApprove(row.id)}
+                          >
+                            Approve
+                          </Button>
+                        ) : row.status === 1 ? (
+                          <Button
+                            variant="outline"
+                            disabled={isApproving || isFinalizing}
+                            onClick={() => onFinalize(row.id)}
+                          >
+                            Finalize
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No action</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6}>No sessions pending approval.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }

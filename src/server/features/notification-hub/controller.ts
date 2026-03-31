@@ -5,6 +5,8 @@ import {
   createNotificationCampaignSvc,
   createNotificationProviderSvc,
   createNotificationTemplateSvc,
+  getNotificationProviderSvc,
+  getNotificationTemplateSvc,
   listCampaignDispatchSummarySvc,
   listNotificationCampaignsSvc,
   listNotificationDispatchesSvc,
@@ -82,6 +84,21 @@ export async function createNotificationProviderCtrl(input: {
   return createNotificationProviderSvc(input);
 }
 
+export async function getNotificationProviderCtrl(input: { id: string; companyId: string }) {
+  const row = await getNotificationProviderSvc(input);
+  return {
+    id: row.id,
+    channel: row.channel,
+    providerKey: row.providerKey,
+    name: row.name,
+    configJson: row.configJson,
+    isActive: row.isActive,
+    isDefault: row.isDefault,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
 export async function updateNotificationProviderCtrl(input: {
   id: string;
   companyId: string;
@@ -154,6 +171,22 @@ export async function listNotificationTemplateOptionsCtrl(input: {
   channel?: string;
 }) {
   return listNotificationTemplateOptionsSvc(input);
+}
+
+export async function getNotificationTemplateCtrl(input: { id: string; companyId: string }) {
+  const row = await getNotificationTemplateSvc(input);
+  return {
+    id: row.id,
+    channel: row.channel,
+    code: row.code,
+    name: row.name,
+    subject: row.subject,
+    body: row.body,
+    variablesJson: row.variablesJson,
+    isActive: row.isActive,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }
 
 export async function createNotificationTemplateCtrl(input: {

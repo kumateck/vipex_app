@@ -389,9 +389,24 @@ const BASE_ROUTES: Route[] = [
       },
       {
         title: 'Leave Mgt',
-        url: '/hr/leave',
         icon: 'CalendarDays',
-        permissionKey: PermissionKeys.CanReadLeaveRequests,
+        items: [
+          {
+            title: 'Leave Requests',
+            url: '/hr/leave/requests',
+            permissionKey: PermissionKeys.CanReadLeaveRequests,
+          },
+          {
+            title: 'Leave Types',
+            url: '/hr/leave/types',
+            permissionKey: PermissionKeys.CanReadLeaveTypes,
+          },
+          {
+            title: 'Leave History',
+            url: '/hr/leave/history',
+            permissionKey: PermissionKeys.CanReadLeaveRequests,
+          },
+        ],
       },
     ],
   },
@@ -664,6 +679,29 @@ const BASE_ROUTES: Route[] = [
             title: 'Tickets',
             url: '/it-support/tickets',
             permissionKey: PermissionKeys.CanReadItSupportTickets,
+          },
+          {
+            title: 'Create Ticket',
+            url: '/it-support/tickets/new',
+            permissionKey: PermissionKeys.CanCreateItSupportTickets,
+          },
+        ],
+      },
+      {
+        title: 'Communication',
+        icon: 'MessageSquare',
+        items: [
+          {
+            title: 'Team Chat',
+            url: '/communication/chat',
+          },
+          {
+            title: 'Calls',
+            url: '/communication/calls',
+          },
+          {
+            title: 'Events',
+            url: '/communication/events',
           },
         ],
       },

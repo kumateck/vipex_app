@@ -84,6 +84,11 @@ const EnvSchema = z.object({
   REDIS_URL: z.string().url().optional(),
   RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
+  // LiveKit (optional)
+  LIVEKIT_URL: z.string().url().optional(),
+  LIVEKIT_PUBLIC_URL: z.string().url().optional(),
+  LIVEKIT_API_KEY: z.string().optional(),
+  LIVEKIT_API_SECRET: z.string().optional(),
   // PostGIS
   POSTGIS_REQUIRED: toBoolean.default(false),
 });

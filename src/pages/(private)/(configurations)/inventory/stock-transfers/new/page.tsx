@@ -1,3 +1,3 @@
-import { StockTransfersCreatePage } from '@/features/inventory/stock/pages/stock-transfers-create-page';
+import { StockTransfersCreateEditPage } from '@/features/inventory/stock/pages/stock-transfers-create-edit-page';
 
-export default StockTransfersCreatePage;
+export default StockTransfersCreateEditPage;

@@ -56,7 +56,10 @@ export type ListLeaveRequestParams = {
   offset: number;
   companyId: string;
   employeeId?: string | null;
+  leaveTypeId?: string | null;
   status?: number | null;
+  dateFrom?: Date | null;
+  dateTo?: Date | null;
 };
 
 export async function listDepartmentsRepo(p: ListDepartmentParams) {
@@ -586,7 +589,10 @@ export async function listLeaveRequestsRepo(p: ListLeaveRequestParams) {
   const where = [
     eq(leaveRequests.companyId, p.companyId),
     ...(p.employeeId ? [eq(leaveRequests.employeeId, p.employeeId)] : []),
+    ...(p.leaveTypeId ? [eq(leaveRequests.leaveTypeId, p.leaveTypeId)] : []),
     ...(p.status !== null && p.status !== undefined ? [eq(leaveRequests.status, p.status)] : []),
+    ...(p.dateFrom ? [gte(leaveRequests.dateFrom, p.dateFrom)] : []),
+    ...(p.dateTo ? [lte(leaveRequests.dateTo, p.dateTo)] : []),
   ];
 
   const [countRow] = await db

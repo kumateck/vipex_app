@@ -33,3 +33,7 @@ export const ItSupportTicketsUpdateBodySchema = t.Object({
   assignedToUserId: t.Optional(t.Union([t.String({ minLength: 1 }), t.Null()])),
   note: t.Optional(t.Union([t.String({ minLength: 1 }), t.Null()])),
 });
+
+export const ItSupportTicketNoteBodySchema = t.Object({
+  note: t.String({ minLength: 1, maxLength: 3000 }),
+});

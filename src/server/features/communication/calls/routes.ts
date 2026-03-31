@@ -1,8 +1,18 @@
 import { Elysia } from 'elysia';
 import type { AuthUser } from '@/server/plugins/auth';
 import { authPlugin, requireAuth, requireModuleEnabled } from '@/server/plugins/auth';
-import { createCommunicationCallsCtrl, listCommunicationCallsCtrl } from './controller';
-import { CommunicationCallsCreateBodySchema, CommunicationCallsListQuerySchema } from './schema';
+import {
+  createCommunicationCallLivekitTokenCtrl,
+  createCommunicationCallsCtrl,
+  listCommunicationCallsCtrl,
+  updateCommunicationCallStatusCtrl,
+} from './controller';
+import {
+  CommunicationCallsCreateBodySchema,
+  CommunicationCallsIdParamSchema,
+  CommunicationCallsListQuerySchema,
+  CommunicationCallsUpdateStatusBodySchema,
+} from './schema';
 
 export const CommunicationCallsRoutes = new Elysia({ name: 'calls' })
   .use(authPlugin)
@@ -33,6 +43,34 @@ export const CommunicationCallsRoutes = new Elysia({ name: 'calls' })
       }),
     {
       body: CommunicationCallsCreateBodySchema,
+      beforeHandle: [requireAuth(), requireModuleEnabled('communication_calls_livekit')],
+    },
+  )
+  .post(
+    '/:id/livekit-token',
+    async ({ params, user, request }) =>
+      createCommunicationCallLivekitTokenCtrl({
+        companyId: (user as AuthUser | null)?.companyId ?? '',
+        userId: (user as AuthUser | null)?.sub ?? '',
+        id: params.id,
+        requestOrigin: request.headers.get('origin') ?? new URL(request.url).origin,
+      }),
+    {
+      params: CommunicationCallsIdParamSchema,
+      beforeHandle: [requireAuth(), requireModuleEnabled('communication_calls_livekit')],
+    },
+  )
+  .patch(
+    '/:id/status',
+    async ({ params, body, user }) =>
+      updateCommunicationCallStatusCtrl({
+        companyId: (user as AuthUser | null)?.companyId ?? '',
+        id: params.id,
+        status: body.status,
+      }),
+    {
+      params: CommunicationCallsIdParamSchema,
+      body: CommunicationCallsUpdateStatusBodySchema,
       beforeHandle: [requireAuth(), requireModuleEnabled('communication_calls_livekit')],
     },
   );

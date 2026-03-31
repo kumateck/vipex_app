@@ -99,6 +99,12 @@ export const notificationHubApi = api.injectEndpoints({
       }),
       providesTags: (result) => provideEntityListTags('NotificationHub', result),
     }),
+    getNotificationProvider: builder.query<NotificationProvider, { id: string }>({
+      query: ({ id }) => ({
+        url: `/notification-hub/providers/${id}`,
+      }),
+      providesTags: (_result, _error, { id }) => [{ type: 'NotificationHub', id }],
+    }),
     createNotificationProvider: builder.mutation<
       { id: string },
       {
@@ -158,6 +164,12 @@ export const notificationHubApi = api.injectEndpoints({
         params: buildServerPaginationParams(query),
       }),
       providesTags: (result) => provideEntityListTags('NotificationHub', result),
+    }),
+    getNotificationTemplate: builder.query<NotificationTemplate, { id: string }>({
+      query: ({ id }) => ({
+        url: `/notification-hub/templates/${id}`,
+      }),
+      providesTags: (_result, _error, { id }) => [{ type: 'NotificationHub', id }],
     }),
     listNotificationTemplateOptions: builder.query<
       NotificationTemplateOption[],
@@ -314,10 +326,12 @@ export const notificationHubApi = api.injectEndpoints({
 
 export const {
   useListNotificationProvidersQuery,
+  useGetNotificationProviderQuery,
   useCreateNotificationProviderMutation,
   useUpdateNotificationProviderMutation,
   useSetDefaultNotificationProviderMutation,
   useListNotificationTemplatesQuery,
+  useGetNotificationTemplateQuery,
   useListNotificationTemplateOptionsQuery,
   useCreateNotificationTemplateMutation,
   useUpdateNotificationTemplateMutation,

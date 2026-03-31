@@ -2,9 +2,11 @@ import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { commCallSessions } from '@/db/schemas';
 import type {
+  CommunicationCallsCreateLivekitTokenInput,
   CommunicationCallsCreateInput,
   CommunicationCallsItem,
   CommunicationCallsListInput,
+  CommunicationCallsUpdateStatusInput,
 } from './dto';
 
 export async function listCommunicationCallsRepo(
@@ -79,5 +81,75 @@ export async function createCommunicationCallsRepo(
     endedAt: created.endedAt ? created.endedAt.toISOString() : null,
     createdAt: created.createdAt ? created.createdAt.toISOString() : null,
     updatedAt: created.updatedAt ? created.updatedAt.toISOString() : null,
+  };
+}
+
+export async function updateCommunicationCallStatusRepo(
+  input: CommunicationCallsUpdateStatusInput,
+): Promise<CommunicationCallsItem> {
+  const now = new Date();
+  const [updated] = await db
+    .update(commCallSessions)
+    .set({
+      status: input.status,
+      startedAt: input.status === 'active' ? now : undefined,
+      endedAt: input.status === 'ended' || input.status === 'cancelled' ? now : undefined,
+      updatedAt: now,
+    })
+    .where(and(eq(commCallSessions.id, input.id), eq(commCallSessions.companyId, input.companyId)))
+    .returning({
+      id: commCallSessions.id,
+      companyId: commCallSessions.companyId,
+      threadId: commCallSessions.threadId,
+      channelId: commCallSessions.channelId,
+      initiatorUserId: commCallSessions.initiatorUserId,
+      callType: commCallSessions.callType,
+      status: commCallSessions.status,
+      livekitRoomName: commCallSessions.livekitRoomName,
+      startedAt: commCallSessions.startedAt,
+      endedAt: commCallSessions.endedAt,
+      createdAt: commCallSessions.createdAt,
+      updatedAt: commCallSessions.updatedAt,
+    });
+
+  if (!updated) throw new Error('Call session not found');
+  return {
+    ...updated,
+    startedAt: updated.startedAt ? updated.startedAt.toISOString() : null,
+    endedAt: updated.endedAt ? updated.endedAt.toISOString() : null,
+    createdAt: updated.createdAt ? updated.createdAt.toISOString() : null,
+    updatedAt: updated.updatedAt ? updated.updatedAt.toISOString() : null,
+  };
+}
+
+export async function getCommunicationCallByIdRepo(
+  input: Pick<CommunicationCallsCreateLivekitTokenInput, 'companyId' | 'id'>,
+): Promise<CommunicationCallsItem | null> {
+  const [row] = await db
+    .select({
+      id: commCallSessions.id,
+      companyId: commCallSessions.companyId,
+      threadId: commCallSessions.threadId,
+      channelId: commCallSessions.channelId,
+      initiatorUserId: commCallSessions.initiatorUserId,
+      callType: commCallSessions.callType,
+      status: commCallSessions.status,
+      livekitRoomName: commCallSessions.livekitRoomName,
+      startedAt: commCallSessions.startedAt,
+      endedAt: commCallSessions.endedAt,
+      createdAt: commCallSessions.createdAt,
+      updatedAt: commCallSessions.updatedAt,
+    })
+    .from(commCallSessions)
+    .where(and(eq(commCallSessions.id, input.id), eq(commCallSessions.companyId, input.companyId)))
+    .limit(1);
+
+  if (!row) return null;
+  return {
+    ...row,
+    startedAt: row.startedAt ? row.startedAt.toISOString() : null,
+    endedAt: row.endedAt ? row.endedAt.toISOString() : null,
+    createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+    updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
   };
 }

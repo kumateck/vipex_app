@@ -41,6 +41,26 @@ export type ItSupportTicketsUpdateInput = {
   note?: string | null;
 };
 
+export type ItSupportTicketNoteCreateInput = {
+  companyId: string;
+  userId: string;
+  ticketId: string;
+  note: string;
+  canManageTickets?: boolean;
+};
+
+export type ItSupportTicketEventItem = {
+  id: string;
+  ticketId: string;
+  eventType: string;
+  eventNote: string | null;
+  fromStatus: string | null;
+  toStatus: string | null;
+  performedBy: string | null;
+  performedByUserName: string | null;
+  createdAt: string | null;
+};
+
 export type ItSupportTicketItem = {
   id: string;
   companyId: string;

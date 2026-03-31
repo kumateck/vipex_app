@@ -1,3 +1,5 @@
-import { UsersCreatePage } from '@/features/users';
+import { Navigate } from 'react-router-dom';
 
-export default UsersCreatePage;
+export default function UsersCreateLegacyRedirectPage() {
+  return <Navigate to="/users/new" replace />;
+}

@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useCreateBankSettlementMutation,
   useListReconciliationBranchOptionsQuery,
@@ -65,85 +66,94 @@ export function ReconciliationBankSettlementsCreatePage() {
   };
 
   return (
-    <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create Bank Settlement</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <FieldGroup className="grid gap-4 md:grid-cols-2">
-            <Field>
-              <FieldLabel>Branch</FieldLabel>
-              <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select branch" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Select branch</SelectItem>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field>
-              <FieldLabel>Settlement date</FieldLabel>
-              <Input
-                type="datetime-local"
-                value={settlementDate}
-                onChange={(event) => setSettlementDate(event.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel>Settlement number (optional)</FieldLabel>
-              <Input
-                value={settlementNo}
-                onChange={(event) => setSettlementNo(event.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel>Bank reference</FieldLabel>
-              <Input
-                value={bankReference}
-                onChange={(event) => setBankReference(event.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel>Expected amount (PSW)</FieldLabel>
-              <Input
-                type="number"
-                min={0}
-                value={expectedAmountPsw}
-                onChange={(event) => setExpectedAmountPsw(event.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel>Banked amount (PSW)</FieldLabel>
-              <Input
-                type="number"
-                min={0}
-                value={bankedAmountPsw}
-                onChange={(event) => setBankedAmountPsw(event.target.value)}
-              />
-            </Field>
-            <Field className="md:col-span-2">
-              <FieldLabel>Notes</FieldLabel>
-              <Textarea rows={4} value={notes} onChange={(event) => setNotes(event.target.value)} />
-            </Field>
-          </FieldGroup>
+    <ScrollableWrapper>
+      <div className="w-full p-4 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Create Bank Settlement</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FieldGroup className="grid gap-4 md:grid-cols-2">
+              <Field>
+                <FieldLabel>Branch</FieldLabel>
+                <Select value={branchId} onValueChange={setBranchId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Select branch</SelectItem>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel>Settlement date</FieldLabel>
+                <Input
+                  type="datetime-local"
+                  value={settlementDate}
+                  onChange={(event) => setSettlementDate(event.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Settlement number (optional)</FieldLabel>
+                <Input
+                  value={settlementNo}
+                  onChange={(event) => setSettlementNo(event.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Bank reference</FieldLabel>
+                <Input
+                  value={bankReference}
+                  onChange={(event) => setBankReference(event.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Expected amount (PSW)</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  value={expectedAmountPsw}
+                  onChange={(event) => setExpectedAmountPsw(event.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Banked amount (PSW)</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  value={bankedAmountPsw}
+                  onChange={(event) => setBankedAmountPsw(event.target.value)}
+                />
+              </Field>
+              <Field className="md:col-span-2">
+                <FieldLabel>Notes</FieldLabel>
+                <Textarea
+                  rows={4}
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                />
+              </Field>
+            </FieldGroup>
 
-          <div className="flex gap-2">
-            <Button onClick={onSubmit} disabled={isLoading}>
-              Save settlement
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/reconciliation/bank-settlements')}>
-              Cancel
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            <div className="flex gap-2">
+              <Button onClick={onSubmit} disabled={isLoading}>
+                Save settlement
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/reconciliation/bank-settlements')}
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }

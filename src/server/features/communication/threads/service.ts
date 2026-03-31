@@ -5,6 +5,7 @@ import type {
   CommunicationThreadsListInput,
 } from './dto';
 import { createCommunicationThreadRepo, listCommunicationThreadsRepo } from './repository';
+import { emitCommunicationThreadCreated } from '../realtime';
 
 export async function listCommunicationThreadsSvc(
   input: CommunicationThreadsListInput,
@@ -29,5 +30,12 @@ export async function createCommunicationThreadsSvc(
     throw BadRequest('Group or channel thread requires at least 2 participants');
   }
 
-  return createCommunicationThreadRepo({ ...input, participantUserIds });
+  const created = await createCommunicationThreadRepo({ ...input, participantUserIds });
+  emitCommunicationThreadCreated({
+    companyId: input.companyId,
+    id: created.id,
+    threadType: input.threadType,
+    userId: input.userId,
+  });
+  return created;
 }

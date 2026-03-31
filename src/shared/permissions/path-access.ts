@@ -39,6 +39,7 @@ export function inferReadPermissionByPath(pathname?: string): PermissionKey | un
   if (pathname.startsWith('/fleet-transport')) return 'CanReadFleetTransport';
   if (pathname.startsWith('/customer-wallet-credit')) return 'CanReadCustomerWalletCredit';
   if (pathname.startsWith('/reconciliation')) return 'CanReadReconciliation';
+  if (pathname.startsWith('/notification-hub')) return 'CanReadNotificationHub';
   if (pathname.startsWith('/it-support')) return 'CanReadItSupportTickets';
 
   if (pathname.startsWith('/reports/financial/')) return 'CanReadAccounting';
@@ -80,6 +81,12 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
   if (pathname === '/settings/change-password') return 'CanChangePassword';
   if (pathname === '/accounting/setup') return undefined;
   if (pathname.startsWith('/it-support/tickets')) return 'CanReadItSupportTickets';
+  if (pathname.startsWith('/notification-hub/providers/edit/')) {
+    return 'CanManageNotificationProviders';
+  }
+  if (pathname.startsWith('/notification-hub/templates/edit/')) {
+    return 'CanManageNotificationTemplates';
+  }
 
   if (pathname === '/inventory/categories/new') return 'CanCreateProductCategory';
   if (pathname.startsWith('/inventory/categories/edit/')) return 'CanUpdateProductCategory';
@@ -88,9 +95,29 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
   if (pathname === '/inventory/products/new') return 'CanCreateProduct';
   if (pathname.startsWith('/inventory/products/edit/')) return 'CanUpdateProduct';
   if (pathname === '/inventory/stock-movements/new') return 'CanCreateStockMovement';
+  if (pathname.startsWith('/inventory/stock-movements/edit/')) return 'CanCreateStockMovement';
   if (pathname === '/inventory/stock-adjustments/new') return 'CanCreateStockAdjustment';
+  if (pathname.startsWith('/inventory/stock-adjustments/edit/')) return 'CanCreateStockAdjustment';
   if (pathname === '/inventory/stock-transfers/new') return 'CanCreateStockTransfer';
   if (pathname.startsWith('/inventory/stock-transfers/edit/')) return 'CanUpdateStockTransfer';
+  if (pathname.startsWith('/fleet-transport/vehicles/edit/')) return 'CanUpdateFleetVehicles';
+  if (pathname.startsWith('/fleet-transport/fuel-logs/edit/')) return 'CanCreateFleetFuelLogs';
+  if (pathname.startsWith('/procurement/suppliers/edit/')) return 'CanUpdateProcurementSuppliers';
+  if (pathname.startsWith('/procurement/purchase-requests/edit/')) {
+    return 'CanCreateProcurementPurchaseRequests';
+  }
+  if (pathname.startsWith('/reconciliation/sessions/edit/'))
+    return 'CanCreateReconciliationSessions';
+  if (pathname.startsWith('/reconciliation/bank-settlements/edit/')) {
+    return 'CanCreateReconciliationBankSettlements';
+  }
+  if (pathname.startsWith('/customer-wallet-credit/payments/edit/')) {
+    return 'CanCreateCustomerWalletCreditPayments';
+  }
+  if (pathname.startsWith('/notification-hub/campaigns/edit/')) {
+    return 'CanCreateNotificationCampaigns';
+  }
+  if (pathname.startsWith('/parcels/edit/')) return 'CanCreateBookingWithParcels';
 
   if (pathname === '/accounting/tax') return 'CanReadAccounting';
   if (pathname === '/accounting/daily-cash' || pathname === '/accounting/expenses') {

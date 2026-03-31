@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useCreateFleetFuelLogMutation,
   useListFleetVehiclesQuery,
@@ -73,76 +74,78 @@ export function FleetFuelLogsCreatePage() {
   };
 
   return (
-    <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create Fuel Log</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <FieldGroup className="grid gap-4 md:grid-cols-2">
-            <Field>
-              <FieldLabel>Vehicle</FieldLabel>
-              <Select value={vehicleId} onValueChange={setVehicleId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select vehicle" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Select vehicle</SelectItem>
-                  {vehicles.map((vehicle) => (
-                    <SelectItem key={vehicle.id} value={vehicle.id}>
-                      {vehicle.plateNumber} - {vehicle.model}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field>
-              <FieldLabel>Liters</FieldLabel>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={liters}
-                onChange={(e) => setLiters(e.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel>Fuel Cost (PSW)</FieldLabel>
-              <Input
-                type="number"
-                min={0}
-                value={fuelCostPsw}
-                onChange={(e) => setFuelCostPsw(e.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel>Odometer (km)</FieldLabel>
-              <Input
-                type="number"
-                min={0}
-                value={odometerKm}
-                onChange={(e) => setOdometerKm(e.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel>Station Name</FieldLabel>
-              <Input value={stationName} onChange={(e) => setStationName(e.target.value)} />
-            </Field>
-            <Field className="md:col-span-2">
-              <FieldLabel>Note</FieldLabel>
-              <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
-            </Field>
-          </FieldGroup>
-          <div className="flex gap-2">
-            <Button onClick={onSubmit} disabled={isLoading}>
-              Save fuel log
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/fleet-transport/fuel-logs')}>
-              Cancel
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <ScrollableWrapper>
+      <div className="w-full p-4 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Create Fuel Log</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FieldGroup className="grid gap-4 md:grid-cols-2">
+              <Field>
+                <FieldLabel>Vehicle</FieldLabel>
+                <Select value={vehicleId} onValueChange={setVehicleId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select vehicle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Select vehicle</SelectItem>
+                    {vehicles.map((vehicle) => (
+                      <SelectItem key={vehicle.id} value={vehicle.id}>
+                        {vehicle.plateNumber} - {vehicle.model}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel>Liters</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={liters}
+                  onChange={(e) => setLiters(e.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Fuel Cost (PSW)</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  value={fuelCostPsw}
+                  onChange={(e) => setFuelCostPsw(e.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Odometer (km)</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  value={odometerKm}
+                  onChange={(e) => setOdometerKm(e.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Station Name</FieldLabel>
+                <Input value={stationName} onChange={(e) => setStationName(e.target.value)} />
+              </Field>
+              <Field className="md:col-span-2">
+                <FieldLabel>Note</FieldLabel>
+                <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
+              </Field>
+            </FieldGroup>
+            <div className="flex gap-2">
+              <Button onClick={onSubmit} disabled={isLoading}>
+                Save fuel log
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/fleet-transport/fuel-logs')}>
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }

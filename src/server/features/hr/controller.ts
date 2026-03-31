@@ -230,6 +230,7 @@ export async function listLeaveRequestsCtrl(
   q: PaginationRequestDto<{
     companyId: string;
     employeeId?: string | null;
+    leaveTypeId?: string | null;
     status?: number | null;
   }>,
 ) {
@@ -239,7 +240,10 @@ export async function listLeaveRequestsCtrl(
     offset: pagination.offset,
     companyId: q.filters!.companyId,
     employeeId: q.filters?.employeeId ?? null,
+    leaveTypeId: q.filters?.leaveTypeId ?? null,
     status: q.filters?.status ?? null,
+    dateFrom: q.dateFrom ? new Date(q.dateFrom) : null,
+    dateTo: q.dateTo ? new Date(q.dateTo) : null,
   });
 
   return {

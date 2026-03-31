@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useCreateReconciliationSessionMutation,
   useListReconciliationBranchOptionsQuery,
@@ -62,77 +63,83 @@ export function ReconciliationSessionsCreatePage() {
   };
 
   return (
-    <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create Reconciliation Session</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <FieldGroup className="grid gap-4 md:grid-cols-2">
-            <Field>
-              <FieldLabel>Branch</FieldLabel>
-              <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select branch" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Select branch</SelectItem>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
+    <ScrollableWrapper>
+      <div className="w-full p-4 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Create Reconciliation Session</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FieldGroup className="grid gap-4 md:grid-cols-2">
+              <Field>
+                <FieldLabel>Branch</FieldLabel>
+                <Select value={branchId} onValueChange={setBranchId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Select branch</SelectItem>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
 
-            <Field>
-              <FieldLabel>Confirmation date</FieldLabel>
-              <Input
-                type="datetime-local"
-                value={confirmationDate}
-                onChange={(event) => setConfirmationDate(event.target.value)}
-              />
-            </Field>
+              <Field>
+                <FieldLabel>Confirmation date</FieldLabel>
+                <Input
+                  type="datetime-local"
+                  value={confirmationDate}
+                  onChange={(event) => setConfirmationDate(event.target.value)}
+                />
+              </Field>
 
-            <Field>
-              <FieldLabel>Expected cash (Cedis)</FieldLabel>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={expectedCashCedis}
-                onChange={(event) => setExpectedCashCedis(event.target.value)}
-              />
-            </Field>
+              <Field>
+                <FieldLabel>Expected cash (Cedis)</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={expectedCashCedis}
+                  onChange={(event) => setExpectedCashCedis(event.target.value)}
+                />
+              </Field>
 
-            <Field>
-              <FieldLabel>Counted cash (Cedis)</FieldLabel>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={countedCashCedis}
-                onChange={(event) => setCountedCashCedis(event.target.value)}
-              />
-            </Field>
+              <Field>
+                <FieldLabel>Counted cash (Cedis)</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={countedCashCedis}
+                  onChange={(event) => setCountedCashCedis(event.target.value)}
+                />
+              </Field>
 
-            <Field className="md:col-span-2">
-              <FieldLabel>Notes</FieldLabel>
-              <Textarea rows={4} value={notes} onChange={(event) => setNotes(event.target.value)} />
-            </Field>
-          </FieldGroup>
+              <Field className="md:col-span-2">
+                <FieldLabel>Notes</FieldLabel>
+                <Textarea
+                  rows={4}
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                />
+              </Field>
+            </FieldGroup>
 
-          <div className="flex gap-2">
-            <Button onClick={onSubmit} disabled={isLoading}>
-              Save session
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/reconciliation/sessions')}>
-              Cancel
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            <div className="flex gap-2">
+              <Button onClick={onSubmit} disabled={isLoading}>
+                Save session
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/reconciliation/sessions')}>
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }
