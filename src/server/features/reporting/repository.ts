@@ -1294,6 +1294,9 @@ export async function listToBePaidOutstandingReportRowsRepo(input: {
   from?: Date | null;
   to?: Date | null;
 }) {
+  const fromParam = input.from ? input.from.toISOString() : null;
+  const toParam = input.to ? input.to.toISOString() : null;
+
   const rows = await db.execute(sql<{
     parcel_id: string;
     booking_code: string;
@@ -1348,8 +1351,8 @@ export async function listToBePaidOutstandingReportRowsRepo(input: {
       AND GREATEST(pr.planned_tobepaid_psw - COALESCE(pp.paid_principal_psw, 0), 0) > 0
       ${input.sourceBranchId ? sql`AND pr.source_id = ${input.sourceBranchId}` : sql``}
       ${input.destinationBranchId ? sql`AND pr.destination_id = ${input.destinationBranchId}` : sql``}
-      ${input.from ? sql`AND pr.created_at >= ${input.from}` : sql``}
-      ${input.to ? sql`AND pr.created_at <= ${input.to}` : sql``}
+      ${fromParam ? sql`AND pr.created_at >= ${fromParam}` : sql``}
+      ${toParam ? sql`AND pr.created_at <= ${toParam}` : sql``}
     ORDER BY outstanding_psw DESC, pr.created_at DESC
   `);
 
@@ -1381,6 +1384,9 @@ export async function listToBePaidCollectionsReconciliationReportRowsRepo(input:
   from?: Date | null;
   to?: Date | null;
 }) {
+  const fromParam = input.from ? input.from.toISOString() : null;
+  const toParam = input.to ? input.to.toISOString() : null;
+
   const rows = await db.execute(sql<{
     parcel_id: string;
     booking_code: string;
@@ -1458,8 +1464,8 @@ export async function listToBePaidCollectionsReconciliationReportRowsRepo(input:
       AND pr.planned_tobepaid_psw > 0
       ${input.sourceBranchId ? sql`AND pr.source_id = ${input.sourceBranchId}` : sql``}
       ${input.destinationBranchId ? sql`AND pr.destination_id = ${input.destinationBranchId}` : sql``}
-      ${input.from ? sql`AND pr.created_at >= ${input.from}` : sql``}
-      ${input.to ? sql`AND pr.created_at <= ${input.to}` : sql``}
+      ${fromParam ? sql`AND pr.created_at >= ${fromParam}` : sql``}
+      ${toParam ? sql`AND pr.created_at <= ${toParam}` : sql``}
     ORDER BY pr.created_at DESC, pr.booking_code DESC
   `);
 
