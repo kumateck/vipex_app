@@ -272,10 +272,6 @@ export function CommunicationEventsPage() {
     [selectedDate],
   );
 
-  const highlightedDays = useMemo(
-    () => meetingsWithDate.map((item) => item.date),
-    [meetingsWithDate],
-  );
   const eventsByDay = useMemo(() => {
     const map = new Map<string, typeof filteredEvents>();
     for (const event of filteredEvents) {

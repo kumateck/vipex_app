@@ -3,7 +3,6 @@ import { skipToken } from '@reduxjs/toolkit/query';
 import {
   ArrowLeft,
   Bell,
-  CalendarPlus,
   Forward,
   Link2,
   Mic,
@@ -631,10 +630,9 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
     normalizedThreadId ? { threadId: normalizedThreadId, limit: messageLimit } : skipToken,
   );
   const [createMessage, { isLoading: isSendingMessage }] = useCreateCommunicationMessageMutation();
-  const [updateMessage, { isLoading: isUpdatingMessage }] = useUpdateCommunicationMessageMutation();
-  const [deleteMessage, { isLoading: isDeletingMessage }] = useDeleteCommunicationMessageMutation();
-  const [toggleMessageFlag, { isLoading: isTogglingFlag }] =
-    useToggleCommunicationMessageFlagMutation();
+  const [updateMessage] = useUpdateCommunicationMessageMutation();
+  const [deleteMessage] = useDeleteCommunicationMessageMutation();
+  const [toggleMessageFlag] = useToggleCommunicationMessageFlagMutation();
   const [createCall, { isLoading: isCreatingCall }] = useCreateCommunicationCallMutation();
   const [uploadImage, { isLoading: isUploadingFile }] = useUploadImageMutation();
   const { data: threadCalls = [] } = useListCommunicationCallsQuery(
