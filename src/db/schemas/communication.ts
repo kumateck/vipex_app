@@ -237,8 +237,14 @@ export const commChannels = pgTable(
     locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
+    channelType: varchar('channel_type', { length: 20 }).notNull().default('text'), // text | voice
+    visibility: varchar('visibility', { length: 20 }).notNull().default('public'), // public | private
     isCallEnabled: boolean('is_call_enabled').notNull().default(false),
     isAnnouncementOnly: boolean('is_announcement_only').notNull().default(false),
+    threadId: varchar('thread_id', { length: 25 }).references(() => commThreads.id),
+    maxParticipants: integer('max_participants'),
+    isArchived: boolean('is_archived').notNull().default(false),
+    archivedAt: timestamp('archived_at', { withTimezone: false }),
     createdBy: varchar('created_by', { length: 25 }).references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
@@ -246,6 +252,11 @@ export const commChannels = pgTable(
   },
   (t) => ({
     byCompany: index('comm_channels_company_idx').on(t.companyId),
+    byCompanyType: index('comm_channels_company_type_idx').on(t.companyId, t.channelType),
+    byCompanyVisibility: index('comm_channels_company_visibility_idx').on(
+      t.companyId,
+      t.visibility,
+    ),
   }),
 );
 
@@ -268,6 +279,29 @@ export const commChannelMembers = pgTable(
     byChannel: index('comm_channel_members_channel_idx').on(t.channelId),
     byUser: index('comm_channel_members_user_idx').on(t.userId),
     uqChannelUser: uniqueIndex('comm_channel_members_channel_user_uq').on(t.channelId, t.userId),
+  }),
+);
+
+export const commChannelReadState = pgTable(
+  'comm_channel_read_state',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    channelId: varchar('channel_id', { length: 25 })
+      .notNull()
+      .references(() => commChannels.id),
+    userId: varchar('user_id', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+    lastReadAt: timestamp('last_read_at', { withTimezone: false }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byChannel: index('comm_channel_read_state_channel_idx').on(t.channelId),
+    byUser: index('comm_channel_read_state_user_idx').on(t.userId),
+    uqChannelUser: uniqueIndex('comm_channel_read_state_channel_user_uq').on(t.channelId, t.userId),
   }),
 );
 

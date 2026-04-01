@@ -5,6 +5,17 @@ export type CommunicationMessagesListInput = {
   limit?: number;
 };
 
+export type CommunicationMessagesUnreadCountsInput = {
+  companyId: string;
+  userId: string;
+};
+
+export type CommunicationMessagesMarkThreadReadInput = {
+  companyId: string;
+  userId: string;
+  threadId: string;
+};
+
 export type CommunicationMeetingsListInput = {
   companyId: string;
   userId: string;
@@ -46,10 +57,19 @@ export type CommunicationMessagesToggleFlagInput = {
   enabled: boolean;
 };
 
+export type CommunicationMessagesToggleReactionInput = {
+  companyId: string;
+  userId: string;
+  id: string;
+  emoji: string;
+  enabled: boolean;
+};
+
 export type CommunicationMessagesItem = {
   id: string;
   threadId: string;
   senderUserId: string | null;
+  senderName?: string | null;
   messageType: string;
   body: string | null;
   metadataJson: unknown;
@@ -57,6 +77,14 @@ export type CommunicationMessagesItem = {
   editedAt?: string | null;
   deletedAt?: string | null;
   createdAt: string | null;
+};
+
+export type CommunicationMessagesUnreadCountItem = {
+  threadId: string;
+  unreadCount: number;
+  mentionCount: number;
+  lastReadAt: string | null;
+  lastMessageAt: string | null;
 };
 
 export type CommunicationMeetingItem = {

@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Room, RoomEvent, Track, type LocalVideoTrack, type RemoteTrack } from 'livekit-client';
+import {
+  Maximize2,
+  Mic,
+  MicOff,
+  Minimize2,
+  Phone,
+  PhoneOff,
+  ScreenShare,
+  ScreenShareOff,
+  Video,
+  VideoOff,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +31,7 @@ import {
   useCreateCommunicationCallLivekitTokenMutation,
   useListCommunicationCallsQuery,
   useListCommunicationThreadsQuery,
+  useMarkCommunicationChannelReadMutation,
   useUpdateCommunicationCallStatusMutation,
 } from '../api/communication.api';
 import { useCommunicationSocket } from '../hooks/use-communication-socket';
@@ -106,6 +119,7 @@ export function CommunicationCallRoomPage() {
   const currentUserId = useAuthStore((state) => state.user?.id ?? '');
 
   const roomRef = useRef<Room | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
 
   const [participants, setParticipants] = useState<CallParticipant[]>([]);
   const [isMuted, setIsMuted] = useState(false);
@@ -128,6 +142,9 @@ export function CommunicationCallRoomPage() {
     readStoredDeviceId(AUDIO_OUTPUT_STORAGE_KEY),
   );
   const [activeSpeakerUserIds, setActiveSpeakerUserIds] = useState<string[]>([]);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isStageFullscreen, setIsStageFullscreen] = useState(false);
+  const [focusedTrackKey, setFocusedTrackKey] = useState<string | null>(null);
 
   const { data: calls = [], refetch } = useListCommunicationCallsQuery();
   const { data: threads = [] } = useListCommunicationThreadsQuery();
@@ -135,6 +152,7 @@ export function CommunicationCallRoomPage() {
   const [updateCallStatus, { isLoading: isUpdatingStatus }] =
     useUpdateCommunicationCallStatusMutation();
   const [createLivekitToken] = useCreateCommunicationCallLivekitTokenMutation();
+  const [markChannelRead] = useMarkCommunicationChannelReadMutation();
 
   const call = useMemo(() => calls.find((row) => row.id === callId) ?? null, [callId, calls]);
   const threadLabelById = useMemo(
@@ -166,6 +184,34 @@ export function CommunicationCallRoomPage() {
     () => remoteTracks.filter((row) => row.kind === 'audio'),
     [remoteTracks],
   );
+  const dominantSpeakerUserId = useMemo(() => {
+    if (!activeSpeakerUserIds.length) return null;
+    const remoteUserIds = new Set(remoteVideoTracks.map((item) => item.userId));
+    return (
+      activeSpeakerUserIds.find((id) => remoteUserIds.has(id)) ?? activeSpeakerUserIds[0] ?? null
+    );
+  }, [activeSpeakerUserIds, remoteVideoTracks]);
+  const orderedRemoteVideoTracks = useMemo(() => {
+    if (!dominantSpeakerUserId) return remoteVideoTracks;
+    return [...remoteVideoTracks].sort((a, b) => {
+      const aDominant = a.userId === dominantSpeakerUserId ? 1 : 0;
+      const bDominant = b.userId === dominantSpeakerUserId ? 1 : 0;
+      return bDominant - aDominant;
+    });
+  }, [dominantSpeakerUserId, remoteVideoTracks]);
+  const focusedRemoteTrack = useMemo(() => {
+    if (!focusedTrackKey?.startsWith('remote:')) return null;
+    const id = focusedTrackKey.replace('remote:', '');
+    return orderedRemoteVideoTracks.find((item) => item.id === id) ?? null;
+  }, [focusedTrackKey, orderedRemoteVideoTracks]);
+
+  const hasFocusedLocal = focusedTrackKey === 'local';
+
+  const focusedLabel = useMemo(() => {
+    if (hasFocusedLocal) return 'You';
+    if (!focusedRemoteTrack) return null;
+    return userLabelById.get(focusedRemoteTrack.userId) ?? 'Unknown participant';
+  }, [focusedRemoteTrack, hasFocusedLocal, userLabelById]);
 
   const { isConnected, joinCall, leaveCall, setCallMediaState, requestCallParticipants } =
     useCommunicationSocket({
@@ -188,6 +234,11 @@ export function CommunicationCallRoomPage() {
   }, [callId, isConnected, requestCallParticipants]);
 
   useEffect(() => {
+    if (!call?.channelId) return;
+    void markChannelRead({ id: call.channelId });
+  }, [call?.channelId, markChannelRead]);
+
+  useEffect(() => {
     if (!currentParticipant) return;
     setIsMuted(currentParticipant.isMuted);
     setIsVideoOff(currentParticipant.isVideoOff);
@@ -201,9 +252,19 @@ export function CommunicationCallRoomPage() {
       setIsMediaConnected(false);
       setLocalVideoTrack(null);
       setRemoteTracks([]);
+      setIsScreenSharing(false);
+      setFocusedTrackKey(null);
     },
     [callId, leaveCall],
   );
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsStageFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
 
   const refreshDevices = async () => {
     try {
@@ -253,6 +314,16 @@ export function CommunicationCallRoomPage() {
       const room = new Room();
       roomRef.current = room;
 
+      const syncScreenShareState = () => {
+        const hasScreenShare = [...room.localParticipant.videoTrackPublications.values()].some(
+          (publication) =>
+            publication.track &&
+            publication.source === Track.Source.ScreenShare &&
+            !publication.isMuted,
+        );
+        setIsScreenSharing(hasScreenShare);
+      };
+
       room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
         setRemoteTracks((prev) => {
           const trackId = track.sid ?? `${participant.identity}-${track.kind}-${Date.now()}`;
@@ -280,10 +351,12 @@ export function CommunicationCallRoomPage() {
 
       room.on(RoomEvent.LocalTrackPublished, () => {
         syncLocalVideoTrack(room);
+        syncScreenShareState();
       });
 
       room.on(RoomEvent.LocalTrackUnpublished, () => {
         syncLocalVideoTrack(room);
+        syncScreenShareState();
       });
 
       room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
@@ -301,8 +374,9 @@ export function CommunicationCallRoomPage() {
         await room.switchActiveDevice('audiooutput', selectedAudioOutputDeviceId);
       }
       await room.localParticipant.setMicrophoneEnabled(!isMuted);
-      await room.localParticipant.setCameraEnabled(call.callType === 'video' ? !isVideoOff : false);
+      await room.localParticipant.setCameraEnabled(!isVideoOff);
       syncLocalVideoTrack(room);
+      syncScreenShareState();
       await refreshDevices();
       setIsMediaConnected(true);
     } catch (error) {
@@ -338,6 +412,8 @@ export function CommunicationCallRoomPage() {
     setIsMediaConnected(false);
     setLocalVideoTrack(null);
     setRemoteTracks([]);
+    setIsScreenSharing(false);
+    setFocusedTrackKey(null);
   };
 
   const onToggleMuted = async () => {
@@ -351,13 +427,61 @@ export function CommunicationCallRoomPage() {
   };
 
   const onToggleVideo = async () => {
-    if (!callId || !call || call.callType !== 'video') return;
+    if (!callId || !call) return;
     const next = !isVideoOff;
-    setIsVideoOff(next);
-    setCallMediaState(callId, { isVideoOff: next });
-    if (roomRef.current) {
-      await roomRef.current.localParticipant.setCameraEnabled(!next);
-      syncLocalVideoTrack(roomRef.current);
+    try {
+      setIsVideoOff(next);
+      setCallMediaState(callId, { isVideoOff: next });
+      if (roomRef.current) {
+        await roomRef.current.localParticipant.setCameraEnabled(!next);
+        syncLocalVideoTrack(roomRef.current);
+      }
+    } catch {
+      setIsVideoOff((prev) => !prev);
+      toast.error('Unable to toggle camera. Check camera permission/device.');
+    }
+  };
+
+  const onToggleScreenShare = async () => {
+    if (!roomRef.current || !isMediaConnected) return;
+
+    const isDesktopProtocolError = (error: unknown) => {
+      if (!(error instanceof Error)) return false;
+      const msg = error.message.toLowerCase();
+      return (
+        msg.includes('getdisplaymedia') ||
+        msg.includes('display media') ||
+        msg.includes('not supported') ||
+        msg.includes('permission denied') ||
+        msg.includes('denied') ||
+        msg.includes('aborted')
+      );
+    };
+
+    try {
+      const next = !isScreenSharing;
+      await roomRef.current.localParticipant.setScreenShareEnabled(next);
+      setIsScreenSharing(next);
+      if (next) toast.success('Screen sharing started.');
+    } catch (error) {
+      if (isDesktopProtocolError(error)) {
+        toast.error('Screen share needs desktop capture support in Electron (getDisplayMedia).');
+        return;
+      }
+      toast.error(error instanceof Error ? error.message : 'Unable to toggle screen share.');
+    }
+  };
+
+  const onToggleStageFullscreen = async () => {
+    if (!stageRef.current) return;
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await stageRef.current.requestFullscreen();
+      }
+    } catch {
+      toast.error('Fullscreen is not available right now.');
     }
   };
 
@@ -412,29 +536,12 @@ export function CommunicationCallRoomPage() {
   return (
     <ScrollableWrapper>
       <div className="w-full space-y-4 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h1 className="text-xl font-semibold">Call Room</h1>
-            <p className="text-sm text-muted-foreground">
-              Join real-time media, manage microphone/camera, and track participants.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate('/communication/calls')}>
-              Back to Calls
-            </Button>
-            <Button variant="outline" onClick={() => refetch()}>
-              Refresh
-            </Button>
-          </div>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Session Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {!call ? (
+        {!call ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Call Room</CardTitle>
+            </CardHeader>
+            <CardContent>
               <p className="text-sm text-muted-foreground">
                 Call session not found.{' '}
                 <Link to="/communication/calls" className="underline">
@@ -442,254 +549,381 @@ export function CommunicationCallRoomPage() {
                 </Link>
                 .
               </p>
-            ) : (
-              <>
-                <div className="grid gap-3 md:grid-cols-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Thread</p>
-                    <p className="text-sm font-medium">
-                      {call.threadId
-                        ? (threadLabelById.get(call.threadId) ?? 'Unknown thread')
-                        : '-'}
-                    </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h1 className="text-xl font-semibold">
+                  {call.threadId
+                    ? (threadLabelById.get(call.threadId) ?? 'Call')
+                    : 'Voice Channel Call'}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {prettyValue(call.callType)} • {call.livekitRoomName || 'Auto-generated room'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={isConnected ? 'default' : 'outline'}>
+                  {isConnected ? 'Socket live' : 'Socket offline'}
+                </Badge>
+                <Badge variant={isMediaConnected ? 'default' : 'outline'}>
+                  {isMediaConnected
+                    ? 'Media connected'
+                    : isMediaConnecting
+                      ? 'Connecting...'
+                      : 'Disconnected'}
+                </Badge>
+                <Button variant="outline" onClick={() => navigate('/communication/calls')}>
+                  Back
+                </Button>
+                <Button variant="outline" onClick={() => refetch()}>
+                  Refresh
+                </Button>
+              </div>
+            </div>
+
+            {mediaError ? (
+              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                Media connection failed: {mediaError}
+              </p>
+            ) : null}
+
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="space-y-3">
+                <div ref={stageRef} className="relative rounded-xl border bg-muted/20 p-3">
+                  <div className="mb-2 flex items-center justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void onToggleStageFullscreen()}
+                    >
+                      {isStageFullscreen ? (
+                        <>
+                          <Minimize2 className="mr-2 h-4 w-4" /> Exit Fullscreen
+                        </>
+                      ) : (
+                        <>
+                          <Maximize2 className="mr-2 h-4 w-4" /> Fullscreen
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Type</p>
-                    <p className="text-sm font-medium">{prettyValue(call.callType)}</p>
+
+                  {focusedTrackKey ? (
+                    <div className="mb-3 rounded-xl border border-primary/60 p-2">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <p className="truncate text-xs font-medium">Focus: {focusedLabel}</p>
+                        <Button size="sm" variant="ghost" onClick={() => setFocusedTrackKey(null)}>
+                          Clear Focus
+                        </Button>
+                      </div>
+                      {hasFocusedLocal && localVideoTrack ? (
+                        <TrackRenderer
+                          track={localVideoTrack}
+                          muted
+                          className="h-[360px] w-full rounded-lg bg-black object-cover"
+                        />
+                      ) : focusedRemoteTrack ? (
+                        <TrackRenderer
+                          track={focusedRemoteTrack.track}
+                          className="h-[360px] w-full rounded-lg bg-black object-cover"
+                        />
+                      ) : (
+                        <div className="grid h-[360px] place-content-center rounded-lg bg-muted text-xs text-muted-foreground">
+                          Focused track unavailable
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+
+                  <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                    {orderedRemoteVideoTracks.map((item) => {
+                      const label = userLabelById.get(item.userId) ?? 'Unknown participant';
+                      const isSpeaking = activeSpeakerUserIds.includes(item.userId);
+                      const isDominant = item.userId === dominantSpeakerUserId;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`rounded-xl border p-2 ${isSpeaking ? 'border-primary/70 ring-2 ring-primary/20' : 'border-border/70'} ${isDominant && orderedRemoteVideoTracks.length > 1 ? 'md:col-span-2' : ''}`}
+                        >
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <p className="truncate text-xs font-medium">{label}</p>
+                            {isSpeaking ? (
+                              <Badge variant="default" className="gap-1">
+                                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
+                                Speaking
+                              </Badge>
+                            ) : null}
+                          </div>
+                          <TrackRenderer
+                            track={item.track}
+                            className={`${isDominant ? 'h-[320px]' : 'h-[240px]'} w-full rounded-lg bg-black object-cover`}
+                          />
+                          <div className="mt-2 flex justify-end">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setFocusedTrackKey(`remote:${item.id}`)}
+                            >
+                              Focus
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {!orderedRemoteVideoTracks.length ? (
+                      <div className="grid h-[340px] place-content-center rounded-xl border border-dashed text-sm text-muted-foreground md:col-span-2 2xl:col-span-3">
+                        Waiting for participants to turn on video
+                      </div>
+                    ) : null}
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Status</p>
-                    <Badge variant="outline">{prettyValue(call.status)}</Badge>
+
+                  <div className="pointer-events-none absolute bottom-5 right-5 w-44 rounded-xl border bg-background/90 p-2 shadow-lg backdrop-blur">
+                    <div className="mb-1 flex items-center justify-between text-[11px]">
+                      <span className="font-medium">You</span>
+                      <span className="text-muted-foreground">
+                        {isVideoOff ? 'Camera off' : 'Preview'}
+                      </span>
+                    </div>
+                    {localVideoTrack ? (
+                      <button
+                        type="button"
+                        className="pointer-events-auto block w-full"
+                        onClick={() => setFocusedTrackKey('local')}
+                      >
+                        <TrackRenderer
+                          track={localVideoTrack}
+                          muted
+                          className="h-24 w-full rounded-md bg-black object-cover"
+                        />
+                      </button>
+                    ) : (
+                      <div className="grid h-24 place-content-center rounded-md bg-muted text-[11px] text-muted-foreground">
+                        Camera off
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Room</p>
-                    <p className="text-sm font-medium">
-                      {call.livekitRoomName || 'Auto-generated room'}
-                    </p>
-                  </div>
+
+                  {remoteAudioTracks.map((item) => (
+                    <TrackRenderer key={item.id} track={item.track} className="hidden" />
+                  ))}
                 </div>
-                <div className="grid gap-3 md:grid-cols-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Started</p>
-                    <p className="text-sm">{formatDateTime(call.startedAt)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Ended</p>
-                    <p className="text-sm">{formatDateTime(call.endedAt)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Socket</p>
-                    <Badge variant={isConnected ? 'default' : 'outline'}>
-                      {isConnected ? 'Live' : 'Offline'}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Media</p>
-                    <Badge variant={isMediaConnected ? 'default' : 'outline'}>
-                      {isMediaConnected
-                        ? 'Connected'
-                        : isMediaConnecting
-                          ? 'Connecting...'
-                          : 'Disconnected'}
-                    </Badge>
-                  </div>
-                </div>
-                {mediaError ? (
-                  <p className="text-sm text-destructive">Media connection failed: {mediaError}</p>
-                ) : null}
-                <div className="flex flex-wrap gap-2">
-                  <Button onClick={onJoin} disabled={!isConnected || isMediaConnecting}>
-                    {isMediaConnected ? 'Rejoin room' : 'Join room'}
+
+                <div className="sticky bottom-2 z-30 flex flex-wrap items-center justify-center gap-3 rounded-xl border bg-card/95 p-3 backdrop-blur">
+                  <Button
+                    size="icon"
+                    className="h-12 w-12 rounded-full"
+                    onClick={onJoin}
+                    disabled={!isConnected || isMediaConnecting}
+                    title={isMediaConnected ? 'Reconnect' : 'Join'}
+                  >
+                    <Phone className="h-5 w-5" />
                   </Button>
                   <Button
-                    variant="outline"
+                    size="icon"
+                    variant={isMuted ? 'secondary' : 'outline'}
+                    className="h-12 w-12 rounded-full"
+                    onClick={onToggleMuted}
+                    disabled={!isMediaConnected}
+                    title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+                  >
+                    {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant={isVideoOff ? 'secondary' : 'outline'}
+                    className="h-12 w-12 rounded-full"
+                    onClick={onToggleVideo}
+                    disabled={!isMediaConnected}
+                    title={isVideoOff ? 'Turn camera on' : 'Turn camera off'}
+                  >
+                    {isVideoOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant={isScreenSharing ? 'secondary' : 'outline'}
+                    className="h-12 w-12 rounded-full"
+                    onClick={() => void onToggleScreenShare()}
+                    disabled={!isMediaConnected}
+                    title={isScreenSharing ? 'Stop sharing screen' : 'Share screen'}
+                  >
+                    {isScreenSharing ? (
+                      <ScreenShareOff className="h-5 w-5" />
+                    ) : (
+                      <ScreenShare className="h-5 w-5" />
+                    )}
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    className="h-12 w-12 rounded-full"
                     onClick={onLeave}
                     disabled={!isConnected && !isMediaConnected}
+                    title="Leave call"
                   >
-                    Leave room
+                    <PhoneOff className="h-5 w-5" />
                   </Button>
-                  <Button variant="outline" onClick={onToggleMuted} disabled={!isMediaConnected}>
-                    {isMuted ? 'Unmute' : 'Mute'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={onToggleVideo}
-                    disabled={!isMediaConnected || call.callType !== 'video'}
-                  >
-                    {isVideoOff ? 'Turn Camera On' : 'Turn Camera Off'}
-                  </Button>
-                  <Select
-                    value={call.status}
-                    onValueChange={(value) =>
-                      onChangeStatus(
-                        value as 'pending' | 'ringing' | 'active' | 'ended' | 'cancelled',
-                      )
-                    }
-                    disabled={isUpdatingStatus}
-                  >
-                    <SelectTrigger className="w-[170px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="ringing">Ringing</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="ended">Ended</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Media</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Microphone</p>
-                <Select
-                  value={selectedAudioInputDeviceId || '__default__'}
-                  onValueChange={(value) => void onSelectAudioInput(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Default microphone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__default__">Default microphone</SelectItem>
-                    {audioInputDevices.map((device) => (
-                      <SelectItem key={device.deviceId} value={device.deviceId}>
-                        {device.label || `Microphone ${device.deviceId.slice(0, 6)}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Camera</p>
-                <Select
-                  value={selectedVideoInputDeviceId || '__default__'}
-                  onValueChange={(value) => void onSelectVideoInput(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Default camera" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__default__">Default camera</SelectItem>
-                    {videoInputDevices.map((device) => (
-                      <SelectItem key={device.deviceId} value={device.deviceId}>
-                        {device.label || `Camera ${device.deviceId.slice(0, 6)}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Speaker</p>
-                <Select
-                  value={selectedAudioOutputDeviceId || '__default__'}
-                  onValueChange={(value) => void onSelectAudioOutput(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Default speaker" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__default__">Default speaker</SelectItem>
-                    {audioOutputDevices.map((device) => (
-                      <SelectItem key={device.deviceId} value={device.deviceId}>
-                        {device.label || `Speaker ${device.deviceId.slice(0, 6)}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <div className="rounded-md border p-2">
-                <p className="mb-2 text-xs text-muted-foreground">You</p>
-                {localVideoTrack ? (
-                  <TrackRenderer
-                    track={localVideoTrack}
-                    muted
-                    className="h-[220px] w-full rounded bg-black object-cover"
-                  />
-                ) : (
-                  <div className="grid h-[220px] place-content-center rounded bg-muted text-xs text-muted-foreground">
-                    Camera not publishing
-                  </div>
-                )}
-              </div>
-              {remoteVideoTracks.map((item) => {
-                const label = userLabelById.get(item.userId) ?? 'Unknown participant';
-                return (
-                  <div key={item.id} className="rounded-md border p-2">
-                    <p className="mb-2 text-xs text-muted-foreground">{label}</p>
-                    <TrackRenderer
-                      track={item.track}
-                      className="h-[220px] w-full rounded bg-black object-cover"
-                    />
-                  </div>
-                );
-              })}
-            </div>
-            {remoteAudioTracks.map((item) => (
-              <TrackRenderer key={item.id} track={item.track} className="hidden" />
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Participants ({participants.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {participants.length ? (
-                participants.map((participant) => {
-                  const label = userLabelById.get(participant.userId) ?? 'Unknown participant';
-                  return (
-                    <div
-                      key={participant.userId}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Joined {formatDateTime(participant.joinedAt)}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Badge variant={participant.isMuted ? 'outline' : 'default'}>
-                          {participant.isMuted ? 'Muted' : 'Mic On'}
-                        </Badge>
-                        <Badge variant={participant.isVideoOff ? 'outline' : 'default'}>
-                          {participant.isVideoOff ? 'Video Off' : 'Video On'}
-                        </Badge>
-                        <Badge
-                          variant={
-                            activeSpeakerUserIds.includes(participant.userId)
-                              ? 'default'
-                              : 'outline'
-                          }
-                        >
-                          {activeSpeakerUserIds.includes(participant.userId)
-                            ? 'Speaking'
-                            : 'Not Speaking'}
-                        </Badge>
-                      </div>
+              <div className="space-y-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Call Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Status</span>
+                      <Select
+                        value={call.status}
+                        onValueChange={(value) =>
+                          onChangeStatus(
+                            value as 'pending' | 'ringing' | 'active' | 'ended' | 'cancelled',
+                          )
+                        }
+                        disabled={isUpdatingStatus}
+                      >
+                        <SelectTrigger className="w-[160px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="ringing">Ringing</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="ended">Ended</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  );
-                })
-              ) : (
-                <p className="text-sm text-muted-foreground">No participants in room yet.</p>
-              )}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Started</span>
+                      <span>{formatDateTime(call.startedAt)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Ended</span>
+                      <span>{formatDateTime(call.endedAt)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Devices</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="mb-1 text-xs text-muted-foreground">Microphone</p>
+                      <Select
+                        value={selectedAudioInputDeviceId || '__default__'}
+                        onValueChange={(value) => void onSelectAudioInput(value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Default microphone" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__default__">Default microphone</SelectItem>
+                          {audioInputDevices.map((device) => (
+                            <SelectItem key={device.deviceId} value={device.deviceId}>
+                              {device.label || `Microphone ${device.deviceId.slice(0, 6)}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-xs text-muted-foreground">Camera</p>
+                      <Select
+                        value={selectedVideoInputDeviceId || '__default__'}
+                        onValueChange={(value) => void onSelectVideoInput(value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Default camera" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__default__">Default camera</SelectItem>
+                          {videoInputDevices.map((device) => (
+                            <SelectItem key={device.deviceId} value={device.deviceId}>
+                              {device.label || `Camera ${device.deviceId.slice(0, 6)}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-xs text-muted-foreground">Speaker</p>
+                      <Select
+                        value={selectedAudioOutputDeviceId || '__default__'}
+                        onValueChange={(value) => void onSelectAudioOutput(value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Default speaker" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__default__">Default speaker</SelectItem>
+                          {audioOutputDevices.map((device) => (
+                            <SelectItem key={device.deviceId} value={device.deviceId}>
+                              {device.label || `Speaker ${device.deviceId.slice(0, 6)}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Participants ({participants.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
+                      {participants.length ? (
+                        participants.map((participant) => {
+                          const label =
+                            userLabelById.get(participant.userId) ?? 'Unknown participant';
+                          return (
+                            <div
+                              key={participant.userId}
+                              className={`rounded-md border p-2 ${activeSpeakerUserIds.includes(participant.userId) ? 'border-primary/60 bg-primary/5' : ''}`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="truncate text-sm font-medium">{label}</p>
+                                <div className="flex gap-1">
+                                  {activeSpeakerUserIds.includes(participant.userId) ? (
+                                    <Badge variant="default" className="gap-1">
+                                      <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
+                                      Speaking
+                                    </Badge>
+                                  ) : null}
+                                  <Badge variant={participant.isMuted ? 'outline' : 'default'}>
+                                    {participant.isMuted ? 'Muted' : 'Mic'}
+                                  </Badge>
+                                  <Badge variant={participant.isVideoOff ? 'outline' : 'default'}>
+                                    {participant.isVideoOff ? 'No Cam' : 'Cam'}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Joined {formatDateTime(participant.joinedAt)}
+                              </p>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          No participants in room yet.
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </>
+        )}
       </div>
     </ScrollableWrapper>
   );

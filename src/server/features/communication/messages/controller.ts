@@ -1,9 +1,12 @@
 import type {
   CommunicationMessagesCreateInput,
   CommunicationMessagesDeleteInput,
+  CommunicationMessagesMarkThreadReadInput,
   CommunicationMeetingsListInput,
   CommunicationMessagesListInput,
+  CommunicationMessagesUnreadCountsInput,
   CommunicationMessagesToggleFlagInput,
+  CommunicationMessagesToggleReactionInput,
   CommunicationMessagesUpdateInput,
 } from './dto';
 import {
@@ -11,7 +14,10 @@ import {
   deleteCommunicationMessageSvc,
   listCommunicationMeetingsSvc,
   listCommunicationMessagesSvc,
+  listCommunicationMessagesUnreadCountsSvc,
+  markCommunicationThreadReadSvc,
   toggleCommunicationMessageFlagSvc,
+  toggleCommunicationMessageReactionSvc,
   updateCommunicationMessageSvc,
 } from './service';
 
@@ -21,6 +27,12 @@ export async function listCommunicationMessagesCtrl(input: CommunicationMessages
 
 export async function listCommunicationMeetingsCtrl(input: CommunicationMeetingsListInput) {
   return listCommunicationMeetingsSvc(input);
+}
+
+export async function listCommunicationMessagesUnreadCountsCtrl(
+  input: CommunicationMessagesUnreadCountsInput,
+) {
+  return listCommunicationMessagesUnreadCountsSvc(input);
 }
 
 export async function createCommunicationMessagesCtrl(input: CommunicationMessagesCreateInput) {
@@ -39,4 +51,16 @@ export async function toggleCommunicationMessageFlagCtrl(
   input: CommunicationMessagesToggleFlagInput,
 ) {
   return toggleCommunicationMessageFlagSvc(input);
+}
+
+export async function toggleCommunicationMessageReactionCtrl(
+  input: CommunicationMessagesToggleReactionInput,
+) {
+  return toggleCommunicationMessageReactionSvc(input);
+}
+
+export async function markCommunicationThreadReadCtrl(
+  input: CommunicationMessagesMarkThreadReadInput,
+) {
+  return markCommunicationThreadReadSvc(input);
 }

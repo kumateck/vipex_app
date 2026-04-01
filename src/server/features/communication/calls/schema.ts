@@ -4,6 +4,10 @@ export const CommunicationCallsIdParamSchema = t.Object({
   id: t.String({ minLength: 1 }),
 });
 
+export const CommunicationVoiceJoinParamSchema = t.Object({
+  channelId: t.String({ minLength: 1 }),
+});
+
 export const CommunicationCallsListQuerySchema = t.Object({
   threadId: t.Optional(t.String({ minLength: 1 })),
   channelId: t.Optional(t.String({ minLength: 1 })),

@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { commCallSessions } from '@/db/schemas';
 import type {
@@ -85,7 +85,7 @@ export async function createCommunicationCallsRepo(
 }
 
 export async function updateCommunicationCallStatusRepo(
-  input: CommunicationCallsUpdateStatusInput,
+  input: Pick<CommunicationCallsUpdateStatusInput, 'companyId' | 'id' | 'status'>,
 ): Promise<CommunicationCallsItem> {
   const now = new Date();
   const [updated] = await db
@@ -142,6 +142,46 @@ export async function getCommunicationCallByIdRepo(
     })
     .from(commCallSessions)
     .where(and(eq(commCallSessions.id, input.id), eq(commCallSessions.companyId, input.companyId)))
+    .limit(1);
+
+  if (!row) return null;
+  return {
+    ...row,
+    startedAt: row.startedAt ? row.startedAt.toISOString() : null,
+    endedAt: row.endedAt ? row.endedAt.toISOString() : null,
+    createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+    updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
+  };
+}
+
+export async function getLatestOpenChannelCallRepo(input: {
+  companyId: string;
+  channelId: string;
+}): Promise<CommunicationCallsItem | null> {
+  const [row] = await db
+    .select({
+      id: commCallSessions.id,
+      companyId: commCallSessions.companyId,
+      threadId: commCallSessions.threadId,
+      channelId: commCallSessions.channelId,
+      initiatorUserId: commCallSessions.initiatorUserId,
+      callType: commCallSessions.callType,
+      status: commCallSessions.status,
+      livekitRoomName: commCallSessions.livekitRoomName,
+      startedAt: commCallSessions.startedAt,
+      endedAt: commCallSessions.endedAt,
+      createdAt: commCallSessions.createdAt,
+      updatedAt: commCallSessions.updatedAt,
+    })
+    .from(commCallSessions)
+    .where(
+      and(
+        eq(commCallSessions.companyId, input.companyId),
+        eq(commCallSessions.channelId, input.channelId),
+        inArray(commCallSessions.status, ['pending', 'ringing', 'active']),
+      ),
+    )
+    .orderBy(desc(commCallSessions.createdAt), desc(commCallSessions.id))
     .limit(1);
 
   if (!row) return null;

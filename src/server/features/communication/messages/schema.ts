@@ -9,6 +9,8 @@ export const CommunicationMessagesListQuerySchema = t.Object({
   limit: t.Optional(t.Numeric({ minimum: 1, maximum: 200 })),
 });
 
+export const CommunicationMessagesUnreadCountsQuerySchema = t.Object({});
+
 export const CommunicationMeetingsListQuerySchema = t.Object({
   threadId: t.Optional(t.String({ minLength: 1 })),
   from: t.Optional(t.String({ format: 'date-time' })),
@@ -24,6 +26,10 @@ export const CommunicationMessagesCreateBodySchema = t.Object({
   replyToMessageId: t.Optional(t.Union([t.String({ minLength: 1 }), t.Null()])),
 });
 
+export const CommunicationMessagesMarkThreadReadBodySchema = t.Object({
+  threadId: t.String({ minLength: 1 }),
+});
+
 export const CommunicationMessagesUpdateBodySchema = t.Object({
   body: t.Optional(t.Union([t.String({ minLength: 1 }), t.Null()])),
   metadataJson: t.Optional(t.Any()),
@@ -32,4 +38,9 @@ export const CommunicationMessagesUpdateBodySchema = t.Object({
 export const CommunicationMessagesToggleFlagBodySchema = t.Object({
   flag: t.Union([t.Literal('pinnedByUserIds'), t.Literal('starredByUserIds')]),
   enabled: t.Boolean(),
+});
+
+export const CommunicationMessagesToggleReactionBodySchema = t.Object({
+  emoji: t.String({ minLength: 1, maxLength: 16 }),
+  enabled: t.Optional(t.Boolean()),
 });

@@ -6,15 +6,21 @@ import {
   deleteCommunicationMessageCtrl,
   listCommunicationMeetingsCtrl,
   listCommunicationMessagesCtrl,
+  listCommunicationMessagesUnreadCountsCtrl,
+  markCommunicationThreadReadCtrl,
   toggleCommunicationMessageFlagCtrl,
+  toggleCommunicationMessageReactionCtrl,
   updateCommunicationMessageCtrl,
 } from './controller';
 import {
   CommunicationMeetingsListQuerySchema,
   CommunicationMessagesCreateBodySchema,
   CommunicationMessagesIdParamSchema,
+  CommunicationMessagesMarkThreadReadBodySchema,
   CommunicationMessagesListQuerySchema,
+  CommunicationMessagesUnreadCountsQuerySchema,
   CommunicationMessagesToggleFlagBodySchema,
+  CommunicationMessagesToggleReactionBodySchema,
   CommunicationMessagesUpdateBodySchema,
 } from './schema';
 
@@ -33,6 +39,31 @@ export const CommunicationMessagesRoutes = new Elysia({ name: 'messages' })
       }),
     {
       query: CommunicationMeetingsListQuerySchema,
+      beforeHandle: [requireAuth(), requireModuleEnabled('communication_internal')],
+    },
+  )
+  .get(
+    '/unread-counts',
+    async ({ user }) =>
+      listCommunicationMessagesUnreadCountsCtrl({
+        companyId: (user as AuthUser | null)?.companyId ?? '',
+        userId: (user as AuthUser | null)?.sub ?? '',
+      }),
+    {
+      query: CommunicationMessagesUnreadCountsQuerySchema,
+      beforeHandle: [requireAuth(), requireModuleEnabled('communication_internal')],
+    },
+  )
+  .post(
+    '/read',
+    async ({ body, user }) =>
+      markCommunicationThreadReadCtrl({
+        companyId: (user as AuthUser | null)?.companyId ?? '',
+        userId: (user as AuthUser | null)?.sub ?? '',
+        threadId: body.threadId,
+      }),
+    {
+      body: CommunicationMessagesMarkThreadReadBodySchema,
       beforeHandle: [requireAuth(), requireModuleEnabled('communication_internal')],
     },
   )
@@ -109,6 +140,22 @@ export const CommunicationMessagesRoutes = new Elysia({ name: 'messages' })
     {
       params: CommunicationMessagesIdParamSchema,
       body: CommunicationMessagesToggleFlagBodySchema,
+      beforeHandle: [requireAuth(), requireModuleEnabled('communication_internal')],
+    },
+  )
+  .post(
+    '/:id/reactions',
+    async ({ params, body, user }) =>
+      toggleCommunicationMessageReactionCtrl({
+        companyId: (user as AuthUser | null)?.companyId ?? '',
+        userId: (user as AuthUser | null)?.sub ?? '',
+        id: params.id,
+        emoji: body.emoji,
+        enabled: body.enabled ?? true,
+      }),
+    {
+      params: CommunicationMessagesIdParamSchema,
+      body: CommunicationMessagesToggleReactionBodySchema,
       beforeHandle: [requireAuth(), requireModuleEnabled('communication_internal')],
     },
   );

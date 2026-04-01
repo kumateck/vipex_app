@@ -22,6 +22,27 @@
       "when": 1774951923664,
       "tag": "0002_missing_module_tables_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775040000000,
+      "tag": "0003_leave_ticket_policy_updates",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775040060000,
+      "tag": "0004_communication_channels_visibility_voice",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775040120000,
+      "tag": "0005_communication_channel_read_state",
+      "breakpoints": true
     }
   ]
 }

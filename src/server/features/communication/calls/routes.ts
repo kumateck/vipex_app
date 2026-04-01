@@ -4,6 +4,7 @@ import { authPlugin, requireAuth, requireModuleEnabled } from '@/server/plugins/
 import {
   createCommunicationCallLivekitTokenCtrl,
   createCommunicationCallsCtrl,
+  joinCommunicationVoiceChannelCtrl,
   listCommunicationCallsCtrl,
   updateCommunicationCallStatusCtrl,
 } from './controller';
@@ -12,6 +13,7 @@ import {
   CommunicationCallsIdParamSchema,
   CommunicationCallsListQuerySchema,
   CommunicationCallsUpdateStatusBodySchema,
+  CommunicationVoiceJoinParamSchema,
 } from './schema';
 
 export const CommunicationCallsRoutes = new Elysia({ name: 'calls' })
@@ -21,6 +23,7 @@ export const CommunicationCallsRoutes = new Elysia({ name: 'calls' })
     async ({ query, user }) =>
       listCommunicationCallsCtrl({
         companyId: (user as AuthUser | null)?.companyId ?? '',
+        userId: (user as AuthUser | null)?.sub ?? '',
         threadId: query.threadId ?? undefined,
         channelId: query.channelId ?? undefined,
         status: query.status ?? undefined,
@@ -47,6 +50,20 @@ export const CommunicationCallsRoutes = new Elysia({ name: 'calls' })
     },
   )
   .post(
+    '/voice/:channelId/join',
+    async ({ params, user, request }) =>
+      joinCommunicationVoiceChannelCtrl({
+        companyId: (user as AuthUser | null)?.companyId ?? '',
+        userId: (user as AuthUser | null)?.sub ?? '',
+        channelId: params.channelId,
+        requestOrigin: request.headers.get('origin') ?? new URL(request.url).origin,
+      }),
+    {
+      params: CommunicationVoiceJoinParamSchema,
+      beforeHandle: [requireAuth(), requireModuleEnabled('communication_calls_livekit')],
+    },
+  )
+  .post(
     '/:id/livekit-token',
     async ({ params, user, request }) =>
       createCommunicationCallLivekitTokenCtrl({
@@ -65,6 +82,7 @@ export const CommunicationCallsRoutes = new Elysia({ name: 'calls' })
     async ({ params, body, user }) =>
       updateCommunicationCallStatusCtrl({
         companyId: (user as AuthUser | null)?.companyId ?? '',
+        userId: (user as AuthUser | null)?.sub ?? '',
         id: params.id,
         status: body.status,
       }),
