@@ -785,7 +785,6 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
   const [typingUserIdsByThread, setTypingUserIdsByThread] = useState<Record<string, string[]>>({});
   const [reactionMenuMessageId, setReactionMenuMessageId] = useState<string | null>(null);
   const [actionsMenuMessageId, setActionsMenuMessageId] = useState<string | null>(null);
-  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [composerCaret, setComposerCaret] = useState(0);
   const [activeMentionIndex, setActiveMentionIndex] = useState(0);
   const composerTypingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -803,7 +802,6 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
   const preserveScrollOnPrependRef = useRef<{ top: number; height: number } | null>(null);
   const firstLoadDoneRef = useRef(false);
   const stickToBottomRef = useRef(true);
-  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: userOptions = [] } = useListUserOptionsQuery();
   const { data: threads = [], refetch: refetchThreads } = useListCommunicationThreadsQuery();
