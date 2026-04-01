@@ -26,6 +26,7 @@ import {
   findUserByEmployeeIdRepo,
   getDepartmentRepo,
   getEmployeeRepo,
+  getEmployeeBookedLeaveDaysRepo,
   getJobTitleRepo,
   getLeaveRequestRepo,
   getLeaveTypeRepo,
@@ -115,6 +116,8 @@ export async function createLeaveTypeSvc(input: {
   code?: string | null;
   name: string;
   isPaid?: boolean;
+  minAdvanceDays?: number;
+  allowEmergencySameDay?: boolean;
   createdBy: string;
 }) {
   const duplicate = await findLeaveTypeByNameRepo(input.companyId, input.name);
@@ -124,6 +127,8 @@ export async function createLeaveTypeSvc(input: {
     code: input.code ?? null,
     name: input.name.trim(),
     isPaid: input.isPaid ?? true,
+    minAdvanceDays: Math.max(0, Math.floor(input.minAdvanceDays ?? 0)),
+    allowEmergencySameDay: input.allowEmergencySameDay ?? true,
     createdBy: input.createdBy,
   });
   await recordAuditLog({
@@ -133,7 +138,13 @@ export async function createLeaveTypeSvc(input: {
     entityId: created?.id ?? null,
     action: 'LEAVE_TYPE_CREATED',
     message: 'Leave type created',
-    metadata: { code: input.code ?? null, name: input.name.trim(), isPaid: input.isPaid ?? true },
+    metadata: {
+      code: input.code ?? null,
+      name: input.name.trim(),
+      isPaid: input.isPaid ?? true,
+      minAdvanceDays: Math.max(0, Math.floor(input.minAdvanceDays ?? 0)),
+      allowEmergencySameDay: input.allowEmergencySameDay ?? true,
+    },
   });
   return { id: created?.id };
 }
@@ -144,6 +155,7 @@ export async function createJobTitleSvc(input: {
   code?: string | null;
   name: string;
   description?: string | null;
+  defaultLeaveDays?: number;
   createdBy: string;
 }) {
   const duplicate = await findJobTitleByNameRepo(input.companyId, input.name);
@@ -154,6 +166,7 @@ export async function createJobTitleSvc(input: {
     code: input.code ?? null,
     name: input.name,
     description: input.description ?? null,
+    defaultLeaveDays: Math.max(0, Math.floor(input.defaultLeaveDays ?? 0)),
     createdBy: input.createdBy,
   });
   return { id: created?.id };
@@ -167,6 +180,7 @@ export async function updateJobTitleSvc(
     code?: string | null;
     name?: string;
     description?: string | null;
+    defaultLeaveDays?: number;
     isActive?: boolean;
   },
 ) {
@@ -176,7 +190,13 @@ export async function updateJobTitleSvc(
     const duplicate = await findJobTitleByNameRepo(companyId, patch.name);
     if (duplicate && duplicate.id !== id) throw Conflict('Job title name already exists');
   }
-  const updated = await updateJobTitleRepo(id, patch);
+  const normalizedPatch = {
+    ...patch,
+    ...(typeof patch.defaultLeaveDays === 'number'
+      ? { defaultLeaveDays: Math.max(0, Math.floor(patch.defaultLeaveDays)) }
+      : {}),
+  };
+  const updated = await updateJobTitleRepo(id, normalizedPatch);
   return { id: updated?.id };
 }
 
@@ -199,6 +219,12 @@ function getSupervisorEmployeeId(input: {
 
 function normalizeSettlementField(value?: string | null) {
   return value?.trim() || null;
+}
+
+function normalizeNullableString(value?: string | null) {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : null;
 }
 
 function validateSettlementDetails(input: {
@@ -491,6 +517,7 @@ export async function createLeaveRequestSvc(input: {
   leaveTypeId: string;
   dateFrom: Date;
   dateTo: Date;
+  isEmergency?: boolean;
   reason?: string | null;
   createdBy: string;
 }) {
@@ -502,6 +529,55 @@ export async function createLeaveRequestSvc(input: {
     throw NotFound('Leave type not found');
   }
   if (input.dateTo < input.dateFrom) throw Conflict('Leave end date cannot be before start date');
+  const normalizedDateFrom = startOfDay(input.dateFrom);
+  const normalizedDateTo = startOfDay(input.dateTo);
+  const today = startOfDay(new Date());
+  if (normalizedDateFrom < today) {
+    throw Conflict('Leave start date cannot be in the past');
+  }
+
+  const reason = normalizeNullableString(input.reason);
+  const isEmergency = Boolean(input.isEmergency);
+  if (isEmergency && !reason) {
+    throw BadRequest('Emergency leave requests require a reason');
+  }
+
+  const requestedLeadDays = Math.floor(
+    (normalizedDateFrom.getTime() - today.getTime()) / (24 * 60 * 60 * 1000),
+  );
+  const minAdvanceDays = Math.max(0, Number(leaveType.minAdvanceDays ?? 0));
+  if (isEmergency) {
+    if (!leaveType.allowEmergencySameDay) {
+      throw Conflict('This leave type does not allow emergency same-day requests');
+    }
+    if (requestedLeadDays !== 0) {
+      throw Conflict('Emergency leave can only be requested for the same day');
+    }
+  } else if (requestedLeadDays < minAdvanceDays) {
+    throw Conflict(`Leave request must be made at least ${minAdvanceDays} day(s) in advance`);
+  }
+
+  const requestedDays = differenceInDaysInclusive(normalizedDateFrom, normalizedDateTo);
+  if (employee.jobTitleId) {
+    const jobTitle = await getJobTitleRepo(employee.jobTitleId);
+    const defaultLeaveDays = Number(jobTitle?.defaultLeaveDays ?? 0);
+    if (defaultLeaveDays > 0) {
+      const yearStart = new Date(normalizedDateFrom.getFullYear(), 0, 1);
+      const yearEnd = new Date(normalizedDateFrom.getFullYear(), 11, 31);
+      const bookedDays = await getEmployeeBookedLeaveDaysRepo({
+        companyId: input.companyId,
+        employeeId: input.employeeId,
+        from: yearStart,
+        to: yearEnd,
+      });
+      if (bookedDays + requestedDays > defaultLeaveDays) {
+        throw Conflict(
+          `Leave allocation exceeded for ${normalizedDateFrom.getFullYear()}: ${bookedDays}/${defaultLeaveDays} day(s) already booked`,
+        );
+      }
+    }
+  }
+
   const supervisorEmployeeId = getSupervisorEmployeeId(employee);
   const managerApprovalStatus = supervisorEmployeeId
     ? ApprovalStatus.PENDING
@@ -511,10 +587,11 @@ export async function createLeaveRequestSvc(input: {
     companyId: input.companyId,
     employeeId: input.employeeId,
     leaveTypeId: input.leaveTypeId,
-    dateFrom: input.dateFrom,
-    dateTo: input.dateTo,
-    daysCount: differenceInDaysInclusive(input.dateFrom, input.dateTo),
-    reason: input.reason ?? null,
+    dateFrom: normalizedDateFrom,
+    dateTo: normalizedDateTo,
+    daysCount: requestedDays,
+    isEmergency,
+    reason,
     managerApprovalStatus,
     managerApprovedAt: managerApprovalStatus === ApprovalStatus.APPROVED ? new Date() : null,
     status: LeaveRequestStatus.PENDING,

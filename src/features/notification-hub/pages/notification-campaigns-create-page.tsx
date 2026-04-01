@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
@@ -28,7 +29,7 @@ export function NotificationCampaignsCreatePage() {
   const [subjectOverride, setSubjectOverride] = useState('');
   const [bodyOverride, setBodyOverride] = useState('');
   const [audienceType, setAudienceType] = useState('customers_all');
-  const [scheduledAt, setScheduledAt] = useState('');
+  const [scheduledAt, setScheduledAt] = useState<Date | undefined>(undefined);
   const [createCampaign, { isLoading }] = useCreateNotificationCampaignMutation();
   const { data: templateOptions = [] } = useListNotificationTemplateOptionsQuery({ channel });
 
@@ -52,7 +53,7 @@ export function NotificationCampaignsCreatePage() {
         subjectOverride: subjectOverride.trim() || null,
         bodyOverride: bodyOverride.trim() || null,
         audienceType,
-        scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+        scheduledAt: scheduledAt ? scheduledAt.toISOString() : null,
       }).unwrap();
       toast.success('Campaign created');
       navigate('/notification-hub/campaigns');
@@ -157,10 +158,10 @@ export function NotificationCampaignsCreatePage() {
 
               <Field className="md:col-span-2">
                 <FieldLabel>Schedule At (optional)</FieldLabel>
-                <Input
-                  type="datetime-local"
+                <DateTimePicker
                   value={scheduledAt}
-                  onChange={(event) => setScheduledAt(event.target.value)}
+                  onChange={setScheduledAt}
+                  placeholder="Select schedule date and time"
                 />
               </Field>
             </FieldGroup>

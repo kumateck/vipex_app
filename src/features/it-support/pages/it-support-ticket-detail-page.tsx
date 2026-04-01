@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,6 +27,23 @@ function eventTitle(event: ItSupportTicketEvent) {
   if (event.eventType === 'ticket_created') return 'Ticket created';
   if (event.eventType === 'ticket_updated') return 'Ticket updated';
   return prettyValue(event.eventType);
+}
+
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case 'open':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'in_progress':
+      return 'bg-amber-100 text-amber-800 border-amber-200';
+    case 'pending_user':
+      return 'bg-violet-100 text-violet-800 border-violet-200';
+    case 'resolved':
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    case 'closed':
+      return 'bg-slate-100 text-slate-800 border-slate-200';
+    default:
+      return 'bg-muted text-muted-foreground border-border';
+  }
 }
 
 export function ItSupportTicketDetailPage() {
@@ -118,7 +136,9 @@ export function ItSupportTicketDetailPage() {
             <CardContent className="grid gap-3 md:grid-cols-2">
               <div>
                 <p className="text-xs text-muted-foreground">Status</p>
-                <p className="font-medium">{prettyValue(ticket.status)}</p>
+                <Badge variant="outline" className={statusBadgeClass(ticket.status)}>
+                  {prettyValue(ticket.status)}
+                </Badge>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Priority</p>

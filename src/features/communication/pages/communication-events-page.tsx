@@ -21,6 +21,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DatePicker } from '@/components/ui/date-picker';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { MultiSelect } from '@/components/ui/multi-select';
 import {
   Dialog,
@@ -82,13 +84,19 @@ function monthLabel(value: Date) {
   return value.toLocaleDateString([], { month: 'long', year: 'numeric' });
 }
 
-function toDateTimeLocalValue(value: Date) {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-  const hours = String(value.getHours()).padStart(2, '0');
-  const mins = String(value.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${mins}`;
+type RelativeScheduleBucket = 'today' | 'upcoming' | 'previous';
+
+function getRelativeScheduleBucket(
+  startsAtDate: Date | null,
+  nowTs: number,
+): RelativeScheduleBucket {
+  if (!startsAtDate || Number.isNaN(startsAtDate.getTime())) return 'previous';
+  const now = new Date(nowTs);
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const tomorrowStart = todayStart + 24 * 60 * 60 * 1000;
+  const eventTs = startsAtDate.getTime();
+  if (eventTs >= todayStart && eventTs < tomorrowStart) return 'today';
+  return eventTs > nowTs ? 'upcoming' : 'previous';
 }
 
 function getCalendarGridDates(monthDate: Date) {
@@ -132,7 +140,7 @@ export function CommunicationEventsPage() {
   const [eventParticipantUserIds, setEventParticipantUserIds] = useState<string[]>([]);
   const [eventReminderMinutes, setEventReminderMinutes] = useState('15');
   const [eventDescription, setEventDescription] = useState('');
-  const [eventStartsAt, setEventStartsAt] = useState(() => toDateTimeLocalValue(new Date()));
+  const [eventStartsAt, setEventStartsAt] = useState<Date | undefined>(() => new Date());
   const [editingEventMessageId, setEditingEventMessageId] = useState<string | null>(null);
 
   const fromIso = fromDate ? new Date(`${fromDate}T00:00:00`).toISOString() : undefined;
@@ -244,6 +252,26 @@ export function CommunicationEventsPage() {
       }),
     [events, participantFilterUserIds, search, statusFilter, typeFilter],
   );
+  const groupedListEvents = useMemo(() => {
+    const buckets: Record<RelativeScheduleBucket, typeof filteredEvents> = {
+      today: [],
+      upcoming: [],
+      previous: [],
+    };
+    for (const event of filteredEvents) {
+      buckets[getRelativeScheduleBucket(event.startsAtDate, nowTs)].push(event);
+    }
+    buckets.today.sort(
+      (a, b) => (a.startsAtDate?.getTime() ?? 0) - (b.startsAtDate?.getTime() ?? 0),
+    );
+    buckets.upcoming.sort(
+      (a, b) => (a.startsAtDate?.getTime() ?? 0) - (b.startsAtDate?.getTime() ?? 0),
+    );
+    buckets.previous.sort(
+      (a, b) => (b.startsAtDate?.getTime() ?? 0) - (a.startsAtDate?.getTime() ?? 0),
+    );
+    return buckets;
+  }, [filteredEvents, nowTs]);
 
   const meetingsWithDate = useMemo(
     () =>
@@ -263,6 +291,26 @@ export function CommunicationEventsPage() {
         .map((item) => item.meeting),
     [meetingsWithDate, selectedDate],
   );
+  const groupedSelectedDayMeetings = useMemo(() => {
+    const buckets: Record<RelativeScheduleBucket, typeof selectedDayMeetings> = {
+      today: [],
+      upcoming: [],
+      previous: [],
+    };
+    for (const meeting of selectedDayMeetings) {
+      buckets[getRelativeScheduleBucket(meeting.startsAtDate, nowTs)].push(meeting);
+    }
+    buckets.today.sort(
+      (a, b) => (a.startsAtDate?.getTime() ?? 0) - (b.startsAtDate?.getTime() ?? 0),
+    );
+    buckets.upcoming.sort(
+      (a, b) => (a.startsAtDate?.getTime() ?? 0) - (b.startsAtDate?.getTime() ?? 0),
+    );
+    buckets.previous.sort(
+      (a, b) => (b.startsAtDate?.getTime() ?? 0) - (a.startsAtDate?.getTime() ?? 0),
+    );
+    return buckets;
+  }, [selectedDayMeetings, nowTs]);
 
   const selectedDayTitle = useMemo(
     () =>
@@ -339,9 +387,79 @@ export function CommunicationEventsPage() {
     );
   };
 
+  const renderEventCard = (event: (typeof filteredEvents)[number]) => (
+    <div key={event.messageId} className="rounded-2xl border p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted font-semibold">
+            {event.senderName.slice(0, 1).toUpperCase()}
+          </div>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">
+                {event.inferredType === 'meeting' ? 'Meeting' : event.inferredType}
+              </Badge>
+              <Badge variant={event.status === 'completed' ? 'secondary' : 'default'}>
+                {event.status === 'completed' ? 'Completed' : 'Scheduled'}
+              </Badge>
+            </div>
+            <p className="text-2xl font-semibold leading-none">{event.title}</p>
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <p className="inline-flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                {event.startsAtDate ? event.startsAtDate.toLocaleDateString() : '-'}
+              </p>
+              <p className="inline-flex items-center gap-2">
+                <Clock3 className="h-4 w-4" />
+                {event.startsAtDate
+                  ? event.startsAtDate.toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : '-'}
+              </p>
+              <div className="inline-flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                {participantDisplay(event)}
+              </div>
+              <p className="inline-flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Reminder: {event.reminderMinutes ? `${event.reminderMinutes} min before` : 'Off'}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {event.link ? (
+            <a href={event.link} target="_blank" rel="noreferrer" className="text-xs underline">
+              Join
+            </a>
+          ) : null}
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            onClick={() => openEditDialog(event)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            onClick={() => void onDeleteEvent(event)}
+            disabled={isDeletingEvent}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   const openCreateDialog = (presetDate?: Date) => {
     const baseDate = presetDate ?? selectedDate ?? new Date();
-    setEventStartsAt(toDateTimeLocalValue(baseDate));
+    setEventStartsAt(baseDate);
     if (!eventThreadId && threads[0]?.id) {
       setEventThreadId(threads[0].id);
     }
@@ -394,11 +512,7 @@ export function CommunicationEventsPage() {
         : '15',
     );
     setEventDescription(event.body ?? '');
-    setEventStartsAt(
-      event.startsAtDate
-        ? toDateTimeLocalValue(event.startsAtDate)
-        : toDateTimeLocalValue(new Date()),
-    );
+    setEventStartsAt(event.startsAtDate ?? new Date());
     setIsCreateDialogOpen(true);
   };
 
@@ -425,8 +539,12 @@ export function CommunicationEventsPage() {
       toast.error('Select at least one participant.');
       return;
     }
+    if (eventStartsAt && eventStartsAt.getTime() < Date.now()) {
+      toast.error('Event time must be now or in the future.');
+      return;
+    }
 
-    const startsAtIso = eventStartsAt ? new Date(eventStartsAt).toISOString() : null;
+    const startsAtIso = eventStartsAt ? eventStartsAt.toISOString() : null;
     const reminderMinutes = Number(eventReminderMinutes);
     const participants = eventParticipantUserIds
       .map(
@@ -736,15 +854,15 @@ export function CommunicationEventsPage() {
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <CardTitle>Events Calendar</CardTitle>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <Input
-                    type="date"
-                    value={fromDate}
-                    onChange={(event) => setFromDate(event.target.value)}
+                  <DatePicker
+                    date={fromDate ? new Date(`${fromDate}T00:00:00`) : undefined}
+                    onDateChange={(date) => setFromDate(date ? toDateOnly(date) : '')}
+                    placeholder="From date"
                   />
-                  <Input
-                    type="date"
-                    value={toDate}
-                    onChange={(event) => setToDate(event.target.value)}
+                  <DatePicker
+                    date={toDate ? new Date(`${toDate}T00:00:00`) : undefined}
+                    onDateChange={(date) => setToDate(date ? toDateOnly(date) : '')}
+                    placeholder="To date"
                   />
                 </div>
               </CardHeader>
@@ -752,82 +870,25 @@ export function CommunicationEventsPage() {
                 {isLoading ? (
                   <p className="text-sm text-muted-foreground">Loading events...</p>
                 ) : filteredEvents.length ? (
-                  filteredEvents.map((event) => (
-                    <div key={event.messageId} className="rounded-2xl border p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted font-semibold">
-                            {event.senderName.slice(0, 1).toUpperCase()}
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="outline">
-                                {event.inferredType === 'meeting' ? 'Meeting' : event.inferredType}
-                              </Badge>
-                              <Badge
-                                variant={event.status === 'completed' ? 'secondary' : 'default'}
-                              >
-                                {event.status === 'completed' ? 'Completed' : 'Scheduled'}
-                              </Badge>
-                            </div>
-                            <p className="text-2xl font-semibold leading-none">{event.title}</p>
-                            <div className="space-y-1 text-sm text-muted-foreground">
-                              <p className="inline-flex items-center gap-2">
-                                <CalendarIcon className="h-4 w-4" />
-                                {event.startsAtDate ? event.startsAtDate.toLocaleDateString() : '-'}
-                              </p>
-                              <p className="inline-flex items-center gap-2">
-                                <Clock3 className="h-4 w-4" />
-                                {event.startsAtDate
-                                  ? event.startsAtDate.toLocaleTimeString([], {
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })
-                                  : '-'}
-                              </p>
-                              <div className="inline-flex items-center gap-2">
-                                <Users className="h-4 w-4" />
-                                {participantDisplay(event)}
-                              </div>
-                              <p className="inline-flex items-center gap-2">
-                                <Bell className="h-4 w-4" />
-                                Reminder:{' '}
-                                {event.reminderMinutes
-                                  ? `${event.reminderMinutes} min before`
-                                  : 'Off'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {event.link ? (
-                            <a
-                              href={event.link}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs underline"
-                            >
-                              Join
-                            </a>
-                          ) : null}
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => openEditDialog(event)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => void onDeleteEvent(event)}
-                            disabled={isDeletingEvent}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                  (
+                    [
+                      ['today', 'Today'],
+                      ['upcoming', 'Upcoming'],
+                      ['previous', 'Previous'],
+                    ] as const
+                  ).map(([bucket, title]) => (
+                    <div key={bucket} className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {title}
+                      </p>
+                      <div className="space-y-3">
+                        {groupedListEvents[bucket].length ? (
+                          groupedListEvents[bucket].map((event) => renderEventCard(event))
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            No {title.toLowerCase()} events.
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))
@@ -851,62 +912,87 @@ export function CommunicationEventsPage() {
             </DialogHeader>
             <div className="space-y-3">
               {selectedDayMeetings.length ? (
-                selectedDayMeetings.map((event) => (
-                  <div key={event.messageId} className="rounded-xl border p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline">
-                            {(event.inferredType === 'meeting'
-                              ? 'Meeting'
-                              : event.inferredType
-                            ).toUpperCase()}
-                          </Badge>
-                          <Badge variant={event.status === 'completed' ? 'secondary' : 'default'}>
-                            {event.status === 'completed' ? 'Completed' : 'Pending'}
-                          </Badge>
-                        </div>
-                        <p className="text-xl font-semibold">{event.title}</p>
+                (
+                  [
+                    ['today', 'Today'],
+                    ['upcoming', 'Upcoming'],
+                    ['previous', 'Previous'],
+                  ] as const
+                ).map(([bucket, title]) => (
+                  <div key={bucket} className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {title}
+                    </p>
+                    <div className="space-y-3">
+                      {groupedSelectedDayMeetings[bucket].length ? (
+                        groupedSelectedDayMeetings[bucket].map((event) => (
+                          <div key={event.messageId} className="rounded-xl border p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Badge variant="outline">
+                                    {(event.inferredType === 'meeting'
+                                      ? 'Meeting'
+                                      : event.inferredType
+                                    ).toUpperCase()}
+                                  </Badge>
+                                  <Badge
+                                    variant={event.status === 'completed' ? 'secondary' : 'default'}
+                                  >
+                                    {event.status === 'completed' ? 'Completed' : 'Pending'}
+                                  </Badge>
+                                </div>
+                                <p className="text-xl font-semibold">{event.title}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Time:{' '}
+                                  {event.startsAtDate
+                                    ? event.startsAtDate.toLocaleTimeString([], {
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                      })
+                                    : '-'}
+                                </p>
+                                <div className="text-sm text-muted-foreground">
+                                  <span className="mr-1">Participants:</span>
+                                  {participantDisplay(event)}
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  Reminder:{' '}
+                                  {event.reminderMinutes
+                                    ? `${event.reminderMinutes} min before`
+                                    : 'Off'}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  Thread: {event.threadTitle || 'Untitled thread'}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-9 w-9"
+                                  onClick={() => openEditDialog(event)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-9 w-9"
+                                  onClick={() => void onDeleteEvent(event)}
+                                  disabled={isDeletingEvent}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
                         <p className="text-sm text-muted-foreground">
-                          Time:{' '}
-                          {event.startsAtDate
-                            ? event.startsAtDate.toLocaleTimeString([], {
-                                hour: 'numeric',
-                                minute: '2-digit',
-                              })
-                            : '-'}
+                          No {title.toLowerCase()} events.
                         </p>
-                        <div className="text-sm text-muted-foreground">
-                          <span className="mr-1">Participants:</span>
-                          {participantDisplay(event)}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Reminder:{' '}
-                          {event.reminderMinutes ? `${event.reminderMinutes} min before` : 'Off'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Thread: {event.threadTitle || 'Untitled thread'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-9 w-9"
-                          onClick={() => openEditDialog(event)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-9 w-9"
-                          onClick={() => void onDeleteEvent(event)}
-                          disabled={isDeletingEvent}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
+                      )}
                     </div>
                   </div>
                 ))
@@ -961,10 +1047,11 @@ export function CommunicationEventsPage() {
                   <SelectItem value="video">Video</SelectItem>
                 </SelectContent>
               </Select>
-              <Input
-                type="datetime-local"
+              <DateTimePicker
                 value={eventStartsAt}
-                onChange={(event) => setEventStartsAt(event.target.value)}
+                onChange={setEventStartsAt}
+                placeholder="Select event start date and time"
+                minDateTime={new Date()}
               />
               <Select value={eventThreadId} onValueChange={setEventThreadId}>
                 <SelectTrigger className="sm:col-span-2">

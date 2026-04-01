@@ -156,6 +156,7 @@ export async function listJobTitlesRepo(p: ListJobTitleParams) {
       code: jobTitles.code,
       name: jobTitles.name,
       description: jobTitles.description,
+      defaultLeaveDays: jobTitles.defaultLeaveDays,
       isActive: jobTitles.isActive,
       createdBy: jobTitles.createdBy,
       createdAt: jobTitles.createdAt,
@@ -179,6 +180,7 @@ export async function listJobTitleOptionsRepo(companyId: string, search?: string
       name: jobTitles.name,
       departmentId: jobTitles.departmentId,
       departmentName: departments.name,
+      defaultLeaveDays: jobTitles.defaultLeaveDays,
     })
     .from(jobTitles)
     .leftJoin(departments, eq(jobTitles.departmentId, departments.id))
@@ -210,6 +212,8 @@ export async function listLeaveTypesRepo(p: ListLeaveTypeParams) {
       code: leaveTypes.code,
       name: leaveTypes.name,
       isPaid: leaveTypes.isPaid,
+      minAdvanceDays: leaveTypes.minAdvanceDays,
+      allowEmergencySameDay: leaveTypes.allowEmergencySameDay,
       isActive: leaveTypes.isActive,
       createdAt: leaveTypes.createdAt,
       updatedAt: leaveTypes.updatedAt,
@@ -230,6 +234,8 @@ export async function listLeaveTypeOptionsRepo(companyId: string) {
       code: leaveTypes.code,
       name: leaveTypes.name,
       isPaid: leaveTypes.isPaid,
+      minAdvanceDays: leaveTypes.minAdvanceDays,
+      allowEmergencySameDay: leaveTypes.allowEmergencySameDay,
     })
     .from(leaveTypes)
     .where(and(eq(leaveTypes.companyId, companyId), eq(leaveTypes.isActive, true)))
@@ -257,6 +263,8 @@ export async function getLeaveTypeRepo(id: string) {
       companyId: leaveTypes.companyId,
       name: leaveTypes.name,
       isPaid: leaveTypes.isPaid,
+      minAdvanceDays: leaveTypes.minAdvanceDays,
+      allowEmergencySameDay: leaveTypes.allowEmergencySameDay,
       isActive: leaveTypes.isActive,
     })
     .from(leaveTypes)
@@ -611,6 +619,7 @@ export async function listLeaveRequestsRepo(p: ListLeaveRequestParams) {
       dateFrom: leaveRequests.dateFrom,
       dateTo: leaveRequests.dateTo,
       daysCount: leaveRequests.daysCount,
+      isEmergency: leaveRequests.isEmergency,
       reason: leaveRequests.reason,
       supervisorEmployeeId: sql<
         string | null
@@ -652,6 +661,7 @@ export async function getLeaveRequestRepo(id: string) {
       dateFrom: leaveRequests.dateFrom,
       dateTo: leaveRequests.dateTo,
       daysCount: leaveRequests.daysCount,
+      isEmergency: leaveRequests.isEmergency,
       managerApprovalStatus: leaveRequests.managerApprovalStatus,
       managerApprovedBy: leaveRequests.managerApprovedBy,
       managerApprovedAt: leaveRequests.managerApprovedAt,
@@ -720,6 +730,30 @@ export async function getPaidLeaveSummariesRepo(input: {
   return daysByEmployeeId;
 }
 
+export async function getEmployeeBookedLeaveDaysRepo(input: {
+  companyId: string;
+  employeeId: string;
+  from: Date;
+  to: Date;
+}) {
+  const [row] = await db
+    .select({
+      totalDays: sql<number>`COALESCE(SUM(${leaveRequests.daysCount}), 0)`,
+    })
+    .from(leaveRequests)
+    .where(
+      and(
+        eq(leaveRequests.companyId, input.companyId),
+        eq(leaveRequests.employeeId, input.employeeId),
+        inArray(leaveRequests.status, [0, 1]),
+        lte(leaveRequests.dateFrom, input.to),
+        gte(leaveRequests.dateTo, input.from),
+      ),
+    );
+
+  return Number(row?.totalDays ?? 0);
+}
+
 export async function updateEmployeeHasUserAccountRepo(id: string, hasUserAccount: boolean) {
   const [row] = await db
     .update(employees)
@@ -745,6 +779,7 @@ export async function getJobTitleRepo(id: string) {
       companyId: jobTitles.companyId,
       departmentId: jobTitles.departmentId,
       name: jobTitles.name,
+      defaultLeaveDays: jobTitles.defaultLeaveDays,
     })
     .from(jobTitles)
     .where(eq(jobTitles.id, id))

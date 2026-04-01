@@ -36,6 +36,7 @@ export type ItSupportTicketsUpdateInput = {
   companyId: string;
   userId: string;
   ticketId: string;
+  canReopenClosedTicket?: boolean;
   status?: string | null;
   priority?: string | null;
   category?: string | null;

@@ -49,9 +49,33 @@ import {
 
 const STATUSES = ['open', 'in_progress', 'pending_user', 'resolved', 'closed'] as const;
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
+const STATUS_TRANSITIONS: Record<string, string[]> = {
+  open: ['in_progress', 'pending_user', 'resolved', 'closed'],
+  in_progress: ['pending_user', 'resolved', 'closed'],
+  pending_user: ['in_progress', 'resolved', 'closed'],
+  resolved: ['in_progress', 'pending_user', 'closed'],
+  closed: ['open'],
+};
 
 function prettyValue(value: string) {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case 'open':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'in_progress':
+      return 'bg-amber-100 text-amber-800 border-amber-200';
+    case 'pending_user':
+      return 'bg-violet-100 text-violet-800 border-violet-200';
+    case 'resolved':
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    case 'closed':
+      return 'bg-slate-100 text-slate-800 border-slate-200';
+    default:
+      return 'bg-muted text-muted-foreground border-border';
+  }
 }
 
 function formatFileSize(sizeBytes: number) {
@@ -76,6 +100,9 @@ export function ItSupportTicketsPage() {
   const companyId = user?.company?.id ?? null;
   const canManageTickets = (user?.permissions ?? []).includes(
     PermissionKeys.CanUpdateItSupportTickets,
+  );
+  const canReopenClosedTickets = (user?.permissions ?? []).includes(
+    PermissionKeys.CanReopenItSupportTickets,
   );
 
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -179,6 +206,16 @@ export function ItSupportTicketsPage() {
   const getLocationLabel = (locationId?: string | null) => {
     if (!locationId) return '-';
     return locationOptions.find((option) => option.id === locationId)?.name ?? 'Unknown location';
+  };
+
+  const getAllowedStatuses = (ticket: ItSupportTicket) => {
+    const current = ticket.status;
+    const nextStatuses = STATUS_TRANSITIONS[current] ?? [];
+    const candidates = [current, ...nextStatuses];
+    if (current === 'closed' && !canReopenClosedTickets) {
+      return ['closed'];
+    }
+    return candidates.filter((status) => STATUSES.includes(status as (typeof STATUSES)[number]));
   };
   const filteredLocationOptions =
     filterBranch === 'all'
@@ -316,7 +353,9 @@ export function ItSupportTicketsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary">{prettyValue(ticket.status)}</Badge>
+                          <Badge variant="outline" className={statusBadgeClass(ticket.status)}>
+                            {prettyValue(ticket.status)}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{prettyValue(ticket.priority)}</Badge>
@@ -405,7 +444,7 @@ export function ItSupportTicketsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {STATUSES.map((item) => (
+                        {getAllowedStatuses(editingTicket).map((item) => (
                           <SelectItem key={item} value={item}>
                             {prettyValue(item)}
                           </SelectItem>

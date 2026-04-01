@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
@@ -22,7 +23,7 @@ import {
 export function ReconciliationSessionsCreatePage() {
   const navigate = useNavigate();
   const [branchId, setBranchId] = useState('__none__');
-  const [confirmationDate, setConfirmationDate] = useState('');
+  const [confirmationDate, setConfirmationDate] = useState<Date | undefined>(undefined);
   const [expectedCashCedis, setExpectedCashCedis] = useState('');
   const [countedCashCedis, setCountedCashCedis] = useState('');
   const [notes, setNotes] = useState('');
@@ -48,7 +49,7 @@ export function ReconciliationSessionsCreatePage() {
     try {
       await createSession({
         branchId,
-        confirmationDate: new Date(confirmationDate).toISOString(),
+        confirmationDate: confirmationDate.toISOString(),
         expectedCashCedis: expected,
         countedCashCedis: counted,
         notes: notes.trim() || null,
@@ -90,10 +91,10 @@ export function ReconciliationSessionsCreatePage() {
 
               <Field>
                 <FieldLabel>Confirmation date</FieldLabel>
-                <Input
-                  type="datetime-local"
+                <DateTimePicker
                   value={confirmationDate}
-                  onChange={(event) => setConfirmationDate(event.target.value)}
+                  onChange={setConfirmationDate}
+                  placeholder="Select confirmation date and time"
                 />
               </Field>
 

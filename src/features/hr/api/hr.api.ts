@@ -26,6 +26,7 @@ export interface JobTitle {
   code?: string | null;
   name: string;
   description?: string | null;
+  defaultLeaveDays: number;
   isActive: boolean;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -91,6 +92,8 @@ export interface LeaveType {
   code?: string | null;
   name: string;
   isPaid: boolean;
+  minAdvanceDays: number;
+  allowEmergencySameDay: boolean;
   isActive: boolean;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -108,6 +111,7 @@ export interface LeaveRequest {
   dateFrom: string;
   dateTo: string;
   daysCount: number;
+  isEmergency: boolean;
   reason?: string | null;
   managerApprovalStatus: number;
   managerApprovedBy?: string | null;
@@ -194,6 +198,7 @@ export const hrApi = api.injectEndpoints({
         code?: string | null;
         name: string;
         description?: string | null;
+        defaultLeaveDays?: number;
       }
     >({
       query: (body) => ({
@@ -212,6 +217,7 @@ export const hrApi = api.injectEndpoints({
           departmentId?: string | null;
           name?: string;
           description?: string | null;
+          defaultLeaveDays?: number;
           isActive?: boolean;
         };
       }
@@ -396,7 +402,13 @@ export const hrApi = api.injectEndpoints({
     }),
     createLeaveType: builder.mutation<
       { id?: string },
-      { code?: string | null; name: string; isPaid?: boolean }
+      {
+        code?: string | null;
+        name: string;
+        isPaid?: boolean;
+        minAdvanceDays?: number;
+        allowEmergencySameDay?: boolean;
+      }
     >({
       query: (body) => ({
         url: '/hr/leave-types',
@@ -430,6 +442,7 @@ export const hrApi = api.injectEndpoints({
         leaveTypeId: string;
         dateFrom: string;
         dateTo: string;
+        isEmergency?: boolean;
         reason?: string | null;
       }
     >({

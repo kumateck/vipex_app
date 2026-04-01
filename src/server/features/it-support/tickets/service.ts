@@ -22,6 +22,13 @@ import {
 
 const ALLOWED_STATUSES = new Set(['open', 'in_progress', 'pending_user', 'resolved', 'closed']);
 const ALLOWED_PRIORITIES = new Set(['low', 'medium', 'high', 'urgent']);
+const STATUS_TRANSITIONS: Record<string, Set<string>> = {
+  open: new Set(['in_progress', 'pending_user', 'resolved', 'closed']),
+  in_progress: new Set(['pending_user', 'resolved', 'closed']),
+  pending_user: new Set(['in_progress', 'resolved', 'closed']),
+  resolved: new Set(['in_progress', 'pending_user', 'closed']),
+  closed: new Set(['open']),
+};
 
 function normalizeNullableString(value?: string | null) {
   if (value == null) return null;
@@ -147,6 +154,16 @@ export async function updateItSupportTicketSvc(
     ticketId: input.ticketId,
   });
   if (!existing) throw NotFound('IT support ticket not found');
+
+  if (status && status !== existing.status) {
+    if (existing.status === 'closed' && status === 'open' && !input.canReopenClosedTicket) {
+      throw Forbidden('Only authorized users can reopen closed tickets');
+    }
+    const allowedNextStatuses = STATUS_TRANSITIONS[existing.status] ?? new Set<string>();
+    if (!allowedNextStatuses.has(status)) {
+      throw BadRequest(`Invalid status transition from ${existing.status} to ${status}`);
+    }
+  }
 
   const isBranchPatched = typeof input.branchId !== 'undefined';
   const isLocationPatched = typeof input.locationId !== 'undefined';

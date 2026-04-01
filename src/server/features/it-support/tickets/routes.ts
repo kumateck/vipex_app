@@ -101,6 +101,9 @@ export const ItSupportTicketsRoutes = new Elysia({ name: 'it-support-tickets' })
         ticketId: params.id,
         companyId: user!.companyId!,
         userId: user!.sub,
+        canReopenClosedTicket: (user!.permissions ?? []).includes(
+          PermissionKeys.CanReopenItSupportTickets,
+        ),
         status: body.status ?? undefined,
         priority: body.priority ?? undefined,
         category: body.category ?? undefined,

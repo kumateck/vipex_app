@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import {
   Dialog,
   DialogContent,
@@ -594,7 +595,7 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
   const [isMeetingDialogOpen, setIsMeetingDialogOpen] = useState(false);
   const [meetingTitle, setMeetingTitle] = useState('');
   const [meetingLink, setMeetingLink] = useState('');
-  const [meetingStartAt, setMeetingStartAt] = useState('');
+  const [meetingStartAt, setMeetingStartAt] = useState<Date | undefined>(undefined);
   const [meetingReminderMinutes, setMeetingReminderMinutes] = useState('15');
   const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
   const [createCallType, setCreateCallType] = useState<'audio' | 'video'>('audio');
@@ -1201,7 +1202,7 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
         metadataJson: {
           title: meetingTitle.trim(),
           link: meetingLink.trim() || null,
-          startsAt: meetingStartAt || null,
+          startsAt: meetingStartAt ? meetingStartAt.toISOString() : null,
           reminderMinutes: Number.isFinite(Number(meetingReminderMinutes))
             ? Math.max(0, Number(meetingReminderMinutes))
             : 0,
@@ -1212,7 +1213,7 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
       setIsMeetingDialogOpen(false);
       setMeetingTitle('');
       setMeetingLink('');
-      setMeetingStartAt('');
+      setMeetingStartAt(undefined);
       setMeetingReminderMinutes('15');
       toast.success('Meeting bubble created');
       refetchMessages();
@@ -1889,10 +1890,10 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
                   value={meetingLink}
                   onChange={(event) => setMeetingLink(event.target.value)}
                 />
-                <Input
-                  type="datetime-local"
+                <DateTimePicker
                   value={meetingStartAt}
-                  onChange={(event) => setMeetingStartAt(event.target.value)}
+                  onChange={setMeetingStartAt}
+                  placeholder="Select meeting date and time"
                 />
                 <Select value={meetingReminderMinutes} onValueChange={setMeetingReminderMinutes}>
                   <SelectTrigger>
