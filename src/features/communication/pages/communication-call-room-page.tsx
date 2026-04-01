@@ -18,6 +18,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import {
   useCreateCommunicationCallLivekitTokenMutation,
   useListCommunicationCallsQuery,
+  useListCommunicationThreadsQuery,
   useUpdateCommunicationCallStatusMutation,
 } from '../api/communication.api';
 import { useCommunicationSocket } from '../hooks/use-communication-socket';
@@ -129,12 +130,30 @@ export function CommunicationCallRoomPage() {
   const [activeSpeakerUserIds, setActiveSpeakerUserIds] = useState<string[]>([]);
 
   const { data: calls = [], refetch } = useListCommunicationCallsQuery();
+  const { data: threads = [] } = useListCommunicationThreadsQuery();
   const { data: userOptions = [] } = useListUserOptionsQuery();
   const [updateCallStatus, { isLoading: isUpdatingStatus }] =
     useUpdateCommunicationCallStatusMutation();
   const [createLivekitToken] = useCreateCommunicationCallLivekitTokenMutation();
 
   const call = useMemo(() => calls.find((row) => row.id === callId) ?? null, [callId, calls]);
+  const threadLabelById = useMemo(
+    () =>
+      new Map(
+        threads.map((thread) => [
+          thread.id,
+          thread.title || `${prettyValue(thread.threadType)} thread`,
+        ]),
+      ),
+    [threads],
+  );
+  const userLabelById = useMemo(
+    () =>
+      new Map(
+        userOptions.map((option) => [option.id, option.fullname || option.email || 'Unknown user']),
+      ),
+    [userOptions],
+  );
   const currentParticipant = useMemo(
     () => participants.find((item) => item.userId === currentUserId) ?? null,
     [currentUserId, participants],
@@ -427,8 +446,12 @@ export function CommunicationCallRoomPage() {
               <>
                 <div className="grid gap-3 md:grid-cols-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">Call ID</p>
-                    <p className="text-sm font-medium">{call.id}</p>
+                    <p className="text-xs text-muted-foreground">Thread</p>
+                    <p className="text-sm font-medium">
+                      {call.threadId
+                        ? (threadLabelById.get(call.threadId) ?? 'Unknown thread')
+                        : '-'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Type</p>
@@ -441,7 +464,7 @@ export function CommunicationCallRoomPage() {
                   <div>
                     <p className="text-xs text-muted-foreground">Room</p>
                     <p className="text-sm font-medium">
-                      {call.livekitRoomName || `call-${call.id}`}
+                      {call.livekitRoomName || 'Auto-generated room'}
                     </p>
                   </div>
                 </div>
@@ -601,8 +624,7 @@ export function CommunicationCallRoomPage() {
                 )}
               </div>
               {remoteVideoTracks.map((item) => {
-                const label =
-                  userOptions.find((row) => row.id === item.userId)?.fullname ?? item.userId;
+                const label = userLabelById.get(item.userId) ?? 'Unknown participant';
                 return (
                   <div key={item.id} className="rounded-md border p-2">
                     <p className="mb-2 text-xs text-muted-foreground">{label}</p>
@@ -628,9 +650,7 @@ export function CommunicationCallRoomPage() {
             <div className="space-y-2">
               {participants.length ? (
                 participants.map((participant) => {
-                  const label =
-                    userOptions.find((item) => item.id === participant.userId)?.fullname ??
-                    participant.userId;
+                  const label = userLabelById.get(participant.userId) ?? 'Unknown participant';
                   return (
                     <div
                       key={participant.userId}

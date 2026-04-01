@@ -150,7 +150,8 @@ export function WarehousesPage() {
       {
         id: 'branch',
         header: 'Branch',
-        accessorFn: (row) => row.branch?.name ?? branchNameById.get(row.branchId) ?? row.branchId,
+        accessorFn: (row) =>
+          row.branch?.name ?? branchNameById.get(row.branchId) ?? 'Unknown branch',
       },
       {
         id: 'description',

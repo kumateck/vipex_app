@@ -177,7 +177,7 @@ export function CommunicationEventsPage() {
           startsAtDate && startsAtDate.getTime() < Date.now() ? 'completed' : 'scheduled';
         const senderName =
           userOptions.find((user) => user.id === meeting.senderUserId)?.fullname ??
-          meeting.senderUserId ??
+          userOptions.find((user) => user.id === meeting.senderUserId)?.email ??
           'Unknown';
         const participantUserIds = Array.isArray(metadata.participantUserIds)
           ? (metadata.participantUserIds as unknown[]).filter(
@@ -190,7 +190,10 @@ export function CommunicationEventsPage() {
             )
           : [];
         const participantNamesFromIds = participantUserIds
-          .map((userId) => userById.get(userId)?.fullname ?? userById.get(userId)?.email ?? userId)
+          .map(
+            (userId) =>
+              userById.get(userId)?.fullname ?? userById.get(userId)?.email ?? 'Unknown user',
+          )
           .filter(Boolean);
         const resolvedParticipants = participants.length
           ? participants
@@ -308,7 +311,7 @@ export function CommunicationEventsPage() {
         <div className="flex -space-x-2">
           {visibleIds.map((userId) => {
             const option = userById.get(userId);
-            const name = option?.fullname || option?.email || userId;
+            const name = option?.fullname || option?.email || 'Unknown user';
             return (
               <Avatar
                 key={`${event.messageId}-${userId}`}
@@ -426,7 +429,9 @@ export function CommunicationEventsPage() {
     const startsAtIso = eventStartsAt ? new Date(eventStartsAt).toISOString() : null;
     const reminderMinutes = Number(eventReminderMinutes);
     const participants = eventParticipantUserIds
-      .map((userId) => userById.get(userId)?.fullname ?? userById.get(userId)?.email ?? userId)
+      .map(
+        (userId) => userById.get(userId)?.fullname ?? userById.get(userId)?.email ?? 'Unknown user',
+      )
       .filter(Boolean);
 
     const payload = {
@@ -553,7 +558,7 @@ export function CommunicationEventsPage() {
             options={userOptions}
             value={participantFilterUserIds}
             onValueChange={setParticipantFilterUserIds}
-            getLabel={(option) => option.fullname || option.email || option.id}
+            getLabel={(option) => option.fullname || option.email || 'Unknown user'}
             getValue={(option) => option.id}
             placeholder="All participants"
             searchPlaceholder="Search users..."
@@ -985,7 +990,7 @@ export function CommunicationEventsPage() {
                   options={userOptions}
                   value={eventParticipantUserIds}
                   onValueChange={setEventParticipantUserIds}
-                  getLabel={(option) => option.fullname || option.email || option.id}
+                  getLabel={(option) => option.fullname || option.email || 'Unknown user'}
                   getValue={(option) => option.id}
                   placeholder="Select participants"
                   searchPlaceholder="Search users..."

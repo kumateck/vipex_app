@@ -28,6 +28,7 @@ import {
   useListCommunicationThreadsQuery,
   useUpdateCommunicationCallStatusMutation,
 } from '../api/communication.api';
+import { useListUserOptionsQuery } from '@/features/users/api/users.api';
 import { useCommunicationSocket } from '../hooks/use-communication-socket';
 
 const CALL_STATUSES = ['all', 'pending', 'ringing', 'active', 'ended', 'cancelled'] as const;
@@ -61,6 +62,7 @@ export function CommunicationCallsPage() {
     refetch,
   } = useListCommunicationCallsQuery(listQueryParams);
   const { data: threads = [] } = useListCommunicationThreadsQuery();
+  const { data: userOptions = [] } = useListUserOptionsQuery();
   const [createCall, { isLoading: isCreating }] = useCreateCommunicationCallMutation();
   const [updateCallStatus, { isLoading: isUpdatingStatus }] =
     useUpdateCommunicationCallStatusMutation();
@@ -72,6 +74,23 @@ export function CommunicationCallsPage() {
       refetch();
     },
   });
+  const threadLabelById = useMemo(
+    () =>
+      new Map(
+        threads.map((thread) => [
+          thread.id,
+          thread.title || `${prettyValue(thread.threadType)} thread`,
+        ]),
+      ),
+    [threads],
+  );
+  const userLabelById = useMemo(
+    () =>
+      new Map(
+        userOptions.map((option) => [option.id, option.fullname || option.email || 'Unknown user']),
+      ),
+    [userOptions],
+  );
 
   const onCreateCall = async () => {
     try {
@@ -228,8 +247,16 @@ export function CommunicationCallsPage() {
                         <Badge variant="outline">{prettyValue(session.status)}</Badge>
                       </TableCell>
                       <TableCell>{session.livekitRoomName || '-'}</TableCell>
-                      <TableCell>{session.threadId || '-'}</TableCell>
-                      <TableCell>{session.initiatorUserId || '-'}</TableCell>
+                      <TableCell>
+                        {session.threadId
+                          ? (threadLabelById.get(session.threadId) ?? 'Unknown thread')
+                          : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {session.initiatorUserId
+                          ? (userLabelById.get(session.initiatorUserId) ?? 'Unknown user')
+                          : '-'}
+                      </TableCell>
                       <TableCell>{formatDateTime(session.startedAt)}</TableCell>
                       <TableCell>{formatDateTime(session.endedAt)}</TableCell>
                       <TableCell>{formatDateTime(session.createdAt)}</TableCell>

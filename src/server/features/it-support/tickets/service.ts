@@ -11,6 +11,8 @@ import type {
 import {
   createItSupportTicketRepo,
   getItSupportTicketRepo,
+  getItSupportBranchScopeRepo,
+  getItSupportLocationScopeRepo,
   ItSupportTicketUploadModelType,
   listItSupportTicketEventsRepo,
   listItSupportTicketsRepo,
@@ -27,10 +29,57 @@ function normalizeNullableString(value?: string | null) {
   return normalized.length ? normalized : null;
 }
 
+async function resolveAndValidateTicketScope(input: {
+  companyId: string;
+  branchId: string | null;
+  locationId: string | null;
+  clearLocationOnBranchMismatch: boolean;
+}) {
+  let nextBranchId = input.branchId;
+  let nextLocationId = input.locationId;
+
+  if (nextBranchId) {
+    const branch = await getItSupportBranchScopeRepo(nextBranchId);
+    if (!branch) throw BadRequest('Target branch does not exist');
+    if (branch.companyId !== input.companyId) {
+      throw Forbidden('Cannot use branch outside your company');
+    }
+  }
+
+  if (nextLocationId) {
+    const location = await getItSupportLocationScopeRepo(nextLocationId);
+    if (!location) throw BadRequest('Target location does not exist');
+    if (location.companyId !== input.companyId) {
+      throw Forbidden('Cannot use location outside your company');
+    }
+    if (nextBranchId && location.branchId !== nextBranchId) {
+      if (input.clearLocationOnBranchMismatch) {
+        nextLocationId = null;
+      } else {
+        throw Forbidden('Target location must belong to the selected branch');
+      }
+    } else if (!nextBranchId) {
+      nextBranchId = location.branchId;
+    }
+  }
+
+  return {
+    branchId: nextBranchId,
+    locationId: nextLocationId,
+  };
+}
+
 export async function listItSupportTicketsSvc(
   input: ItSupportTicketsListInput,
 ): Promise<ItSupportTicketItem[]> {
-  return listItSupportTicketsRepo(input);
+  return listItSupportTicketsRepo({
+    ...input,
+    status: normalizeNullableString(input.status) ?? undefined,
+    priority: normalizeNullableString(input.priority) ?? undefined,
+    assignedToUserId: normalizeNullableString(input.assignedToUserId) ?? undefined,
+    branchId: normalizeNullableString(input.branchId) ?? undefined,
+    locationId: normalizeNullableString(input.locationId) ?? undefined,
+  });
 }
 
 export async function createItSupportTicketSvc(
@@ -44,14 +93,21 @@ export async function createItSupportTicketSvc(
     throw BadRequest(`Invalid priority: ${priority}`);
   }
 
+  const resolvedScope = await resolveAndValidateTicketScope({
+    companyId: input.companyId,
+    branchId: normalizeNullableString(input.branchId),
+    locationId: normalizeNullableString(input.locationId),
+    clearLocationOnBranchMismatch: false,
+  });
+
   const created = await createItSupportTicketRepo({
     ...input,
     subject,
     priority,
     category: normalizeNullableString(input.category)?.toLowerCase() ?? 'general',
     description: normalizeNullableString(input.description),
-    branchId: normalizeNullableString(input.branchId),
-    locationId: normalizeNullableString(input.locationId),
+    branchId: resolvedScope.branchId,
+    locationId: resolvedScope.locationId,
     assignedToUserId: normalizeNullableString(input.assignedToUserId),
   });
 
@@ -86,6 +142,26 @@ export async function updateItSupportTicketSvc(
   if (priority && !ALLOWED_PRIORITIES.has(priority)) {
     throw BadRequest(`Invalid priority: ${priority}`);
   }
+  const existing = await getItSupportTicketRepo({
+    companyId: input.companyId,
+    ticketId: input.ticketId,
+  });
+  if (!existing) throw NotFound('IT support ticket not found');
+
+  const isBranchPatched = typeof input.branchId !== 'undefined';
+  const isLocationPatched = typeof input.locationId !== 'undefined';
+  const nextBranchId = isBranchPatched
+    ? normalizeNullableString(input.branchId)
+    : existing.branchId;
+  const nextLocationId = isLocationPatched
+    ? normalizeNullableString(input.locationId)
+    : existing.locationId;
+  const resolvedScope = await resolveAndValidateTicketScope({
+    companyId: input.companyId,
+    branchId: nextBranchId,
+    locationId: nextLocationId,
+    clearLocationOnBranchMismatch: isBranchPatched && !isLocationPatched,
+  });
 
   const updated = await updateItSupportTicketRepo({
     ...input,
@@ -96,6 +172,8 @@ export async function updateItSupportTicketSvc(
       typeof input.assignedToUserId === 'undefined'
         ? undefined
         : normalizeNullableString(input.assignedToUserId),
+    branchId: resolvedScope.branchId,
+    locationId: resolvedScope.locationId,
     note: normalizeNullableString(input.note),
   });
   if (!updated) throw NotFound('IT support ticket not found');

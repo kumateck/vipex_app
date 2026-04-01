@@ -56,6 +56,30 @@ type UseCommunicationSocketOptions = {
   }) => void;
 };
 
+const SOCKET_ENDPOINT_PATH = '/v1/communication/ws';
+
+function toSocketBaseUrl(candidate: string): string | null {
+  const normalizedCandidate = candidate.trim();
+  if (!normalizedCandidate) return null;
+
+  try {
+    const baseUrl = new URL(
+      normalizedCandidate,
+      typeof window !== 'undefined' ? window.location.origin : 'http://localhost',
+    );
+    const socketProtocol =
+      baseUrl.protocol === 'https:' || baseUrl.protocol === 'wss:' ? 'wss:' : 'ws:';
+    baseUrl.protocol = socketProtocol;
+    baseUrl.pathname = baseUrl.pathname.includes(SOCKET_ENDPOINT_PATH)
+      ? baseUrl.pathname
+      : SOCKET_ENDPOINT_PATH;
+    baseUrl.search = '';
+    return baseUrl.toString();
+  } catch {
+    return null;
+  }
+}
+
 export function useCommunicationSocket(options: UseCommunicationSocketOptions = {}) {
   const token = useAuthStore((state) => state.accessToken);
   const [isConnected, setIsConnected] = useState(false);
@@ -66,36 +90,51 @@ export function useCommunicationSocket(options: UseCommunicationSocketOptions = 
     optionsRef.current = options;
   }, [options]);
 
-  const socketUrl = useMemo(() => {
+  const socketUrls = useMemo(() => {
     if (!token || typeof window === 'undefined') return null;
-    const explicitBaseUrl = [
+    const rawCandidates = [
+      import.meta.env.VITE_COMMUNICATION_WS_URL,
       import.meta.env.VITE_WS_BASE_URL,
       import.meta.env.VITE_BACKEND_URL,
       import.meta.env.VITE_API_BASE_URL,
-    ].find((value): value is string => typeof value === 'string' && value.trim().length > 0);
-
-    const baseUrl = new URL(
-      explicitBaseUrl?.trim() ?? window.location.origin,
       window.location.origin,
-    );
-    const socketProtocol =
-      baseUrl.protocol === 'https:' || baseUrl.protocol === 'wss:' ? 'wss:' : 'ws:';
-    const socketOrigin = `${socketProtocol}//${baseUrl.host}`;
-    return `${socketOrigin}/v1/communication/ws?token=${encodeURIComponent(token)}`;
+    ];
+
+    const uniqueSocketUrls = new Set<string>();
+
+    for (const rawCandidate of rawCandidates) {
+      if (typeof rawCandidate !== 'string') continue;
+      for (const candidate of rawCandidate.split(',')) {
+        const socketBaseUrl = toSocketBaseUrl(candidate);
+        if (!socketBaseUrl) continue;
+        const url = new URL(socketBaseUrl);
+        url.searchParams.set('token', token);
+        uniqueSocketUrls.add(url.toString());
+      }
+    }
+
+    return uniqueSocketUrls.size ? [...uniqueSocketUrls] : null;
   }, [token]);
 
   useEffect(() => {
-    if (!socketUrl) return;
+    if (!socketUrls?.length) return;
 
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let pingTimer: ReturnType<typeof setInterval> | null = null;
     let stopped = false;
+    let socketUrlIndex = 0;
+    let hasConnectedAtLeastOnce = false;
 
     const connect = () => {
+      const socketUrl = socketUrls[socketUrlIndex] ?? socketUrls[0];
+      if (!socketUrl) return;
       socketRef.current = new WebSocket(socketUrl);
       const socket = socketRef.current;
+      let opened = false;
 
       socket.onopen = () => {
+        opened = true;
+        hasConnectedAtLeastOnce = true;
         setIsConnected(true);
         pingTimer = setInterval(() => {
           if (socket?.readyState === WebSocket.OPEN) {
@@ -145,7 +184,13 @@ export function useCommunicationSocket(options: UseCommunicationSocketOptions = 
         if (pingTimer) clearInterval(pingTimer);
         pingTimer = null;
         if (stopped) return;
-        reconnectTimer = setTimeout(connect, 2000);
+
+        // If the socket never opened, try the next configured endpoint first.
+        if (!opened && socketUrls.length > 1) {
+          socketUrlIndex = (socketUrlIndex + 1) % socketUrls.length;
+        }
+
+        reconnectTimer = setTimeout(connect, hasConnectedAtLeastOnce ? 2000 : 800);
       };
 
       socket.onerror = () => {
@@ -163,7 +208,7 @@ export function useCommunicationSocket(options: UseCommunicationSocketOptions = 
       socketRef.current?.close();
       socketRef.current = null;
     };
-  }, [socketUrl]);
+  }, [socketUrls]);
 
   const setPresence = useCallback((status: 'online' | 'away' | 'busy' | 'offline') => {
     const socket = socketRef.current;

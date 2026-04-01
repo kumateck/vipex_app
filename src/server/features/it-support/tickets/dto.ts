@@ -12,6 +12,8 @@ export type ItSupportTicketsListInput = {
   status?: string;
   priority?: string;
   assignedToUserId?: string;
+  branchId?: string;
+  locationId?: string;
 };
 
 export type ItSupportTicketsCreateInput = {
@@ -38,6 +40,8 @@ export type ItSupportTicketsUpdateInput = {
   priority?: string | null;
   category?: string | null;
   assignedToUserId?: string | null;
+  branchId?: string | null;
+  locationId?: string | null;
   note?: string | null;
 };
 

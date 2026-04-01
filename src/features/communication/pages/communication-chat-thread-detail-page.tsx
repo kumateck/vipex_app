@@ -727,7 +727,10 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
     const typingUserIds = typingUserIdsByThread[normalizedThreadId] ?? [];
     return typingUserIds
       .filter((userId) => userId !== currentUserId)
-      .map((userId) => usersById.get(userId)?.fullname ?? userId)
+      .map(
+        (userId) =>
+          usersById.get(userId)?.fullname ?? usersById.get(userId)?.email ?? 'Unknown user',
+      )
       .slice(0, 3);
   }, [currentUserId, normalizedThreadId, typingUserIdsByThread, usersById]);
 

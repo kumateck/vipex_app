@@ -46,7 +46,13 @@ export const itSupportApi = api.injectEndpoints({
   endpoints: (builder) => ({
     listItSupportTickets: builder.query<
       ItSupportTicket[],
-      { status?: string; priority?: string; assignedToUserId?: string } | void
+      {
+        status?: string;
+        priority?: string;
+        assignedToUserId?: string;
+        branchId?: string;
+        locationId?: string;
+      } | void
     >({
       query: (query) => ({
         url: '/it-support/tickets',
@@ -87,6 +93,8 @@ export const itSupportApi = api.injectEndpoints({
         priority?: string | null;
         category?: string | null;
         assignedToUserId?: string | null;
+        branchId?: string | null;
+        locationId?: string | null;
         note?: string | null;
       }
     >({

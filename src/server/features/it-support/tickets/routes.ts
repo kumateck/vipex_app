@@ -33,6 +33,8 @@ export const ItSupportTicketsRoutes = new Elysia({ name: 'it-support-tickets' })
         status: query.status ?? undefined,
         priority: query.priority ?? undefined,
         assignedToUserId: query.assignedToUserId ?? undefined,
+        branchId: query.branchId ?? undefined,
+        locationId: query.locationId ?? undefined,
       }),
     {
       query: ItSupportTicketsListQuerySchema,
@@ -103,6 +105,8 @@ export const ItSupportTicketsRoutes = new Elysia({ name: 'it-support-tickets' })
         priority: body.priority ?? undefined,
         category: body.category ?? undefined,
         assignedToUserId: body.assignedToUserId ?? undefined,
+        branchId: body.branchId ?? undefined,
+        locationId: body.locationId ?? undefined,
         note: body.note ?? undefined,
       }),
     {
