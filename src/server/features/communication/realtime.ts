@@ -11,6 +11,12 @@ import {
   updateCommunicationCallStatusRepo,
 } from './calls/repository';
 import { canTransitionCommunicationCallStatus } from './calls/status';
+import {
+  canUserAccessCallAccessRepo,
+  listChannelVisibleUserIdsAccessRepo,
+  listThreadParticipantUserIdsAccessRepo,
+  isThreadParticipantAccessRepo,
+} from './access/repository';
 
 type CommunicationSocketData = {
   kind: 'communication';
@@ -103,6 +109,26 @@ function broadcast(companyId: string, event: CommunicationRealtimeEvent) {
   }
 }
 
+function broadcastToUserIds(
+  companyId: string,
+  userIds: Iterable<string>,
+  event: CommunicationRealtimeEvent,
+) {
+  const set = companySockets.get(companyId);
+  if (!set?.size) return;
+  const audience = new Set(userIds);
+  if (!audience.size) return;
+  const encoded = JSON.stringify(event);
+  for (const ws of set) {
+    if (!audience.has(ws.data.userId)) continue;
+    try {
+      ws.send(encoded);
+    } catch {
+      // Ignore single-socket send errors; stale sockets are cleaned up on close.
+    }
+  }
+}
+
 function getParticipantsMap(companyId: string, callId: string): Map<string, CallParticipantState> {
   const companyMap =
     callParticipantsByCompany.get(companyId) ??
@@ -124,10 +150,22 @@ function getParticipantsCount(companyId: string, callId: string): number {
 function emitCallParticipants(companyId: string, callId: string) {
   const callMap = getParticipantsMap(companyId, callId);
   const participants = [...callMap.values()].sort((a, b) => a.joinedAt.localeCompare(b.joinedAt));
-  broadcast(companyId, {
+  const set = companySockets.get(companyId);
+  if (!set?.size) return;
+  const encoded = JSON.stringify({
     type: 'communication.call.participants.updated',
     payload: { callId, participants },
-  });
+  } satisfies CommunicationRealtimeEvent);
+
+  for (const ws of set) {
+    const joinedCalls = socketJoinedCalls.get(ws);
+    if (!joinedCalls?.has(callId)) continue;
+    try {
+      ws.send(encoded);
+    } catch {
+      // Ignore single-socket send errors; stale sockets are cleaned up on close.
+    }
+  }
 }
 
 async function transitionCallStatusIfAllowed(params: {
@@ -249,6 +287,12 @@ export const communicationSocketHandlers = {
       if (parsed.type === 'communication.typing.set') {
         const threadId = parsed.payload.threadId?.trim();
         if (!threadId) return;
+        const canAccessThread = await isThreadParticipantAccessRepo({
+          companyId: data.companyId,
+          threadId,
+          userId: data.userId,
+        });
+        if (!canAccessThread) return;
         emitCommunicationTypingUpdated(data.companyId, {
           threadId,
           userId: data.userId,
@@ -261,6 +305,12 @@ export const communicationSocketHandlers = {
       if (parsed.type === 'communication.call.join') {
         const callId = parsed.payload.callId?.trim();
         if (!callId) return;
+        const canAccessCall = await canUserAccessCallAccessRepo({
+          callId,
+          companyId: data.companyId,
+          userId: data.userId,
+        });
+        if (!canAccessCall) return;
         const callMap = getParticipantsMap(data.companyId, callId);
         const current =
           callMap.get(data.userId) ??
@@ -291,6 +341,12 @@ export const communicationSocketHandlers = {
       if (parsed.type === 'communication.call.leave') {
         const callId = parsed.payload.callId?.trim();
         if (!callId) return;
+        const canAccessCall = await canUserAccessCallAccessRepo({
+          callId,
+          companyId: data.companyId,
+          userId: data.userId,
+        });
+        if (!canAccessCall) return;
         removeUserFromCall(data.companyId, callId, data.userId);
         socketJoinedCalls.get(ws)?.delete(callId);
         const count = getParticipantsCount(data.companyId, callId);
@@ -307,6 +363,12 @@ export const communicationSocketHandlers = {
       if (parsed.type === 'communication.call.media.set') {
         const callId = parsed.payload.callId?.trim();
         if (!callId) return;
+        const canAccessCall = await canUserAccessCallAccessRepo({
+          callId,
+          companyId: data.companyId,
+          userId: data.userId,
+        });
+        if (!canAccessCall) return;
         const callMap = getParticipantsMap(data.companyId, callId);
         const current =
           callMap.get(data.userId) ??
@@ -328,6 +390,12 @@ export const communicationSocketHandlers = {
       if (parsed.type === 'communication.call.participants.get') {
         const callId = parsed.payload.callId?.trim();
         if (!callId) return;
+        const canAccessCall = await canUserAccessCallAccessRepo({
+          callId,
+          companyId: data.companyId,
+          userId: data.userId,
+        });
+        if (!canAccessCall) return;
         const participants = [...getParticipantsMap(data.companyId, callId).values()].sort((a, b) =>
           a.joinedAt.localeCompare(b.joinedAt),
         );
@@ -370,25 +438,83 @@ export function emitCommunicationThreadCreated(params: {
   threadType: string;
   userId: string;
 }) {
-  broadcast(params.companyId, {
-    type: 'communication.thread.created',
-    payload: { id: params.id, threadType: params.threadType, userId: params.userId },
-  });
+  void (async () => {
+    const audience = await listThreadParticipantUserIdsAccessRepo({
+      companyId: params.companyId,
+      threadId: params.id,
+    });
+    broadcastToUserIds(params.companyId, audience, {
+      type: 'communication.thread.created',
+      payload: { id: params.id, threadType: params.threadType, userId: params.userId },
+    });
+  })();
 }
 
 export function emitCommunicationMessageCreated(
   companyId: string,
   payload: CommunicationMessagesItem,
 ) {
-  broadcast(companyId, { type: 'communication.message.created', payload });
+  void (async () => {
+    const audience = await listThreadParticipantUserIdsAccessRepo({
+      companyId,
+      threadId: payload.threadId,
+    });
+    broadcastToUserIds(companyId, audience, { type: 'communication.message.created', payload });
+  })();
 }
 
 export function emitCommunicationCallCreated(companyId: string, payload: CommunicationCallsItem) {
-  broadcast(companyId, { type: 'communication.call.created', payload });
+  void (async () => {
+    if (payload.threadId) {
+      const audience = await listThreadParticipantUserIdsAccessRepo({
+        companyId,
+        threadId: payload.threadId,
+      });
+      broadcastToUserIds(companyId, audience, { type: 'communication.call.created', payload });
+      return;
+    }
+    if (payload.channelId) {
+      const audience = await listChannelVisibleUserIdsAccessRepo({
+        companyId,
+        channelId: payload.channelId,
+      });
+      broadcastToUserIds(companyId, audience, { type: 'communication.call.created', payload });
+      return;
+    }
+    if (payload.initiatorUserId) {
+      broadcastToUserIds(companyId, [payload.initiatorUserId], {
+        type: 'communication.call.created',
+        payload,
+      });
+    }
+  })();
 }
 
 export function emitCommunicationCallUpdated(companyId: string, payload: CommunicationCallsItem) {
-  broadcast(companyId, { type: 'communication.call.updated', payload });
+  void (async () => {
+    if (payload.threadId) {
+      const audience = await listThreadParticipantUserIdsAccessRepo({
+        companyId,
+        threadId: payload.threadId,
+      });
+      broadcastToUserIds(companyId, audience, { type: 'communication.call.updated', payload });
+      return;
+    }
+    if (payload.channelId) {
+      const audience = await listChannelVisibleUserIdsAccessRepo({
+        companyId,
+        channelId: payload.channelId,
+      });
+      broadcastToUserIds(companyId, audience, { type: 'communication.call.updated', payload });
+      return;
+    }
+    if (payload.initiatorUserId) {
+      broadcastToUserIds(companyId, [payload.initiatorUserId], {
+        type: 'communication.call.updated',
+        payload,
+      });
+    }
+  })();
 }
 
 export function emitCommunicationPresenceUpdated(
@@ -402,5 +528,11 @@ export function emitCommunicationTypingUpdated(
   companyId: string,
   payload: { threadId: string; userId: string; isTyping: boolean; at: string },
 ) {
-  broadcast(companyId, { type: 'communication.typing.updated', payload });
+  void (async () => {
+    const audience = await listThreadParticipantUserIdsAccessRepo({
+      companyId,
+      threadId: payload.threadId,
+    });
+    broadcastToUserIds(companyId, audience, { type: 'communication.typing.updated', payload });
+  })();
 }

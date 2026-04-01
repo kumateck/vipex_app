@@ -193,6 +193,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         code: body.code ?? null,
         name: body.name,
         description: body.description ?? null,
+        defaultLeaveDays: body.defaultLeaveDays ?? 0,
         createdBy: (user as AuthUser).sub,
       });
       set.status = HttpStatus.CREATED;
@@ -204,6 +205,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         code: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
         name: NonEmpty255,
         description: t.Optional(t.Union([t.String(), t.Null()])),
+        defaultLeaveDays: t.Optional(t.Number({ minimum: 0 })),
       }),
       beforeHandle: [
         requireAuth(),
@@ -221,6 +223,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         code: body.code,
         name: body.name,
         description: body.description,
+        defaultLeaveDays: body.defaultLeaveDays,
         isActive: body.isActive,
       }),
     {
@@ -230,6 +233,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         code: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
         name: t.Optional(NonEmpty255),
         description: t.Optional(t.Union([t.String(), t.Null()])),
+        defaultLeaveDays: t.Optional(t.Number({ minimum: 0 })),
         isActive: t.Optional(t.Boolean()),
       }),
       beforeHandle: [
@@ -292,6 +296,8 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         code: body.code ?? null,
         name: body.name,
         isPaid: body.isPaid ?? true,
+        minAdvanceDays: body.minAdvanceDays ?? 0,
+        allowEmergencySameDay: body.allowEmergencySameDay ?? true,
         createdBy: (user as AuthUser).sub,
       });
       set.status = HttpStatus.CREATED;
@@ -302,6 +308,8 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         code: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
         name: NonEmpty255,
         isPaid: t.Optional(t.Boolean()),
+        minAdvanceDays: t.Optional(t.Number({ minimum: 0 })),
+        allowEmergencySameDay: t.Optional(t.Boolean()),
       }),
       beforeHandle: [
         requireAuth(),
@@ -629,6 +637,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         leaveTypeId: body.leaveTypeId,
         dateFrom: new Date(body.dateFrom),
         dateTo: new Date(body.dateTo),
+        isEmergency: body.isEmergency ?? false,
         reason: body.reason ?? null,
         createdBy: (user as AuthUser).sub,
       });
@@ -641,6 +650,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         leaveTypeId: UUID,
         dateFrom: t.String({ format: 'date' }),
         dateTo: t.String({ format: 'date' }),
+        isEmergency: t.Optional(t.Boolean()),
         reason: t.Optional(t.Union([t.String(), t.Null()])),
       }),
       beforeHandle: [

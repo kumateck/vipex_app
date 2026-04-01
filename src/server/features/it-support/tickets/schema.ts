@@ -4,6 +4,8 @@ export const ItSupportTicketsListQuerySchema = t.Object({
   status: t.Optional(t.String({ minLength: 1 })),
   priority: t.Optional(t.String({ minLength: 1 })),
   assignedToUserId: t.Optional(t.String({ minLength: 1 })),
+  branchId: t.Optional(t.String({ minLength: 1 })),
+  locationId: t.Optional(t.String({ minLength: 1 })),
 });
 
 export const ItSupportTicketsIdParamSchema = t.Object({
@@ -31,6 +33,8 @@ export const ItSupportTicketsUpdateBodySchema = t.Object({
   priority: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 20 }), t.Null()])),
   category: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 60 }), t.Null()])),
   assignedToUserId: t.Optional(t.Union([t.String({ minLength: 1 }), t.Null()])),
+  branchId: t.Optional(t.Union([t.String({ minLength: 1 }), t.Null()])),
+  locationId: t.Optional(t.Union([t.String({ minLength: 1 }), t.Null()])),
   note: t.Optional(t.Union([t.String({ minLength: 1 }), t.Null()])),
 });
 

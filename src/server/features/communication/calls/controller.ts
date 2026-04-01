@@ -2,11 +2,13 @@ import type {
   CommunicationCallsCreateLivekitTokenInput,
   CommunicationCallsCreateInput,
   CommunicationCallsListInput,
+  CommunicationVoiceJoinInput,
   CommunicationCallsUpdateStatusInput,
 } from './dto';
 import {
   createCommunicationCallLivekitTokenSvc,
   createCommunicationCallsSvc,
+  joinCommunicationVoiceChannelSvc,
   listCommunicationCallsSvc,
   updateCommunicationCallStatusSvc,
 } from './service';
@@ -29,4 +31,8 @@ export async function createCommunicationCallLivekitTokenCtrl(
   input: CommunicationCallsCreateLivekitTokenInput,
 ) {
   return createCommunicationCallLivekitTokenSvc(input);
+}
+
+export async function joinCommunicationVoiceChannelCtrl(input: CommunicationVoiceJoinInput) {
+  return joinCommunicationVoiceChannelSvc(input);
 }

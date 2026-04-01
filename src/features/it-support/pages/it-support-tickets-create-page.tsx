@@ -14,6 +14,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
+import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
+import { useAuthStore } from '@/stores/auth-store';
 import { useCreateItSupportTicketMutation } from '../api/it-support.api';
 
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
@@ -42,12 +45,28 @@ async function toDataUrl(file: File): Promise<string> {
 
 export function ItSupportTicketsCreatePage() {
   const navigate = useNavigate();
+  const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<string>('medium');
   const [category, setCategory] = useState<string>('general');
+  const [branchId, setBranchId] = useState('');
+  const [locationId, setLocationId] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [createTicket, { isLoading: isCreating }] = useCreateItSupportTicketMutation();
+  const { data: branchOptions = [] } = useListBranchOptionsQuery(
+    companyId ? { companyId } : undefined,
+    { skip: !companyId },
+  );
+  const { data: locationOptions = [] } = useListLocationOptionsQuery(
+    companyId
+      ? {
+          companyId,
+          branchId: branchId || undefined,
+        }
+      : undefined,
+    { skip: !companyId },
+  );
 
   const canSubmit = Boolean(subject.trim()) && !isCreating;
 
@@ -61,6 +80,8 @@ export function ItSupportTicketsCreatePage() {
     setDescription('');
     setPriority('medium');
     setCategory('general');
+    setBranchId('');
+    setLocationId('');
     setSelectedFiles([]);
   };
 
@@ -83,6 +104,8 @@ export function ItSupportTicketsCreatePage() {
         description: description.trim() || null,
         priority,
         category,
+        branchId: branchId || null,
+        locationId: locationId || null,
         attachments,
       }).unwrap();
 
@@ -134,6 +157,48 @@ export function ItSupportTicketsCreatePage() {
                     {CATEGORIES.map((item) => (
                       <SelectItem key={item} value={item}>
                         {prettyValue(item)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel>Branch</FieldLabel>
+                <Select
+                  value={branchId || '__none__'}
+                  onValueChange={(value) => {
+                    const nextBranchId = value === '__none__' ? '' : value;
+                    setBranchId(nextBranchId);
+                    setLocationId('');
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No branch</SelectItem>
+                    {branchOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel>Location</FieldLabel>
+                <Select
+                  value={locationId || '__none__'}
+                  onValueChange={(value) => setLocationId(value === '__none__' ? '' : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No location</SelectItem>
+                    {locationOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

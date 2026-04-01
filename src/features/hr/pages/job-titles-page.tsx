@@ -28,6 +28,7 @@ export function JobTitlesPage() {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [departmentId, setDepartmentId] = useState('');
+  const [defaultLeaveDays, setDefaultLeaveDays] = useState('0');
   const { data, isLoading } = useListJobTitlesQuery();
   const { data: departmentOptions = [] } = useListDepartmentOptionsQuery();
   const [createJobTitle, { isLoading: isCreating }] = useCreateJobTitleMutation();
@@ -42,7 +43,7 @@ export function JobTitlesPage() {
             <CardTitle>Job Titles</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-2 md:grid-cols-4">
+            <div className="grid gap-2 md:grid-cols-5">
               <Select value={departmentId} onValueChange={setDepartmentId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select department" />
@@ -65,6 +66,13 @@ export function JobTitlesPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
+              <Input
+                type="number"
+                min={0}
+                placeholder="Default leave days"
+                value={defaultLeaveDays}
+                onChange={(e) => setDefaultLeaveDays(e.target.value)}
+              />
               <Button
                 disabled={!name.trim() || !departmentId || isCreating}
                 onClick={async () => {
@@ -72,10 +80,12 @@ export function JobTitlesPage() {
                     departmentId,
                     code: code || null,
                     name: name.trim(),
+                    defaultLeaveDays: Math.max(0, Number(defaultLeaveDays) || 0),
                   }).unwrap();
                   setDepartmentId('');
                   setCode('');
                   setName('');
+                  setDefaultLeaveDays('0');
                 }}
               >
                 Add
@@ -87,13 +97,14 @@ export function JobTitlesPage() {
                   <TableHead>Department</TableHead>
                   <TableHead>Code</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>Default Leave Days</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={4}>Loading job titles...</TableCell>
+                    <TableCell colSpan={5}>Loading job titles...</TableCell>
                   </TableRow>
                 ) : rows.length ? (
                   rows.map((row) => (
@@ -101,12 +112,13 @@ export function JobTitlesPage() {
                       <TableCell>{row.departmentName ?? '-'}</TableCell>
                       <TableCell>{row.code ?? '-'}</TableCell>
                       <TableCell>{row.name}</TableCell>
+                      <TableCell>{Math.max(0, Number(row.defaultLeaveDays ?? 0))}</TableCell>
                       <TableCell>{row.isActive ? 'Active' : 'Inactive'}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4}>No job titles found.</TableCell>
+                    <TableCell colSpan={5}>No job titles found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>

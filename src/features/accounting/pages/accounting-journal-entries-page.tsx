@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -217,10 +219,10 @@ function AccountingJournalEntriesPageContent({
               </div>
               <div className="space-y-2">
                 <Label>Entry Date</Label>
-                <Input
-                  type="date"
-                  value={entryDate}
-                  onChange={(event) => setEntryDate(event.target.value)}
+                <DatePicker
+                  date={entryDate ? new Date(`${entryDate}T00:00:00`) : undefined}
+                  onDateChange={(date) => setEntryDate(date ? format(date, 'yyyy-MM-dd') : '')}
+                  placeholder="Select entry date"
                 />
               </div>
             </div>

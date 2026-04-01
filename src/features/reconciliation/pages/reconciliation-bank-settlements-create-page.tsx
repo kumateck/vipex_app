@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
@@ -22,7 +23,7 @@ import {
 export function ReconciliationBankSettlementsCreatePage() {
   const navigate = useNavigate();
   const [branchId, setBranchId] = useState('__none__');
-  const [settlementDate, setSettlementDate] = useState('');
+  const [settlementDate, setSettlementDate] = useState<Date | undefined>(undefined);
   const [settlementNo, setSettlementNo] = useState('');
   const [bankReference, setBankReference] = useState('');
   const [expectedAmountPsw, setExpectedAmountPsw] = useState('');
@@ -51,7 +52,7 @@ export function ReconciliationBankSettlementsCreatePage() {
     try {
       await createSettlement({
         branchId,
-        settlementDate: new Date(settlementDate).toISOString(),
+        settlementDate: settlementDate.toISOString(),
         settlementNo: settlementNo.trim() || null,
         bankReference: bankReference.trim() || null,
         expectedAmountPsw: expected,
@@ -92,10 +93,10 @@ export function ReconciliationBankSettlementsCreatePage() {
               </Field>
               <Field>
                 <FieldLabel>Settlement date</FieldLabel>
-                <Input
-                  type="datetime-local"
+                <DateTimePicker
                   value={settlementDate}
-                  onChange={(event) => setSettlementDate(event.target.value)}
+                  onChange={setSettlementDate}
+                  placeholder="Select settlement date and time"
                 />
               </Field>
               <Field>

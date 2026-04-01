@@ -1,6 +1,13 @@
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { itSupportTicketEvents, itSupportTickets, uploads, users } from '@/db/schemas';
+import {
+  branches,
+  itSupportTicketEvents,
+  itSupportTickets,
+  locations,
+  uploads,
+  users,
+} from '@/db/schemas';
 import type {
   ItSupportTicketAttachment,
   ItSupportTicketEventItem,
@@ -35,6 +42,46 @@ type TicketRow = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type ItSupportBranchScope = {
+  id: string;
+  companyId: string;
+};
+
+export type ItSupportLocationScope = {
+  id: string;
+  companyId: string;
+  branchId: string;
+};
+
+export async function getItSupportBranchScopeRepo(
+  id: string,
+): Promise<ItSupportBranchScope | null> {
+  const [row] = await db
+    .select({
+      id: branches.id,
+      companyId: branches.companyId,
+    })
+    .from(branches)
+    .where(and(eq(branches.id, id), eq(branches.isDeleted, false)))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getItSupportLocationScopeRepo(
+  id: string,
+): Promise<ItSupportLocationScope | null> {
+  const [row] = await db
+    .select({
+      id: locations.id,
+      companyId: locations.companyId,
+      branchId: locations.branchId,
+    })
+    .from(locations)
+    .where(and(eq(locations.id, id), eq(locations.isDeleted, false)))
+    .limit(1);
+  return row ?? null;
+}
 
 async function listAttachmentsByTicketIds(
   companyId: string,
@@ -114,6 +161,8 @@ export async function listItSupportTicketsRepo(
   if (input.priority) where.push(eq(itSupportTickets.priority, input.priority));
   if (input.assignedToUserId)
     where.push(eq(itSupportTickets.assignedToUserId, input.assignedToUserId));
+  if (input.branchId) where.push(eq(itSupportTickets.branchId, input.branchId));
+  if (input.locationId) where.push(eq(itSupportTickets.locationId, input.locationId));
 
   const rows = await db
     .select({
@@ -251,6 +300,10 @@ export async function updateItSupportTicketRepo(
         typeof input.assignedToUserId === 'undefined'
           ? existing.assignedToUserId
           : (input.assignedToUserId ?? null),
+      branchId:
+        typeof input.branchId === 'undefined' ? existing.branchId : (input.branchId ?? null),
+      locationId:
+        typeof input.locationId === 'undefined' ? existing.locationId : (input.locationId ?? null),
       resolvedAt: nextStatus === 'resolved' ? new Date() : null,
       closedAt: nextStatus === 'closed' ? new Date() : null,
       updatedAt: new Date(),

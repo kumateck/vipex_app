@@ -16,7 +16,10 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
-import { useCreateCommunicationThreadMutation } from '../api/communication.api';
+import {
+  useCreateCommunicationChannelMutation,
+  useCreateCommunicationThreadMutation,
+} from '../api/communication.api';
 
 type ThreadTypeCreate = 'direct' | 'group' | 'channel';
 
@@ -27,11 +30,18 @@ function asThreadType(value: string): ThreadTypeCreate {
 
 export function CommunicationChatCreatePage() {
   const navigate = useNavigate();
+  const [createTarget, setCreateTarget] = useState<'conversation' | 'channel'>('conversation');
   const [newThreadType, setNewThreadType] = useState<ThreadTypeCreate>('direct');
   const [newThreadTitle, setNewThreadTitle] = useState('');
   const [newThreadParticipantIds, setNewThreadParticipantIds] = useState<string[]>([]);
+  const [newChannelName, setNewChannelName] = useState('');
+  const [newChannelDescription, setNewChannelDescription] = useState('');
+  const [newChannelType, setNewChannelType] = useState<'text' | 'voice'>('text');
+  const [newChannelVisibility, setNewChannelVisibility] = useState<'public' | 'private'>('public');
+  const [newChannelParticipantIds, setNewChannelParticipantIds] = useState<string[]>([]);
   const { data: userOptions = [] } = useListUserOptionsQuery();
   const [createThread, { isLoading: isCreatingThread }] = useCreateCommunicationThreadMutation();
+  const [createChannel, { isLoading: isCreatingChannel }] = useCreateCommunicationChannelMutation();
 
   const onToggleParticipant = (userId: string, checked: boolean) => {
     setNewThreadParticipantIds((prev) => {
@@ -63,6 +73,38 @@ export function CommunicationChatCreatePage() {
     }
   };
 
+  const onCreateChannel = async () => {
+    if (!newChannelName.trim()) {
+      toast.error('Channel name is required.');
+      return;
+    }
+    if (newChannelVisibility === 'private' && !newChannelParticipantIds.length) {
+      toast.error('Select participants for a private channel.');
+      return;
+    }
+
+    try {
+      const created = await createChannel({
+        name: newChannelName.trim(),
+        description: newChannelDescription.trim() || null,
+        channelType: newChannelType,
+        visibility: newChannelVisibility,
+        participantUserIds:
+          newChannelVisibility === 'private' ? newChannelParticipantIds : undefined,
+        isCallEnabled: newChannelType === 'voice',
+      }).unwrap();
+
+      toast.success('Channel created.');
+      if (created.channelType === 'text' && created.threadId) {
+        navigate(`/communication/chat/${created.threadId}`);
+        return;
+      }
+      navigate('/communication/chat');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create channel.');
+    }
+  };
+
   return (
     <ScrollableWrapper>
       <div className="w-full space-y-4 p-4">
@@ -70,7 +112,7 @@ export function CommunicationChatCreatePage() {
           <div>
             <h1 className="text-xl font-semibold">Create Thread</h1>
             <p className="text-sm text-muted-foreground">
-              Start a direct, group, or channel thread in a dedicated page.
+              Start a conversation or create a text/voice channel.
             </p>
           </div>
           <Button variant="outline" onClick={() => navigate('/communication/chat')}>
@@ -85,73 +127,209 @@ export function CommunicationChatCreatePage() {
           <CardContent className="space-y-4">
             <FieldGroup className="grid gap-4 md:grid-cols-2">
               <Field>
-                <FieldLabel>Type</FieldLabel>
+                <FieldLabel>Create</FieldLabel>
                 <Select
-                  value={newThreadType}
-                  onValueChange={(value) => setNewThreadType(asThreadType(value))}
+                  value={createTarget}
+                  onValueChange={(value) =>
+                    setCreateTarget(value === 'channel' ? 'channel' : 'conversation')
+                  }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="direct">Direct</SelectItem>
-                    <SelectItem value="group">Group</SelectItem>
+                    <SelectItem value="conversation">Conversation</SelectItem>
                     <SelectItem value="channel">Channel</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
 
-              <Field>
-                <FieldLabel>Title (optional)</FieldLabel>
-                <Input
-                  value={newThreadTitle}
-                  onChange={(event) => setNewThreadTitle(event.target.value)}
-                  placeholder="Thread title"
-                />
-              </Field>
+              {createTarget === 'conversation' ? (
+                <>
+                  <Field>
+                    <FieldLabel>Type</FieldLabel>
+                    <Select
+                      value={newThreadType}
+                      onValueChange={(value) => setNewThreadType(asThreadType(value))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="direct">Direct</SelectItem>
+                        <SelectItem value="group">Group</SelectItem>
+                        <SelectItem value="channel">Channel</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
 
-              <Field className="md:col-span-2">
-                <FieldLabel>Participants</FieldLabel>
-                <div className="max-h-[55vh] space-y-2 overflow-y-auto rounded-md border p-2">
-                  {userOptions.length ? (
-                    userOptions.map((option) => {
-                      const checked = newThreadParticipantIds.includes(option.id);
-                      return (
-                        <label
-                          key={option.id}
-                          className="flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/40"
-                        >
-                          <span className="min-w-0 text-sm">
-                            <span className="block truncate font-medium">{option.fullname}</span>
-                            <span className="block truncate text-xs text-muted-foreground">
-                              {option.email}
-                            </span>
-                          </span>
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={(value) =>
-                              onToggleParticipant(option.id, value === true)
-                            }
-                          />
-                        </label>
-                      );
-                    })
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No users found.</p>
-                  )}
-                </div>
-              </Field>
+                  <Field>
+                    <FieldLabel>Title (optional)</FieldLabel>
+                    <Input
+                      value={newThreadTitle}
+                      onChange={(event) => setNewThreadTitle(event.target.value)}
+                      placeholder="Thread title"
+                    />
+                  </Field>
+
+                  <Field className="md:col-span-2">
+                    <FieldLabel>Participants</FieldLabel>
+                    <div className="max-h-[55vh] space-y-2 overflow-y-auto rounded-md border p-2">
+                      {userOptions.length ? (
+                        userOptions.map((option) => {
+                          const checked = newThreadParticipantIds.includes(option.id);
+                          return (
+                            <label
+                              key={option.id}
+                              className="flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/40"
+                            >
+                              <span className="min-w-0 text-sm">
+                                <span className="block truncate font-medium">
+                                  {option.fullname}
+                                </span>
+                                <span className="block truncate text-xs text-muted-foreground">
+                                  {option.email}
+                                </span>
+                              </span>
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(value) =>
+                                  onToggleParticipant(option.id, value === true)
+                                }
+                              />
+                            </label>
+                          );
+                        })
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No users found.</p>
+                      )}
+                    </div>
+                  </Field>
+                </>
+              ) : (
+                <>
+                  <Field>
+                    <FieldLabel>Channel Type</FieldLabel>
+                    <Select
+                      value={newChannelType}
+                      onValueChange={(value) =>
+                        setNewChannelType(value === 'voice' ? 'voice' : 'text')
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">Text</SelectItem>
+                        <SelectItem value="voice">Voice</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>Visibility</FieldLabel>
+                    <Select
+                      value={newChannelVisibility}
+                      onValueChange={(value) =>
+                        setNewChannelVisibility(value === 'private' ? 'private' : 'public')
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="public">Public</SelectItem>
+                        <SelectItem value="private">Private</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>Name</FieldLabel>
+                    <Input
+                      value={newChannelName}
+                      onChange={(event) => setNewChannelName(event.target.value)}
+                      placeholder="Channel name"
+                    />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>Description (optional)</FieldLabel>
+                    <Input
+                      value={newChannelDescription}
+                      onChange={(event) => setNewChannelDescription(event.target.value)}
+                      placeholder="Description"
+                    />
+                  </Field>
+
+                  {newChannelVisibility === 'private' ? (
+                    <Field className="md:col-span-2">
+                      <FieldLabel>Participants</FieldLabel>
+                      <div className="max-h-[55vh] space-y-2 overflow-y-auto rounded-md border p-2">
+                        {userOptions.length ? (
+                          userOptions.map((option) => {
+                            const checked = newChannelParticipantIds.includes(option.id);
+                            return (
+                              <label
+                                key={option.id}
+                                className="flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/40"
+                              >
+                                <span className="min-w-0 text-sm">
+                                  <span className="block truncate font-medium">
+                                    {option.fullname}
+                                  </span>
+                                  <span className="block truncate text-xs text-muted-foreground">
+                                    {option.email}
+                                  </span>
+                                </span>
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(value) => {
+                                    const nextChecked = value === true;
+                                    setNewChannelParticipantIds((prev) => {
+                                      if (nextChecked) {
+                                        if (prev.includes(option.id)) return prev;
+                                        return [...prev, option.id];
+                                      }
+                                      return prev.filter((item) => item !== option.id);
+                                    });
+                                  }}
+                                />
+                              </label>
+                            );
+                          })
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No users found.</p>
+                        )}
+                      </div>
+                    </Field>
+                  ) : null}
+                </>
+              )}
             </FieldGroup>
 
             <Separator />
 
             <div className="flex gap-2">
-              <Button
-                onClick={onCreateThread}
-                disabled={!newThreadParticipantIds.length || isCreatingThread}
-              >
-                {isCreatingThread ? 'Creating...' : 'Create thread'}
-              </Button>
+              {createTarget === 'conversation' ? (
+                <Button
+                  onClick={onCreateThread}
+                  disabled={!newThreadParticipantIds.length || isCreatingThread}
+                >
+                  {isCreatingThread ? 'Creating...' : 'Create conversation'}
+                </Button>
+              ) : (
+                <Button
+                  onClick={onCreateChannel}
+                  disabled={
+                    !newChannelName.trim() ||
+                    isCreatingChannel ||
+                    (newChannelVisibility === 'private' && !newChannelParticipantIds.length)
+                  }
+                >
+                  {isCreatingChannel ? 'Creating...' : 'Create channel'}
+                </Button>
+              )}
               <Button variant="outline" onClick={() => navigate('/communication/chat')}>
                 Cancel
               </Button>

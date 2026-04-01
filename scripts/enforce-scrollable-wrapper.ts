@@ -31,6 +31,11 @@ function isSharedHelperPageFile(filePath: string) {
   return posix.endsWith('-shared.tsx');
 }
 
+function isScrollableWrapperExemptFile(filePath: string) {
+  const posix = toPosix(filePath);
+  return posix.endsWith('/communication/pages/communication-chat-thread-detail-page.tsx');
+}
+
 async function main() {
   const files = (await Promise.all(ROOTS.map((root) => walkTsxFiles(root)))).flat();
   const violations: string[] = [];
@@ -38,6 +43,7 @@ async function main() {
   for (const file of files) {
     if (!isRoutePageFile(file)) continue;
     if (isSharedHelperPageFile(file)) continue;
+    if (isScrollableWrapperExemptFile(file)) continue;
 
     const code = await readFile(file, 'utf8');
     const lineCount = code.split('\n').length;

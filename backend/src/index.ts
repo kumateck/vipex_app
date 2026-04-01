@@ -7,6 +7,7 @@ import {
 } from '../../src/server/features/communication/realtime';
 
 const server = serve({
+  idleTimeout: 60,
   async fetch(req, server) {
     const { pathname } = new URL(req.url);
 

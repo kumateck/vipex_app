@@ -24,6 +24,8 @@ export function LeaveTypesPage() {
   const [leaveTypeCode, setLeaveTypeCode] = useState('');
   const [leaveTypeName, setLeaveTypeName] = useState('');
   const [leaveTypePaid, setLeaveTypePaid] = useState('true');
+  const [minAdvanceDays, setMinAdvanceDays] = useState('0');
+  const [allowEmergencySameDay, setAllowEmergencySameDay] = useState('true');
 
   const { data: leaveTypesData } = useListLeaveTypesQuery({ pageSize: 100 });
   const leaveTypes = leaveTypesData?.data ?? [];
@@ -37,7 +39,7 @@ export function LeaveTypesPage() {
             <CardTitle>Leave Types</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-2 md:grid-cols-4">
+            <div className="grid gap-2 md:grid-cols-6">
               <Input
                 placeholder="Code"
                 value={leaveTypeCode}
@@ -57,6 +59,22 @@ export function LeaveTypesPage() {
                   <SelectItem value="false">Unpaid</SelectItem>
                 </SelectContent>
               </Select>
+              <Input
+                type="number"
+                min={0}
+                placeholder="Min advance days"
+                value={minAdvanceDays}
+                onChange={(e) => setMinAdvanceDays(e.target.value)}
+              />
+              <Select value={allowEmergencySameDay} onValueChange={setAllowEmergencySameDay}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Same-day emergency?" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Emergency same-day allowed</SelectItem>
+                  <SelectItem value="false">Emergency same-day blocked</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 disabled={!leaveTypeName.trim() || isCreatingLeaveType}
                 onClick={async () => {
@@ -64,10 +82,14 @@ export function LeaveTypesPage() {
                     code: leaveTypeCode.trim() || null,
                     name: leaveTypeName.trim(),
                     isPaid: leaveTypePaid === 'true',
+                    minAdvanceDays: Math.max(0, Number(minAdvanceDays) || 0),
+                    allowEmergencySameDay: allowEmergencySameDay === 'true',
                   }).unwrap();
                   setLeaveTypeCode('');
                   setLeaveTypeName('');
                   setLeaveTypePaid('true');
+                  setMinAdvanceDays('0');
+                  setAllowEmergencySameDay('true');
                 }}
               >
                 Add type
@@ -80,6 +102,8 @@ export function LeaveTypesPage() {
                   <TableHead>Code</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Paid</TableHead>
+                  <TableHead>Min Advance (Days)</TableHead>
+                  <TableHead>Emergency Same-day</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -89,11 +113,13 @@ export function LeaveTypesPage() {
                       <TableCell>{row.code ?? '-'}</TableCell>
                       <TableCell>{row.name}</TableCell>
                       <TableCell>{row.isPaid ? 'Yes' : 'No'}</TableCell>
+                      <TableCell>{Math.max(0, Number(row.minAdvanceDays ?? 0))}</TableCell>
+                      <TableCell>{row.allowEmergencySameDay ? 'Allowed' : 'Blocked'}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3}>No leave types configured.</TableCell>
+                    <TableCell colSpan={5}>No leave types configured.</TableCell>
                   </TableRow>
                 )}
               </TableBody>

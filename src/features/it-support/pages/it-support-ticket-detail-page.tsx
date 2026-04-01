@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
+import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
+import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
+import { useListUserOptionsQuery } from '@/features/users/api/users.api';
 import {
   useCreateItSupportTicketNoteMutation,
   useGetItSupportTicketQuery,
@@ -25,10 +29,37 @@ function eventTitle(event: ItSupportTicketEvent) {
   return prettyValue(event.eventType);
 }
 
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case 'open':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'in_progress':
+      return 'bg-amber-100 text-amber-800 border-amber-200';
+    case 'pending_user':
+      return 'bg-violet-100 text-violet-800 border-violet-200';
+    case 'resolved':
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    case 'closed':
+      return 'bg-slate-100 text-slate-800 border-slate-200';
+    default:
+      return 'bg-muted text-muted-foreground border-border';
+  }
+}
+
 export function ItSupportTicketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [note, setNote] = useState('');
   const user = useAuthStore((state) => state.user);
+  const companyId = user?.company?.id ?? null;
+  const { data: userOptions = [] } = useListUserOptionsQuery();
+  const { data: branchOptions = [] } = useListBranchOptionsQuery(
+    companyId ? { companyId } : undefined,
+    { skip: !companyId },
+  );
+  const { data: locationOptions = [] } = useListLocationOptionsQuery(
+    companyId ? { companyId } : undefined,
+    { skip: !companyId },
+  );
 
   const {
     data: ticket,
@@ -70,13 +101,26 @@ export function ItSupportTicketDetailPage() {
     PermissionKeys.CanUpdateItSupportTickets,
   );
   const canAddComment = canManageTickets || ticket.assignedToUserId === user?.id;
+  const assignedUser = ticket.assignedToUserId
+    ? userOptions.find((option) => option.id === ticket.assignedToUserId)
+    : null;
+  const assignedToLabel = ticket.assignedToUserId
+    ? (assignedUser?.fullname ?? assignedUser?.email ?? 'Assigned user')
+    : '-';
+  const branchLabel = ticket.branchId
+    ? (branchOptions.find((option) => option.id === ticket.branchId)?.name ?? 'Unknown branch')
+    : '-';
+  const locationLabel = ticket.locationId
+    ? (locationOptions.find((option) => option.id === ticket.locationId)?.name ??
+      'Unknown location')
+    : '-';
 
   return (
     <div className="w-full space-y-4 p-4">
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold">{ticket.subject}</h1>
-          <p className="text-sm text-muted-foreground">Ticket ID: {ticket.id}</p>
+          <p className="text-sm text-muted-foreground">{prettyValue(ticket.category)}</p>
         </div>
         <Button asChild variant="outline">
           <Link to="/it-support/tickets">Back to tickets</Link>
@@ -92,7 +136,9 @@ export function ItSupportTicketDetailPage() {
             <CardContent className="grid gap-3 md:grid-cols-2">
               <div>
                 <p className="text-xs text-muted-foreground">Status</p>
-                <p className="font-medium">{prettyValue(ticket.status)}</p>
+                <Badge variant="outline" className={statusBadgeClass(ticket.status)}>
+                  {prettyValue(ticket.status)}
+                </Badge>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Priority</p>
@@ -104,7 +150,15 @@ export function ItSupportTicketDetailPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Assigned To</p>
-                <p className="font-medium">{ticket.assignedToUserId ?? '-'}</p>
+                <p className="font-medium">{assignedToLabel}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Branch</p>
+                <p className="font-medium">{branchLabel}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Location</p>
+                <p className="font-medium">{locationLabel}</p>
               </div>
               <div className="md:col-span-2">
                 <p className="text-xs text-muted-foreground">Description</p>

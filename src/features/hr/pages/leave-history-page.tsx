@@ -153,6 +153,7 @@ export function LeaveHistoryPage() {
                   <TableHead>Type</TableHead>
                   <TableHead>Dates</TableHead>
                   <TableHead>Days</TableHead>
+                  <TableHead>Request Mode</TableHead>
                   <TableHead>Manager</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Audit</TableHead>
@@ -172,6 +173,7 @@ export function LeaveHistoryPage() {
                         {row.dateFrom.slice(0, 10)} to {row.dateTo.slice(0, 10)}
                       </TableCell>
                       <TableCell>{row.daysCount}</TableCell>
+                      <TableCell>{row.isEmergency ? 'Emergency' : 'Planned'}</TableCell>
                       <TableCell>
                         {managerApprovalLabel(
                           row.managerApprovalStatus,
@@ -192,7 +194,7 @@ export function LeaveHistoryPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7}>No leave history found.</TableCell>
+                    <TableCell colSpan={8}>No leave history found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>

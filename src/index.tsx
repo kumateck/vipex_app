@@ -43,6 +43,7 @@ async function serveWebAsset(req: Request): Promise<Response> {
 
 // One Bun server for Frontend + API + Swagger
 const server = serve({
+  idleTimeout: 60,
   async fetch(req, server) {
     const { pathname } = new URL(req.url);
 

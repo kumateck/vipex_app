@@ -3,10 +3,10 @@ import { skipToken } from '@reduxjs/toolkit/query';
 import {
   ArrowLeft,
   Bell,
+  ChevronDown,
   Forward,
   Link2,
   Mic,
-  MoreVertical,
   Pencil,
   Phone,
   Pin,
@@ -21,9 +21,16 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import {
   Dialog,
   DialogContent,
@@ -47,7 +54,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useUploadImageMutation } from '@/features/uploads/api/uploads.api';
-import { useListUserOptionsQuery } from '@/features/users/api/users.api';
+import { useListUserOptionsQuery, type UserOption } from '@/features/users/api/users.api';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   type CommunicationMessage,
@@ -57,7 +64,9 @@ import {
   useListCommunicationMessagesQuery,
   useListCommunicationCallsQuery,
   useListCommunicationThreadsQuery,
+  useMarkCommunicationThreadReadMutation,
   useToggleCommunicationMessageFlagMutation,
+  useToggleCommunicationMessageReactionMutation,
   useUpdateCommunicationMessageMutation,
 } from '../api/communication.api';
 import { useCommunicationSocket } from '../hooks/use-communication-socket';
@@ -77,6 +86,14 @@ function formatDayLabel(value?: string | null) {
   if (!value) return null;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return null;
+  const now = new Date();
+  if (
+    parsed.getFullYear() === now.getFullYear() &&
+    parsed.getMonth() === now.getMonth() &&
+    parsed.getDate() === now.getDate()
+  ) {
+    return 'Today';
+  }
   return parsed.toLocaleDateString([], {
     month: 'long',
     day: 'numeric',
@@ -89,6 +106,102 @@ function getDayKey(value?: string | null) {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return null;
   return `${parsed.getFullYear()}-${parsed.getMonth()}-${parsed.getDate()}`;
+}
+
+function normalizeMentionHandle(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, '');
+}
+
+function getUserMentionHandles(user: UserOption) {
+  const handles = new Set<string>();
+  handles.add(normalizeMentionHandle(user.id));
+  const emailPrefix = user.email.split('@')[0] ?? '';
+  if (emailPrefix) handles.add(normalizeMentionHandle(emailPrefix));
+  const full = normalizeMentionHandle(user.fullname.replace(/\s+/g, ''));
+  if (full) handles.add(full);
+  const first = normalizeMentionHandle(user.fullname.split(/\s+/)[0] ?? '');
+  if (first) handles.add(first);
+  return [...handles].filter(Boolean);
+}
+
+function preferredMentionHandle(user: UserOption) {
+  const handles = getUserMentionHandles(user);
+  return handles[1] ?? handles[2] ?? handles[0] ?? normalizeMentionHandle(user.id);
+}
+
+function getDisplayNameForUser(
+  usersById: Map<string, UserOption>,
+  userId?: string | null,
+  fallback = 'Unknown user',
+) {
+  if (!userId) return fallback;
+  const user = usersById.get(userId);
+  if (!user) return fallback;
+  return user.fullname || user.email || fallback;
+}
+
+function ensureDisplayNameOnly(value?: string | null, fallback = 'Unknown user') {
+  if (!value) return fallback;
+  const trimmed = value.trim();
+  if (!trimmed || looksLikeInternalId(trimmed)) return fallback;
+  return trimmed;
+}
+
+function looksLikeInternalId(value: string) {
+  return /^[a-z0-9]{12,}$/i.test(value.replace(/^@/, ''));
+}
+
+function buildMentionLookup(users: UserOption[]) {
+  const map = new Map<string, string>();
+  for (const user of users) {
+    const handles = getUserMentionHandles(user);
+    for (const handle of handles) {
+      if (!handle) continue;
+      if (!map.has(handle)) {
+        map.set(handle, user.id);
+      }
+    }
+  }
+  return map;
+}
+
+function extractMentionsFromText(text: string, mentionLookup: Map<string, string>) {
+  const mentionedUserIds = new Set<string>();
+  let mentionAll = false;
+  const regex = /(^|\s)@([a-zA-Z0-9._-]+)/g;
+  let match: RegExpExecArray | null = regex.exec(text);
+  while (match) {
+    const raw = match[2] ?? '';
+    const token = normalizeMentionHandle(raw);
+    if (token === 'everyone') {
+      mentionAll = true;
+    } else {
+      const userId = mentionLookup.get(token);
+      if (userId) mentionedUserIds.add(userId);
+    }
+    match = regex.exec(text);
+  }
+  return {
+    mentionAll,
+    mentionedUserIds: [...mentionedUserIds],
+  };
+}
+
+function getActiveMentionQuery(text: string, caret: number) {
+  if (caret < 0 || caret > text.length) return null;
+  const beforeCaret = text.slice(0, caret);
+  const match = /(^|\s)@([a-zA-Z0-9._-]*)$/.exec(beforeCaret);
+  if (!match) return null;
+  const raw = match[2] ?? '';
+  return {
+    start: caret - raw.length - 1,
+    end: caret,
+    queryRaw: raw,
+    query: normalizeMentionHandle(raw),
+  };
 }
 
 type MediaKind = 'image' | 'video' | 'audio' | 'file';
@@ -111,7 +224,15 @@ type PendingFileUpload = {
 };
 type RecordingMode = 'audio' | 'video';
 
+type MentionSuggestion = {
+  key: string;
+  label: string;
+  subLabel: string;
+  insertHandle: string;
+};
+
 const typingDotStyle = ['0ms', '180ms', '360ms'] as const;
+const QUICK_REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const;
 const SUPPORTED_UPLOAD_MIME_TYPES = new Set([
   'image/png',
   'image/jpeg',
@@ -132,6 +253,11 @@ const SUPPORTED_UPLOAD_MIME_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ]);
 
+function normalizeMimeType(mimeType: string | null | undefined) {
+  if (!mimeType) return '';
+  return mimeType.split(';')[0]?.trim().toLowerCase() ?? '';
+}
+
 function formatFileSize(sizeBytes: number) {
   if (sizeBytes < 1024) return `${sizeBytes} B`;
   const kb = sizeBytes / 1024;
@@ -147,6 +273,7 @@ function formatDurationClock(totalSec: number) {
 }
 
 function getFileExtensionByMimeType(mimeType: string, fallback: string) {
+  const normalizedMimeType = normalizeMimeType(mimeType);
   const map: Record<string, string> = {
     'video/mp4': 'mp4',
     'video/webm': 'webm',
@@ -156,7 +283,7 @@ function getFileExtensionByMimeType(mimeType: string, fallback: string) {
     'audio/webm': 'webm',
     'audio/ogg': 'ogg',
   };
-  return map[mimeType] ?? fallback;
+  return map[normalizedMimeType] ?? fallback;
 }
 
 function pickSupportedRecorderMimeType(mode: RecordingMode): string | null {
@@ -310,7 +437,7 @@ function extractMediaAttachments(message: CommunicationMessage): MediaAttachment
 
 function extractReplyPreview(
   message: CommunicationMessage,
-): { sender?: string; body: string } | null {
+): { sender?: string; senderUserId?: string | null; body: string } | null {
   const metadata = asRecord(message.metadataJson);
   if (!metadata) return null;
   const nestedReply = asRecord(metadata.replyTo);
@@ -319,6 +446,11 @@ function extractReplyPreview(
     metadata.replyToSender,
     nestedReply?.senderName,
     nestedReply?.sender,
+  ]);
+  const senderUserId = firstString([
+    metadata.replyToSenderUserId,
+    nestedReply?.senderUserId,
+    metadata.replyToSenderId,
   ]);
   const body = firstString([
     metadata.replyToBody,
@@ -329,24 +461,28 @@ function extractReplyPreview(
     nestedReply?.text,
   ]);
   if (!body) return null;
-  return { sender: sender ?? undefined, body };
+  const safeSender = sender && looksLikeInternalId(sender) ? undefined : sender;
+  return { sender: safeSender ?? undefined, senderUserId: senderUserId ?? null, body };
 }
 
-function extractReactions(message: CommunicationMessage): string[] {
+function extractReactions(message: CommunicationMessage): Array<{ emoji: string; count: number }> {
   const metadata = asRecord(message.metadataJson);
   if (!metadata) return [];
   const raw = metadata.reactions;
   if (!Array.isArray(raw)) return [];
-  return raw
-    .map((item) => {
-      if (typeof item === 'string') return item.trim();
+  const counts = new Map<string, number>();
+  for (const item of raw) {
+    let emoji = '';
+    if (typeof item === 'string') {
+      emoji = item.trim();
+    } else {
       const record = asRecord(item);
-      if (!record) return '';
-      const emoji = firstString([record.emoji, record.icon, record.value]);
-      return emoji ?? '';
-    })
-    .filter(Boolean)
-    .slice(0, 8);
+      emoji = firstString([record?.emoji, record?.icon, record?.value]) ?? '';
+    }
+    if (!emoji) continue;
+    counts.set(emoji, (counts.get(emoji) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([emoji, count]) => ({ emoji, count })).slice(0, 3);
 }
 
 function extractRecordingDurationLabel(message: CommunicationMessage): string | null {
@@ -479,18 +615,20 @@ function renderMeetingReminderBubble(message: CommunicationMessage, nowTs: numbe
   );
 }
 
-function renderRichText(body: string) {
+function renderRichText(body: string, resolveMentionLabel: (handle: string) => string) {
   const segments = body.split(/(@[A-Za-z0-9_.-]+)/g);
   return (
     <>
       {segments.map((segment, index) => {
         if (/^@[A-Za-z0-9_.-]+$/.test(segment)) {
+          const mentionHandle = segment.slice(1);
+          const displayLabel = resolveMentionLabel(mentionHandle);
           return (
             <span
               key={`${segment}-${index}`}
               className="rounded-md bg-blue-500/25 px-1 text-blue-200"
             >
-              {segment}
+              @{displayLabel}
             </span>
           );
         }
@@ -568,6 +706,46 @@ function renderAttachment(
   );
 }
 
+function ChatMessageReactions({
+  isOwnMessage,
+  reactions,
+  isActive,
+  onOpenPicker,
+}: {
+  isOwnMessage: boolean;
+  reactions: Array<{ emoji: string; count: number }>;
+  isActive: boolean;
+  onOpenPicker: () => void;
+}) {
+  if (!reactions.length) return null;
+  const visible = reactions.slice(0, 3);
+  const totalCount = reactions.reduce((acc, item) => acc + item.count, 0);
+
+  return (
+    <button
+      type="button"
+      onClick={onOpenPicker}
+      className={`absolute -bottom-3 z-20 inline-flex items-center gap-1 rounded-full bg-white px-2 py-[2px] text-sm shadow-sm transition-all duration-75 hover:scale-105 hover:shadow-md dark:bg-[#1f2c34] ${
+        isActive ? 'bg-sky-50 dark:bg-[#27363f]' : ''
+      } ${isOwnMessage ? 'right-2' : 'left-2'}`}
+    >
+      {visible.map((reaction) => (
+        <span key={`reaction-pill-${reaction.emoji}`} className="inline-flex items-center gap-0.5">
+          <span>{reaction.emoji}</span>
+          {reaction.count > 1 ? (
+            <span className="text-[10px] text-muted-foreground">{reaction.count}</span>
+          ) : null}
+        </span>
+      ))}
+      {totalCount > visible.length ? (
+        <span className="ml-1 rounded-full bg-black/5 px-1 text-[10px] text-muted-foreground dark:bg-white/10">
+          {totalCount}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
 export function CommunicationChatThreadDetailPage({ threadId }: { threadId: string }) {
   const currentUserId = useAuthStore((state) => state.user?.id ?? '');
   const navigate = useNavigate();
@@ -594,7 +772,7 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
   const [isMeetingDialogOpen, setIsMeetingDialogOpen] = useState(false);
   const [meetingTitle, setMeetingTitle] = useState('');
   const [meetingLink, setMeetingLink] = useState('');
-  const [meetingStartAt, setMeetingStartAt] = useState('');
+  const [meetingStartAt, setMeetingStartAt] = useState<Date | undefined>(undefined);
   const [meetingReminderMinutes, setMeetingReminderMinutes] = useState('15');
   const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
   const [createCallType, setCreateCallType] = useState<'audio' | 'video'>('audio');
@@ -605,9 +783,14 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
   const [filePickerAccept, setFilePickerAccept] = useState('*/*');
   const [nowTs, setNowTs] = useState(() => Date.now());
   const [typingUserIdsByThread, setTypingUserIdsByThread] = useState<Record<string, string[]>>({});
+  const [reactionMenuMessageId, setReactionMenuMessageId] = useState<string | null>(null);
+  const [actionsMenuMessageId, setActionsMenuMessageId] = useState<string | null>(null);
+  const [composerCaret, setComposerCaret] = useState(0);
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
   const composerTypingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingPresenceTimerByUserRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
+  const composerInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const recorderPreviewRef = useRef<HTMLVideoElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -633,6 +816,8 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
   const [updateMessage] = useUpdateCommunicationMessageMutation();
   const [deleteMessage] = useDeleteCommunicationMessageMutation();
   const [toggleMessageFlag] = useToggleCommunicationMessageFlagMutation();
+  const [toggleMessageReaction] = useToggleCommunicationMessageReactionMutation();
+  const [markThreadRead] = useMarkCommunicationThreadReadMutation();
   const [createCall, { isLoading: isCreatingCall }] = useCreateCommunicationCallMutation();
   const [uploadImage, { isLoading: isUploadingFile }] = useUploadImageMutation();
   const { data: threadCalls = [] } = useListCommunicationCallsQuery(
@@ -722,12 +907,82 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
   const usersById = useMemo(() => {
     return new Map(userOptions.map((user) => [user.id, user]));
   }, [userOptions]);
+  const mentionLookup = useMemo(() => buildMentionLookup(userOptions), [userOptions]);
+  const userIdByMentionHandle = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const user of userOptions) {
+      const handles = getUserMentionHandles(user);
+      for (const handle of handles) {
+        if (!handle) continue;
+        map.set(handle, user.id);
+      }
+    }
+    return map;
+  }, [userOptions]);
+  const activeMentionQuery = useMemo(
+    () => getActiveMentionQuery(newMessage, composerCaret),
+    [composerCaret, newMessage],
+  );
+  const mentionSuggestions = useMemo(() => {
+    if (!activeMentionQuery) return [] as MentionSuggestion[];
+    const query = activeMentionQuery.query;
+    const everyone: MentionSuggestion = {
+      key: 'everyone',
+      label: '@everyone',
+      subLabel: 'Notify everyone in this chat',
+      insertHandle: 'everyone',
+    };
+
+    const users = userOptions
+      .map((user) => {
+        const handles = getUserMentionHandles(user);
+        const label = user.fullname || user.email || user.id;
+        const primaryHandle = preferredMentionHandle(user);
+        const searchTerms = [label, user.email, user.id, ...handles, `@${primaryHandle}`]
+          .join(' ')
+          .toLowerCase();
+        const starts =
+          query.length === 0 ||
+          primaryHandle.startsWith(query) ||
+          label.toLowerCase().startsWith(query) ||
+          user.email.toLowerCase().startsWith(query);
+
+        return {
+          key: user.id,
+          label,
+          subLabel: `@${primaryHandle}`,
+          insertHandle: primaryHandle,
+          matches: query.length === 0 || searchTerms.includes(query),
+          starts,
+        };
+      })
+      .filter((item) => item.matches)
+      .sort((a, b) => Number(b.starts) - Number(a.starts) || a.label.localeCompare(b.label))
+      .slice(0, 8)
+      .map((item) => ({
+        key: item.key,
+        label: item.label,
+        subLabel: item.subLabel,
+        insertHandle: item.insertHandle,
+      }));
+
+    const includeEveryone = query.length === 0 || 'everyone'.includes(query);
+    return includeEveryone ? [everyone, ...users].slice(0, 8) : users;
+  }, [activeMentionQuery, userOptions]);
+  const isMentionMenuOpen = Boolean(activeMentionQuery && mentionSuggestions.length);
+
+  useEffect(() => {
+    setActiveMentionIndex(0);
+  }, [activeMentionQuery?.start, activeMentionQuery?.query]);
 
   const typingUserLabels = useMemo(() => {
     const typingUserIds = typingUserIdsByThread[normalizedThreadId] ?? [];
     return typingUserIds
       .filter((userId) => userId !== currentUserId)
-      .map((userId) => usersById.get(userId)?.fullname ?? userId)
+      .map(
+        (userId) =>
+          usersById.get(userId)?.fullname ?? usersById.get(userId)?.email ?? 'Unknown user',
+      )
       .slice(0, 3);
   }, [currentUserId, normalizedThreadId, typingUserIdsByThread, usersById]);
 
@@ -755,6 +1010,11 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
     }
   }, [isLoadingMessages, isLoadingOlder]);
 
+  useEffect(() => {
+    if (!normalizedThreadId || isLoadingMessages || !messages.length) return;
+    void markThreadRead({ threadId: normalizedThreadId });
+  }, [isLoadingMessages, markThreadRead, messages.length, normalizedThreadId]);
+
   const onMessageInputChange = (value: string) => {
     setNewMessage(value);
     if (!normalizedThreadId) return;
@@ -768,6 +1028,25 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
   const isMediaMode = messageKind !== 'text';
   const canSendMessage = isMediaMode ? Boolean(mediaUrl.trim()) : Boolean(newMessage.trim());
 
+  const insertMentionSuggestion = (suggestion: MentionSuggestion) => {
+    if (!activeMentionQuery) return;
+    const prefix = newMessage.slice(0, activeMentionQuery.start);
+    const suffix = newMessage.slice(activeMentionQuery.end);
+    const insertion = `@${suggestion.insertHandle} `;
+    const nextValue = `${prefix}${insertion}${suffix}`;
+    const nextCaret = prefix.length + insertion.length;
+
+    setNewMessage(nextValue);
+    setComposerCaret(nextCaret);
+
+    requestAnimationFrame(() => {
+      const input = composerInputRef.current;
+      if (!input) return;
+      input.focus();
+      input.setSelectionRange(nextCaret, nextCaret);
+    });
+  };
+
   const onSendMessage = async () => {
     if (!normalizedThreadId) return;
     if (!canSendMessage) {
@@ -778,6 +1057,21 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
     try {
       const trimmedBody = newMessage.trim();
       const trimmedMediaUrl = mediaUrl.trim();
+      const mentionData = extractMentionsFromText(trimmedBody, mentionLookup);
+      if (mentionData.mentionAll) {
+        const shouldNotifyAll = window.confirm(
+          'This message contains @everyone and will notify everyone in this chat. Continue?',
+        );
+        if (!shouldNotifyAll) return;
+      } else if (mentionData.mentionedUserIds.length) {
+        const mentionedLabels = mentionData.mentionedUserIds
+          .slice(0, 5)
+          .map((userId) => getDisplayNameForUser(usersById, userId));
+        const shouldNotifyUsers = window.confirm(
+          `This message will notify: ${mentionedLabels.join(', ')}${mentionData.mentionedUserIds.length > mentionedLabels.length ? ' and others' : ''}. Continue?`,
+        );
+        if (!shouldNotifyUsers) return;
+      }
       const metadataJson = isMediaMode
         ? {
             url: trimmedMediaUrl,
@@ -787,11 +1081,17 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
         : null;
 
       if (editingMessage) {
+        const existingMetadata = asRecord(editingMessage.metadataJson) ?? {};
         await updateMessage({
           id: editingMessage.id,
           threadId: normalizedThreadId,
           body: trimmedBody || null,
-          metadataJson: metadataJson ?? asRecord(editingMessage.metadataJson) ?? null,
+          metadataJson: {
+            ...existingMetadata,
+            ...(metadataJson ?? {}),
+            mentionAll: mentionData.mentionAll,
+            mentionedUserIds: mentionData.mentionedUserIds,
+          },
         }).unwrap();
         setEditingMessage(null);
       } else {
@@ -800,21 +1100,26 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
               replyTo: {
                 id: replyToMessage.id,
                 body: replyToMessage.body ?? '',
-                sender: replyToMessage.senderUserId ?? '',
+                sender: getDisplayNameForUser(usersById, replyToMessage.senderUserId),
+                senderName: getDisplayNameForUser(usersById, replyToMessage.senderUserId),
+                senderUserId: replyToMessage.senderUserId ?? null,
               },
               replyToBody: replyToMessage.body ?? '',
-              replyToSender: replyToMessage.senderUserId ?? '',
+              replyToSender: getDisplayNameForUser(usersById, replyToMessage.senderUserId),
+              replyToSenderName: getDisplayNameForUser(usersById, replyToMessage.senderUserId),
+              replyToSenderUserId: replyToMessage.senderUserId ?? null,
             }
           : {};
         await createMessage({
           threadId: normalizedThreadId,
           body: trimmedBody || null,
           messageType: isMediaMode ? messageKind : 'text',
-          metadataJson: metadataJson
-            ? { ...metadataJson, ...replyMetadata }
-            : Object.keys(replyMetadata).length
-              ? replyMetadata
-              : null,
+          metadataJson: {
+            ...(metadataJson ?? {}),
+            ...replyMetadata,
+            mentionAll: mentionData.mentionAll,
+            mentionedUserIds: mentionData.mentionedUserIds,
+          },
           replyToMessageId: replyToMessage?.id ?? null,
         }).unwrap();
       }
@@ -830,7 +1135,43 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
     }
   };
 
+  const resolveMentionLabel = (handle: string) => {
+    const normalized = normalizeMentionHandle(handle);
+    if (!normalized) return 'unknown';
+    if (normalized === 'everyone') return 'everyone';
+
+    const userId = userIdByMentionHandle.get(normalized);
+    if (userId) return getDisplayNameForUser(usersById, userId, 'unknown');
+
+    if (looksLikeInternalId(normalized)) return 'unknown';
+    return normalized;
+  };
+
   const onInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isMentionMenuOpen) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setActiveMentionIndex((prev) => (prev + 1) % mentionSuggestions.length);
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setActiveMentionIndex((prev) => (prev <= 0 ? mentionSuggestions.length - 1 : prev - 1));
+        return;
+      }
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+        const suggestion = mentionSuggestions[activeMentionIndex] ?? mentionSuggestions[0];
+        if (suggestion) insertMentionSuggestion(suggestion);
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setComposerCaret(-1);
+        return;
+      }
+    }
+
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       void onSendMessage();
@@ -971,20 +1312,21 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
 
             const blobType =
               chunks[0]?.type || mimeType || (mode === 'video' ? 'video/webm' : 'audio/webm');
+            const normalizedBlobType = normalizeMimeType(blobType);
             const blob = new Blob(chunks, { type: blobType });
             const extension = getFileExtensionByMimeType(
-              blobType,
+              normalizedBlobType || blobType,
               mode === 'video' ? 'webm' : 'wav',
             );
             const file = new File([blob], `recording-${Date.now()}.${extension}`, {
-              type: blobType,
+              type: normalizedBlobType || blobType,
             });
             const startedAt = recordingStartedAtRef.current;
             const recordingDurationSec =
               startedAt && startedAt > 0
                 ? Math.max(1, Math.round((Date.now() - startedAt) / 1000))
                 : undefined;
-            if (!SUPPORTED_UPLOAD_MIME_TYPES.has(file.type)) {
+            if (!SUPPORTED_UPLOAD_MIME_TYPES.has(normalizeMimeType(file.type))) {
               toast.error('Recorded format is not supported by the upload API.');
               closeRecorderDialog(false);
               return;
@@ -1135,6 +1477,21 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
     }
   };
 
+  const onQuickReact = async (message: CommunicationMessage, emoji: string) => {
+    if (!normalizedThreadId) return;
+    try {
+      await toggleMessageReaction({
+        id: message.id,
+        threadId: normalizedThreadId,
+        emoji,
+        enabled: true,
+      }).unwrap();
+      refetchMessages();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to add reaction.');
+    }
+  };
+
   const onForwardMessage = async (message: CommunicationMessage) => {
     if (!normalizedThreadId) return;
     try {
@@ -1198,7 +1555,7 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
         metadataJson: {
           title: meetingTitle.trim(),
           link: meetingLink.trim() || null,
-          startsAt: meetingStartAt || null,
+          startsAt: meetingStartAt ? meetingStartAt.toISOString() : null,
           reminderMinutes: Number.isFinite(Number(meetingReminderMinutes))
             ? Math.max(0, Number(meetingReminderMinutes))
             : 0,
@@ -1209,7 +1566,7 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
       setIsMeetingDialogOpen(false);
       setMeetingTitle('');
       setMeetingLink('');
-      setMeetingStartAt('');
+      setMeetingStartAt(undefined);
       setMeetingReminderMinutes('15');
       toast.success('Meeting bubble created');
       refetchMessages();
@@ -1241,423 +1598,540 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
   };
 
   return (
-    <ScrollableWrapper>
-      <div className="w-full p-3 sm:p-4">
-        <div className="flex h-[calc(100vh-6.5rem)] flex-col overflow-hidden rounded-2xl border bg-background shadow">
-          <div className="z-20 flex shrink-0 items-center justify-between border-b bg-background/95 px-3 py-2 backdrop-blur">
-            <div className="flex min-w-0 items-center gap-2">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8"
-                onClick={() => navigate('/communication/chat')}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold">
-                {(selectedThread?.title || 'T').slice(0, 1).toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">
-                  {selectedThread?.title || 'Untitled thread'}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {selectedThread ? prettyValue(selectedThread.threadType) : 'Conversation thread'}
-                  {selectedThread?.participantCount
-                    ? ` • ${selectedThread.participantCount} members`
-                    : ''}
-                </p>
-              </div>
+    <div className="w-full p-3">
+      <div className="flex h-[calc(100vh-7rem)] flex-col overflow-hidden rounded-2xl border bg-background shadow">
+        <div className="z-20 flex shrink-0 items-center justify-between border-b bg-background/95 px-3 py-2 backdrop-blur">
+          <div className="flex min-w-0 items-center gap-2">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              onClick={() => navigate('/communication/chat')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+              {(selectedThread?.title || 'T').slice(0, 1).toUpperCase()}
             </div>
-            <div className="flex items-center gap-1">
-              <Button size="icon" variant="ghost" className="h-8 w-8">
-                <Phone className="h-4 w-4" />
-              </Button>
-              <Button size="icon" variant="ghost" className="h-8 w-8">
-                <Video className="h-4 w-4" />
-              </Button>
-              <Badge
-                variant={isSocketConnected ? 'default' : 'outline'}
-                className="ml-1 hidden sm:inline-flex"
-              >
-                {isSocketConnected ? 'Live' : 'Offline'}
-              </Badge>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">
+                {selectedThread?.title || 'Untitled thread'}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {selectedThread ? prettyValue(selectedThread.threadType) : 'Conversation thread'}
+                {selectedThread?.participantCount
+                  ? ` • ${selectedThread.participantCount} members`
+                  : ''}
+              </p>
             </div>
           </div>
+          <div className="flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              onClick={() => {
+                setCreateCallType('audio');
+                setIsCallDialogOpen(true);
+              }}
+            >
+              <Phone className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              onClick={() => {
+                setCreateCallType('video');
+                setIsCallDialogOpen(true);
+              }}
+            >
+              <Video className="h-4 w-4" />
+            </Button>
+            <Badge
+              variant={isSocketConnected ? 'default' : 'outline'}
+              className="ml-1 hidden sm:inline-flex"
+            >
+              {isSocketConnected ? 'Live' : 'Offline'}
+            </Badge>
+          </div>
+        </div>
 
-          <div
-            ref={messagesViewportRef}
-            onScroll={onMessagesScroll}
-            className="flex-1 overflow-y-auto bg-muted/20 px-2 py-3 sm:px-4"
-          >
-            {isLoadingOlder ? (
-              <div className="flex justify-center py-2">
-                <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-                  Loading older messages...
-                </span>
-              </div>
-            ) : null}
-            {isLoadingMessages ? (
-              <p className="p-4 text-sm text-muted-foreground">Loading messages...</p>
-            ) : null}
+        <div
+          ref={messagesViewportRef}
+          onScroll={onMessagesScroll}
+          className="flex-1 overflow-y-auto bg-[#efeae2] px-2 py-3 dark:bg-[#0b141a] sm:px-4"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 24px 24px, rgba(120,120,120,0.08) 1.2px, transparent 0), radial-gradient(circle at 0 0, rgba(120,120,120,0.05) 1px, transparent 0)',
+            backgroundSize: '48px 48px, 32px 32px',
+          }}
+        >
+          {isLoadingOlder ? (
+            <div className="flex justify-center py-2">
+              <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                Loading older messages...
+              </span>
+            </div>
+          ) : null}
+          {isLoadingMessages ? (
+            <p className="p-4 text-sm text-muted-foreground">Loading messages...</p>
+          ) : null}
 
-            {!isLoadingMessages && messages.length
-              ? messages.map((message, index) => {
-                  const isOwnMessage = Boolean(
-                    currentUserId && message.senderUserId === currentUserId,
-                  );
-                  const senderLabel = message.senderUserId
-                    ? (usersById.get(message.senderUserId)?.fullname ?? message.senderUserId)
-                    : 'System';
-                  const attachments = extractMediaAttachments(message);
-                  const replyPreview = extractReplyPreview(message);
-                  const reactions = extractReactions(message);
-                  const recordingDuration = extractRecordingDurationLabel(message);
-                  const messageMetadata = asRecord(message.metadataJson);
-                  const callIdFromMessage = firstString([
-                    messageMetadata?.callId,
-                    messageMetadata?.sessionId,
-                  ]);
-                  const liveCallStatus = callIdFromMessage
-                    ? (threadCalls.find((call) => call.id === callIdFromMessage)?.status ?? null)
-                    : null;
-                  const pinned = hasUserFlag(message, currentUserId, 'pinnedByUserIds');
-                  const starred = hasUserFlag(message, currentUserId, 'starredByUserIds');
-                  const canEditDelete = Boolean(
-                    currentUserId &&
-                      message.senderUserId === currentUserId &&
-                      isWithinMinutes(message.createdAt, 5),
-                  );
-                  const thisDay = getDayKey(message.createdAt);
-                  const prevDay = index > 0 ? getDayKey(messages[index - 1]?.createdAt) : null;
-                  const dayLabel =
-                    thisDay && thisDay !== prevDay ? formatDayLabel(message.createdAt) : null;
+          {!isLoadingMessages && messages.length
+            ? messages.map((message, index) => {
+                const isOwnMessage = Boolean(
+                  currentUserId && message.senderUserId === currentUserId,
+                );
+                const senderLabel = message.senderUserId
+                  ? getDisplayNameForUser(usersById, message.senderUserId)
+                  : 'System';
+                const attachments = extractMediaAttachments(message);
+                const replyPreview = extractReplyPreview(message);
+                const reactions = extractReactions(message);
+                const recordingDuration = extractRecordingDurationLabel(message);
+                const messageMetadata = asRecord(message.metadataJson);
+                const callIdFromMessage = firstString([
+                  messageMetadata?.callId,
+                  messageMetadata?.sessionId,
+                ]);
+                const liveCallStatus = callIdFromMessage
+                  ? (threadCalls.find((call) => call.id === callIdFromMessage)?.status ?? null)
+                  : null;
+                const pinned = hasUserFlag(message, currentUserId, 'pinnedByUserIds');
+                const starred = hasUserFlag(message, currentUserId, 'starredByUserIds');
+                const canEditDelete = Boolean(
+                  currentUserId &&
+                    message.senderUserId === currentUserId &&
+                    isWithinMinutes(message.createdAt, 5),
+                );
+                const isReactionMenuOpen = reactionMenuMessageId === message.id;
+                const isActionsMenuOpen = actionsMenuMessageId === message.id;
+                const thisDay = getDayKey(message.createdAt);
+                const prevDay = index > 0 ? getDayKey(messages[index - 1]?.createdAt) : null;
+                const dayLabel =
+                  thisDay && thisDay !== prevDay ? formatDayLabel(message.createdAt) : null;
 
-                  return (
-                    <div key={message.id} className="mb-3 space-y-2 last:mb-0">
-                      {dayLabel ? (
-                        <div className="flex justify-center">
-                          <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-                            {dayLabel}
-                          </span>
+                return (
+                  <div key={message.id} className="group/message mb-3 space-y-2 last:mb-0">
+                    {dayLabel ? (
+                      <div className="flex justify-center">
+                        <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                          {dayLabel}
+                        </span>
+                      </div>
+                    ) : null}
+
+                    <div
+                      className={`flex items-end gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {!isOwnMessage ? (
+                        <div className="mb-1 flex h-7 w-7 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
+                          {senderLabel.slice(0, 1).toUpperCase()}
                         </div>
                       ) : null}
 
                       <div
-                        className={`flex items-end gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                        className={`relative max-w-[88%] rounded-2xl px-3 py-2 sm:max-w-[72%] ${reactions.length ? 'pb-4' : ''} ${
+                          isOwnMessage
+                            ? 'rounded-br-sm bg-[#d9fdd3] text-[#111b21] dark:bg-[#005c4b] dark:text-[#e9edef]'
+                            : 'rounded-bl-sm border border-black/5 bg-white text-[#111b21] dark:border-white/10 dark:bg-[#202c33] dark:text-[#e9edef]'
+                        }`}
                       >
+                        <div
+                          className={`absolute top-1 z-20 ${isOwnMessage ? '-left-11' : '-right-11'}`}
+                        >
+                          <button
+                            type="button"
+                            className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white/90 text-[#54656f] shadow-sm transition-all duration-75 group-hover/message:opacity-100 focus-visible:opacity-100 dark:border-white/15 dark:bg-[#1f2c34]/95 dark:text-[#aebac1] ${
+                              isReactionMenuOpen ? 'opacity-100' : 'opacity-0'
+                            }`}
+                            onClick={() =>
+                              setReactionMenuMessageId((prev) =>
+                                prev === message.id ? null : message.id,
+                              )
+                            }
+                          >
+                            <Smile className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <div
+                          className={`absolute top-1 z-20 ${isOwnMessage ? 'left-2' : 'right-2'}`}
+                        >
+                          <DropdownMenu
+                            open={isActionsMenuOpen}
+                            onOpenChange={(open) =>
+                              setActionsMenuMessageId(open ? message.id : null)
+                            }
+                          >
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className={`inline-flex h-6 items-center gap-1 rounded-full border border-black/10 bg-white/90 px-2 text-[11px] text-[#54656f] shadow-sm backdrop-blur transition-all duration-75 group-hover/message:opacity-100 focus-visible:opacity-100 dark:border-white/15 dark:bg-[#1f2c34]/95 dark:text-[#aebac1] ${
+                                  isActionsMenuOpen ? 'opacity-100' : 'opacity-0'
+                                }`}
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align={isOwnMessage ? 'end' : 'start'}
+                              className="w-52 rounded-2xl border-black/10 bg-white/95 p-1.5 text-[#111b21] shadow-xl backdrop-blur dark:border-white/10 dark:bg-[#111b21]/95 dark:text-[#e9edef]"
+                            >
+                              <DropdownMenuItem onClick={() => onReplyMessage(message)}>
+                                <Reply className="mr-2 h-3.5 w-3.5" /> Reply
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => void onForwardMessage(message)}>
+                                <Forward className="mr-2 h-3.5 w-3.5" /> Forward
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => void onToggleFlag(message, 'pinnedByUserIds')}
+                              >
+                                <Pin className="mr-2 h-3.5 w-3.5" />
+                                {pinned ? 'Unpin' : 'Pin'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => void onToggleFlag(message, 'starredByUserIds')}
+                              >
+                                <Star className="mr-2 h-3.5 w-3.5" />
+                                {starred ? 'Unstar' : 'Star'}
+                              </DropdownMenuItem>
+                              {canEditDelete ? (
+                                <DropdownMenuItem onClick={() => onEditMessage(message)}>
+                                  <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
+                                </DropdownMenuItem>
+                              ) : null}
+                              {canEditDelete ? (
+                                <DropdownMenuItem onClick={() => void onDeleteMessage(message)}>
+                                  <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                                </DropdownMenuItem>
+                              ) : null}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                         {!isOwnMessage ? (
-                          <div className="mb-1 flex h-7 w-7 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
-                            {senderLabel.slice(0, 1).toUpperCase()}
+                          <p className="mb-0.5 text-xs font-semibold text-muted-foreground">
+                            {senderLabel}
+                          </p>
+                        ) : null}
+
+                        {replyPreview ? (
+                          <div className="mb-1 rounded-lg border bg-muted/50 px-2 py-1 text-xs">
+                            <p className="font-semibold text-muted-foreground">
+                              {replyPreview.senderUserId
+                                ? getDisplayNameForUser(
+                                    usersById,
+                                    replyPreview.senderUserId,
+                                    ensureDisplayNameOnly(replyPreview.sender),
+                                  )
+                                : ensureDisplayNameOnly(replyPreview.sender)}
+                            </p>
+                            <p className="truncate">{replyPreview.body}</p>
                           </div>
                         ) : null}
 
-                        <div
-                          className={`max-w-[88%] rounded-2xl px-3 py-2 sm:max-w-[72%] ${
-                            isOwnMessage
-                              ? 'rounded-br-sm bg-primary text-primary-foreground'
-                              : 'rounded-bl-sm border bg-card text-card-foreground'
-                          }`}
-                        >
-                          {!isOwnMessage ? (
-                            <p className="mb-0.5 text-xs font-semibold text-muted-foreground">
-                              {senderLabel}
-                            </p>
-                          ) : null}
-
-                          {replyPreview ? (
-                            <div className="mb-1 rounded-lg border bg-muted/50 px-2 py-1 text-xs">
-                              {replyPreview.sender ? (
-                                <p className="font-semibold text-muted-foreground">
-                                  {replyPreview.sender}
-                                </p>
-                              ) : null}
-                              <p className="truncate">{replyPreview.body}</p>
-                            </div>
-                          ) : null}
-
-                          {message.body ? (
-                            <p className="text-sm whitespace-pre-wrap">
-                              {renderRichText(message.body)}
-                            </p>
-                          ) : null}
-                          {renderCallOrMeetingBubble(message, liveCallStatus)}
-                          {renderMeetingReminderBubble(message, nowTs)}
-                          {attachments.length ? (
-                            <div className="space-y-2">
-                              {attachments.map((attachment) =>
-                                renderAttachment(attachment, isOwnMessage, {
+                        {message.body ? (
+                          <p className="text-sm whitespace-pre-wrap">
+                            {renderRichText(message.body, resolveMentionLabel)}
+                          </p>
+                        ) : null}
+                        {renderCallOrMeetingBubble(message, liveCallStatus)}
+                        {renderMeetingReminderBubble(message, nowTs)}
+                        {attachments.length ? (
+                          <div className="space-y-2">
+                            {attachments.map((attachment, attachmentIndex) => (
+                              <div
+                                key={`${message.id}-attachment-${attachment.kind}-${attachment.url}-${attachmentIndex}`}
+                              >
+                                {renderAttachment(attachment, isOwnMessage, {
                                   onOpenVideo: onOpenVideoAttachment,
-                                }),
-                              )}
-                            </div>
-                          ) : null}
-                          {recordingDuration ? (
-                            <p
-                              className={`mt-1 text-xs ${isOwnMessage ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}
-                            >
-                              Recording • {recordingDuration}
-                            </p>
-                          ) : null}
-                          {reactions.length ? (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {reactions.map((reaction, reactionIndex) => (
-                                <span
-                                  key={`${message.id}-reaction-${reactionIndex}`}
-                                  className="rounded-full border bg-background/40 px-2 py-0.5 text-xs"
+                                })}
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                        {recordingDuration ? (
+                          <p
+                            className={`mt-1 text-xs ${isOwnMessage ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}
+                          >
+                            Recording • {recordingDuration}
+                          </p>
+                        ) : null}
+                        <ChatMessageReactions
+                          isOwnMessage={isOwnMessage}
+                          reactions={reactions}
+                          isActive={isReactionMenuOpen}
+                          onOpenPicker={() =>
+                            setReactionMenuMessageId((prev) =>
+                              prev === message.id ? null : message.id,
+                            )
+                          }
+                        />
+
+                        <DropdownMenu
+                          open={isReactionMenuOpen}
+                          onOpenChange={(open) =>
+                            setReactionMenuMessageId(open ? message.id : null)
+                          }
+                        >
+                          <DropdownMenuTrigger asChild>
+                            <span
+                              className={`absolute -bottom-3 z-10 h-0 w-0 ${
+                                isOwnMessage ? 'right-2' : 'left-2'
+                              }`}
+                            />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align={isOwnMessage ? 'end' : 'start'}
+                            side="top"
+                            className="rounded-full border border-black/10 bg-white/95 px-2 py-1 shadow-xl backdrop-blur dark:border-white/10 dark:bg-[#1f2c34]/95"
+                          >
+                            <div className="flex items-center gap-1">
+                              {QUICK_REACTION_EMOJIS.map((emoji) => (
+                                <button
+                                  key={`${message.id}-reaction-picker-${emoji}`}
+                                  type="button"
+                                  onClick={() => void onQuickReact(message, emoji)}
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-full text-sm transition hover:bg-black/5 dark:hover:bg-white/10"
                                 >
-                                  {reaction}
-                                </span>
+                                  {emoji}
+                                </button>
                               ))}
                             </div>
-                          ) : null}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
 
-                          {pinned || starred ? (
-                            <div
-                              className={`mt-1 flex items-center gap-2 text-[11px] ${isOwnMessage ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}
-                            >
-                              {pinned ? (
-                                <span className="inline-flex items-center gap-1">
-                                  <Pin className="h-3 w-3" /> Pinned
-                                </span>
-                              ) : null}
-                              {starred ? (
-                                <span className="inline-flex items-center gap-1">
-                                  <Star className="h-3 w-3" /> Starred
-                                </span>
-                              ) : null}
-                            </div>
-                          ) : null}
-
-                          <div
-                            className={`mt-1 flex items-center justify-end gap-1 text-[11px] ${isOwnMessage ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}
-                          >
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="mr-1 rounded p-1 hover:bg-background/20"
-                                >
-                                  <MoreVertical className="h-3.5 w-3.5" />
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align={isOwnMessage ? 'end' : 'start'}>
-                                <DropdownMenuItem onClick={() => onReplyMessage(message)}>
-                                  <Reply className="mr-2 h-3.5 w-3.5" /> Reply
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => void onForwardMessage(message)}>
-                                  <Forward className="mr-2 h-3.5 w-3.5" /> Forward
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => void onToggleFlag(message, 'pinnedByUserIds')}
-                                >
-                                  <Pin className="mr-2 h-3.5 w-3.5" />
-                                  {pinned ? 'Unpin' : 'Pin'}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => void onToggleFlag(message, 'starredByUserIds')}
-                                >
-                                  <Star className="mr-2 h-3.5 w-3.5" />
-                                  {starred ? 'Unstar' : 'Star'}
-                                </DropdownMenuItem>
-                                {canEditDelete ? (
-                                  <DropdownMenuItem onClick={() => onEditMessage(message)}>
-                                    <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
-                                  </DropdownMenuItem>
-                                ) : null}
-                                {canEditDelete ? (
-                                  <DropdownMenuItem onClick={() => void onDeleteMessage(message)}>
-                                    <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-                                  </DropdownMenuItem>
-                                ) : null}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                            <span>{formatMessageTime(message.createdAt)}</span>
-                            {isOwnMessage ? <span>✓✓</span> : null}
-                          </div>
+                        <div
+                          className={`mt-1 flex items-center justify-end gap-1 text-[11px] ${isOwnMessage ? 'text-[#667781] dark:text-[#8696a0]' : 'text-muted-foreground'}`}
+                        >
+                          {pinned ? <Pin className="h-3 w-3" /> : null}
+                          {starred ? <Star className="h-3 w-3" /> : null}
+                          <span>{formatMessageTime(message.createdAt)}</span>
+                          {isOwnMessage ? <span>✓✓</span> : null}
                         </div>
                       </div>
                     </div>
-                  );
-                })
-              : null}
-
-            {!isLoadingMessages && !messages.length ? (
-              <p className="p-4 text-sm text-muted-foreground">No messages yet.</p>
-            ) : null}
-
-            {typingUserLabels.length ? (
-              <div className="mt-2 flex justify-start">
-                <div className="rounded-2xl rounded-bl-sm border bg-card px-3 py-2">
-                  <div className="flex items-center gap-1">
-                    {typingDotStyle.map((delay, index) => (
-                      <span
-                        key={delay}
-                        className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground"
-                        style={{ animationDelay: delay }}
-                        aria-hidden={index > 0}
-                      />
-                    ))}
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {typingUserLabels.join(', ')} {typingUserLabels.length > 1 ? 'are' : 'is'}{' '}
-                    typing...
-                  </p>
-                </div>
-              </div>
-            ) : null}
-          </div>
+                );
+              })
+            : null}
 
-          <div className="z-20 shrink-0 border-t bg-background/95 px-2 py-2 backdrop-blur sm:px-3">
-            {replyToMessage ? (
-              <div className="mb-2 flex items-start justify-between rounded-lg border bg-muted/40 px-3 py-2 text-xs">
-                <div>
-                  <p className="font-medium">
-                    Replying to {replyToMessage.senderUserId ?? 'message'}
-                  </p>
-                  <p className="line-clamp-1 text-muted-foreground">
-                    {replyToMessage.body ?? '(attachment)'}
-                  </p>
-                </div>
-                <Button size="sm" variant="ghost" onClick={() => setReplyToMessage(null)}>
-                  Clear
-                </Button>
-              </div>
-            ) : null}
-            {editingMessage ? (
-              <div className="mb-2 flex items-start justify-between rounded-lg border bg-muted/40 px-3 py-2 text-xs">
-                <div>
-                  <p className="font-medium">Editing message</p>
-                  <p className="line-clamp-1 text-muted-foreground">
-                    {editingMessage.body ?? '(attachment)'}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setEditingMessage(null);
-                    setNewMessage('');
-                  }}
-                >
-                  Cancel edit
-                </Button>
-              </div>
-            ) : null}
-            {showMediaComposer ? (
-              <div className="mb-2 grid gap-2 rounded-xl border bg-muted/30 p-2 sm:grid-cols-[160px_1fr_1fr]">
-                <Select
-                  value={messageKind}
-                  onValueChange={(value) => setMessageKind(value as ComposerMessageKind)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">Text</SelectItem>
-                    <SelectItem value="image">Image</SelectItem>
-                    <SelectItem value="video">Video</SelectItem>
-                    <SelectItem value="audio">Audio</SelectItem>
-                    <SelectItem value="file">File</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  placeholder="Media URL (https://...)"
-                  value={mediaUrl}
-                  onChange={(event) => setMediaUrl(event.target.value)}
-                  disabled={isSendingMessage}
-                />
-                <Input
-                  placeholder="Label (optional)"
-                  value={mediaLabel}
-                  onChange={(event) => setMediaLabel(event.target.value)}
-                  disabled={isSendingMessage}
-                />
-              </div>
-            ) : null}
+          {!isLoadingMessages && !messages.length ? (
+            <p className="p-4 text-sm text-muted-foreground">No messages yet.</p>
+          ) : null}
 
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full">
-                    <Plus className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  <DropdownMenuItem
-                    onClick={() => openFilePicker('.pdf,.txt,.zip,.doc,.docx,.xls,.xlsx')}
-                  >
-                    File
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() =>
-                      openFilePicker('image/png,image/jpeg,image/webp,video/mp4,video/webm')
-                    }
-                  >
-                    Photos and video
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsCallDialogOpen(true)}>
-                    Start call bubble
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsMeetingDialogOpen(true)}>
-                    Schedule meeting
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void onRecordMedia('audio')}>
-                    Record audio
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void onRecordMedia('video')}>
-                    Record video
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setMessageKind('text');
-                      setShowMediaComposer(false);
-                    }}
-                  >
-                    Contact
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setMessageKind('text');
-                      setShowMediaComposer(false);
-                    }}
-                  >
-                    Poll
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setMessageKind('text');
-                      setShowMediaComposer(false);
-                    }}
-                  >
-                    Event
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => openFilePicker('image/png,image/jpeg,image/webp')}
-                  >
-                    AI images
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full">
-                <Smile className="h-4 w-4" />
+          {typingUserLabels.length ? (
+            <div className="mt-2 flex justify-start">
+              <div className="rounded-2xl rounded-bl-sm border bg-card px-3 py-2">
+                <div className="flex items-center gap-1">
+                  {typingDotStyle.map((delay, index) => (
+                    <span
+                      key={delay}
+                      className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground"
+                      style={{ animationDelay: delay }}
+                      aria-hidden={index > 0}
+                    />
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {typingUserLabels.join(', ')} {typingUserLabels.length > 1 ? 'are' : 'is'}{' '}
+                  typing...
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="z-20 shrink-0 border-t bg-background/95 px-2 py-2 backdrop-blur sm:px-3">
+          {replyToMessage ? (
+            <div className="mb-2 flex items-start justify-between rounded-lg border bg-muted/40 px-3 py-2 text-xs">
+              <div>
+                <p className="font-medium">
+                  Replying to{' '}
+                  {getDisplayNameForUser(usersById, replyToMessage.senderUserId, 'message')}
+                </p>
+                <p className="line-clamp-1 text-muted-foreground">
+                  {replyToMessage.body ?? '(attachment)'}
+                </p>
+              </div>
+              <Button size="sm" variant="ghost" onClick={() => setReplyToMessage(null)}>
+                Clear
               </Button>
+            </div>
+          ) : null}
+          {editingMessage ? (
+            <div className="mb-2 flex items-start justify-between rounded-lg border bg-muted/40 px-3 py-2 text-xs">
+              <div>
+                <p className="font-medium">Editing message</p>
+                <p className="line-clamp-1 text-muted-foreground">
+                  {editingMessage.body ?? '(attachment)'}
+                </p>
+              </div>
               <Button
-                size="icon"
+                size="sm"
                 variant="ghost"
-                className={`h-9 w-9 rounded-full ${isMediaMode ? 'text-primary' : ''}`}
                 onClick={() => {
-                  setShowMediaComposer(true);
-                  if (messageKind === 'text') setMessageKind('file');
+                  setEditingMessage(null);
+                  setNewMessage('');
                 }}
               >
-                <Link2 className="h-4 w-4" />
+                Cancel edit
               </Button>
-
+            </div>
+          ) : null}
+          {showMediaComposer ? (
+            <div className="mb-2 grid gap-2 rounded-xl border bg-muted/30 p-2 sm:grid-cols-[160px_1fr_1fr]">
+              <Select
+                value={messageKind}
+                onValueChange={(value) => setMessageKind(value as ComposerMessageKind)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">Text</SelectItem>
+                  <SelectItem value="image">Image</SelectItem>
+                  <SelectItem value="video">Video</SelectItem>
+                  <SelectItem value="audio">Audio</SelectItem>
+                  <SelectItem value="file">File</SelectItem>
+                </SelectContent>
+              </Select>
               <Input
+                placeholder="Media URL (https://...)"
+                value={mediaUrl}
+                onChange={(event) => setMediaUrl(event.target.value)}
+                disabled={isSendingMessage}
+              />
+              <Input
+                placeholder="Label (optional)"
+                value={mediaLabel}
+                onChange={(event) => setMediaLabel(event.target.value)}
+                disabled={isSendingMessage}
+              />
+            </div>
+          ) : null}
+
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full">
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuItem
+                  onClick={() => openFilePicker('.pdf,.txt,.zip,.doc,.docx,.xls,.xlsx')}
+                >
+                  File
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    openFilePicker('image/png,image/jpeg,image/webp,video/mp4,video/webm')
+                  }
+                >
+                  Photos and video
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsCallDialogOpen(true)}>
+                  Start call bubble
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsMeetingDialogOpen(true)}>
+                  Schedule meeting
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => void onRecordMedia('audio')}>
+                  Record audio
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => void onRecordMedia('video')}>
+                  Record video
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setMessageKind('text');
+                    setShowMediaComposer(false);
+                  }}
+                >
+                  Contact
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setMessageKind('text');
+                    setShowMediaComposer(false);
+                  }}
+                >
+                  Poll
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setMessageKind('text');
+                    setShowMediaComposer(false);
+                  }}
+                >
+                  Event
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openFilePicker('image/png,image/jpeg,image/webp')}>
+                  AI images
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full">
+              <Smile className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className={`h-9 w-9 rounded-full ${isMediaMode ? 'text-primary' : ''}`}
+              onClick={() => {
+                setShowMediaComposer(true);
+                if (messageKind === 'text') setMessageKind('file');
+              }}
+            >
+              <Link2 className="h-4 w-4" />
+            </Button>
+
+            <div className="relative flex-1">
+              {isMentionMenuOpen ? (
+                <div className="absolute bottom-full z-30 mb-2 w-full overflow-hidden rounded-lg border bg-popover shadow-md">
+                  <Command shouldFilter={false}>
+                    <CommandList>
+                      <CommandEmpty>No matching users.</CommandEmpty>
+                      <CommandGroup>
+                        {mentionSuggestions.map((suggestion, index) => (
+                          <CommandItem
+                            key={suggestion.key}
+                            value={`${suggestion.label} ${suggestion.subLabel}`}
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              insertMentionSuggestion(suggestion);
+                            }}
+                            className={
+                              index === activeMentionIndex
+                                ? 'bg-accent text-accent-foreground'
+                                : undefined
+                            }
+                          >
+                            <div className="flex w-full min-w-0 items-center justify-between gap-2">
+                              <span className="truncate">{suggestion.label}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {suggestion.subLabel}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </div>
+              ) : null}
+              <Input
+                ref={composerInputRef}
                 placeholder={isMediaMode ? 'Add caption and send...' : 'Type a message'}
                 value={newMessage}
-                onChange={(event) => onMessageInputChange(event.target.value)}
+                onChange={(event) => {
+                  onMessageInputChange(event.target.value);
+                  setComposerCaret(event.target.selectionStart ?? event.target.value.length);
+                }}
+                onClick={(event) => setComposerCaret(event.currentTarget.selectionStart ?? 0)}
+                onKeyUp={(event) => setComposerCaret(event.currentTarget.selectionStart ?? 0)}
                 onBlur={() => {
                   if (normalizedThreadId) setTyping(normalizedThreadId, false);
                 }}
@@ -1665,256 +2139,261 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
                 disabled={isSendingMessage}
                 className="h-10 rounded-full"
               />
-
-              <Button
-                size="icon"
-                className="h-10 w-10 rounded-full"
-                onClick={() => void onSendMessage()}
-                disabled={!canSendMessage || isSendingMessage}
-              >
-                {canSendMessage ? (
-                  <SendHorizontal className="h-4 w-4" />
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
-              </Button>
             </div>
+
+            <Button
+              size="icon"
+              className="h-10 w-10 rounded-full"
+              onClick={() => {
+                if (canSendMessage) {
+                  void onSendMessage();
+                  return;
+                }
+                void onRecordMedia('audio');
+              }}
+              disabled={isSendingMessage || isPreparingRecording}
+              title={canSendMessage ? 'Send message' : 'Record audio'}
+            >
+              {canSendMessage ? (
+                <SendHorizontal className="h-4 w-4" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+            </Button>
           </div>
+        </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={filePickerAccept}
-            className="hidden"
-            onChange={onPickFile}
-          />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={filePickerAccept}
+          className="hidden"
+          onChange={onPickFile}
+        />
 
-          <Dialog
-            open={isUploadDialogOpen}
-            onOpenChange={(open) => (open ? setIsUploadDialogOpen(true) : clearPendingUpload())}
-          >
-            <DialogContent className="max-w-xl">
-              <DialogHeader>
-                <DialogTitle>Upload Attachment</DialogTitle>
-                <DialogDescription>
-                  Preview your file, add a caption, and upload it to this thread.
-                </DialogDescription>
-              </DialogHeader>
+        <Dialog
+          open={isUploadDialogOpen}
+          onOpenChange={(open) => (open ? setIsUploadDialogOpen(true) : clearPendingUpload())}
+        >
+          <DialogContent className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Upload Attachment</DialogTitle>
+              <DialogDescription>
+                Preview your file, add a caption, and upload it to this thread.
+              </DialogDescription>
+            </DialogHeader>
 
-              {pendingUpload ? (
-                <div className="space-y-3">
-                  {pendingUpload.kind === 'image' ? (
-                    <img
-                      src={pendingUpload.previewUrl}
-                      alt={pendingUpload.file.name}
-                      className="max-h-80 w-full rounded-lg border object-contain"
-                    />
-                  ) : pendingUpload.kind === 'video' ? (
-                    <video
-                      src={pendingUpload.previewUrl}
-                      controls
-                      className="max-h-80 w-full rounded-lg border bg-black object-contain"
-                    />
-                  ) : pendingUpload.kind === 'audio' ? (
-                    <audio
-                      src={pendingUpload.previewUrl}
-                      controls
-                      className="w-full rounded-lg border p-2"
-                    />
-                  ) : (
-                    <div className="rounded-lg border bg-muted p-3 text-sm">
-                      <p className="font-medium">{pendingUpload.file.name}</p>
-                      <p className="text-muted-foreground">
-                        {formatFileSize(pendingUpload.file.size)}
-                      </p>
-                    </div>
-                  )}
-
-                  <Input
-                    placeholder="Add a caption (optional)"
-                    value={uploadCaption}
-                    onChange={(event) => setUploadCaption(event.target.value)}
-                    disabled={isUploadingFile || isSendingMessage}
-                  />
-                </div>
-              ) : null}
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={clearPendingUpload}
-                  disabled={isUploadingFile || isSendingMessage}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => void onUploadPickedFile()}
-                  disabled={!pendingUpload || isUploadingFile || isSendingMessage}
-                >
-                  {isUploadingFile ? 'Uploading...' : 'Upload'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog
-            open={isRecorderDialogOpen}
-            onOpenChange={(open) => (open ? setIsRecorderDialogOpen(true) : closeRecorderDialog())}
-          >
-            <DialogContent className="max-w-xl">
-              <DialogHeader>
-                <DialogTitle>
-                  {recordingMode === 'video' ? 'Record Video' : 'Record Audio'}
-                </DialogTitle>
-                <DialogDescription>
-                  {isRecording
-                    ? 'Recording in progress. Stop to preview and upload.'
-                    : 'Preparing recorder...'}
-                </DialogDescription>
-              </DialogHeader>
-
+            {pendingUpload ? (
               <div className="space-y-3">
-                {isRecording ? (
-                  <p className="text-sm font-medium text-destructive">
-                    Recording • {formatDurationClock(recordingElapsedSec)}
-                  </p>
-                ) : null}
-                {recordingMode === 'video' ? (
+                {pendingUpload.kind === 'image' ? (
+                  <img
+                    src={pendingUpload.previewUrl}
+                    alt={pendingUpload.file.name}
+                    className="max-h-80 w-full rounded-lg border object-contain"
+                  />
+                ) : pendingUpload.kind === 'video' ? (
                   <video
-                    ref={recorderPreviewRef}
-                    muted
-                    playsInline
+                    src={pendingUpload.previewUrl}
+                    controls
                     className="max-h-80 w-full rounded-lg border bg-black object-contain"
+                  />
+                ) : pendingUpload.kind === 'audio' ? (
+                  <audio
+                    src={pendingUpload.previewUrl}
+                    controls
+                    className="w-full rounded-lg border p-2"
                   />
                 ) : (
                   <div className="rounded-lg border bg-muted p-3 text-sm">
-                    {isRecording ? 'Recording audio...' : 'Requesting microphone access...'}
+                    <p className="font-medium">{pendingUpload.file.name}</p>
+                    <p className="text-muted-foreground">
+                      {formatFileSize(pendingUpload.file.size)}
+                    </p>
                   </div>
                 )}
-              </div>
 
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => closeRecorderDialog()}
-                  disabled={isPreparingRecording}
-                >
-                  Cancel
-                </Button>
-                <Button type="button" onClick={onStopRecording} disabled={!isRecording}>
-                  Stop Recording
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog
-            open={isVideoPlayerDialogOpen}
-            onOpenChange={(open) => {
-              setIsVideoPlayerDialogOpen(open);
-              if (!open) setActiveVideoAttachment(null);
-            }}
-          >
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                <DialogTitle>{activeVideoAttachment?.label || 'Video'}</DialogTitle>
-              </DialogHeader>
-              {activeVideoAttachment ? (
-                <video
-                  key={activeVideoAttachment.url}
-                  src={activeVideoAttachment.url}
-                  controls
-                  autoPlay
-                  className="max-h-[72vh] w-full rounded-lg bg-black"
-                  preload="metadata"
+                <Input
+                  placeholder="Add a caption (optional)"
+                  value={uploadCaption}
+                  onChange={(event) => setUploadCaption(event.target.value)}
+                  disabled={isUploadingFile || isSendingMessage}
                 />
+              </div>
+            ) : null}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearPendingUpload}
+                disabled={isUploadingFile || isSendingMessage}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void onUploadPickedFile()}
+                disabled={!pendingUpload || isUploadingFile || isSendingMessage}
+              >
+                {isUploadingFile ? 'Uploading...' : 'Upload'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={isRecorderDialogOpen}
+          onOpenChange={(open) => (open ? setIsRecorderDialogOpen(true) : closeRecorderDialog())}
+        >
+          <DialogContent className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle>
+                {recordingMode === 'video' ? 'Record Video' : 'Record Audio'}
+              </DialogTitle>
+              <DialogDescription>
+                {isRecording
+                  ? 'Recording in progress. Stop to preview and upload.'
+                  : 'Preparing recorder...'}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3">
+              {isRecording ? (
+                <p className="text-sm font-medium text-destructive">
+                  Recording • {formatDurationClock(recordingElapsedSec)}
+                </p>
               ) : null}
-            </DialogContent>
-          </Dialog>
+              {recordingMode === 'video' ? (
+                <video
+                  ref={recorderPreviewRef}
+                  muted
+                  playsInline
+                  className="max-h-80 w-full rounded-lg border bg-black object-contain"
+                />
+              ) : (
+                <div className="rounded-lg border bg-muted p-3 text-sm">
+                  {isRecording ? 'Recording audio...' : 'Requesting microphone access...'}
+                </div>
+              )}
+            </div>
 
-          <Dialog open={isCallDialogOpen} onOpenChange={setIsCallDialogOpen}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create Call Bubble</DialogTitle>
-                <DialogDescription>Create a call entry in this thread.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Call type</p>
-                <Select
-                  value={createCallType}
-                  onValueChange={(value) => setCreateCallType(value as 'audio' | 'video')}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="audio">Audio</SelectItem>
-                    <SelectItem value="video">Video</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCallDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={() => void onCreateCallBubble()} disabled={isCreatingCall}>
-                  {isCreatingCall ? 'Creating...' : 'Create'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => closeRecorderDialog()}
+                disabled={isPreparingRecording}
+              >
+                Cancel
+              </Button>
+              <Button type="button" onClick={onStopRecording} disabled={!isRecording}>
+                Stop Recording
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-          <Dialog open={isMeetingDialogOpen} onOpenChange={setIsMeetingDialogOpen}>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Schedule Meeting Bubble</DialogTitle>
-                <DialogDescription>
-                  Share meeting details directly in this thread.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3">
-                <Input
-                  placeholder="Meeting title"
-                  value={meetingTitle}
-                  onChange={(event) => setMeetingTitle(event.target.value)}
-                />
-                <Input
-                  placeholder="Meeting link (https://...)"
-                  value={meetingLink}
-                  onChange={(event) => setMeetingLink(event.target.value)}
-                />
-                <Input
-                  type="datetime-local"
-                  value={meetingStartAt}
-                  onChange={(event) => setMeetingStartAt(event.target.value)}
-                />
-                <Select value={meetingReminderMinutes} onValueChange={setMeetingReminderMinutes}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Reminder" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">No reminder</SelectItem>
-                    <SelectItem value="5">5 minutes before</SelectItem>
-                    <SelectItem value="10">10 minutes before</SelectItem>
-                    <SelectItem value="15">15 minutes before</SelectItem>
-                    <SelectItem value="30">30 minutes before</SelectItem>
-                    <SelectItem value="60">1 hour before</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsMeetingDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={() => void onCreateMeetingBubble()}>Create</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+        <Dialog
+          open={isVideoPlayerDialogOpen}
+          onOpenChange={(open) => {
+            setIsVideoPlayerDialogOpen(open);
+            if (!open) setActiveVideoAttachment(null);
+          }}
+        >
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>{activeVideoAttachment?.label || 'Video'}</DialogTitle>
+            </DialogHeader>
+            {activeVideoAttachment ? (
+              <video
+                key={activeVideoAttachment.url}
+                src={activeVideoAttachment.url}
+                controls
+                autoPlay
+                className="max-h-[72vh] w-full rounded-lg bg-black"
+                preload="metadata"
+              />
+            ) : null}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isCallDialogOpen} onOpenChange={setIsCallDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create Call Bubble</DialogTitle>
+              <DialogDescription>Create a call entry in this thread.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Call type</p>
+              <Select
+                value={createCallType}
+                onValueChange={(value) => setCreateCallType(value as 'audio' | 'video')}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="audio">Audio</SelectItem>
+                  <SelectItem value="video">Video</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCallDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => void onCreateCallBubble()} disabled={isCreatingCall}>
+                {isCreatingCall ? 'Creating...' : 'Create'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isMeetingDialogOpen} onOpenChange={setIsMeetingDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Schedule Meeting Bubble</DialogTitle>
+              <DialogDescription>Share meeting details directly in this thread.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <Input
+                placeholder="Meeting title"
+                value={meetingTitle}
+                onChange={(event) => setMeetingTitle(event.target.value)}
+              />
+              <Input
+                placeholder="Meeting link (https://...)"
+                value={meetingLink}
+                onChange={(event) => setMeetingLink(event.target.value)}
+              />
+              <DateTimePicker
+                value={meetingStartAt}
+                onChange={setMeetingStartAt}
+                placeholder="Select meeting date and time"
+              />
+              <Select value={meetingReminderMinutes} onValueChange={setMeetingReminderMinutes}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Reminder" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">No reminder</SelectItem>
+                  <SelectItem value="5">5 minutes before</SelectItem>
+                  <SelectItem value="10">10 minutes before</SelectItem>
+                  <SelectItem value="15">15 minutes before</SelectItem>
+                  <SelectItem value="30">30 minutes before</SelectItem>
+                  <SelectItem value="60">1 hour before</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsMeetingDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => void onCreateMeetingBubble()}>Create</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-    </ScrollableWrapper>
+    </div>
   );
 }

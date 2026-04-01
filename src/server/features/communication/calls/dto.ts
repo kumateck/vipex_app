@@ -1,5 +1,6 @@
 export type CommunicationCallsListInput = {
   companyId: string;
+  userId: string;
   threadId?: string;
   channelId?: string;
   status?: string;
@@ -16,6 +17,7 @@ export type CommunicationCallsCreateInput = {
 
 export type CommunicationCallsUpdateStatusInput = {
   companyId: string;
+  userId: string;
   id: string;
   status: 'pending' | 'ringing' | 'active' | 'ended' | 'cancelled';
 };
@@ -33,6 +35,18 @@ export type CommunicationCallsLivekitTokenItem = {
   livekitUrl: string;
   token: string;
   expiresAt: string;
+};
+
+export type CommunicationVoiceJoinInput = {
+  companyId: string;
+  userId: string;
+  channelId: string;
+  requestOrigin?: string | null;
+};
+
+export type CommunicationVoiceJoinItem = {
+  call: CommunicationCallsItem;
+  livekit: CommunicationCallsLivekitTokenItem;
 };
 
 export type CommunicationCallsItem = {

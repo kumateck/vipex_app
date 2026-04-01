@@ -17,6 +17,7 @@ export type CommunicationMessage = {
   id: string;
   threadId: string;
   senderUserId: string | null;
+  senderName?: string | null;
   messageType: string;
   body: string | null;
   metadataJson: unknown;
@@ -24,6 +25,22 @@ export type CommunicationMessage = {
   editedAt?: string | null;
   deletedAt?: string | null;
   createdAt: string | null;
+};
+
+export type CommunicationUnreadCount = {
+  threadId: string;
+  unreadCount: number;
+  mentionCount: number;
+  lastReadAt: string | null;
+  lastMessageAt: string | null;
+};
+
+export type CommunicationChannelUnreadCount = {
+  channelId: string;
+  unreadCount: number;
+  mentionCount: number;
+  lastReadAt: string | null;
+  latestActivityAt: string | null;
 };
 
 export type CommunicationMeeting = {
@@ -63,12 +80,38 @@ export type CommunicationPresence = {
   updatedAt: string | null;
 };
 
+export type CommunicationChannel = {
+  id: string;
+  companyId: string;
+  branchId: string | null;
+  locationId: string | null;
+  name: string;
+  description: string | null;
+  channelType: 'text' | 'voice' | string;
+  visibility: 'public' | 'private' | string;
+  isCallEnabled: boolean;
+  isAnnouncementOnly: boolean;
+  threadId: string | null;
+  maxParticipants: number | null;
+  isArchived: boolean;
+  archivedAt: string | null;
+  createdBy: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  participantCount: number;
+};
+
 export type CommunicationLivekitToken = {
   callId: string;
   roomName: string;
   livekitUrl: string;
   token: string;
   expiresAt: string;
+};
+
+export type CommunicationVoiceJoin = {
+  call: CommunicationCallSession;
+  livekit: CommunicationLivekitToken;
 };
 
 export const communicationApi = api.injectEndpoints({
@@ -143,6 +186,8 @@ export const communicationApi = api.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, { threadId }) => [
         { type: 'Communication', id: `MESSAGES:${threadId}` },
+        { type: 'Communication', id: 'UNREAD_COUNTS' },
+        { type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' },
       ],
     }),
 
@@ -162,6 +207,8 @@ export const communicationApi = api.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, { threadId }) => [
         { type: 'Communication', id: `MESSAGES:${threadId}` },
+        { type: 'Communication', id: 'UNREAD_COUNTS' },
+        { type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' },
       ],
     }),
 
@@ -175,6 +222,8 @@ export const communicationApi = api.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, { threadId }) => [
         { type: 'Communication', id: `MESSAGES:${threadId}` },
+        { type: 'Communication', id: 'UNREAD_COUNTS' },
+        { type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' },
       ],
     }),
 
@@ -194,7 +243,71 @@ export const communicationApi = api.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, { threadId }) => [
         { type: 'Communication', id: `MESSAGES:${threadId}` },
+        { type: 'Communication', id: 'UNREAD_COUNTS' },
+        { type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' },
       ],
+    }),
+
+    toggleCommunicationMessageReaction: builder.mutation<
+      CommunicationMessage,
+      {
+        id: string;
+        threadId: string;
+        emoji: string;
+        enabled?: boolean;
+      }
+    >({
+      query: ({ id, emoji, enabled }) => ({
+        url: `/communication/messages/${id}/reactions`,
+        method: 'POST',
+        body: { emoji, enabled },
+      }),
+      invalidatesTags: (_result, _error, { threadId }) => [
+        { type: 'Communication', id: `MESSAGES:${threadId}` },
+        { type: 'Communication', id: 'UNREAD_COUNTS' },
+        { type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' },
+      ],
+    }),
+
+    listCommunicationUnreadCounts: builder.query<CommunicationUnreadCount[], void>({
+      query: () => ({
+        url: '/communication/messages/unread-counts',
+      }),
+      providesTags: [{ type: 'Communication', id: 'UNREAD_COUNTS' }],
+    }),
+
+    markCommunicationThreadRead: builder.mutation<
+      { threadId: string; readAt: string | null },
+      { threadId: string }
+    >({
+      query: (body) => ({
+        url: '/communication/messages/read',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Communication', id: 'UNREAD_COUNTS' }],
+    }),
+
+    listCommunicationChannelUnreadCounts: builder.query<
+      CommunicationChannelUnreadCount[],
+      { channelType?: 'text' | 'voice' } | void
+    >({
+      query: (params) => ({
+        url: '/communication/channels/unread-counts',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' }],
+    }),
+
+    markCommunicationChannelRead: builder.mutation<
+      { channelId: string; readAt: string | null },
+      { id: string }
+    >({
+      query: ({ id }) => ({
+        url: `/communication/channels/${id}/read`,
+        method: 'POST',
+      }),
+      invalidatesTags: [{ type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' }],
     }),
 
     listCommunicationCalls: builder.query<
@@ -222,7 +335,10 @@ export const communicationApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: [{ type: 'Communication', id: 'CALLS' }],
+      invalidatesTags: [
+        { type: 'Communication', id: 'CALLS' },
+        { type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' },
+      ],
     }),
 
     updateCommunicationCallStatus: builder.mutation<
@@ -234,7 +350,10 @@ export const communicationApi = api.injectEndpoints({
         method: 'PATCH',
         body: { status },
       }),
-      invalidatesTags: [{ type: 'Communication', id: 'CALLS' }],
+      invalidatesTags: [
+        { type: 'Communication', id: 'CALLS' },
+        { type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' },
+      ],
     }),
 
     createCommunicationCallLivekitToken: builder.mutation<
@@ -265,6 +384,106 @@ export const communicationApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Communication', id: 'PRESENCE' }],
     }),
+
+    listCommunicationChannels: builder.query<
+      CommunicationChannel[],
+      { channelType?: 'text' | 'voice'; includeArchived?: boolean } | void
+    >({
+      query: (params) => ({
+        url: '/communication/channels',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'Communication', id: 'CHANNELS' }],
+    }),
+
+    createCommunicationChannel: builder.mutation<
+      CommunicationChannel,
+      {
+        name: string;
+        description?: string | null;
+        branchId?: string | null;
+        locationId?: string | null;
+        channelType?: 'text' | 'voice';
+        visibility?: 'public' | 'private';
+        participantUserIds?: string[];
+        isCallEnabled?: boolean;
+        isAnnouncementOnly?: boolean;
+        maxParticipants?: number | null;
+      }
+    >({
+      query: (body) => ({
+        url: '/communication/channels',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [
+        { type: 'Communication', id: 'CHANNELS' },
+        { type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' },
+      ],
+    }),
+
+    updateCommunicationChannel: builder.mutation<
+      CommunicationChannel,
+      {
+        id: string;
+        name?: string | null;
+        description?: string | null;
+        isArchived?: boolean;
+        isCallEnabled?: boolean;
+        isAnnouncementOnly?: boolean;
+        maxParticipants?: number | null;
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/communication/channels/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: [
+        { type: 'Communication', id: 'CHANNELS' },
+        { type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' },
+      ],
+    }),
+
+    addCommunicationChannelParticipants: builder.mutation<
+      CommunicationChannel,
+      { id: string; participantUserIds: string[] }
+    >({
+      query: ({ id, participantUserIds }) => ({
+        url: `/communication/channels/${id}/participants`,
+        method: 'POST',
+        body: { participantUserIds },
+      }),
+      invalidatesTags: [
+        { type: 'Communication', id: 'CHANNELS' },
+        { type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' },
+      ],
+    }),
+
+    removeCommunicationChannelParticipant: builder.mutation<
+      CommunicationChannel,
+      { id: string; userId: string }
+    >({
+      query: ({ id, userId }) => ({
+        url: `/communication/channels/${id}/participants/${userId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [
+        { type: 'Communication', id: 'CHANNELS' },
+        { type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' },
+      ],
+    }),
+
+    joinVoiceChannel: builder.mutation<CommunicationVoiceJoin, { channelId: string }>({
+      query: ({ channelId }) => ({
+        url: `/communication/calls/voice/${channelId}/join`,
+        method: 'POST',
+      }),
+      invalidatesTags: [
+        { type: 'Communication', id: 'CALLS' },
+        { type: 'Communication', id: 'CHANNEL_UNREAD_COUNTS' },
+      ],
+    }),
   }),
 });
 
@@ -277,10 +496,21 @@ export const {
   useUpdateCommunicationMessageMutation,
   useDeleteCommunicationMessageMutation,
   useToggleCommunicationMessageFlagMutation,
+  useToggleCommunicationMessageReactionMutation,
+  useListCommunicationUnreadCountsQuery,
+  useMarkCommunicationThreadReadMutation,
+  useListCommunicationChannelUnreadCountsQuery,
+  useMarkCommunicationChannelReadMutation,
   useListCommunicationCallsQuery,
   useCreateCommunicationCallMutation,
   useUpdateCommunicationCallStatusMutation,
   useCreateCommunicationCallLivekitTokenMutation,
   useListCommunicationPresenceQuery,
   useSetCommunicationPresenceMutation,
+  useListCommunicationChannelsQuery,
+  useCreateCommunicationChannelMutation,
+  useUpdateCommunicationChannelMutation,
+  useAddCommunicationChannelParticipantsMutation,
+  useRemoveCommunicationChannelParticipantMutation,
+  useJoinVoiceChannelMutation,
 } = communicationApi;

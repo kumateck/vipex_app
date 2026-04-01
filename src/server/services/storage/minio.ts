@@ -82,7 +82,7 @@ function parseDataUrl(dataUrl: string) {
   const match = dataUrl.match(/^data:([a-zA-Z0-9.+/-]+);base64,(.+)$/);
   if (!match) throw BadRequest('Only base64 data URLs are supported');
 
-  const contentType = match[1]!;
+  const contentType = match[1]!.split(';')[0]!.trim().toLowerCase();
   const base64 = match[2]!;
   const extension = MIME_EXTENSIONS[contentType];
   if (!extension) throw BadRequest('Unsupported file type');

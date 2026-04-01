@@ -71,6 +71,7 @@ export function LeaveRequestsPage() {
   const [dateFrom, setDateFrom] = useState(new Date().toISOString().slice(0, 10));
   const [dateTo, setDateTo] = useState(new Date().toISOString().slice(0, 10));
   const [reason, setReason] = useState('');
+  const [isEmergency, setIsEmergency] = useState('false');
 
   const { data: leaveTypeOptions = [] } = useListLeaveTypeOptionsQuery();
   const { data: leaveRequestsData } = useListLeaveRequestsQuery({ pageSize: 100 });
@@ -105,7 +106,7 @@ export function LeaveRequestsPage() {
             <CardTitle>Leave Requests</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-2 md:grid-cols-5">
+            <div className="grid gap-2 md:grid-cols-6">
               <Select value={employeeId} onValueChange={setEmployeeId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Employee" />
@@ -138,6 +139,15 @@ export function LeaveRequestsPage() {
                 }}
                 placeholder="Select leave date range"
               />
+              <Select value={isEmergency} onValueChange={setIsEmergency}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Emergency?" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">Planned</SelectItem>
+                  <SelectItem value="true">Emergency (same day)</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 disabled={
                   !employeeId || !leaveTypeId || !dateFrom || !dateTo || isCreatingLeaveRequest
@@ -148,9 +158,11 @@ export function LeaveRequestsPage() {
                     leaveTypeId,
                     dateFrom,
                     dateTo,
+                    isEmergency: isEmergency === 'true',
                     reason: reason.trim() || null,
                   }).unwrap();
                   setReason('');
+                  setIsEmergency('false');
                 }}
               >
                 Request leave
@@ -170,6 +182,7 @@ export function LeaveRequestsPage() {
                   <TableHead>Type</TableHead>
                   <TableHead>Dates</TableHead>
                   <TableHead>Days</TableHead>
+                  <TableHead>Request Mode</TableHead>
                   <TableHead>Manager</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -185,6 +198,7 @@ export function LeaveRequestsPage() {
                         {row.dateFrom.slice(0, 10)} to {row.dateTo.slice(0, 10)}
                       </TableCell>
                       <TableCell>{row.daysCount}</TableCell>
+                      <TableCell>{row.isEmergency ? 'Emergency' : 'Planned'}</TableCell>
                       <TableCell>
                         {managerApprovalLabel(
                           row.managerApprovalStatus,
@@ -258,7 +272,7 @@ export function LeaveRequestsPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7}>No leave requests found.</TableCell>
+                    <TableCell colSpan={8}>No leave requests found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>

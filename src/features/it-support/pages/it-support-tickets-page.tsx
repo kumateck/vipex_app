@@ -37,6 +37,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
+import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
 import {
@@ -47,9 +49,33 @@ import {
 
 const STATUSES = ['open', 'in_progress', 'pending_user', 'resolved', 'closed'] as const;
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
+const STATUS_TRANSITIONS: Record<string, string[]> = {
+  open: ['in_progress', 'pending_user', 'resolved', 'closed'],
+  in_progress: ['pending_user', 'resolved', 'closed'],
+  pending_user: ['in_progress', 'resolved', 'closed'],
+  resolved: ['in_progress', 'pending_user', 'closed'],
+  closed: ['open'],
+};
 
 function prettyValue(value: string) {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case 'open':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'in_progress':
+      return 'bg-amber-100 text-amber-800 border-amber-200';
+    case 'pending_user':
+      return 'bg-violet-100 text-violet-800 border-violet-200';
+    case 'resolved':
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    case 'closed':
+      return 'bg-slate-100 text-slate-800 border-slate-200';
+    default:
+      return 'bg-muted text-muted-foreground border-border';
+  }
 }
 
 function formatFileSize(sizeBytes: number) {
@@ -64,18 +90,26 @@ type RowEditState = {
   status: string;
   priority: string;
   assignedToUserId: string;
+  branchId: string;
+  locationId: string;
   note: string;
 };
 
 export function ItSupportTicketsPage() {
   const user = useAuthStore((state) => state.user);
+  const companyId = user?.company?.id ?? null;
   const canManageTickets = (user?.permissions ?? []).includes(
     PermissionKeys.CanUpdateItSupportTickets,
+  );
+  const canReopenClosedTickets = (user?.permissions ?? []).includes(
+    PermissionKeys.CanReopenItSupportTickets,
   );
 
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [filterAssignedTo, setFilterAssignedTo] = useState<string>('all');
+  const [filterBranch, setFilterBranch] = useState<string>('all');
+  const [filterLocation, setFilterLocation] = useState<string>('all');
 
   const [editRows, setEditRows] = useState<Record<string, RowEditState>>({});
   const [submittingRowId, setSubmittingRowId] = useState<string | null>(null);
@@ -86,12 +120,22 @@ export function ItSupportTicketsPage() {
       status: filterStatus === 'all' ? undefined : filterStatus,
       priority: filterPriority === 'all' ? undefined : filterPriority,
       assignedToUserId: filterAssignedTo === 'all' ? undefined : filterAssignedTo,
+      branchId: filterBranch === 'all' ? undefined : filterBranch,
+      locationId: filterLocation === 'all' ? undefined : filterLocation,
     }),
-    [filterAssignedTo, filterPriority, filterStatus],
+    [filterAssignedTo, filterBranch, filterLocation, filterPriority, filterStatus],
   );
 
   const { data: tickets = [], isLoading, refetch } = useListItSupportTicketsQuery(query);
   const { data: userOptions = [] } = useListUserOptionsQuery();
+  const { data: branchOptions = [] } = useListBranchOptionsQuery(
+    companyId ? { companyId } : undefined,
+    { skip: !companyId },
+  );
+  const { data: locationOptions = [] } = useListLocationOptionsQuery(
+    companyId ? { companyId } : undefined,
+    { skip: !companyId },
+  );
   const [updateTicket] = useUpdateItSupportTicketMutation();
 
   const getRowState = (ticket: ItSupportTicket): RowEditState => {
@@ -101,6 +145,8 @@ export function ItSupportTicketsPage() {
       status: ticket.status,
       priority: ticket.priority,
       assignedToUserId: ticket.assignedToUserId ?? '',
+      branchId: ticket.branchId ?? '',
+      locationId: ticket.locationId ?? '',
       note: '',
     };
   };
@@ -111,6 +157,8 @@ export function ItSupportTicketsPage() {
         status: 'open',
         priority: 'medium',
         assignedToUserId: '',
+        branchId: '',
+        locationId: '',
         note: '',
       };
       return { ...prev, [ticketId]: { ...current, ...patch } };
@@ -126,6 +174,8 @@ export function ItSupportTicketsPage() {
         status: row.status,
         priority: row.priority,
         assignedToUserId: row.assignedToUserId.trim() || null,
+        branchId: row.branchId.trim() || null,
+        locationId: row.locationId.trim() || null,
         note: row.note.trim() || null,
       }).unwrap();
       toast.success('Ticket updated');
@@ -143,8 +193,34 @@ export function ItSupportTicketsPage() {
 
   const getUserLabel = (userId?: string | null) => {
     if (!userId) return 'Unassigned';
-    return userOptions.find((option) => option.id === userId)?.fullname ?? userId;
+    return (
+      userOptions.find((option) => option.id === userId)?.fullname ??
+      userOptions.find((option) => option.id === userId)?.email ??
+      'Unknown user'
+    );
   };
+  const getBranchLabel = (branchId?: string | null) => {
+    if (!branchId) return '-';
+    return branchOptions.find((option) => option.id === branchId)?.name ?? 'Unknown branch';
+  };
+  const getLocationLabel = (locationId?: string | null) => {
+    if (!locationId) return '-';
+    return locationOptions.find((option) => option.id === locationId)?.name ?? 'Unknown location';
+  };
+
+  const getAllowedStatuses = (ticket: ItSupportTicket) => {
+    const current = ticket.status;
+    const nextStatuses = STATUS_TRANSITIONS[current] ?? [];
+    const candidates = [current, ...nextStatuses];
+    if (current === 'closed' && !canReopenClosedTickets) {
+      return ['closed'];
+    }
+    return candidates.filter((status) => STATUSES.includes(status as (typeof STATUSES)[number]));
+  };
+  const filteredLocationOptions =
+    filterBranch === 'all'
+      ? locationOptions
+      : locationOptions.filter((option) => option.branchId === filterBranch);
 
   return (
     <ScrollableWrapper>
@@ -159,7 +235,7 @@ export function ItSupportTicketsPage() {
             </PermissionGuard>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-6">
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger>
                   <SelectValue placeholder="All status" />
@@ -199,6 +275,38 @@ export function ItSupportTicketsPage() {
                   ))}
                 </SelectContent>
               </Select>
+              <Select
+                value={filterBranch}
+                onValueChange={(value) => {
+                  setFilterBranch(value);
+                  setFilterLocation('all');
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All branches</SelectItem>
+                  {branchOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterLocation} onValueChange={setFilterLocation}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All locations</SelectItem>
+                  {filteredLocationOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button variant="outline" onClick={() => refetch()}>
                 Refresh
               </Button>
@@ -212,6 +320,8 @@ export function ItSupportTicketsPage() {
                   <TableHead>Priority</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Assigned To</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Location</TableHead>
                   <TableHead>Attachments</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Actions</TableHead>
@@ -220,7 +330,7 @@ export function ItSupportTicketsPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8}>Loading IT support tickets...</TableCell>
+                    <TableCell colSpan={10}>Loading IT support tickets...</TableCell>
                   </TableRow>
                 ) : tickets.length ? (
                   tickets.map((ticket) => {
@@ -243,13 +353,17 @@ export function ItSupportTicketsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary">{prettyValue(ticket.status)}</Badge>
+                          <Badge variant="outline" className={statusBadgeClass(ticket.status)}>
+                            {prettyValue(ticket.status)}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{prettyValue(ticket.priority)}</Badge>
                         </TableCell>
                         <TableCell>{prettyValue(ticket.category)}</TableCell>
                         <TableCell>{getUserLabel(ticket.assignedToUserId)}</TableCell>
+                        <TableCell>{getBranchLabel(ticket.branchId)}</TableCell>
+                        <TableCell>{getLocationLabel(ticket.locationId)}</TableCell>
                         <TableCell>
                           {ticket.attachments.length ? (
                             <div className="space-y-1">
@@ -300,7 +414,7 @@ export function ItSupportTicketsPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8}>No IT support tickets found.</TableCell>
+                    <TableCell colSpan={10}>No IT support tickets found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -330,7 +444,7 @@ export function ItSupportTicketsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {STATUSES.map((item) => (
+                        {getAllowedStatuses(editingTicket).map((item) => (
                           <SelectItem key={item} value={item}>
                             {prettyValue(item)}
                           </SelectItem>
@@ -380,6 +494,60 @@ export function ItSupportTicketsPage() {
                           {option.fullname}
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Branch</p>
+                  <Select
+                    value={getRowState(editingTicket).branchId || '__none__'}
+                    onValueChange={(value) =>
+                      setRowState(editingTicket.id, {
+                        branchId: value === '__none__' ? '' : value,
+                        locationId: '',
+                      })
+                    }
+                    disabled={!canManageTickets}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No branch</SelectItem>
+                      {branchOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Location</p>
+                  <Select
+                    value={getRowState(editingTicket).locationId || '__none__'}
+                    onValueChange={(value) =>
+                      setRowState(editingTicket.id, {
+                        locationId: value === '__none__' ? '' : value,
+                      })
+                    }
+                    disabled={!canManageTickets}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No location</SelectItem>
+                      {locationOptions
+                        .filter((option) => {
+                          const selectedBranchId = getRowState(editingTicket).branchId;
+                          return selectedBranchId ? option.branchId === selectedBranchId : true;
+                        })
+                        .map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>

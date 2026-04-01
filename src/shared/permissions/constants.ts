@@ -455,6 +455,7 @@ const catalog = [
   ['CanReadItSupportTickets', 'View IT support tickets', 'IT Support'],
   ['CanCreateItSupportTickets', 'Create IT support tickets', 'IT Support'],
   ['CanUpdateItSupportTickets', 'Update IT support tickets', 'IT Support'],
+  ['CanReopenItSupportTickets', 'Reopen closed IT support tickets', 'IT Support'],
 
   // Auth / account setup
   ['CanChangePassword', 'Change password', 'Auth'],
