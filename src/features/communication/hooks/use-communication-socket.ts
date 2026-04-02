@@ -20,6 +20,7 @@ type CommunicationSocketEvent =
         callId: string;
         participants: Array<{
           userId: string;
+          displayName?: string;
           joinedAt: string;
           isMuted: boolean;
           isVideoOff: boolean;
@@ -42,6 +43,7 @@ type UseCommunicationSocketOptions = {
     callId: string;
     participants: Array<{
       userId: string;
+      displayName?: string;
       joinedAt: string;
       isMuted: boolean;
       isVideoOff: boolean;

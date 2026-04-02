@@ -33,7 +33,10 @@ function isSharedHelperPageFile(filePath: string) {
 
 function isScrollableWrapperExemptFile(filePath: string) {
   const posix = toPosix(filePath);
-  return posix.endsWith('/communication/pages/communication-chat-thread-detail-page.tsx');
+  return (
+    posix.endsWith('/communication/pages/communication-chat-thread-detail-page.tsx') ||
+    posix.endsWith('/communication/pages/communication-call-room-page.tsx')
+  );
 }
 
 async function main() {
