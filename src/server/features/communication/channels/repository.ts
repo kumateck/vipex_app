@@ -240,14 +240,11 @@ export async function createCommunicationChannelsRepo(
 
     const participants = [...new Set([input.userId, ...companyUserIds])];
 
-    let threadId: string | null = null;
-    if (input.channelType === 'text') {
-      threadId = await createThreadForChannelTx({
-        tx,
-        input,
-        participantUserIds: participants,
-      });
-    }
+    const threadId = await createThreadForChannelTx({
+      tx,
+      input,
+      participantUserIds: participants,
+    });
 
     const [created] = await tx
       .insert(commChannels)
@@ -298,6 +295,77 @@ export async function createCommunicationChannelsRepo(
     }
 
     return toChannelItem(created, participants.length);
+  });
+}
+
+export async function ensureCommunicationChannelThreadRepo(input: {
+  companyId: string;
+  channelId: string;
+  userId: string;
+}): Promise<string | null> {
+  return db.transaction(async (tx) => {
+    const [channel] = await tx
+      .select({
+        id: commChannels.id,
+        companyId: commChannels.companyId,
+        name: commChannels.name,
+        visibility: commChannels.visibility,
+        threadId: commChannels.threadId,
+        createdBy: commChannels.createdBy,
+      })
+      .from(commChannels)
+      .where(
+        and(
+          eq(commChannels.id, input.channelId),
+          eq(commChannels.companyId, input.companyId),
+          eq(commChannels.isDeleted, false),
+        ),
+      )
+      .limit(1);
+
+    if (!channel) return null;
+    if (channel.threadId) return channel.threadId;
+
+    const participantUserIds =
+      channel.visibility === 'public'
+        ? await listCompanyUserIds(input.companyId)
+        : (
+            await tx
+              .select({ userId: commChannelMembers.userId })
+              .from(commChannelMembers)
+              .where(eq(commChannelMembers.channelId, input.channelId))
+          ).map((row) => row.userId);
+
+    const uniqueParticipants = [...new Set([input.userId, ...participantUserIds])];
+
+    const [createdThread] = await tx
+      .insert(commThreads)
+      .values({
+        companyId: input.companyId,
+        threadType: 'channel',
+        title: channel.name,
+        isPrivate: channel.visibility === 'private',
+        createdBy: channel.createdBy ?? input.userId,
+      })
+      .returning({ id: commThreads.id });
+    if (!createdThread) return null;
+
+    if (uniqueParticipants.length) {
+      await tx.insert(commThreadParticipants).values(
+        uniqueParticipants.map((userId) => ({
+          threadId: createdThread.id,
+          userId,
+          roleInThread: userId === (channel.createdBy ?? input.userId) ? 'owner' : 'member',
+        })),
+      );
+    }
+
+    await tx
+      .update(commChannels)
+      .set({ threadId: createdThread.id, updatedAt: new Date() })
+      .where(eq(commChannels.id, channel.id));
+
+    return createdThread.id;
   });
 }
 

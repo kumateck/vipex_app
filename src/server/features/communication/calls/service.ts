@@ -25,6 +25,7 @@ import {
   canUserAccessCallContextAccessRepo,
 } from '../access/repository';
 import { getCommunicationChannelByIdRepo } from '../channels/repository';
+import { ensureCommunicationChannelThreadSvc } from '../channels/service';
 
 function resolveLivekitClientUrl(requestOrigin?: string | null) {
   if (env.LIVEKIT_PUBLIC_URL) {
@@ -92,6 +93,8 @@ export async function createCommunicationCallsSvc(
     throw Forbidden('You do not have access to start a call in this context');
   }
 
+  let resolvedThreadId = input.threadId ?? null;
+
   if (input.channelId) {
     const channelAccess = await canAccessChannelAccessRepo({
       companyId: input.companyId,
@@ -101,9 +104,26 @@ export async function createCommunicationCallsSvc(
     if (!channelAccess) {
       throw Forbidden('You do not have access to this channel');
     }
+
+    const channel = await getCommunicationChannelByIdRepo({
+      companyId: input.companyId,
+      userId: input.userId,
+      id: input.channelId,
+    });
+    if (!channel) throw NotFound('Channel not found');
+    resolvedThreadId =
+      channel.threadId ??
+      (await ensureCommunicationChannelThreadSvc({
+        companyId: input.companyId,
+        userId: input.userId,
+        channelId: input.channelId,
+      }));
   }
 
-  const created = await createCommunicationCallsRepo(input);
+  const created = await createCommunicationCallsRepo({
+    ...input,
+    threadId: resolvedThreadId,
+  });
   emitCommunicationCallCreated(input.companyId, created);
   return created;
 }
@@ -210,9 +230,18 @@ export async function joinCommunicationVoiceChannelSvc(
     })) ?? null;
 
   if (!call) {
+    const channelThreadId =
+      channel.threadId ??
+      (await ensureCommunicationChannelThreadSvc({
+        companyId: input.companyId,
+        userId: input.userId,
+        channelId: input.channelId,
+      }));
+
     call = await createCommunicationCallsRepo({
       companyId: input.companyId,
       userId: input.userId,
+      threadId: channelThreadId,
       channelId: input.channelId,
       callType: 'audio',
       livekitRoomName: `voice-channel-${input.channelId}`,

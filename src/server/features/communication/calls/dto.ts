@@ -53,6 +53,7 @@ export type CommunicationCallsItem = {
   id: string;
   companyId: string;
   threadId: string | null;
+  chatThreadId: string | null;
   channelId: string | null;
   initiatorUserId: string | null;
   callType: string;

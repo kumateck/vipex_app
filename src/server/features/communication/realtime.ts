@@ -22,10 +22,12 @@ type CommunicationSocketData = {
   kind: 'communication';
   userId: string;
   companyId: string;
+  userName: string;
 };
 
 type CallParticipantState = {
   userId: string;
+  displayName: string;
   joinedAt: string;
   isMuted: boolean;
   isVideoOff: boolean;
@@ -242,7 +244,12 @@ export async function upgradeCommunicationSocket(
     await ensureCompanyModuleEnabledSvc(companyId, 'communication_internal');
 
     const upgraded = server.upgrade(request, {
-      data: { kind: 'communication', userId, companyId },
+      data: {
+        kind: 'communication',
+        userId,
+        companyId,
+        userName: userRecord?.fullname ?? userRecord?.email ?? userId,
+      },
     });
     if (!upgraded) return new Response('Failed to upgrade websocket', { status: 426 });
     return new Response(null, { status: 101 });
@@ -316,6 +323,7 @@ export const communicationSocketHandlers = {
           callMap.get(data.userId) ??
           ({
             userId: data.userId,
+            displayName: data.userName,
             joinedAt: new Date().toISOString(),
             isMuted: false,
             isVideoOff: false,
@@ -374,6 +382,7 @@ export const communicationSocketHandlers = {
           callMap.get(data.userId) ??
           ({
             userId: data.userId,
+            displayName: data.userName,
             joinedAt: new Date().toISOString(),
             isMuted: false,
             isVideoOff: false,

@@ -61,6 +61,7 @@ export type CommunicationCallSession = {
   id: string;
   companyId: string;
   threadId: string | null;
+  chatThreadId: string | null;
   channelId: string | null;
   initiatorUserId: string | null;
   callType: 'audio' | 'video' | string;

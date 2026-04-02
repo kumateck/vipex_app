@@ -14,6 +14,7 @@ import type {
 import {
   addCommunicationChannelParticipantsRepo,
   createCommunicationChannelsRepo,
+  ensureCommunicationChannelThreadRepo,
   getCommunicationChannelByIdRepo,
   listCommunicationChannelUnreadCountsRepo,
   listCommunicationChannelsRepo,
@@ -111,6 +112,23 @@ export async function createCommunicationChannelsSvc(
     ...input,
     participantUserIds: [],
   });
+}
+
+export async function ensureCommunicationChannelThreadSvc(input: {
+  companyId: string;
+  userId: string;
+  channelId: string;
+}): Promise<string> {
+  const canAccess = await canAccessChannelAccessRepo({
+    companyId: input.companyId,
+    channelId: input.channelId,
+    userId: input.userId,
+  });
+  if (!canAccess) throw Forbidden('You do not have access to this channel');
+
+  const threadId = await ensureCommunicationChannelThreadRepo(input);
+  if (!threadId) throw NotFound('Channel not found');
+  return threadId;
 }
 
 export async function updateCommunicationChannelsSvc(
