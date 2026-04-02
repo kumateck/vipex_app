@@ -1,5 +1,3 @@
-import { CustomerUpsertForm } from '@/features/customers/components/customer-upsert-form';
+import { CustomerCreateEditPage } from '@/features/customers/pages/customer-create-edit-page';
 
-export default function CustomerCreatePage() {
-  return <CustomerUpsertForm mode="create" />;
-}
+export default CustomerCreateEditPage;

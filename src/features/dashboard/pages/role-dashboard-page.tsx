@@ -6,6 +6,7 @@ import {
 } from '../components/dashboard-scope-filter-bar';
 import { RoleDashboardGuard } from '../components/role-dashboard-guard';
 import type { DashboardRoleKey } from '../utils/role-dashboard';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
 function formatScope(scope: DashboardScope | null) {
   if (!scope) return 'No scope applied yet.';
@@ -27,23 +28,25 @@ export function RoleDashboardPage({
 
   return (
     <RoleDashboardGuard role={role}>
-      <div className="w-full p-4 space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <DashboardScopeFilterBar onApply={setScope} />
-            <div className="rounded-md border p-3 text-sm text-muted-foreground">
-              {formatScope(scope)}
-            </div>
-            <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
-              Widget area for KPIs/charts/tables will be implemented in the next backlog items.
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <ScrollableWrapper>
+        <div className="w-full p-4 space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>{title}</CardTitle>
+              <CardDescription>{description}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <DashboardScopeFilterBar onApply={setScope} />
+              <div className="rounded-md border p-3 text-sm text-muted-foreground">
+                {formatScope(scope)}
+              </div>
+              <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
+                Widget area for KPIs/charts/tables will be implemented in the next backlog items.
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </ScrollableWrapper>
     </RoleDashboardGuard>
   );
 }

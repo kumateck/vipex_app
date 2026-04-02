@@ -14,13 +14,12 @@ export function createInventoryLocationColumns(
       header: 'Name',
     },
     {
-      accessorFn: (row) => row.branch?.name ?? branchNameById?.get(row.branchId) ?? row.branchId,
+      accessorFn: (row) =>
+        row.branch?.name ?? branchNameById?.get(row.branchId) ?? 'Unknown branch',
       id: 'branchName',
       header: 'Branch',
       cell: ({ row }) =>
-        row.original.branch?.name ??
-        branchNameById?.get(row.original.branchId) ??
-        row.original.branchId,
+        row.original.branch?.name ?? branchNameById?.get(row.original.branchId) ?? 'Unknown branch',
     },
     {
       accessorKey: 'description',

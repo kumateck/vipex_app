@@ -8,6 +8,7 @@ import { useListInventoryProductsQuery } from '@/features/inventory/products/api
 import { useGetStockLevelQuery } from '@/features/inventory/api';
 import { StockLoadError } from '../components/stock-load-error';
 import { getInventoryStockErrorMessage } from '../utils/inventory-stock-error';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
 const OPTIONS_PAGE_SIZE = 100;
 
@@ -32,14 +33,17 @@ export function StockLevelDetailPage() {
   );
 
   const { data: productsData } = useListInventoryProductsQuery(productQuery, { skip: !companyId });
-  const { data: locationsData } = useListInventoryLocationsQuery(locationQuery, { skip: !companyId });
+  const { data: locationsData } = useListInventoryLocationsQuery(locationQuery, {
+    skip: !companyId,
+  });
 
   const productNameById = useMemo(
     () => new Map((productsData?.data ?? []).map((product) => [product.id, product.name] as const)),
     [productsData],
   );
   const locationNameById = useMemo(
-    () => new Map((locationsData?.data ?? []).map((location) => [location.id, location.name] as const)),
+    () =>
+      new Map((locationsData?.data ?? []).map((location) => [location.id, location.name] as const)),
     [locationsData],
   );
 
@@ -75,26 +79,28 @@ export function StockLevelDetailPage() {
   const locationName = locationNameById.get(data.locationId) ?? data.locationId;
 
   return (
-    <div className="w-full max-w-lg mx-auto p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Stock level</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>
-            <span className="font-medium">Product:</span> {productName}
-          </p>
-          <p>
-            <span className="font-medium">Location:</span> {locationName}
-          </p>
-          <p>
-            <span className="font-medium">Quantity:</span> {data.quantity}
-          </p>
-          <p>
-            <span className="font-medium">Updated:</span> {data.updatedAt ?? '-'}
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <ScrollableWrapper>
+      <div className="w-full max-w-lg mx-auto p-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Stock level</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p>
+              <span className="font-medium">Product:</span> {productName}
+            </p>
+            <p>
+              <span className="font-medium">Location:</span> {locationName}
+            </p>
+            <p>
+              <span className="font-medium">Quantity:</span> {data.quantity}
+            </p>
+            <p>
+              <span className="font-medium">Updated:</span> {data.updatedAt ?? '-'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }

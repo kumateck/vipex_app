@@ -1,10 +1,9 @@
-name: Desktop Release (Windows + macOS) (PR to desktop)
+name: Desktop Release (Windows + macOS) (Push to desktop)
 
 on:
-  pull_request:
+  push:
     branches:
       - desktop
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -120,13 +119,14 @@ jobs:
           LATEST_PREFIX="${PREFIX}/latest"
           VERSION_PREFIX="${PREFIX}/v${VERSION}"
 
-          mapfile -t FILES < <(find apps/desktop/out/make -type f \( -name "*.zip" -o -name "*.dmg" \))
-          if [ "${#FILES[@]}" -eq 0 ]; then
+          FILES=$(find apps/desktop/out/make -type f \( -name "*.zip" -o -name "*.dmg" \) || true)
+          if [ -z "${FILES}" ]; then
             echo "No macOS distributables found under apps/desktop/out/make"
             exit 1
           fi
 
-          for file in "${FILES[@]}"; do
+          while IFS= read -r file; do
+            [ -z "${file}" ] && continue
             base=$(basename "${file}")
             aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
               --bucket "${MINIO_BUCKET}" \
@@ -137,7 +137,9 @@ jobs:
               --bucket "${MINIO_BUCKET}" \
               --key "${VERSION_PREFIX}/${base}" \
               --body "${file}" >/dev/null
-          done
+          done <<EOF
+          ${FILES}
+          EOF
 
       - name: Distribution summary
         run: |
@@ -151,7 +153,6 @@ jobs:
     name: Publish Windows Feed to MinIO
     needs: build-windows-desktop
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
     env:
       MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
       MINIO_REGION: ${{ secrets.MINIO_REGION }}

@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia';
+import { getUserByIdRepo } from '@/server/features/auth/repository';
 import { verifyAccessToken } from '@/server/utils/jwt';
 import { recordAuditLog } from '@/server/features/audit/logger';
 
@@ -45,9 +46,11 @@ async function parseAuthContext(request: Request): Promise<{
 
   try {
     const payload = await verifyAccessToken(token);
+    const userRecord =
+      typeof payload.sub === 'string' && payload.sub ? await getUserByIdRepo(payload.sub) : null;
     return {
       actorUserId: typeof payload.sub === 'string' ? payload.sub : null,
-      companyId: typeof payload.companyId === 'string' ? payload.companyId : null,
+      companyId: userRecord?.companyId ?? null,
     };
   } catch {
     return { actorUserId: null, companyId: null };

@@ -197,6 +197,10 @@ export async function isAccountingEnabledForCompanySvc(
 ) {
   try {
     const company = await getCompanyAccountingSettingsRepo(companyId, executor);
+    // Prefer module state when present to avoid drift between company_modules and companies.useAccounting.
+    if (company?.moduleAccountingEnabled != null) {
+      return Boolean(company.moduleAccountingEnabled);
+    }
     return Boolean(company?.useAccounting);
   } catch (error) {
     if (!isMissingSchemaError(error)) throw error;

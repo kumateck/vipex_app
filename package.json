@@ -39,10 +39,14 @@
     "seed:accounting": "bun run scripts/seed_accounting.ts",
     "seed:sessions": "bun run scripts/seed_session_types.ts",
     "seed:users": "bun run scripts/seed_demo_user.ts",
-    "seed:all": "bun run seed:init && bun run seed:accounting && bun run seed:sessions && bun run seed:users",
+    "seed:hr:staff": "bun run scripts/seed_hr_staff.ts",
+    "seed:permissions:system-admin": "bun run scripts/seed_permissions_system_admin.ts",
+    "seed:all": "bun run seed:init && bun run seed:accounting && bun run seed:sessions && bun run seed:users && bun run seed:hr:staff",
     "seed:desmond": "bun run scripts/seed_superadmin.ts",
     "prepare": "husky",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx && bun run lint:architecture && bun run lint:scrollable",
+    "lint:architecture": "bun run scripts/enforce-create-edit-architecture.ts",
+    "lint:scrollable": "bun run scripts/enforce-scrollable-wrapper.ts",
     "format": "prettier --write .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check": "bun run lint && bun run typecheck && bun test",
@@ -92,6 +96,7 @@
     "generouted": "^1.20.0",
     "input-otp": "^1.4.2",
     "jose": "^6.1.0",
+    "livekit-client": "^2.18.0",
     "lucide-react": "^0.525.0",
     "next-themes": "^0.4.6",
     "nodemailer": "^7.0.9",
@@ -146,7 +151,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
-      "bunx --bun eslint --fix",
+      "bunx --bun eslint --fix --no-warn-ignored",
       "bunx --bun prettier --write"
     ],
     "*.{json,md,css,scss,html,yml,yaml}": [

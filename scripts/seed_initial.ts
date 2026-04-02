@@ -13,6 +13,7 @@ import {
   users,
 } from '@/db/schemas';
 import { BranchType, UserStatus, UserType } from '@/db/schemas/enums';
+import { DEFAULT_MODULE_CATALOG } from '@/shared/company-modules/catalog';
 import { hashPassword } from '../src/server/utils/password';
 
 const COMPANY_NAME = 'Vipex Co. LTD';
@@ -20,8 +21,14 @@ const COMPANY_CODE = 'VIPEX';
 const COMPANY_TYPE = 'COURIER';
 const COMPANY_TIN = 'GHA-VX-001234';
 
-const BRANCH_NAME = 'Head Office';
-const BRANCH_TYPE = BranchType.HEADOFFICE;
+const HEAD_OFFICE_BRANCH_NAME = 'Head Office';
+const BRANCH_SEEDS = [
+  { name: 'Head Office', type: BranchType.HEADOFFICE },
+  { name: 'Kumasi', type: BranchType.AGENCY },
+  { name: 'Accra', type: BranchType.AGENCY },
+  { name: 'Sunyani', type: BranchType.AGENCY },
+  { name: 'Tamale', type: BranchType.AGENCY },
+] as const;
 
 const ROLE_NAME = 'System Admin';
 const SYS_FULLNAME = 'System User';
@@ -29,25 +36,73 @@ const SYS_EMAIL = 'sys@vipexparcel.com';
 const SYS_TELEPHONE = '+233200000000';
 const SYS_PASSWORD = 'ChangeMe123!';
 
-const MODULES = [
-  ['shipments', 'Shipments', true],
-  ['customers', 'Customers', true],
-  ['payments', 'Payments', true],
-  ['accounting', 'Accounting', true],
-  ['parcel_content_pricing', 'Parcel Content Pricing', false],
-  ['parcel_packaging_styles', 'Parcel Packaging Styles', false],
-  ['inventory', 'Inventory', true],
-  ['shifts', 'Shifts', true],
-  ['hr', 'HR', false],
-  ['payroll', 'Payroll', false],
-] as const;
-
 const DEFAULT_PARCEL_PACKAGING = ['Box', 'Envelope', 'Sack', 'Crate'] as const;
 const DEFAULT_PARCEL_CONTENTS = [
   { name: 'General Goods', basePricePsw: 3000, taxInclusive: true, sortOrder: 10 },
   { name: 'Documents', basePricePsw: 2000, taxInclusive: true, sortOrder: 20 },
   { name: 'Spare Parts', basePricePsw: 50000, taxInclusive: true, sortOrder: 30 },
 ] as const;
+
+async function ensureBranches(companyId: string, createdBy: string) {
+  let headOfficeBranchId: string | null = null;
+
+  for (const branchSeed of BRANCH_SEEDS) {
+    const [existingBranch] = await db
+      .select({ id: branches.id })
+      .from(branches)
+      .where(
+        and(
+          eq(branches.companyId, companyId),
+          sql`lower(${branches.name}) = lower(${branchSeed.name})`,
+        ),
+      )
+      .limit(1);
+
+    if (existingBranch) {
+      if (branchSeed.name === HEAD_OFFICE_BRANCH_NAME) {
+        headOfficeBranchId = existingBranch.id;
+      }
+      continue;
+    }
+
+    const newBranchId = createId();
+    await db.insert(branches).values({
+      id: newBranchId,
+      name: branchSeed.name,
+      type: branchSeed.type,
+      companyId,
+      telephone: '+233302000000',
+      address: '1 Vipex Ave, Accra, Ghana',
+      email: branchSeed.name === HEAD_OFFICE_BRANCH_NAME ? 'headoffice@vipex.local' : null,
+      isDeleted: false,
+      createdBy,
+    });
+    console.log(`Created branch: ${branchSeed.name} (${newBranchId})`);
+    if (branchSeed.name === HEAD_OFFICE_BRANCH_NAME) {
+      headOfficeBranchId = newBranchId;
+    }
+  }
+
+  if (!headOfficeBranchId) {
+    const [headOffice] = await db
+      .select({ id: branches.id })
+      .from(branches)
+      .where(
+        and(
+          eq(branches.companyId, companyId),
+          sql`lower(${branches.name}) = lower(${HEAD_OFFICE_BRANCH_NAME})`,
+        ),
+      )
+      .limit(1);
+    headOfficeBranchId = headOffice?.id ?? null;
+  }
+
+  if (!headOfficeBranchId) {
+    throw new Error(`Required branch '${HEAD_OFFICE_BRANCH_NAME}' not found after branch seeding.`);
+  }
+
+  return { headOfficeBranchId };
+}
 
 async function main() {
   let [existingUser] = await db
@@ -83,35 +138,7 @@ async function main() {
       console.log(`Created company: ${COMPANY_NAME} (${companyId})`);
     }
 
-    let branchId: string;
-    const [existingBranch] = await db
-      .select({ id: branches.id })
-      .from(branches)
-      .where(
-        and(
-          eq(branches.companyId, companyId),
-          sql`lower(${branches.name}) = lower(${BRANCH_NAME})`,
-        ),
-      )
-      .limit(1);
-
-    if (existingBranch) {
-      branchId = existingBranch.id;
-    } else {
-      branchId = createId();
-      await db.insert(branches).values({
-        id: branchId,
-        name: BRANCH_NAME,
-        type: BRANCH_TYPE,
-        companyId,
-        telephone: '+233302000000',
-        address: '1 Vipex Ave, Accra, Ghana',
-        email: 'headoffice@vipex.local',
-        isDeleted: false,
-        createdBy: bootstrapActorId,
-      });
-      console.log(`Created branch: ${BRANCH_NAME} (${branchId})`);
-    }
+    const { headOfficeBranchId: branchId } = await ensureBranches(companyId, bootstrapActorId);
 
     let roleId: string;
     const [existingRole] = await db
@@ -185,7 +212,8 @@ async function main() {
     }
   }
 
-  for (const [code, name, isCoreEnabled] of MODULES) {
+  for (const moduleDefinition of DEFAULT_MODULE_CATALOG) {
+    const { code, name, isCore: isCoreEnabled, description } = moduleDefinition;
     const [existingModule] = await db
       .select({ id: moduleCatalog.id })
       .from(moduleCatalog)
@@ -197,7 +225,7 @@ async function main() {
         id: createId(),
         code,
         name,
-        description: `${name} module`,
+        description,
         isCore: isCoreEnabled,
         isActive: true,
       });
@@ -281,38 +309,8 @@ async function main() {
     }
   }
 
-  let branchId: string;
-  {
-    const [existing] = await db
-      .select({ id: branches.id })
-      .from(branches)
-      .where(
-        and(
-          eq(branches.companyId, companyId),
-          sql`lower(${branches.name}) = lower(${BRANCH_NAME})`,
-        ),
-      )
-      .limit(1);
-
-    if (existing) {
-      branchId = existing.id;
-      console.log(`Branch already exists: ${BRANCH_NAME} (${branchId})`);
-    } else {
-      branchId = createId();
-      await db.insert(branches).values({
-        id: branchId,
-        name: BRANCH_NAME,
-        type: BRANCH_TYPE,
-        companyId,
-        telephone: '+233302000000',
-        address: '1 Vipex Ave, Accra, Ghana',
-        email: 'headoffice@vipex.local',
-        isDeleted: false,
-        createdBy: creatorId,
-      });
-      console.log(`Created branch: ${BRANCH_NAME} (${branchId})`);
-    }
-  }
+  const { headOfficeBranchId: branchId } = await ensureBranches(companyId, creatorId);
+  console.log(`Head Office branch ready: ${branchId}`);
 
   let roleId: string;
   {

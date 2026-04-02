@@ -1,3 +1,3 @@
-import { UsersCreatePage } from '@/features/users';
+import { UsersCreateEditPage } from '@/features/users';
 
-export default UsersCreatePage;
+export default UsersCreateEditPage;

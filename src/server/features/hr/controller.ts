@@ -143,6 +143,8 @@ export async function listEmployeesCtrl(
     companyId: string;
     branchId?: string | null;
     departmentId?: string | null;
+    jobTitleId?: string | null;
+    officerEmployeeId?: string | null;
     status?: number | null;
   }>,
 ) {
@@ -153,6 +155,8 @@ export async function listEmployeesCtrl(
     companyId: q.filters!.companyId,
     branchId: q.filters?.branchId ?? null,
     departmentId: q.filters?.departmentId ?? null,
+    jobTitleId: q.filters?.jobTitleId ?? null,
+    officerEmployeeId: q.filters?.officerEmployeeId ?? null,
     status: q.filters?.status ?? null,
     search: pagination.search ?? null,
     sort: pagination.sort ?? null,
@@ -226,6 +230,7 @@ export async function listLeaveRequestsCtrl(
   q: PaginationRequestDto<{
     companyId: string;
     employeeId?: string | null;
+    leaveTypeId?: string | null;
     status?: number | null;
   }>,
 ) {
@@ -235,7 +240,10 @@ export async function listLeaveRequestsCtrl(
     offset: pagination.offset,
     companyId: q.filters!.companyId,
     employeeId: q.filters?.employeeId ?? null,
+    leaveTypeId: q.filters?.leaveTypeId ?? null,
     status: q.filters?.status ?? null,
+    dateFrom: q.dateFrom ? new Date(q.dateFrom) : null,
+    dateTo: q.dateTo ? new Date(q.dateTo) : null,
   });
 
   return {

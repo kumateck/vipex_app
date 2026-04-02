@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { companies, companyModules, moduleCatalog } from '@/db/schemas';
+import type { ModuleCatalogDefinition } from '@/shared/company-modules/catalog';
 
 export async function listModuleCatalogRepo() {
   return db
@@ -14,6 +15,26 @@ export async function listModuleCatalogRepo() {
     })
     .from(moduleCatalog)
     .orderBy(asc(moduleCatalog.name), asc(moduleCatalog.id));
+}
+
+export async function ensureModuleCatalogEntriesRepo(entries: ModuleCatalogDefinition[]) {
+  for (const entry of entries) {
+    const [existing] = await db
+      .select({ id: moduleCatalog.id })
+      .from(moduleCatalog)
+      .where(eq(moduleCatalog.code, entry.code))
+      .limit(1);
+
+    if (existing) continue;
+
+    await db.insert(moduleCatalog).values({
+      code: entry.code,
+      name: entry.name,
+      description: entry.description,
+      isCore: entry.isCore,
+      isActive: entry.isActive,
+    });
+  }
 }
 
 export async function listCompanyModulesRepo(companyId: string) {

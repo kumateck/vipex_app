@@ -123,7 +123,7 @@ export default function SetPasswordPage() {
           </CardContent>
 
           <CardFooter>
-            <div className="w-full space-y-2">
+            <div className="w-full space-y-2 py-5">
               <Button
                 type="submit"
                 className="w-full flex gap-2"

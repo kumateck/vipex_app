@@ -5,6 +5,7 @@ import {
   chartOfAccounts,
   cashierSessions,
   companies,
+  companyModules,
   dailyCashConfirmations,
   branches,
   companyBankAccounts,
@@ -33,6 +34,11 @@ import type { SQL } from 'drizzle-orm';
 import { ApprovalStatus, CashierType, PaymentComponent, PaymentMethod } from '@/db/schemas/enums';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
+
+function toDateOnlyParam(value: Date | string) {
+  if (typeof value === 'string') return value.length > 10 ? value.slice(0, 10) : value;
+  return value.toISOString().slice(0, 10);
+}
 
 export async function listAccountsRepo(input: { companyId: string; active?: boolean | null }) {
   const where = [eq(chartOfAccounts.companyId, input.companyId)];
@@ -285,8 +291,13 @@ export async function getCompanyAccountingSettingsRepo(
     .select({
       id: companies.id,
       useAccounting: companies.useAccounting,
+      moduleAccountingEnabled: companyModules.isEnabled,
     })
     .from(companies)
+    .leftJoin(
+      companyModules,
+      and(eq(companyModules.companyId, companies.id), eq(companyModules.moduleCode, 'accounting')),
+    )
     .where(eq(companies.id, companyId))
     .limit(1);
 
@@ -1331,8 +1342,8 @@ export async function listJournalLinesForReportingRepo(
     companyId: string;
     branchId?: string | null;
     locationId?: string | null;
-    dateFrom?: Date | null;
-    dateTo?: Date | null;
+    dateFrom?: Date | string | null;
+    dateTo?: Date | string | null;
     accountId?: string | null;
   },
   executor: DbExecutor = db,
@@ -1341,8 +1352,10 @@ export async function listJournalLinesForReportingRepo(
   if (input.branchId) where.push(eq(journalLines.branchId, input.branchId));
   if (input.locationId) where.push(eq(journalLines.locationId, input.locationId));
   if (input.accountId) where.push(eq(journalLines.accountId, input.accountId));
-  if (input.dateFrom) where.push(sql`${journalEntries.entryDate} >= ${input.dateFrom}`);
-  if (input.dateTo) where.push(sql`${journalEntries.entryDate} <= ${input.dateTo}`);
+  if (input.dateFrom)
+    where.push(sql`${journalEntries.entryDate} >= ${toDateOnlyParam(input.dateFrom)}`);
+  if (input.dateTo)
+    where.push(sql`${journalEntries.entryDate} <= ${toDateOnlyParam(input.dateTo)}`);
 
   return executor
     .select({

@@ -389,9 +389,8 @@ export async function createPayrollOvertimeEntrySvc(input: {
   if (employee.companyId !== input.companyId) throw NotFound('Employee not found');
   if (input.overtimeMinutes <= 0) throw Conflict('Overtime minutes must be greater than zero');
   if (input.ratePerHourPsw <= 0) throw Conflict('Overtime hourly rate must be greater than zero');
-  const approvalStatus = employee.managerEmployeeId
-    ? ApprovalStatus.PENDING
-    : ApprovalStatus.APPROVED;
+  const supervisorEmployeeId = employee.officerEmployeeId ?? employee.supervisorEmployeeId ?? null;
+  const approvalStatus = supervisorEmployeeId ? ApprovalStatus.PENDING : ApprovalStatus.APPROVED;
 
   const created = await createPayrollOvertimeEntryRepo({
     companyId: input.companyId,
@@ -459,9 +458,8 @@ export async function createPayrollManualAdjustmentSvc(input: {
   const employee = await getEmployeeSvc(input.employeeId);
   if (employee.companyId !== input.companyId) throw NotFound('Employee not found');
   if (input.amountPsw <= 0) throw Conflict('Adjustment amount must be greater than zero');
-  const approvalStatus = employee.managerEmployeeId
-    ? ApprovalStatus.PENDING
-    : ApprovalStatus.APPROVED;
+  const supervisorEmployeeId = employee.officerEmployeeId ?? employee.supervisorEmployeeId ?? null;
+  const approvalStatus = supervisorEmployeeId ? ApprovalStatus.PENDING : ApprovalStatus.APPROVED;
 
   let code = '';
   let name = '';
@@ -521,15 +519,16 @@ export async function createPayrollManualAdjustmentSvc(input: {
   return { id: created?.id };
 }
 
-async function assertManagerCanApproveEmployeeInput(
-  managerEmployeeId: string | null | undefined,
+async function assertSupervisorCanApproveEmployeeInput(
+  supervisorEmployeeId: string | null | undefined,
   actorUserId: string,
 ) {
   const actor = await getUserByIdRepo(actorUserId);
   if (!actor?.employeeId) throw Forbidden('Current user is not linked to an employee record');
-  if (!managerEmployeeId) throw Conflict('This payroll input does not require manager approval');
-  if (actor.employeeId !== managerEmployeeId) {
-    throw Forbidden('Only the assigned manager can approve this payroll input');
+  if (!supervisorEmployeeId)
+    throw Conflict('This payroll input does not require supervisor approval');
+  if (actor.employeeId !== supervisorEmployeeId) {
+    throw Forbidden('Only the assigned supervisor can approve this payroll input');
   }
 }
 
@@ -547,7 +546,7 @@ export async function approvePayrollOvertimeEntrySvc(
   if (entry.approvalStatus !== ApprovalStatus.PENDING) {
     throw Conflict('Payroll overtime entry approval has already been decided');
   }
-  await assertManagerCanApproveEmployeeInput(entry.managerEmployeeId, approvedBy);
+  await assertSupervisorCanApproveEmployeeInput(entry.supervisorEmployeeId, approvedBy);
   const updated = await updatePayrollOvertimeEntryRepo(entryId, {
     approvalStatus: ApprovalStatus.APPROVED,
     approvedBy,
@@ -560,7 +559,7 @@ export async function approvePayrollOvertimeEntrySvc(
     entityType: 'payroll_overtime_entry',
     entityId: entryId,
     action: 'PAYROLL_OVERTIME_ENTRY_APPROVED',
-    message: 'Payroll overtime entry approved by manager',
+    message: 'Payroll overtime entry approved by supervisor',
     metadata: { payrollCycleId, employeeId: entry.employeeId },
   });
   return { id: updated?.id };
@@ -581,7 +580,7 @@ export async function rejectPayrollOvertimeEntrySvc(
   if (entry.approvalStatus !== ApprovalStatus.PENDING) {
     throw Conflict('Payroll overtime entry approval has already been decided');
   }
-  await assertManagerCanApproveEmployeeInput(entry.managerEmployeeId, approvedBy);
+  await assertSupervisorCanApproveEmployeeInput(entry.supervisorEmployeeId, approvedBy);
   const updated = await updatePayrollOvertimeEntryRepo(entryId, {
     approvalStatus: ApprovalStatus.REJECTED,
     approvedBy,
@@ -594,7 +593,7 @@ export async function rejectPayrollOvertimeEntrySvc(
     entityType: 'payroll_overtime_entry',
     entityId: entryId,
     action: 'PAYROLL_OVERTIME_ENTRY_REJECTED',
-    message: 'Payroll overtime entry rejected by manager',
+    message: 'Payroll overtime entry rejected by supervisor',
     metadata: { payrollCycleId, employeeId: entry.employeeId, reason: reason ?? null },
   });
   return { id: updated?.id };
@@ -614,7 +613,7 @@ export async function approvePayrollManualAdjustmentSvc(
   if (entry.approvalStatus !== ApprovalStatus.PENDING) {
     throw Conflict('Payroll manual adjustment approval has already been decided');
   }
-  await assertManagerCanApproveEmployeeInput(entry.managerEmployeeId, approvedBy);
+  await assertSupervisorCanApproveEmployeeInput(entry.supervisorEmployeeId, approvedBy);
   const updated = await updatePayrollManualAdjustmentRepo(entryId, {
     approvalStatus: ApprovalStatus.APPROVED,
     approvedBy,
@@ -627,7 +626,7 @@ export async function approvePayrollManualAdjustmentSvc(
     entityType: 'payroll_manual_adjustment',
     entityId: entryId,
     action: 'PAYROLL_MANUAL_ADJUSTMENT_APPROVED',
-    message: 'Payroll manual adjustment approved by manager',
+    message: 'Payroll manual adjustment approved by supervisor',
     metadata: { payrollCycleId, employeeId: entry.employeeId },
   });
   return { id: updated?.id };
@@ -648,7 +647,7 @@ export async function rejectPayrollManualAdjustmentSvc(
   if (entry.approvalStatus !== ApprovalStatus.PENDING) {
     throw Conflict('Payroll manual adjustment approval has already been decided');
   }
-  await assertManagerCanApproveEmployeeInput(entry.managerEmployeeId, approvedBy);
+  await assertSupervisorCanApproveEmployeeInput(entry.supervisorEmployeeId, approvedBy);
   const updated = await updatePayrollManualAdjustmentRepo(entryId, {
     approvalStatus: ApprovalStatus.REJECTED,
     approvedBy,
@@ -661,7 +660,7 @@ export async function rejectPayrollManualAdjustmentSvc(
     entityType: 'payroll_manual_adjustment',
     entityId: entryId,
     action: 'PAYROLL_MANUAL_ADJUSTMENT_REJECTED',
-    message: 'Payroll manual adjustment rejected by manager',
+    message: 'Payroll manual adjustment rejected by supervisor',
     metadata: { payrollCycleId, employeeId: entry.employeeId, reason: reason ?? null },
   });
   return { id: updated?.id };

@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { PropsWithChildren } from 'react';
-import { clearSession, loadSession, saveSession } from '@/lib/storage';
-import { authorizedRequestWithRefresh, login as loginRequest } from '@/lib/api';
-import type { SessionState } from '@/types/auth';
+import { clearSession, loadSession, saveSession } from '@mobile/lib/storage';
+import { authorizedRequestWithRefresh, login as loginRequest } from '@mobile/lib/api';
+import type { SessionState } from '@mobile/types/auth';
 
 type AuthContextValue = {
   bootstrapped: boolean;

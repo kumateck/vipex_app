@@ -10,3 +10,4 @@ export * from './hooks/use-inventory-category-actions';
 export * from './pages/inventory-categories-list-page';
 export * from './pages/inventory-categories-create-page';
 export * from './pages/inventory-categories-edit-page';
+export * from './pages/inventory-categories-create-edit-page';

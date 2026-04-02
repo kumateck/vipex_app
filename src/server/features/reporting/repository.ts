@@ -649,8 +649,10 @@ export async function listEmployeeMasterReportRowsRepo(input: {
       departmentName: departments.name,
       jobTitleId: employees.jobTitleId,
       jobTitleName: jobTitles.name,
-      managerEmployeeId: employees.managerEmployeeId,
-      managerName: manager.displayName,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
+      supervisorName: manager.displayName,
       hasUserAccount: employees.hasUserAccount,
       paymentMethod: sql<string | null>`NULL`,
       bankName: sql<string | null>`NULL`,
@@ -662,7 +664,10 @@ export async function listEmployeeMasterReportRowsRepo(input: {
     .leftJoin(locations, eq(locations.id, employees.locationId))
     .leftJoin(departments, eq(departments.id, employees.departmentId))
     .leftJoin(jobTitles, eq(jobTitles.id, employees.jobTitleId))
-    .leftJoin(manager, eq(manager.id, employees.managerEmployeeId))
+    .leftJoin(
+      manager,
+      sql`${manager.id} = coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
+    )
     .where(and(...where))
     .orderBy(asc(employees.displayName), asc(employees.id));
 }
@@ -720,7 +725,9 @@ export async function listLeaveRequestReportRowsRepo(input: {
       employeeId: leaveRequests.employeeId,
       employeeNumber: employees.employeeNumber,
       employeeName: employees.displayName,
-      managerEmployeeId: employees.managerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
       leaveTypeId: leaveRequests.leaveTypeId,
       leaveTypeName: leaveTypes.name,
       leaveTypeIsPaid: leaveTypes.isPaid,
@@ -1287,6 +1294,9 @@ export async function listToBePaidOutstandingReportRowsRepo(input: {
   from?: Date | null;
   to?: Date | null;
 }) {
+  const fromParam = input.from ? input.from.toISOString() : null;
+  const toParam = input.to ? input.to.toISOString() : null;
+
   const rows = await db.execute(sql<{
     parcel_id: string;
     booking_code: string;
@@ -1341,8 +1351,8 @@ export async function listToBePaidOutstandingReportRowsRepo(input: {
       AND GREATEST(pr.planned_tobepaid_psw - COALESCE(pp.paid_principal_psw, 0), 0) > 0
       ${input.sourceBranchId ? sql`AND pr.source_id = ${input.sourceBranchId}` : sql``}
       ${input.destinationBranchId ? sql`AND pr.destination_id = ${input.destinationBranchId}` : sql``}
-      ${input.from ? sql`AND pr.created_at >= ${input.from}` : sql``}
-      ${input.to ? sql`AND pr.created_at <= ${input.to}` : sql``}
+      ${fromParam ? sql`AND pr.created_at >= ${fromParam}` : sql``}
+      ${toParam ? sql`AND pr.created_at <= ${toParam}` : sql``}
     ORDER BY outstanding_psw DESC, pr.created_at DESC
   `);
 
@@ -1374,6 +1384,9 @@ export async function listToBePaidCollectionsReconciliationReportRowsRepo(input:
   from?: Date | null;
   to?: Date | null;
 }) {
+  const fromParam = input.from ? input.from.toISOString() : null;
+  const toParam = input.to ? input.to.toISOString() : null;
+
   const rows = await db.execute(sql<{
     parcel_id: string;
     booking_code: string;
@@ -1451,8 +1464,8 @@ export async function listToBePaidCollectionsReconciliationReportRowsRepo(input:
       AND pr.planned_tobepaid_psw > 0
       ${input.sourceBranchId ? sql`AND pr.source_id = ${input.sourceBranchId}` : sql``}
       ${input.destinationBranchId ? sql`AND pr.destination_id = ${input.destinationBranchId}` : sql``}
-      ${input.from ? sql`AND pr.created_at >= ${input.from}` : sql``}
-      ${input.to ? sql`AND pr.created_at <= ${input.to}` : sql``}
+      ${fromParam ? sql`AND pr.created_at >= ${fromParam}` : sql``}
+      ${toParam ? sql`AND pr.created_at <= ${toParam}` : sql``}
     ORDER BY pr.created_at DESC, pr.booking_code DESC
   `);
 

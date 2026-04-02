@@ -126,6 +126,11 @@ export default function ResetPassword() {
                 {isLoading && <Spinner />}
                 {isLoading ? 'Resetting...' : 'Reset Password'}
               </Button>
+              <Button asChild type="button" variant="secondary" className="w-full">
+                <Link to={`/set-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}>
+                  Invite OTP? Set password instead
+                </Link>
+              </Button>
               <Button asChild type="button" variant="outline" className="w-full">
                 <Link to="/login">Return to login</Link>
               </Button>

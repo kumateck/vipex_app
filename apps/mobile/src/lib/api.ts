@@ -1,11 +1,11 @@
 import Constants from 'expo-constants';
-import type { LoginResponse, SessionState, TokenPair } from '@/types/auth';
+import type { LoginResponse, SessionState, TokenPair } from '@mobile/types/auth';
 import type {
   ParcelFullDetails,
   ParcelSearchRow,
   PickupQueueCard,
   RiderDoorstepResponse,
-} from '@/types/parcels';
+} from '@mobile/types/parcels';
 
 const extra = (Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string };
 const manifestExtra = ((

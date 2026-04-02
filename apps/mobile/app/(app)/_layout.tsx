@@ -1,14 +1,23 @@
 import { Redirect, Stack } from 'expo-router';
-import { useAuth } from '@/providers/auth-provider';
+import { useAuth } from '@mobile/providers/auth-provider';
+import { useAppearance } from '@mobile/providers/appearance-provider';
 
 export default function AppLayout() {
   const { bootstrapped, session } = useAuth();
+  const { theme } = useAppearance();
 
   if (!bootstrapped) return null;
   if (!session.accessToken) return <Redirect href="/(auth)/login" />;
 
   return (
-    <Stack>
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: theme.colors.bgElevated },
+        headerTintColor: theme.colors.text,
+        headerTitleStyle: { color: theme.colors.text, fontWeight: '700' },
+        contentStyle: { backgroundColor: theme.colors.bg },
+      }}
+    >
       <Stack.Screen name="index" options={{ title: 'Vipex Mobile' }} />
       <Stack.Screen name="queue" options={{ title: 'Queue Creation' }} />
       <Stack.Screen name="rider" options={{ title: 'Rider Operations' }} />

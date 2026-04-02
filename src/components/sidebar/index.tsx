@@ -12,12 +12,29 @@ import {
 import { AccountingSetupPermissionKeys, PermissionKeys } from '@/shared/permissions/constants';
 import { inferRequiredPermissionByPath } from '@/shared/permissions/path-access';
 import { useAuthStore } from '@/stores/auth-store';
+import { useListCompanyModulesQuery } from '@/features/company-modules/api';
+import { inferRequiredModuleByPath } from '@/shared/company-modules/route-modules';
 
 // import { NavMain } from './nav-main';
 import { TeamSwitcher } from './team';
 import { NavUser } from './user';
 import { ROUTES, type MenuItem } from './navigation';
 import { NavMain } from './menu';
+
+type ModuleState = { code: string; isEnabled: boolean };
+
+function normalizeModuleRows(payload: unknown): ModuleState[] {
+  if (Array.isArray(payload)) return payload as ModuleState[];
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'data' in payload &&
+    Array.isArray((payload as { data?: unknown }).data)
+  ) {
+    return (payload as { data: ModuleState[] }).data;
+  }
+  return [];
+}
 
 type SidebarNode = {
   title: string;
@@ -27,12 +44,6 @@ type SidebarNode = {
   items?: SidebarNode[];
   children?: SidebarNode[];
 };
-
-function hasAccountingUrl(node: SidebarNode): boolean {
-  if (node.url?.startsWith('/accounting')) return true;
-  const descendants = [...(node.items ?? []), ...(node.children ?? [])];
-  return descendants.some(hasAccountingUrl);
-}
 
 function canRenderSidebarNode(node: SidebarNode, allowedPermissions: Set<string>): boolean {
   if (node.hiddenInSidebar) return false;
@@ -57,15 +68,16 @@ function canRenderSidebarNode(node: SidebarNode, allowedPermissions: Set<string>
 function filterSidebarTreeByPermissions(
   node: SidebarNode,
   allowedPermissions: Set<string>,
-  accountingEnabled: boolean,
+  enabledModules: Set<string>,
 ): SidebarNode | null {
-  if (!accountingEnabled && hasAccountingUrl(node)) return null;
+  const requiredModule = inferRequiredModuleByPath(node.url);
+  if (requiredModule && !enabledModules.has(requiredModule)) return null;
 
   const filteredChildren = (node.children ?? [])
-    .map((child) => filterSidebarTreeByPermissions(child, allowedPermissions, accountingEnabled))
+    .map((child) => filterSidebarTreeByPermissions(child, allowedPermissions, enabledModules))
     .filter((child): child is SidebarNode => child !== null);
   const filteredItems = (node.items ?? [])
-    .map((item) => filterSidebarTreeByPermissions(item, allowedPermissions, accountingEnabled))
+    .map((item) => filterSidebarTreeByPermissions(item, allowedPermissions, enabledModules))
     .filter((item): item is SidebarNode => item !== null);
   const isDirectlyVisible = canRenderSidebarNode(node, allowedPermissions);
   const hasVisibleDescendant = filteredChildren.length > 0 || filteredItems.length > 0;
@@ -90,12 +102,12 @@ function filterSidebarTreeByPermissions(
 function filterRoutesByPermissions(
   routes: typeof ROUTES,
   allowedPermissions: Set<string>,
-  accountingEnabled: boolean,
+  enabledModules: Set<string>,
 ) {
   return routes
     .map((group) => {
       const menu = group.menu
-        .map((item) => filterSidebarTreeByPermissions(item, allowedPermissions, accountingEnabled))
+        .map((item) => filterSidebarTreeByPermissions(item, allowedPermissions, enabledModules))
         .filter((item): item is MenuItem => item !== null);
       return { ...group, menu };
     })
@@ -104,10 +116,19 @@ function filterRoutesByPermissions(
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const storePermissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const accountingEnabled = useAuthStore((state) => state.user?.company?.useAccounting ?? false);
+  const companyAccountingEnabled = useAuthStore(
+    (state) => state.user?.company?.useAccounting ?? false,
+  );
+  const { data: companyModules } = useListCompanyModulesQuery();
+  const enabledModules = React.useMemo(() => {
+    const rows = normalizeModuleRows(companyModules);
+    const modules = new Set(rows.filter((module) => module.isEnabled).map((module) => module.code));
+    if (companyAccountingEnabled) modules.add('accounting');
+    return modules;
+  }, [companyAccountingEnabled, companyModules]);
 
   const allowedPermissions = new Set(storePermissions);
-  const filteredRoutes = filterRoutesByPermissions(ROUTES, allowedPermissions, accountingEnabled);
+  const filteredRoutes = filterRoutesByPermissions(ROUTES, allowedPermissions, enabledModules);
 
   return (
     <Sidebar collapsible="icon" {...props}>
