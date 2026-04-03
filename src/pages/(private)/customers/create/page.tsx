@@ -1,5 +1,5 @@
-import { CustomerUpsertForm } from '@/features/customers/components/customer-upsert-form';
+import { Navigate } from 'react-router-dom';
 
 export default function CustomerCreateLegacyPage() {
-  return <CustomerUpsertForm mode="create" />;
+  return <Navigate to="/customers/new" replace />;
 }

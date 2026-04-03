@@ -21,9 +21,12 @@ export interface Department {
 export interface JobTitle {
   id: string;
   companyId: string;
+  departmentId?: string | null;
+  departmentName?: string | null;
   code?: string | null;
   name: string;
   description?: string | null;
+  defaultLeaveDays: number;
   isActive: boolean;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -54,14 +57,27 @@ export interface Employee {
   departmentName?: string | null;
   jobTitleId?: string | null;
   jobTitleName?: string | null;
+  reportingOfficerTitleId?: string | null;
+  officerEmployeeId?: string | null;
   locationId?: string | null;
   locationName?: string | null;
-  managerEmployeeId?: string | null;
+  supervisorEmployeeId?: string | null;
   alternatePhone?: string | null;
   confirmationDate?: string | null;
   terminationDate?: string | null;
   terminationReason?: string | null;
   hasUserAccount: boolean;
+}
+
+export interface EmployeeOption {
+  id: string;
+  employeeNumber: string;
+  displayName: string;
+  branchId?: string | null;
+  locationId?: string | null;
+  departmentId?: string | null;
+  jobTitleId?: string | null;
+  employmentStatus: number;
 }
 
 export interface AttendanceRecord {
@@ -87,6 +103,8 @@ export interface LeaveType {
   code?: string | null;
   name: string;
   isPaid: boolean;
+  minAdvanceDays: number;
+  allowEmergencySameDay: boolean;
   isActive: boolean;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -97,13 +115,14 @@ export interface LeaveRequest {
   companyId: string;
   employeeId: string;
   employeeName?: string | null;
-  managerEmployeeId?: string | null;
+  supervisorEmployeeId?: string | null;
   leaveTypeId: string;
   leaveTypeName?: string | null;
   leaveTypeIsPaid?: boolean;
   dateFrom: string;
   dateTo: string;
   daysCount: number;
+  isEmergency: boolean;
   reason?: string | null;
   managerApprovalStatus: number;
   managerApprovedBy?: string | null;
@@ -185,7 +204,13 @@ export const hrApi = api.injectEndpoints({
     }),
     createJobTitle: builder.mutation<
       { id?: string },
-      { code?: string | null; name: string; description?: string | null }
+      {
+        departmentId?: string | null;
+        code?: string | null;
+        name: string;
+        description?: string | null;
+        defaultLeaveDays?: number;
+      }
     >({
       query: (body) => ({
         url: '/hr/job-titles',
@@ -200,8 +225,10 @@ export const hrApi = api.injectEndpoints({
         id: string;
         body: {
           code?: string | null;
+          departmentId?: string | null;
           name?: string;
           description?: string | null;
+          defaultLeaveDays?: number;
           isActive?: boolean;
         };
       }
@@ -218,6 +245,8 @@ export const hrApi = api.injectEndpoints({
       ServerListQuery<{
         branchId?: string | null;
         departmentId?: string | null;
+        jobTitleId?: string | null;
+        officerEmployeeId?: string | null;
         status?: number | null;
       }> | void
     >({
@@ -226,6 +255,23 @@ export const hrApi = api.injectEndpoints({
         params: buildServerPaginationParams(query),
       }),
       providesTags: (result) => provideEntityListTags('HR', result),
+    }),
+    listEmployeeOptions: builder.query<
+      EmployeeOption[],
+      {
+        branchId?: string | null;
+        departmentId?: string | null;
+        jobTitleId?: string | null;
+        officerEmployeeId?: string | null;
+        status?: number | null;
+        search?: string;
+      } | void
+    >({
+      query: (params) => ({
+        url: '/hr/employees/options',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'HR', id: 'EMPLOYEE_OPTIONS' }],
     }),
     createEmployee: builder.mutation<
       { id?: string },
@@ -246,7 +292,9 @@ export const hrApi = api.injectEndpoints({
         locationId?: string | null;
         departmentId?: string | null;
         jobTitleId?: string | null;
-        managerEmployeeId?: string | null;
+        reportingOfficerTitleId?: string | null;
+        officerEmployeeId?: string | null;
+        supervisorEmployeeId?: string | null;
         hireDate: string;
         employmentStatus?: number;
         employmentType?: number;
@@ -285,7 +333,9 @@ export const hrApi = api.injectEndpoints({
           locationId?: string | null;
           departmentId?: string | null;
           jobTitleId?: string | null;
-          managerEmployeeId?: string | null;
+          reportingOfficerTitleId?: string | null;
+          officerEmployeeId?: string | null;
+          supervisorEmployeeId?: string | null;
           employmentStatus?: number;
           employmentType?: number;
           confirmationDate?: string | null;
@@ -380,7 +430,13 @@ export const hrApi = api.injectEndpoints({
     }),
     createLeaveType: builder.mutation<
       { id?: string },
-      { code?: string | null; name: string; isPaid?: boolean }
+      {
+        code?: string | null;
+        name: string;
+        isPaid?: boolean;
+        minAdvanceDays?: number;
+        allowEmergencySameDay?: boolean;
+      }
     >({
       query: (body) => ({
         url: '/hr/leave-types',
@@ -393,7 +449,10 @@ export const hrApi = api.injectEndpoints({
       ServerListResponse<LeaveRequest>,
       {
         employeeId?: string | null;
+        leaveTypeId?: string | null;
         status?: number | null;
+        dateFrom?: string;
+        dateTo?: string;
         page?: number;
         pageSize?: number;
       } | void
@@ -411,6 +470,7 @@ export const hrApi = api.injectEndpoints({
         leaveTypeId: string;
         dateFrom: string;
         dateTo: string;
+        isEmergency?: boolean;
         reason?: string | null;
       }
     >({
@@ -481,6 +541,7 @@ export const {
   useCreateJobTitleMutation,
   useUpdateJobTitleMutation,
   useListEmployeesQuery,
+  useListEmployeeOptionsQuery,
   useCreateEmployeeMutation,
   useGetEmployeeQuery,
   useUpdateEmployeeMutation,

@@ -65,7 +65,7 @@ export function WarehousesPage() {
   const { data, isLoading, refetch } = useListWarehousesQuery(
     {
       page: 1,
-      pageSize: 100,
+      pageSize: 20,
       filters: { companyId },
     },
     { skip: !companyId || !canRead },
@@ -150,7 +150,8 @@ export function WarehousesPage() {
       {
         id: 'branch',
         header: 'Branch',
-        accessorFn: (row) => row.branch?.name ?? branchNameById.get(row.branchId) ?? row.branchId,
+        accessorFn: (row) =>
+          row.branch?.name ?? branchNameById.get(row.branchId) ?? 'Unknown branch',
       },
       {
         id: 'description',

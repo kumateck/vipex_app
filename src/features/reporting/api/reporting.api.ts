@@ -17,8 +17,8 @@ export interface EmployeeMasterReportRow {
   departmentName?: string | null;
   jobTitleId?: string | null;
   jobTitleName?: string | null;
-  managerEmployeeId?: string | null;
-  managerName?: string | null;
+  supervisorEmployeeId?: string | null;
+  supervisorName?: string | null;
   hasUserAccount: boolean;
   paymentMethod?: string | null;
   bankName?: string | null;
@@ -71,7 +71,7 @@ export interface LeaveRequestsReportRow {
   employeeId: string;
   employeeNumber?: string | null;
   employeeName?: string | null;
-  managerEmployeeId?: string | null;
+  supervisorEmployeeId?: string | null;
   leaveTypeId: string;
   leaveTypeName: string;
   leaveTypeIsPaid: boolean;

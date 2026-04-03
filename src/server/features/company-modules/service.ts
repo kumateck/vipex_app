@@ -1,6 +1,8 @@
 import { BadRequest, Conflict, Forbidden } from '@/server/utils/http-error';
+import { DEFAULT_MODULE_CATALOG } from '@/shared/company-modules/catalog';
 import { recordAuditLog } from '../audit/logger';
 import {
+  ensureModuleCatalogEntriesRepo,
   findCatalogModulesRepo,
   findCompanyModuleRepo,
   listCompanyModulesRepo,
@@ -11,9 +13,24 @@ import {
 
 export const MODULE_DEPENDENCIES: Record<string, string[]> = {
   payroll: ['hr'],
+  procurement: ['accounting'],
+  fleet_transport: ['shipments'],
+  customer_wallet_credit: ['customers', 'payments'],
+  sla_claims: ['shipments', 'customers'],
+  reconciliation: ['payments', 'accounting'],
+  document_compliance: ['customers'],
+  dispatch_optimization: ['shipments'],
+  notification_hub: ['customers'],
+  communication_internal: [],
+  communication_customer_service: ['customers', 'communication_internal'],
+  communication_calls_livekit: ['communication_internal'],
+  it_support: [],
+  bi_executive_dashboard: ['accounting'],
+  partner_agent_portal: ['shipments', 'customers', 'payments'],
 };
 
 async function ensureModuleExists(moduleCode: string) {
+  await ensureModuleCatalogEntriesRepo(DEFAULT_MODULE_CATALOG);
   const modules = await findCatalogModulesRepo([moduleCode]);
   const module = modules[0];
   if (!module) throw BadRequest(`Unknown module: ${moduleCode}`);
@@ -21,6 +38,7 @@ async function ensureModuleExists(moduleCode: string) {
 }
 
 export async function listCompanyModulesSvc(companyId: string) {
+  await ensureModuleCatalogEntriesRepo(DEFAULT_MODULE_CATALOG);
   const [catalog, enabled] = await Promise.all([
     listModuleCatalogRepo(),
     listCompanyModulesRepo(companyId),

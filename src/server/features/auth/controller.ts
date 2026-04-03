@@ -1,12 +1,14 @@
 import {
   changePasswordSvc,
   forgotPasswordSvc,
+  getCurrentUserProfileSvc,
   loginSvc,
   logoutSvc,
   refreshSvc,
   resetPasswordSvc,
   setPasswordSvc,
   getCurrentUserPermissionsSvc,
+  updateCurrentUserProfileSvc,
 } from './service';
 
 export async function loginCtrl(input: {
@@ -15,7 +17,11 @@ export async function loginCtrl(input: {
   ua?: string;
   ip?: string;
 }) {
-  return loginSvc(input.email, input.password, input.ua, input.ip);
+  const result = await loginSvc(input.email, input.password, input.ua, input.ip);
+  return {
+    ...result,
+    permissions: result.user.permissions ?? [],
+  };
 }
 
 export async function refreshCtrl(refreshToken: string) {
@@ -26,6 +32,7 @@ export async function refreshCtrl(refreshToken: string) {
       refreshToken: nextRefreshToken,
     },
     user,
+    permissions: user.permissions ?? [],
   };
 }
 
@@ -62,4 +69,15 @@ export async function currentUserPermissionsCtrl(userId: string) {
 export async function currentUserReadOnlyPermissionsCtrl(userId: string) {
   const result = await getCurrentUserPermissionsSvc(userId);
   return { readOnlyPermissions: result.readOnlyPermissions };
+}
+
+export async function currentUserProfileCtrl(userId: string) {
+  return getCurrentUserProfileSvc(userId);
+}
+
+export async function updateCurrentUserProfileCtrl(
+  userId: string,
+  patch: { fullname?: string; telephone?: string },
+) {
+  return updateCurrentUserProfileSvc(userId, patch);
 }

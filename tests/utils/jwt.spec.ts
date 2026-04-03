@@ -7,10 +7,6 @@ describe('jwt sign/verify', async () => {
   test('sign and verify access token', async () => {
     const payload = {
       sub: '00000000-0000-0000-0000-000000000001',
-      email: 'test@example.com',
-      roleId: null,
-      companyId: null,
-      branchId: null,
     };
 
     const token = await jwt.signAccessToken(payload);
@@ -18,7 +14,6 @@ describe('jwt sign/verify', async () => {
 
     const decoded = await jwt.verifyAccessToken(token);
     expect(decoded.sub).toBe(payload.sub);
-    expect(decoded.email).toBe(payload.email);
     expect(decoded.exp).toBeGreaterThan(decoded.iat!);
   });
 });

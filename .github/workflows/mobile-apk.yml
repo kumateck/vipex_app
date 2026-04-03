@@ -1,7 +1,7 @@
 name: Mobile Build (Android Only) (Internal)
 
 on:
-  pull_request:
+  push:
     branches:
       - mobile
 
@@ -73,7 +73,7 @@ jobs:
         run: |
           set -euo pipefail
           bunx eas-cli whoami
-          bunx eas-cli update --channel preview --non-interactive --message "PR #${{ github.event.pull_request.number || github.run_number }} (${GITHUB_SHA::7})"
+          bunx eas-cli update --channel preview --non-interactive --message "Build #${{ github.run_number }} (${GITHUB_SHA::7})"
 
       - name: Trigger and Wait for EAS Android APK Build
         id: eas_build

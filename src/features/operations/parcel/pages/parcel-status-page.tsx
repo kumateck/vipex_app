@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -20,6 +21,7 @@ import { useCreateCustomerMutation } from '@/features/customers/api';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   type ParcelSearchRow,
+  useSendParcelStatusCallNotificationMutation,
   useSearchParcelsQuery,
   useUpdateParcelMutation,
 } from '../api/parcel.api';
@@ -67,14 +69,18 @@ export function ParcelStatusPage() {
   const [useSecondReceiver, setUseSecondReceiver] = useState(false);
   const [secondReceiverName, setSecondReceiverName] = useState('');
   const [secondReceiverPhone, setSecondReceiverPhone] = useState('');
+  const [sendSms, setSendSms] = useState(true);
+  const [sendEmail, setSendEmail] = useState(false);
 
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
+  const [sendCallNotification, { isLoading: isSendingNotification }] =
+    useSendParcelStatusCallNotificationMutation();
 
   const baseQuery = useMemo(
     () => ({
       page: 1,
-      pageSize: 100,
+      pageSize: 20,
       search: submittedSearch.trim().length > 0 ? submittedSearch.trim() : undefined,
     }),
     [submittedSearch],
@@ -109,7 +115,7 @@ export function ParcelStatusPage() {
   }, [arrivedQuery.data?.data]);
 
   const loading = arrivedQuery.isLoading;
-  const isSaving = isUpdatingParcel || isCreatingCustomer;
+  const isSaving = isUpdatingParcel || isCreatingCustomer || isSendingNotification;
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
@@ -167,6 +173,8 @@ export function ParcelStatusPage() {
                 setUseSecondReceiver(false);
                 setSecondReceiverName('');
                 setSecondReceiverPhone('');
+                setSendSms(true);
+                setSendEmail(false);
               }}
             >
               Call Outcome
@@ -240,7 +248,26 @@ export function ParcelStatusPage() {
       secondReceiverId,
     }).unwrap();
 
-    toast.success('Parcel contact outcome saved');
+    if (sendSms || sendEmail) {
+      const notification = await sendCallNotification({
+        parcelId: selectedParcel.id,
+        outcome,
+        sendSms,
+        sendEmail,
+        includeSecondReceiver: useSecondReceiver || Boolean(secondReceiverId),
+      }).unwrap();
+
+      if (notification.failedCount > 0) {
+        toast.warning(
+          `Outcome saved. Notifications sent: ${notification.sentCount}, failed: ${notification.failedCount}.`,
+        );
+      } else {
+        toast.success(`Outcome saved. Notifications sent: ${notification.sentCount}.`);
+      }
+    } else {
+      toast.success('Parcel contact outcome saved');
+    }
+
     setSelectedParcel(null);
     await refreshQueues();
   }
@@ -375,6 +402,26 @@ export function ParcelStatusPage() {
                 ) : null}
               </div>
             ) : null}
+
+            <div className="space-y-3 rounded-md border p-3">
+              <p className="text-sm font-medium">Send Notification</p>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="send-sms">Send SMS</Label>
+                <Checkbox
+                  id="send-sms"
+                  checked={sendSms}
+                  onCheckedChange={(checked) => setSendSms(checked === true)}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="send-email">Send Email</Label>
+                <Checkbox
+                  id="send-email"
+                  checked={sendEmail}
+                  onCheckedChange={(checked) => setSendEmail(checked === true)}
+                />
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button

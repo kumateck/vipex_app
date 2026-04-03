@@ -1,4 +1,13 @@
-import { app, BrowserWindow, dialog, ipcMain, shell, type WebContentsPrintOptions } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  desktopCapturer,
+  dialog,
+  ipcMain,
+  session,
+  shell,
+  type WebContentsPrintOptions,
+} from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { autoUpdater } from 'electron-updater';
@@ -543,6 +552,53 @@ function createWindow() {
   });
 }
 
+function configureDesktopCapturePermissions() {
+  const ses = session.defaultSession;
+
+  ses.setPermissionCheckHandler((_webContents, permission) => {
+    if (permission === 'media') {
+      return true;
+    }
+    return false;
+  });
+
+  ses.setPermissionRequestHandler((_webContents, permission, callback) => {
+    if (permission === 'media') {
+      callback(true);
+      return;
+    }
+    callback(false);
+  });
+
+  ses.setDisplayMediaRequestHandler(
+    async (_request, callback) => {
+      try {
+        const sources = await desktopCapturer.getSources({
+          types: ['screen', 'window'],
+          fetchWindowIcons: true,
+          thumbnailSize: { width: 320, height: 180 },
+        });
+
+        const preferred =
+          sources.find((source) => source.id.startsWith('screen:')) ?? sources[0] ?? null;
+
+        if (!preferred) {
+          callback({ video: undefined, audio: undefined });
+          return;
+        }
+
+        callback({
+          video: preferred,
+          audio: 'loopback',
+        });
+      } catch {
+        callback({ video: undefined, audio: undefined });
+      }
+    },
+    { useSystemPicker: true },
+  );
+}
+
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
   app.quit();
@@ -584,6 +640,7 @@ app.whenReady().then(() => {
   }
 
   configureAutoUpdater();
+  configureDesktopCapturePermissions();
   registerIpcHandlers();
   createWindow();
 

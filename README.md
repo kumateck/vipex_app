@@ -26,6 +26,32 @@ bun test
 - PostGIS extension (geospatial endpoints)
 - Redis (rate limiting + caching, optional with memory fallback)
 
+## WebSocket Deployment Notes
+
+Communication realtime uses `GET /v1/communication/ws` with WebSocket upgrade.
+
+If you see browser errors like `Error during WebSocket handshake: 'Upgrade' header is missing`,
+your reverse proxy is forwarding the request as plain HTTP.
+
+For Nginx, ensure the socket location forwards upgrade headers:
+
+```nginx
+location /v1/communication/ws {
+  proxy_pass http://127.0.0.1:3000;
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection "upgrade";
+  proxy_set_header Host $host;
+  proxy_read_timeout 3600;
+}
+```
+
+Frontend can also force a dedicated socket host using:
+
+```bash
+VITE_COMMUNICATION_WS_URL=wss://your-ws-capable-domain.com
+```
+
 ## Documentation
 
 - Architecture: `docs/ARCHITECTURE.md`

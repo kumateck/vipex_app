@@ -20,9 +20,12 @@ export type ListEmployeeParams = {
   companyId: string;
   branchId?: string | null;
   departmentId?: string | null;
+  jobTitleId?: string | null;
+  officerEmployeeId?: string | null;
   status?: number | null;
   search?: string | null;
   sort?: SortField[] | null;
+  noPagination?: boolean;
 };
 
 export type ListDepartmentParams = {
@@ -54,7 +57,10 @@ export type ListLeaveRequestParams = {
   offset: number;
   companyId: string;
   employeeId?: string | null;
+  leaveTypeId?: string | null;
   status?: number | null;
+  dateFrom?: Date | null;
+  dateTo?: Date | null;
 };
 
 export async function listDepartmentsRepo(p: ListDepartmentParams) {
@@ -146,15 +152,19 @@ export async function listJobTitlesRepo(p: ListJobTitleParams) {
     .select({
       id: jobTitles.id,
       companyId: jobTitles.companyId,
+      departmentId: jobTitles.departmentId,
+      departmentName: departments.name,
       code: jobTitles.code,
       name: jobTitles.name,
       description: jobTitles.description,
+      defaultLeaveDays: jobTitles.defaultLeaveDays,
       isActive: jobTitles.isActive,
       createdBy: jobTitles.createdBy,
       createdAt: jobTitles.createdAt,
       updatedAt: jobTitles.updatedAt,
     })
     .from(jobTitles)
+    .leftJoin(departments, eq(jobTitles.departmentId, departments.id))
     .where(and(...where))
     .orderBy(asc(jobTitles.name), asc(jobTitles.id))
     .limit(p.limit)
@@ -165,8 +175,16 @@ export async function listJobTitlesRepo(p: ListJobTitleParams) {
 
 export async function listJobTitleOptionsRepo(companyId: string, search?: string | null) {
   return db
-    .select({ id: jobTitles.id, code: jobTitles.code, name: jobTitles.name })
+    .select({
+      id: jobTitles.id,
+      code: jobTitles.code,
+      name: jobTitles.name,
+      departmentId: jobTitles.departmentId,
+      departmentName: departments.name,
+      defaultLeaveDays: jobTitles.defaultLeaveDays,
+    })
     .from(jobTitles)
+    .leftJoin(departments, eq(jobTitles.departmentId, departments.id))
     .where(
       and(
         eq(jobTitles.companyId, companyId),
@@ -195,6 +213,8 @@ export async function listLeaveTypesRepo(p: ListLeaveTypeParams) {
       code: leaveTypes.code,
       name: leaveTypes.name,
       isPaid: leaveTypes.isPaid,
+      minAdvanceDays: leaveTypes.minAdvanceDays,
+      allowEmergencySameDay: leaveTypes.allowEmergencySameDay,
       isActive: leaveTypes.isActive,
       createdAt: leaveTypes.createdAt,
       updatedAt: leaveTypes.updatedAt,
@@ -215,6 +235,8 @@ export async function listLeaveTypeOptionsRepo(companyId: string) {
       code: leaveTypes.code,
       name: leaveTypes.name,
       isPaid: leaveTypes.isPaid,
+      minAdvanceDays: leaveTypes.minAdvanceDays,
+      allowEmergencySameDay: leaveTypes.allowEmergencySameDay,
     })
     .from(leaveTypes)
     .where(and(eq(leaveTypes.companyId, companyId), eq(leaveTypes.isActive, true)))
@@ -242,6 +264,8 @@ export async function getLeaveTypeRepo(id: string) {
       companyId: leaveTypes.companyId,
       name: leaveTypes.name,
       isPaid: leaveTypes.isPaid,
+      minAdvanceDays: leaveTypes.minAdvanceDays,
+      allowEmergencySameDay: leaveTypes.allowEmergencySameDay,
       isActive: leaveTypes.isActive,
     })
     .from(leaveTypes)
@@ -280,11 +304,15 @@ export async function listEmployeesRepo(p: ListEmployeeParams) {
   const where = [eq(employees.companyId, p.companyId), eq(employees.isDeleted, false)];
   if (p.branchId) where.push(eq(employees.branchId, p.branchId));
   if (p.departmentId) where.push(eq(employees.departmentId, p.departmentId));
+  if (p.jobTitleId) where.push(eq(employees.jobTitleId, p.jobTitleId));
+  if (p.officerEmployeeId) where.push(eq(employees.officerEmployeeId, p.officerEmployeeId));
   if (p.status !== null && p.status !== undefined)
     where.push(eq(employees.employmentStatus, p.status));
 
   const searchPredicate = p.search
     ? or(
+        ilike(employees.firstName, `%${p.search}%`),
+        ilike(employees.lastName, `%${p.search}%`),
         ilike(employees.displayName, `%${p.search}%`),
         ilike(employees.employeeNumber, `%${p.search}%`),
         ilike(employees.email, `%${p.search}%`),
@@ -311,7 +339,7 @@ export async function listEmployeesRepo(p: ListEmployeeParams) {
     .from(employees)
     .where(and(...where, ...(searchPredicate ? [searchPredicate] : [])));
 
-  const data = await db
+  const baseQuery = db
     .select({
       id: employees.id,
       companyId: employees.companyId,
@@ -339,7 +367,11 @@ export async function listEmployeesRepo(p: ListEmployeeParams) {
       departmentName: departments.name,
       jobTitleId: employees.jobTitleId,
       jobTitleName: jobTitles.name,
-      managerEmployeeId: employees.managerEmployeeId,
+      reportingOfficerTitleId: employees.reportingOfficerTitleId,
+      officerEmployeeId: employees.officerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
       hasUserAccount: employees.hasUserAccount,
       createdAt: employees.createdAt,
       updatedAt: employees.updatedAt,
@@ -350,14 +382,57 @@ export async function listEmployeesRepo(p: ListEmployeeParams) {
     .leftJoin(departments, eq(employees.departmentId, departments.id))
     .leftJoin(jobTitles, eq(employees.jobTitleId, jobTitles.id))
     .where(and(...where, ...(searchPredicate ? [searchPredicate] : [])))
-    .orderBy(...(orderBy.length ? orderBy : [asc(employees.createdAt), asc(employees.id)]))
-    .limit(p.limit)
-    .offset(p.offset);
+    .orderBy(...(orderBy.length ? orderBy : [asc(employees.displayName), asc(employees.id)]));
+
+  const data = p.noPagination ? await baseQuery : await baseQuery.limit(p.limit).offset(p.offset);
 
   return {
     data,
     totalRecords: Number((countRow?.c as unknown as bigint) ?? 0n),
   };
+}
+
+export async function listEmployeeOptionsRepo(input: {
+  companyId: string;
+  branchId?: string | null;
+  departmentId?: string | null;
+  jobTitleId?: string | null;
+  officerEmployeeId?: string | null;
+  status?: number | null;
+  search?: string | null;
+}) {
+  const where = [eq(employees.companyId, input.companyId), eq(employees.isDeleted, false)];
+  if (input.branchId) where.push(eq(employees.branchId, input.branchId));
+  if (input.departmentId) where.push(eq(employees.departmentId, input.departmentId));
+  if (input.jobTitleId) where.push(eq(employees.jobTitleId, input.jobTitleId));
+  if (input.officerEmployeeId) where.push(eq(employees.officerEmployeeId, input.officerEmployeeId));
+  if (input.status !== null && input.status !== undefined)
+    where.push(eq(employees.employmentStatus, input.status));
+
+  const searchPredicate = input.search
+    ? or(
+        ilike(employees.displayName, `%${input.search}%`),
+        ilike(employees.employeeNumber, `%${input.search}%`),
+        ilike(employees.firstName, `%${input.search}%`),
+        ilike(employees.lastName, `%${input.search}%`),
+        ilike(employees.email, `%${input.search}%`),
+      )
+    : undefined;
+
+  return db
+    .select({
+      id: employees.id,
+      employeeNumber: employees.employeeNumber,
+      displayName: employees.displayName,
+      branchId: employees.branchId,
+      locationId: employees.locationId,
+      departmentId: employees.departmentId,
+      jobTitleId: employees.jobTitleId,
+      employmentStatus: employees.employmentStatus,
+    })
+    .from(employees)
+    .where(and(...where, ...(searchPredicate ? [searchPredicate] : [])))
+    .orderBy(asc(employees.displayName), asc(employees.id));
 }
 
 export async function getEmployeeRepo(id: string) {
@@ -401,7 +476,11 @@ export async function getEmployeeRepo(id: string) {
       locationId: employees.locationId,
       departmentId: employees.departmentId,
       jobTitleId: employees.jobTitleId,
-      managerEmployeeId: employees.managerEmployeeId,
+      reportingOfficerTitleId: employees.reportingOfficerTitleId,
+      officerEmployeeId: employees.officerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
       hasUserAccount: employees.hasUserAccount,
       isDeleted: employees.isDeleted,
       createdBy: employees.createdBy,
@@ -550,7 +629,7 @@ export async function listAttendanceRepo(p: ListAttendanceParams) {
         lte(attendanceRecords.attendanceDate, p.to),
       ),
     )
-    .orderBy(desc(attendanceRecords.attendanceDate), desc(attendanceRecords.createdAt))
+    .orderBy(asc(attendanceRecords.attendanceDate), asc(attendanceRecords.createdAt))
     .limit(p.limit)
     .offset(p.offset);
 
@@ -564,7 +643,10 @@ export async function listLeaveRequestsRepo(p: ListLeaveRequestParams) {
   const where = [
     eq(leaveRequests.companyId, p.companyId),
     ...(p.employeeId ? [eq(leaveRequests.employeeId, p.employeeId)] : []),
+    ...(p.leaveTypeId ? [eq(leaveRequests.leaveTypeId, p.leaveTypeId)] : []),
     ...(p.status !== null && p.status !== undefined ? [eq(leaveRequests.status, p.status)] : []),
+    ...(p.dateFrom ? [gte(leaveRequests.dateFrom, p.dateFrom)] : []),
+    ...(p.dateTo ? [lte(leaveRequests.dateTo, p.dateTo)] : []),
   ];
 
   const [countRow] = await db
@@ -583,8 +665,11 @@ export async function listLeaveRequestsRepo(p: ListLeaveRequestParams) {
       dateFrom: leaveRequests.dateFrom,
       dateTo: leaveRequests.dateTo,
       daysCount: leaveRequests.daysCount,
+      isEmergency: leaveRequests.isEmergency,
       reason: leaveRequests.reason,
-      managerEmployeeId: employees.managerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
       managerApprovalStatus: leaveRequests.managerApprovalStatus,
       managerApprovedBy: leaveRequests.managerApprovedBy,
       managerApprovedAt: leaveRequests.managerApprovedAt,
@@ -600,7 +685,7 @@ export async function listLeaveRequestsRepo(p: ListLeaveRequestParams) {
     .innerJoin(employees, eq(leaveRequests.employeeId, employees.id))
     .innerJoin(leaveTypes, eq(leaveRequests.leaveTypeId, leaveTypes.id))
     .where(and(...where))
-    .orderBy(desc(leaveRequests.dateFrom), desc(leaveRequests.createdAt))
+    .orderBy(asc(leaveRequests.dateFrom), asc(leaveRequests.createdAt))
     .limit(p.limit)
     .offset(p.offset);
 
@@ -622,6 +707,7 @@ export async function getLeaveRequestRepo(id: string) {
       dateFrom: leaveRequests.dateFrom,
       dateTo: leaveRequests.dateTo,
       daysCount: leaveRequests.daysCount,
+      isEmergency: leaveRequests.isEmergency,
       managerApprovalStatus: leaveRequests.managerApprovalStatus,
       managerApprovedBy: leaveRequests.managerApprovedBy,
       managerApprovedAt: leaveRequests.managerApprovedAt,
@@ -630,7 +716,10 @@ export async function getLeaveRequestRepo(id: string) {
       approvedBy: leaveRequests.approvedBy,
       approvedAt: leaveRequests.approvedAt,
       rejectionReason: leaveRequests.rejectionReason,
-      managerEmployeeId: employees.managerEmployeeId,
+      officerEmployeeId: employees.officerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
     })
     .from(leaveRequests)
     .innerJoin(employees, eq(leaveRequests.employeeId, employees.id))
@@ -687,6 +776,30 @@ export async function getPaidLeaveSummariesRepo(input: {
   return daysByEmployeeId;
 }
 
+export async function getEmployeeBookedLeaveDaysRepo(input: {
+  companyId: string;
+  employeeId: string;
+  from: Date;
+  to: Date;
+}) {
+  const [row] = await db
+    .select({
+      totalDays: sql<number>`COALESCE(SUM(${leaveRequests.daysCount}), 0)`,
+    })
+    .from(leaveRequests)
+    .where(
+      and(
+        eq(leaveRequests.companyId, input.companyId),
+        eq(leaveRequests.employeeId, input.employeeId),
+        inArray(leaveRequests.status, [0, 1]),
+        lte(leaveRequests.dateFrom, input.to),
+        gte(leaveRequests.dateTo, input.from),
+      ),
+    );
+
+  return Number(row?.totalDays ?? 0);
+}
+
 export async function updateEmployeeHasUserAccountRepo(id: string, hasUserAccount: boolean) {
   const [row] = await db
     .update(employees)
@@ -707,7 +820,13 @@ export async function getDepartmentRepo(id: string) {
 
 export async function getJobTitleRepo(id: string) {
   const [row] = await db
-    .select({ id: jobTitles.id, companyId: jobTitles.companyId, name: jobTitles.name })
+    .select({
+      id: jobTitles.id,
+      companyId: jobTitles.companyId,
+      departmentId: jobTitles.departmentId,
+      name: jobTitles.name,
+      defaultLeaveDays: jobTitles.defaultLeaveDays,
+    })
     .from(jobTitles)
     .where(eq(jobTitles.id, id))
     .limit(1);

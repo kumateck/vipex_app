@@ -57,9 +57,11 @@ export const jobTitles = pgTable(
     companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
+    departmentId: varchar('department_id', { length: 25 }).references(() => departments.id),
     code: varchar('code', { length: 50 }),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
+    defaultLeaveDays: integer('default_leave_days').notNull().default(0),
     isActive: boolean('is_active').notNull().default(true),
     createdBy: varchar('created_by', { length: 25 }).references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
@@ -120,6 +122,10 @@ export const employees = pgTable(
     locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
     departmentId: varchar('department_id', { length: 25 }).references(() => departments.id),
     jobTitleId: varchar('job_title_id', { length: 25 }).references(() => jobTitles.id),
+    reportingOfficerTitleId: varchar('reporting_officer_title_id', { length: 25 }).references(
+      () => jobTitles.id,
+    ),
+    officerEmployeeId: varchar('officer_employee_id', { length: 25 }),
     managerEmployeeId: varchar('manager_employee_id', { length: 25 }),
     hasUserAccount: boolean('has_user_account').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
@@ -251,6 +257,8 @@ export const leaveTypes = pgTable(
     code: varchar('code', { length: 50 }),
     name: varchar('name', { length: 255 }).notNull(),
     isPaid: boolean('is_paid').notNull().default(true),
+    minAdvanceDays: integer('min_advance_days').notNull().default(0),
+    allowEmergencySameDay: boolean('allow_emergency_same_day').notNull().default(true),
     isActive: boolean('is_active').notNull().default(true),
     createdBy: varchar('created_by', { length: 25 }).references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
@@ -284,6 +292,7 @@ export const leaveRequests = pgTable(
     dateFrom: timestamp('date_from', { withTimezone: false }).notNull(),
     dateTo: timestamp('date_to', { withTimezone: false }).notNull(),
     daysCount: integer('days_count').notNull().default(1),
+    isEmergency: boolean('is_emergency').notNull().default(false),
     reason: text('reason'),
     managerApprovalStatus: smallint('manager_approval_status')
       .notNull()

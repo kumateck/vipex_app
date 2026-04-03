@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useCreateDepartmentMutation, useListDepartmentsQuery } from '../api/hr.api';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
 export function DepartmentsPage() {
   const [name, setName] = useState('');
@@ -21,64 +22,66 @@ export function DepartmentsPage() {
   const rows = data?.data ?? [];
 
   return (
-    <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Departments</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="Department code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-            />
-            <Input
-              placeholder="Department name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <Button
-              disabled={!name.trim() || isCreating}
-              onClick={async () => {
-                await createDepartment({ code: code || null, name: name.trim() }).unwrap();
-                setCode('');
-                setName('');
-              }}
-            >
-              Add
-            </Button>
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+    <ScrollableWrapper>
+      <div className="w-full p-4 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Departments</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Department code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
+              <Input
+                placeholder="Department name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <Button
+                disabled={!name.trim() || isCreating}
+                onClick={async () => {
+                  await createDepartment({ code: code || null, name: name.trim() }).unwrap();
+                  setCode('');
+                  setName('');
+                }}
+              >
+                Add
+              </Button>
+            </div>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={3}>Loading departments...</TableCell>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              ) : rows.length ? (
-                rows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>{row.code ?? '-'}</TableCell>
-                    <TableCell>{row.name}</TableCell>
-                    <TableCell>{row.isActive ? 'Active' : 'Inactive'}</TableCell>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={3}>Loading departments...</TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={3}>No departments found.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+                ) : rows.length ? (
+                  rows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>{row.code ?? '-'}</TableCell>
+                      <TableCell>{row.name}</TableCell>
+                      <TableCell>{row.isActive ? 'Active' : 'Inactive'}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3}>No departments found.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }

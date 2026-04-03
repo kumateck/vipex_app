@@ -63,6 +63,12 @@ const IMPLEMENTED_STANDALONE_REPORT_URLS = new Set<string>([
   '/reports/transfers/acknowledged',
   '/reports/cashier/shifts',
   '/reports/cashier/revenue',
+  '/reports/audit/user',
+  '/reports/audit/module',
+  '/reports/audit/entity',
+  '/reports/audit/suspicious',
+  '/reports/audit/deleted',
+  '/reports/audit/roles',
 ]);
 
 function isImplementedReportUrl(url?: string) {
@@ -389,9 +395,219 @@ const BASE_ROUTES: Route[] = [
       },
       {
         title: 'Leave Mgt',
-        url: '/hr/leave',
         icon: 'CalendarDays',
-        permissionKey: PermissionKeys.CanReadLeaveRequests,
+        items: [
+          {
+            title: 'Leave Requests',
+            url: '/hr/leave/requests',
+            permissionKey: PermissionKeys.CanReadLeaveRequests,
+          },
+          {
+            title: 'Leave Types',
+            url: '/hr/leave/types',
+            permissionKey: PermissionKeys.CanReadLeaveTypes,
+          },
+          {
+            title: 'Leave History',
+            url: '/hr/leave/history',
+            permissionKey: PermissionKeys.CanReadLeaveRequests,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'Growth',
+    menu: [
+      {
+        title: 'Procurement',
+        icon: 'BookOpen',
+        items: [
+          {
+            title: 'Suppliers List',
+            url: '/procurement/suppliers',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          {
+            title: 'Create Supplier',
+            url: '/procurement/suppliers/new',
+            permissionKey: PermissionKeys.CanCreateProcurementSuppliers,
+          },
+          {
+            title: 'Request List',
+            url: '/procurement/purchase-requests',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          {
+            title: 'Create Request',
+            url: '/procurement/purchase-requests/new',
+            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          },
+          {
+            title: 'Approvals',
+            url: '/procurement/purchase-requests/approvals',
+            permissionKey: PermissionKeys.CanApproveProcurementPurchaseRequests,
+          },
+        ],
+      },
+      {
+        title: 'Fleet & Transport',
+        icon: 'Truck',
+        items: [
+          {
+            title: 'Vehicles List',
+            url: '/fleet-transport/vehicles',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Create Vehicle',
+            url: '/fleet-transport/vehicles/new',
+            permissionKey: PermissionKeys.CanCreateFleetVehicles,
+          },
+          {
+            title: 'Fuel Logs List',
+            url: '/fleet-transport/fuel-logs',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Create Fuel Log',
+            url: '/fleet-transport/fuel-logs/new',
+            permissionKey: PermissionKeys.CanCreateFleetFuelLogs,
+          },
+          {
+            title: 'Fuel Approvals',
+            url: '/fleet-transport/fuel-logs/approvals',
+            permissionKey: PermissionKeys.CanApproveFleetFuelLogs,
+          },
+        ],
+      },
+      {
+        title: 'Customer Wallet',
+        icon: 'Wallet',
+        items: [
+          {
+            title: 'Accounts List',
+            url: '/customer-wallet-credit/accounts',
+            permissionKey: PermissionKeys.CanReadCustomerWalletCredit,
+          },
+          {
+            title: 'Create Payment',
+            url: '/customer-wallet-credit/payments/new',
+            permissionKey: PermissionKeys.CanCreateCustomerWalletCreditPayments,
+          },
+          {
+            title: 'Approvals',
+            url: '/customer-wallet-credit/approvals',
+            permissionKey: PermissionKeys.CanApproveCustomerWalletCreditControls,
+          },
+        ],
+      },
+      {
+        title: 'SLA & Claims',
+        url: '/sla-claims',
+        icon: 'Shield',
+      },
+      {
+        title: 'Reconciliation',
+        icon: 'Receipt',
+        items: [
+          {
+            title: 'Session List',
+            url: '/reconciliation/sessions',
+            permissionKey: PermissionKeys.CanReadReconciliation,
+          },
+          {
+            title: 'Create Session',
+            url: '/reconciliation/sessions/new',
+            permissionKey: PermissionKeys.CanCreateReconciliationSessions,
+          },
+          {
+            title: 'Session Approvals',
+            url: '/reconciliation/sessions/approvals',
+            permissionKey: PermissionKeys.CanApproveReconciliationSessions,
+          },
+          {
+            title: 'Settlement List',
+            url: '/reconciliation/bank-settlements',
+            permissionKey: PermissionKeys.CanReadReconciliation,
+          },
+          {
+            title: 'Create Settlement',
+            url: '/reconciliation/bank-settlements/new',
+            permissionKey: PermissionKeys.CanCreateReconciliationBankSettlements,
+          },
+          {
+            title: 'Settlement Approvals',
+            url: '/reconciliation/bank-settlements/approvals',
+            permissionKey: PermissionKeys.CanApproveReconciliationBankSettlements,
+          },
+        ],
+      },
+      {
+        title: 'Document Compliance',
+        url: '/document-compliance',
+        icon: 'FileText',
+      },
+      {
+        title: 'Dispatch Optimization',
+        url: '/dispatch-optimization',
+        icon: 'Route',
+      },
+      {
+        title: 'Notification Hub',
+        icon: 'BellRing',
+        items: [
+          {
+            title: 'Providers List',
+            url: '/notification-hub/providers',
+            permissionKey: PermissionKeys.CanReadNotificationHub,
+          },
+          {
+            title: 'Add Provider',
+            url: '/notification-hub/providers/new',
+            permissionKey: PermissionKeys.CanManageNotificationProviders,
+          },
+          {
+            title: 'Templates List',
+            url: '/notification-hub/templates',
+            permissionKey: PermissionKeys.CanReadNotificationHub,
+          },
+          {
+            title: 'Add Template',
+            url: '/notification-hub/templates/new',
+            permissionKey: PermissionKeys.CanManageNotificationTemplates,
+          },
+          {
+            title: 'Campaigns List',
+            url: '/notification-hub/campaigns',
+            permissionKey: PermissionKeys.CanReadNotificationHub,
+          },
+          {
+            title: 'Create Campaign',
+            url: '/notification-hub/campaigns/new',
+            permissionKey: PermissionKeys.CanCreateNotificationCampaigns,
+          },
+          {
+            title: 'Approvals',
+            url: '/notification-hub/campaigns/approvals',
+            permissionKey: PermissionKeys.CanApproveNotificationCampaigns,
+          },
+          {
+            title: 'Delivery Logs',
+            url: '/notification-hub/dispatches',
+            permissionKey: PermissionKeys.CanReadNotificationHub,
+          },
+        ],
+      },
+      {
+        title: 'BI Dashboard',
+        url: '/bi-executive-dashboard',
+        icon: 'ChartBar',
+      },
+      {
+        title: 'Partner Portal',
+        url: '/partner-agent-portal',
+        icon: 'Users',
       },
     ],
   },
@@ -458,6 +674,40 @@ const BASE_ROUTES: Route[] = [
             title: 'History',
             url: '/parcels/rider/history',
             permissionKey: PermissionKeys.CanReadRiderHistory,
+          },
+        ],
+      },
+      {
+        title: 'IT Support',
+        icon: 'Wrench',
+        items: [
+          {
+            title: 'Tickets',
+            url: '/it-support/tickets',
+            permissionKey: PermissionKeys.CanReadItSupportTickets,
+          },
+          {
+            title: 'Create Ticket',
+            url: '/it-support/tickets/new',
+            permissionKey: PermissionKeys.CanCreateItSupportTickets,
+          },
+        ],
+      },
+      {
+        title: 'Communication',
+        icon: 'MessageSquare',
+        items: [
+          {
+            title: 'Team Chat',
+            url: '/communication/chat',
+          },
+          {
+            title: 'Calls',
+            url: '/communication/calls',
+          },
+          {
+            title: 'Events',
+            url: '/communication/events',
           },
         ],
       },

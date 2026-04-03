@@ -1,3 +1,5 @@
-import { LeavePage } from '@/features/hr';
+import { Navigate } from 'react-router-dom';
 
-export default LeavePage;
+export default function LeaveLandingPage() {
+  return <Navigate to="/hr/leave/requests" replace />;
+}

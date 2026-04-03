@@ -11,11 +11,13 @@ import {
   RefreshBody,
   TokenPair,
   AuthUserResponse,
+  PermissionsField,
   SetPasswordBody,
 } from './schemas';
 import {
   changePasswordCtrl,
   currentUserPermissionsCtrl,
+  currentUserProfileCtrl,
   currentUserReadOnlyPermissionsCtrl,
   forgotPasswordCtrl,
   loginCtrl,
@@ -23,6 +25,7 @@ import {
   refreshCtrl,
   resetPasswordCtrl,
   setPasswordCtrl,
+  updateCurrentUserProfileCtrl,
 } from './controller';
 
 export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/auth', (app) =>
@@ -54,7 +57,11 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
       },
       {
         body: RefreshBody,
-        response: t.Object({ tokens: TokenPair, user: AuthUserResponse }),
+        response: t.Object({
+          tokens: TokenPair,
+          user: AuthUserResponse,
+          permissions: PermissionsField,
+        }),
         detail: {
           tags: ['Auth'],
           summary: 'Refresh',
@@ -150,6 +157,71 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
         security: [{ bearerAuth: [] }],
       },
     })
+    .get('/me/profile', async ({ user }) => currentUserProfileCtrl(user!.sub), {
+      response: t.Object({
+        id: t.String(),
+        fullname: t.String(),
+        email: t.String({ format: 'email' }),
+        telephone: t.String(),
+        employeeId: t.Union([t.String(), t.Null()]),
+        role: t.Union([t.Object({ id: t.String(), name: t.String() }), t.Null()]),
+        company: t.Union([
+          t.Object({
+            id: t.String(),
+            name: t.String(),
+            useAccounting: t.Boolean(),
+          }),
+          t.Null(),
+        ]),
+        branch: t.Union([
+          t.Object({
+            id: t.String(),
+            name: t.String(),
+            type: t.Number(),
+          }),
+          t.Null(),
+        ]),
+        location: t.Union([
+          t.Object({
+            id: t.String(),
+            name: t.String(),
+          }),
+          t.Null(),
+        ]),
+        locationId: t.Union([t.String(), t.Null()]),
+        locationName: t.Union([t.String(), t.Null()]),
+        userType: t.Union([t.Number(), t.Null()]),
+      }),
+      beforeHandle: requireAuth(),
+      detail: {
+        tags: ['Auth'],
+        summary: 'Get current user profile',
+        operationId: 'getCurrentUserProfile',
+        security: [{ bearerAuth: [] }],
+      },
+    })
+    .patch(
+      '/me/profile',
+      async ({ user, body }) => {
+        return updateCurrentUserProfileCtrl(user!.sub, {
+          fullname: body.fullname,
+          telephone: body.telephone,
+        });
+      },
+      {
+        body: t.Object({
+          fullname: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
+          telephone: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
+        }),
+        beforeHandle: requireAuth(),
+        detail: {
+          tags: ['Auth'],
+          summary: 'Update current user profile',
+          operationId: 'updateCurrentUserProfile',
+          security: [{ bearerAuth: [] }],
+        },
+      },
+    )
     .get(
       '/me/permissions/read-only',
       async ({ user }) => currentUserReadOnlyPermissionsCtrl(user!.sub),

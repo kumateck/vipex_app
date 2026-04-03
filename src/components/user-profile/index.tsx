@@ -10,21 +10,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  BadgeCheck,
-  Bell,
-  Building2,
-  CreditCard,
-  LogOut,
-  Settings,
-  User,
-  ChevronsUpDown,
-  Shield,
-} from 'lucide-react';
+import { Building2, User, ChevronsUpDown, Shield, KeyRound, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAuthStore, type AuthUser } from '@/stores/auth-store';
+import { useLogoutMutation } from '@/features/auth/api';
 
 export interface UserProfileData {
   name: string;
@@ -45,6 +36,8 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
   const navigate = useNavigate();
   const { isMobile, state } = useSidebar();
   const authUser = useAuthStore((s) => s.user);
+  const refreshToken = useAuthStore((s) => s.refreshToken);
+  const [logout] = useLogoutMutation();
   // TODO: Get from auth context if not provided
   const userData: UserProfileData = user ?? {
     name: 'Desmond Adusei',
@@ -61,9 +54,10 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
     .join('')
     .toUpperCase();
 
-  const handleLogout = () => {
-    // TODO: Implement logout logic
-    navigate('/login');
+  const handleLogout = async () => {
+    const token = refreshToken ?? '';
+    await logout({ refreshToken: token });
+    navigate('/login', { replace: true });
   };
 
   const isSidebarCollapsed = variant === 'sidebar' && !isMobile && state === 'collapsed';
@@ -109,7 +103,7 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
           sideOffset={4}
           forceMount
         >
-          <UserMenuContent userData={authUser} onLogout={handleLogout} onNavigate={navigate} />
+          <UserMenuContent userData={authUser} onNavigate={navigate} onLogout={handleLogout} />
         </DropdownMenuContent>
       </DropdownMenu>
     );
@@ -143,7 +137,7 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-72" align="end" sideOffset={8} forceMount>
-        <UserMenuContent userData={authUser} onLogout={handleLogout} onNavigate={navigate} />
+        <UserMenuContent userData={authUser} onNavigate={navigate} onLogout={handleLogout} />
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -152,12 +146,12 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
 // Shared menu content for both variants
 function UserMenuContent({
   userData,
-  onLogout,
   onNavigate,
+  onLogout,
 }: {
   userData: AuthUser | null;
-  onLogout: () => void;
   onNavigate: (path: string) => void;
+  onLogout: () => Promise<void>;
 }) {
   const initials = userData?.fullname
     .split(' ')
@@ -201,26 +195,16 @@ function UserMenuContent({
           <User className="mr-2 h-4 w-4" />
           <span>Profile</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onNavigate('/settings')}>
-          <Settings className="mr-2 h-4 w-4" />
-          <span>Settings</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onNavigate('/settings/account')}>
-          <BadgeCheck className="mr-2 h-4 w-4" />
-          <span>Account</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onNavigate('/settings/billing')}>
-          <CreditCard className="mr-2 h-4 w-4" />
-          <span>Billing</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onNavigate('/notifications')}>
-          <Bell className="mr-2 h-4 w-4" />
-          <span>Notifications</span>
+        <DropdownMenuItem onClick={() => onNavigate('/settings/change-password')}>
+          <KeyRound className="mr-2 h-4 w-4" />
+          <span>Change Password</span>
         </DropdownMenuItem>
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
       <DropdownMenuItem
-        onClick={onLogout}
+        onClick={() => {
+          void onLogout();
+        }}
         className="text-destructive focus:text-destructive focus:bg-destructive/10"
       >
         <LogOut className="mr-2 h-4 w-4" />

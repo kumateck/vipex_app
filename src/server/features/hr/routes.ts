@@ -26,6 +26,7 @@ import {
   listDepartmentsCtrl,
   listAttendanceCtrl,
   listEmployeesCtrl,
+  listEmployeeOptionsCtrl,
   listJobTitleOptionsCtrl,
   listJobTitlesCtrl,
   listLeaveRequestsCtrl,
@@ -189,9 +190,11 @@ export const hrRoutes = new Elysia({ name: 'hr' })
     async ({ body, set, user }) => {
       const result = await createJobTitleCtrl({
         companyId: (user as AuthUser).companyId!,
+        departmentId: body.departmentId ?? null,
         code: body.code ?? null,
         name: body.name,
         description: body.description ?? null,
+        defaultLeaveDays: body.defaultLeaveDays ?? 0,
         createdBy: (user as AuthUser).sub,
       });
       set.status = HttpStatus.CREATED;
@@ -199,9 +202,11 @@ export const hrRoutes = new Elysia({ name: 'hr' })
     },
     {
       body: t.Object({
+        departmentId: t.Optional(t.Union([UUID, t.Null()])),
         code: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
         name: NonEmpty255,
         description: t.Optional(t.Union([t.String(), t.Null()])),
+        defaultLeaveDays: t.Optional(t.Number({ minimum: 0 })),
       }),
       beforeHandle: [
         requireAuth(),
@@ -215,17 +220,21 @@ export const hrRoutes = new Elysia({ name: 'hr' })
     '/job-titles/:id',
     async ({ params, body, user }) =>
       updateJobTitleCtrl(params.id, (user as AuthUser).companyId!, {
+        departmentId: body.departmentId,
         code: body.code,
         name: body.name,
         description: body.description,
+        defaultLeaveDays: body.defaultLeaveDays,
         isActive: body.isActive,
       }),
     {
       params: t.Object({ id: UUID }),
       body: t.Object({
+        departmentId: t.Optional(t.Union([UUID, t.Null()])),
         code: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
         name: t.Optional(NonEmpty255),
         description: t.Optional(t.Union([t.String(), t.Null()])),
+        defaultLeaveDays: t.Optional(t.Number({ minimum: 0 })),
         isActive: t.Optional(t.Boolean()),
       }),
       beforeHandle: [
@@ -288,6 +297,8 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         code: body.code ?? null,
         name: body.name,
         isPaid: body.isPaid ?? true,
+        minAdvanceDays: body.minAdvanceDays ?? 0,
+        allowEmergencySameDay: body.allowEmergencySameDay ?? true,
         createdBy: (user as AuthUser).sub,
       });
       set.status = HttpStatus.CREATED;
@@ -298,6 +309,8 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         code: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
         name: NonEmpty255,
         isPaid: t.Optional(t.Boolean()),
+        minAdvanceDays: t.Optional(t.Number({ minimum: 0 })),
+        allowEmergencySameDay: t.Optional(t.Boolean()),
       }),
       beforeHandle: [
         requireAuth(),
@@ -305,6 +318,42 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         requireModuleEnabled('hr'),
       ],
       detail: { tags: ['HR'], summary: 'Create leave type', operationId: 'createLeaveType' },
+    },
+  )
+  .get(
+    '/employees/options',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      const isHeadOffice = authUser.branchType === BranchType.HEADOFFICE;
+      return listEmployeeOptionsCtrl({
+        companyId: authUser.companyId!,
+        branchId: isHeadOffice ? (query.branchId ?? null) : (authUser.branchId ?? null),
+        departmentId: query.departmentId ?? null,
+        jobTitleId: query.jobTitleId ?? null,
+        officerEmployeeId: query.officerEmployeeId ?? null,
+        status: query.status ?? null,
+        search: query.search ?? null,
+      });
+    },
+    {
+      query: t.Object({
+        branchId: t.Optional(UUID),
+        departmentId: t.Optional(UUID),
+        jobTitleId: t.Optional(UUID),
+        officerEmployeeId: t.Optional(UUID),
+        status: t.Optional(t.Number()),
+        search: t.Optional(t.String()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanListEmployees),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'List employee options',
+        operationId: 'listEmployeeOptions',
+      },
     },
   )
   .get(
@@ -323,6 +372,8 @@ export const hrRoutes = new Elysia({ name: 'hr' })
           companyId: authUser.companyId!,
           branchId: isHeadOffice ? (query.branchId ?? null) : (authUser.branchId ?? null),
           departmentId: query.departmentId ?? null,
+          jobTitleId: query.jobTitleId ?? null,
+          officerEmployeeId: query.officerEmployeeId ?? null,
           status: query.status ?? null,
         },
       });
@@ -332,6 +383,8 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         ...PaginationRequestQueryProps,
         branchId: t.Optional(UUID),
         departmentId: t.Optional(UUID),
+        jobTitleId: t.Optional(UUID),
+        officerEmployeeId: t.Optional(UUID),
         status: t.Optional(t.Number()),
         search: t.Optional(t.String()),
       }),
@@ -365,7 +418,9 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         locationId: body.locationId ?? null,
         departmentId: body.departmentId ?? null,
         jobTitleId: body.jobTitleId ?? null,
-        managerEmployeeId: body.managerEmployeeId ?? null,
+        reportingOfficerTitleId: body.reportingOfficerTitleId ?? null,
+        officerEmployeeId: body.officerEmployeeId ?? null,
+        supervisorEmployeeId: body.supervisorEmployeeId ?? null,
         employmentStatus: body.employmentStatus ?? undefined,
         employmentType: body.employmentType ?? undefined,
         hireDate: new Date(body.hireDate),
@@ -392,7 +447,9 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         locationId: t.Optional(t.Union([UUID, t.Null()])),
         departmentId: t.Optional(t.Union([UUID, t.Null()])),
         jobTitleId: t.Optional(t.Union([UUID, t.Null()])),
-        managerEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        reportingOfficerTitleId: t.Optional(t.Union([UUID, t.Null()])),
+        officerEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        supervisorEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
         hireDate: t.String({ format: 'date' }),
         employmentStatus: t.Optional(t.Number()),
         employmentType: t.Optional(t.Number()),
@@ -435,7 +492,9 @@ export const hrRoutes = new Elysia({ name: 'hr' })
           locationId: body.locationId,
           departmentId: body.departmentId,
           jobTitleId: body.jobTitleId,
-          managerEmployeeId: body.managerEmployeeId,
+          reportingOfficerTitleId: body.reportingOfficerTitleId,
+          officerEmployeeId: body.officerEmployeeId,
+          supervisorEmployeeId: body.supervisorEmployeeId,
           employmentStatus: body.employmentStatus,
           employmentType: body.employmentType,
           confirmationDate: body.confirmationDate ? new Date(body.confirmationDate) : undefined,
@@ -463,7 +522,9 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         locationId: t.Optional(t.Union([UUID, t.Null()])),
         departmentId: t.Optional(t.Union([UUID, t.Null()])),
         jobTitleId: t.Optional(t.Union([UUID, t.Null()])),
-        managerEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        reportingOfficerTitleId: t.Optional(t.Union([UUID, t.Null()])),
+        officerEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        supervisorEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
         employmentStatus: t.Optional(t.Number()),
         employmentType: t.Optional(t.Number()),
         confirmationDate: t.Optional(t.Union([t.String({ format: 'date' }), t.Null()])),
@@ -585,6 +646,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         filters: {
           companyId: (user as AuthUser).companyId!,
           employeeId: query.employeeId ?? null,
+          leaveTypeId: query.leaveTypeId ?? null,
           status: query.status ?? null,
         },
       }),
@@ -592,6 +654,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
       query: t.Object({
         ...PaginationRequestQueryProps,
         employeeId: t.Optional(UUID),
+        leaveTypeId: t.Optional(UUID),
         status: t.Optional(t.Number()),
       }),
       beforeHandle: [
@@ -611,6 +674,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         leaveTypeId: body.leaveTypeId,
         dateFrom: new Date(body.dateFrom),
         dateTo: new Date(body.dateTo),
+        isEmergency: body.isEmergency ?? false,
         reason: body.reason ?? null,
         createdBy: (user as AuthUser).sub,
       });
@@ -623,6 +687,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         leaveTypeId: UUID,
         dateFrom: t.String({ format: 'date' }),
         dateTo: t.String({ format: 'date' }),
+        isEmergency: t.Optional(t.Boolean()),
         reason: t.Optional(t.Union([t.String(), t.Null()])),
       }),
       beforeHandle: [

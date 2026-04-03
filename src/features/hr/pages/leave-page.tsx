@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useListEmployeesQuery } from '../api/hr.api';
+import { useListEmployeeOptionsQuery } from '../api/hr.api';
 import {
   useApproveLeaveRequestMutation,
   useApproveLeaveRequestByManagerMutation,
@@ -82,7 +82,7 @@ export function LeavePage() {
   const { data: leaveTypesData } = useListLeaveTypesQuery({ pageSize: 100 });
   const { data: leaveTypeOptions = [] } = useListLeaveTypeOptionsQuery();
   const { data: leaveRequestsData } = useListLeaveRequestsQuery({ pageSize: 100 });
-  const { data: employeesData } = useListEmployeesQuery({ pageSize: 100 });
+  const { data: employees = [] } = useListEmployeeOptionsQuery();
   const authUser = useAuthStore((state) => state.user as AuthUser | null);
   const currentEmployeeId = authUser?.employeeId ?? null;
   const permissions = new Set(authUser?.permissions ?? []);
@@ -101,7 +101,6 @@ export function LeavePage() {
 
   const leaveTypes = leaveTypesData?.data ?? [];
   const leaveRequests = leaveRequestsData?.data ?? [];
-  const employees = employeesData?.data ?? [];
   const requestRange: DateRange | undefined = {
     from: dateFrom ? new Date(`${dateFrom}T00:00:00`) : undefined,
     to: dateTo ? new Date(`${dateTo}T00:00:00`) : undefined,
@@ -267,7 +266,7 @@ export function LeavePage() {
                         <TableCell>
                           {managerApprovalLabel(
                             row.managerApprovalStatus,
-                            Boolean(row.managerEmployeeId),
+                            Boolean(row.supervisorEmployeeId),
                           )}
                         </TableCell>
                         <TableCell>{leaveStatusLabel(row.status)}</TableCell>
@@ -286,7 +285,7 @@ export function LeavePage() {
                               disabled={
                                 row.status !== 0 ||
                                 row.managerApprovalStatus !== 0 ||
-                                row.managerEmployeeId !== currentEmployeeId ||
+                                row.supervisorEmployeeId !== currentEmployeeId ||
                                 !permissions.has('CanApproveManagedLeaveRequests') ||
                                 isManagerApprovingLeaveRequest
                               }
@@ -302,7 +301,7 @@ export function LeavePage() {
                               disabled={
                                 row.status !== 0 ||
                                 row.managerApprovalStatus !== 0 ||
-                                row.managerEmployeeId !== currentEmployeeId ||
+                                row.supervisorEmployeeId !== currentEmployeeId ||
                                 !permissions.has('CanApproveManagedLeaveRequests') ||
                                 isManagerRejectingLeaveRequest
                               }

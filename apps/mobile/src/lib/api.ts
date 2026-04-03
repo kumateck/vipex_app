@@ -1,6 +1,16 @@
 import Constants from 'expo-constants';
 import type { LoginResponse, SessionState, TokenPair } from '@mobile/types/auth';
 import type {
+  CommunicationCallSession,
+  CommunicationChannel,
+  CommunicationChannelUnreadCount,
+  CommunicationMessage,
+  CommunicationThread,
+  CommunicationUnreadCount,
+  CommunicationVoiceJoin,
+  MobileUserOption,
+} from '@mobile/types/communication';
+import type {
   ParcelFullDetails,
   ParcelSearchRow,
   PickupQueueCard,
@@ -321,6 +331,164 @@ export async function riderReturnedToOffice(
     body: {
       riderUserId: input.riderUserId,
     },
+  });
+}
+
+export async function listCommunicationThreads(
+  accessToken: string,
+  input?: { threadType?: 'direct' | 'group' | 'channel' },
+): Promise<CommunicationThread[]> {
+  return request<CommunicationThread[]>({
+    path: '/communication/threads',
+    token: accessToken,
+    query: input?.threadType ? { threadType: input.threadType } : undefined,
+  });
+}
+
+export async function listCommunicationChannels(
+  accessToken: string,
+  input?: { channelType?: 'text' | 'voice'; includeArchived?: boolean },
+): Promise<CommunicationChannel[]> {
+  return request<CommunicationChannel[]>({
+    path: '/communication/channels',
+    token: accessToken,
+    query: {
+      channelType: input?.channelType,
+      includeArchived: input?.includeArchived ?? false,
+    },
+  });
+}
+
+export async function listCommunicationMessages(
+  accessToken: string,
+  input: { threadId: string; limit?: number },
+): Promise<CommunicationMessage[]> {
+  return request<CommunicationMessage[]>({
+    path: '/communication/messages',
+    token: accessToken,
+    query: {
+      threadId: input.threadId,
+      limit: input.limit ?? 100,
+    },
+  });
+}
+
+export async function createCommunicationMessage(
+  accessToken: string,
+  input: {
+    threadId: string;
+    body?: string | null;
+    messageType?: string | null;
+    metadataJson?: Record<string, unknown> | null;
+  },
+): Promise<CommunicationMessage> {
+  return request<CommunicationMessage>({
+    path: '/communication/messages',
+    method: 'POST',
+    token: accessToken,
+    body: input,
+  });
+}
+
+export async function listCommunicationUnreadCounts(
+  accessToken: string,
+): Promise<CommunicationUnreadCount[]> {
+  return request<CommunicationUnreadCount[]>({
+    path: '/communication/messages/unread-counts',
+    token: accessToken,
+  });
+}
+
+export async function markCommunicationThreadRead(
+  accessToken: string,
+  input: { threadId: string },
+): Promise<{ threadId: string; readAt: string | null }> {
+  return request<{ threadId: string; readAt: string | null }>({
+    path: '/communication/messages/read',
+    method: 'POST',
+    token: accessToken,
+    body: input,
+  });
+}
+
+export async function listCommunicationChannelUnreadCounts(
+  accessToken: string,
+  input?: { channelType?: 'text' | 'voice' },
+): Promise<CommunicationChannelUnreadCount[]> {
+  return request<CommunicationChannelUnreadCount[]>({
+    path: '/communication/channels/unread-counts',
+    token: accessToken,
+    query: {
+      channelType: input?.channelType,
+    },
+  });
+}
+
+export async function markCommunicationChannelRead(
+  accessToken: string,
+  input: { id: string },
+): Promise<{ channelId: string; readAt: string | null }> {
+  return request<{ channelId: string; readAt: string | null }>({
+    path: `/communication/channels/${input.id}/read`,
+    method: 'POST',
+    token: accessToken,
+  });
+}
+
+export async function listCommunicationCalls(
+  accessToken: string,
+  input?: { status?: string; channelId?: string; threadId?: string },
+): Promise<CommunicationCallSession[]> {
+  return request<CommunicationCallSession[]>({
+    path: '/communication/calls',
+    token: accessToken,
+    query: {
+      status: input?.status,
+      channelId: input?.channelId,
+      threadId: input?.threadId,
+    },
+  });
+}
+
+export async function joinCommunicationVoiceChannel(
+  accessToken: string,
+  input: { channelId: string },
+): Promise<CommunicationVoiceJoin> {
+  return request<CommunicationVoiceJoin>({
+    path: `/communication/calls/voice/${input.channelId}/join`,
+    method: 'POST',
+    token: accessToken,
+  });
+}
+
+export async function listMobileUserOptions(accessToken: string): Promise<MobileUserOption[]> {
+  return request<MobileUserOption[]>({
+    path: '/users/options',
+    token: accessToken,
+  });
+}
+
+export async function registerCommunicationPushToken(
+  accessToken: string,
+  input: { token: string; platform: 'ios' | 'android' | 'web' },
+): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>({
+    path: '/communication/push/register',
+    method: 'POST',
+    token: accessToken,
+    body: input,
+  });
+}
+
+export async function unregisterCommunicationPushToken(
+  accessToken: string,
+  input: { token: string },
+): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>({
+    path: '/communication/push/unregister',
+    method: 'POST',
+    token: accessToken,
+    body: input,
   });
 }
 

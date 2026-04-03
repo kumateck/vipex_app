@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useListCompanyModulesQuery,
   useSetCompanyModuleStateMutation,
@@ -21,57 +22,59 @@ export function CompanyModulesPage() {
   const modules = useMemo(() => (Array.isArray(data) ? data : (data?.data ?? [])), [data]);
 
   return (
-    <div className="w-full p-4 space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Company Modules</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Module</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading || isFetching ? (
+    <ScrollableWrapper>
+      <div className="w-full p-4 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Company Modules</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4}>Loading modules...</TableCell>
+                  <TableHead>Module</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
-              ) : modules.length ? (
-                modules.map((module) => (
-                  <TableRow key={module.code}>
-                    <TableCell className="font-medium">{module.name}</TableCell>
-                    <TableCell>{module.description ?? '-'}</TableCell>
-                    <TableCell>{module.isEnabled ? 'Enabled' : 'Disabled'}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant={module.isEnabled ? 'outline' : 'default'}
-                        disabled={isSaving}
-                        onClick={() =>
-                          setModuleState({
-                            moduleCode: module.code,
-                            isEnabled: !module.isEnabled,
-                          })
-                        }
-                      >
-                        {module.isEnabled ? 'Disable' : 'Enable'}
-                      </Button>
-                    </TableCell>
+              </TableHeader>
+              <TableBody>
+                {isLoading || isFetching ? (
+                  <TableRow>
+                    <TableCell colSpan={4}>Loading modules...</TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4}>No modules found.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+                ) : modules.length ? (
+                  modules.map((module) => (
+                    <TableRow key={module.code}>
+                      <TableCell className="font-medium">{module.name}</TableCell>
+                      <TableCell>{module.description ?? '-'}</TableCell>
+                      <TableCell>{module.isEnabled ? 'Enabled' : 'Disabled'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant={module.isEnabled ? 'outline' : 'default'}
+                          disabled={isSaving}
+                          onClick={() =>
+                            setModuleState({
+                              moduleCode: module.code,
+                              isEnabled: !module.isEnabled,
+                            })
+                          }
+                        >
+                          {module.isEnabled ? 'Disable' : 'Enable'}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4}>No modules found.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }

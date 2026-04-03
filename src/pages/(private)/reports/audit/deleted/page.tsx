@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
+import { format } from 'date-fns';
 import { DataTable } from '@/components/datatable';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { PaginationMeta } from '@/server/types/pagination.types';
@@ -126,20 +127,18 @@ export default function DeletedParcelAuditPage() {
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="audit-deleted-from">From</Label>
-                <Input
-                  id="audit-deleted-from"
-                  type="date"
-                  value={from}
-                  onChange={(event) => setFrom(event.target.value)}
+                <DatePicker
+                  date={from ? new Date(`${from}T00:00:00`) : undefined}
+                  onDateChange={(date) => setFrom(date ? format(date, 'yyyy-MM-dd') : '')}
+                  placeholder="Select start date"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="audit-deleted-to">To</Label>
-                <Input
-                  id="audit-deleted-to"
-                  type="date"
-                  value={to}
-                  onChange={(event) => setTo(event.target.value)}
+                <DatePicker
+                  date={to ? new Date(`${to}T00:00:00`) : undefined}
+                  onDateChange={(date) => setTo(date ? format(date, 'yyyy-MM-dd') : '')}
+                  placeholder="Select end date"
                 />
               </div>
             </div>

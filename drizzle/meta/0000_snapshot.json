@@ -1,5 +1,5 @@
 {
-  "id": "0deb02b1-f256-4fd3-857f-19fdb579bad9",
+  "id": "734d6698-e03b-492f-8a85-1368cfabddfc",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -9572,6 +9572,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "reporting_officer_title_id": {
+          "name": "reporting_officer_title_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "officer_employee_id": {
+          "name": "officer_employee_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "manager_employee_id": {
           "name": "manager_employee_id",
           "type": "varchar(25)",
@@ -9796,6 +9808,15 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
+        "employees_reporting_officer_title_id_job_titles_id_fk": {
+          "name": "employees_reporting_officer_title_id_job_titles_id_fk",
+          "tableFrom": "employees",
+          "tableTo": "job_titles",
+          "columnsFrom": ["reporting_officer_title_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "employees_created_by_users_id_fk": {
           "name": "employees_created_by_users_id_fk",
           "tableFrom": "employees",
@@ -9827,6 +9848,12 @@
           "type": "varchar(25)",
           "primaryKey": false,
           "notNull": true
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "varchar(25)",
+          "primaryKey": false,
+          "notNull": false
         },
         "code": {
           "name": "code",
@@ -9939,6 +9966,15 @@
           "tableFrom": "job_titles",
           "tableTo": "companies",
           "columnsFrom": ["company_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "job_titles_department_id_departments_id_fk": {
+          "name": "job_titles_department_id_departments_id_fk",
+          "tableFrom": "job_titles",
+          "tableTo": "departments",
+          "columnsFrom": ["department_id"],
           "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"

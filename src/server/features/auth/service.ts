@@ -10,6 +10,7 @@ import {
   revokeAllUserTokensRepo,
   revokeRefreshTokenRepo,
   rotateRefreshTokenRepo,
+  updateCurrentUserProfileRepo,
   updateUserPasswordRepo,
 } from './repository';
 import { env } from '../../utils/env';
@@ -53,6 +54,12 @@ async function hashEmailOtp(email: string, otp: string) {
 export async function loginSvc(email: string, password: string, ua?: string, ip?: string) {
   const user = await getUserByEmailRepo(email);
   if (!user || user === null) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
+  if (user.status === UserStatus.INVITED) {
+    throw new HttpError(
+      HttpStatus.FORBIDDEN,
+      'Account setup pending. Use your invite OTP on the Set Password page.',
+    );
+  }
   if (user.status && user.status !== UserStatus.ACTIVE)
     throw new HttpError(HttpStatus.FORBIDDEN, 'Account disabled');
   const ok = await verifyPassword(password, user?.password);
@@ -62,19 +69,7 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
     permissionKeys.length > 0
       ? permissionKeys
       : PermissionCatalog.map((permission) => permission.key);
-  const payload = {
-    sub: user.id,
-    email: user.email,
-    employeeId: user.employeeId ?? null,
-    roleId: user.roleId ?? null,
-    companyId: user.companyId ?? null,
-    branchId: user.branchId ?? null,
-    branchType: user.branch?.type ?? null,
-    locationId: user.locationId ?? null,
-    userType: user.userType ?? null,
-    permissions: resolvedPermissionKeys,
-  };
-  const accessToken = await signAccessToken(payload);
+  const accessToken = await signAccessToken({ sub: user.id });
   const refreshPlain = generateOpaqueToken(32);
   const refreshHash = await sha256HexAsync(refreshPlain);
   const refreshExpSec = parseDurationToSeconds(env.JWT_REFRESH_EXPIRES);
@@ -129,18 +124,7 @@ export async function refreshSvc(refreshToken: string) {
   const nextExpiresAt = new Date(Date.now() + refreshExpSec * 1000);
   await rotateRefreshTokenRepo(hash, nextHash, nextExpiresAt);
 
-  const accessToken = await signAccessToken({
-    sub: user.id,
-    email: user.email,
-    employeeId: user.employeeId ?? null,
-    roleId: user.roleId ?? null,
-    companyId: user.companyId ?? null,
-    branchId: user.branchId ?? null,
-    branchType: user.branch?.type ?? null,
-    locationId: user.locationId ?? null,
-    userType: user.userType ?? null,
-    permissions: resolvedPermissionKeys,
-  });
+  const accessToken = await signAccessToken({ sub: user.id });
 
   return {
     accessToken,
@@ -196,6 +180,12 @@ export async function resetPasswordSvc(email: string, otp: string, newPassword: 
   const tokenHash = await hashEmailOtp(normalizedEmail, otp);
   const user = await findUserByEmailAndResetTokenRepo(normalizedEmail, tokenHash);
   if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid or expired OTP');
+  if (user.status === UserStatus.INVITED) {
+    throw new HttpError(
+      HttpStatus.BAD_REQUEST,
+      'This OTP is for account setup. Please use Set Password.',
+    );
+  }
   const passwordHash = await hashPassword(newPassword);
   await updateUserPasswordRepo(user.id, passwordHash);
   await clearUserResetTokenRepo(user.id);
@@ -243,4 +233,52 @@ export async function getCurrentUserPermissionsSvc(userId: string) {
   );
 
   return { allPermissions, readOnlyPermissions };
+}
+
+export async function getCurrentUserProfileSvc(userId: string) {
+  const user = await getUserByIdRepo(userId);
+  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
+
+  return {
+    id: user.id,
+    fullname: user.fullname,
+    email: user.email,
+    telephone: user.telephone,
+    employeeId: user.employeeId ?? null,
+    role: user.role ?? null,
+    branch: user.branch ?? null,
+    company: user.company ?? null,
+    location: user.location ?? null,
+    locationId: user.locationId ?? null,
+    locationName: user.location?.name ?? null,
+    userType: user.userType ?? null,
+  };
+}
+
+export async function updateCurrentUserProfileSvc(
+  userId: string,
+  patch: { fullname?: string; telephone?: string },
+) {
+  const updates: { fullname?: string; telephone?: string } = {};
+
+  if (patch.fullname !== undefined) {
+    const fullname = patch.fullname.trim();
+    if (!fullname) throw new HttpError(HttpStatus.BAD_REQUEST, 'Full name is required');
+    updates.fullname = fullname;
+  }
+
+  if (patch.telephone !== undefined) {
+    const telephone = patch.telephone.trim();
+    if (!telephone) throw new HttpError(HttpStatus.BAD_REQUEST, 'Telephone is required');
+    updates.telephone = telephone;
+  }
+
+  if (!Object.keys(updates).length) {
+    throw new HttpError(HttpStatus.BAD_REQUEST, 'No profile fields provided');
+  }
+
+  const updated = await updateCurrentUserProfileRepo(userId, updates);
+  if (!updated) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
+
+  return getCurrentUserProfileSvc(userId);
 }

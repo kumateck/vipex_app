@@ -26,10 +26,12 @@ import {
   findUserByEmployeeIdRepo,
   getDepartmentRepo,
   getEmployeeRepo,
+  getEmployeeBookedLeaveDaysRepo,
   getJobTitleRepo,
   getLeaveRequestRepo,
   getLeaveTypeRepo,
   listDepartmentOptionsRepo,
+  listEmployeeOptionsRepo,
   listDepartmentsRepo,
   listAttendanceRepo,
   listEmployeesRepo,
@@ -115,6 +117,8 @@ export async function createLeaveTypeSvc(input: {
   code?: string | null;
   name: string;
   isPaid?: boolean;
+  minAdvanceDays?: number;
+  allowEmergencySameDay?: boolean;
   createdBy: string;
 }) {
   const duplicate = await findLeaveTypeByNameRepo(input.companyId, input.name);
@@ -124,6 +128,8 @@ export async function createLeaveTypeSvc(input: {
     code: input.code ?? null,
     name: input.name.trim(),
     isPaid: input.isPaid ?? true,
+    minAdvanceDays: Math.max(0, Math.floor(input.minAdvanceDays ?? 0)),
+    allowEmergencySameDay: input.allowEmergencySameDay ?? true,
     createdBy: input.createdBy,
   });
   await recordAuditLog({
@@ -133,25 +139,35 @@ export async function createLeaveTypeSvc(input: {
     entityId: created?.id ?? null,
     action: 'LEAVE_TYPE_CREATED',
     message: 'Leave type created',
-    metadata: { code: input.code ?? null, name: input.name.trim(), isPaid: input.isPaid ?? true },
+    metadata: {
+      code: input.code ?? null,
+      name: input.name.trim(),
+      isPaid: input.isPaid ?? true,
+      minAdvanceDays: Math.max(0, Math.floor(input.minAdvanceDays ?? 0)),
+      allowEmergencySameDay: input.allowEmergencySameDay ?? true,
+    },
   });
   return { id: created?.id };
 }
 
 export async function createJobTitleSvc(input: {
   companyId: string;
+  departmentId?: string | null;
   code?: string | null;
   name: string;
   description?: string | null;
+  defaultLeaveDays?: number;
   createdBy: string;
 }) {
   const duplicate = await findJobTitleByNameRepo(input.companyId, input.name);
   if (duplicate) throw Conflict('Job title name already exists');
   const created = await createJobTitleRepo({
     companyId: input.companyId,
+    departmentId: input.departmentId ?? null,
     code: input.code ?? null,
     name: input.name,
     description: input.description ?? null,
+    defaultLeaveDays: Math.max(0, Math.floor(input.defaultLeaveDays ?? 0)),
     createdBy: input.createdBy,
   });
   return { id: created?.id };
@@ -160,7 +176,14 @@ export async function createJobTitleSvc(input: {
 export async function updateJobTitleSvc(
   id: string,
   companyId: string,
-  patch: { code?: string | null; name?: string; description?: string | null; isActive?: boolean },
+  patch: {
+    departmentId?: string | null;
+    code?: string | null;
+    name?: string;
+    description?: string | null;
+    defaultLeaveDays?: number;
+    isActive?: boolean;
+  },
 ) {
   const current = await getJobTitleRepo(id);
   if (!current || current.companyId !== companyId) throw NotFound('Job title not found');
@@ -168,12 +191,30 @@ export async function updateJobTitleSvc(
     const duplicate = await findJobTitleByNameRepo(companyId, patch.name);
     if (duplicate && duplicate.id !== id) throw Conflict('Job title name already exists');
   }
-  const updated = await updateJobTitleRepo(id, patch);
+  const normalizedPatch = {
+    ...patch,
+    ...(typeof patch.defaultLeaveDays === 'number'
+      ? { defaultLeaveDays: Math.max(0, Math.floor(patch.defaultLeaveDays)) }
+      : {}),
+  };
+  const updated = await updateJobTitleRepo(id, normalizedPatch);
   return { id: updated?.id };
 }
 
 export async function listEmployeesSvc(p: ListEmployeeParams) {
   return listEmployeesRepo(p);
+}
+
+export async function listEmployeeOptionsSvc(input: {
+  companyId: string;
+  branchId?: string | null;
+  departmentId?: string | null;
+  jobTitleId?: string | null;
+  officerEmployeeId?: string | null;
+  status?: number | null;
+  search?: string | null;
+}) {
+  return listEmployeeOptionsRepo(input);
 }
 
 export async function getEmployeeSvc(id: string) {
@@ -182,8 +223,21 @@ export async function getEmployeeSvc(id: string) {
   return employee;
 }
 
+function getSupervisorEmployeeId(input: {
+  officerEmployeeId?: string | null;
+  supervisorEmployeeId?: string | null;
+}) {
+  return input.officerEmployeeId ?? input.supervisorEmployeeId ?? null;
+}
+
 function normalizeSettlementField(value?: string | null) {
   return value?.trim() || null;
+}
+
+function normalizeNullableString(value?: string | null) {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : null;
 }
 
 function validateSettlementDetails(input: {
@@ -250,7 +304,9 @@ export async function createEmployeeSvc(input: {
   locationId?: string | null;
   departmentId?: string | null;
   jobTitleId?: string | null;
-  managerEmployeeId?: string | null;
+  reportingOfficerTitleId?: string | null;
+  officerEmployeeId?: string | null;
+  supervisorEmployeeId?: string | null;
   employmentStatus?: number;
   employmentType?: number;
   hireDate: Date;
@@ -285,7 +341,9 @@ export async function createEmployeeSvc(input: {
     locationId: input.locationId ?? null,
     departmentId: input.departmentId ?? null,
     jobTitleId: input.jobTitleId ?? null,
-    managerEmployeeId: input.managerEmployeeId ?? null,
+    reportingOfficerTitleId: input.reportingOfficerTitleId ?? null,
+    officerEmployeeId: input.officerEmployeeId ?? null,
+    managerEmployeeId: input.supervisorEmployeeId ?? null,
     employmentStatus: input.employmentStatus ?? EmploymentStatus.ACTIVE,
     employmentType: input.employmentType,
     hireDate: input.hireDate,
@@ -300,7 +358,7 @@ export async function createEmployeeSvc(input: {
       locationId: input.locationId ?? null,
       departmentId: input.departmentId ?? null,
       jobTitleId: input.jobTitleId ?? null,
-      managerEmployeeId: input.managerEmployeeId ?? null,
+      managerEmployeeId: input.officerEmployeeId ?? input.supervisorEmployeeId ?? null,
       effectiveFrom: input.hireDate,
       reason: 'Initial assignment',
       createdBy: input.createdBy,
@@ -341,7 +399,9 @@ export async function updateEmployeeSvc(
     locationId?: string | null;
     departmentId?: string | null;
     jobTitleId?: string | null;
-    managerEmployeeId?: string | null;
+    reportingOfficerTitleId?: string | null;
+    officerEmployeeId?: string | null;
+    supervisorEmployeeId?: string | null;
     employmentStatus?: number;
     employmentType?: number;
     confirmationDate?: Date | null;
@@ -361,9 +421,11 @@ export async function updateEmployeeSvc(
   const nextFirstName = patch.firstName ?? current.firstName;
   const nextMiddleName = patch.middleName !== undefined ? patch.middleName : current.middleName;
   const nextLastName = patch.lastName ?? current.lastName;
+  const { supervisorEmployeeId, ...patchWithoutSupervisor } = patch;
 
   const updated = await updateEmployeeRepo(id, {
-    ...patch,
+    ...patchWithoutSupervisor,
+    managerEmployeeId: supervisorEmployeeId,
     paymentMethod: settlement.paymentMethod,
     bankName: settlement.bankName,
     bankAccountName: settlement.bankAccountName,
@@ -468,6 +530,7 @@ export async function createLeaveRequestSvc(input: {
   leaveTypeId: string;
   dateFrom: Date;
   dateTo: Date;
+  isEmergency?: boolean;
   reason?: string | null;
   createdBy: string;
 }) {
@@ -479,7 +542,57 @@ export async function createLeaveRequestSvc(input: {
     throw NotFound('Leave type not found');
   }
   if (input.dateTo < input.dateFrom) throw Conflict('Leave end date cannot be before start date');
-  const managerApprovalStatus = employee.managerEmployeeId
+  const normalizedDateFrom = startOfDay(input.dateFrom);
+  const normalizedDateTo = startOfDay(input.dateTo);
+  const today = startOfDay(new Date());
+  if (normalizedDateFrom < today) {
+    throw Conflict('Leave start date cannot be in the past');
+  }
+
+  const reason = normalizeNullableString(input.reason);
+  const isEmergency = Boolean(input.isEmergency);
+  if (isEmergency && !reason) {
+    throw BadRequest('Emergency leave requests require a reason');
+  }
+
+  const requestedLeadDays = Math.floor(
+    (normalizedDateFrom.getTime() - today.getTime()) / (24 * 60 * 60 * 1000),
+  );
+  const minAdvanceDays = Math.max(0, Number(leaveType.minAdvanceDays ?? 0));
+  if (isEmergency) {
+    if (!leaveType.allowEmergencySameDay) {
+      throw Conflict('This leave type does not allow emergency same-day requests');
+    }
+    if (requestedLeadDays !== 0) {
+      throw Conflict('Emergency leave can only be requested for the same day');
+    }
+  } else if (requestedLeadDays < minAdvanceDays) {
+    throw Conflict(`Leave request must be made at least ${minAdvanceDays} day(s) in advance`);
+  }
+
+  const requestedDays = differenceInDaysInclusive(normalizedDateFrom, normalizedDateTo);
+  if (employee.jobTitleId) {
+    const jobTitle = await getJobTitleRepo(employee.jobTitleId);
+    const defaultLeaveDays = Number(jobTitle?.defaultLeaveDays ?? 0);
+    if (defaultLeaveDays > 0) {
+      const yearStart = new Date(normalizedDateFrom.getFullYear(), 0, 1);
+      const yearEnd = new Date(normalizedDateFrom.getFullYear(), 11, 31);
+      const bookedDays = await getEmployeeBookedLeaveDaysRepo({
+        companyId: input.companyId,
+        employeeId: input.employeeId,
+        from: yearStart,
+        to: yearEnd,
+      });
+      if (bookedDays + requestedDays > defaultLeaveDays) {
+        throw Conflict(
+          `Leave allocation exceeded for ${normalizedDateFrom.getFullYear()}: ${bookedDays}/${defaultLeaveDays} day(s) already booked`,
+        );
+      }
+    }
+  }
+
+  const supervisorEmployeeId = getSupervisorEmployeeId(employee);
+  const managerApprovalStatus = supervisorEmployeeId
     ? ApprovalStatus.PENDING
     : ApprovalStatus.APPROVED;
 
@@ -487,10 +600,11 @@ export async function createLeaveRequestSvc(input: {
     companyId: input.companyId,
     employeeId: input.employeeId,
     leaveTypeId: input.leaveTypeId,
-    dateFrom: input.dateFrom,
-    dateTo: input.dateTo,
-    daysCount: differenceInDaysInclusive(input.dateFrom, input.dateTo),
-    reason: input.reason ?? null,
+    dateFrom: normalizedDateFrom,
+    dateTo: normalizedDateTo,
+    daysCount: requestedDays,
+    isEmergency,
+    reason,
     managerApprovalStatus,
     managerApprovedAt: managerApprovalStatus === ApprovalStatus.APPROVED ? new Date() : null,
     status: LeaveRequestStatus.PENDING,
@@ -517,15 +631,16 @@ export async function createLeaveRequestSvc(input: {
 }
 
 async function assertManagerCanApproveLeaveRequest(
-  request: { managerEmployeeId?: string | null },
+  request: { supervisorEmployeeId?: string | null; officerEmployeeId?: string | null },
   actorUserId: string,
 ) {
   const actor = await getUserByIdRepo(actorUserId);
   if (!actor?.employeeId) throw Forbidden('Current user is not linked to an employee record');
-  if (!request.managerEmployeeId) {
+  const supervisorEmployeeId = request.officerEmployeeId ?? request.supervisorEmployeeId ?? null;
+  if (!supervisorEmployeeId) {
     throw Conflict('This leave request does not require manager approval');
   }
-  if (request.managerEmployeeId !== actor.employeeId) {
+  if (supervisorEmployeeId !== actor.employeeId) {
     throw Forbidden('Only the assigned manager can approve this leave request');
   }
 }
