@@ -16,6 +16,7 @@ import ThrowErrorMessage from '@/lib/throw-error';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot, Spinner } from '@/components/ui';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
 export default function SetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -82,102 +83,104 @@ export default function SetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen grid place-items-center p-6">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Set Password</CardTitle>
-          <CardDescription>
-            For first-time invited users only. If your account is already active, use Forgot
-            Password.
-          </CardDescription>
-        </CardHeader>
+    <ScrollableWrapper className="p-6">
+      <div className="min-h-screen grid place-items-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Set Password</CardTitle>
+            <CardDescription>
+              For first-time invited users only. If your account is already active, use Forgot
+              Password.
+            </CardDescription>
+          </CardHeader>
 
-        <form onSubmit={submit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="set-email">Email</Label>
-              <Input
-                id="set-email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+          <form onSubmit={submit}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="set-email">Email</Label>
+                <Input
+                  id="set-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>OTP Code</Label>
+                <InputOTP maxLength={6} value={otp} onChange={setOtp} pattern="^[0-9]+$">
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                  </InputOTPGroup>
+                  <InputOTPSeparator className="mx-0.5" />
+                  <InputOTPGroup>
+                    <InputOTPSlot index={1} />
+                  </InputOTPGroup>
+                  <InputOTPSeparator className="mx-0.5" />
+                  <InputOTPGroup>
+                    <InputOTPSlot index={2} />
+                  </InputOTPGroup>
+                  <InputOTPSeparator className="mx-0.5" />
+                  <InputOTPGroup>
+                    <InputOTPSlot index={3} />
+                  </InputOTPGroup>
+                  <InputOTPSeparator className="mx-0.5" />
+                  <InputOTPGroup>
+                    <InputOTPSlot index={4} />
+                  </InputOTPGroup>
+                  <InputOTPSeparator className="mx-0.5" />
+                  <InputOTPGroup>
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+
+              <PasswordField
+                id="password"
+                label="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                minLength={8}
+                autoComplete="new-password"
                 required
               />
-            </div>
 
-            <div className="space-y-2">
-              <Label>OTP Code</Label>
-              <InputOTP maxLength={6} value={otp} onChange={setOtp} pattern="^[0-9]+$">
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                </InputOTPGroup>
-                <InputOTPSeparator className="mx-0.5" />
-                <InputOTPGroup>
-                  <InputOTPSlot index={1} />
-                </InputOTPGroup>
-                <InputOTPSeparator className="mx-0.5" />
-                <InputOTPGroup>
-                  <InputOTPSlot index={2} />
-                </InputOTPGroup>
-                <InputOTPSeparator className="mx-0.5" />
-                <InputOTPGroup>
-                  <InputOTPSlot index={3} />
-                </InputOTPGroup>
-                <InputOTPSeparator className="mx-0.5" />
-                <InputOTPGroup>
-                  <InputOTPSlot index={4} />
-                </InputOTPGroup>
-                <InputOTPSeparator className="mx-0.5" />
-                <InputOTPGroup>
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
+              <PasswordField
+                id="confirm"
+                label="Confirm Password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                minLength={8}
+                autoComplete="new-password"
+                required
+              />
+            </CardContent>
 
-            <PasswordField
-              id="password"
-              label="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              minLength={8}
-              autoComplete="new-password"
-              required
-            />
-
-            <PasswordField
-              id="confirm"
-              label="Confirm Password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              minLength={8}
-              autoComplete="new-password"
-              required
-            />
-          </CardContent>
-
-          <CardFooter>
-            <div className="w-full space-y-2 py-5">
-              <Button
-                type="submit"
-                className="w-full flex gap-2"
-                disabled={isLoading || otp.length !== 6 || !email.trim()}
-              >
-                {isLoading && <Spinner />}
-                {isLoading ? 'Setting password...' : 'Set Password'}
-              </Button>
-              <Button asChild type="button" variant="outline" className="w-full">
-                <Link to="/login">Return to login</Link>
-              </Button>
-              <Button asChild type="button" variant="secondary" className="w-full">
-                <Link to={`/forgot${email ? `?email=${encodeURIComponent(email)}` : ''}`}>
-                  Forgot Password Instead
-                </Link>
-              </Button>
-            </div>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+            <CardFooter>
+              <div className="w-full space-y-2 py-5">
+                <Button
+                  type="submit"
+                  className="w-full flex gap-2"
+                  disabled={isLoading || otp.length !== 6 || !email.trim()}
+                >
+                  {isLoading && <Spinner />}
+                  {isLoading ? 'Setting password...' : 'Set Password'}
+                </Button>
+                <Button asChild type="button" variant="outline" className="w-full">
+                  <Link to="/login">Return to login</Link>
+                </Button>
+                <Button asChild type="button" variant="secondary" className="w-full">
+                  <Link to={`/forgot${email ? `?email=${encodeURIComponent(email)}` : ''}`}>
+                    Forgot Password Instead
+                  </Link>
+                </Button>
+              </div>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
+    </ScrollableWrapper>
   );
 }
