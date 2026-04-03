@@ -8,7 +8,7 @@ import {
   listMobileUserOptions,
   markCommunicationThreadRead,
 } from '@mobile/lib/api';
-import { notifyError, notifySuccess } from '@mobile/lib/notify';
+import { notifyError } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import type { CommunicationMessage, MobileUserOption } from '@mobile/types/communication';
