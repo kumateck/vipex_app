@@ -23,6 +23,7 @@ import {
   useCreateEmployeeMutation,
   useGetEmployeeQuery,
   useListDepartmentOptionsQuery,
+  useListEmployeeOptionsQuery,
   useListJobTitleOptionsQuery,
   useUpdateEmployeeMutation,
 } from '../api/hr.api';
@@ -67,6 +68,7 @@ type EmployeeFormState = {
   locationId: string;
   departmentId: string;
   jobTitleId: string;
+  supervisorEmployeeId: string;
   employmentStatus: string;
   employmentType: string;
   confirmationDate: string;
@@ -91,6 +93,7 @@ const EMPTY_FORM: EmployeeFormState = {
   locationId: '',
   departmentId: '',
   jobTitleId: '',
+  supervisorEmployeeId: '',
   employmentStatus: String(EmploymentStatus.ACTIVE),
   employmentType: String(EmploymentType.FULL_TIME),
   confirmationDate: '',
@@ -129,6 +132,10 @@ export function EmployeeCreateEditPage() {
 
   const { data: departmentOptions = [] } = useListDepartmentOptionsQuery();
   const { data: jobTitleOptions = [] } = useListJobTitleOptionsQuery();
+  const { data: employeeOptions = [] } = useListEmployeeOptionsQuery();
+  const supervisorOptions = isEditing
+    ? employeeOptions.filter((option) => option.id !== id)
+    : employeeOptions;
   const { data: branchOptions = [] } = useListBranchOptionsQuery();
   const { data: locationOptions = [] } = useListLocationOptionsQuery(
     { branchId: form.branchId || undefined },
@@ -158,6 +165,7 @@ export function EmployeeCreateEditPage() {
       locationId: employee.locationId ?? '',
       departmentId: employee.departmentId ?? '',
       jobTitleId: employee.jobTitleId ?? '',
+      supervisorEmployeeId: employee.supervisorEmployeeId ?? '',
       employmentStatus: String(employee.employmentStatus ?? EmploymentStatus.ACTIVE),
       employmentType: String(employee.employmentType ?? EmploymentType.FULL_TIME),
       confirmationDate: dateInputValue(employee.confirmationDate),
@@ -451,6 +459,31 @@ export function EmployeeCreateEditPage() {
                     </Field>
 
                     <Field>
+                      <FieldLabel>Reporting manager</FieldLabel>
+                      <Select
+                        value={form.supervisorEmployeeId || '__none__'}
+                        onValueChange={(value) =>
+                          setForm((current) => ({
+                            ...current,
+                            supervisorEmployeeId: value === '__none__' ? '' : value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select reporting manager" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">No reporting manager</SelectItem>
+                          {supervisorOptions.map((option) => (
+                            <SelectItem key={option.id} value={option.id}>
+                              {option.displayName} ({option.employeeNumber})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+
+                    <Field>
                       <FieldLabel>Status</FieldLabel>
                       <Select
                         value={form.employmentStatus}
@@ -567,6 +600,7 @@ export function EmployeeCreateEditPage() {
                               locationId: form.locationId || null,
                               departmentId: form.departmentId || null,
                               jobTitleId: form.jobTitleId || null,
+                              supervisorEmployeeId: form.supervisorEmployeeId || null,
                               employmentStatus: Number(form.employmentStatus),
                               employmentType: Number(form.employmentType),
                               confirmationDate: form.confirmationDate || null,
@@ -596,6 +630,7 @@ export function EmployeeCreateEditPage() {
                           locationId: form.locationId || null,
                           departmentId: form.departmentId || null,
                           jobTitleId: form.jobTitleId || null,
+                          supervisorEmployeeId: form.supervisorEmployeeId || null,
                           employmentStatus: Number(form.employmentStatus),
                           employmentType: Number(form.employmentType),
                           hireDate: new Date().toISOString().slice(0, 10),

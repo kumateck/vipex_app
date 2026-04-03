@@ -18,6 +18,13 @@ export type FleetVehicle = {
   updatedAt: string;
 };
 
+export type FleetVehicleOption = {
+  id: string;
+  plateNumber: string;
+  model: string;
+  isActive: boolean;
+};
+
 export type FleetFuelLog = {
   id: string;
   logNo: string;
@@ -51,6 +58,17 @@ export const fleetTransportApi = api.injectEndpoints({
         params: buildServerPaginationParams(query),
       }),
       providesTags: (result) => provideEntityListTags('FleetTransport', result),
+    }),
+
+    listFleetVehicleOptions: builder.query<
+      FleetVehicleOption[],
+      { search?: string; isActive?: boolean } | void
+    >({
+      query: (params) => ({
+        url: '/fleet-transport/vehicles/options',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'FleetTransport', id: 'VEHICLE_OPTIONS' }],
     }),
 
     createFleetVehicle: builder.mutation<
@@ -152,6 +170,7 @@ export const fleetTransportApi = api.injectEndpoints({
 
 export const {
   useListFleetVehiclesQuery,
+  useListFleetVehicleOptionsQuery,
   useCreateFleetVehicleMutation,
   useUpdateFleetVehicleMutation,
   useListFleetFuelLogsQuery,

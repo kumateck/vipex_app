@@ -1,6 +1,11 @@
 import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
-import { createAuditLogSvc, getAuditLogSvc, listAuditLogsSvc } from './service';
+import {
+  createAuditLogSvc,
+  getAuditAnalyticsSvc,
+  getAuditLogSvc,
+  listAuditLogsSvc,
+} from './service';
 
 export async function listAuditLogsCtrl(
   q: PaginationRequestDto<{
@@ -41,6 +46,30 @@ export async function listAuditLogsCtrl(
 export async function getAuditLogCtrl(id: string, companyId: string) {
   const row = await getAuditLogSvc(id, companyId);
   return { ...row, createdAt: row.createdAt.toISOString() };
+}
+
+export async function getAuditAnalyticsCtrl(input: {
+  companyId: string;
+  from?: string | null;
+  to?: string | null;
+}) {
+  const summary = await getAuditAnalyticsSvc({
+    companyId: input.companyId,
+    from: input.from ?? null,
+    to: input.to ?? null,
+  });
+
+  return {
+    ...summary,
+    recentHighRiskEvents: summary.recentHighRiskEvents.map((row) => ({
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+    })),
+    recentTechEvents: summary.recentTechEvents.map((row) => ({
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+    })),
+  };
 }
 
 export async function listEntityAuditHistoryCtrl(input: {

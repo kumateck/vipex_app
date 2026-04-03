@@ -81,6 +81,26 @@ export interface CurrentUserReadOnlyPermissionsResponse {
   readOnlyPermissions: string[];
 }
 
+export interface CurrentUserProfileResponse {
+  id: string;
+  fullname: string;
+  email: string;
+  telephone: string;
+  employeeId: string | null;
+  role: { id: string; name: string } | null;
+  branch: { id: string; name: string; type: number } | null;
+  company: { id: string; name: string; useAccounting: boolean } | null;
+  location: { id: string; name: string } | null;
+  locationId: string | null;
+  locationName: string | null;
+  userType: number | null;
+}
+
+export interface UpdateCurrentUserProfileRequest {
+  fullname?: string;
+  telephone?: string;
+}
+
 export const authApi = api.injectEndpoints({
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, LoginRequest>({
@@ -197,6 +217,37 @@ export const authApi = api.injectEndpoints({
       }),
       providesTags: ['Auth'],
     }),
+
+    getCurrentUserProfile: builder.query<CurrentUserProfileResponse, void>({
+      query: () => ({
+        url: '/auth/me/profile',
+      }),
+      providesTags: ['Auth'],
+    }),
+
+    updateCurrentUserProfile: builder.mutation<
+      CurrentUserProfileResponse,
+      UpdateCurrentUserProfileRequest
+    >({
+      query: (body) => ({
+        url: '/auth/me/profile',
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['Auth'],
+      async onQueryStarted(_args, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          const store = useAuthStore.getState();
+          const current = store.user;
+          if (current) {
+            store.updateUser({ fullname: data.fullname, telephone: data.telephone });
+          }
+        } catch (_err) {
+          // Error handled by consumer
+        }
+      },
+    }),
   }),
 });
 
@@ -210,4 +261,6 @@ export const {
   useChangePasswordMutation,
   useGetCurrentUserPermissionsQuery,
   useGetCurrentUserReadOnlyPermissionsQuery,
+  useGetCurrentUserProfileQuery,
+  useUpdateCurrentUserProfileMutation,
 } = authApi;

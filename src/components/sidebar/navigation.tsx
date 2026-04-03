@@ -63,6 +63,12 @@ const IMPLEMENTED_STANDALONE_REPORT_URLS = new Set<string>([
   '/reports/transfers/acknowledged',
   '/reports/cashier/shifts',
   '/reports/cashier/revenue',
+  '/reports/audit/user',
+  '/reports/audit/module',
+  '/reports/audit/entity',
+  '/reports/audit/suspicious',
+  '/reports/audit/deleted',
+  '/reports/audit/roles',
 ]);
 
 function isImplementedReportUrl(url?: string) {

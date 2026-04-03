@@ -27,6 +27,26 @@ export default function SetPasswordPage() {
   const [password, setPassword] = useState<string>('');
   const [confirm, setConfirm] = useState<string>('');
 
+  const inviteOnlyErrorPhrases = [
+    'User is not in invited state',
+    'This OTP is for account setup. Please use Set Password.',
+  ];
+
+  function getErrorMessage(error: unknown): string {
+    if (!error || typeof error !== 'object') return '';
+    const err = error as {
+      message?: string;
+      data?: { message?: string; error?: { message?: string } };
+      error?: string;
+    };
+
+    if (typeof err.message === 'string') return err.message;
+    if (typeof err.data?.message === 'string') return err.data.message;
+    if (typeof err.data?.error?.message === 'string') return err.data.error.message;
+    if (typeof err.error === 'string') return err.error;
+    return '';
+  }
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -46,6 +66,17 @@ export default function SetPasswordPage() {
       toast.success('Password set successfully. Please login.');
       navigate('/login');
     } catch (err) {
+      const message = getErrorMessage(err);
+      const shouldRedirectToForgot = inviteOnlyErrorPhrases.some((phrase) =>
+        message.toLowerCase().includes(phrase.toLowerCase()),
+      );
+
+      if (shouldRedirectToForgot) {
+        toast.error('Account already activated. Use Forgot Password to reset your password.');
+        navigate(`/forgot${email ? `?email=${encodeURIComponent(email)}` : ''}`);
+        return;
+      }
+
       ThrowErrorMessage(err);
     }
   };
@@ -55,7 +86,10 @@ export default function SetPasswordPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Set Password</CardTitle>
-          <CardDescription>Enter your email, invitation OTP, and your new password</CardDescription>
+          <CardDescription>
+            For first-time invited users only. If your account is already active, use Forgot
+            Password.
+          </CardDescription>
         </CardHeader>
 
         <form onSubmit={submit}>
@@ -134,6 +168,11 @@ export default function SetPasswordPage() {
               </Button>
               <Button asChild type="button" variant="outline" className="w-full">
                 <Link to="/login">Return to login</Link>
+              </Button>
+              <Button asChild type="button" variant="secondary" className="w-full">
+                <Link to={`/forgot${email ? `?email=${encodeURIComponent(email)}` : ''}`}>
+                  Forgot Password Instead
+                </Link>
               </Button>
             </div>
           </CardFooter>

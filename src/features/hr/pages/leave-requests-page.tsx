@@ -25,7 +25,7 @@ import {
   useApproveLeaveRequestMutation,
   useApproveLeaveRequestByManagerMutation,
   useCreateLeaveRequestMutation,
-  useListEmployeesQuery,
+  useListEmployeeOptionsQuery,
   useListLeaveRequestsQuery,
   useListLeaveTypeOptionsQuery,
   useRejectLeaveRequestMutation,
@@ -75,7 +75,7 @@ export function LeaveRequestsPage() {
 
   const { data: leaveTypeOptions = [] } = useListLeaveTypeOptionsQuery();
   const { data: leaveRequestsData } = useListLeaveRequestsQuery({ pageSize: 100 });
-  const { data: employeesData } = useListEmployeesQuery({ pageSize: 100 });
+  const { data: employees = [] } = useListEmployeeOptionsQuery();
   const authUser = useAuthStore((state) => state.user as AuthUser | null);
   const currentEmployeeId = authUser?.employeeId ?? null;
   const permissions = new Set(authUser?.permissions ?? []);
@@ -92,7 +92,6 @@ export function LeaveRequestsPage() {
     useRejectLeaveRequestMutation();
 
   const leaveRequests = leaveRequestsData?.data ?? [];
-  const employees = employeesData?.data ?? [];
   const requestRange: DateRange | undefined = {
     from: dateFrom ? new Date(`${dateFrom}T00:00:00`) : undefined,
     to: dateTo ? new Date(`${dateTo}T00:00:00`) : undefined,

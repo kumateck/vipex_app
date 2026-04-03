@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useListTaxProfilesQuery } from '@/features/accounting/api';
-import { useListEmployeesQuery } from '@/features/hr';
+import { useListEmployeeOptionsQuery } from '@/features/hr';
 import { useAuthStore, type AuthUser } from '@/stores/auth-store';
 import {
   CompensationItemCalculationType,
@@ -103,7 +103,7 @@ export function PayrollCompensationPage() {
   const { data: earningTypesData } = useListEarningTypesQuery({ pageSize: 100 });
   const { data: deductionTypesData } = useListDeductionTypesQuery({ pageSize: 100 });
   const { data: payrollGroupsData } = useListPayrollGroupsQuery({ pageSize: 100 });
-  const { data: employeesData } = useListEmployeesQuery({ pageSize: 100 });
+  const { data: employees = [] } = useListEmployeeOptionsQuery();
   const { data: compensationData } = useListCompensationQuery({ pageSize: 100 });
   const { data: employeeCompensation } = useGetEmployeeCompensationQuery(employeeId, {
     skip: !employeeId,
@@ -124,7 +124,6 @@ export function PayrollCompensationPage() {
   const earningTypes = earningTypesData?.data ?? [];
   const deductionTypes = deductionTypesData?.data ?? [];
   const payrollGroups = payrollGroupsData?.data ?? [];
-  const employees = employeesData?.data ?? [];
   const compensationRows = compensationData?.data ?? [];
   const taxProfiles = taxProfilesData ?? [];
 

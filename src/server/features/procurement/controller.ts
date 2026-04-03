@@ -4,6 +4,7 @@ import {
   approvePurchaseRequestSvc,
   createProcurementSupplierSvc,
   createPurchaseRequestSvc,
+  listProcurementSupplierOptionsSvc,
   listProcurementSuppliersSvc,
   listPurchaseRequestsSvc,
   rejectPurchaseRequestSvc,
@@ -76,6 +77,14 @@ export async function listProcurementSuppliersCtrl(
       pageSize: pagination.pageSize,
     }),
   };
+}
+
+export async function listProcurementSupplierOptionsCtrl(input: {
+  companyId: string;
+  search?: string | null;
+  isActive?: boolean | null;
+}) {
+  return listProcurementSupplierOptionsSvc(input);
 }
 
 export async function createProcurementSupplierCtrl(input: {

@@ -18,6 +18,17 @@ export interface EntityAuditLog {
   createdAt: string;
 }
 
+export interface AuditAnalyticsSummary {
+  totalEvents: number;
+  suspiciousActions: number;
+  deletedActions: number;
+  rolePermissionChanges: number;
+  moduleChanges: number;
+  securitySignals: number;
+  recentHighRiskEvents: EntityAuditLog[];
+  recentTechEvents: EntityAuditLog[];
+}
+
 export const auditApi = api.injectEndpoints({
   endpoints: (builder) => ({
     listAuditLogs: builder.query<
@@ -44,7 +55,20 @@ export const auditApi = api.injectEndpoints({
         url: `/audit/entities/${entityType}/${entityId}`,
       }),
     }),
+    getAuditAnalyticsSummary: builder.query<
+      AuditAnalyticsSummary,
+      { from?: string | null; to?: string | null } | void
+    >({
+      query: (params) => ({
+        url: '/audit/analytics',
+        params: params ?? undefined,
+      }),
+    }),
   }),
 });
 
-export const { useListAuditLogsQuery, useGetEntityAuditHistoryQuery } = auditApi;
+export const {
+  useListAuditLogsQuery,
+  useGetEntityAuditHistoryQuery,
+  useGetAuditAnalyticsSummaryQuery,
+} = auditApi;

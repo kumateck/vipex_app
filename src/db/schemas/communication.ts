@@ -305,6 +305,31 @@ export const commChannelReadState = pgTable(
   }),
 );
 
+export const commPushTokens = pgTable(
+  'comm_push_tokens',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    userId: varchar('user_id', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+    token: varchar('token', { length: 255 }).notNull(),
+    platform: varchar('platform', { length: 20 }).notNull().default('unknown'),
+    isActive: boolean('is_active').notNull().default(true),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: false }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompanyUser: index('comm_push_tokens_company_user_idx').on(t.companyId, t.userId),
+    byToken: uniqueIndex('comm_push_tokens_token_uq').on(t.token),
+  }),
+);
+
 export const commPresence = pgTable(
   'comm_presence',
   {

@@ -5,6 +5,7 @@ import {
   createFleetFuelLogSvc,
   createFleetVehicleSvc,
   listFleetFuelLogsSvc,
+  listFleetVehicleOptionsSvc,
   listFleetVehiclesSvc,
   rejectFleetFuelLogSvc,
   updateFleetVehicleSvc,
@@ -77,6 +78,14 @@ export async function listFleetVehiclesCtrl(
       pageSize: pagination.pageSize,
     }),
   };
+}
+
+export async function listFleetVehicleOptionsCtrl(input: {
+  companyId: string;
+  search?: string | null;
+  isActive?: boolean | null;
+}) {
+  return listFleetVehicleOptionsSvc(input);
 }
 
 export async function createFleetVehicleCtrl(input: {

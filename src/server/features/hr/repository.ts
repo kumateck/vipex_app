@@ -25,6 +25,7 @@ export type ListEmployeeParams = {
   status?: number | null;
   search?: string | null;
   sort?: SortField[] | null;
+  noPagination?: boolean;
 };
 
 export type ListDepartmentParams = {
@@ -310,6 +311,8 @@ export async function listEmployeesRepo(p: ListEmployeeParams) {
 
   const searchPredicate = p.search
     ? or(
+        ilike(employees.firstName, `%${p.search}%`),
+        ilike(employees.lastName, `%${p.search}%`),
         ilike(employees.displayName, `%${p.search}%`),
         ilike(employees.employeeNumber, `%${p.search}%`),
         ilike(employees.email, `%${p.search}%`),
@@ -336,7 +339,7 @@ export async function listEmployeesRepo(p: ListEmployeeParams) {
     .from(employees)
     .where(and(...where, ...(searchPredicate ? [searchPredicate] : [])));
 
-  const data = await db
+  const baseQuery = db
     .select({
       id: employees.id,
       companyId: employees.companyId,
@@ -379,14 +382,57 @@ export async function listEmployeesRepo(p: ListEmployeeParams) {
     .leftJoin(departments, eq(employees.departmentId, departments.id))
     .leftJoin(jobTitles, eq(employees.jobTitleId, jobTitles.id))
     .where(and(...where, ...(searchPredicate ? [searchPredicate] : [])))
-    .orderBy(...(orderBy.length ? orderBy : [asc(employees.displayName), asc(employees.id)]))
-    .limit(p.limit)
-    .offset(p.offset);
+    .orderBy(...(orderBy.length ? orderBy : [asc(employees.displayName), asc(employees.id)]));
+
+  const data = p.noPagination ? await baseQuery : await baseQuery.limit(p.limit).offset(p.offset);
 
   return {
     data,
     totalRecords: Number((countRow?.c as unknown as bigint) ?? 0n),
   };
+}
+
+export async function listEmployeeOptionsRepo(input: {
+  companyId: string;
+  branchId?: string | null;
+  departmentId?: string | null;
+  jobTitleId?: string | null;
+  officerEmployeeId?: string | null;
+  status?: number | null;
+  search?: string | null;
+}) {
+  const where = [eq(employees.companyId, input.companyId), eq(employees.isDeleted, false)];
+  if (input.branchId) where.push(eq(employees.branchId, input.branchId));
+  if (input.departmentId) where.push(eq(employees.departmentId, input.departmentId));
+  if (input.jobTitleId) where.push(eq(employees.jobTitleId, input.jobTitleId));
+  if (input.officerEmployeeId) where.push(eq(employees.officerEmployeeId, input.officerEmployeeId));
+  if (input.status !== null && input.status !== undefined)
+    where.push(eq(employees.employmentStatus, input.status));
+
+  const searchPredicate = input.search
+    ? or(
+        ilike(employees.displayName, `%${input.search}%`),
+        ilike(employees.employeeNumber, `%${input.search}%`),
+        ilike(employees.firstName, `%${input.search}%`),
+        ilike(employees.lastName, `%${input.search}%`),
+        ilike(employees.email, `%${input.search}%`),
+      )
+    : undefined;
+
+  return db
+    .select({
+      id: employees.id,
+      employeeNumber: employees.employeeNumber,
+      displayName: employees.displayName,
+      branchId: employees.branchId,
+      locationId: employees.locationId,
+      departmentId: employees.departmentId,
+      jobTitleId: employees.jobTitleId,
+      employmentStatus: employees.employmentStatus,
+    })
+    .from(employees)
+    .where(and(...where, ...(searchPredicate ? [searchPredicate] : [])))
+    .orderBy(asc(employees.displayName), asc(employees.id));
 }
 
 export async function getEmployeeRepo(id: string) {

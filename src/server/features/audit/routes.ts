@@ -4,6 +4,7 @@ import { authPlugin, requireAuth, requirePermissions } from '@/server/plugins/au
 import { PermissionKeys } from '@/shared/permissions/constants';
 import {
   createAuditExportJobCtrl,
+  getAuditAnalyticsCtrl,
   getAuditLogCtrl,
   listAuditLogsCtrl,
   listEntityAuditHistoryCtrl,
@@ -44,6 +45,28 @@ export const auditRoutes = new Elysia({ name: 'audit' })
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanListAuditLogs)],
       detail: { tags: ['Audit'], summary: 'List audit logs', operationId: 'listAuditLogs' },
+    },
+  )
+  .get(
+    '/analytics',
+    async ({ query, user }) => {
+      return getAuditAnalyticsCtrl({
+        companyId: user!.companyId!,
+        from: query.from ?? null,
+        to: query.to ?? null,
+      });
+    },
+    {
+      query: t.Object({
+        from: t.Optional(t.String({ format: 'date-time' })),
+        to: t.Optional(t.String({ format: 'date-time' })),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanListAuditLogs)],
+      detail: {
+        tags: ['Audit'],
+        summary: 'Get audit analytics summary',
+        operationId: 'getAuditAnalytics',
+      },
     },
   )
   .get(

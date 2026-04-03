@@ -38,6 +38,7 @@ import { useListRoleOptionsQuery } from '@/features/rbac';
 import {
   useCreateEmployeeUserAccountMutation,
   useListDepartmentOptionsQuery,
+  useListEmployeeOptionsQuery,
   useListEmployeesQuery,
   useListJobTitleOptionsQuery,
   type Employee,
@@ -75,10 +76,7 @@ export function EmployeesPage() {
   );
 
   const { data, isLoading } = useListEmployeesQuery(listQuery);
-  const { data: reportingOfficerData } = useListEmployeesQuery({
-    pageSize: 500,
-    sort: [{ field: 'displayName', direction: 'asc' }],
-  });
+  const { data: reportingOfficerOptions = [] } = useListEmployeeOptionsQuery();
   const { data: departmentOptions = [] } = useListDepartmentOptionsQuery();
   const { data: jobTitleOptions = [] } = useListJobTitleOptionsQuery();
   const { data: branchOptions = [] } = useListBranchOptionsQuery();
@@ -93,7 +91,6 @@ export function EmployeesPage() {
 
   const rows = data?.data ?? [];
   const meta = data?.meta;
-  const reportingOfficerOptions = reportingOfficerData?.data ?? [];
   const jobTitleNameById = useMemo(
     () => new Map(jobTitleOptions.map((jobTitle) => [jobTitle.id, jobTitle.name] as const)),
     [jobTitleOptions],
@@ -128,7 +125,7 @@ export function EmployeesPage() {
             <div className="grid gap-3 md:grid-cols-6">
               <div className="md:col-span-2">
                 <Input
-                  placeholder="Search by name, number, email or phone"
+                  placeholder="Search by first name, last name, email, staff ID or phone"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                 />
@@ -196,7 +193,7 @@ export function EmployeesPage() {
                   <SelectItem value="__all__">All reporting officers</SelectItem>
                   {reportingOfficerOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
-                      {option.displayName}
+                      {option.displayName} ({option.employeeNumber})
                     </SelectItem>
                   ))}
                 </SelectContent>

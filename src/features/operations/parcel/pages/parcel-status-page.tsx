@@ -80,7 +80,7 @@ export function ParcelStatusPage() {
   const baseQuery = useMemo(
     () => ({
       page: 1,
-      pageSize: 100,
+      pageSize: 20,
       search: submittedSearch.trim().length > 0 ? submittedSearch.trim() : undefined,
     }),
     [submittedSearch],
