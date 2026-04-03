@@ -37,7 +37,7 @@ import {
 } from '@/db/schemas/enums';
 import { useListBranchOptionsQuery } from '@/features/branches';
 import { useGetCustomerStatementQuery, useListCustomersQuery } from '@/features/customers/api';
-import { useListDepartmentOptionsQuery, useListEmployeesQuery } from '@/features/hr';
+import { useListDepartmentOptionsQuery, useListEmployeeOptionsQuery } from '@/features/hr';
 import { useListPayrollCyclesQuery } from '@/features/payroll';
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
 import { PermissionKeys } from '@/shared/permissions/constants';
@@ -468,12 +468,11 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
 
   const { data: branchOptions = [] } = useListBranchOptionsQuery();
   const { data: departmentOptions = [] } = useListDepartmentOptionsQuery();
-  const { data: employeesData } = useListEmployeesQuery({ pageSize: 100 });
+  const { data: employeeOptions = [] } = useListEmployeeOptionsQuery();
   const { data: payrollCyclesData } = useListPayrollCyclesQuery({ pageSize: 100 });
   const { data: customersData } = useListCustomersQuery({ pageSize: 100 });
   const { data: riderOptions = [] } = useListUserOptionsQuery({ status: 1 }, { skip: !canParcels });
 
-  const employeeOptions = employeesData?.data ?? [];
   const payrollCycleOptions = payrollCyclesData?.data ?? [];
   const customerOptions = customersData?.data ?? [];
 

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { useListAuditLogsQuery } from '@/features/audit/api';
+import { useGetAuditAnalyticsSummaryQuery } from '@/features/audit/api';
 import { useListCompanyModulesQuery } from '@/features/company-modules/api';
 import type { CompanyModuleRow } from '@/features/company-modules/api';
 import { useListRolesQuery } from '@/features/rbac/api/rbac.api';
@@ -44,12 +44,8 @@ export function ITDashboardV1Page() {
   const locationId = scope?.locationId ?? null;
   const dateRange = toDateTimeRange(from, to);
 
-  const auditLogs = useListAuditLogsQuery(
-    {
-      page: 1,
-      pageSize: 200,
-      filters: { from: dateRange.from, to: dateRange.to },
-    },
+  const auditAnalytics = useGetAuditAnalyticsSummaryQuery(
+    { from: dateRange.from, to: dateRange.to },
     { skip: !scope || !canListAudit },
   );
 
@@ -76,58 +72,14 @@ export function ITDashboardV1Page() {
   const moduleRows: CompanyModuleRow[] = useMemo(() => modules.data ?? [], [modules.data]);
 
   const loading =
-    auditLogs.isFetching || roles.isFetching || users.isFetching || modules.isFetching;
+    auditAnalytics.isFetching || roles.isFetching || users.isFetching || modules.isFetching;
 
-  const rolePermissionChanges = useMemo(() => {
-    const rows = auditLogs.data?.data ?? [];
-    return rows.filter((row) => {
-      const searchable = `${row.entityType} ${row.action} ${row.message ?? ''}`.toLowerCase();
-      return (
-        searchable.includes('role') ||
-        searchable.includes('permission') ||
-        searchable.includes('rbac')
-      );
-    }).length;
-  }, [auditLogs.data?.data]);
-
-  const moduleChanges = useMemo(() => {
-    const rows = auditLogs.data?.data ?? [];
-    return rows.filter((row) => {
-      const searchable = `${row.entityType} ${row.action} ${row.message ?? ''}`.toLowerCase();
-      return searchable.includes('module') || searchable.includes('companymodule');
-    }).length;
-  }, [auditLogs.data?.data]);
-
-  const securitySignals = useMemo(() => {
-    const rows = auditLogs.data?.data ?? [];
-    return rows.filter((row) => {
-      const searchable = `${row.action} ${row.message ?? ''}`.toLowerCase();
-      return (
-        searchable.includes('login') ||
-        searchable.includes('password') ||
-        searchable.includes('token') ||
-        searchable.includes('unauthorized') ||
-        searchable.includes('forbidden')
-      );
-    }).length;
-  }, [auditLogs.data?.data]);
-
-  const recentTechEvents = useMemo(() => {
-    const rows = auditLogs.data?.data ?? [];
-    return rows
-      .filter((row) => {
-        const searchable = `${row.entityType} ${row.action} ${row.message ?? ''}`.toLowerCase();
-        return (
-          searchable.includes('role') ||
-          searchable.includes('permission') ||
-          searchable.includes('module') ||
-          searchable.includes('user')
-        );
-      })
-      .slice(0, 8);
-  }, [auditLogs.data?.data]);
+  const rolePermissionChanges = auditAnalytics.data?.rolePermissionChanges ?? 0;
+  const moduleChanges = auditAnalytics.data?.moduleChanges ?? 0;
+  const securitySignals = auditAnalytics.data?.securitySignals ?? 0;
+  const recentTechEvents = auditAnalytics.data?.recentTechEvents ?? [];
   const securityActivityData = [
-    { label: 'Audit Events', value: auditLogs.data?.meta.totalRecords ?? 0 },
+    { label: 'Audit Events', value: auditAnalytics.data?.totalEvents ?? 0 },
     { label: 'Role/Perm Changes', value: rolePermissionChanges },
     { label: 'Module Changes', value: moduleChanges },
     { label: 'Security Signals', value: securitySignals },
@@ -172,7 +124,7 @@ export function ITDashboardV1Page() {
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     <DashboardKpiCard
                       label="Audit Events"
-                      value={canListAudit ? (auditLogs.data?.meta.totalRecords ?? 0) : '-'}
+                      value={canListAudit ? (auditAnalytics.data?.totalEvents ?? 0) : '-'}
                       loading={loading}
                     />
                     <DashboardKpiCard
@@ -207,7 +159,7 @@ export function ITDashboardV1Page() {
                     rows={[
                       {
                         metric: 'Audit Events',
-                        value: canListAudit ? (auditLogs.data?.meta.totalRecords ?? 0) : '-',
+                        value: canListAudit ? (auditAnalytics.data?.totalEvents ?? 0) : '-',
                       },
                       {
                         metric: 'Role/Permission Changes',

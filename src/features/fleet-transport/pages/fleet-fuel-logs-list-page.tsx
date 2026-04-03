@@ -20,7 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useListFleetFuelLogsQuery, useListFleetVehiclesQuery } from '../api/fleet-transport.api';
+import {
+  useListFleetFuelLogsQuery,
+  useListFleetVehicleOptionsQuery,
+} from '../api/fleet-transport.api';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
 function statusLabel(status: number) {
@@ -36,8 +39,7 @@ export function FleetFuelLogsListPage() {
   const [vehicleId, setVehicleId] = useState<string>('__all__');
   const [page, setPage] = useState(1);
 
-  const { data: vehicleData } = useListFleetVehiclesQuery({ pageSize: 200 });
-  const vehicles = vehicleData?.data ?? [];
+  const { data: vehicles = [] } = useListFleetVehicleOptionsQuery();
 
   const query = useMemo(
     () => ({

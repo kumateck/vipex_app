@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/table';
 import { EntityAuditHistoryCard } from '@/features/audit/components/entity-audit-history-card';
 import {
-  useListEmployeesQuery,
+  useListEmployeeOptionsQuery,
   useListLeaveRequestsQuery,
   useListLeaveTypeOptionsQuery,
 } from '../api/hr.api';
@@ -68,11 +68,10 @@ export function LeaveHistoryPage() {
   const [selectedLeaveRequestId, setSelectedLeaveRequestId] = useState('');
 
   const { data: leaveTypeOptions = [] } = useListLeaveTypeOptionsQuery();
-  const { data: employeesData } = useListEmployeesQuery({ pageSize: 200 });
-  const employees = employeesData?.data ?? [];
+  const { data: employees = [] } = useListEmployeeOptionsQuery();
 
   const { data: leaveRequestsData, isLoading } = useListLeaveRequestsQuery({
-    pageSize: 200,
+    pageSize: 20,
     employeeId: employeeId === '__all__' ? null : employeeId,
     leaveTypeId: leaveTypeId === '__all__' ? null : leaveTypeId,
     status: status === '__all__' ? null : Number(status),

@@ -97,6 +97,31 @@ export function PermissionsPageContent() {
     [activeModule, modulesInActiveTab],
   );
 
+  const selectedPermissionKeySet = useMemo(
+    () => new Set(selectedPermissionKeys),
+    [selectedPermissionKeys],
+  );
+
+  const selectedInActiveModuleCount = useMemo(
+    () =>
+      activeModulePermissions.filter((permission) => selectedPermissionKeySet.has(permission.key))
+        .length,
+    [activeModulePermissions, selectedPermissionKeySet],
+  );
+
+  const areAllInActiveModuleSelected =
+    activeModulePermissions.length > 0 &&
+    selectedInActiveModuleCount === activeModulePermissions.length;
+
+  const isSomeInActiveModuleSelected =
+    selectedInActiveModuleCount > 0 && !areAllInActiveModuleSelected;
+
+  const activeModuleCheckboxState: boolean | 'indeterminate' = areAllInActiveModuleSelected
+    ? true
+    : isSomeInActiveModuleSelected
+      ? 'indeterminate'
+      : false;
+
   const allPermissionKeys = useMemo(
     () => PermissionCatalogUi.map((permission) => permission.key),
     [],
@@ -144,6 +169,18 @@ export function PermissionsPageContent() {
           : [...current, key]
         : current.filter((value) => value !== key),
     );
+  };
+
+  const handleToggleActiveModulePermissions = (enabled: boolean) => {
+    if (!canSetRolePermissions) return;
+    setSelectedPermissionKeys((current) => {
+      const next = new Set(current);
+      for (const permission of activeModulePermissions) {
+        if (enabled) next.add(permission.key);
+        else next.delete(permission.key);
+      }
+      return [...next];
+    });
   };
 
   const handleSave = async () => {
@@ -298,35 +335,71 @@ export function PermissionsPageContent() {
                       </div>
 
                       <div>
-                        <h3 className="mb-2 text-sm font-semibold">
-                          {activeModule || 'Permissions'}
-                        </h3>
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <h3 className="text-sm font-semibold">{activeModule || 'Permissions'}</h3>
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Checkbox
+                              checked={activeModuleCheckboxState}
+                              onCheckedChange={(checked) =>
+                                handleToggleActiveModulePermissions(checked === true)
+                              }
+                              disabled={
+                                !canSetRolePermissions || activeModulePermissions.length === 0
+                              }
+                            />
+                            <span>Check all in module</span>
+                            <span>
+                              ({selectedInActiveModuleCount}/{activeModulePermissions.length})
+                            </span>
+                          </label>
+                        </div>
                         <ScrollableWrapper>
                           <div className="space-y-2 pr-1">
-                            {activeModulePermissions.map((permission) => (
-                              <div
-                                key={permission.key}
-                                className="flex items-start justify-between gap-3 rounded border p-3 text-sm"
-                              >
-                                <div>
-                                  <div className="font-medium">{permission.title}</div>
-                                  <div className="text-muted-foreground">
-                                    {permission.description} [{permission.mainTab} /{' '}
-                                    {permission.module}]
+                            {activeModulePermissions.map((permission) => {
+                              const isSelected = selectedPermissionKeySet.has(permission.key);
+                              return (
+                                <div
+                                  key={permission.key}
+                                  role="button"
+                                  tabIndex={canSetRolePermissions ? 0 : -1}
+                                  onClick={() =>
+                                    handleTogglePermission(permission.key, !isSelected)
+                                  }
+                                  onKeyDown={(event) => {
+                                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                                    event.preventDefault();
+                                    handleTogglePermission(permission.key, !isSelected);
+                                  }}
+                                  className={cn(
+                                    'flex items-start justify-between gap-3 rounded border p-3 text-sm transition-colors',
+                                    canSetRolePermissions ? 'cursor-pointer' : '',
+                                    isSelected
+                                      ? 'border-primary bg-primary/10'
+                                      : 'border-border hover:bg-muted/40',
+                                  )}
+                                >
+                                  <div>
+                                    <div className="font-medium">{permission.title}</div>
+                                    <div className="text-muted-foreground">
+                                      {permission.description} [{permission.mainTab} /{' '}
+                                      {permission.module}]
+                                    </div>
+                                    <div className="font-mono text-xs text-muted-foreground/80">
+                                      {permission.key}
+                                    </div>
                                   </div>
-                                  <div className="font-mono text-xs text-muted-foreground/80">
-                                    {permission.key}
+                                  <div onClick={(event) => event.stopPropagation()}>
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={(checked) =>
+                                        handleTogglePermission(permission.key, checked === true)
+                                      }
+                                      disabled={!canSetRolePermissions}
+                                    />
                                   </div>
                                 </div>
-                                <Checkbox
-                                  checked={selectedPermissionKeys.includes(permission.key)}
-                                  onCheckedChange={(checked) =>
-                                    handleTogglePermission(permission.key, checked === true)
-                                  }
-                                  disabled={!canSetRolePermissions}
-                                />
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </ScrollableWrapper>
                       </div>

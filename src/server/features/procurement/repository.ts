@@ -66,6 +66,37 @@ export async function listProcurementSuppliersRepo(params: ListSuppliersParams) 
   };
 }
 
+export async function listProcurementSupplierOptionsRepo(params: {
+  companyId: string;
+  search?: string | null;
+  isActive?: boolean | null;
+}) {
+  const where = [eq(procurementSuppliers.companyId, params.companyId)];
+  if (params.search?.trim()) {
+    const q = `%${params.search.trim()}%`;
+    where.push(
+      or(
+        ilike(procurementSuppliers.name, q),
+        ilike(procurementSuppliers.contactPerson, q),
+        ilike(procurementSuppliers.email, q),
+      )!,
+    );
+  }
+  if (typeof params.isActive === 'boolean') {
+    where.push(eq(procurementSuppliers.isActive, params.isActive));
+  }
+
+  return db
+    .select({
+      id: procurementSuppliers.id,
+      name: procurementSuppliers.name,
+      isActive: procurementSuppliers.isActive,
+    })
+    .from(procurementSuppliers)
+    .where(and(...where))
+    .orderBy(asc(procurementSuppliers.name), asc(procurementSuppliers.id));
+}
+
 export async function createProcurementSupplierRepo(
   values: typeof procurementSuppliers.$inferInsert,
 ) {

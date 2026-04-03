@@ -36,6 +36,10 @@ export default function ForgotPassword() {
         <CardHeader>
           <CardTitle>Forgot Password</CardTitle>
           <CardDescription>Enter your account email to receive a 6-digit OTP</CardDescription>
+          <p className="text-xs text-muted-foreground">
+            Use <strong>reset OTP</strong> if your account is already active. Use{' '}
+            <strong>invite OTP</strong> only for first-time account setup.
+          </p>
         </CardHeader>
         <form onSubmit={onSubmit}>
           <CardContent className="space-y-4 pb-5">

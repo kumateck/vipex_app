@@ -609,6 +609,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/settings/appearance': PermissionKeys.CanManageAppearance,
   '/settings/app-updates': PermissionKeys.CanManageDesktopUpdates,
   '/dashboard': PermissionKeys.CanReadDashboard,
+  '/analytics': PermissionKeys.CanReadDashboard,
   '/reports': PermissionKeys.CanReadReportsHub,
   '/cashiers': PermissionKeys.CanReadCashiers,
   '/users/active': PermissionKeys.CanReadActiveUsers,

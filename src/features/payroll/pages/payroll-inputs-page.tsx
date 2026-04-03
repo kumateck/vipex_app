@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useListEmployeesQuery } from '@/features/hr';
+import { useListEmployeeOptionsQuery } from '@/features/hr';
 import { ApprovalStatus, PayrollItemType } from '@/db/schemas/enums';
 import {
   useApprovePayrollManualAdjustmentMutation,
@@ -75,7 +75,7 @@ export function PayrollInputsPage() {
   const [adjustmentNotes, setAdjustmentNotes] = useState('');
 
   const { data: cyclesData } = useListPayrollCyclesQuery({ pageSize: 100 });
-  const { data: employeesData } = useListEmployeesQuery({ pageSize: 100 });
+  const { data: employees = [] } = useListEmployeeOptionsQuery();
   const { data: earningTypesData } = useListEarningTypesQuery({ pageSize: 100 });
   const { data: deductionTypesData } = useListDeductionTypesQuery({ pageSize: 100 });
   const authUser = useAuthStore((state) => state.user as AuthUser | null);
@@ -100,7 +100,6 @@ export function PayrollInputsPage() {
     useRejectPayrollManualAdjustmentMutation();
 
   const cycles = useMemo(() => cyclesData?.data ?? [], [cyclesData]);
-  const employees = useMemo(() => employeesData?.data ?? [], [employeesData]);
   const earningTypes = useMemo(() => earningTypesData?.data ?? [], [earningTypesData]);
   const deductionTypes = useMemo(() => deductionTypesData?.data ?? [], [deductionTypesData]);
   const selectedCycle = useMemo(

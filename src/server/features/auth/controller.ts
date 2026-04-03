@@ -1,12 +1,14 @@
 import {
   changePasswordSvc,
   forgotPasswordSvc,
+  getCurrentUserProfileSvc,
   loginSvc,
   logoutSvc,
   refreshSvc,
   resetPasswordSvc,
   setPasswordSvc,
   getCurrentUserPermissionsSvc,
+  updateCurrentUserProfileSvc,
 } from './service';
 
 export async function loginCtrl(input: {
@@ -67,4 +69,15 @@ export async function currentUserPermissionsCtrl(userId: string) {
 export async function currentUserReadOnlyPermissionsCtrl(userId: string) {
   const result = await getCurrentUserPermissionsSvc(userId);
   return { readOnlyPermissions: result.readOnlyPermissions };
+}
+
+export async function currentUserProfileCtrl(userId: string) {
+  return getCurrentUserProfileSvc(userId);
+}
+
+export async function updateCurrentUserProfileCtrl(
+  userId: string,
+  patch: { fullname?: string; telephone?: string },
+) {
+  return updateCurrentUserProfileSvc(userId, patch);
 }

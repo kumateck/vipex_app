@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useCreateFleetFuelLogMutation,
-  useListFleetVehiclesQuery,
+  useListFleetVehicleOptionsQuery,
 } from '../api/fleet-transport.api';
 
 export function FleetFuelLogsCreatePage() {
@@ -27,11 +27,8 @@ export function FleetFuelLogsCreatePage() {
   const [odometerKm, setOdometerKm] = useState('');
   const [stationName, setStationName] = useState('');
   const [note, setNote] = useState('');
-  const { data: vehicleData } = useListFleetVehiclesQuery({
-    pageSize: 200,
-    filters: { isActive: true },
-  });
-  const vehicles = vehicleData?.data ?? [];
+  const { data: vehicleOptions = [] } = useListFleetVehicleOptionsQuery({ isActive: true });
+  const vehicles = vehicleOptions;
   const [createFuelLog, { isLoading }] = useCreateFleetFuelLogMutation();
 
   const onSubmit = async () => {

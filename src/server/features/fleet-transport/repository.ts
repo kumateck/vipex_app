@@ -60,6 +60,32 @@ export async function listFleetVehiclesRepo(params: ListFleetVehiclesParams) {
   };
 }
 
+export async function listFleetVehicleOptionsRepo(params: {
+  companyId: string;
+  search?: string | null;
+  isActive?: boolean | null;
+}) {
+  const where = [eq(fleetVehicles.companyId, params.companyId)];
+  if (params.search?.trim()) {
+    const q = `%${params.search.trim()}%`;
+    where.push(or(ilike(fleetVehicles.plateNumber, q), ilike(fleetVehicles.model, q))!);
+  }
+  if (typeof params.isActive === 'boolean') {
+    where.push(eq(fleetVehicles.isActive, params.isActive));
+  }
+
+  return db
+    .select({
+      id: fleetVehicles.id,
+      plateNumber: fleetVehicles.plateNumber,
+      model: fleetVehicles.model,
+      isActive: fleetVehicles.isActive,
+    })
+    .from(fleetVehicles)
+    .where(and(...where))
+    .orderBy(asc(fleetVehicles.plateNumber), asc(fleetVehicles.id));
+}
+
 export async function createFleetVehicleRepo(values: typeof fleetVehicles.$inferInsert) {
   const [row] = await db.insert(fleetVehicles).values(values).returning({ id: fleetVehicles.id });
   return row;

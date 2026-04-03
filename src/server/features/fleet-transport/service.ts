@@ -7,6 +7,7 @@ import {
   findFleetVehicleByPlateRepo,
   getFleetFuelLogByIdRepo,
   listFleetFuelLogsRepo,
+  listFleetVehicleOptionsRepo,
   listFleetVehiclesRepo,
   type ListFleetFuelLogsParams,
   type ListFleetVehiclesParams,
@@ -20,6 +21,14 @@ function buildFuelLogNo() {
 
 export async function listFleetVehiclesSvc(params: ListFleetVehiclesParams) {
   return listFleetVehiclesRepo(params);
+}
+
+export async function listFleetVehicleOptionsSvc(input: {
+  companyId: string;
+  search?: string | null;
+  isActive?: boolean | null;
+}) {
+  return listFleetVehicleOptionsRepo(input);
 }
 
 export async function createFleetVehicleSvc(input: {

@@ -38,6 +38,15 @@
     "plugins": [
       "expo-router",
       "expo-updates",
+      "@livekit/react-native-expo-plugin",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#C05500",
+          "sounds": []
+        }
+      ],
       [
         "expo-camera",
         {

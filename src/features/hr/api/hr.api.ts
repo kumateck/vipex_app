@@ -69,6 +69,17 @@ export interface Employee {
   hasUserAccount: boolean;
 }
 
+export interface EmployeeOption {
+  id: string;
+  employeeNumber: string;
+  displayName: string;
+  branchId?: string | null;
+  locationId?: string | null;
+  departmentId?: string | null;
+  jobTitleId?: string | null;
+  employmentStatus: number;
+}
+
 export interface AttendanceRecord {
   id: string;
   employeeId: string;
@@ -244,6 +255,23 @@ export const hrApi = api.injectEndpoints({
         params: buildServerPaginationParams(query),
       }),
       providesTags: (result) => provideEntityListTags('HR', result),
+    }),
+    listEmployeeOptions: builder.query<
+      EmployeeOption[],
+      {
+        branchId?: string | null;
+        departmentId?: string | null;
+        jobTitleId?: string | null;
+        officerEmployeeId?: string | null;
+        status?: number | null;
+        search?: string;
+      } | void
+    >({
+      query: (params) => ({
+        url: '/hr/employees/options',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'HR', id: 'EMPLOYEE_OPTIONS' }],
     }),
     createEmployee: builder.mutation<
       { id?: string },
@@ -513,6 +541,7 @@ export const {
   useCreateJobTitleMutation,
   useUpdateJobTitleMutation,
   useListEmployeesQuery,
+  useListEmployeeOptionsQuery,
   useCreateEmployeeMutation,
   useGetEmployeeQuery,
   useUpdateEmployeeMutation,

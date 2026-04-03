@@ -33,7 +33,7 @@ export function CustomerWalletApprovalsPage() {
   const query = useMemo(
     () => ({
       page: 1,
-      pageSize: 100,
+      pageSize: 20,
       search: search.trim() || undefined,
       filters: { overdueOnly },
     }),

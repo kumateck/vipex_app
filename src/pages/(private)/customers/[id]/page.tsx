@@ -103,7 +103,7 @@ export default function CustomerDetailsPage() {
     {
       customerId: id ?? '',
       page: txPage,
-      pageSize: 30,
+      pageSize: 20,
       dateFrom: txRange?.from?.toISOString(),
       dateTo: txRange?.to?.toISOString(),
     },
@@ -123,7 +123,7 @@ export default function CustomerDetailsPage() {
     {
       customerId: id ?? '',
       page: paymentsPage,
-      pageSize: 30,
+      pageSize: 20,
       dateFrom: paymentsRange?.from?.toISOString(),
       dateTo: paymentsRange?.to?.toISOString(),
     },

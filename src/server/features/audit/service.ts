@@ -1,7 +1,9 @@
 import { NotFound } from '@/server/utils/http-error';
 import {
   createAuditLogRepo,
+  getAuditAnalyticsRepo,
   getAuditLogRepo,
+  type AuditAnalyticsParams,
   listAuditLogsRepo,
   type ListAuditLogsParams,
 } from './repository';
@@ -28,6 +30,10 @@ export async function createAuditLogSvc(input: {
 
 export async function listAuditLogsSvc(p: ListAuditLogsParams) {
   return listAuditLogsRepo(p);
+}
+
+export async function getAuditAnalyticsSvc(p: AuditAnalyticsParams) {
+  return getAuditAnalyticsRepo(p);
 }
 
 export async function getAuditLogSvc(id: string, companyId: string) {

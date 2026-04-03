@@ -180,3 +180,19 @@ export async function markPasswordResetUsedRepo(tokenHash: string) {
 export async function updateUserPasswordRepo(userId: string, passwordHash: string) {
   await db.update(users).set({ password: passwordHash }).where(eq(users.id, userId));
 }
+
+export async function updateCurrentUserProfileRepo(
+  userId: string,
+  patch: { fullname?: string; telephone?: string },
+) {
+  const [row] = await db
+    .update(users)
+    .set({
+      ...(patch.fullname !== undefined ? { fullname: patch.fullname } : {}),
+      ...(patch.telephone !== undefined ? { telephone: patch.telephone } : {}),
+    })
+    .where(eq(users.id, userId))
+    .returning({ id: users.id });
+
+  return row ?? null;
+}

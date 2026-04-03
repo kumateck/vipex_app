@@ -13,6 +13,7 @@ import {
   approvePurchaseRequestCtrl,
   createProcurementSupplierCtrl,
   createPurchaseRequestCtrl,
+  listProcurementSupplierOptionsCtrl,
   listProcurementSuppliersCtrl,
   listPurchaseRequestsCtrl,
   rejectPurchaseRequestCtrl,
@@ -21,6 +22,27 @@ import {
 
 export const procurementRoutes = new Elysia({ name: 'procurement' })
   .use(authPlugin)
+  .get(
+    '/suppliers/options',
+    async ({ query, user }) =>
+      listProcurementSupplierOptionsCtrl({
+        companyId: (user as AuthUser).companyId!,
+        search: query.search ?? null,
+        isActive: query.isActive ?? null,
+      }),
+    {
+      query: t.Object({
+        search: t.Optional(t.String()),
+        isActive: t.Optional(t.Boolean()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadProcurement),
+        requireModuleEnabled('procurement'),
+      ],
+      detail: { tags: ['Procurement'], summary: 'List procurement supplier options' },
+    },
+  )
   .get(
     '/suppliers',
     async ({ query, user }) =>
