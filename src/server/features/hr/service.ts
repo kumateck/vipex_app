@@ -31,6 +31,7 @@ import {
   getLeaveRequestRepo,
   getLeaveTypeRepo,
   listDepartmentOptionsRepo,
+  listEmployeeOptionsRepo,
   listDepartmentsRepo,
   listAttendanceRepo,
   listEmployeesRepo,
@@ -202,6 +203,18 @@ export async function updateJobTitleSvc(
 
 export async function listEmployeesSvc(p: ListEmployeeParams) {
   return listEmployeesRepo(p);
+}
+
+export async function listEmployeeOptionsSvc(input: {
+  companyId: string;
+  branchId?: string | null;
+  departmentId?: string | null;
+  jobTitleId?: string | null;
+  officerEmployeeId?: string | null;
+  status?: number | null;
+  search?: string | null;
+}) {
+  return listEmployeeOptionsRepo(input);
 }
 
 export async function getEmployeeSvc(id: string) {

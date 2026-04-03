@@ -10,6 +10,7 @@ import {
   createPurchaseRequestRepo,
   findSupplierByNameRepo,
   getPurchaseRequestByIdRepo,
+  listProcurementSupplierOptionsRepo,
   listProcurementSuppliersRepo,
   listPurchaseRequestsRepo,
   updateProcurementSupplierRepo,
@@ -24,6 +25,14 @@ function buildRequestNo() {
 
 export async function listProcurementSuppliersSvc(params: ListSuppliersParams) {
   return listProcurementSuppliersRepo(params);
+}
+
+export async function listProcurementSupplierOptionsSvc(input: {
+  companyId: string;
+  search?: string | null;
+  isActive?: boolean | null;
+}) {
+  return listProcurementSupplierOptionsRepo(input);
 }
 
 export async function createProcurementSupplierSvc(input: {

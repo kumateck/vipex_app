@@ -14,6 +14,7 @@ import {
   createFleetFuelLogCtrl,
   createFleetVehicleCtrl,
   listFleetFuelLogsCtrl,
+  listFleetVehicleOptionsCtrl,
   listFleetVehiclesCtrl,
   rejectFleetFuelLogCtrl,
   updateFleetVehicleCtrl,
@@ -21,6 +22,27 @@ import {
 
 export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
   .use(authPlugin)
+  .get(
+    '/vehicles/options',
+    async ({ query, user }) =>
+      listFleetVehicleOptionsCtrl({
+        companyId: (user as AuthUser).companyId!,
+        search: query.search ?? null,
+        isActive: query.isActive ?? null,
+      }),
+    {
+      query: t.Object({
+        search: t.Optional(t.String()),
+        isActive: t.Optional(t.Boolean()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requireModuleEnabled('fleet_transport'),
+      ],
+      detail: { tags: ['FleetTransport'], summary: 'List fleet vehicle options' },
+    },
+  )
   .get(
     '/vehicles',
     async ({ query, user }) =>

@@ -65,7 +65,7 @@ export function WarehousesPage() {
   const { data, isLoading, refetch } = useListWarehousesQuery(
     {
       page: 1,
-      pageSize: 100,
+      pageSize: 20,
       filters: { companyId },
     },
     { skip: !companyId || !canRead },

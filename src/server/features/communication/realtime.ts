@@ -17,6 +17,7 @@ import {
   listThreadParticipantUserIdsAccessRepo,
   isThreadParticipantAccessRepo,
 } from './access/repository';
+import { sendCommunicationPushToUsers } from './push/sender';
 
 type CommunicationSocketData = {
   kind: 'communication';
@@ -469,6 +470,44 @@ export function emitCommunicationMessageCreated(
       threadId: payload.threadId,
     });
     broadcastToUserIds(companyId, audience, { type: 'communication.message.created', payload });
+
+    if (!audience.length) return;
+    if (!payload.senderUserId) return;
+    if (!payload.metadataJson || typeof payload.metadataJson !== 'object') return;
+
+    const metadata = payload.metadataJson as Record<string, unknown>;
+    const recipients = new Set<string>();
+    if (metadata.mentionAll === true) {
+      for (const userId of audience) {
+        if (userId !== payload.senderUserId) recipients.add(userId);
+      }
+    } else if (Array.isArray(metadata.mentionedUserIds)) {
+      const audienceSet = new Set(audience);
+      for (const entry of metadata.mentionedUserIds) {
+        if (typeof entry !== 'string') continue;
+        if (entry === payload.senderUserId) continue;
+        if (audienceSet.has(entry)) recipients.add(entry);
+      }
+    }
+    if (!recipients.size) return;
+
+    const fallbackBody =
+      typeof payload.body === 'string' && payload.body.trim()
+        ? payload.body.trim().slice(0, 140)
+        : 'You were mentioned in a message.';
+
+    await sendCommunicationPushToUsers({
+      companyId,
+      userIds: [...recipients],
+      title: 'New mention',
+      body: fallbackBody,
+      data: {
+        type: 'communication.mention',
+        threadId: payload.threadId,
+        messageId: payload.id,
+      },
+      dedupeKey: `mention:${payload.id}`,
+    });
   })();
 }
 
@@ -480,6 +519,22 @@ export function emitCommunicationCallCreated(companyId: string, payload: Communi
         threadId: payload.threadId,
       });
       broadcastToUserIds(companyId, audience, { type: 'communication.call.created', payload });
+      const recipients = audience.filter((userId) => userId !== payload.initiatorUserId);
+      if (recipients.length) {
+        await sendCommunicationPushToUsers({
+          companyId,
+          userIds: recipients,
+          title: 'Incoming call',
+          body: 'A call has started in your chat.',
+          data: {
+            type: 'communication.call',
+            callId: payload.id,
+            threadId: payload.threadId,
+            channelId: payload.channelId,
+          },
+          dedupeKey: `call-created:${payload.id}`,
+        });
+      }
       return;
     }
     if (payload.channelId) {
@@ -488,6 +543,22 @@ export function emitCommunicationCallCreated(companyId: string, payload: Communi
         channelId: payload.channelId,
       });
       broadcastToUserIds(companyId, audience, { type: 'communication.call.created', payload });
+      const recipients = audience.filter((userId) => userId !== payload.initiatorUserId);
+      if (recipients.length) {
+        await sendCommunicationPushToUsers({
+          companyId,
+          userIds: recipients,
+          title: 'Voice channel activity',
+          body: 'A voice channel is now active.',
+          data: {
+            type: 'communication.call',
+            callId: payload.id,
+            threadId: payload.threadId,
+            channelId: payload.channelId,
+          },
+          dedupeKey: `call-created:${payload.id}`,
+        });
+      }
       return;
     }
     if (payload.initiatorUserId) {

@@ -26,6 +26,7 @@ import {
   listDepartmentsCtrl,
   listAttendanceCtrl,
   listEmployeesCtrl,
+  listEmployeeOptionsCtrl,
   listJobTitleOptionsCtrl,
   listJobTitlesCtrl,
   listLeaveRequestsCtrl,
@@ -317,6 +318,42 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         requireModuleEnabled('hr'),
       ],
       detail: { tags: ['HR'], summary: 'Create leave type', operationId: 'createLeaveType' },
+    },
+  )
+  .get(
+    '/employees/options',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      const isHeadOffice = authUser.branchType === BranchType.HEADOFFICE;
+      return listEmployeeOptionsCtrl({
+        companyId: authUser.companyId!,
+        branchId: isHeadOffice ? (query.branchId ?? null) : (authUser.branchId ?? null),
+        departmentId: query.departmentId ?? null,
+        jobTitleId: query.jobTitleId ?? null,
+        officerEmployeeId: query.officerEmployeeId ?? null,
+        status: query.status ?? null,
+        search: query.search ?? null,
+      });
+    },
+    {
+      query: t.Object({
+        branchId: t.Optional(UUID),
+        departmentId: t.Optional(UUID),
+        jobTitleId: t.Optional(UUID),
+        officerEmployeeId: t.Optional(UUID),
+        status: t.Optional(t.Number()),
+        search: t.Optional(t.String()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanListEmployees),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'List employee options',
+        operationId: 'listEmployeeOptions',
+      },
     },
   )
   .get(

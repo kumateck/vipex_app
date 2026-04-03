@@ -22,8 +22,8 @@ import { useListBranchOptionsQuery } from '@/features/branches';
 import {
   useCheckInAttendanceMutation,
   useCheckOutAttendanceMutation,
+  useListEmployeeOptionsQuery,
   useListAttendanceQuery,
-  useListEmployeesQuery,
 } from '../api/hr.api';
 import type { DateRange } from 'react-day-picker';
 
@@ -55,7 +55,7 @@ export function AttendancePage() {
   const selectedEmployeeId = employeeId && employeeId !== '__all__' ? employeeId : '';
   const selectedBranchId = branchId && branchId !== '__all__' ? branchId : '';
 
-  const { data: employeesData } = useListEmployeesQuery({ pageSize: 100 });
+  const { data: employees = [] } = useListEmployeeOptionsQuery();
   const { data: branchOptions = [] } = useListBranchOptionsQuery();
   const { data, isLoading } = useListAttendanceQuery({
     from,
@@ -67,7 +67,6 @@ export function AttendancePage() {
   const [checkInAttendance, { isLoading: isCheckingIn }] = useCheckInAttendanceMutation();
   const [checkOutAttendance, { isLoading: isCheckingOut }] = useCheckOutAttendanceMutation();
 
-  const employees = employeesData?.data ?? [];
   const rows = data?.data ?? [];
   const attendanceRange: DateRange | undefined = {
     from: from ? new Date(`${from}T00:00:00`) : undefined,

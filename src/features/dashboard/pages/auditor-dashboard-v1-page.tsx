@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { useListAuditLogsQuery } from '@/features/audit/api';
+import { useGetAuditAnalyticsSummaryQuery } from '@/features/audit/api';
 import {
   useGetDailyCashConfirmationReportQuery,
   useGetExpenseByCategoryReportQuery,
@@ -43,14 +43,12 @@ export function AuditorDashboardV1Page() {
   const branchId = scope?.branchId ?? null;
   const locationId = scope?.locationId ?? null;
 
-  const auditLogs = useListAuditLogsQuery(
+  const auditDateRange = toDateTimeRange(from, to);
+
+  const auditAnalytics = useGetAuditAnalyticsSummaryQuery(
     {
-      page: 1,
-      pageSize: 200,
-      filters: {
-        from: toDateTimeRange(from, to).from,
-        to: toDateTimeRange(from, to).to,
-      },
+      from: auditDateRange.from,
+      to: auditDateRange.to,
     },
     { skip: !scope || !canListAudit },
   );
@@ -71,47 +69,18 @@ export function AuditorDashboardV1Page() {
   );
 
   const loading =
-    auditLogs.isFetching ||
+    auditAnalytics.isFetching ||
     cashConfirmations.isFetching ||
     expenseByCategory.isFetching ||
     toBePaidReconciliation.isFetching;
 
-  const suspiciousCount = useMemo(() => {
-    const rows = auditLogs.data?.data ?? [];
-    return rows.filter((row) => {
-      const searchable = `${row.action} ${row.message ?? ''}`.toLowerCase();
-      return (
-        searchable.includes('suspicious') ||
-        searchable.includes('override') ||
-        searchable.includes('failed') ||
-        searchable.includes('reject')
-      );
-    }).length;
-  }, [auditLogs.data?.data]);
-
-  const deletedCount = useMemo(() => {
-    const rows = auditLogs.data?.data ?? [];
-    return rows.filter((row) => row.action.toLowerCase().includes('delete')).length;
-  }, [auditLogs.data?.data]);
-
-  const highRiskLogs = useMemo(() => {
-    const rows = auditLogs.data?.data ?? [];
-    return rows
-      .filter((row) => {
-        const searchable = `${row.action} ${row.message ?? ''}`.toLowerCase();
-        return (
-          searchable.includes('delete') ||
-          searchable.includes('override') ||
-          searchable.includes('reject') ||
-          searchable.includes('suspicious')
-        );
-      })
-      .slice(0, 8);
-  }, [auditLogs.data?.data]);
+  const suspiciousCount = auditAnalytics.data?.suspiciousActions ?? 0;
+  const deletedCount = auditAnalytics.data?.deletedActions ?? 0;
+  const highRiskLogs = auditAnalytics.data?.recentHighRiskEvents ?? [];
   const auditSignalData = [
     { label: 'Suspicious', value: suspiciousCount },
     { label: 'Deleted', value: deletedCount },
-    { label: 'Events', value: auditLogs.data?.meta.totalRecords ?? 0 },
+    { label: 'Events', value: auditAnalytics.data?.totalEvents ?? 0 },
   ];
   const financialRiskMixData = [
     {
@@ -172,7 +141,7 @@ export function AuditorDashboardV1Page() {
                     />
                     <DashboardKpiCard
                       label="Audit Events"
-                      value={canListAudit ? (auditLogs.data?.meta.totalRecords ?? 0) : '-'}
+                      value={canListAudit ? (auditAnalytics.data?.totalEvents ?? 0) : '-'}
                       loading={loading}
                     />
                     <DashboardKpiCard
@@ -214,7 +183,7 @@ export function AuditorDashboardV1Page() {
                       { metric: 'Deleted Actions', value: canListAudit ? deletedCount : '-' },
                       {
                         metric: 'Audit Events',
-                        value: canListAudit ? (auditLogs.data?.meta.totalRecords ?? 0) : '-',
+                        value: canListAudit ? (auditAnalytics.data?.totalEvents ?? 0) : '-',
                       },
                       {
                         metric: 'Cash Variance (Abs)',

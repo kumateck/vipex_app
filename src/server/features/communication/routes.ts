@@ -6,6 +6,7 @@ import { CommunicationGroupsRoutes } from './groups/routes';
 import { CommunicationEngagementRequestsRoutes } from './engagement-requests/routes';
 import { CommunicationPresenceRoutes } from './presence/routes';
 import { CommunicationCallsRoutes } from './calls/routes';
+import { CommunicationPushRoutes } from './push/routes';
 
 export const communicationRoutes = new Elysia({ name: 'communication' })
   .group('/threads', (r) => r.use(CommunicationThreadsRoutes))
@@ -14,4 +15,5 @@ export const communicationRoutes = new Elysia({ name: 'communication' })
   .group('/groups', (r) => r.use(CommunicationGroupsRoutes))
   .group('/engagement-requests', (r) => r.use(CommunicationEngagementRequestsRoutes))
   .group('/presence', (r) => r.use(CommunicationPresenceRoutes))
-  .group('/calls', (r) => r.use(CommunicationCallsRoutes));
+  .group('/calls', (r) => r.use(CommunicationCallsRoutes))
+  .group('/push', (r) => r.use(CommunicationPushRoutes));

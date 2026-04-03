@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useCreatePurchaseRequestMutation,
-  useListProcurementSuppliersQuery,
+  useListProcurementSupplierOptionsQuery,
 } from '../api/procurement.api';
 
 export function ProcurementRequestsCreatePage() {
@@ -25,8 +25,7 @@ export function ProcurementRequestsCreatePage() {
   const [supplierId, setSupplierId] = useState('__none__');
   const [amountPsw, setAmountPsw] = useState('');
   const [description, setDescription] = useState('');
-  const { data: supplierData } = useListProcurementSuppliersQuery({ pageSize: 200 });
-  const suppliers = supplierData?.data ?? [];
+  const { data: suppliers = [] } = useListProcurementSupplierOptionsQuery();
   const [createRequest, { isLoading }] = useCreatePurchaseRequestMutation();
 
   const onSubmit = async () => {

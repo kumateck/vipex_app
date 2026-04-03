@@ -19,6 +19,12 @@ export type ProcurementSupplier = {
   updatedAt: string;
 };
 
+export type ProcurementSupplierOption = {
+  id: string;
+  name: string;
+  isActive: boolean;
+};
+
 export type PurchaseRequest = {
   id: string;
   requestNo: string;
@@ -50,6 +56,17 @@ export const procurementApi = api.injectEndpoints({
         params: buildServerPaginationParams(query),
       }),
       providesTags: (result) => provideEntityListTags('Procurement', result),
+    }),
+
+    listProcurementSupplierOptions: builder.query<
+      ProcurementSupplierOption[],
+      { search?: string; isActive?: boolean } | void
+    >({
+      query: (params) => ({
+        url: '/procurement/suppliers/options',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'Procurement', id: 'SUPPLIER_OPTIONS' }],
     }),
 
     createProcurementSupplier: builder.mutation<
@@ -153,6 +170,7 @@ export const procurementApi = api.injectEndpoints({
 
 export const {
   useListProcurementSuppliersQuery,
+  useListProcurementSupplierOptionsQuery,
   useCreateProcurementSupplierMutation,
   useUpdateProcurementSupplierMutation,
   useListPurchaseRequestsQuery,

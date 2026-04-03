@@ -43,6 +43,13 @@
       "when": 1775040120000,
       "tag": "0005_communication_channel_read_state",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775040180000,
+      "tag": "0006_communication_push_tokens",
+      "breakpoints": true
     }
   ]
 }

@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import {
   useListPurchaseRequestsQuery,
-  useListProcurementSuppliersQuery,
+  useListProcurementSupplierOptionsQuery,
 } from '../api/procurement.api';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
@@ -39,8 +39,7 @@ export function ProcurementRequestsListPage() {
   const [supplierId, setSupplierId] = useState<string>('__all__');
   const [page, setPage] = useState(1);
 
-  const { data: supplierData } = useListProcurementSuppliersQuery({ pageSize: 200 });
-  const suppliers = supplierData?.data ?? [];
+  const { data: suppliers = [] } = useListProcurementSupplierOptionsQuery();
   const query = useMemo(
     () => ({
       page,

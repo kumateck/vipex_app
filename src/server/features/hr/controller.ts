@@ -14,6 +14,7 @@ import {
   listDepartmentsSvc,
   listAttendanceSvc,
   listEmployeesSvc,
+  listEmployeeOptionsSvc,
   listJobTitleOptionsSvc,
   listJobTitlesSvc,
   listLeaveRequestsSvc,
@@ -170,6 +171,18 @@ export async function listEmployeesCtrl(
       pageSize: pagination.pageSize,
     }),
   };
+}
+
+export async function listEmployeeOptionsCtrl(input: {
+  companyId: string;
+  branchId?: string | null;
+  departmentId?: string | null;
+  jobTitleId?: string | null;
+  officerEmployeeId?: string | null;
+  status?: number | null;
+  search?: string | null;
+}) {
+  return listEmployeeOptionsSvc(input);
 }
 
 export async function getEmployeeCtrl(id: string) {

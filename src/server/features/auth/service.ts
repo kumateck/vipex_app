@@ -10,6 +10,7 @@ import {
   revokeAllUserTokensRepo,
   revokeRefreshTokenRepo,
   rotateRefreshTokenRepo,
+  updateCurrentUserProfileRepo,
   updateUserPasswordRepo,
 } from './repository';
 import { env } from '../../utils/env';
@@ -232,4 +233,52 @@ export async function getCurrentUserPermissionsSvc(userId: string) {
   );
 
   return { allPermissions, readOnlyPermissions };
+}
+
+export async function getCurrentUserProfileSvc(userId: string) {
+  const user = await getUserByIdRepo(userId);
+  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
+
+  return {
+    id: user.id,
+    fullname: user.fullname,
+    email: user.email,
+    telephone: user.telephone,
+    employeeId: user.employeeId ?? null,
+    role: user.role ?? null,
+    branch: user.branch ?? null,
+    company: user.company ?? null,
+    location: user.location ?? null,
+    locationId: user.locationId ?? null,
+    locationName: user.location?.name ?? null,
+    userType: user.userType ?? null,
+  };
+}
+
+export async function updateCurrentUserProfileSvc(
+  userId: string,
+  patch: { fullname?: string; telephone?: string },
+) {
+  const updates: { fullname?: string; telephone?: string } = {};
+
+  if (patch.fullname !== undefined) {
+    const fullname = patch.fullname.trim();
+    if (!fullname) throw new HttpError(HttpStatus.BAD_REQUEST, 'Full name is required');
+    updates.fullname = fullname;
+  }
+
+  if (patch.telephone !== undefined) {
+    const telephone = patch.telephone.trim();
+    if (!telephone) throw new HttpError(HttpStatus.BAD_REQUEST, 'Telephone is required');
+    updates.telephone = telephone;
+  }
+
+  if (!Object.keys(updates).length) {
+    throw new HttpError(HttpStatus.BAD_REQUEST, 'No profile fields provided');
+  }
+
+  const updated = await updateCurrentUserProfileRepo(userId, updates);
+  if (!updated) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
+
+  return getCurrentUserProfileSvc(userId);
 }
