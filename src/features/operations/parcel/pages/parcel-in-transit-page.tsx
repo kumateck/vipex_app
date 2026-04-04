@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Textarea } from '@/components/ui/textarea';
+import { formatDateTime } from '@/lib/date';
 import {
   Dialog,
   DialogContent,
@@ -46,7 +54,7 @@ function formatDate(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTime(date);
 }
 
 function formatCurrency(amountPsw: number) {
@@ -228,62 +236,68 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
       },
       {
         id: 'actions',
-        header: 'Actions',
+        header: 'Action',
         enableSorting: false,
         cell: ({ row }) => {
           const parcel = row.original;
           return (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => setSelectedParcelId(parcel.id)}>
-                View Details
-              </Button>
-              {view === 'incoming' ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
-                  size="sm"
+                  size="icon"
                   variant="outline"
-                  onClick={() => {
-                    setEditingParcel(parcel);
-                    setEditParcelDetails(parcel.parcelDetails ?? '');
-                    setEditReceiverName(parcel.receiverName ?? '');
-                    setEditReceiverPhone(parcel.receiverPhone ?? '');
-                  }}
-                >
-                  Edit
-                </Button>
-              ) : null}
-              {view === 'incoming' ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setDiscrepancyParcel(parcel);
-                    setDiscrepancyDialogOpen(true);
-                    setDiscrepancyNotes('');
-                    setMissingTrackingCode(parcel.trackingCode);
-                    setMissingBookingCode(parcel.bookingCode);
-                  }}
-                >
-                  Log Not Physical
-                </Button>
-              ) : null}
-              {view === 'incoming' ? (
-                <Button
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      await handleMarkAsArrived(parcel);
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error ? error.message : 'Failed to update parcel status',
-                      );
-                    }
-                  }}
+                  className="h-8 w-8"
                   disabled={isUpdatingStatus}
                 >
-                  Mark Arrived
+                  <EllipsisVertical className="h-4 w-4" />
                 </Button>
-              ) : null}
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setSelectedParcelId(parcel.id)}>
+                  View Details
+                </DropdownMenuItem>
+                {view === 'incoming' ? (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setEditingParcel(parcel);
+                      setEditParcelDetails(parcel.parcelDetails ?? '');
+                      setEditReceiverName(parcel.receiverName ?? '');
+                      setEditReceiverPhone(parcel.receiverPhone ?? '');
+                    }}
+                  >
+                    Edit
+                  </DropdownMenuItem>
+                ) : null}
+                {view === 'incoming' ? (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setDiscrepancyParcel(parcel);
+                      setDiscrepancyDialogOpen(true);
+                      setDiscrepancyNotes('');
+                      setMissingTrackingCode(parcel.trackingCode);
+                      setMissingBookingCode(parcel.bookingCode);
+                    }}
+                  >
+                    Log Not Physical
+                  </DropdownMenuItem>
+                ) : null}
+                {view === 'incoming' ? (
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      try {
+                        await handleMarkAsArrived(parcel);
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error ? error.message : 'Failed to update parcel status',
+                        );
+                      }
+                    }}
+                  >
+                    Mark Arrived
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           );
         },
       },

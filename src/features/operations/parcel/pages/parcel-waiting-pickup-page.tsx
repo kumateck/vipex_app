@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -14,13 +21,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import { formatDateTime as formatDateTimeStandard } from '@/lib/date';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { useGetBranchQuery } from '@/features/branches/api/branches.api';
 import type { PaginationMeta } from '@/server/types/pagination.types';
@@ -49,7 +57,7 @@ function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTimeStandard(date);
 }
 
 type CardMode = 'existing' | 'new';
@@ -208,32 +216,38 @@ export function ParcelWaitingPickupPage() {
       header: 'Action',
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => openParcelDialog(row.original)}>
-            View Details
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              try {
-                await updateParcel({
-                  id: row.original.id,
-                  status: ParcelStatus.HOME_DELIVERY_REQUESTED,
-                }).unwrap();
-                toast.success('Parcel moved to Home Delivery Requested');
-                await listQuery.refetch();
-              } catch (error) {
-                toast.error(
-                  error instanceof Error ? error.message : 'Failed to move parcel to home delivery',
-                );
-              }
-            }}
-            disabled={isSaving}
-          >
-            Request Delivery
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="outline" className="h-8 w-8" disabled={isSaving}>
+              <EllipsisVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => openParcelDialog(row.original)}>
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={async () => {
+                try {
+                  await updateParcel({
+                    id: row.original.id,
+                    status: ParcelStatus.HOME_DELIVERY_REQUESTED,
+                  }).unwrap();
+                  toast.success('Parcel moved to Home Delivery Requested');
+                  await listQuery.refetch();
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : 'Failed to move parcel to home delivery',
+                  );
+                }
+              }}
+            >
+              Request Delivery
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     });
 

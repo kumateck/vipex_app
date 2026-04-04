@@ -1,10 +1,17 @@
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import { formatDateTime } from '@/lib/date';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { useCreateCustomerMutation } from '@/features/customers/api';
 import { useAuthStore } from '@/stores/auth-store';
@@ -40,7 +48,7 @@ function formatDate(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTime(date);
 }
 
 function formatCurrency(amountPsw: number) {
@@ -161,43 +169,46 @@ export function ParcelStatusPage() {
       },
       {
         id: 'actions',
-        header: 'Actions',
+        header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={() => {
-                setSelectedParcel(row.original);
-                setOutcome('contacted');
-                setUseSecondReceiver(false);
-                setSecondReceiverName('');
-                setSecondReceiverPhone('');
-                setSendSms(true);
-                setSendEmail(false);
-              }}
-            >
-              Call Outcome
-            </Button>
-            {canReturnToPickup(row.original.status) ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    await handleReturnToPickup(row.original);
-                  } catch (error) {
-                    toast.error(
-                      error instanceof Error ? error.message : 'Failed to move parcel to pickup',
-                    );
-                  }
-                }}
-                disabled={isSaving}
-              >
-                Return to Pickup
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="outline" className="h-8 w-8" disabled={isSaving}>
+                <EllipsisVertical className="h-4 w-4" />
               </Button>
-            ) : null}
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedParcel(row.original);
+                  setOutcome('contacted');
+                  setUseSecondReceiver(false);
+                  setSecondReceiverName('');
+                  setSecondReceiverPhone('');
+                  setSendSms(true);
+                  setSendEmail(false);
+                }}
+              >
+                Call Outcome
+              </DropdownMenuItem>
+              {canReturnToPickup(row.original.status) ? (
+                <DropdownMenuItem
+                  onClick={async () => {
+                    try {
+                      await handleReturnToPickup(row.original);
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error ? error.message : 'Failed to move parcel to pickup',
+                      );
+                    }
+                  }}
+                >
+                  Return to Pickup
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],

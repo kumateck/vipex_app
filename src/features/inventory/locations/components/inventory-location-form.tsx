@@ -6,7 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select-searchable';
 import { Spinner } from '@/components/ui';
 import { normalizeOptionalFields } from '@/lib/optional-fields';
 import { useAuthStore } from '@/stores/auth-store';
@@ -109,8 +115,15 @@ export function InventoryLocationForm({
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="name">Name</FieldLabel>
-                <Input id="name" placeholder="Location name" aria-invalid={!!errors.name} {...register('name')} />
-                {errors.name?.message ? <p className="text-sm text-destructive">{errors.name.message}</p> : null}
+                <Input
+                  id="name"
+                  placeholder="Location name"
+                  aria-invalid={!!errors.name}
+                  {...register('name')}
+                />
+                {errors.name?.message ? (
+                  <p className="text-sm text-destructive">{errors.name.message}</p>
+                ) : null}
               </Field>
               {mode === 'create' ? (
                 <Field>
@@ -126,7 +139,9 @@ export function InventoryLocationForm({
                           disabled={isLoadingBranches}
                         >
                           <SelectValue
-                            placeholder={isLoadingBranches ? 'Loading branches...' : 'Select branch'}
+                            placeholder={
+                              isLoadingBranches ? 'Loading branches...' : 'Select branch'
+                            }
                           />
                         </SelectTrigger>
                         <SelectContent>
@@ -159,9 +174,15 @@ export function InventoryLocationForm({
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? <Spinner /> : null}
-                  {isSubmitting ? `${mode === 'create' ? 'Creating...' : 'Saving...'}` : submitButtonText}
+                  {isSubmitting
+                    ? `${mode === 'create' ? 'Creating...' : 'Saving...'}`
+                    : submitButtonText}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => navigate('/inventory/locations')}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/inventory/locations')}
+                >
                   Cancel
                 </Button>
               </div>

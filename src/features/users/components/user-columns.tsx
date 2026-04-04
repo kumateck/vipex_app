@@ -1,4 +1,5 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import { EllipsisVertical } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PermissionGuard } from '@/components/permissions/permission-guard';
@@ -13,6 +14,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import type { User } from '../types/user.types';
 import { USER_TYPE_LABELS } from '@/shared/access/constants';
@@ -42,13 +49,13 @@ export function createUserColumns(options?: {
     { accessorKey: 'fullname', header: 'Full name' },
     { accessorKey: 'email', header: 'Email' },
     { accessorKey: 'telephone', header: 'Telephone' },
-    { accessorFn: (row) => row.roleName ?? row.roleId, id: 'roleName', header: 'Role' },
+    { accessorFn: (row) => row.roleName ?? 'Unassigned role', id: 'roleName', header: 'Role' },
     {
       accessorFn: (row) => USER_TYPE_LABELS[row.userType] ?? row.userType,
       id: 'userType',
       header: 'User type',
     },
-    { accessorFn: (row) => row.branchName ?? row.branchId, id: 'branchName', header: 'Branch' },
+    { accessorFn: (row) => row.branchName ?? 'Unknown branch', id: 'branchName', header: 'Branch' },
     { accessorFn: (row) => row.locationName ?? '-', id: 'locationName', header: 'Location' },
     {
       accessorFn: (row) => USER_STATUS_LABELS[row.status] ?? String(row.status),
@@ -57,9 +64,9 @@ export function createUserColumns(options?: {
     },
     {
       id: 'actions',
-      header: 'Actions',
+      header: 'Action',
       enableSorting: false,
-      size: 220,
+      size: 70,
       cell: ({ row }) => {
         return (
           <UserActionsCell
@@ -99,35 +106,35 @@ function UserActionsCell({
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <PermissionGuard permissionKey={PermissionKeys.CanUpdateUsers}>
-          <Button variant="outline" size="sm" asChild>
-            <Link to={`/users/edit/${user.id}`}>Edit</Link>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon" className="h-8 w-8">
+            <EllipsisVertical className="h-4 w-4" />
           </Button>
-        </PermissionGuard>
-        <PermissionGuard permissionKey={PermissionKeys.CanUpdateUsers}>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={isUpdatingStatus}
-            onClick={() => setIsStatusDialogOpen(true)}
-          >
-            {statusActionLabel}
-          </Button>
-        </PermissionGuard>
-        {canResendInvite ? (
-          <PermissionGuard permissionKey={PermissionKeys.CanResendSetupInvite}>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={isResendingInvite}
-              onClick={() => onResendInvite?.(user)}
-            >
-              Resend invite
-            </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <PermissionGuard permissionKey={PermissionKeys.CanUpdateUsers}>
+            <DropdownMenuItem asChild>
+              <Link to={`/users/edit/${user.id}`}>Edit</Link>
+            </DropdownMenuItem>
           </PermissionGuard>
-        ) : null}
-      </div>
+          <PermissionGuard permissionKey={PermissionKeys.CanUpdateUsers}>
+            <DropdownMenuItem
+              disabled={isUpdatingStatus}
+              onClick={() => setIsStatusDialogOpen(true)}
+            >
+              {statusActionLabel}
+            </DropdownMenuItem>
+          </PermissionGuard>
+          {canResendInvite ? (
+            <PermissionGuard permissionKey={PermissionKeys.CanResendSetupInvite}>
+              <DropdownMenuItem disabled={isResendingInvite} onClick={() => onResendInvite?.(user)}>
+                Resend invite
+              </DropdownMenuItem>
+            </PermissionGuard>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <AlertDialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

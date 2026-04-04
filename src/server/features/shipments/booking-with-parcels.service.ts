@@ -7,17 +7,10 @@ import {
   type CreateBookingWithParcelsInput,
   type CreateBookingWithParcelsOutput,
 } from './booking-with-parcels.repository';
-import { PaymentMethod } from '@/db/schemas';
+import { PaymentMethod, PaymentResponsibility } from '@/db/schemas';
 import { assertActiveSessionSvc } from '../cashiers/service';
 import { recordAuditLog } from '../audit/logger';
 import { getCustomerCreditSummarySvc, getCustomerSvc } from '../customers/service';
-import {
-  createParcelContentRepo,
-  createParcelDetailRepo,
-  findParcelContentByNameRepo,
-  findParcelDetailByNameRepo,
-  getParcelContentRepo,
-} from '../parcel-masters/repository';
 
 export type CreateBookingWithParcelsBody = {
   senderId: string;
@@ -40,6 +33,7 @@ export type CreateBookingWithParcelsBody = {
     trackingCode?: string | null;
     senderPaymentCedis?: number | string | null;
     senderPaymentMethod?: PaymentMethod;
+    paymentResponsibility?: PaymentResponsibility;
     cashierUserId: string;
     branchId: string;
   }>;
@@ -61,7 +55,7 @@ export async function createBookingWithParcelsSvc(
     throw BadRequest('At least one parcel is required');
   }
 
-  const normalizedParcels = await linkParcelMastersAndNormalizeParcels(body);
+  const normalizedParcels = normalizeParcels(body);
 
   const creditParcels = normalizedParcels.filter(
     (parcel) => parcel.method === PaymentMethod.CREDIT && Number(parcel.chargeCedis ?? 0) > 0,
@@ -181,95 +175,39 @@ export async function createBookingWithParcelsSvc(
   return created;
 }
 
-async function linkParcelMastersAndNormalizeParcels(body: CreateBookingWithParcelsBody) {
-  const contentCache = new Map<string, { name: string; basePricePsw: number }>();
-  const detailCache = new Map<string, { name: string }>();
+function normalizeParcels(body: CreateBookingWithParcelsBody) {
+  return body.parcels.map((parcel, index) => {
+    const normalizedContent = parcel.parcelContent.trim();
+    const normalizedDetails = parcel.parcelDetails.trim();
 
-  return Promise.all(
-    body.parcels.map(async (parcel) => {
-      const normalizedContent = parcel.parcelContent.trim();
-      const normalizedDetails = parcel.parcelDetails.trim();
-      let normalizedChargeCedis = parcel.chargeCedis;
+    if (!normalizedDetails.length) {
+      throw BadRequest(`Parcel details are required for parcel ${index + 1}`);
+    }
+    if (!normalizedContent.length) {
+      throw BadRequest(`Parcel content is required for parcel ${index + 1}`);
+    }
+    if (normalizedDetails.length > 255) {
+      throw BadRequest(`Parcel details must be 255 characters or less for parcel ${index + 1}`);
+    }
+    if (normalizedContent.length > 255) {
+      throw BadRequest(`Parcel content must be 255 characters or less for parcel ${index + 1}`);
+    }
 
-      if (normalizedContent.length > 0) {
-        const contentKey = normalizedContent.toLowerCase();
-        let cachedContent = contentCache.get(contentKey);
+    const paymentResponsibility =
+      parcel.paymentResponsibility ??
+      (Number(parcel.senderPaymentCedis ?? 0) > 0
+        ? Number(parcel.plannedToBePaidCedis ?? 0) > 0
+          ? PaymentResponsibility.SPLIT
+          : PaymentResponsibility.SENDER
+        : Number(parcel.plannedToBePaidCedis ?? 0) > 0
+          ? PaymentResponsibility.RECIPIENT
+          : PaymentResponsibility.SENDER);
 
-        if (!cachedContent) {
-          const existing = await findParcelContentByNameRepo(body.companyId, normalizedContent);
-          if (existing) {
-            const current = await getParcelContentRepo(body.companyId, existing.id);
-            cachedContent = {
-              name: current?.name ?? normalizedContent,
-              basePricePsw: Number(current?.basePricePsw ?? 0),
-            };
-          } else {
-            const chargePsw = Number(
-              toPesewas(
-                parcel.chargeCedis != null && String(parcel.chargeCedis).trim().length > 0
-                  ? parcel.chargeCedis
-                  : 0,
-              ),
-            );
-            const created = await createParcelContentRepo({
-              companyId: body.companyId,
-              name: normalizedContent,
-              description: null,
-              basePricePsw: chargePsw,
-              taxInclusive: true,
-              active: true,
-              sortOrder: 0,
-              createdBy: body.createdBy,
-            });
-            if (created) {
-              cachedContent = { name: normalizedContent, basePricePsw: chargePsw };
-            }
-          }
-
-          if (cachedContent) {
-            contentCache.set(contentKey, cachedContent);
-          }
-        }
-
-        if (
-          cachedContent &&
-          (normalizedChargeCedis == null || String(normalizedChargeCedis).trim().length === 0)
-        ) {
-          normalizedChargeCedis = (cachedContent.basePricePsw / 100).toFixed(2);
-        }
-      }
-
-      if (normalizedDetails.length > 0) {
-        const detailsKey = normalizedDetails.toLowerCase();
-        let cachedDetails = detailCache.get(detailsKey);
-
-        if (!cachedDetails) {
-          const existing = await findParcelDetailByNameRepo(body.companyId, normalizedDetails);
-          if (existing) {
-            cachedDetails = { name: normalizedDetails };
-          } else {
-            const created = await createParcelDetailRepo({
-              companyId: body.companyId,
-              name: normalizedDetails,
-              description: null,
-              active: true,
-              sortOrder: 0,
-              createdBy: body.createdBy,
-            });
-            if (created) {
-              cachedDetails = { name: normalizedDetails };
-            }
-          }
-          if (cachedDetails) detailCache.set(detailsKey, cachedDetails);
-        }
-      }
-
-      return {
-        ...parcel,
-        parcelContent: normalizedContent,
-        parcelDetails: normalizedDetails,
-        chargeCedis: normalizedChargeCedis,
-      };
-    }),
-  );
+    return {
+      ...parcel,
+      parcelContent: normalizedContent,
+      parcelDetails: normalizedDetails,
+      paymentResponsibility,
+    };
+  });
 }

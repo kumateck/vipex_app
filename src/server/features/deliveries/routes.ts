@@ -14,6 +14,7 @@ import {
   ddOutCtrl,
   ddReturnToOfficeCtrl,
   ddRiderGivenCtrl,
+  ddRiderBranchBenchmarkCtrl,
   markOfficePickupCompleteCtrl,
 } from './controller';
 
@@ -144,6 +145,22 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
         mode: t.Optional(t.Union([t.Literal('current'), t.Literal('history')])),
       }),
       detail: { tags: ['Deliveries'], summary: 'Doorstep: list rider assigned/current/history' },
+    },
+  )
+  .get(
+    '/dd/rider/:riderUserId/benchmark',
+    async ({ params, query }) =>
+      ddRiderBranchBenchmarkCtrl({
+        riderUserId: params.riderUserId,
+        branchId: (query.branchId ?? '') as string,
+      }),
+    {
+      params: t.Object({ riderUserId: UUID }),
+      query: t.Object({ branchId: UUID }),
+      detail: {
+        tags: ['Deliveries'],
+        summary: 'Doorstep: rider analytics benchmark vs branch rider average',
+      },
     },
   )
   .post(

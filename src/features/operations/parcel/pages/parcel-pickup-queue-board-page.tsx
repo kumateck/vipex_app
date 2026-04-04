@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useNavigate } from 'react-router-dom';
 import { useGetBranchQuery } from '@/features/branches/api/branches.api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListPickupQueueCardsQuery } from '../api/parcel.api';
@@ -26,9 +27,14 @@ export function ParcelPickupQueueBoardPage({
   title: string;
   description: string;
 }) {
+  const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const branchId = user?.branch?.id ?? null;
-  const { data: currentBranch } = useGetBranchQuery(branchId ?? '', { skip: !branchId });
+  const { data: currentBranch } = useGetBranchQuery(branchId ?? '', {
+    skip: !branchId,
+    refetchOnMountOrArgChange: true,
+    pollingInterval: 5000,
+  });
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
   const {
     data: queueCards = [],
@@ -62,6 +68,11 @@ export function ParcelPickupQueueBoardPage({
           <Card>
             <CardContent className="p-6 text-sm text-muted-foreground">
               This branch has not enabled pickup queue yet.
+              <div className="mt-3">
+                <Button variant="outline" size="sm" onClick={() => navigate('/branches')}>
+                  Open Branch Settings
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : null}

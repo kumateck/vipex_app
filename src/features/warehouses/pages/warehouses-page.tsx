@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
+import { EllipsisVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
 import {
@@ -14,6 +15,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -23,7 +30,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
@@ -167,18 +174,26 @@ export function WarehousesPage() {
         id: 'actions',
         header: 'Action',
         cell: ({ row }) => (
-          <div className="flex gap-2">
-            {canUpdate ? (
-              <Button size="sm" variant="outline" onClick={() => handleEdit(row.original)}>
-                Edit
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="outline" className="h-8 w-8">
+                <EllipsisVertical className="h-4 w-4" />
               </Button>
-            ) : null}
-            {canDelete ? (
-              <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(row.original)}>
-                Delete
-              </Button>
-            ) : null}
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {canUpdate ? (
+                <DropdownMenuItem onClick={() => handleEdit(row.original)}>Edit</DropdownMenuItem>
+              ) : null}
+              {canDelete ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => setDeleteTarget(row.original)}
+                >
+                  Delete
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],

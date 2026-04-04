@@ -9,13 +9,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { sanitizeString } from '@/lib/utils';
 import { useFindCustomersByTelephoneQuery } from '@/features/customers/api';
 import { useDebouncedValue } from '../../hooks/use-debounced-value';
 import type { ParcelBookingFormValues } from './parcel-form.types';
@@ -45,8 +40,8 @@ export function CustomerLookupSection({
   layout = 'stacked',
 }: CustomerLookupSectionProps) {
   const { control, setValue } = useFormContext<ParcelBookingFormValues>();
-  const phone = String(useWatch({ control, name: phoneName }) ?? '');
-  const selectedCustomerId = String(useWatch({ control, name: customerIdName }) ?? '');
+  const phone = sanitizeString(useWatch({ control, name: phoneName }));
+  const selectedCustomerId = sanitizeString(useWatch({ control, name: customerIdName }));
 
   const normalizedPhone = normalizePhoneDigits(phone);
   const debouncedPhone = useDebouncedValue(normalizedPhone, PHONE_LOOKUP_DELAY_MS);
@@ -119,7 +114,7 @@ export function CustomerLookupSection({
           rules={{
             required: `${label} telephone is required`,
             validate: (value) =>
-              normalizePhoneDigits(String(value ?? '')).length === PHONE_DIGITS ||
+              normalizePhoneDigits(sanitizeString(value)).length === PHONE_DIGITS ||
               `${label} telephone must be exactly ${PHONE_DIGITS} digits`,
           }}
           render={({ field }) => (
@@ -131,7 +126,7 @@ export function CustomerLookupSection({
                   ref={field.ref}
                   onBlur={field.onBlur}
                   onChange={field.onChange}
-                  value={String(field.value ?? '')}
+                  value={sanitizeString(field.value)}
                   placeholder="0240000000"
                   inputMode="numeric"
                   autoComplete="tel"
@@ -151,7 +146,7 @@ export function CustomerLookupSection({
           name={secondaryPhoneName}
           rules={{
             validate: (value) => {
-              const digits = normalizePhoneDigits(String(value ?? ''));
+              const digits = normalizePhoneDigits(sanitizeString(value));
               const primaryDigits = normalizePhoneDigits(phone);
               if (!digits.length) return true;
               if (digits.length !== PHONE_DIGITS) {
@@ -172,7 +167,7 @@ export function CustomerLookupSection({
                   ref={field.ref}
                   onBlur={field.onBlur}
                   onChange={field.onChange}
-                  value={String(field.value ?? '')}
+                  value={sanitizeString(field.value)}
                   disabled={isExistingCustomer}
                   placeholder="0240000001"
                   inputMode="numeric"
@@ -196,7 +191,7 @@ export function CustomerLookupSection({
             rules={{
               validate: (value) => {
                 if (!shouldEnableName && !isExistingCustomer) return true;
-                return String(value ?? '').trim().length ? true : `${label} fullname is required`;
+                return sanitizeString(value).trim().length ? true : `${label} fullname is required`;
               },
             }}
             render={({ field }) => (
@@ -208,7 +203,7 @@ export function CustomerLookupSection({
                     ref={field.ref}
                     onBlur={field.onBlur}
                     onChange={field.onChange}
-                    value={String(field.value ?? '')}
+                    value={field.value ?? ''}
                     disabled={!shouldEnableName}
                     placeholder={`Enter ${label.toLowerCase()} fullname`}
                   />
@@ -232,36 +227,31 @@ export function CustomerLookupSection({
           render={({ field }) => (
             <FormItem>
               <FormLabel>{label} Fullname</FormLabel>
-              <Select
-                value={String(field.value ?? '')}
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  const matched = customers.find((customer) => customer.id === value);
-                  if (matched?.fullname) {
-                    setValue(fullnameName, matched.fullname, {
+              <FormControl>
+                <SearchableSelect
+                  value={sanitizeString(field.value)}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    const matched = customers.find((customer) => customer.id === value);
+                    if (matched?.fullname) {
+                      setValue(fullnameName, matched.fullname, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    }
+                    setValue(secondaryPhoneName, matched?.telephone2 ?? '', {
                       shouldDirty: true,
                       shouldValidate: true,
                     });
-                  }
-                  setValue(secondaryPhoneName, matched?.telephone2 ?? '', {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  });
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder={`Select ${label.toLowerCase()} fullname`} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.fullname} {customer.telephone ? `(${customer.telephone})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  }}
+                  placeholder={`Select ${label.toLowerCase()} fullname`}
+                  searchPlaceholder={`Search ${label.toLowerCase()}...`}
+                  options={customers.map((customer) => ({
+                    value: customer.id,
+                    label: `${customer.fullname}${customer.telephone ? ` (${customer.telephone})` : ''}`,
+                  }))}
+                />
+              </FormControl>
             </FormItem>
           )}
         />

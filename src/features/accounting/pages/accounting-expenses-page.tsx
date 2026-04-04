@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
+import { EllipsisVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
@@ -13,7 +20,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { Textarea } from '@/components/ui/textarea';
 import { BranchType, ExpenseFundingSource, ExpenseRequestStatus } from '@/db/schemas/enums';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
@@ -241,100 +248,113 @@ function AccountingExpensesPageContent({ user }: { user: AuthUser }) {
         id: 'actions',
         header: 'Action',
         enableSorting: false,
-        cell: ({ row }) => (
-          <div className="flex flex-wrap gap-2">
-            {row.original.status === ExpenseRequestStatus.RECORDED ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  void runExpenseAction(
-                    () => submitExpenseRequest({ id: row.original.id }).unwrap(),
-                    'Expense request submitted',
-                    'Failed to submit expense request',
-                  )
-                }
-                disabled={isMutating}
-              >
-                Submit
-              </Button>
-            ) : null}
-            {row.original.status === ExpenseRequestStatus.SUBMITTED ? (
-              <>
+        cell: ({ row }) => {
+          const canSubmit = row.original.status === ExpenseRequestStatus.RECORDED;
+          const canApprove = row.original.status === ExpenseRequestStatus.SUBMITTED;
+          const canReject = row.original.status === ExpenseRequestStatus.SUBMITTED;
+          const canPay = row.original.status === ExpenseRequestStatus.APPROVED;
+          const canPost = row.original.status === ExpenseRequestStatus.PAID;
+
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
-                  size="sm"
                   variant="outline"
-                  onClick={() =>
-                    void runExpenseAction(
-                      () =>
-                        approveExpenseRequest({
-                          id: row.original.id,
-                          approvedByUserId: user?.id ?? '',
-                          approvalReason: 'Approved from accounting screen',
-                        }).unwrap(),
-                      'Expense request approved',
-                      'Failed to approve expense request',
-                    )
-                  }
-                  disabled={isMutating || !user?.id}
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={!canSubmit && !canApprove && !canReject && !canPay && !canPost}
                 >
-                  Approve
+                  <EllipsisVertical className="h-4 w-4" />
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setRejectingRow(row.original)}
-                  disabled={isMutating}
-                >
-                  Reject
-                </Button>
-              </>
-            ) : null}
-            {row.original.status === ExpenseRequestStatus.APPROVED ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  void runExpenseAction(
-                    () =>
-                      payExpenseRequest({
-                        id: row.original.id,
-                        paidByUserId: user?.id ?? '',
-                        companyBankAccountId:
-                          row.original.fundingSource === ExpenseFundingSource.COMPANY_BANK
-                            ? row.original.companyBankAccountId || companyBankAccountId || null
-                            : null,
-                      }).unwrap(),
-                    'Expense request marked as paid',
-                    'Failed to mark expense request as paid',
-                  )
-                }
-                disabled={isMutating || !user?.id}
-              >
-                Pay
-              </Button>
-            ) : null}
-            {row.original.status === ExpenseRequestStatus.PAID ? (
-              <Button
-                size="sm"
-                onClick={() =>
-                  void runExpenseAction(
-                    () =>
-                      postExpenseRequest({
-                        id: row.original.id,
-                        postedBy: user?.id ?? '',
-                      }).unwrap(),
-                    'Expense request posted to ledger',
-                    'Failed to post expense request',
-                  )
-                }
-                disabled={isMutating || !user?.id}
-              >
-                Post
-              </Button>
-            ) : null}
-          </div>
-        ),
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canSubmit ? (
+                  <DropdownMenuItem
+                    disabled={isMutating}
+                    onClick={() => {
+                      void runExpenseAction(
+                        () => submitExpenseRequest({ id: row.original.id }).unwrap(),
+                        'Expense request submitted',
+                        'Failed to submit expense request',
+                      );
+                    }}
+                  >
+                    Submit
+                  </DropdownMenuItem>
+                ) : null}
+                {canApprove ? (
+                  <DropdownMenuItem
+                    disabled={isMutating || !user?.id}
+                    onClick={() => {
+                      void runExpenseAction(
+                        () =>
+                          approveExpenseRequest({
+                            id: row.original.id,
+                            approvedByUserId: user?.id ?? '',
+                            approvalReason: 'Approved from accounting screen',
+                          }).unwrap(),
+                        'Expense request approved',
+                        'Failed to approve expense request',
+                      );
+                    }}
+                  >
+                    Approve
+                  </DropdownMenuItem>
+                ) : null}
+                {canReject ? (
+                  <DropdownMenuItem
+                    disabled={isMutating}
+                    onClick={() => {
+                      setRejectingRow(row.original);
+                    }}
+                  >
+                    Reject
+                  </DropdownMenuItem>
+                ) : null}
+                {canPay ? (
+                  <DropdownMenuItem
+                    disabled={isMutating || !user?.id}
+                    onClick={() => {
+                      void runExpenseAction(
+                        () =>
+                          payExpenseRequest({
+                            id: row.original.id,
+                            paidByUserId: user?.id ?? '',
+                            companyBankAccountId:
+                              row.original.fundingSource === ExpenseFundingSource.COMPANY_BANK
+                                ? row.original.companyBankAccountId || companyBankAccountId || null
+                                : null,
+                          }).unwrap(),
+                        'Expense request marked as paid',
+                        'Failed to mark expense request as paid',
+                      );
+                    }}
+                  >
+                    Pay
+                  </DropdownMenuItem>
+                ) : null}
+                {canPost ? (
+                  <DropdownMenuItem
+                    disabled={isMutating || !user?.id}
+                    onClick={() => {
+                      void runExpenseAction(
+                        () =>
+                          postExpenseRequest({
+                            id: row.original.id,
+                            postedBy: user?.id ?? '',
+                          }).unwrap(),
+                        'Expense request posted to ledger',
+                        'Failed to post expense request',
+                      );
+                    }}
+                  >
+                    Post
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
       },
     ],
     [

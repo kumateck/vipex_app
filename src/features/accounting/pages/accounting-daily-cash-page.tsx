@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
+import { EllipsisVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
@@ -8,12 +9,18 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { BranchType, CashConfirmationStatus, UserType } from '@/db/schemas/enums';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
@@ -296,25 +303,47 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
         id: 'actions',
         header: 'Action',
         enableSorting: false,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            {row.original.status === CashConfirmationStatus.DRAFT ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => void handleConfirm(row.original)}
-                disabled={isMutating}
-              >
-                Confirm
-              </Button>
-            ) : null}
-            {row.original.status === CashConfirmationStatus.CONFIRMED ? (
-              <Button size="sm" onClick={() => void handlePost(row.original)} disabled={isMutating}>
-                Post
-              </Button>
-            ) : null}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const canConfirm = row.original.status === CashConfirmationStatus.DRAFT;
+          const canPost = row.original.status === CashConfirmationStatus.CONFIRMED;
+
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={!canConfirm && !canPost}
+                >
+                  <EllipsisVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canConfirm ? (
+                  <DropdownMenuItem
+                    disabled={isMutating}
+                    onClick={() => {
+                      void handleConfirm(row.original);
+                    }}
+                  >
+                    Confirm
+                  </DropdownMenuItem>
+                ) : null}
+                {canPost ? (
+                  <DropdownMenuItem
+                    disabled={isMutating}
+                    onClick={() => {
+                      void handlePost(row.original);
+                    }}
+                  >
+                    Post
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
       },
     ],
     [branchNameById, cashierNameById, isMutating, locationNameById],

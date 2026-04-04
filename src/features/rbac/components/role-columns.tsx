@@ -1,5 +1,12 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import { EllipsisVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { Role } from '../api/rbac.api';
 
 interface RoleColumnsOptions {
@@ -22,21 +29,28 @@ export function createRoleColumns(options: RoleColumnsOptions): ColumnDef<Role>[
   if (options.canManage) {
     columns.push({
       id: 'actions',
-      header: 'Actions',
-      size: 280,
+      header: 'Action',
+      size: 70,
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => options.onRename(row.original)}>
-            Rename
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => options.onManagePermissions(row.original)}>
-            Manage permissions
-          </Button>
-          <Button size="sm" variant="destructive" onClick={() => options.onDelete(row.original)}>
-            Delete
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="h-8 w-8">
+              <EllipsisVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => options.onRename(row.original)}>
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => options.onManagePermissions(row.original)}>
+              Manage permissions
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onClick={() => options.onDelete(row.original)}>
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     });
   }

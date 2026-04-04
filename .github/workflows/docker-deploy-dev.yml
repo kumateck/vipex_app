@@ -10,9 +10,9 @@ env:
   CONTAINER_NAME: vipex_app_dev
   HOST_PORT: 11000
   CONTAINER_PORT: 3000
-  APP_BASE_URL: https://test.app.vipexparcel.com
-  RESET_LINK_BASE_URL: https://test.app.vipexparcel.com
-  INVITE_LINK_BASE_URL: https://test.app.vipexparcel.com
+  APP_BASE_URL: https://testing.app.vipexparcel.com
+  RESET_LINK_BASE_URL: https://testing.app.vipexparcel.com
+  INVITE_LINK_BASE_URL: https://testing.app.vipexparcel.com
 
 jobs:
   build:

@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
@@ -13,7 +20,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
 import { ParcelStatus } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
@@ -149,28 +156,39 @@ export function ParcelHomeDeliveryDispatchPage() {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              try {
-                await updateParcel({
-                  id: row.original.id,
-                  status: ParcelStatus.AWAITING_PICKUP,
-                }).unwrap();
-                toast.success('Parcel moved to Awaiting Pickup');
-                setSelectedIds((prev) => prev.filter((id) => id !== row.original.id));
-                await listQuery.refetch();
-              } catch (error) {
-                toast.error(
-                  error instanceof Error ? error.message : 'Failed to move parcel to pickup',
-                );
-              }
-            }}
-            disabled={isReturningToPickup}
-          >
-            Return to Pickup
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8"
+                disabled={isReturningToPickup}
+              >
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={async () => {
+                  try {
+                    await updateParcel({
+                      id: row.original.id,
+                      status: ParcelStatus.AWAITING_PICKUP,
+                    }).unwrap();
+                    toast.success('Parcel moved to Awaiting Pickup');
+                    setSelectedIds((prev) => prev.filter((id) => id !== row.original.id));
+                    await listQuery.refetch();
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : 'Failed to move parcel to pickup',
+                    );
+                  }
+                }}
+              >
+                Return to Pickup
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],

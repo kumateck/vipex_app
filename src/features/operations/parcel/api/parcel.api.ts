@@ -21,6 +21,7 @@ export type CreateBookingWithParcelsInput = {
     plannedToBePaidCedis?: number;
     senderPaymentCedis?: number;
     senderPaymentMethod?: number;
+    paymentResponsibility?: number;
   }>;
 };
 
@@ -28,24 +29,6 @@ export type CreateBookingWithParcelsResponse = {
   bookingId: string;
   parcels: Array<{ id: string; trackingCode: string; bookingCode: string }>;
   payments: Array<{ id: string }>;
-};
-
-export type ParcelContentOption = {
-  id: string;
-  name: string;
-  description?: string | null;
-  basePricePsw: number;
-  taxInclusive: boolean;
-  active: boolean;
-  sortOrder: number;
-};
-
-export type ParcelDetailOption = {
-  id: string;
-  name: string;
-  description?: string | null;
-  active: boolean;
-  sortOrder: number;
 };
 
 export type SenderCashierParcel = {
@@ -883,43 +866,6 @@ export const parcelApi = api.injectEndpoints({
         { type: 'Bookings', id: `INTERNAL_TRANSFER_${id}` },
       ],
     }),
-    listParcelContentOptions: builder.query<
-      ParcelContentOption[],
-      { companyId?: string; activeOnly?: boolean } | void
-    >({
-      query: (params) => ({
-        url: '/shipments/parcel-masters/content-options',
-        params: params ?? undefined,
-      }),
-      providesTags: [{ type: 'Bookings', id: 'LIST' }],
-    }),
-    listParcelDetailOptions: builder.query<
-      ParcelDetailOption[],
-      { companyId?: string; activeOnly?: boolean } | void
-    >({
-      query: (params) => ({
-        url: '/shipments/parcel-masters/detail-options',
-        params: params ?? undefined,
-      }),
-      providesTags: [{ type: 'Bookings', id: 'LIST' }],
-    }),
-    createParcelDetailOption: builder.mutation<
-      { id?: string },
-      {
-        companyId?: string;
-        name: string;
-        description?: string | null;
-        active?: boolean;
-        sortOrder?: number;
-      }
-    >({
-      query: (body) => ({
-        url: '/shipments/parcel-masters/details',
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
-    }),
   }),
 });
 
@@ -953,7 +899,4 @@ export const {
   useCreateParcelInternalTransferMutation,
   useAcknowledgeParcelInternalTransferMutation,
   useCancelParcelInternalTransferMutation,
-  useListParcelContentOptionsQuery,
-  useListParcelDetailOptionsQuery,
-  useCreateParcelDetailOptionMutation,
 } = parcelApi;
