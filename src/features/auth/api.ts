@@ -1,5 +1,8 @@
 import { api } from '@/services/api';
 import { useAuthStore, type AuthUser } from '@/stores/auth-store';
+import { store } from '@/store';
+import { useBreadcrumbStore } from '@/stores/route-store';
+import { clearApiInFlightRequests } from '@/services/api';
 
 export interface LoginRequest {
   email: string;
@@ -113,6 +116,12 @@ export const authApi = api.injectEndpoints({
       async onQueryStarted(_args, { queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
+          clearApiInFlightRequests();
+          store.dispatch(api.util.resetApiState());
+          useAuthStore.persist.clearStorage();
+          useAuthStore.getState().logout();
+          useBreadcrumbStore.getState().reset();
+          useBreadcrumbStore.persist.clearStorage();
           const accessToken = data.tokens?.accessToken ?? data.accessToken ?? '';
           const refreshToken = data.tokens?.refreshToken ?? data.refreshToken ?? '';
 
@@ -141,7 +150,12 @@ export const authApi = api.injectEndpoints({
           await queryFulfilled;
         } finally {
           // Always clear auth state on logout, even if request fails
+          clearApiInFlightRequests();
+          store.dispatch(api.util.resetApiState());
           useAuthStore.getState().logout();
+          useAuthStore.persist.clearStorage();
+          useBreadcrumbStore.getState().reset();
+          useBreadcrumbStore.persist.clearStorage();
         }
       },
     }),
@@ -166,7 +180,12 @@ export const authApi = api.injectEndpoints({
           }
         } catch (_err) {
           // If refresh fails, logout user
+          clearApiInFlightRequests();
+          store.dispatch(api.util.resetApiState());
           useAuthStore.getState().logout();
+          useAuthStore.persist.clearStorage();
+          useBreadcrumbStore.getState().reset();
+          useBreadcrumbStore.persist.clearStorage();
         }
       },
     }),

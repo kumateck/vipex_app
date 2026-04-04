@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import Constants from 'expo-constants';
 import { AppScreen } from '@mobile/components/screen';
 import { useAuth } from '@mobile/providers/auth-provider';
-import { getApiDebugInfo } from '@mobile/lib/api';
+import { getApiDebugInfo, runApiDiagnostics, type ApiProbeResult } from '@mobile/lib/api';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { AppButton, AppCard, AppInput, AppLabel } from '@/components/ui/mobile';
 import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
@@ -16,6 +16,9 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
+  const [diagnosticProbes, setDiagnosticProbes] = useState<ApiProbeResult[] | null>(null);
+  const [diagnosticsError, setDiagnosticsError] = useState<string | null>(null);
   const apiDebug = getApiDebugInfo();
   const appVersion = Constants.expoConfig?.version ?? 'unknown';
   const configuredApiBase =
@@ -31,6 +34,20 @@ export default function LoginScreen() {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleRunDiagnostics() {
+    setDiagnosticsLoading(true);
+    setDiagnosticsError(null);
+    try {
+      const result = await runApiDiagnostics();
+      setDiagnosticProbes(result.probes);
+    } catch (err) {
+      setDiagnosticProbes(null);
+      setDiagnosticsError(err instanceof Error ? err.message : 'Diagnostics failed');
+    } finally {
+      setDiagnosticsLoading(false);
     }
   }
 
@@ -118,6 +135,44 @@ export default function LoginScreen() {
         <Text style={[styles.debugText, { color: theme.colors.textSubtle }]}>
           Active API: {apiDebug.activeApiBaseUrl}
         </Text>
+        <AppButton
+          title={diagnosticsLoading ? 'Running diagnostics...' : 'Run Network Diagnostics'}
+          onPress={() => void handleRunDiagnostics()}
+          disabled={diagnosticsLoading}
+          variant="secondary"
+        />
+        {diagnosticsError ? (
+          <Text style={[styles.debugText, { color: theme.colors.danger }]}>
+            Diagnostics error: {diagnosticsError}
+          </Text>
+        ) : null}
+        {diagnosticProbes?.length ? (
+          <View style={styles.diagnosticList}>
+            {diagnosticProbes.map((probe) => (
+              <View key={probe.apiBaseUrl} style={styles.diagnosticItem}>
+                <Text style={[styles.debugText, { color: theme.colors.textMuted }]}>
+                  {probe.apiBaseUrl}
+                </Text>
+                <Text
+                  style={[
+                    styles.debugText,
+                    {
+                      color: probe.ok ? theme.colors.success : theme.colors.danger,
+                    },
+                  ]}
+                >
+                  /health: {probe.ok ? 'ok' : 'failed'} • status: {probe.status ?? '-'} •{' '}
+                  {probe.latencyMs}ms
+                </Text>
+                {probe.error ? (
+                  <Text style={[styles.debugText, { color: theme.colors.danger }]}>
+                    error: {probe.error}
+                  </Text>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
     </AppScreen>
   );
@@ -151,4 +206,6 @@ const styles = StyleSheet.create({
   },
   debugTitle: { fontSize: mobileTypography.caption, fontWeight: '700' },
   debugText: { fontSize: mobileTypography.caption },
+  diagnosticList: { gap: 6, marginTop: 6 },
+  diagnosticItem: { gap: 2 },
 });

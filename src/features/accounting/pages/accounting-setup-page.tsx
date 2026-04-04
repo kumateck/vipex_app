@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
+import { EllipsisVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
 import {
@@ -17,7 +18,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/date-picker';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { formatDateTime } from '@/lib/date';
 import { Label } from '@/components/ui/label';
 import { CreatableCombobox } from '@/components/ui/creatable-combobox';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -28,7 +36,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AccountClass, ExpenseFundingSource } from '@/db/schemas/enums';
 import { AccountingSetupPermissionKeys, PermissionKeys } from '@/shared/permissions/constants';
@@ -303,7 +311,7 @@ function getPolicyTemplate(policyCode: string) {
 }
 
 function formatAuditDateTime(value: string) {
-  return new Date(value).toLocaleString();
+  return formatDateTime(value);
 }
 
 function stringifyAuditMetadata(metadata: unknown) {
@@ -1206,14 +1214,23 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleEditAccount(row.original)}
-            disabled={!accountsAccess.canUpdate}
-          >
-            Edit
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={!accountsAccess.canUpdate}
+              >
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleEditAccount(row.original)}>
+                Edit
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],
@@ -1241,14 +1258,23 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleEditExpenseCategory(row.original)}
-            disabled={!categoriesAccess.canUpdate}
-          >
-            Edit
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={!categoriesAccess.canUpdate}
+              >
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleEditExpenseCategory(row.original)}>
+                Edit
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],
@@ -1304,14 +1330,23 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleEditApprovalPolicy(row.original)}
-            disabled={!policiesAccess.canUpdate}
-          >
-            Edit
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={!policiesAccess.canUpdate}
+              >
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleEditApprovalPolicy(row.original)}>
+                Edit
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],
@@ -1341,14 +1376,23 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleEditBankAccount(row.original)}
-            disabled={!bankAccountsAccess.canUpdate}
-          >
-            Edit
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={!bankAccountsAccess.canUpdate}
+              >
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleEditBankAccount(row.original)}>
+                Edit
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],
@@ -1370,14 +1414,23 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleEditTaxProfile(row.original)}
-            disabled={!taxProfilesAccess.canUpdate}
-          >
-            Edit
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={!taxProfilesAccess.canUpdate}
+              >
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleEditTaxProfile(row.original)}>
+                Edit
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],
@@ -1426,14 +1479,23 @@ function AccountingSetupPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleEditTaxComponent(row.original)}
-            disabled={!taxComponentsAccess.canUpdate}
-          >
-            Edit
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={!taxComponentsAccess.canUpdate}
+              >
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleEditTaxComponent(row.original)}>
+                Edit
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],

@@ -16,6 +16,32 @@ export default function OperationsTabScreen() {
       </Text>
 
       <AppCard>
+        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Global Search</Text>
+        <Text style={{ color: theme.colors.textMuted }}>
+          Search parcels, communication threads, channels, and users in one view.
+        </Text>
+        <Link
+          href={'/(app)/global-search' as never}
+          style={[styles.link, { color: theme.colors.primary }]}
+        >
+          Open Global Search
+        </Link>
+      </AppCard>
+
+      <AppCard>
+        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Super Search</Text>
+        <Text style={{ color: theme.colors.textMuted }}>
+          Find any parcel record across your company with one search.
+        </Text>
+        <Link
+          href={'/(app)/super-search' as never}
+          style={[styles.link, { color: theme.colors.primary }]}
+        >
+          Open Super Search
+        </Link>
+      </AppCard>
+
+      <AppCard>
         <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Queue Management</Text>
         <Text style={{ color: theme.colors.textMuted }}>
           Search parcels, issue queue tickets, and track queue boards.

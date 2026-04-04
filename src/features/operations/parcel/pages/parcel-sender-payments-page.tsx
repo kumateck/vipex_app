@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -20,7 +27,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
@@ -29,6 +36,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useGetLocationQuery } from '@/features/locations/api/locations.api';
 import { Textarea } from '@/components/ui/textarea';
+import { formatDateTime } from '@/lib/date';
 import {
   type SenderCashierParcel,
   useCollectSenderAndProcessMutation,
@@ -60,7 +68,7 @@ const formatCurrency = (amountPsw: number) => `GHS ${(amountPsw / 100).toFixed(2
 function formatDate(isoDate: string) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTime(date);
 }
 
 function getSenderDuePsw(parcel: SenderCashierParcel) {
@@ -153,34 +161,39 @@ export function ParcelSenderPaymentsPage() {
       },
       {
         id: 'actions',
-        header: 'Actions',
+        header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={() => {
-                const parcel = row.original;
-                setSelectedParcel(parcel);
-                setAmount((getSenderDuePsw(parcel) / 100).toFixed(2));
-                setPaymentMethod(String(PaymentMethod.CASH));
-              }}
-            >
-              {getSenderDuePsw(row.original) > 0 ? 'Collect Payment' : 'Print Receipts'}
-            </Button>
-            {canDeleteParcel ? (
-              <Button
-                size="sm"
-                variant="destructive"
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="outline" className="h-8 w-8">
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
                 onClick={() => {
-                  setDeleteTargetParcel(row.original);
-                  setDeleteReason('');
+                  const parcel = row.original;
+                  setSelectedParcel(parcel);
+                  setAmount((getSenderDuePsw(parcel) / 100).toFixed(2));
+                  setPaymentMethod(String(PaymentMethod.CASH));
                 }}
               >
-                Delete Parcel
-              </Button>
-            ) : null}
-          </div>
+                {getSenderDuePsw(row.original) > 0 ? 'Collect Payment' : 'Print Receipts'}
+              </DropdownMenuItem>
+              {canDeleteParcel ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => {
+                    setDeleteTargetParcel(row.original);
+                    setDeleteReason('');
+                  }}
+                >
+                  Delete Parcel
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],

@@ -3,13 +3,17 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
 import {
+  addCommunicationChannelParticipants,
+  createCommunicationChannel,
   joinCommunicationVoiceChannel,
   listCommunicationCalls,
   listCommunicationChannelUnreadCounts,
   listCommunicationChannels,
   listCommunicationThreads,
   listCommunicationUnreadCounts,
+  listMobileUserOptions,
   markCommunicationChannelRead,
+  updateCommunicationChannel,
 } from '@mobile/lib/api';
 import { notifyError } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
@@ -19,14 +23,21 @@ import type {
   CommunicationChannel,
   CommunicationThread,
 } from '@mobile/types/communication';
+import type { MobileUserOption } from '@mobile/types/communication';
 import { useCommunicationSocket } from '@mobile/features/communication/use-communication-socket';
-import { AppCard, AppSkeletonCard } from '@/components/ui/mobile';
+import {
+  loadChannelNotificationPrefs,
+  saveChannelNotificationPrefs,
+  type ChannelNotificationMode,
+} from '@mobile/lib/communication-local';
+import { AppButton, AppCard, AppInput, AppSkeletonCard } from '@/components/ui/mobile';
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 type CommunicationLoadState = {
   threads: CommunicationThread[];
   textChannels: CommunicationChannel[];
   voiceChannels: CommunicationChannel[];
+  users: MobileUserOption[];
   activeCalls: CommunicationCallSession[];
   threadUnreadById: Map<string, { unread: number; mentions: number }>;
   voiceUnreadById: Map<string, { unread: number; mentions: number }>;
@@ -45,10 +56,26 @@ export default function CommunicationTabScreen() {
   const [loading, setLoading] = useState(true);
   const [joiningChannelId, setJoiningChannelId] = useState<string | null>(null);
   const [callOccupancyByCallId, setCallOccupancyByCallId] = useState<Record<string, number>>({});
+  const [userOptions, setUserOptions] = useState<MobileUserOption[]>([]);
+  const [channelNotifModes, setChannelNotifModes] = useState<
+    Record<string, ChannelNotificationMode>
+  >({});
+  const [createName, setCreateName] = useState('');
+  const [createDescription, setCreateDescription] = useState('');
+  const [createChannelType, setCreateChannelType] = useState<'text' | 'voice'>('text');
+  const [createVisibility, setCreateVisibility] = useState<'public' | 'private'>('public');
+  const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
+  const [creatingChannel, setCreatingChannel] = useState(false);
+  const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
+  const [editingChannelName, setEditingChannelName] = useState('');
+  const [editingArchive, setEditingArchive] = useState(false);
+  const [participantInput, setParticipantInput] = useState('');
+  const [updatingChannel, setUpdatingChannel] = useState(false);
   const [data, setData] = useState<CommunicationLoadState>({
     threads: [],
     textChannels: [],
     voiceChannels: [],
+    users: [],
     activeCalls: [],
     threadUnreadById: new Map(),
     voiceUnreadById: new Map(),
@@ -58,15 +85,23 @@ export default function CommunicationTabScreen() {
     setLoading(true);
     try {
       const next = await withAuth(async (token) => {
-        const [threads, textChannels, voiceChannels, threadUnread, voiceUnread, activeCalls] =
-          await Promise.all([
-            listCommunicationThreads(token),
-            listCommunicationChannels(token, { channelType: 'text' }),
-            listCommunicationChannels(token, { channelType: 'voice' }),
-            listCommunicationUnreadCounts(token),
-            listCommunicationChannelUnreadCounts(token, { channelType: 'voice' }),
-            listCommunicationCalls(token, { status: 'active' }),
-          ]);
+        const [
+          threads,
+          textChannels,
+          voiceChannels,
+          threadUnread,
+          voiceUnread,
+          activeCalls,
+          users,
+        ] = await Promise.all([
+          listCommunicationThreads(token),
+          listCommunicationChannels(token, { channelType: 'text' }),
+          listCommunicationChannels(token, { channelType: 'voice' }),
+          listCommunicationUnreadCounts(token),
+          listCommunicationChannelUnreadCounts(token, { channelType: 'voice' }),
+          listCommunicationCalls(token, { status: 'active' }),
+          listMobileUserOptions(token),
+        ]);
 
         const threadUnreadById = new Map<string, { unread: number; mentions: number }>(
           threadUnread.map((item) => [
@@ -85,12 +120,14 @@ export default function CommunicationTabScreen() {
           threads,
           textChannels,
           voiceChannels,
+          users,
           activeCalls,
           threadUnreadById,
           voiceUnreadById,
         } as CommunicationLoadState;
       });
       setData(next);
+      setUserOptions(next.users);
     } catch (error) {
       notifyError(
         'Communication load failed',
@@ -104,6 +141,13 @@ export default function CommunicationTabScreen() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    void (async () => {
+      const prefs = await loadChannelNotificationPrefs();
+      setChannelNotifModes(prefs);
+    })();
+  }, []);
 
   const { isConnected: isSocketConnected, requestCallParticipants } = useCommunicationSocket(
     session.accessToken,
@@ -190,6 +234,81 @@ export default function CommunicationTabScreen() {
     }
   };
 
+  const cycleNotificationMode = async (channelId: string) => {
+    const current = channelNotifModes[channelId] ?? 'all';
+    const next: ChannelNotificationMode =
+      current === 'all' ? 'mentions' : current === 'mentions' ? 'mute' : 'all';
+    const merged = { ...channelNotifModes, [channelId]: next };
+    setChannelNotifModes(merged);
+    await saveChannelNotificationPrefs(merged);
+  };
+
+  const onCreateChannel = async () => {
+    const name = createName.trim();
+    if (!name) return;
+    setCreatingChannel(true);
+    try {
+      await withAuth((token) =>
+        createCommunicationChannel(token, {
+          name,
+          description: createDescription.trim() || null,
+          channelType: createChannelType,
+          visibility: createVisibility,
+          participantUserIds: createVisibility === 'private' ? selectedParticipantIds : [],
+          isCallEnabled: createChannelType === 'voice',
+        }),
+      );
+      setCreateName('');
+      setCreateDescription('');
+      setSelectedParticipantIds([]);
+      await loadData();
+    } catch (error) {
+      notifyError(
+        'Create channel failed',
+        error instanceof Error ? error.message : 'Unable to create channel',
+      );
+    } finally {
+      setCreatingChannel(false);
+    }
+  };
+
+  const onSaveChannelSettings = async () => {
+    if (!editingChannelId) return;
+    setUpdatingChannel(true);
+    try {
+      await withAuth((token) =>
+        updateCommunicationChannel(token, {
+          id: editingChannelId,
+          name: editingChannelName.trim() || undefined,
+          isArchived: editingArchive,
+        }),
+      );
+      if (participantInput.trim()) {
+        const ids = participantInput
+          .split(',')
+          .map((id) => id.trim())
+          .filter(Boolean);
+        if (ids.length) {
+          await withAuth((token) =>
+            addCommunicationChannelParticipants(token, {
+              id: editingChannelId,
+              participantUserIds: ids,
+            }),
+          );
+        }
+      }
+      setParticipantInput('');
+      await loadData();
+    } catch (error) {
+      notifyError(
+        'Update channel failed',
+        error instanceof Error ? error.message : 'Unable to update channel settings',
+      );
+    } finally {
+      setUpdatingChannel(false);
+    }
+  };
+
   return (
     <AppScreen refreshing={loading} onRefresh={() => void loadData()}>
       <Text style={[styles.title, { color: theme.colors.text }]}>Communication</Text>
@@ -199,6 +318,68 @@ export default function CommunicationTabScreen() {
       <Text style={[styles.socketLabel, { color: theme.colors.textSubtle }]}>
         Socket: {isSocketConnected ? 'Live' : 'Offline'}
       </Text>
+
+      <AppCard>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>Create Channel</Text>
+        <AppInput value={createName} onChangeText={setCreateName} placeholder="Channel name" />
+        <AppInput
+          value={createDescription}
+          onChangeText={setCreateDescription}
+          placeholder="Description (optional)"
+        />
+        <View style={styles.controlsRow}>
+          <AppButton
+            title={`Type: ${createChannelType}`}
+            onPress={() => setCreateChannelType((prev) => (prev === 'text' ? 'voice' : 'text'))}
+            variant="secondary"
+          />
+          <AppButton
+            title={`Visibility: ${createVisibility}`}
+            onPress={() =>
+              setCreateVisibility((prev) => (prev === 'public' ? 'private' : 'public'))
+            }
+            variant="secondary"
+          />
+        </View>
+        {createVisibility === 'private' ? (
+          <View style={styles.userPills}>
+            {userOptions.slice(0, 20).map((user) => {
+              const selected = selectedParticipantIds.includes(user.id);
+              return (
+                <Pressable
+                  key={user.id}
+                  onPress={() =>
+                    setSelectedParticipantIds((prev) =>
+                      selected ? prev.filter((id) => id !== user.id) : [...prev, user.id],
+                    )
+                  }
+                  style={[
+                    styles.userPill,
+                    {
+                      borderColor: theme.colors.border,
+                      backgroundColor: selected ? theme.colors.primary : theme.colors.cardMuted,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color: selected ? theme.colors.primaryText : theme.colors.text,
+                      fontSize: 12,
+                    }}
+                  >
+                    {user.fullname}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+        <AppButton
+          title={creatingChannel ? 'Creating...' : 'Create Channel'}
+          onPress={() => void onCreateChannel()}
+          disabled={creatingChannel || createName.trim().length === 0}
+        />
+      </AppCard>
 
       {loading ? (
         <>
@@ -294,6 +475,7 @@ export default function CommunicationTabScreen() {
                     { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
                   ]}
                   onPress={() => openTextChannel(channel)}
+                  onLongPress={() => void cycleNotificationMode(channel.id)}
                 >
                   <View style={styles.rowMain}>
                     <Text style={[styles.rowTitle, { color: theme.colors.text }]}>
@@ -310,6 +492,7 @@ export default function CommunicationTabScreen() {
                     {unread?.unread ? (
                       <BadgeText value={`${unread.unread}`} tone="primary" />
                     ) : null}
+                    <BadgeText value={channelNotifModes[channel.id] ?? 'all'} tone="primary" />
                   </View>
                 </Pressable>
               );
@@ -358,6 +541,48 @@ export default function CommunicationTabScreen() {
                       {joiningChannelId === channel.id ? 'Joining...' : 'Join Voice'}
                     </Text>
                   </Pressable>
+                  <View style={styles.controlsRow}>
+                    <AppButton
+                      title={`Notif: ${channelNotifModes[channel.id] ?? 'all'}`}
+                      onPress={() => void cycleNotificationMode(channel.id)}
+                      variant="secondary"
+                    />
+                    <AppButton
+                      title={editingChannelId === channel.id ? 'Hide Manage' : 'Manage'}
+                      onPress={() => {
+                        setEditingChannelId((prev) => (prev === channel.id ? null : channel.id));
+                        setEditingChannelName(channel.name);
+                        setEditingArchive(Boolean(channel.isArchived));
+                      }}
+                      variant="secondary"
+                    />
+                  </View>
+                  {editingChannelId === channel.id ? (
+                    <View style={styles.manageWrap}>
+                      <AppInput
+                        value={editingChannelName}
+                        onChangeText={setEditingChannelName}
+                        placeholder="Channel name"
+                      />
+                      <AppInput
+                        value={participantInput}
+                        onChangeText={setParticipantInput}
+                        placeholder="Add participant user IDs (comma separated)"
+                      />
+                      <View style={styles.controlsRow}>
+                        <AppButton
+                          title={editingArchive ? 'Archived' : 'Active'}
+                          onPress={() => setEditingArchive((prev) => !prev)}
+                          variant="secondary"
+                        />
+                        <AppButton
+                          title={updatingChannel ? 'Saving...' : 'Save'}
+                          onPress={() => void onSaveChannelSettings()}
+                          disabled={updatingChannel}
+                        />
+                      </View>
+                    </View>
+                  ) : null}
                 </AppCard>
               );
             })
@@ -427,6 +652,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   voiceHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: mobileSpacing.sm },
+  controlsRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
+  userPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  userPill: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  manageWrap: { marginTop: mobileSpacing.sm, gap: 8 },
   voiceButton: {
     marginTop: mobileSpacing.sm,
     borderRadius: 12,

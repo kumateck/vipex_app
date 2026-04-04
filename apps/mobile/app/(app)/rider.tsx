@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
-import { listRiderParcels, riderGivenToCustomer, riderReturnedToOffice } from '@mobile/lib/api';
+import {
+  getRiderBranchBenchmark,
+  listRiderParcels,
+  riderGivenToCustomer,
+  riderReturnedToOffice,
+} from '@mobile/lib/api';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
-import type { RiderDoorstepRecord } from '@mobile/types/parcels';
+import type { RiderBenchmarkResponse, RiderDoorstepRecord } from '@mobile/types/parcels';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { canCompleteRiderDeliveryActions, canViewRiderScreen } from '@mobile/lib/permissions';
@@ -35,6 +40,21 @@ function formatCedisFromPsw(amountPsw?: number) {
   return `GH₵ ${cedis.toFixed(2)}`;
 }
 
+function formatPercent(value: number) {
+  if (!Number.isFinite(value)) return '0%';
+  return `${Math.max(0, value).toFixed(1)}%`;
+}
+
+function formatDelta(value: number, inverseGood = false) {
+  const sign = value > 0 ? '+' : '';
+  const tone = inverseGood ? (value <= 0 ? 'Good' : 'Needs focus') : value >= 0 ? 'Good' : 'Below';
+  return `${sign}${value.toFixed(1)}% (${tone})`;
+}
+
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
 export default function RiderScreen() {
   const { theme } = useAppearance();
   const { session, withAuth } = useAuth();
@@ -50,25 +70,35 @@ export default function RiderScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [actionParcelId, setActionParcelId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'given' | 'returned' | null>(null);
+  const [benchmark, setBenchmark] = useState<RiderBenchmarkResponse | null>(null);
 
   async function load() {
     if (!riderUserId) return;
     setRefreshing(true);
     try {
-      const [current, history] = await withAuth(async (token) => {
-        return Promise.all([
+      const [current, history, benchmarkResult] = await withAuth(async (token) => {
+        const [currentRowsResult, historyRowsResult, benchmarkResult] = await Promise.all([
           listRiderParcels(token, riderUserId, 'current'),
           listRiderParcels(token, riderUserId, 'history'),
+          session.user?.branchId
+            ? getRiderBranchBenchmark(token, {
+                riderUserId,
+                branchId: session.user.branchId,
+              })
+            : Promise.resolve(null),
         ]);
+        return [currentRowsResult, historyRowsResult, benchmarkResult] as const;
       });
       setCurrentRows(current.rows ?? []);
       setHistoryRows(history.rows ?? []);
+      setBenchmark(benchmarkResult);
     } catch (err) {
       notifyError(
         'Load failed',
         err instanceof Error ? err.message : 'Unable to load rider parcels',
       );
       void hapticError();
+      setBenchmark(null);
     } finally {
       setRefreshing(false);
     }
@@ -102,6 +132,80 @@ export default function RiderScreen() {
       .filter((row) => isSameCalendarDay(row.updatedAt))
       .reduce((sum, row) => sum + (row.amountPaidPsw ?? 0), 0);
   }, [historyRows]);
+
+  const riderRoleLabel = session.user?.role?.name?.trim() || 'Rider';
+
+  const analytics = useMemo(() => {
+    const completed = historyRows.length;
+    const outstanding = currentRows.length;
+    const totalKnown = completed + outstanding;
+    const completionRate = totalKnown > 0 ? (completed / totalKnown) * 100 : 0;
+
+    const returnedCount = historyRows.filter((row) => {
+      const status = (row.deliveryStatus ?? '').toString().toLowerCase();
+      return status.includes('return');
+    }).length;
+    const returnRate = completed > 0 ? (returnedCount / completed) * 100 : 0;
+
+    const totalPaidPsw = historyRows.reduce((sum, row) => sum + (row.amountPaidPsw ?? 0), 0);
+    const averagePaidPsw = completed > 0 ? totalPaidPsw / completed : 0;
+
+    const now = new Date();
+    const todayKey = startOfDay(now);
+    const dailySeries: Array<{ dayLabel: string; completed: number; created: number }> = [];
+
+    for (let offset = 6; offset >= 0; offset -= 1) {
+      const day = new Date(now);
+      day.setDate(now.getDate() - offset);
+      const key = startOfDay(day);
+      const dayLabel = day.toLocaleDateString([], { weekday: 'short' });
+
+      const completedForDay = historyRows.filter((row) => {
+        if (!row.updatedAt) return false;
+        const parsed = new Date(row.updatedAt);
+        if (Number.isNaN(parsed.getTime())) return false;
+        return startOfDay(parsed) === key;
+      }).length;
+
+      const createdForDay = currentRows.filter((row) => {
+        const sourceDate = row.createdAt ?? row.updatedAt;
+        if (!sourceDate) return false;
+        const parsed = new Date(sourceDate);
+        if (Number.isNaN(parsed.getTime())) return false;
+        return startOfDay(parsed) === key;
+      }).length;
+
+      dailySeries.push({
+        dayLabel,
+        completed: completedForDay,
+        created: createdForDay,
+      });
+    }
+
+    const todayCompleted = dailySeries[dailySeries.length - 1]?.completed ?? 0;
+    const yesterdayCompleted = dailySeries[dailySeries.length - 2]?.completed ?? 0;
+    const todayDelta =
+      yesterdayCompleted > 0
+        ? ((todayCompleted - yesterdayCompleted) / yesterdayCompleted) * 100
+        : 0;
+
+    const unresolvedOlderThanOneDay = currentRows.filter((row) => {
+      const sourceDate = row.createdAt ?? row.updatedAt;
+      if (!sourceDate) return false;
+      const parsed = new Date(sourceDate);
+      if (Number.isNaN(parsed.getTime())) return false;
+      return todayKey - startOfDay(parsed) >= 24 * 60 * 60 * 1000;
+    }).length;
+
+    return {
+      completionRate,
+      returnRate,
+      averagePaidPsw,
+      todayDelta,
+      unresolvedOlderThanOneDay,
+      dailySeries,
+    };
+  }, [currentRows, historyRows]);
 
   const searchableRows = useMemo(() => {
     const byParcelId = new Map<string, RiderDoorstepRecord>();
@@ -255,6 +359,135 @@ export default function RiderScreen() {
           </Text>
         </View>
       </View>
+
+      <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>
+        Rider Analytics ({riderRoleLabel})
+      </Text>
+      <View style={styles.kpiGrid}>
+        <View
+          style={[
+            styles.kpiTile,
+            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+          ]}
+        >
+          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
+            Completion Rate (All Known)
+          </Text>
+          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
+            {formatPercent(analytics.completionRate)}
+          </Text>
+        </View>
+        <View
+          style={[
+            styles.kpiTile,
+            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+          ]}
+        >
+          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>Return Rate</Text>
+          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
+            {formatPercent(analytics.returnRate)}
+          </Text>
+        </View>
+        <View
+          style={[
+            styles.kpiTile,
+            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+          ]}
+        >
+          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
+            Avg Payment Per Delivered
+          </Text>
+          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
+            {formatCedisFromPsw(analytics.averagePaidPsw)}
+          </Text>
+        </View>
+        <View
+          style={[
+            styles.kpiTile,
+            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+          ]}
+        >
+          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
+            Outstanding &gt; 24h
+          </Text>
+          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
+            {analytics.unresolvedOlderThanOneDay}
+          </Text>
+        </View>
+      </View>
+
+      <AppCard>
+        <Text style={[styles.detailsTitle, { color: theme.colors.text }]}>
+          7-Day Throughput Trend
+        </Text>
+        <Text style={[styles.detailsLine, { color: theme.colors.textSubtle }]}>
+          Today vs yesterday completed delta: {formatPercent(analytics.todayDelta)}
+        </Text>
+        {analytics.dailySeries.map((point) => (
+          <View key={point.dayLabel} style={styles.trendRow}>
+            <Text style={[styles.trendDay, { color: theme.colors.textMuted }]}>
+              {point.dayLabel}
+            </Text>
+            <Text style={[styles.trendValue, { color: theme.colors.text }]}>
+              Completed: {point.completed}
+            </Text>
+            <Text style={[styles.trendValue, { color: theme.colors.textSubtle }]}>
+              New Assigned: {point.created}
+            </Text>
+          </View>
+        ))}
+      </AppCard>
+
+      {benchmark ? (
+        <AppCard>
+          <Text style={[styles.detailsTitle, { color: theme.colors.text }]}>Branch Benchmark</Text>
+          <Text style={[styles.detailsLine, { color: theme.colors.textSubtle }]}>
+            Compared with {benchmark.branch.ridersCount} riders in your branch.
+          </Text>
+          <View style={styles.benchmarkRow}>
+            <Text style={[styles.benchmarkLabel, { color: theme.colors.textMuted }]}>
+              Completion Rate
+            </Text>
+            <Text style={[styles.benchmarkValue, { color: theme.colors.text }]}>
+              {formatPercent(benchmark.rider.completionRate)} vs{' '}
+              {formatPercent(benchmark.branchAverage.completionRate)}
+            </Text>
+            <Text style={[styles.benchmarkDelta, { color: theme.colors.textSubtle }]}>
+              {formatDelta(benchmark.rider.completionRate - benchmark.branchAverage.completionRate)}
+            </Text>
+          </View>
+          <View style={styles.benchmarkRow}>
+            <Text style={[styles.benchmarkLabel, { color: theme.colors.textMuted }]}>
+              Return Rate
+            </Text>
+            <Text style={[styles.benchmarkValue, { color: theme.colors.text }]}>
+              {formatPercent(benchmark.rider.returnRate)} vs{' '}
+              {formatPercent(benchmark.branchAverage.returnRate)}
+            </Text>
+            <Text style={[styles.benchmarkDelta, { color: theme.colors.textSubtle }]}>
+              {formatDelta(benchmark.rider.returnRate - benchmark.branchAverage.returnRate, true)}
+            </Text>
+          </View>
+          <View style={styles.benchmarkRow}>
+            <Text style={[styles.benchmarkLabel, { color: theme.colors.textMuted }]}>
+              Avg Paid Per Delivery
+            </Text>
+            <Text style={[styles.benchmarkValue, { color: theme.colors.text }]}>
+              {formatCedisFromPsw(benchmark.rider.averagePaidPsw)} vs{' '}
+              {formatCedisFromPsw(benchmark.branchAverage.averagePaidPsw)}
+            </Text>
+          </View>
+          <View style={styles.benchmarkRow}>
+            <Text style={[styles.benchmarkLabel, { color: theme.colors.textMuted }]}>
+              Outstanding &gt; 24h
+            </Text>
+            <Text style={[styles.benchmarkValue, { color: theme.colors.text }]}>
+              {benchmark.rider.unresolvedOlderThanOneDay.toFixed(1)} vs{' '}
+              {benchmark.branchAverage.unresolvedOlderThanOneDay.toFixed(1)}
+            </Text>
+          </View>
+        </AppCard>
+      ) : null}
 
       <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>
         Parcels Yet To Deliver Today
@@ -430,4 +663,16 @@ const styles = StyleSheet.create({
   empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
   buttonRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
   listWrap: { gap: mobileSpacing.sm + 2, paddingTop: mobileSpacing.sm },
+  trendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: mobileSpacing.sm,
+  },
+  trendDay: { width: 48, fontWeight: '700' },
+  trendValue: { flex: 1, fontSize: mobileTypography.caption },
+  benchmarkRow: { gap: 4, marginTop: mobileSpacing.xs },
+  benchmarkLabel: { fontSize: mobileTypography.caption, fontWeight: '700' },
+  benchmarkValue: { fontWeight: '700' },
+  benchmarkDelta: { fontSize: mobileTypography.caption },
 });

@@ -5,7 +5,7 @@ import { createBookingWithParcelsCtrl } from './booking-with-parcels.controller'
 import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { Forbidden } from '@/server/utils/http-error';
-import { BranchType } from '@/db/schemas/enums';
+import { BranchType, PaymentResponsibility } from '@/db/schemas/enums';
 
 export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-parcels' })
   .use(authPlugin)
@@ -34,24 +34,23 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
           trackingCode?: string | null;
           senderPaymentCedis?: number | string | null;
           senderPaymentMethod?: number;
+          paymentResponsibility?: number;
         }>;
       };
-      const res = await createBookingWithParcelsCtrl(
-        {
-          senderId: payload.senderId,
-          companyId: authUser.companyId ?? '',
-          sourceId: authUser.branchId ?? '',
-          status: payload.status,
-          createdBy: authUser.sub,
-          cashierSessionId: payload.cashierSessionId ?? null,
-          bookingCode: payload.bookingCode ?? null,
-          parcels: payload.parcels.map((parcel) => ({
-            ...parcel,
-            cashierUserId: authUser.sub,
-            branchId: authUser.branchId ?? '',
-          })),
-        },
-      );
+      const res = await createBookingWithParcelsCtrl({
+        senderId: payload.senderId,
+        companyId: authUser.companyId ?? '',
+        sourceId: authUser.branchId ?? '',
+        status: payload.status,
+        createdBy: authUser.sub,
+        cashierSessionId: payload.cashierSessionId ?? null,
+        bookingCode: payload.bookingCode ?? null,
+        parcels: payload.parcels.map((parcel) => ({
+          ...parcel,
+          cashierUserId: authUser.sub,
+          branchId: authUser.branchId ?? '',
+        })),
+      });
       set.status = HttpStatus.CREATED;
       return res;
     },
@@ -75,6 +74,13 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
             trackingCode: t.Optional(t.Union([t.String(), t.Null()])),
             senderPaymentCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
             senderPaymentMethod: t.Optional(t.Number()),
+            paymentResponsibility: t.Optional(
+              t.Union([
+                t.Literal(PaymentResponsibility.SENDER),
+                t.Literal(PaymentResponsibility.RECIPIENT),
+                t.Literal(PaymentResponsibility.SPLIT),
+              ]),
+            ),
           }),
           { minItems: 1 },
         ),

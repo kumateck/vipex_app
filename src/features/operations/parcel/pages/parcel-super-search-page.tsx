@@ -1,10 +1,16 @@
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Search } from 'lucide-react';
+import { EllipsisVertical, Search } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -14,6 +20,7 @@ import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListAuditLogsQuery } from '@/features/audit/api';
+import { formatDateTime } from '@/lib/date';
 import {
   type ParcelSearchRow,
   useGetParcelDetailsQuery,
@@ -54,7 +61,7 @@ function formatDate(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTime(date);
 }
 
 function paymentMethodLabel(method: number) {
@@ -170,12 +177,21 @@ export function ParcelSuperSearchPage() {
       },
       {
         id: 'actions',
-        header: 'Actions',
+        header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button size="sm" variant="outline" onClick={() => setSelectedParcelId(row.original.id)}>
-            View Details
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="outline" className="h-8 w-8">
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setSelectedParcelId(row.original.id)}>
+                View Details
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],

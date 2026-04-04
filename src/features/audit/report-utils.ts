@@ -1,9 +1,10 @@
 import type { EntityAuditLog } from './api';
+import { formatDateTime } from '@/lib/date';
 
 export function formatAuditDateTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTime(date);
 }
 
 export function toAuditSearchableText(row: EntityAuditLog) {

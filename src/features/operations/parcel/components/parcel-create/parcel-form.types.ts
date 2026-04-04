@@ -1,4 +1,4 @@
-export type PaymentResponsibility = 'SENDER' | 'RECEIVER';
+export type PaymentResponsibility = 'SENDER' | 'RECEIVER' | 'SPLIT';
 export type SenderSettlementMode = 'PAY_NOW' | 'CREDIT';
 
 export type CustomerFormValues = {
@@ -11,15 +11,13 @@ export type CustomerFormValues = {
 export type ParcelFormValues = {
   destinationBranchId: string;
   destinationLocationId: string;
-  parcelDetailOptionId: string;
-  parcelContentOptionId: string;
   parcelDetails: string;
   parcelContent: string;
-  extraWeightCharge: string;
   parcelValue: string;
   charge: string;
   paymentResponsibility: PaymentResponsibility;
   senderSettlementMode: SenderSettlementMode;
+  senderPartialPayment: string;
   receiver: CustomerFormValues;
 };
 

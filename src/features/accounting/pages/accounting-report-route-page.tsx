@@ -11,7 +11,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
 import { PermissionKeys } from '@/shared/permissions/constants';

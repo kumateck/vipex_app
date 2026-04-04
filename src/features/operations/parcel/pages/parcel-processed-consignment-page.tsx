@@ -7,13 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import { formatDateTime } from '@/lib/date';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { ParcelStatus } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
@@ -43,7 +44,7 @@ const ALL_VALUE = '__all__';
 function formatDate(isoDate: string) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTime(date);
 }
 
 function getTodayDateOnlyLocal() {

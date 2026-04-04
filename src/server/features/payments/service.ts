@@ -125,16 +125,6 @@ function debugPaymentServiceError(
   );
 }
 
-async function markParcelProcessedIfPending(
-  parcelId: string,
-  currentStatus: number,
-  executor: DbExecutor,
-): Promise<boolean> {
-  if (currentStatus !== ParcelStatus.CREATED) return false;
-  const updated = await updateParcelRepo(parcelId, { status: ParcelStatus.PROCESSED }, executor);
-  return Boolean(updated);
-}
-
 function toPaymentAmounts(tax: {
   principal: bigint;
   net: bigint;
@@ -263,65 +253,16 @@ async function createPaymentCore(input: PaymentCreateInput, executor: DbExecutor
   }
 
   const settlement = await getParcelPaymentSettlement(input.parcelId, executor);
-  const parcelPayments = await listPaymentsForParcelRepo(input.parcelId, executor);
   const parcelPrincipalPaidPsw = settlement.paidPrincipalPsw;
   const parcelDeliveryFeePaidPsw = settlement.paidDeliveryFeePsw;
   const parcelTotalPaidPsw = settlement.paidTotalPsw;
   const parcelChargePsw = settlement.requiredPrincipalPsw;
   const doorstepChargePsw = settlement.requiredDeliveryFeePsw;
   const parcelAllowedTotalPsw = settlement.requiredTotalPsw;
-  const senderExpectedPsw = Math.max(
-    Number(parcel.chargePsw ?? 0) - Number(parcel.plannedToBePaidPsw ?? 0),
-    0,
-  );
-  const senderPaidAlreadyPsw = parcelPayments
-    .filter(
-      (payment) =>
-        payment.component === PaymentComponent.PRINCIPAL && payment.payer === Payer.SENDER,
-    )
-    .reduce((sum, payment) => sum + Number(payment.grossAmountPsw ?? 0), 0);
-
   if (input.component === PaymentComponent.PRINCIPAL) {
     if (input.cashierType === CashierType.SENDING) {
       if (input.payer !== Payer.SENDER) {
         throw BadRequest('Sender cashier can only collect sender payments');
-      }
-      const senderAfter = senderPaidAlreadyPsw + amountPsw;
-      if (senderAfter > senderExpectedPsw) {
-        const remainingSenderPsw = Math.max(senderExpectedPsw - senderPaidAlreadyPsw, 0);
-        const wasAutoProcessed =
-          remainingSenderPsw === 0
-            ? await markParcelProcessedIfPending(input.parcelId, parcel.status, executor)
-            : false;
-        if (wasAutoProcessed) {
-          return {
-            kind: 'autoProcessed' as const,
-            response: {
-              id: `auto-processed:${input.parcelId}`,
-              amounts: {
-                grossPsw: 0,
-                netPsw: 0,
-                vatPsw: 0,
-                getfundPsw: 0,
-                nhilPsw: 0,
-                covidPsw: 0,
-                taxTotalPsw: 0,
-                grossCedis: 0,
-                netCedis: 0,
-                vatCedis: 0,
-                getfundCedis: 0,
-                nhilCedis: 0,
-                covidCedis: 0,
-                taxTotalCedis: 0,
-              },
-              message:
-                'Sender allocation is already fully paid. Parcel has been marked as PROCESSED.',
-            },
-          };
-        }
-        throw BadRequest(
-          `Sender cashier cannot collect more than sender allocation. Remaining sender amount is ${(remainingSenderPsw / 100).toFixed(2)} GHS`,
-        );
       }
     }
 
@@ -399,6 +340,20 @@ async function createPaymentCore(input: PaymentCreateInput, executor: DbExecutor
     },
     executor,
   );
+
+  if (input.component === PaymentComponent.PRINCIPAL) {
+    const remainingPrincipalPsw = Math.max(
+      parcelChargePsw - (parcelPrincipalPaidPsw + amountPsw),
+      0,
+    );
+    await updateParcelRepo(
+      input.parcelId,
+      {
+        plannedToBePaidPsw: remainingPrincipalPsw,
+      },
+      executor,
+    );
+  }
 
   if (input.component === PaymentComponent.PRINCIPAL && Number(tax.totalTax) > 0) {
     await recordPaymentTaxJournalItemSvc(
