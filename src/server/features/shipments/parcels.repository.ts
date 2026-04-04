@@ -92,8 +92,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     consignmentSerialForDay: number | null;
     senderName: string | null;
     senderPhone: string | null;
+    senderPhone2: string | null;
     receiverName: string | null;
     receiverPhone: string | null;
+    receiverPhone2: string | null;
     dropoffAddress: string | null;
     deliveryFeePsw: number | null;
     pickupLocationName: string | null;
@@ -236,8 +238,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       consignmentSerialForDay: cg.serialForDay,
       senderName: s.fullname,
       senderPhone: s.telephone,
+      senderPhone2: s.telephone2,
       receiverName: r.fullname,
       receiverPhone: r.telephone,
+      receiverPhone2: r.telephone2,
       dropoffAddress: deliveries.dropoffAddress,
       deliveryFeePsw: deliveries.chargePsw,
       pickupLocationName: pl.name,

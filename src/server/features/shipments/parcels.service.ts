@@ -108,6 +108,7 @@ export async function updateParcelSvc(
   id: string,
   patch: {
     status?: number;
+    destinationId?: string;
     parcelDetails?: string;
     parcelContent?: string;
     secondReceiverId?: string | null;
@@ -123,6 +124,7 @@ export async function updateParcelSvc(
     method?: number;
     taxReportConfirmation?: boolean;
   },
+  actorUserId?: string | null,
 ): Promise<{ id: string }> {
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
@@ -131,6 +133,7 @@ export async function updateParcelSvc(
   }
   const setPatch: Partial<typeof cur> & { parcelValuePsw?: number } = {};
   if (patch.status !== undefined) setPatch.status = patch.status;
+  if (patch.destinationId !== undefined) setPatch.destinationId = patch.destinationId;
   if (patch.parcelDetails) setPatch.parcelDetails = patch.parcelDetails;
   if (patch.parcelContent) setPatch.parcelContent = patch.parcelContent;
   if (patch.secondReceiverId !== undefined) setPatch.secondReceiverId = patch.secondReceiverId;
@@ -156,6 +159,24 @@ export async function updateParcelSvc(
 
   const updated = await updateParcelRepo(id, setPatch);
   if (!updated) throw NotFound('Parcel not found');
+
+  await recordAuditLog({
+    companyId: cur.companyId,
+    actorUserId: actorUserId ?? null,
+    entityType: 'parcel',
+    entityId: id,
+    action: 'PARCEL_UPDATED',
+    message: `Parcel ${cur.trackingCode} updated`,
+    metadata: {
+      patch,
+      previous: {
+        destinationId: cur.destinationId,
+        pickupLocationId: cur.pickupLocationId,
+        status: cur.status,
+      },
+    },
+  });
+
   const shouldEndPickupQueue =
     cur.status === ParcelStatus.AWAITING_PICKUP &&
     patch.status !== undefined &&

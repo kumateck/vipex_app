@@ -1,13 +1,28 @@
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { formatDateTime } from '@/lib/date';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -21,12 +36,14 @@ import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
+import { useUpdateCustomerMutation } from '@/features/customers/api';
 import { BranchType } from '@/db/schemas/enums';
 import {
   type ProcessedParcel,
   useAddConsignmentItemsMutation,
   useCreateConsignmentMutation,
   useListProcessedParcelsForConsignmentQuery,
+  useUpdateParcelMutation,
 } from '../api/parcel.api';
 import { ParcelReceiptActions, type ReceiptPrintData } from '../components/parcel-receipt-actions';
 import { printConsignmentSlip } from '../utils/consignment-print';
@@ -45,6 +62,11 @@ function formatDate(isoDate: string) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return '-';
   return formatDateTime(date);
+}
+
+function formatPhones(primary?: string | null, secondary?: string | null) {
+  const phones = [primary, secondary].filter((value): value is string => Boolean(value?.trim()));
+  return phones.length ? phones.join(', ') : '-';
 }
 
 function getTodayDateOnlyLocal() {
@@ -138,6 +160,14 @@ export function ParcelProcessedConsignmentPage() {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lockedDestinationId, setLockedDestinationId] = useState<string | null>(null);
+  const [editingParcel, setEditingParcel] = useState<ProcessedParcel | null>(null);
+  const [reprintData, setReprintData] = useState<ReceiptPrintData | null>(null);
+  const [editDestinationId, setEditDestinationId] = useState<string>('');
+  const [editPickupLocationId, setEditPickupLocationId] = useState<string>('');
+  const [editSenderPhone, setEditSenderPhone] = useState('');
+  const [editSenderPhone2, setEditSenderPhone2] = useState('');
+  const [editReceiverPhone, setEditReceiverPhone] = useState('');
+  const [editReceiverPhone2, setEditReceiverPhone2] = useState('');
 
   const { data, isLoading, refetch } = useListProcessedParcelsForConsignmentQuery(query, {
     skip: !companyId || !hasLoaded,
@@ -153,8 +183,17 @@ export function ParcelProcessedConsignmentPage() {
     },
     { skip: !companyId || !appliedDestinationId },
   );
+  const { data: editDestinationLocationOptions = [] } = useListLocationOptionsQuery(
+    {
+      companyId,
+      branchId: editDestinationId || null,
+    },
+    { skip: !companyId || !editDestinationId },
+  );
   const [createConsignment, { isLoading: isCreatingConsignment }] = useCreateConsignmentMutation();
   const [addConsignmentItems, { isLoading: isAddingItems }] = useAddConsignmentItemsMutation();
+  const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
+  const [updateCustomer, { isLoading: isUpdatingCustomer }] = useUpdateCustomerMutation();
 
   const branchNameById = useMemo(
     () => new Map(branchOptions.map((branch) => [branch.id, branch.name])),
@@ -278,25 +317,40 @@ export function ParcelProcessedConsignmentPage() {
       {
         id: 'sender',
         header: 'Sender',
-        accessorFn: (row) =>
-          `${row.senderName ?? '-'}${row.senderPhone ? ` (${row.senderPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.senderName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.senderPhone, row.original.senderPhone2)}
+            </p>
+          </div>
+        ),
       },
       {
         id: 'receiver',
         header: 'Receiver',
-        accessorFn: (row) =>
-          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
+            </p>
+          </div>
+        ),
       },
       {
         id: 'destination',
-        header: 'Destination Branch',
-        accessorFn: (row) =>
-          row.destinationName ?? branchNameById.get(row.destinationId) ?? 'Unknown branch',
-      },
-      {
-        id: 'location',
-        header: 'Destination Location',
-        accessorFn: (row) => row.pickupLocationName ?? '-',
+        header: 'Destination',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {row.original.destinationName ??
+                branchNameById.get(row.original.destinationId) ??
+                '-'}
+            </p>
+          </div>
+        ),
       },
       {
         accessorKey: 'createdAt',
@@ -304,23 +358,44 @@ export function ParcelProcessedConsignmentPage() {
         cell: ({ row }) => formatDate(row.original.createdAt),
       },
       {
-        id: 'reprint',
-        header: 'Reprint',
-        cell: ({ row }) => {
-          const parcel = row.original;
-          const destinationName =
-            parcel.destinationName ?? branchNameById.get(parcel.destinationId) ?? '-';
-          const printData = toReceiptPrintData(parcel, destinationName);
-
-          return (
-            <ParcelReceiptActions
-              data={printData}
-              triggerLabel="Reprint"
-              mode="reprint"
-              showSelectionMenu
-            />
-          );
-        },
+        id: 'actions',
+        header: 'Action',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="outline" className="h-8 w-8">
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  const parcel = row.original;
+                  const destinationName =
+                    parcel.destinationName ?? branchNameById.get(parcel.destinationId) ?? '-';
+                  setReprintData(toReceiptPrintData(parcel, destinationName));
+                }}
+              >
+                Reprint
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const parcel = row.original;
+                  setEditingParcel(parcel);
+                  setEditDestinationId(parcel.destinationId);
+                  setEditPickupLocationId(parcel.pickupLocationId ?? '');
+                  setEditSenderPhone(parcel.senderPhone ?? '');
+                  setEditSenderPhone2(parcel.senderPhone2 ?? '');
+                  setEditReceiverPhone(parcel.receiverPhone ?? '');
+                  setEditReceiverPhone2(parcel.receiverPhone2 ?? '');
+                }}
+              >
+                Edit
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
       },
     ],
     [
@@ -401,9 +476,82 @@ export function ParcelProcessedConsignmentPage() {
   };
 
   const isSubmitting = isCreatingConsignment || isAddingItems;
+  const isSavingEdit = isUpdatingParcel || isUpdatingCustomer;
   const lockedDestinationName = lockedDestinationId
     ? (branchNameById.get(lockedDestinationId) ?? '-')
     : null;
+
+  const editLocationOptions = useMemo(() => {
+    if (!editingParcel) return [];
+    if (editDestinationLocationOptions.length) return editDestinationLocationOptions;
+    if (editingParcel.pickupLocationId && editingParcel.pickupLocationName) {
+      return [
+        {
+          id: editingParcel.pickupLocationId,
+          name: editingParcel.pickupLocationName,
+          branchId: editDestinationId || editingParcel.destinationId,
+        },
+      ];
+    }
+    return [];
+  }, [editDestinationId, editDestinationLocationOptions, editingParcel]);
+
+  const editDestinationOptions = useMemo(
+    () =>
+      agencyBranchOptions.filter(
+        (branch) =>
+          !appliedSourceId || branch.id !== appliedSourceId || branch.id === editDestinationId,
+      ),
+    [agencyBranchOptions, appliedSourceId, editDestinationId],
+  );
+
+  const handleEditDestinationChange = (value: string) => {
+    setEditDestinationId(value);
+    setEditPickupLocationId('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingParcel) return;
+    const senderPhone = editSenderPhone.trim();
+    const senderPhone2 = editSenderPhone2.trim();
+    const receiverPhone = editReceiverPhone.trim();
+    const receiverPhone2 = editReceiverPhone2.trim();
+
+    if (!senderPhone) {
+      toast.error('Sender telephone is required');
+      return;
+    }
+    if (!receiverPhone) {
+      toast.error('Receiver telephone is required');
+      return;
+    }
+
+    try {
+      await Promise.all([
+        updateParcel({
+          id: editingParcel.id,
+          destinationId: editDestinationId,
+          pickupLocationId: editPickupLocationId || null,
+        }).unwrap(),
+        updateCustomer({
+          id: editingParcel.senderId,
+          telephone: senderPhone,
+          telephone2: senderPhone2 || null,
+        }).unwrap(),
+        updateCustomer({
+          id: editingParcel.receiverId,
+          telephone: receiverPhone,
+          telephone2: receiverPhone2 || null,
+        }).unwrap(),
+      ]);
+
+      toast.success('Parcel and customer phones updated');
+      setEditingParcel(null);
+      await refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update parcel details');
+    }
+  };
 
   if (!companyId) {
     return (
@@ -592,6 +740,117 @@ export function ParcelProcessedConsignmentPage() {
           </CardContent>
         </Card>
       </ScrollableWrapper>
+
+      <Dialog
+        open={Boolean(editingParcel)}
+        onOpenChange={(open) => {
+          if (!open) setEditingParcel(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Parcel Details</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-destination-branch">Destination Branch</Label>
+              <Select value={editDestinationId} onValueChange={handleEditDestinationChange}>
+                <SelectTrigger id="edit-destination-branch">
+                  <SelectValue placeholder="Select destination branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {editDestinationOptions.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-pickup-location">Pickup Location</Label>
+              <Select
+                value={editPickupLocationId}
+                onValueChange={setEditPickupLocationId}
+                disabled={!editDestinationId}
+              >
+                <SelectTrigger id="edit-pickup-location">
+                  <SelectValue placeholder="Select pickup location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {editLocationOptions.map((location) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-sender-phone">Sender Telephone 1</Label>
+                <Input
+                  id="edit-sender-phone"
+                  value={editSenderPhone}
+                  onChange={(event) => setEditSenderPhone(event.target.value)}
+                  placeholder="0240000000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-sender-phone2">Sender Telephone 2</Label>
+                <Input
+                  id="edit-sender-phone2"
+                  value={editSenderPhone2}
+                  onChange={(event) => setEditSenderPhone2(event.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-receiver-phone">Receiver Telephone 1</Label>
+                <Input
+                  id="edit-receiver-phone"
+                  value={editReceiverPhone}
+                  onChange={(event) => setEditReceiverPhone(event.target.value)}
+                  placeholder="0240000000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-receiver-phone2">Receiver Telephone 2</Label>
+                <Input
+                  id="edit-receiver-phone2"
+                  value={editReceiverPhone2}
+                  onChange={(event) => setEditReceiverPhone2(event.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingParcel(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={isSavingEdit}>
+              {isSavingEdit ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {reprintData ? (
+        <ParcelReceiptActions
+          data={reprintData}
+          autoPrint
+          mode="reprint"
+          onAutoPrintComplete={() => setReprintData(null)}
+        />
+      ) : null}
     </div>
   );
 }

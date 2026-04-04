@@ -60,6 +60,7 @@ export const parcels = pgTable(
     sourceId: varchar('source_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
+    sourceLocationId: varchar('source_location_id', { length: 25 }).references(() => locations.id),
     destinationId: varchar('destination_id', { length: 25 })
       .notNull()
       .references(() => branches.id),

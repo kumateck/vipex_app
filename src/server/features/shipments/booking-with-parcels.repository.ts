@@ -25,6 +25,7 @@ export type CreateBookingWithParcelsInput = {
   senderId: string;
   companyId: string;
   sourceId: string;
+  sourceLocationId?: string | null;
   status: number;
   createdBy: string;
   cashierSessionId?: string | null;
@@ -33,6 +34,7 @@ export type CreateBookingWithParcelsInput = {
   // bookingCode?: string | null; // if absent, will be generated once and applied to all parcels
   parcels: Array<{
     destinationId: string;
+    pickupLocationId?: string | null;
     receiverId: string;
     status: number; // initial parcel status
     parcelDetails: string;
@@ -56,6 +58,13 @@ export type CreateBookingWithParcelsOutput = {
   parcels: CreatedParcelRef[];
   payments: CreatedPaymentRef[];
 };
+
+function getErrorCode(error: unknown, depth = 0): string | undefined {
+  if (!error || typeof error !== 'object' || depth > 6) return undefined;
+  const err = error as { code?: unknown; cause?: unknown };
+  if (typeof err.code === 'string' && err.code.length > 0) return err.code;
+  return getErrorCode(err.cause, depth + 1);
+}
 
 // Simple, readable booking code generator: BK-YYMMDD-XXXXX
 // export function generateBookingCode(now: Date): string {
@@ -156,28 +165,45 @@ export async function createBookingWithParcelsAndPaymentsRepo(
 
       const code = generateBookingCode(branchName, bookingCreatedAt);
 
-      const [parcelRow] = await tx
-        .insert(parcels)
-        .values({
-          companyId: input.companyId,
-          sourceId: input.sourceId,
-          destinationId: p.destinationId,
-          bookingId: sanitizeString(b?.id),
-          bookingCode: code,
-          trackingCode: tracking,
-          senderId: input.senderId,
-          receiverId: p.receiverId,
-          status: p.status,
-          parcelDetails: p.parcelDetails,
-          parcelContent: p.parcelContent,
-          parcelValuePsw: p.parcelValuePsw ?? 0,
-          chargePsw: p.chargePsw ?? 0,
-          plannedToBePaidPsw: p.plannedToBePaidPsw ?? 0,
-          method: p.method,
-          createdBy: input.createdBy,
-          cashierSessionId: input.cashierSessionId ?? null,
-        })
-        .returning({ id: parcels.id, trackingCode: parcels.trackingCode });
+      const baseParcelInsert = {
+        companyId: input.companyId,
+        sourceId: input.sourceId,
+        destinationId: p.destinationId,
+        pickupLocationId: p.pickupLocationId ?? null,
+        bookingId: sanitizeString(b?.id),
+        bookingCode: code,
+        trackingCode: tracking,
+        senderId: input.senderId,
+        receiverId: p.receiverId,
+        status: p.status,
+        parcelDetails: p.parcelDetails,
+        parcelContent: p.parcelContent,
+        parcelValuePsw: p.parcelValuePsw ?? 0,
+        chargePsw: p.chargePsw ?? 0,
+        plannedToBePaidPsw: p.plannedToBePaidPsw ?? 0,
+        method: p.method,
+        createdBy: input.createdBy,
+        cashierSessionId: input.cashierSessionId ?? null,
+      };
+
+      let parcelRow: { id: string; trackingCode: string } | undefined;
+
+      try {
+        [parcelRow] = await tx
+          .insert(parcels)
+          .values({
+            ...baseParcelInsert,
+            sourceLocationId: input.sourceLocationId ?? null,
+          })
+          .returning({ id: parcels.id, trackingCode: parcels.trackingCode });
+      } catch (error) {
+        if (getErrorCode(error) !== '42703') throw error;
+
+        [parcelRow] = await tx
+          .insert(parcels)
+          .values(baseParcelInsert)
+          .returning({ id: parcels.id, trackingCode: parcels.trackingCode });
+      }
 
       createdParcels.push({
         id: sanitizeString(parcelRow?.id),

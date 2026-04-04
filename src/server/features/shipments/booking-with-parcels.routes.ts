@@ -23,6 +23,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
         bookingCode?: string | null;
         parcels: Array<{
           destinationId: string;
+          pickupLocationId?: string | null;
           receiverId: string;
           status: number;
           parcelDetails: string;
@@ -41,6 +42,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
         senderId: payload.senderId,
         companyId: authUser.companyId ?? '',
         sourceId: authUser.branchId ?? '',
+        sourceLocationId: authUser.locationId ?? null,
         status: payload.status,
         createdBy: authUser.sub,
         cashierSessionId: payload.cashierSessionId ?? null,
@@ -63,6 +65,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
         parcels: t.Array(
           t.Object({
             destinationId: UUID,
+            pickupLocationId: t.Optional(t.Union([UUID, t.Null()])),
             receiverId: UUID,
             status: t.Number(),
             parcelDetails: t.String({ minLength: 1, maxLength: 255 }),

@@ -128,6 +128,22 @@ export function ProfilePage() {
                 placeholder="Branch"
               />
             </Field>
+
+            <Field>
+              <FieldLabel htmlFor="profile-location">Location</FieldLabel>
+              <Input
+                id="profile-location"
+                value={
+                  data?.location?.name ??
+                  data?.locationName ??
+                  authUser?.location?.name ??
+                  authUser?.locationName ??
+                  'Not assigned'
+                }
+                disabled
+                placeholder="Location"
+              />
+            </Field>
           </FieldGroup>
         </CardContent>
 
