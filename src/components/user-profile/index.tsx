@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Building2, User, ChevronsUpDown, Shield, KeyRound, LogOut } from 'lucide-react';
+import { Building2, User, ChevronsUpDown, Shield, KeyRound, LogOut, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/ui/sidebar';
@@ -185,6 +185,14 @@ function UserMenuContent({
                   <span className="text-xs text-muted-foreground">{userData?.branch?.name}</span>
                 </div>
               )}
+              {userData?.location?.name || userData?.locationName ? (
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    {userData?.location?.name ?? userData?.locationName}
+                  </span>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

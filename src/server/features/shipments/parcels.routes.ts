@@ -154,11 +154,12 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
   )
   .patch(
     '/:id',
-    async ({ params, body }) =>
+    async ({ params, body, user }) =>
       updateParcelCtrl(
         params.id,
         body as {
           status?: number;
+          destinationId?: string;
           parcelDetails?: string;
           parcelContent?: string;
           secondReceiverId?: string | null;
@@ -174,11 +175,13 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           method?: number;
           taxReportConfirmation?: boolean;
         },
+        (user as AuthUser | null)?.sub ?? null,
       ),
     {
       params: t.Object({ id: UUID }),
       body: t.Object({
         status: t.Optional(t.Number()),
+        destinationId: t.Optional(UUID),
         parcelDetails: t.Optional(t.String()),
         parcelContent: t.Optional(t.String()),
         secondReceiverId: t.Optional(t.Union([UUID, t.Null()])),

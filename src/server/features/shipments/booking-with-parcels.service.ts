@@ -16,12 +16,14 @@ export type CreateBookingWithParcelsBody = {
   senderId: string;
   companyId: string;
   sourceId: string;
+  sourceLocationId?: string | null;
   status: number;
   createdBy: string;
   cashierSessionId?: string | null;
   bookingCode?: string | null;
   parcels: Array<{
     destinationId: string;
+    pickupLocationId?: string | null;
     receiverId: string;
     status: number;
     parcelDetails: string;
@@ -115,12 +117,14 @@ export async function createBookingWithParcelsSvc(
     senderId: body.senderId,
     companyId: body.companyId,
     sourceId: body.sourceId,
+    sourceLocationId: body.sourceLocationId ?? null,
     status: body.status,
     createdBy: body.createdBy,
     cashierSessionId: resolvedCashierSessionId,
     // bookingCode: body.bookingCode ?? null,
     parcels: normalizedParcels.map((p) => ({
       destinationId: p.destinationId,
+      pickupLocationId: p.pickupLocationId ?? null,
       receiverId: p.receiverId,
       status: p.status,
       parcelDetails: p.parcelDetails,

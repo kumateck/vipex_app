@@ -43,7 +43,6 @@ import {
   useListSenderCashierParcelsQuery,
   useSoftDeleteParcelMutation,
 } from '../api/parcel.api';
-import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 import { ParcelReceiptActions, type ReceiptPrintData } from '../components/parcel-receipt-actions';
 import { ParcelSessionGuard } from '../components/parcel-session-guard';
 
@@ -63,7 +62,18 @@ const PAYMENT_METHOD_OPTIONS = [
   { value: PaymentMethod.AIRTEL, label: 'Airtel' },
 ];
 
+const PAYMENT_TYPE_LEGEND = [
+  { label: 'Sender Pay', dotClassName: 'bg-emerald-500' },
+  { label: 'Receiver Pay', dotClassName: 'bg-amber-500' },
+  { label: 'Partial Pay', dotClassName: 'bg-sky-500' },
+];
+
 const formatCurrency = (amountPsw: number) => `GHS ${(amountPsw / 100).toFixed(2)}`;
+
+function formatPhones(primary?: string | null, secondary?: string | null) {
+  const phones = [primary, secondary].filter((value): value is string => Boolean(value?.trim()));
+  return phones.length ? phones.join(', ') : '-';
+}
 
 function formatDate(isoDate: string) {
   const date = new Date(isoDate);
@@ -73,6 +83,21 @@ function formatDate(isoDate: string) {
 
 function getSenderDuePsw(parcel: SenderCashierParcel) {
   return Math.max(parcel.chargePsw - (parcel.plannedToBePaidPsw ?? 0), 0);
+}
+
+function getPaymentType(parcel: SenderCashierParcel) {
+  const charge = Number(parcel.chargePsw ?? 0);
+  const receiverDue = Math.max(Number(parcel.plannedToBePaidPsw ?? 0), 0);
+
+  if (receiverDue <= 0) {
+    return { dotClassName: 'bg-emerald-500' };
+  }
+
+  if (receiverDue >= charge) {
+    return { dotClassName: 'bg-amber-500' };
+  }
+
+  return { dotClassName: 'bg-sky-500' };
 }
 
 export function ParcelSenderPaymentsPage() {
@@ -130,19 +155,42 @@ export function ParcelSenderPaymentsPage() {
 
   const columns = useMemo<ColumnDef<SenderCashierParcel>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        accessorKey: 'bookingCode',
+        header: 'Booking',
+        cell: ({ row }) => {
+          const paymentType = getPaymentType(row.original);
+          return (
+            <div className="inline-flex items-center gap-2">
+              <span className={`h-2.5 w-2.5 rounded-full ${paymentType.dotClassName}`} />
+              <span>{row.original.bookingCode}</span>
+            </div>
+          );
+        },
+      },
       {
         id: 'sender',
         header: 'Sender',
-        accessorFn: (row) =>
-          `${row.senderName ?? '-'}${row.senderPhone ? ` (${row.senderPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.senderName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.senderPhone, row.original.senderPhone2)}
+            </p>
+          </div>
+        ),
       },
       {
         id: 'receiver',
         header: 'Receiver',
-        accessorFn: (row) =>
-          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
+            </p>
+          </div>
+        ),
       },
       {
         id: 'charge',
@@ -155,9 +203,18 @@ export function ParcelSenderPaymentsPage() {
         accessorFn: (row) => formatDate(row.createdAt),
       },
       {
-        id: 'holder',
-        header: 'Current Holder',
-        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
+        id: 'destination',
+        header: 'Destination',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">
+              {row.original.pickupLocationName ?? row.original.pickupLocationId ?? '-'}
+            </p>
+            <p className="text-muted-foreground text-xs">
+              {row.original.destinationName ?? row.original.destinationId}
+            </p>
+          </div>
+        ),
       },
       {
         id: 'actions',
@@ -259,9 +316,12 @@ export function ParcelSenderPaymentsPage() {
         parcelContent: selectedParcel.parcelContent,
         parcelValueCedis: Number(selectedParcel.parcelValuePsw ?? 0) / 100,
         senderName: selectedParcel.senderName ?? '-',
-        senderTelephone: selectedParcel.senderPhone ?? '-',
+        senderTelephone: formatPhones(selectedParcel.senderPhone, selectedParcel.senderPhone2),
         receiverName: selectedParcel.receiverName ?? '-',
-        receiverTelephone: selectedParcel.receiverPhone ?? '-',
+        receiverTelephone: formatPhones(
+          selectedParcel.receiverPhone,
+          selectedParcel.receiverPhone2,
+        ),
         destinationBranchName,
         destinationLocationName,
         totalChargeCedis: totalCharge,
@@ -321,10 +381,22 @@ export function ParcelSenderPaymentsPage() {
         <ScrollableWrapper>
           <Card>
             <CardHeader>
-              <CardTitle>Sender Cashier Payments</CardTitle>
-              <CardDescription>
-                Parcels created at your branch and ready for sender payment collection.
-              </CardDescription>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Sender Cashier Payments</CardTitle>
+                  <CardDescription>
+                    Parcels created at your branch and ready for sender payment collection.
+                  </CardDescription>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  {PAYMENT_TYPE_LEGEND.map((item) => (
+                    <div key={item.label} className="inline-flex items-center gap-1.5">
+                      <span className={`h-2.5 w-2.5 rounded-full ${item.dotClassName}`} />
+                      <span className="text-muted-foreground text-xs">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <DataTable
@@ -357,9 +429,14 @@ export function ParcelSenderPaymentsPage() {
                 <p className="font-medium">{selectedParcel?.trackingCode ?? '-'}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Current Holder</p>
-                <div>
-                  <ParcelInternalHolderBadge holder={selectedParcel} />
+                <p className="text-sm text-muted-foreground">Destination</p>
+                <div className="leading-tight">
+                  <p className="font-medium">
+                    {selectedParcel?.destinationName ?? selectedParcel?.destinationId ?? '-'}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {pickupLocation?.name ?? selectedParcel?.pickupLocationName ?? '-'}
+                  </p>
                 </div>
               </div>
               <div className="space-y-1">

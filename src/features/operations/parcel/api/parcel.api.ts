@@ -11,6 +11,7 @@ export type CreateBookingWithParcelsInput = {
   cashierSessionId?: string | null;
   parcels: Array<{
     destinationId: string;
+    pickupLocationId?: string | null;
     receiverId: string;
     status: number;
     parcelDetails: string;
@@ -33,6 +34,8 @@ export type CreateBookingWithParcelsResponse = {
 
 export type SenderCashierParcel = {
   id: string;
+  senderId: string;
+  receiverId: string;
   destinationId: string;
   destinationName?: string | null;
   pickupLocationId: string | null;
@@ -44,8 +47,10 @@ export type SenderCashierParcel = {
   parcelValuePsw?: number | null;
   senderName: string | null;
   senderPhone: string | null;
+  senderPhone2?: string | null;
   receiverName: string | null;
   receiverPhone: string | null;
+  receiverPhone2?: string | null;
   chargePsw: number;
   plannedToBePaidPsw: number;
   status: number;
@@ -608,9 +613,11 @@ export const parcelApi = api.injectEndpoints({
       { id: string },
       {
         id: string;
+        destinationId?: string;
         parcelDetails?: string;
         parcelContent?: string;
         status?: number;
+        pickupLocationId?: string | null;
         secondReceiverId?: string | null;
         cardId?: string | null;
         cardNumber?: string | null;

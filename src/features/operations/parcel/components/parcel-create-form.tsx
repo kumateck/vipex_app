@@ -253,6 +253,7 @@ export function ParcelCreateForm() {
           }
           return {
             destinationId: parcel.destinationBranchId,
+            pickupLocationId: parcel.destinationLocationId || null,
             receiverId,
             status,
             parcelDetails: parcel.parcelDetails,
