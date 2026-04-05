@@ -6,10 +6,27 @@ import tailwindcss from '@tailwindcss/vite';
 
 const backendTarget = process.env.VITE_BACKEND_URL ?? 'http://localhost:3000';
 const webDir = path.dirname(fileURLToPath(import.meta.url));
+const appBuildId = process.env.VIPEX_BUILD_ID ?? process.env.GITHUB_SHA ?? new Date().toISOString();
 
 export default defineConfig({
   base: './',
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    {
+      name: 'inject-build-id-meta',
+      transformIndexHtml(html) {
+        const safeBuildId = appBuildId.replace(/"/g, '&quot;');
+        return html.replace(
+          '</head>',
+          `  <meta name="x-app-build" content="${safeBuildId}" />\n  </head>`,
+        );
+      },
+    },
+  ],
+  define: {
+    __APP_BUILD_ID__: JSON.stringify(appBuildId),
+  },
   resolve: {
     alias: {
       '@': path.resolve(webDir, '../../src'),
