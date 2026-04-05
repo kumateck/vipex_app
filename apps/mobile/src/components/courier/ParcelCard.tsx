@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { AppButton, AppCard, AppStatusChip } from '@mobile/components/ui';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileTypography } from '@mobile/theme/layout';
