@@ -12,7 +12,7 @@ import type {
   UserMutationInput,
 } from '../types/user.types';
 import { toCreateUserPayload, toUpdateUserPayload } from '../utils/user-payload';
-import type { UserType } from '@/shared/access/constants';
+import type { CashierType, UserType } from '@/shared/access/constants';
 
 export interface UserOption {
   id: string;
@@ -43,6 +43,7 @@ export const usersApi = api.injectEndpoints({
         locationId?: string | null;
         roleId?: string | null;
         userType?: UserType | null;
+        cashierType?: CashierType | null;
         status?: number;
         search?: string;
       } | void

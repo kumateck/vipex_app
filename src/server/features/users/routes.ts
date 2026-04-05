@@ -2,8 +2,8 @@ import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
 import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
-import { BRANCH_TYPES, USER_TYPES } from '@/shared/access/constants';
-import { BranchType } from '@/db/schemas/enums';
+import { BRANCH_TYPES, CASHIER_TYPES, USER_TYPES } from '@/shared/access/constants';
+import { BranchType, UserType, type CashierType } from '@/db/schemas/enums';
 import { Forbidden } from '@/server/utils/http-error';
 
 import { createUserSvc, getUserSvc, updateUserSvc } from './service';
@@ -117,8 +117,12 @@ export const usersRoutes = new Elysia({ name: 'users' })
         branchId: string;
         locationId?: string | null;
         userType: number;
+        cashierType?: CashierType | null;
         sendInvite?: boolean;
       };
+
+      const cashierType =
+        payload.userType === UserType.CASHIER ? (payload.cashierType ?? null) : null;
 
       const res = await createUserSvc({
         fullname: payload.fullname,
@@ -130,6 +134,7 @@ export const usersRoutes = new Elysia({ name: 'users' })
         branchId: payload.branchId,
         locationId: payload.locationId ?? null,
         userType: payload.userType,
+        cashierType,
         createdBy: authUser.sub,
         sendInvite: payload.sendInvite,
         actor: {
@@ -152,24 +157,59 @@ export const usersRoutes = new Elysia({ name: 'users' })
         branchId: UUID,
         locationId: t.Optional(t.Union([UUID, t.Null()])),
         userType: t.Union(USER_TYPES.map((value) => t.Literal(value))),
+        cashierType: t.Optional(
+          t.Union([...CASHIER_TYPES.map((value) => t.Literal(value)), t.Null()]),
+        ),
         sendInvite: t.Optional(t.Boolean()),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateUsers)],
       detail: { tags: ['Users'], summary: 'Create user', operationId: 'createUser' },
     },
   )
-  .patch('/:id', async ({ params, body }) => updateUserSvc(params.id, body), {
-    params: t.Object({ id: UUID }),
-    body: t.Object({
-      fullname: t.Optional(NonEmpty255),
-      telephone: t.Optional(NonEmpty255),
-      email: t.Optional(NonEmpty255),
-      status: t.Optional(t.Number()),
-      roleId: t.Optional(UUID),
-      branchId: t.Optional(UUID),
-      locationId: t.Optional(t.Union([UUID, t.Null()])),
-      userType: t.Optional(t.Union(USER_TYPES.map((value) => t.Literal(value)))),
-    }),
-    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateUsers)],
-    detail: { tags: ['Users'], summary: 'Update user', operationId: 'updateUser' },
-  });
+  .patch(
+    '/:id',
+    async ({ params, body }) => {
+      const payload = body as {
+        fullname?: string;
+        telephone?: string;
+        email?: string;
+        status?: number;
+        roleId?: string;
+        branchId?: string;
+        locationId?: string | null;
+        userType?: number;
+        cashierType?: CashierType | null;
+      };
+
+      const userType = payload.userType;
+      const cashierType =
+        userType === undefined
+          ? payload.cashierType
+          : userType === UserType.CASHIER
+            ? (payload.cashierType ?? null)
+            : null;
+
+      return updateUserSvc(params.id, {
+        ...payload,
+        cashierType,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        fullname: t.Optional(NonEmpty255),
+        telephone: t.Optional(NonEmpty255),
+        email: t.Optional(NonEmpty255),
+        status: t.Optional(t.Number()),
+        roleId: t.Optional(UUID),
+        branchId: t.Optional(UUID),
+        locationId: t.Optional(t.Union([UUID, t.Null()])),
+        userType: t.Optional(t.Union(USER_TYPES.map((value) => t.Literal(value)))),
+        cashierType: t.Optional(
+          t.Union([...CASHIER_TYPES.map((value) => t.Literal(value)), t.Null()]),
+        ),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateUsers)],
+      detail: { tags: ['Users'], summary: 'Update user', operationId: 'updateUser' },
+    },
+  );

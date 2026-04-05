@@ -41,7 +41,7 @@ export default function SuperSearchRecordDetailsScreen() {
 
       const searchPayload = await withAuth((token) =>
         searchParcels(token, {
-          search: detailsPayload.parcel.trackingCode,
+          search: detailsPayload.parcel.bookingCode,
           companyId,
           includeDeleted: true,
           page: 1,
@@ -94,9 +94,6 @@ export default function SuperSearchRecordDetailsScreen() {
 
       <AppCard>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Parcel</Text>
-        <Text style={[styles.line, { color: theme.colors.textMuted }]}>
-          Tracking: {details.parcel.trackingCode}
-        </Text>
         <Text style={[styles.line, { color: theme.colors.textMuted }]}>
           Booking: {details.parcel.bookingCode}
         </Text>

@@ -50,6 +50,13 @@
       "when": 1775040180000,
       "tag": "0006_communication_push_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1775304000000,
+      "tag": "0009_users_cashier_type",
+      "breakpoints": true
     }
   ]
 }

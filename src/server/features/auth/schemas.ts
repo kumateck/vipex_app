@@ -50,6 +50,7 @@ export const AuthUserResponse = t.Object({
   locationId: t.Optional(t.Union([UUID, t.Null()])),
   locationName: t.Optional(t.Union([t.String(), t.Null()])),
   userType: t.Optional(t.Number()),
+  cashierType: t.Optional(t.Union([t.Number(), t.Null()])),
   role: t.Optional(
     t.Union([
       t.Object({

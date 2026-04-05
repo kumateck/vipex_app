@@ -9,32 +9,9 @@ import type { ParcelSearchRow } from '@mobile/types/parcels';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { hapticError, hapticTap } from '@mobile/lib/haptics';
-import {
-  AppButton,
-  AppCard,
-  AppInput,
-  AppSkeletonCard,
-  AppStatusChip,
-} from '@/components/ui/mobile';
+import { ParcelCard, StatCard } from '@mobile/components/courier';
+import { AppButton, AppCard, AppInput, AppSkeletonCard } from '@/components/ui/mobile';
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
-
-const PARCEL_STATUS_LABELS: Record<number, string> = {
-  0: 'Created',
-  1: 'Processed',
-  2: 'In Transit',
-  3: 'Arrived At Destination',
-  4: 'Customer Contacted',
-  5: 'Awaiting Pickup',
-  6: 'Delivered By Office',
-  7: 'Home Delivery Requested',
-  8: 'Address Collected',
-  9: 'Dispatched',
-  10: 'Rider Given Parcel To Customer',
-  11: 'Delivered At Home',
-  12: 'Returned To Office',
-  13: 'Returned To Sender',
-  14: 'Cancelled',
-};
 
 export default function SuperSearchScreen() {
   const { theme } = useAppearance();
@@ -89,15 +66,12 @@ export default function SuperSearchScreen() {
     <AppScreen refreshing={searchBusy} onRefresh={() => void runSearch()}>
       <Text style={[styles.title, { color: theme.colors.text }]}>All Records Super Search</Text>
       <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-        Search by tracking code, booking code, sender/receiver name, or phone.
+        Search by booking code, sender or receiver name, or phone.
       </Text>
 
       <AppCard>
-        <AppInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Tracking / Booking / Sender / Receiver / Phone"
-        />
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Search</Text>
+        <AppInput value={query} onChangeText={setQuery} placeholder="Search..." />
         <View style={styles.buttonRow}>
           <AppButton
             title={searchBusy ? 'Searching...' : 'Search Records'}
@@ -138,28 +112,13 @@ export default function SuperSearchScreen() {
         </AppCard>
       ) : null}
 
-      <View style={styles.kpiRow}>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>Matched Records</Text>
-          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>{rows.length}</Text>
+      <AppCard>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Overview</Text>
+        <View style={styles.kpiRow}>
+          <StatCard label="Matched Records" value={rows.length} />
+          <StatCard label="Deleted Included" value={totalDeleted} />
         </View>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
-            Deleted Included
-          </Text>
-          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>{totalDeleted}</Text>
-        </View>
-      </View>
+      </AppCard>
 
       {searchBusy ? (
         <View style={styles.listWrap}>
@@ -173,34 +132,18 @@ export default function SuperSearchScreen() {
       ) : (
         <View style={styles.listWrap}>
           {rows.map((row) => (
-            <AppCard key={row.id}>
-              <Text style={[styles.bold, { color: theme.colors.text }]}>{row.trackingCode}</Text>
-              <Text style={{ color: theme.colors.textMuted }}>{row.bookingCode}</Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                Sender: {row.senderName ?? '-'} ({row.senderPhone ?? '-'})
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                Receiver: {row.receiverName ?? '-'} ({row.receiverPhone ?? '-'})
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>{row.parcelDetails}</Text>
-              <AppStatusChip label={PARCEL_STATUS_LABELS[row.status] ?? row.status} />
-              {row.isDeleted ? (
-                <Text style={{ color: theme.colors.danger, fontWeight: '700' }}>
-                  Deleted Record
-                </Text>
-              ) : null}
-              <AppButton
-                title="Open Record"
-                onPress={() => {
-                  router.push({
-                    pathname: '/super-search/[parcelId]' as never,
-                    params: { parcelId: row.id },
-                  });
-                  void hapticTap();
-                }}
-                variant="secondary"
-              />
-            </AppCard>
+            <ParcelCard
+              key={row.id}
+              parcel={row}
+              onPress={() => {
+                router.push({
+                  pathname: '/super-search/[parcelId]' as never,
+                  params: { parcelId: row.id },
+                });
+                void hapticTap();
+              }}
+              actionLabel="Open Record"
+            />
           ))}
         </View>
       )}
@@ -211,13 +154,10 @@ export default function SuperSearchScreen() {
 const styles = StyleSheet.create({
   title: { fontSize: mobileTypography.title, fontWeight: '800' },
   subtitle: { marginTop: -2, lineHeight: 20, marginBottom: mobileSpacing.xs },
+  sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
   buttonRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
   kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },
-  kpiTile: { flex: 1, borderWidth: 1, borderRadius: 16, padding: mobileSpacing.md },
-  kpiLabel: { fontSize: mobileTypography.caption, fontWeight: '600' },
-  kpiValue: { fontSize: mobileTypography.kpi, fontWeight: '800', marginTop: 2 },
   listWrap: { gap: mobileSpacing.sm + 2 },
-  bold: { fontWeight: '700' },
   empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
   historyTitle: { fontSize: mobileTypography.caption, fontWeight: '700' },
   historyWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

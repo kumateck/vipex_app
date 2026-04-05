@@ -97,6 +97,7 @@ export interface CurrentUserProfileResponse {
   locationId: string | null;
   locationName: string | null;
   userType: number | null;
+  cashierType: number | null;
 }
 
 export interface UpdateCurrentUserProfileRequest {

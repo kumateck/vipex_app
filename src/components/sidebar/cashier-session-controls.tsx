@@ -28,7 +28,7 @@ import {
   useOpenSessionMutation,
 } from '@/features/cashiers/api/cashiers.api';
 import { useAuthStore } from '@/stores/auth-store';
-import { UserType } from '@/db/schemas/enums';
+import { CashierType, UserType } from '@/db/schemas/enums';
 import { PermissionKeys } from '@/shared/permissions/constants';
 
 function formatCedisFromPsw(valuePsw: number): string {
@@ -50,26 +50,41 @@ export function CashierSessionControls() {
   const [closingBalance, setClosingBalance] = useState('0');
 
   const permissions = useMemo(() => new Set(authUser?.permissions ?? []), [authUser?.permissions]);
-  const isCashierUser = authUser?.userType === UserType.CASHIER;
+  const isCashierUser =
+    authUser?.userType === UserType.CASHIER ||
+    (authUser?.cashierType !== null && authUser?.cashierType !== undefined);
 
   const canReadSessions = permissions.has(PermissionKeys.CanReadCashierSessions);
   const canOpenSessions = permissions.has(PermissionKeys.CanOpenCashierSessions);
   const canCloseSessions = permissions.has(PermissionKeys.CanCloseCashierSessions);
-  const roleName = authUser?.role?.name?.toLowerCase() ?? '';
+  const canAccessSessionControls = canReadSessions || canOpenSessions || canCloseSessions;
+  const cashierType = authUser?.cashierType ?? null;
   const isReceiverRoute = location.pathname.startsWith('/parcels/receiver-cashier');
-  const cashierMode: 'sender' | 'receiver' | 'delivery' = isReceiverRoute
-    ? 'receiver'
-    : roleName.includes('receiver')
+  const isDeliveryRoute = location.pathname.startsWith('/parcels/delivery-cashier');
+  const routeMode: 'sender' | 'receiver' | 'delivery' = isDeliveryRoute
+    ? 'delivery'
+    : isReceiverRoute
       ? 'receiver'
-      : permissions.has(PermissionKeys.CanCompleteDoorstepDelivery)
-        ? 'delivery'
-        : permissions.has(PermissionKeys.CanCompleteOfficePickup)
-          ? 'receiver'
-          : 'sender';
+      : 'sender';
+  const fullCashierMode: 'sender' | 'receiver' = isReceiverRoute ? 'receiver' : 'sender';
+  const cashierMode: 'sender' | 'receiver' | 'delivery' =
+    cashierType === CashierType.SENDING
+      ? 'sender'
+      : cashierType === CashierType.TOBEPAID
+        ? 'receiver'
+        : cashierType === CashierType.DELIVERY
+          ? 'delivery'
+          : cashierType === CashierType.FULL
+            ? fullCashierMode
+            : permissions.has(PermissionKeys.CanCompleteDoorstepDelivery)
+              ? 'delivery'
+              : permissions.has(PermissionKeys.CanCompleteOfficePickup)
+                ? 'receiver'
+                : routeMode;
 
   const { data: activeSession, isLoading: isLoadingActiveSession } =
     useGetCurrentActiveSessionQuery(undefined, {
-      skip: !isCashierUser || !canReadSessions,
+      skip: !isCashierUser || !canAccessSessionControls,
     });
   const { data: summary } = useGetCurrentActiveSessionSummaryQuery(
     { mode: cashierMode },
@@ -87,7 +102,7 @@ export function CashierSessionControls() {
   const [openSession, { isLoading: isOpeningSession }] = useOpenSessionMutation();
   const [closeSession, { isLoading: isClosingSession }] = useCloseSessionMutation();
 
-  if (!isCashierUser || !canReadSessions) return null;
+  if (!isCashierUser || !canAccessSessionControls) return null;
 
   const handleOpenSession = async () => {
     if (!sessionTypeId) {
@@ -204,6 +219,15 @@ export function CashierSessionControls() {
         <Badge variant="secondary">
           Receiver Payments: {formatCedisFromPsw(summary?.totalToBePaidCollectedPsw ?? 0)}
         </Badge>
+      ) : cashierMode === 'delivery' ? (
+        <>
+          <Badge variant="secondary">
+            Delivery Fee: {formatCedisFromPsw(summary?.totalDeliveryFeeCollectedPsw ?? 0)}
+          </Badge>
+          <Badge variant="outline">
+            Receiver Payments: {formatCedisFromPsw(summary?.totalToBePaidCollectedPsw ?? 0)}
+          </Badge>
+        </>
       ) : (
         <>
           <Badge variant="secondary">

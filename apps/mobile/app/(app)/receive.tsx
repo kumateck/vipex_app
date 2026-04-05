@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { CameraView, type BarcodeScanningResult, useCameraPermissions } from 'expo-camera';
 import { AppScreen } from '@mobile/components/screen';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 import { searchParcels, updateParcelStatus } from '@mobile/lib/api';
@@ -11,12 +10,13 @@ import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { canMarkParcelArrived, canViewReceiveScreen } from '@mobile/lib/permissions';
 import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@mobile/lib/haptics';
+import { ParcelCard, ScannerView, StatCard } from '@mobile/components/courier';
+import { UserType } from '@/db/schemas/enums';
 import {
   AppButton,
   AppCard,
   AppInput,
   AppSkeletonCard,
-  AppStatusChip,
   MobileNoAccess,
 } from '@/components/ui/mobile';
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
@@ -25,20 +25,18 @@ export default function ReceiveScanScreen() {
   const { theme } = useAppearance();
   const { session, withAuth } = useAuth();
   const permissions = session.user?.permissions ?? [];
-  const canView = canViewReceiveScreen(permissions);
+  const isRider = session.user?.userType === UserType.RIDER;
+  const canView = canViewReceiveScreen(permissions) || isRider;
   const canMarkArrived = canMarkParcelArrived(permissions);
   const companyId = session.user?.company?.id ?? session.user?.companyId;
   const branchId = session.user?.branch?.id ?? session.user?.branchId;
 
-  const [permission, requestPermission] = useCameraPermissions();
   const [lastCode, setLastCode] = useState<string>('');
   const [searchBusy, setSearchBusy] = useState(false);
   const [scanBusy, setScanBusy] = useState(false);
   const [search, setSearch] = useState('');
   const [searchAllCompany, setSearchAllCompany] = useState(false);
   const [rows, setRows] = useState<ParcelSearchRow[]>([]);
-
-  const canScan = useMemo(() => permission?.granted ?? false, [permission?.granted]);
 
   async function loadIncomingList() {
     if (!companyId) {
@@ -95,9 +93,7 @@ export default function ReceiveScanScreen() {
         }),
       );
 
-      const parcel =
-        response.data.find((row) => row.trackingCode === code || row.bookingCode === code) ??
-        response.data[0];
+      const parcel = response.data.find((row) => row.bookingCode === code) ?? response.data[0];
 
       if (!parcel) {
         notifyError('Not found', 'No in-transit parcel to your branch matches this code.');
@@ -107,7 +103,7 @@ export default function ReceiveScanScreen() {
       await withAuth((token) =>
         updateParcelStatus(token, parcel.id, ParcelStatus.ARRIVED_AT_DESTINATION),
       );
-      notifySuccess(`Parcel ${parcel.trackingCode} marked ARRIVED_AT_DESTINATION.`);
+      notifySuccess(`Parcel ${parcel.bookingCode} marked ARRIVED_AT_DESTINATION.`);
       void hapticSuccess();
       await loadIncomingList();
     } catch (err) {
@@ -119,12 +115,6 @@ export default function ReceiveScanScreen() {
     } finally {
       setScanBusy(false);
     }
-  }
-
-  async function handleBarcode(result: BarcodeScanningResult) {
-    const code = result.data?.trim();
-    if (!code) return;
-    await receiveByCode(code);
   }
 
   if (!canView) {
@@ -142,51 +132,17 @@ export default function ReceiveScanScreen() {
         Scan incoming in-transit parcels for {session.user?.branch?.name ?? '-'}.
       </Text>
 
-      <View style={styles.kpiRow}>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
-            Incoming Parcels
-          </Text>
-          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>{rows.length}</Text>
+      <AppCard>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Overview</Text>
+        <View style={styles.kpiRow}>
+          <StatCard label="Incoming Parcels" value={rows.length} />
+          <StatCard label="Last Scanned Code" value={lastCode || '-'} />
         </View>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
-            Last Scanned Code
-          </Text>
-          <Text style={[styles.kpiLastCode, { color: theme.colors.text }]} numberOfLines={1}>
-            {lastCode || '-'}
-          </Text>
-        </View>
-      </View>
+      </AppCard>
 
       <AppCard>
-        {!permission ? (
-          <Text style={{ color: theme.colors.textMuted }}>Checking camera permissions...</Text>
-        ) : null}
-        {permission && !canScan ? (
-          <AppButton title="Enable Camera Access" onPress={() => void requestPermission()} />
-        ) : null}
-
-        {canScan ? (
-          <View style={[styles.cameraWrap, { borderColor: theme.colors.border }]}>
-            <CameraView
-              style={styles.camera}
-              facing="back"
-              onBarcodeScanned={handleBarcode}
-              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-            />
-          </View>
-        ) : null}
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Scanner</Text>
+        <ScannerView onCodeScanned={(code) => void receiveByCode(code)} />
 
         {scanBusy ? (
           <Text style={{ color: theme.colors.textSubtle }}>Processing scanned parcel...</Text>
@@ -200,14 +156,10 @@ export default function ReceiveScanScreen() {
       </AppCard>
 
       <AppCard>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
           Incoming List And Search
         </Text>
-        <AppInput
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Tracking / Booking / Sender / Receiver / Phone"
-        />
+        <AppInput value={search} onChangeText={setSearch} placeholder="Search..." />
         <View style={styles.buttonRow}>
           <AppButton
             title={searchAllCompany ? 'Scope: All Branches' : 'Scope: My Branch'}
@@ -234,26 +186,15 @@ export default function ReceiveScanScreen() {
       ) : (
         <View style={styles.listWrap}>
           {rows.map((item) => (
-            <AppCard key={item.id}>
-              <Text style={[styles.bold, { color: theme.colors.text }]}>{item.trackingCode}</Text>
-              <Text style={{ color: theme.colors.textMuted }}>{item.bookingCode}</Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {item.senderName ?? '-'} ({item.senderPhone ?? '-'})
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {item.receiverName ?? '-'} ({item.receiverPhone ?? '-'})
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>{item.parcelDetails}</Text>
-              <AppStatusChip label={item.status} />
-              <AppButton
-                title="View Details"
-                onPress={() => {
-                  router.push(`/(app)/receive-process/${item.id}`);
-                  void hapticTap();
-                }}
-                variant="secondary"
-              />
-            </AppCard>
+            <ParcelCard
+              key={item.id}
+              parcel={item}
+              onPress={() => {
+                router.push(`/(app)/receive-process/${item.id}`);
+                void hapticTap();
+              }}
+              actionLabel="View Details"
+            />
           ))}
         </View>
       )}
@@ -265,20 +206,8 @@ const styles = StyleSheet.create({
   title: { fontSize: mobileTypography.title, fontWeight: '800' },
   subtitle: { marginTop: -2, lineHeight: 20, marginBottom: mobileSpacing.xs },
   kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },
-  kpiTile: { flex: 1, borderWidth: 1, borderRadius: 16, padding: mobileSpacing.md },
-  kpiLabel: { fontSize: mobileTypography.caption, fontWeight: '600' },
-  kpiValue: { fontSize: mobileTypography.kpi, fontWeight: '800', marginTop: 2 },
-  kpiLastCode: { fontSize: 14, fontWeight: '700', marginTop: 6 },
   sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
-  cameraWrap: {
-    height: 280,
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-  },
-  camera: { flex: 1 },
   buttonRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
   listWrap: { gap: mobileSpacing.sm + 2, paddingTop: mobileSpacing.sm },
-  bold: { fontWeight: '700' },
   empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
 });

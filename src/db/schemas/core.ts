@@ -9,7 +9,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { BranchType, UserStatus, UserType } from './enums';
+import { BranchType, CashierType, UserStatus, UserType } from './enums';
 import { createId } from '@paralleldrive/cuid2';
 
 // Companies
@@ -211,6 +211,7 @@ export const users = pgTable(
       .references(() => branches.id),
     locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
     userType: smallint('user_type').notNull().default(UserType.STAFF),
+    cashierType: smallint('cashier_type').$type<CashierType>(),
     createdBy: varchar('created_by', { length: 25 }).notNull(),
     taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
     resetToken: varchar('reset_token', { length: 255 }),

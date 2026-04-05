@@ -58,8 +58,10 @@ function toSocketBaseUrl(raw?: string | null) {
   if (!raw?.trim()) return null;
   try {
     const parsed = new URL(raw.trim());
-    parsed.protocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
-    parsed.pathname = SOCKET_ENDPOINT_PATH;
+    parsed.protocol = parsed.protocol === 'https:' || parsed.protocol === 'wss:' ? 'wss:' : 'ws:';
+    parsed.pathname = parsed.pathname.includes(SOCKET_ENDPOINT_PATH)
+      ? parsed.pathname
+      : SOCKET_ENDPOINT_PATH;
     parsed.search = '';
     return parsed.toString();
   } catch {
@@ -69,20 +71,37 @@ function toSocketBaseUrl(raw?: string | null) {
 
 function resolveSocketCandidates() {
   const expoExtra = (Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string };
+  const mobileExtra = (Constants.expoConfig?.extra ?? {}) as {
+    communicationWsUrl?: string;
+    wsBaseUrl?: string;
+  };
   const manifestExtra = ((
     Constants as unknown as {
       manifest2?: { extra?: { expoClient?: { extra?: { apiBaseUrl?: string } } } };
     }
   ).manifest2?.extra?.expoClient?.extra ?? {}) as { apiBaseUrl?: string };
   const baseCandidates = [
+    process.env.EXPO_PUBLIC_COMMUNICATION_WS_URL,
+    process.env.EXPO_PUBLIC_WS_BASE_URL,
     process.env.EXPO_PUBLIC_API_BASE_URL,
+    mobileExtra.communicationWsUrl,
+    mobileExtra.wsBaseUrl,
     expoExtra.apiBaseUrl,
     manifestExtra.apiBaseUrl,
     'https://testing.app.vipexparcel.com',
   ];
-  return [
-    ...new Set(baseCandidates.map((value) => toSocketBaseUrl(value)).filter(Boolean) as string[]),
-  ];
+  const normalized = new Set<string>();
+
+  for (const candidate of baseCandidates) {
+    if (!candidate) continue;
+    for (const segment of candidate.split(',')) {
+      const parsed = toSocketBaseUrl(segment);
+      if (!parsed) continue;
+      normalized.add(parsed);
+    }
+  }
+
+  return [...normalized];
 }
 
 export function useCommunicationSocket(

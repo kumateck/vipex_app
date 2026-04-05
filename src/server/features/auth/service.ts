@@ -96,6 +96,7 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
       locationId: user.locationId ?? null,
       locationName: user.location?.name ?? null,
       userType: user.userType ?? null,
+      cashierType: user.cashierType ?? null,
       permissions: resolvedPermissionKeys,
     },
   };
@@ -141,6 +142,7 @@ export async function refreshSvc(refreshToken: string) {
       locationId: user.locationId ?? null,
       locationName: user.location?.name ?? null,
       userType: user.userType ?? null,
+      cashierType: user.cashierType ?? null,
       permissions: resolvedPermissionKeys,
     },
   };
@@ -252,6 +254,7 @@ export async function getCurrentUserProfileSvc(userId: string) {
     locationId: user.locationId ?? null,
     locationName: user.location?.name ?? null,
     userType: user.userType ?? null,
+    cashierType: user.cashierType ?? null,
   };
 }
 

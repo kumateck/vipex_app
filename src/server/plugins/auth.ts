@@ -17,6 +17,7 @@ export type AuthUser = {
   branchType?: number | null;
   locationId?: string | null;
   userType?: number | null;
+  cashierType?: number | null;
   permissions?: string[];
   iat?: number;
   exp?: number;
@@ -53,6 +54,7 @@ export const authPlugin = (app: Elysia) =>
           branchType: userRecord.branch?.type ?? null,
           locationId: userRecord.locationId ?? null,
           userType: userRecord.userType ?? null,
+          cashierType: userRecord.cashierType ?? null,
           permissions: resolvedPermissions,
           iat: payload.iat,
           exp: payload.exp,
