@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +19,19 @@ import {
 } from '../api/notification-hub.api';
 
 export function NotificationCampaignsApprovalsPage() {
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setSearch(searchInput);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchInput]);
+
   const query = useMemo(
     () => ({
       page: 1,
@@ -63,8 +75,8 @@ export function NotificationCampaignsApprovalsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
               placeholder="Search submitted campaigns"
             />
 

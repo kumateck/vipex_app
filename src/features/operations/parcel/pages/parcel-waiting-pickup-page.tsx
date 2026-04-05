@@ -64,6 +64,21 @@ function formatPhones(primary?: string | null, secondary?: string | null) {
   return phones.length ? phones.join(', ') : '-';
 }
 
+function getPaymentType(row: Pick<ParcelSearchRow, 'chargePsw' | 'plannedToBePaidPsw'>) {
+  const charge = Number(row.chargePsw ?? 0);
+  const receiverDue = Math.max(Number(row.plannedToBePaidPsw ?? 0), 0);
+
+  if (receiverDue <= 0) {
+    return { dotClassName: 'bg-emerald-500' };
+  }
+
+  if (receiverDue >= charge) {
+    return { dotClassName: 'bg-amber-500' };
+  }
+
+  return { dotClassName: 'bg-sky-500' };
+}
+
 function getQueueFilterBySearch(isPickupQueueEnabled: boolean, search?: string) {
   if (!isPickupQueueEnabled) return undefined;
   return search?.trim() ? undefined : true;
@@ -203,7 +218,19 @@ export function ParcelWaitingPickupPage() {
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(() => {
     const baseColumns: ColumnDef<ParcelSearchRow>[] = [
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        accessorKey: 'bookingCode',
+        header: 'Booking',
+        cell: ({ row }) => {
+          const paymentType = getPaymentType(row.original);
+          return (
+            <div className="inline-flex items-center gap-2">
+              <span className={`h-2.5 w-2.5 rounded-full ${paymentType.dotClassName}`} />
+              <span>{row.original.bookingCode}</span>
+            </div>
+          );
+        },
+      },
       {
         id: 'sender',
         header: 'Sender',

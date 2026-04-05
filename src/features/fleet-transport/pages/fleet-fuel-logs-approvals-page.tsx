@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,7 +21,19 @@ import {
 } from '../api/fleet-transport.api';
 
 export function FleetFuelLogsApprovalsPage() {
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setSearch(searchInput);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchInput]);
+
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const query = useMemo(
     () => ({
@@ -73,8 +85,8 @@ export function FleetFuelLogsApprovalsPage() {
           <CardContent className="space-y-4">
             <Input
               placeholder="Search pending fuel logs"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
             />
 
             <Table>
