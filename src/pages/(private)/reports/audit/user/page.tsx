@@ -12,7 +12,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { useListAuditLogsQuery, type EntityAuditLog } from '@/features/audit/api';
 import { AuditReportActions } from '@/features/audit/components/audit-report-actions';
 import { AuditKpiRow } from '@/features/audit/components/audit-kpi-row';

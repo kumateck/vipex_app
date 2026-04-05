@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,19 @@ import {
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
 export function FleetVehiclesListPage() {
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setSearch(searchInput);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchInput]);
+
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<FleetVehicle | null>(null);
   const [plateNumber, setPlateNumber] = useState('');
@@ -104,9 +116,9 @@ export function FleetVehiclesListPage() {
           <CardContent className="space-y-4">
             <Input
               placeholder="Search plate/model"
-              value={search}
+              value={searchInput}
               onChange={(event) => {
-                setSearch(event.target.value);
+                setSearchInput(event.target.value);
                 setPage(1);
               }}
             />

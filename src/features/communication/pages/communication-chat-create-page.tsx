@@ -13,7 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { Separator } from '@/components/ui/separator';
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
 import {

@@ -11,6 +11,7 @@ export type CreateBookingWithParcelsInput = {
   cashierSessionId?: string | null;
   parcels: Array<{
     destinationId: string;
+    pickupLocationId?: string | null;
     receiverId: string;
     status: number;
     parcelDetails: string;
@@ -21,6 +22,7 @@ export type CreateBookingWithParcelsInput = {
     plannedToBePaidCedis?: number;
     senderPaymentCedis?: number;
     senderPaymentMethod?: number;
+    paymentResponsibility?: number;
   }>;
 };
 
@@ -30,26 +32,13 @@ export type CreateBookingWithParcelsResponse = {
   payments: Array<{ id: string }>;
 };
 
-export type ParcelContentOption = {
-  id: string;
-  name: string;
-  description?: string | null;
-  basePricePsw: number;
-  taxInclusive: boolean;
-  active: boolean;
-  sortOrder: number;
-};
-
-export type ParcelDetailOption = {
-  id: string;
-  name: string;
-  description?: string | null;
-  active: boolean;
-  sortOrder: number;
-};
-
 export type SenderCashierParcel = {
   id: string;
+  sourceId?: string;
+  sourceLocationId?: string | null;
+  sourceLocationName?: string | null;
+  senderId: string;
+  receiverId: string;
   destinationId: string;
   destinationName?: string | null;
   pickupLocationId: string | null;
@@ -61,8 +50,10 @@ export type SenderCashierParcel = {
   parcelValuePsw?: number | null;
   senderName: string | null;
   senderPhone: string | null;
+  senderPhone2?: string | null;
   receiverName: string | null;
   receiverPhone: string | null;
+  receiverPhone2?: string | null;
   chargePsw: number;
   plannedToBePaidPsw: number;
   status: number;
@@ -82,6 +73,9 @@ export type ParcelSearchRow = {
   id: string;
   companyId: string;
   sourceId: string;
+  sourceName?: string | null;
+  sourceLocationId?: string | null;
+  sourceLocationName?: string | null;
   destinationId: string;
   destinationName?: string | null;
   consignmentId?: string | null;
@@ -122,8 +116,13 @@ export type ParcelSearchRow = {
   bookingCreatedAt: string | null;
   senderName: string | null;
   senderPhone: string | null;
+  senderPhone2?: string | null;
   receiverName: string | null;
   receiverPhone: string | null;
+  receiverPhone2?: string | null;
+  secondReceiverName?: string | null;
+  secondReceiverPhone?: string | null;
+  secondReceiverPhone2?: string | null;
   dropoffAddress?: string | null;
   deliveryFeePsw?: number | null;
   pickupQueueId?: string | null;
@@ -138,6 +137,27 @@ export type ParcelSearchRow = {
   currentHolderLocationName?: string | null;
   currentHolderWarehouseId?: string | null;
   currentHolderWarehouseName?: string | null;
+};
+
+export type ParcelDiscrepancyRow = {
+  id: string;
+  parcelId: string | null;
+  branchId: string | null;
+  branchName: string | null;
+  trackingCode: string | null;
+  bookingCode: string | null;
+  discrepancyType: string;
+  notes: string | null;
+  createdBy: string | null;
+  createdByName: string | null;
+  createdAt: string;
+  parcelStatus: number | null;
+  sourceId: string | null;
+  destinationId: string | null;
+  pickupLocationId: string | null;
+  destinationLocationName: string | null;
+  senderName: string | null;
+  receiverName: string | null;
 };
 
 export type ParcelInternalHolderSnapshot = {
@@ -401,6 +421,7 @@ export type ParcelSearchFilters = {
   status?: number | null;
   statuses?: number[] | null;
   senderPaid?: boolean | null;
+  hasPickupQueue?: boolean | null;
   includeDeleted?: boolean | null;
 };
 
@@ -625,9 +646,12 @@ export const parcelApi = api.injectEndpoints({
       { id: string },
       {
         id: string;
+        destinationId?: string;
+        sourceLocationId?: string | null;
         parcelDetails?: string;
         parcelContent?: string;
         status?: number;
+        pickupLocationId?: string | null;
         secondReceiverId?: string | null;
         cardId?: string | null;
         cardNumber?: string | null;
@@ -693,6 +717,30 @@ export const parcelApi = api.injectEndpoints({
     >({
       query: (body) => ({
         url: '/shipments/parcels/discrepancies',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    listOpenParcelDiscrepancies: builder.query<
+      ServerListResponse<ParcelDiscrepancyRow>,
+      ServerListQuery<{ companyId?: string; branchId?: string | null }>
+    >({
+      query: (query) => {
+        const { page, pageSize, search, filters } = query;
+        return {
+          url: '/shipments/parcels/discrepancies/open',
+          params: buildServerPaginationParams({ page, pageSize, search, filters }),
+        };
+      },
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    resolveParcelDiscrepancy: builder.mutation<
+      { id: string; parcelId: string | null },
+      { id: string; resolutionNote?: string | null }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/discrepancies/${id}/resolve`,
         method: 'POST',
         body,
       }),
@@ -883,43 +931,6 @@ export const parcelApi = api.injectEndpoints({
         { type: 'Bookings', id: `INTERNAL_TRANSFER_${id}` },
       ],
     }),
-    listParcelContentOptions: builder.query<
-      ParcelContentOption[],
-      { companyId?: string; activeOnly?: boolean } | void
-    >({
-      query: (params) => ({
-        url: '/shipments/parcel-masters/content-options',
-        params: params ?? undefined,
-      }),
-      providesTags: [{ type: 'Bookings', id: 'LIST' }],
-    }),
-    listParcelDetailOptions: builder.query<
-      ParcelDetailOption[],
-      { companyId?: string; activeOnly?: boolean } | void
-    >({
-      query: (params) => ({
-        url: '/shipments/parcel-masters/detail-options',
-        params: params ?? undefined,
-      }),
-      providesTags: [{ type: 'Bookings', id: 'LIST' }],
-    }),
-    createParcelDetailOption: builder.mutation<
-      { id?: string },
-      {
-        companyId?: string;
-        name: string;
-        description?: string | null;
-        active?: boolean;
-        sortOrder?: number;
-      }
-    >({
-      query: (body) => ({
-        url: '/shipments/parcel-masters/details',
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
-    }),
   }),
 });
 
@@ -940,6 +951,8 @@ export const {
   useSendParcelStatusCallNotificationMutation,
   useSoftDeleteParcelMutation,
   useLogParcelDiscrepancyMutation,
+  useListOpenParcelDiscrepanciesQuery,
+  useResolveParcelDiscrepancyMutation,
   useCollectDoorstepAddressMutation,
   useDispatchDoorstepParcelsMutation,
   useListRiderDoorstepParcelsQuery,
@@ -953,7 +966,4 @@ export const {
   useCreateParcelInternalTransferMutation,
   useAcknowledgeParcelInternalTransferMutation,
   useCancelParcelInternalTransferMutation,
-  useListParcelContentOptionsQuery,
-  useListParcelDetailOptionsQuery,
-  useCreateParcelDetailOptionMutation,
 } = parcelApi;

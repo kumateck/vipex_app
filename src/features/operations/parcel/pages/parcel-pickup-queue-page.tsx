@@ -1,9 +1,17 @@
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { EllipsisVertical } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import { formatDateTime as formatDateTimeStandard } from '@/lib/date';
 import { useGetBranchQuery } from '@/features/branches/api/branches.api';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { useAuthStore } from '@/stores/auth-store';
@@ -22,7 +31,6 @@ import {
   useGetParcelDetailsQuery,
   useLazySearchParcelsQuery,
 } from '../api/parcel.api';
-import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 
 function formatCurrency(amountPsw: number) {
   return `GHS ${(amountPsw / 100).toFixed(2)}`;
@@ -32,18 +40,28 @@ function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTimeStandard(date);
 }
 
 function getPaymentBucketLabel(row: Pick<ParcelSearchRow, 'plannedToBePaidPsw'>) {
   return row.plannedToBePaidPsw > 0 ? 'Receiver Pays' : 'Sender Paid';
 }
 
+function formatPhones(primary?: string | null, secondary?: string | null) {
+  const phones = [primary, secondary].filter((value): value is string => Boolean(value?.trim()));
+  return phones.length ? phones.join(', ') : '-';
+}
+
 export function ParcelPickupQueuePage() {
   const user = useAuthStore((state) => state.user);
+  const navigate = useNavigate();
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
-  const { data: currentBranch } = useGetBranchQuery(branchId ?? '', { skip: !branchId });
+  const { data: currentBranch } = useGetBranchQuery(branchId ?? '', {
+    skip: !branchId,
+    refetchOnMountOrArgChange: true,
+    pollingInterval: 5000,
+  });
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
 
   const [searchInput, setSearchInput] = useState('');
@@ -61,19 +79,51 @@ export function ParcelPickupQueuePage() {
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       {
         id: 'receiver',
-        header: 'Customer',
-        accessorFn: (row) =>
-          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        header: 'Receiver',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'secondReceiver',
+        header: 'Second Receiver',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.secondReceiverName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.secondReceiverPhone, row.original.secondReceiverPhone2)}
+            </p>
+          </div>
+        ),
       },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       {
-        id: 'holder',
-        header: 'Current Holder',
-        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
+        id: 'source',
+        header: 'Source',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.sourceLocationName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.sourceName ?? '-'}</p>
+          </div>
+        ),
+      },
+      {
+        id: 'destination',
+        header: 'Destination',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.destinationName ?? '-'}</p>
+          </div>
+        ),
       },
       {
         id: 'paymentBucket',
@@ -90,14 +140,22 @@ export function ParcelPickupQueuePage() {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            onClick={() => {
-              setSelectedParcel(row.original);
-            }}
-          >
-            {row.original.pickupQueueCode ? 'View Queue' : 'Create Queue'}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="outline" className="h-8 w-8">
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedParcel(row.original);
+                }}
+              >
+                {row.original.pickupQueueCode ? 'View Queue' : 'Create Queue'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],
@@ -130,6 +188,11 @@ export function ParcelPickupQueuePage() {
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
                 This branch has not enabled pickup queue yet. Turn on “Use pickup queue” in branch
                 settings to use this page.
+                <div className="mt-3">
+                  <Button variant="outline" size="sm" onClick={() => navigate('/branches')}>
+                    Open Branch Settings
+                  </Button>
+                </div>
               </div>
             ) : null}
 
@@ -207,18 +270,12 @@ export function ParcelPickupQueuePage() {
                   <strong>Booking:</strong> {selectedParcel.bookingCode}
                 </p>
                 <p>
-                  <strong>Customer:</strong> {selectedParcel.receiverName ?? '-'} (
+                  <strong>Receiver:</strong> {selectedParcel.receiverName ?? '-'} (
                   {selectedParcel.receiverPhone ?? '-'})
                 </p>
                 <p>
                   <strong>Parcel:</strong> {selectedParcel.parcelDetails}
                 </p>
-                <div className="flex items-center gap-2">
-                  <strong>Current Holder:</strong>
-                  <ParcelInternalHolderBadge
-                    holder={parcelDetails?.internalHolder ?? selectedParcel}
-                  />
-                </div>
                 <p>
                   <strong>Payment Type:</strong> {getPaymentBucketLabel(selectedParcel)}
                 </p>

@@ -19,7 +19,7 @@ export default function CustomersPage() {
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setSearch(searchInput);
-    }, 300);
+    }, 3000);
 
     return () => {
       window.clearTimeout(timeoutId);

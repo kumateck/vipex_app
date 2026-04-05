@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +19,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import {
   useListPurchaseRequestsQuery,
   useListProcurementSupplierOptionsQuery,
@@ -34,7 +34,19 @@ function statusLabel(status: number) {
 }
 
 export function ProcurementRequestsListPage() {
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setSearch(searchInput);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchInput]);
+
   const [status, setStatus] = useState<string>('__all__');
   const [supplierId, setSupplierId] = useState<string>('__all__');
   const [page, setPage] = useState(1);
@@ -80,9 +92,9 @@ export function ProcurementRequestsListPage() {
             <div className="grid gap-3 md:grid-cols-4">
               <Input
                 placeholder="Search request no/title"
-                value={search}
+                value={searchInput}
                 onChange={(event) => {
-                  setSearch(event.target.value);
+                  setSearchInput(event.target.value);
                   setPage(1);
                 }}
               />

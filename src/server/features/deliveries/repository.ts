@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { and, asc, desc, inArray } from 'drizzle-orm';
+import { and, asc, desc, inArray, isNotNull } from 'drizzle-orm';
 import { deliveries, parcels, customers, branches } from '@/db/schemas';
 import { alias } from 'drizzle-orm/pg-core';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
@@ -166,6 +166,55 @@ export async function listDoorstepByRiderRepo(input: {
   const r = alias(customers, 'r');
   const d = alias(branches, 'd');
   const where = [eq(deliveries.riderUserId, input.riderUserId), eq(deliveries.isDeleted, false)];
+  if (input.parcelStatuses && input.parcelStatuses.length > 0) {
+    where.push(inArray(parcels.status, input.parcelStatuses));
+  }
+
+  return db
+    .select({
+      deliveryId: deliveries.id,
+      parcelId: deliveries.parcelId,
+      riderUserId: deliveries.riderUserId,
+      deliveryStatus: deliveries.status,
+      signatureImage: deliveries.signatureImage,
+      dropoffAddress: deliveries.dropoffAddress,
+      deliveryFeePsw: deliveries.chargePsw,
+      amountPaidPsw: deliveries.amountPaidPsw,
+      trackingCode: parcels.trackingCode,
+      bookingCode: parcels.bookingCode,
+      parcelStatus: parcels.status,
+      parcelDetails: parcels.parcelDetails,
+      parcelContent: parcels.parcelContent,
+      plannedToBePaidPsw: parcels.plannedToBePaidPsw,
+      chargePsw: parcels.chargePsw,
+      destinationId: parcels.destinationId,
+      destinationName: d.name,
+      receiverId: parcels.receiverId,
+      receiverName: r.fullname,
+      receiverPhone: r.telephone,
+      secondReceiverId: parcels.secondReceiverId,
+      createdAt: deliveries.createdAt,
+      updatedAt: deliveries.updatedAt,
+    })
+    .from(deliveries)
+    .innerJoin(parcels, eq(parcels.id, deliveries.parcelId))
+    .leftJoin(r, eq(r.id, parcels.receiverId))
+    .leftJoin(d, eq(d.id, parcels.destinationId))
+    .where(and(...where))
+    .orderBy(desc(deliveries.updatedAt), asc(deliveries.id));
+}
+
+export async function listDoorstepByBranchRepo(input: {
+  branchId: string;
+  parcelStatuses?: number[] | null;
+}): Promise<RiderDeliveryRow[]> {
+  const r = alias(customers, 'r');
+  const d = alias(branches, 'd');
+  const where = [
+    eq(parcels.destinationId, input.branchId),
+    eq(deliveries.isDeleted, false),
+    isNotNull(deliveries.riderUserId),
+  ];
   if (input.parcelStatuses && input.parcelStatuses.length > 0) {
     where.push(inArray(parcels.status, input.parcelStatuses));
   }

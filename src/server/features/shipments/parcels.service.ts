@@ -1,6 +1,8 @@
 import { toPesewas } from '@/server/utils/gh-money';
 import { ParcelStatus } from '@/db/schemas';
+import { auditLogs } from '@/db/schemas/audit';
 import { db } from '@/db/config';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 import {
   listAllPaymentsForParcelRepo,
@@ -13,6 +15,12 @@ import { listConsignmentsForParcelRepo } from './consignments.repository';
 import { getPickupQueueByParcelRepo } from '../pickup-queues/repository';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
 import { getParcelInternalHolderByParcelRepo } from '../parcel-internal-transfers/repository';
+import {
+  createParcelDiscrepancyRepo,
+  getOpenDiscrepancyByParcelRepo,
+  listOpenParcelDiscrepanciesRepo,
+  resolveParcelDiscrepancyRepo,
+} from './parcel-discrepancies.repository';
 
 import {
   createParcelRepo,
@@ -39,6 +47,12 @@ function getErrorCode(error: unknown): string | undefined {
 function isSchemaCompatibilityError(error: unknown): boolean {
   const code = getErrorCode(error);
   return code === '42P01' || code === '42703';
+}
+
+function getAuditMetadataNote(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const candidate = (metadata as Record<string, unknown>).notes;
+  return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : null;
 }
 
 export async function listParcelsSvc(p: ListParcelsParams) {
@@ -108,6 +122,8 @@ export async function updateParcelSvc(
   id: string,
   patch: {
     status?: number;
+    destinationId?: string;
+    sourceLocationId?: string | null;
     parcelDetails?: string;
     parcelContent?: string;
     secondReceiverId?: string | null;
@@ -123,6 +139,7 @@ export async function updateParcelSvc(
     method?: number;
     taxReportConfirmation?: boolean;
   },
+  actorUserId?: string | null,
 ): Promise<{ id: string }> {
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
@@ -131,6 +148,8 @@ export async function updateParcelSvc(
   }
   const setPatch: Partial<typeof cur> & { parcelValuePsw?: number } = {};
   if (patch.status !== undefined) setPatch.status = patch.status;
+  if (patch.destinationId !== undefined) setPatch.destinationId = patch.destinationId;
+  if (patch.sourceLocationId !== undefined) setPatch.sourceLocationId = patch.sourceLocationId;
   if (patch.parcelDetails) setPatch.parcelDetails = patch.parcelDetails;
   if (patch.parcelContent) setPatch.parcelContent = patch.parcelContent;
   if (patch.secondReceiverId !== undefined) setPatch.secondReceiverId = patch.secondReceiverId;
@@ -156,6 +175,24 @@ export async function updateParcelSvc(
 
   const updated = await updateParcelRepo(id, setPatch);
   if (!updated) throw NotFound('Parcel not found');
+
+  await recordAuditLog({
+    companyId: cur.companyId,
+    actorUserId: actorUserId ?? null,
+    entityType: 'parcel',
+    entityId: id,
+    action: 'PARCEL_UPDATED',
+    message: `Parcel ${cur.trackingCode} updated`,
+    metadata: {
+      patch,
+      previous: {
+        destinationId: cur.destinationId,
+        pickupLocationId: cur.pickupLocationId,
+        status: cur.status,
+      },
+    },
+  });
+
   const shouldEndPickupQueue =
     cur.status === ParcelStatus.AWAITING_PICKUP &&
     patch.status !== undefined &&
@@ -351,6 +388,55 @@ export async function logParcelDiscrepancySvc(input: {
 }) {
   const parcel = input.parcelId ? await getParcelRepo(input.parcelId) : null;
 
+  if (input.discrepancyType === 'record_not_physical' && input.parcelId && parcel) {
+    try {
+      const open = await getOpenDiscrepancyByParcelRepo(input.parcelId);
+      if (!open) {
+        await createParcelDiscrepancyRepo({
+          companyId: input.companyId,
+          parcelId: input.parcelId,
+          branchId: input.branchId ?? parcel.destinationId ?? null,
+          trackingCode: input.trackingCode ?? parcel.trackingCode,
+          bookingCode: input.bookingCode ?? parcel.bookingCode,
+          discrepancyType: input.discrepancyType,
+          notes: input.notes?.trim() || null,
+          status: 0,
+          createdBy: input.actorUserId ?? null,
+        });
+      }
+    } catch (error) {
+      if (!isSchemaCompatibilityError(error)) throw error;
+    }
+
+    if (parcel.status !== ParcelStatus.DISCREPANCY) {
+      await updateParcelRepo(
+        input.parcelId,
+        {
+          status: ParcelStatus.DISCREPANCY,
+        },
+        db,
+      );
+    }
+  }
+
+  if (input.discrepancyType === 'physical_missing_in_system') {
+    try {
+      await createParcelDiscrepancyRepo({
+        companyId: input.companyId,
+        parcelId: input.parcelId ?? null,
+        branchId: input.branchId ?? null,
+        trackingCode: input.trackingCode ?? null,
+        bookingCode: input.bookingCode ?? null,
+        discrepancyType: input.discrepancyType,
+        notes: input.notes?.trim() || null,
+        status: 0,
+        createdBy: input.actorUserId ?? null,
+      });
+    } catch (error) {
+      if (!isSchemaCompatibilityError(error)) throw error;
+    }
+  }
+
   await recordAuditLog({
     companyId: input.companyId,
     actorUserId: input.actorUserId ?? null,
@@ -375,4 +461,165 @@ export async function logParcelDiscrepancySvc(input: {
   });
 
   return { success: true };
+}
+
+export async function listOpenParcelDiscrepanciesSvc(input: {
+  companyId: string;
+  branchId?: string | null;
+  limit: number;
+  offset: number;
+  search?: string | null;
+}) {
+  try {
+    return await listOpenParcelDiscrepanciesRepo(input);
+  } catch (error) {
+    if (!isSchemaCompatibilityError(error)) throw error;
+
+    const { data, totalRecords } = await listParcelsRepo({
+      limit: input.limit,
+      offset: input.offset,
+      companyId: input.companyId,
+      destinationId: input.branchId ?? null,
+      status: ParcelStatus.DISCREPANCY,
+      statuses: null,
+      sourceId: null,
+      locationId: null,
+      senderPaid: null,
+      search: input.search ?? null,
+      received: null,
+      includeDeleted: false,
+      sort: null,
+    });
+
+    const parcelIds = data.map((parcel) => parcel.id);
+    const noteByParcelId = new Map<string, { note: string | null; createdAt: Date }>();
+
+    if (parcelIds.length > 0) {
+      const auditRows = await db
+        .select({
+          entityId: auditLogs.entityId,
+          metadata: auditLogs.metadata,
+          createdAt: auditLogs.createdAt,
+        })
+        .from(auditLogs)
+        .where(
+          and(
+            eq(auditLogs.companyId, input.companyId),
+            eq(auditLogs.action, 'PARCEL_DISCREPANCY_LOGGED'),
+            eq(auditLogs.entityType, 'parcel_discrepancy'),
+            inArray(auditLogs.entityId, parcelIds),
+          ),
+        )
+        .orderBy(desc(auditLogs.createdAt));
+
+      for (const row of auditRows) {
+        if (!row.entityId || noteByParcelId.has(row.entityId)) continue;
+        noteByParcelId.set(row.entityId, {
+          note: getAuditMetadataNote(row.metadata),
+          createdAt: row.createdAt,
+        });
+      }
+    }
+
+    return {
+      data: data.map((parcel) => ({
+        // Compatibility mode fallback when parcel_discrepancies table is not yet available.
+        id: parcel.id,
+        parcelId: parcel.id,
+        branchId: parcel.destinationId,
+        branchName: parcel.destinationName ?? null,
+        trackingCode: parcel.trackingCode,
+        bookingCode: parcel.bookingCode,
+        discrepancyType: 'record_not_physical',
+        notes: noteByParcelId.get(parcel.id)?.note ?? null,
+        createdBy: parcel.createdBy,
+        createdByName: null,
+        createdAt: noteByParcelId.get(parcel.id)?.createdAt ?? parcel.updatedAt,
+        parcelStatus: parcel.status,
+        sourceId: parcel.sourceId,
+        destinationId: parcel.destinationId,
+        pickupLocationId: parcel.pickupLocationId,
+        destinationLocationName: parcel.pickupLocationName ?? null,
+        senderName: parcel.senderName,
+        receiverName: parcel.receiverName,
+      })),
+      totalRecords,
+    };
+  }
+}
+
+export async function resolveParcelDiscrepancySvc(input: {
+  id: string;
+  companyId: string;
+  actorUserId: string;
+  resolutionNote?: string | null;
+}) {
+  let resolved: {
+    id: string;
+    parcelId: string | null;
+    companyId: string;
+    trackingCode: string | null;
+    bookingCode: string | null;
+  } | null;
+
+  try {
+    resolved = await resolveParcelDiscrepancyRepo(input.id, input.companyId, {
+      resolvedBy: input.actorUserId,
+      resolvedAt: new Date(),
+      resolutionNote: input.resolutionNote?.trim() || null,
+    });
+  } catch (error) {
+    if (!isSchemaCompatibilityError(error)) throw error;
+
+    const parcel = await getParcelRepo(input.id);
+    if (!parcel || parcel.companyId !== input.companyId) {
+      throw NotFound('Discrepancy parcel not found');
+    }
+    if (parcel.status !== ParcelStatus.DISCREPANCY) {
+      throw BadRequest('Parcel is not in discrepancy status');
+    }
+
+    await updateParcelRepo(parcel.id, { status: ParcelStatus.IN_TRANSIT }, db);
+
+    await recordAuditLog({
+      companyId: input.companyId,
+      actorUserId: input.actorUserId,
+      entityType: 'parcel_discrepancy',
+      entityId: parcel.id,
+      action: 'PARCEL_DISCREPANCY_RESOLVED',
+      message: 'Parcel discrepancy resolved (compat mode)',
+      metadata: {
+        parcelId: parcel.id,
+        trackingCode: parcel.trackingCode,
+        bookingCode: parcel.bookingCode,
+        resolutionNote: input.resolutionNote?.trim() || null,
+        compatibilityMode: true,
+      },
+    });
+
+    return { id: parcel.id, parcelId: parcel.id };
+  }
+
+  if (!resolved) throw NotFound('Open discrepancy not found');
+
+  if (resolved.parcelId) {
+    await updateParcelRepo(resolved.parcelId, { status: ParcelStatus.IN_TRANSIT }, db);
+  }
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'parcel_discrepancy',
+    entityId: resolved.id,
+    action: 'PARCEL_DISCREPANCY_RESOLVED',
+    message: 'Parcel discrepancy resolved',
+    metadata: {
+      parcelId: resolved.parcelId,
+      trackingCode: resolved.trackingCode,
+      bookingCode: resolved.bookingCode,
+      resolutionNote: input.resolutionNote?.trim() || null,
+    },
+  });
+
+  return { id: resolved.id, parcelId: resolved.parcelId };
 }

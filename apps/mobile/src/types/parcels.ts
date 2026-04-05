@@ -21,6 +21,8 @@ export type ParcelSearchRow = {
   pickupQueueCode?: string | null;
   pickupQueueNumber?: number | null;
   pickupQueuedAt?: string | null;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
 };
 
 export type PickupQueueCard = {
@@ -109,5 +111,31 @@ export type RiderDoorstepResponse = {
     expectedDeliveryFeePsw: number;
     expectedToBePaidPsw: number;
     expectedTotalPsw: number;
+  };
+};
+
+export type RiderBenchmarkResponse = {
+  rider: {
+    completionRate: number;
+    returnRate: number;
+    averagePaidPsw: number;
+    unresolvedOlderThanOneDay: number;
+    completedCount: number;
+    outstandingCount: number;
+    totalKnown: number;
+  };
+  branchAverage: {
+    completionRate: number;
+    returnRate: number;
+    averagePaidPsw: number;
+    unresolvedOlderThanOneDay: number;
+    completedCount: number;
+    outstandingCount: number;
+    totalKnown: number;
+  };
+  branch: {
+    id: string;
+    ridersCount: number;
+    samples: number;
   };
 };

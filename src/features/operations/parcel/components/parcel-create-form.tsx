@@ -14,11 +14,9 @@ import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { Spinner } from '@/components/ui/spinner';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
-import { useGetCurrentActiveSessionQuery } from '@/features/cashiers/api/cashiers.api';
 import { useCreateCustomerMutation } from '@/features/customers/api';
-import { useListCompanyModulesQuery } from '@/features/company-modules/api';
 import { useAuthStore } from '@/stores/auth-store';
-import { BranchType, PaymentMethod } from '@/db/schemas/enums';
+import { BranchType, PaymentMethod, PaymentResponsibility } from '@/db/schemas/enums';
 import { useCreateBookingWithParcelsMutation } from '../api/parcel.api';
 import { CustomerLookupSection } from './parcel-create/customer-lookup-section';
 import { ParcelCard } from './parcel-create/parcel-card';
@@ -31,19 +29,18 @@ import type {
 } from './parcel-create/parcel-form.types';
 import { Plus } from 'lucide-react';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import { sanitizeNumber, sanitizeString } from '@/lib/utils';
 
 const createEmptyParcel = (): ParcelFormValues => ({
   destinationBranchId: '',
   destinationLocationId: '',
-  parcelDetailOptionId: '',
-  parcelContentOptionId: '',
   parcelDetails: '',
   parcelContent: '',
-  extraWeightCharge: '',
-  parcelValue: '',
+  parcelValue: '0',
   charge: '',
   paymentResponsibility: 'SENDER',
   senderSettlementMode: 'PAY_NOW',
+  senderPartialPayment: '',
   receiver: {
     telephone: '',
     telephone2: '',
@@ -64,11 +61,9 @@ const createInitialFormValues = (): ParcelBookingFormValues => ({
 });
 
 const parseAmount = (value: string, label: string) => {
-  const normalized = String(value ?? '')
-    .replace(/,/g, '')
-    .trim();
+  const normalized = sanitizeString(value).replace(/,/g, '').trim();
   if (!normalized) return 0;
-  const amount = Number(normalized);
+  const amount = sanitizeNumber(normalized);
   if (Number.isNaN(amount) || amount < 0) {
     throw new Error(`Enter a valid ${label} amount`);
   }
@@ -92,21 +87,14 @@ export function ParcelCreateForm() {
   const userId = user?.id ?? '';
 
   const [latestReceipt, setLatestReceipt] = useState<ReceiptSummary | null>(null);
+  const [openParcels, setOpenParcels] = useState<Record<string, boolean>>({});
 
-  const { data: activeSession } = useGetCurrentActiveSessionQuery();
-  const { data: companyModules = [] } = useListCompanyModulesQuery();
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
     { companyId },
     { skip: !companyId },
   );
   const destinationBranchOptions = branchOptions.filter(
     (branch) => branch.id !== userBranchId && branch.type !== BranchType.HEADOFFICE,
-  );
-  const parcelContentModuleEnabled = companyModules.some(
-    (module) => module.code === 'parcel_content_pricing' && module.isEnabled,
-  );
-  const parcelPackagingModuleEnabled = companyModules.some(
-    (module) => module.code === 'parcel_packaging_styles' && module.isEnabled,
   );
 
   const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
@@ -153,7 +141,7 @@ export function ParcelCreateForm() {
     const cachedId = cache.get(phone);
     if (cachedId) return cachedId;
 
-    const secondaryPhone = String(params.telephone2 ?? '').trim();
+    const secondaryPhone = sanitizeString(params.telephone2).trim();
     const created = await createCustomer({
       fullname: name,
       telephone: phone,
@@ -230,21 +218,34 @@ export function ParcelCreateForm() {
         values.parcels.map((parcel, index) => ({
           charge: parseAmount(parcel.charge, `charge for parcel ${index + 1}`),
           value: parseAmount(parcel.parcelValue, `parcel value for parcel ${index + 1}`),
+          partial: parseAmount(
+            parcel.senderPartialPayment,
+            `sender partial payment for parcel ${index + 1}`,
+          ),
         })) || [];
-      const requiresSessionForPayNow = values.parcels.some(
-        (parcel) =>
-          parcel.paymentResponsibility === 'SENDER' && parcel.senderSettlementMode === 'PAY_NOW',
-      );
-      if (requiresSessionForPayNow && !activeSession) {
-        toast.error('An active cashier session is required when collecting sender payment now');
-        return;
-      }
+      for (let index = 0; index < values.parcels.length; index += 1) {
+        const parcel = values.parcels[index];
+        if (!parcel) continue;
+        const charge = amounts[index]?.charge ?? 0;
+        const partial = amounts[index]?.partial ?? 0;
 
-      const status = Number(values.status);
+        if (parcel.paymentResponsibility === 'SPLIT') {
+          if (partial <= 0) {
+            toast.error(`Sender partial payment is required for parcel ${index + 1}`);
+            return;
+          }
+          if (partial >= charge) {
+            toast.error(
+              `Sender partial payment must be less than total charge for parcel ${index + 1}`,
+            );
+            return;
+          }
+        }
+      }
+      const status = sanitizeNumber(values.status);
       const response = await createBookingWithParcels({
         senderId: resolvedSenderId,
         status,
-        cashierSessionId: activeSession?.id ?? null,
         parcels: values.parcels.map((parcel, index) => {
           const receiverId = receiverIds[index];
           if (!receiverId) {
@@ -252,6 +253,7 @@ export function ParcelCreateForm() {
           }
           return {
             destinationId: parcel.destinationBranchId,
+            pickupLocationId: parcel.destinationLocationId || null,
             receiverId,
             status,
             parcelDetails: parcel.parcelDetails,
@@ -262,12 +264,19 @@ export function ParcelCreateForm() {
                 : PaymentMethod.CASH,
             parcelValueCedis: amounts[index]?.value,
             chargeCedis: amounts[index]?.charge,
-            senderPaymentCedis:
-              parcel.paymentResponsibility === 'SENDER' && parcel.senderSettlementMode === 'PAY_NOW'
-                ? amounts[index]?.charge
-                : 0,
+            senderPaymentCedis: 0,
             plannedToBePaidCedis:
-              parcel.paymentResponsibility === 'RECEIVER' ? amounts[index]?.charge : 0,
+              parcel.paymentResponsibility === 'RECEIVER'
+                ? amounts[index]?.charge
+                : parcel.paymentResponsibility === 'SPLIT'
+                  ? Math.max((amounts[index]?.charge ?? 0) - (amounts[index]?.partial ?? 0), 0)
+                  : 0,
+            paymentResponsibility:
+              parcel.paymentResponsibility === 'SENDER'
+                ? PaymentResponsibility.SENDER
+                : parcel.paymentResponsibility === 'RECEIVER'
+                  ? PaymentResponsibility.RECIPIENT
+                  : PaymentResponsibility.SPLIT,
           };
         }),
       }).unwrap();
@@ -290,11 +299,15 @@ export function ParcelCreateForm() {
           senderPaidCedis:
             values.parcels[index]?.paymentResponsibility === 'SENDER'
               ? (amounts[index]?.charge ?? 0)
-              : 0,
+              : values.parcels[index]?.paymentResponsibility === 'SPLIT'
+                ? (amounts[index]?.partial ?? 0)
+                : 0,
           receiverToPayCedis:
             values.parcels[index]?.paymentResponsibility === 'RECEIVER'
               ? (amounts[index]?.charge ?? 0)
-              : 0,
+              : values.parcels[index]?.paymentResponsibility === 'SPLIT'
+                ? Math.max((amounts[index]?.charge ?? 0) - (amounts[index]?.partial ?? 0), 0)
+                : 0,
           issuedAt: new Date().toISOString(),
         })),
       });
@@ -373,7 +386,15 @@ export function ParcelCreateForm() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => append(createEmptyParcel())}
+                      onClick={() => {
+                        append(createEmptyParcel());
+                        setOpenParcels((prev) => {
+                          const collapsed = Object.fromEntries(
+                            Object.entries(prev).map(([key]) => [key, false]),
+                          );
+                          return collapsed;
+                        });
+                      }}
                     >
                       <Plus className="h-4 w-4" />
                       Add Parcel
@@ -387,18 +408,30 @@ export function ParcelCreateForm() {
                         key={field.id}
                         index={index}
                         canRemove={fields.length > 1}
-                        onRemove={() => remove(index)}
+                        onRemove={() => {
+                          remove(index);
+                          setOpenParcels((prev) => {
+                            const copy = { ...prev };
+                            delete copy[field.id];
+                            return copy;
+                          });
+                        }}
                         companyId={companyId}
                         branchOptions={destinationBranchOptions}
-                        parcelContentModuleEnabled={parcelContentModuleEnabled}
-                        parcelPackagingModuleEnabled={parcelPackagingModuleEnabled}
+                        isOpen={openParcels[field.id] ?? index === fields.length - 1}
+                        onOpenChange={(open) => {
+                          setOpenParcels((prev) => ({
+                            ...prev,
+                            [field.id]: open,
+                          }));
+                        }}
                       />
                     ))}
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    All parcels will be saved under a single booking. Cashier session is only
-                    required when collecting sender payment now.
+                    All parcels will be saved under a single booking. Sender payments are collected
+                    later from the Sender Payments page.
                   </p>
                   {userBranchType === BranchType.HEADOFFICE ? (
                     <p className="text-xs text-destructive">

@@ -41,7 +41,6 @@ import { companyModulesRoutes } from './features/company-modules/routes';
 import { warehousesRoutes } from './features/warehouses/routes';
 import { parcelInternalTransfersRoutes } from './features/parcel-internal-transfers/routes';
 import { uploadsRoutes } from './features/uploads/routes';
-import { parcelMastersRoutes } from './features/parcel-masters/routes';
 import { moduleWorkspaceRoutes } from './features/module-workspace/routes';
 import { communicationRoutes } from './features/communication/routes';
 import { customerServiceRoutes } from './features/customer-service/routes';
@@ -82,7 +81,6 @@ export const app = new Elysia()
           s
             .group('/bookings', (r) => r.use(bookingsRoutes).use(bookingWithParcelsRoutes))
             .group('/parcels', (r) => r.use(parcelsRoutes))
-            .group('/parcel-masters', (r) => r.use(parcelMastersRoutes))
             .group('/parcel-internal-transfers', (r) => r.use(parcelInternalTransfersRoutes))
             .group('/consignments', (r) => r.use(consignmentsRoutes))
             .group('/auto-grouping', (r) => r.use(autoGroupingRoutes)),

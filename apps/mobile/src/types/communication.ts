@@ -8,12 +8,20 @@ export type CommunicationThread = {
 
 export type CommunicationChannel = {
   id: string;
+  companyId?: string;
+  branchId?: string | null;
+  locationId?: string | null;
   name: string;
   description: string | null;
   channelType: 'text' | 'voice' | string;
   visibility: 'public' | 'private' | string;
   isCallEnabled: boolean;
+  isAnnouncementOnly?: boolean;
   threadId: string | null;
+  maxParticipants?: number | null;
+  isArchived?: boolean;
+  archivedAt?: string | null;
+  createdBy?: string | null;
   participantCount: number;
 };
 

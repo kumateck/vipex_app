@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { AudioSession } from '@livekit/react-native';
-import { Room, RoomEvent } from 'livekit-client';
+import { ConnectionQuality, Room, RoomEvent } from 'livekit-client';
 import { AppScreen } from '@mobile/components/screen';
 import {
   joinCommunicationVoiceChannel,
@@ -59,6 +59,10 @@ export default function MobileVoiceChannelScreen() {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(true);
   const [speakerOn, setSpeakerOn] = useState(true);
+  const [prejoinChecked, setPrejoinChecked] = useState(false);
+  const [connectionQuality, setConnectionQuality] = useState<
+    'good' | 'degraded' | 'poor' | 'unknown'
+  >('unknown');
   const [audioRouteLabel, setAudioRouteLabel] = useState<'speaker' | 'earpiece' | 'default'>(
     'speaker',
   );
@@ -140,6 +144,19 @@ export default function MobileVoiceChannelScreen() {
     roomRef.current = room;
     room.on(RoomEvent.Disconnected, () => {
       setConnected(false);
+      setConnectionQuality('unknown');
+    });
+    room.on(RoomEvent.ConnectionQualityChanged, (quality, participant) => {
+      if (!participant?.isLocal) return;
+      if (quality === ConnectionQuality.Excellent || quality === ConnectionQuality.Good) {
+        setConnectionQuality('good');
+        return;
+      }
+      if (quality === ConnectionQuality.Poor) {
+        setConnectionQuality('poor');
+        return;
+      }
+      setConnectionQuality('degraded');
     });
     await room.connect(payload.livekitUrl, payload.token);
     await room.localParticipant.setMicrophoneEnabled(!isMuted);
@@ -185,7 +202,10 @@ export default function MobileVoiceChannelScreen() {
 
   const toggleMute = async () => {
     const room = roomRef.current;
-    if (!room) return;
+    if (!room) {
+      setIsMuted((prev) => !prev);
+      return;
+    }
     const next = !isMuted;
     try {
       await room.localParticipant.setMicrophoneEnabled(!next);
@@ -200,7 +220,10 @@ export default function MobileVoiceChannelScreen() {
 
   const toggleCamera = async () => {
     const room = roomRef.current;
-    if (!room) return;
+    if (!room) {
+      setIsVideoOff((prev) => !prev);
+      return;
+    }
     const next = !isVideoOff;
     try {
       await room.localParticipant.setCameraEnabled(!next);
@@ -229,6 +252,21 @@ export default function MobileVoiceChannelScreen() {
     }
   };
 
+  const runPrejoinCheck = async () => {
+    try {
+      await AudioSession.startAudioSession();
+      if (Platform.OS === 'ios') {
+        await AudioSession.selectAudioOutput(speakerOn ? 'force_speaker' : 'default');
+      } else {
+        await AudioSession.selectAudioOutput(speakerOn ? 'speaker' : 'earpiece');
+      }
+      setPrejoinChecked(true);
+      notifySuccess('Pre-join check complete.');
+    } catch {
+      notifyError('Pre-join check failed', 'Audio session could not be prepared.');
+    }
+  };
+
   const orderedParticipants = useMemo(
     () => [...participants].sort((a, b) => a.joinedAt.localeCompare(b.joinedAt)),
     [participants],
@@ -242,6 +280,9 @@ export default function MobileVoiceChannelScreen() {
       </Text>
       <Text style={[styles.note, { color: theme.colors.textSubtle }]}>
         Socket: {isSocketConnected ? 'Live' : 'Offline'} • Media: {connected ? 'Connected' : 'Idle'}
+      </Text>
+      <Text style={[styles.note, { color: theme.colors.textSubtle }]}>
+        Connection quality: {connectionQuality}
       </Text>
       {connected && !isSocketConnected ? (
         <View
@@ -257,18 +298,11 @@ export default function MobileVoiceChannelScreen() {
       ) : null}
 
       <AppCard>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Current Session</Text>
-        <Text style={{ color: theme.colors.textMuted }}>Latest Call ID: {latestCallId ?? '-'}</Text>
-        <Text style={{ color: theme.colors.textMuted }}>Room Name: {latestRoomName ?? '-'}</Text>
-        <Text style={{ color: theme.colors.textMuted }}>Audio Route: {audioRouteLabel}</Text>
-        <View style={styles.controlsRow}>
-          <AppButton
-            title={joining ? 'Joining...' : 'Join'}
-            onPress={() => void onJoin()}
-            disabled={joining}
-          />
-          <AppButton title="Leave" onPress={() => void onLeave()} variant="secondary" />
-        </View>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Pre-Join</Text>
+        <Text style={{ color: theme.colors.textSubtle }}>
+          Mic: {isMuted ? 'Muted' : 'On'} • Camera: {isVideoOff ? 'Off' : 'On'} • Speaker:{' '}
+          {speakerOn ? 'On' : 'Off'}
+        </Text>
         <View style={styles.controlsRow}>
           <AppButton
             title={isMuted ? 'Unmute Mic' : 'Mute Mic'}
@@ -287,7 +321,49 @@ export default function MobileVoiceChannelScreen() {
             onPress={() => void toggleSpeaker()}
             variant="secondary"
           />
+          <AppButton
+            title="Run Device Check"
+            onPress={() => void runPrejoinCheck()}
+            variant="secondary"
+          />
         </View>
+        <Text style={{ color: theme.colors.textSubtle }}>
+          Pre-join ready: {prejoinChecked ? 'Yes' : 'Not yet'}
+        </Text>
+      </AppCard>
+
+      <AppCard>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Current Session</Text>
+        <Text style={{ color: theme.colors.textMuted }}>Latest Call ID: {latestCallId ?? '-'}</Text>
+        <Text style={{ color: theme.colors.textMuted }}>Room Name: {latestRoomName ?? '-'}</Text>
+        <Text style={{ color: theme.colors.textMuted }}>Audio Route: {audioRouteLabel}</Text>
+        <View style={styles.controlsRow}>
+          <AppButton
+            title={joining ? 'Joining...' : 'Join'}
+            onPress={() => void onJoin()}
+            disabled={joining}
+          />
+          <AppButton title="Leave" onPress={() => void onLeave()} variant="secondary" />
+        </View>
+        {connected ? (
+          <View style={styles.controlsRow}>
+            <AppButton
+              title={isMuted ? 'Unmute Mic' : 'Mute Mic'}
+              onPress={() => void toggleMute()}
+              variant="secondary"
+            />
+            <AppButton
+              title={isVideoOff ? 'Camera On' : 'Camera Off'}
+              onPress={() => void toggleCamera()}
+              variant="secondary"
+            />
+            <AppButton
+              title={speakerOn ? 'Speaker On' : 'Speaker Off'}
+              onPress={() => void toggleSpeaker()}
+              variant="secondary"
+            />
+          </View>
+        ) : null}
       </AppCard>
 
       <AppCard>
