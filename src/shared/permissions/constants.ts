@@ -546,6 +546,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/parcels/receiver-cashier': PermissionKeys.CanCreateReceiverPayments,
   '/parcels/in-transit/outgoing': PermissionKeys.CanReadParcelOutgoing,
   '/parcels/in-transit/incoming': PermissionKeys.CanReadParcelIncoming,
+  '/parcels/discrepancies': PermissionKeys.CanReadParcelIncoming,
   '/parcels/receive': PermissionKeys.CanReadParcelScan,
   '/parcels/home-delivery/dispatch': PermissionKeys.CanDispatchForDelivery,
   '/parcels/delivery-cashier': PermissionKeys.CanCompleteDoorstepDelivery,

@@ -4,6 +4,7 @@ export { ParcelSenderPaymentsPage } from './pages/parcel-sender-payments-page';
 export { ParcelProcessedConsignmentPage } from './pages/parcel-processed-consignment-page';
 export { ParcelInTransitPage } from './pages/parcel-in-transit-page';
 export { ParcelReceivePage } from './pages/parcel-receive-page';
+export { ParcelDiscrepanciesPage } from './pages/parcel-discrepancies-page';
 export { ParcelStatusPage } from './pages/parcel-status-page';
 export { ParcelPickupQueuePage } from './pages/parcel-pickup-queue-page';
 export { ParcelPickupQueueBoardPage } from './pages/parcel-pickup-queue-board-page';

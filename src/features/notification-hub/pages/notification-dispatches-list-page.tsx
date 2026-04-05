@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +25,19 @@ import {
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
 export function NotificationDispatchesListPage() {
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setSearch(searchInput);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchInput]);
+
   const [page, setPage] = useState(1);
   const [channel, setChannel] = useState('all');
   const [status, setStatus] = useState('all');
@@ -67,9 +79,9 @@ export function NotificationDispatchesListPage() {
           <CardContent className="space-y-4">
             <div className="grid gap-3 md:grid-cols-4">
               <Input
-                value={search}
+                value={searchInput}
                 onChange={(event) => {
-                  setSearch(event.target.value);
+                  setSearchInput(event.target.value);
                   setPage(1);
                 }}
                 placeholder="Search recipient or message"

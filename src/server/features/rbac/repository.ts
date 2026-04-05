@@ -45,7 +45,8 @@ export async function listRolesRepo(p: ListRolesParams) {
     .limit(p.limit)
     .offset(p.offset);
 
-  if (!rows.length) return { data: rows, totalRecords, permissionsByRole: new Map<string, string[]>() };
+  if (!rows.length)
+    return { data: rows, totalRecords, permissionsByRole: new Map<string, string[]>() };
 
   const roleIds = rows.map((r) => r.id);
   const grants = await db
@@ -54,7 +55,9 @@ export async function listRolesRepo(p: ListRolesParams) {
       key: rolePermissions.permission,
     })
     .from(rolePermissions)
-    .where(and(eq(rolePermissions.companyId, p.companyId), inArray(rolePermissions.roleId, roleIds)));
+    .where(
+      and(eq(rolePermissions.companyId, p.companyId), inArray(rolePermissions.roleId, roleIds)),
+    );
 
   const permissionsByRole = new Map<string, string[]>();
   for (const grant of grants) {
@@ -106,6 +109,18 @@ export async function getRoleRepo(id: string) {
 
 export async function createRoleRepo(values: typeof roles.$inferInsert) {
   const [row] = await db.insert(roles).values(values).returning({ id: roles.id });
+  return row ?? null;
+}
+
+export async function restoreRoleRepo(id: string, patch: Pick<typeof roles.$inferInsert, 'name'>) {
+  const [row] = await db
+    .update(roles)
+    .set({
+      name: patch.name,
+      isDeleted: false,
+    })
+    .where(eq(roles.id, id))
+    .returning({ id: roles.id });
   return row ?? null;
 }
 
@@ -162,7 +177,10 @@ export async function listPermissionCatalogForCompanyRepo(_companyId: string) {
   return PermissionCatalog;
 }
 
-export async function listRolePermissionKeysRepo(roleId: string, companyId: string): Promise<PermissionKey[]> {
+export async function listRolePermissionKeysRepo(
+  roleId: string,
+  companyId: string,
+): Promise<PermissionKey[]> {
   const rows = await db
     .select({ key: rolePermissions.permission })
     .from(rolePermissions)

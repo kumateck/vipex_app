@@ -166,6 +166,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadParcelIncoming,
           },
           {
+            title: 'Discrepancies',
+            url: '/parcels/discrepancies',
+            permissionKey: PermissionKeys.CanReadParcelIncoming,
+          },
+          {
             title: 'Scan to Receive',
             url: '/parcels/receive',
             permissionKey: PermissionKeys.CanReadParcelScan,

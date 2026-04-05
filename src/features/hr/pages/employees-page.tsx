@@ -47,7 +47,19 @@ import {
 const PAGE_SIZE_OPTIONS = ['10', '20', '50', '100'] as const;
 
 export function EmployeesPage() {
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setSearch(searchInput);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchInput]);
+
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [branchId, setBranchId] = useState('');
@@ -98,7 +110,7 @@ export function EmployeesPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, branchId, departmentId, jobTitleId, reportingOfficerId]);
+  }, [searchInput, branchId, departmentId, jobTitleId, reportingOfficerId]);
 
   useEffect(() => {
     if (!linkEmployee) return;
@@ -126,8 +138,8 @@ export function EmployeesPage() {
               <div className="md:col-span-2">
                 <Input
                   placeholder="Search by first name, last name, email, staff ID or phone"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
                 />
               </div>
 

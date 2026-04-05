@@ -31,7 +31,6 @@ import {
   useGetParcelDetailsQuery,
   useLazySearchParcelsQuery,
 } from '../api/parcel.api';
-import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 
 function formatCurrency(amountPsw: number) {
   return `GHS ${(amountPsw / 100).toFixed(2)}`;
@@ -46,6 +45,11 @@ function formatDateTime(value: string | null | undefined) {
 
 function getPaymentBucketLabel(row: Pick<ParcelSearchRow, 'plannedToBePaidPsw'>) {
   return row.plannedToBePaidPsw > 0 ? 'Receiver Pays' : 'Sender Paid';
+}
+
+function formatPhones(primary?: string | null, secondary?: string | null) {
+  const phones = [primary, secondary].filter((value): value is string => Boolean(value?.trim()));
+  return phones.length ? phones.join(', ') : '-';
 }
 
 export function ParcelPickupQueuePage() {
@@ -75,19 +79,51 @@ export function ParcelPickupQueuePage() {
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       {
         id: 'receiver',
-        header: 'Customer',
-        accessorFn: (row) =>
-          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        header: 'Receiver',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'secondReceiver',
+        header: 'Second Receiver',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.secondReceiverName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.secondReceiverPhone, row.original.secondReceiverPhone2)}
+            </p>
+          </div>
+        ),
       },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       {
-        id: 'holder',
-        header: 'Current Holder',
-        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
+        id: 'source',
+        header: 'Source',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.sourceLocationName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.sourceName ?? '-'}</p>
+          </div>
+        ),
+      },
+      {
+        id: 'destination',
+        header: 'Destination',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.destinationName ?? '-'}</p>
+          </div>
+        ),
       },
       {
         id: 'paymentBucket',
@@ -234,18 +270,12 @@ export function ParcelPickupQueuePage() {
                   <strong>Booking:</strong> {selectedParcel.bookingCode}
                 </p>
                 <p>
-                  <strong>Customer:</strong> {selectedParcel.receiverName ?? '-'} (
+                  <strong>Receiver:</strong> {selectedParcel.receiverName ?? '-'} (
                   {selectedParcel.receiverPhone ?? '-'})
                 </p>
                 <p>
                   <strong>Parcel:</strong> {selectedParcel.parcelDetails}
                 </p>
-                <div className="flex items-center gap-2">
-                  <strong>Current Holder:</strong>
-                  <ParcelInternalHolderBadge
-                    holder={parcelDetails?.internalHolder ?? selectedParcel}
-                  />
-                </div>
                 <p>
                   <strong>Payment Type:</strong> {getPaymentBucketLabel(selectedParcel)}
                 </p>

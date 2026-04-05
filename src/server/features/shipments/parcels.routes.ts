@@ -13,9 +13,11 @@ import {
   createParcelCtrl,
   getParcelByIdCtrl,
   getParcelDetailsCtrl,
+  listOpenParcelDiscrepanciesCtrl,
   listParcelsCtrl,
   logParcelDiscrepancyCtrl,
   markParcelReceivedCtrl,
+  resolveParcelDiscrepancyCtrl,
   setPlannedToBePaidCtrl,
   softDeleteParcelCtrl,
   updateParcelCtrl,
@@ -58,6 +60,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           status: query.status ?? null,
           statuses: parseStatuses(query.statuses),
           senderPaid: query.senderPaid ?? null,
+          hasPickupQueue: query.hasPickupQueue ?? null,
           received: query.received ?? null,
           includeDeleted: query.includeDeleted ?? null,
         },
@@ -85,6 +88,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         status: t.Optional(t.Number()),
         statuses: t.Optional(t.Union([t.Array(t.Number()), t.String()])),
         senderPaid: t.Optional(t.Boolean()),
+        hasPickupQueue: t.Optional(t.Boolean()),
         received: t.Optional(t.Boolean()),
         includeDeleted: t.Optional(t.Boolean()),
       }),
@@ -160,6 +164,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         body as {
           status?: number;
           destinationId?: string;
+          sourceLocationId?: string | null;
           parcelDetails?: string;
           parcelContent?: string;
           secondReceiverId?: string | null;
@@ -182,6 +187,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       body: t.Object({
         status: t.Optional(t.Number()),
         destinationId: t.Optional(UUID),
+        sourceLocationId: t.Optional(t.Union([UUID, t.Null()])),
         parcelDetails: t.Optional(t.String()),
         parcelContent: t.Optional(t.String()),
         secondReceiverId: t.Optional(t.Union([UUID, t.Null()])),
@@ -231,6 +237,50 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
       detail: { tags: ['Shipments'], summary: 'Log parcel discrepancy for incoming transit' },
+    },
+  )
+  .get(
+    '/discrepancies/open',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      return listOpenParcelDiscrepanciesCtrl({
+        companyId: query.companyId ?? authUser.companyId ?? '',
+        branchId: query.branchId ?? authUser.branchId ?? null,
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 20,
+        search: query.search ?? null,
+      });
+    },
+    {
+      query: t.Object({
+        companyId: t.Optional(UUID),
+        branchId: t.Optional(t.Union([UUID, t.Null()])),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+        search: t.Optional(t.String()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
+      detail: { tags: ['Shipments'], summary: 'List open parcel discrepancies' },
+    },
+  )
+  .post(
+    '/discrepancies/:id/resolve',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return resolveParcelDiscrepancyCtrl({
+        id: params.id,
+        companyId: authUser.companyId ?? '',
+        actorUserId: authUser.sub,
+        resolutionNote: (body as { resolutionNote?: string | null }).resolutionNote ?? null,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        resolutionNote: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
+      detail: { tags: ['Shipments'], summary: 'Resolve parcel discrepancy' },
     },
   )
   .post(
