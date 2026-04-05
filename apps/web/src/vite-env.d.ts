@@ -25,6 +25,8 @@ type DesktopUpdateStatus = {
 };
 
 declare global {
+  const __APP_BUILD_ID__: string;
+
   interface Window {
     api?: {
       platform: () => Promise<NodeJS.Platform>;

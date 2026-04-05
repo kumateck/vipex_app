@@ -45,20 +45,38 @@ jobs:
       - name: Sync Brand Assets
         run: bun run assets:sync
 
+      - name: Resolve Mobile Version
+        id: mobile_version
+        run: |
+          VERSION=$(node -e "try{const app=require('./apps/mobile/app.json');process.stdout.write(app?.expo?.version||'')}catch{process.stdout.write('')}")
+          if [ -z "$VERSION" ]; then
+            VERSION=$(node -p "require('./apps/mobile/package.json').version")
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Detect Android Build Mode
+        id: mobile_mode
+        run: |
+          set -euo pipefail
+          EAS_PROJECT_ID=$(node -e "try{const app=require('./apps/mobile/app.json');process.stdout.write(app?.expo?.extra?.eas?.projectId||'')}catch{process.stdout.write('')}")
+          if [ -n "${EAS_PROJECT_ID}" ] && [ "${EAS_PROJECT_ID}" != "REPLACE_WITH_EAS_PROJECT_ID" ]; then
+            echo "build_mode=eas" >> "$GITHUB_OUTPUT"
+            echo "Using EAS remote APK build."
+          else
+            echo "build_mode=native" >> "$GITHUB_OUTPUT"
+            echo "Using native Gradle APK build."
+          fi
+
       - name: Verify Expo Token
+        if: ${{ steps.mobile_mode.outputs.build_mode == 'eas' }}
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
             echo "EXPO_TOKEN is missing. Add it in GitHub repo secrets."
             exit 1
           fi
 
-      - name: Resolve Mobile Version
-        id: mobile_version
-        run: |
-          VERSION=$(node -p "require('./apps/mobile/app.json').expo.version")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
       - name: Validate EAS project id
+        if: ${{ steps.mobile_mode.outputs.build_mode == 'eas' }}
         run: |
           set -euo pipefail
           PROJECT_ID=$(node -p "require('./apps/mobile/app.json').expo?.extra?.eas?.projectId || ''")
@@ -68,6 +86,7 @@ jobs:
           fi
 
       - name: Publish OTA Update (Preview Channel)
+        if: ${{ steps.mobile_mode.outputs.build_mode == 'eas' }}
         id: ota_publish
         working-directory: apps/mobile
         run: |
@@ -76,6 +95,7 @@ jobs:
           bunx eas-cli update --channel preview --non-interactive --message "Build #${{ github.run_number }} (${GITHUB_SHA::7})"
 
       - name: Trigger and Wait for EAS Android APK Build
+        if: ${{ steps.mobile_mode.outputs.build_mode == 'eas' }}
         id: eas_build
         working-directory: apps/mobile
         run: |
@@ -95,10 +115,42 @@ jobs:
           echo "apk_url=$APK_URL" >> "$GITHUB_OUTPUT"
           echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
 
-      - name: Download APK
+      - name: Setup Java (Native Android Build)
+        if: ${{ steps.mobile_mode.outputs.build_mode == 'native' }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build APK with Gradle
+        if: ${{ steps.mobile_mode.outputs.build_mode == 'native' }}
+        working-directory: apps/mobile/android
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
+          find app/build/outputs/apk -type f -name "*.apk" -print
+
+      - name: Download APK from EAS
+        if: ${{ steps.mobile_mode.outputs.build_mode == 'eas' }}
         run: |
           mkdir -p artifacts
           curl -L "${{ steps.eas_build.outputs.apk_url }}" -o artifacts/vipex-mobile-${{ github.run_number }}.apk
+          ls -lah artifacts
+
+      - name: Collect APK from Native Build
+        if: ${{ steps.mobile_mode.outputs.build_mode == 'native' }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          mapfile -t APK_FILES < <(find apps/mobile/android/app/build/outputs/apk -type f -name "*.apk")
+          if [ "${#APK_FILES[@]}" -eq 0 ]; then
+            echo "No APK files found from native Gradle build."
+            exit 1
+          fi
+          for file in "${APK_FILES[@]}"; do
+            cp "$file" "artifacts/$(basename "$file")"
+          done
           ls -lah artifacts
 
       - name: Upload APK Artifact
@@ -155,7 +207,11 @@ jobs:
 
       - name: Distribution summary
         run: |
-          echo "OTA channel published: preview"
+          if [ "${{ steps.mobile_mode.outputs.build_mode }}" = "eas" ]; then
+            echo "OTA channel published: preview"
+          else
+            echo "Native Gradle APK build completed."
+          fi
           echo "APK artifact uploaded to GitHub artifacts."
           if [ -n "${MINIO_ENDPOINT}" ] && [ -n "${MINIO_BUCKET}" ]; then
             PREFIX="${MOBILE_MINIO_PREFIX:-mobile/android}"

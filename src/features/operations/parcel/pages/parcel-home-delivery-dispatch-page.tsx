@@ -109,7 +109,7 @@ export function ParcelHomeDeliveryDispatchPage() {
           );
         },
       },
-      { accessorKey: 'trackingCode', header: 'Tracking' },
+      // { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       {
@@ -128,7 +128,7 @@ export function ParcelHomeDeliveryDispatchPage() {
       },
       {
         id: 'addressCollection',
-        header: 'Address Collection',
+        header: 'Address',
         cell: ({ row }) =>
           row.original.dropoffAddress ? (
             <div className="space-y-1">

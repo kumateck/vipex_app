@@ -11,6 +11,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { NotFound } from '@/server/utils/http-error';
 import { BadRequest } from '@/server/utils/http-error';
 import { env } from '@/server/utils/env';
+import { logger } from '@/server/utils/logger';
 
 const MIME_EXTENSIONS: Record<string, string> = {
   'image/png': 'png',
@@ -34,6 +35,38 @@ const MIME_EXTENSIONS: Record<string, string> = {
 const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
 
 let ensureBucketPromise: Promise<void> | null = null;
+
+const MINIO_REQUEST_TIMEOUT_MS = Number.isFinite(Number(process.env.MINIO_REQUEST_TIMEOUT_MS))
+  ? Number(process.env.MINIO_REQUEST_TIMEOUT_MS)
+  : 45000;
+
+function getErrorCode(error: unknown): string {
+  if (typeof error !== 'object' || error === null) return '';
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' ? code : '';
+}
+
+function getHttpStatusCode(error: unknown): number | null {
+  if (typeof error !== 'object' || error === null) return null;
+  const metadata = (error as { $metadata?: { httpStatusCode?: number } }).$metadata;
+  return typeof metadata?.httpStatusCode === 'number' ? metadata.httpStatusCode : null;
+}
+
+async function withTimeout<T>(task: Promise<T>, operation: string): Promise<T> {
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(new Error(`MINIO_TIMEOUT:${operation}:${MINIO_REQUEST_TIMEOUT_MS}ms`));
+    }, MINIO_REQUEST_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([task, timeoutPromise]);
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+  }
+}
 
 function isConfigured() {
   return Boolean(
@@ -63,15 +96,56 @@ async function ensureBucketReady() {
 
   ensureBucketPromise = (async () => {
     const client = getClient();
+    const startedAt = Date.now();
+    logger.info('[minio] ensureBucketReady:start', {
+      endpoint: env.MINIO_ENDPOINT,
+      bucket: env.MINIO_BUCKET,
+      timeoutMs: MINIO_REQUEST_TIMEOUT_MS,
+    });
 
     try {
-      await client.send(new HeadBucketCommand({ Bucket: env.MINIO_BUCKET }));
-    } catch {
-      await client.send(new CreateBucketCommand({ Bucket: env.MINIO_BUCKET }));
+      await withTimeout(
+        client.send(new HeadBucketCommand({ Bucket: env.MINIO_BUCKET })),
+        'HeadBucket',
+      );
+      logger.info('[minio] ensureBucketReady:head-ok', {
+        bucket: env.MINIO_BUCKET,
+        elapsedMs: Date.now() - startedAt,
+      });
+    } catch (error) {
+      const statusCode = getHttpStatusCode(error);
+      const code = getErrorCode(error);
+      logger.warn('[minio] ensureBucketReady:head-failed', {
+        bucket: env.MINIO_BUCKET,
+        statusCode,
+        code,
+        message: error instanceof Error ? error.message : String(error),
+        elapsedMs: Date.now() - startedAt,
+      });
+
+      if (statusCode !== 404 && code !== 'NotFound' && code !== 'NoSuchBucket') {
+        throw error;
+      }
+
+      await withTimeout(
+        client.send(new CreateBucketCommand({ Bucket: env.MINIO_BUCKET })),
+        'CreateBucket',
+      );
+      logger.info('[minio] ensureBucketReady:create-ok', {
+        bucket: env.MINIO_BUCKET,
+        elapsedMs: Date.now() - startedAt,
+      });
     }
   })().catch((error) => {
     // Allow retries on subsequent requests if initial bucket check/create fails.
     ensureBucketPromise = null;
+    logger.error('[minio] ensureBucketReady:error', {
+      endpoint: env.MINIO_ENDPOINT,
+      bucket: env.MINIO_BUCKET,
+      code: getErrorCode(error),
+      statusCode: getHttpStatusCode(error),
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw error;
   });
 
@@ -113,6 +187,13 @@ export async function uploadImageDataUrl(input: {
   dataUrl: string;
   fileName?: string | null;
 }) {
+  const startedAt = Date.now();
+  logger.info('[minio] uploadImageDataUrl:start', {
+    folder: input.folder,
+    fileName: input.fileName ?? null,
+    dataUrlLength: input.dataUrl.length,
+  });
+
   await ensureBucketReady();
 
   const { buffer, contentType, extension } = parseDataUrl(input.dataUrl);
@@ -122,16 +203,41 @@ export async function uploadImageDataUrl(input: {
   const date = new Date();
   const key = `${folder}/${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${createId()}-${fileBase}.${extension}`;
 
-  await client.send(
-    new PutObjectCommand({
-      Bucket: env.MINIO_BUCKET,
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-      ContentLength: buffer.length,
-      CacheControl: 'public, max-age=31536000, immutable',
-    }),
-  );
+  try {
+    await withTimeout(
+      client.send(
+        new PutObjectCommand({
+          Bucket: env.MINIO_BUCKET,
+          Key: key,
+          Body: buffer,
+          ContentType: contentType,
+          ContentLength: buffer.length,
+          CacheControl: 'public, max-age=31536000, immutable',
+        }),
+      ),
+      'PutObject',
+    );
+  } catch (error) {
+    logger.error('[minio] uploadImageDataUrl:put-error', {
+      bucket: env.MINIO_BUCKET,
+      key,
+      sizeBytes: buffer.length,
+      contentType,
+      code: getErrorCode(error),
+      statusCode: getHttpStatusCode(error),
+      message: error instanceof Error ? error.message : String(error),
+      elapsedMs: Date.now() - startedAt,
+    });
+    throw error;
+  }
+
+  logger.info('[minio] uploadImageDataUrl:success', {
+    bucket: env.MINIO_BUCKET,
+    key,
+    sizeBytes: buffer.length,
+    contentType,
+    elapsedMs: Date.now() - startedAt,
+  });
 
   return {
     key,
