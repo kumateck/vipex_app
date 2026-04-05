@@ -2,16 +2,7 @@ import 'dotenv/config';
 import { createId } from '@paralleldrive/cuid2';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../src/db/config';
-import {
-  branches,
-  companies,
-  companyModules,
-  moduleCatalog,
-  parcelContentCatalog,
-  parcelDetailCatalog,
-  roles,
-  users,
-} from '@/db/schemas';
+import { branches, companies, companyModules, moduleCatalog, roles, users } from '@/db/schemas';
 import { BranchType, UserStatus, UserType } from '@/db/schemas/enums';
 import { DEFAULT_MODULE_CATALOG } from '@/shared/company-modules/catalog';
 import { hashPassword } from '../src/server/utils/password';
@@ -35,13 +26,6 @@ const SYS_FULLNAME = 'System User';
 const SYS_EMAIL = 'sys@vipexparcel.com';
 const SYS_TELEPHONE = '+233200000000';
 const SYS_PASSWORD = 'ChangeMe123!';
-
-const DEFAULT_PARCEL_PACKAGING = ['Box', 'Envelope', 'Sack', 'Crate'] as const;
-const DEFAULT_PARCEL_CONTENTS = [
-  { name: 'General Goods', basePricePsw: 3000, taxInclusive: true, sortOrder: 10 },
-  { name: 'Documents', basePricePsw: 2000, taxInclusive: true, sortOrder: 20 },
-  { name: 'Spare Parts', basePricePsw: 50000, taxInclusive: true, sortOrder: 30 },
-] as const;
 
 async function ensureBranches(companyId: string, createdBy: string) {
   let headOfficeBranchId: string | null = null;
@@ -254,58 +238,6 @@ async function main() {
         configuredBy: creatorId,
       });
       console.log(`Created company module state: ${code}`);
-    }
-  }
-
-  for (const style of DEFAULT_PARCEL_PACKAGING) {
-    const [existing] = await db
-      .select({ id: parcelDetailCatalog.id })
-      .from(parcelDetailCatalog)
-      .where(
-        and(
-          eq(parcelDetailCatalog.companyId, companyId),
-          sql`lower(${parcelDetailCatalog.name}) = lower(${style})`,
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      await db.insert(parcelDetailCatalog).values({
-        id: createId(),
-        companyId,
-        name: style,
-        active: true,
-        sortOrder: DEFAULT_PARCEL_PACKAGING.indexOf(style) + 1,
-        createdBy: creatorId,
-      });
-      console.log(`Created parcel packaging style: ${style}`);
-    }
-  }
-
-  for (const content of DEFAULT_PARCEL_CONTENTS) {
-    const [existing] = await db
-      .select({ id: parcelContentCatalog.id })
-      .from(parcelContentCatalog)
-      .where(
-        and(
-          eq(parcelContentCatalog.companyId, companyId),
-          sql`lower(${parcelContentCatalog.name}) = lower(${content.name})`,
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      await db.insert(parcelContentCatalog).values({
-        id: createId(),
-        companyId,
-        name: content.name,
-        basePricePsw: content.basePricePsw,
-        taxInclusive: content.taxInclusive,
-        active: true,
-        sortOrder: content.sortOrder,
-        createdBy: creatorId,
-      });
-      console.log(`Created parcel content: ${content.name}`);
     }
   }
 

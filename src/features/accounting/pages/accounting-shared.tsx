@@ -21,6 +21,7 @@ import {
   TaxFilingPeriodStatus,
   TaxFilingStatus,
 } from '@/db/schemas/enums';
+import { formatDateTime as formatDateTimeStandard } from '@/lib/date';
 
 export function formatMoney(pesewas: number | null | undefined) {
   const amount = Number(pesewas ?? 0) / 100;
@@ -38,7 +39,7 @@ export function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTimeStandard(date);
 }
 
 export function todayDateInputValue() {

@@ -34,6 +34,24 @@ export default function MobileHomeTabScreen() {
 
       <View style={styles.grid}>
         <AppCard>
+          <Text style={[styles.tileTitle, { color: theme.colors.text }]}>Global Search</Text>
+          <Link
+            href={'/(app)/global-search' as never}
+            style={[styles.link, { color: theme.colors.primary }]}
+          >
+            Search Across App
+          </Link>
+        </AppCard>
+        <AppCard>
+          <Text style={[styles.tileTitle, { color: theme.colors.text }]}>Super Search</Text>
+          <Link
+            href={'/(app)/super-search' as never}
+            style={[styles.link, { color: theme.colors.primary }]}
+          >
+            Search Any Record
+          </Link>
+        </AppCard>
+        <AppCard>
           <Text style={[styles.tileTitle, { color: theme.colors.text }]}>Queue</Text>
           <Link href="/(app)/queue" style={[styles.link, { color: theme.colors.primary }]}>
             Open Queue Operations

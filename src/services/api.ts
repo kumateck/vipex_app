@@ -13,6 +13,10 @@ type QueryResult = QueryReturnValue<unknown, FetchBaseQueryError, QueryMeta>;
 
 const inFlightRequests = new Map<string, Promise<QueryResult>>();
 
+export function clearApiInFlightRequests() {
+  inFlightRequests.clear();
+}
+
 function sanitizeQueryParams(params: FetchArgs['params']): FetchArgs['params'] {
   if (!params || typeof params !== 'object' || params instanceof URLSearchParams) {
     return params;
@@ -56,15 +60,17 @@ function safeSerialize(value: unknown): string {
 }
 
 function buildRequestKey(args: string | FetchArgs): string {
+  const authState = useAuthStore.getState();
+  const userId = authState.user?.id ?? 'anonymous';
   if (typeof args === 'string') {
-    return `GET|${args}|`;
+    return `GET|${args}||${userId}`;
   }
 
   const method = (args.method ?? 'GET').toUpperCase();
   const url = args.url;
   const params = safeSerialize(args.params);
   const body = safeSerialize(args.body);
-  return `${method}|${url}|${params}|${body}`;
+  return `${method}|${url}|${params}|${body}|${userId}`;
 }
 
 function shouldDedupeRequest(args: string | FetchArgs): boolean {
@@ -85,13 +91,13 @@ const baseQuery = fetchBaseQuery({
 
 const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
   args,
-  api,
+  apiContext,
   extraOptions,
 ) => {
   const requestArgs = sanitizeFetchArgs(args);
 
   const runRequest = async (): Promise<QueryResult> => {
-    let result = await baseQuery(requestArgs, api, extraOptions);
+    let result = await baseQuery(requestArgs, apiContext, extraOptions);
 
     // If we get a 401, try to refresh the token
     if (result.error && result.error.status === 401) {
@@ -105,7 +111,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
             method: 'POST',
             body: { refreshToken },
           },
-          api,
+          apiContext,
           extraOptions,
         );
 
@@ -126,15 +132,19 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
             });
 
             // Retry the original request with new token
-            result = await baseQuery(requestArgs, api, extraOptions);
+            result = await baseQuery(requestArgs, apiContext, extraOptions);
           }
         } else {
           // Refresh failed - logout user
+          clearApiInFlightRequests();
+          apiContext.dispatch(api.util.resetApiState());
           useAuthStore.getState().logout();
           TheAduseiErrorResponse(refreshResult.error ?? 'Session expired');
         }
       } else {
         // No refresh token available - logout user
+        clearApiInFlightRequests();
+        apiContext.dispatch(api.util.resetApiState());
         useAuthStore.getState().logout();
         TheAduseiErrorResponse('Your session has expired. Please log in again.');
       }

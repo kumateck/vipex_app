@@ -1,10 +1,17 @@
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +32,6 @@ import {
   useSearchParcelsQuery,
   useUpdateParcelMutation,
 } from '../api/parcel.api';
-import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 
 const STATUS_LABELS: Record<number, string> = {
   [ParcelStatus.ARRIVED_AT_DESTINATION]: 'Arrived at Destination',
@@ -36,15 +42,13 @@ const STATUS_LABELS: Record<number, string> = {
   [ParcelStatus.RETURNED_TO_OFFICE]: 'Returned to Office',
 };
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
-}
-
 function formatCurrency(amountPsw: number) {
   return `GHS ${(amountPsw / 100).toFixed(2)}`;
+}
+
+function formatPhones(primary?: string | null, secondary?: string | null) {
+  const phones = [primary, secondary].filter((value): value is string => Boolean(value?.trim()));
+  return phones.length ? phones.join(', ') : '-';
 }
 
 type ContactOutcome = 'contacted' | 'pickup' | 'delivery' | 'follow_up';
@@ -92,14 +96,7 @@ export function ParcelStatusPage() {
       filters: {
         companyId,
         destinationId: branchId,
-        statuses: [
-          ParcelStatus.ARRIVED_AT_DESTINATION,
-          ParcelStatus.CUSTOMER_CONTACTED,
-          ParcelStatus.AWAITING_PICKUP,
-          ParcelStatus.HOME_DELIVERY_REQUESTED,
-          ParcelStatus.ADDRESS_COLLECTED,
-          ParcelStatus.RETURNED_TO_OFFICE,
-        ],
+        statuses: [ParcelStatus.ARRIVED_AT_DESTINATION, ParcelStatus.RETURNED_TO_OFFICE],
       },
     },
     { skip: !companyId || !branchId },
@@ -119,20 +116,40 @@ export function ParcelStatusPage() {
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       { accessorKey: 'parcelContent', header: 'Parcel Content' },
       {
         id: 'receiver',
         header: 'Receiver',
-        accessorFn: (row) =>
-          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
+            </p>
+          </div>
+        ),
       },
       {
-        id: 'status',
-        header: 'Status',
-        accessorFn: (row) => STATUS_LABELS[row.status] ?? String(row.status),
+        id: 'source',
+        header: 'Source',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.sourceLocationName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.sourceName ?? '-'}</p>
+          </div>
+        ),
+      },
+      {
+        id: 'destination',
+        header: 'Destination',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.destinationName ?? '-'}</p>
+          </div>
+        ),
       },
       {
         id: 'receiverPayment',
@@ -150,54 +167,52 @@ export function ParcelStatusPage() {
           ),
       },
       {
-        id: 'createdAt',
-        header: 'Created',
-        accessorFn: (row) => formatDate(row.createdAt),
-      },
-      {
-        id: 'holder',
-        header: 'Current Holder',
-        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
+        id: 'status',
+        header: 'Status',
+        accessorFn: (row) => STATUS_LABELS[row.status] ?? String(row.status),
       },
       {
         id: 'actions',
-        header: 'Actions',
+        header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={() => {
-                setSelectedParcel(row.original);
-                setOutcome('contacted');
-                setUseSecondReceiver(false);
-                setSecondReceiverName('');
-                setSecondReceiverPhone('');
-                setSendSms(true);
-                setSendEmail(false);
-              }}
-            >
-              Call Outcome
-            </Button>
-            {canReturnToPickup(row.original.status) ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    await handleReturnToPickup(row.original);
-                  } catch (error) {
-                    toast.error(
-                      error instanceof Error ? error.message : 'Failed to move parcel to pickup',
-                    );
-                  }
-                }}
-                disabled={isSaving}
-              >
-                Return to Pickup
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="outline" className="h-8 w-8" disabled={isSaving}>
+                <EllipsisVertical className="h-4 w-4" />
               </Button>
-            ) : null}
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedParcel(row.original);
+                  setOutcome('contacted');
+                  setUseSecondReceiver(false);
+                  setSecondReceiverName('');
+                  setSecondReceiverPhone('');
+                  setSendSms(true);
+                  setSendEmail(false);
+                }}
+              >
+                Call Outcome
+              </DropdownMenuItem>
+              {canReturnToPickup(row.original.status) ? (
+                <DropdownMenuItem
+                  onClick={async () => {
+                    try {
+                      await handleReturnToPickup(row.original);
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error ? error.message : 'Failed to move parcel to pickup',
+                      );
+                    }
+                  }}
+                >
+                  Return to Pickup
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],
@@ -279,9 +294,7 @@ export function ParcelStatusPage() {
           <CardHeader>
             <CardTitle>Parcel Status (Call Receivers)</CardTitle>
             <CardDescription>
-              Queue includes parcels at arrival, contacted, awaiting pickup, home delivery
-              requested, address collected, and returned to office so staff can switch between
-              pickup and delivery when needed.
+              Queue includes parcels at arrival and returned to office for receiver call handling.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -327,12 +340,6 @@ export function ParcelStatusPage() {
             <p className="text-sm text-muted-foreground">
               {selectedParcel ? `Tracking: ${selectedParcel.trackingCode}` : ''}
             </p>
-            {selectedParcel ? (
-              <div className="flex items-center gap-2 text-sm">
-                <strong>Current Holder:</strong>
-                <ParcelInternalHolderBadge holder={selectedParcel} />
-              </div>
-            ) : null}
 
             <div className="space-y-2">
               <Label>Outcome</Label>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
+import { EllipsisVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   Select,
@@ -14,7 +21,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { TaxFilingPeriodStatus, TaxFilingStatus } from '@/db/schemas/enums';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { PermissionKeys } from '@/shared/permissions/constants';
@@ -232,57 +239,70 @@ function AccountingTaxPageContent({ user }: { user: AuthUser }) {
         id: 'actions',
         header: 'Action',
         enableSorting: false,
-        cell: ({ row }) => (
-          <div className="flex flex-wrap gap-2">
-            {row.original.status === TaxFilingPeriodStatus.OPEN ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  void runPeriodAction(
-                    () => markTaxFilingPeriodUnderReview({ id: row.original.id }).unwrap(),
-                    'Tax filing period moved to under review',
-                    'Failed to move tax filing period to under review',
-                  )
-                }
-                disabled={isMutating}
-              >
-                Review
-              </Button>
-            ) : null}
-            {row.original.status === TaxFilingPeriodStatus.UNDER_REVIEW ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  void runPeriodAction(
-                    () => submitTaxFilingPeriod({ id: row.original.id }).unwrap(),
-                    'Tax filing period submitted',
-                    'Failed to submit tax filing period',
-                  )
-                }
-                disabled={isMutating}
-              >
-                Submit
-              </Button>
-            ) : null}
-            {row.original.status === TaxFilingPeriodStatus.SUBMITTED ? (
-              <Button
-                size="sm"
-                onClick={() =>
-                  void runPeriodAction(
-                    () => closeTaxFilingPeriod({ id: row.original.id }).unwrap(),
-                    'Tax filing period closed',
-                    'Failed to close tax filing period',
-                  )
-                }
-                disabled={isMutating}
-              >
-                Close
-              </Button>
-            ) : null}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const canReview = row.original.status === TaxFilingPeriodStatus.OPEN;
+          const canSubmit = row.original.status === TaxFilingPeriodStatus.UNDER_REVIEW;
+          const canClose = row.original.status === TaxFilingPeriodStatus.SUBMITTED;
+
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={!canReview && !canSubmit && !canClose}
+                >
+                  <EllipsisVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canReview ? (
+                  <DropdownMenuItem
+                    disabled={isMutating}
+                    onClick={() => {
+                      void runPeriodAction(
+                        () => markTaxFilingPeriodUnderReview({ id: row.original.id }).unwrap(),
+                        'Tax filing period moved to under review',
+                        'Failed to move tax filing period to under review',
+                      );
+                    }}
+                  >
+                    Review
+                  </DropdownMenuItem>
+                ) : null}
+                {canSubmit ? (
+                  <DropdownMenuItem
+                    disabled={isMutating}
+                    onClick={() => {
+                      void runPeriodAction(
+                        () => submitTaxFilingPeriod({ id: row.original.id }).unwrap(),
+                        'Tax filing period submitted',
+                        'Failed to submit tax filing period',
+                      );
+                    }}
+                  >
+                    Submit
+                  </DropdownMenuItem>
+                ) : null}
+                {canClose ? (
+                  <DropdownMenuItem
+                    disabled={isMutating}
+                    onClick={() => {
+                      void runPeriodAction(
+                        () => closeTaxFilingPeriod({ id: row.original.id }).unwrap(),
+                        'Tax filing period closed',
+                        'Failed to close tax filing period',
+                      );
+                    }}
+                  >
+                    Close
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
       },
     ],
     [closeTaxFilingPeriod, isMutating, markTaxFilingPeriodUnderReview, submitTaxFilingPeriod],
@@ -351,61 +371,76 @@ function AccountingTaxPageContent({ user }: { user: AuthUser }) {
         id: 'actions',
         header: 'Action',
         enableSorting: false,
-        cell: ({ row }) => (
-          <div className="flex flex-wrap gap-2">
-            {row.original.filingStatus === TaxFilingStatus.UNFILED ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  void runTaxAction(
-                    () =>
-                      markTaxItemReady({
-                        id: row.original.id,
-                        filingPeriodId: selectedPeriodId,
-                        actedByUserId: user?.id ?? '',
-                      }).unwrap(),
-                    'Tax item marked ready for filing',
-                    'Failed to mark tax item ready',
-                  )
-                }
-                disabled={isMutating || !selectedPeriodId || !user?.id}
-              >
-                Ready
-              </Button>
-            ) : null}
-            {row.original.filingStatus === TaxFilingStatus.READY_FOR_FILING ? (
-              <Button
-                size="sm"
-                onClick={() =>
-                  void runTaxAction(
-                    () =>
-                      markTaxItemFiled({
-                        id: row.original.id,
-                        filingPeriodId: row.original.filingPeriodId ?? selectedPeriodId ?? null,
-                        actedByUserId: user?.id ?? '',
-                      }).unwrap(),
-                    'Tax item marked as filed',
-                    'Failed to mark tax item as filed',
-                  )
-                }
-                disabled={isMutating || !user?.id}
-              >
-                Filed
-              </Button>
-            ) : null}
-            {row.original.filingStatus !== TaxFilingStatus.FILED ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setExcludingRow(row.original)}
-                disabled={isMutating}
-              >
-                Exclude
-              </Button>
-            ) : null}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const canReady = row.original.filingStatus === TaxFilingStatus.UNFILED;
+          const canFiled = row.original.filingStatus === TaxFilingStatus.READY_FOR_FILING;
+          const canExclude = row.original.filingStatus !== TaxFilingStatus.FILED;
+
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={!canReady && !canFiled && !canExclude}
+                >
+                  <EllipsisVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canReady ? (
+                  <DropdownMenuItem
+                    disabled={isMutating || !selectedPeriodId || !user?.id}
+                    onClick={() => {
+                      void runTaxAction(
+                        () =>
+                          markTaxItemReady({
+                            id: row.original.id,
+                            filingPeriodId: selectedPeriodId,
+                            actedByUserId: user?.id ?? '',
+                          }).unwrap(),
+                        'Tax item marked ready for filing',
+                        'Failed to mark tax item ready',
+                      );
+                    }}
+                  >
+                    Ready
+                  </DropdownMenuItem>
+                ) : null}
+                {canFiled ? (
+                  <DropdownMenuItem
+                    disabled={isMutating || !user?.id}
+                    onClick={() => {
+                      void runTaxAction(
+                        () =>
+                          markTaxItemFiled({
+                            id: row.original.id,
+                            filingPeriodId: row.original.filingPeriodId ?? selectedPeriodId ?? null,
+                            actedByUserId: user?.id ?? '',
+                          }).unwrap(),
+                        'Tax item marked as filed',
+                        'Failed to mark tax item as filed',
+                      );
+                    }}
+                  >
+                    Filed
+                  </DropdownMenuItem>
+                ) : null}
+                {canExclude ? (
+                  <DropdownMenuItem
+                    disabled={isMutating}
+                    onClick={() => {
+                      setExcludingRow(row.original);
+                    }}
+                  >
+                    Exclude
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
       },
     ],
     [

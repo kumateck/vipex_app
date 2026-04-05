@@ -1,13 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
-import { Camera, CameraOff, QrCode } from 'lucide-react';
+import { Camera, CameraOff, EllipsisVertical, QrCode } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import { formatDateTime } from '@/lib/date';
 import { ParcelStatus } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
@@ -39,7 +46,7 @@ function formatDate(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTime(date);
 }
 
 function isBarcodeDetectorAvailable() {
@@ -383,23 +390,32 @@ export function ParcelReceivePage() {
       },
       {
         id: 'actions',
-        header: 'Actions',
+        header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            onClick={async () => {
-              try {
-                await confirmReceive(row.original, 'manual');
-                triggerScanSuccessFeedback();
-              } catch (error) {
-                toast.error(error instanceof Error ? error.message : 'Failed to receive parcel');
-              }
-            }}
-            disabled={isUpdating}
-          >
-            Confirm Receive
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="outline" className="h-8 w-8" disabled={isUpdating}>
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={async () => {
+                  try {
+                    await confirmReceive(row.original, 'manual');
+                    triggerScanSuccessFeedback();
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : 'Failed to receive parcel',
+                    );
+                  }
+                }}
+              >
+                Confirm Receive
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],

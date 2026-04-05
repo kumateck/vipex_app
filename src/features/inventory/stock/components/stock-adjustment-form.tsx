@@ -5,14 +5,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select-searchable';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
 import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { STOCK_ADJUSTMENT_REASON_OPTIONS } from '../constants/stock-options';
-import { createStockAdjustmentSchema, type CreateStockAdjustmentFormValues } from '../schemas/stock-forms.schema';
+import {
+  createStockAdjustmentSchema,
+  type CreateStockAdjustmentFormValues,
+} from '../schemas/stock-forms.schema';
 
 interface StockAdjustmentFormProps {
   onSubmit: (data: CreateStockAdjustmentFormValues) => Promise<void>;
@@ -21,17 +30,20 @@ interface StockAdjustmentFormProps {
   submitButtonText: string;
 }
 
-export function StockAdjustmentForm({ onSubmit, isSubmitting, title, submitButtonText }: StockAdjustmentFormProps) {
+export function StockAdjustmentForm({
+  onSubmit,
+  isSubmitting,
+  title,
+  submitButtonText,
+}: StockAdjustmentFormProps) {
   const navigate = useNavigate();
   const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
   const { data: products = [], isLoading: isLoadingProducts } = useListInventoryProductOptionsQuery(
     { companyId },
     { skip: !companyId },
   );
-  const { data: locations = [], isLoading: isLoadingLocations } = useListInventoryLocationOptionsQuery(
-    { companyId },
-    { skip: !companyId },
-  );
+  const { data: locations = [], isLoading: isLoadingLocations } =
+    useListInventoryLocationOptionsQuery({ companyId }, { skip: !companyId });
 
   const {
     control,
@@ -66,8 +78,14 @@ export function StockAdjustmentForm({ onSubmit, isSubmitting, title, submitButto
                   name="productId"
                   render={({ field }) => (
                     <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                      <SelectTrigger id="productId" aria-invalid={!!errors.productId} disabled={isLoadingProducts}>
-                        <SelectValue placeholder={isLoadingProducts ? 'Loading products...' : 'Select product'} />
+                      <SelectTrigger
+                        id="productId"
+                        aria-invalid={!!errors.productId}
+                        disabled={isLoadingProducts}
+                      >
+                        <SelectValue
+                          placeholder={isLoadingProducts ? 'Loading products...' : 'Select product'}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {products.map((product) => (
@@ -90,8 +108,16 @@ export function StockAdjustmentForm({ onSubmit, isSubmitting, title, submitButto
                   name="locationId"
                   render={({ field }) => (
                     <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                      <SelectTrigger id="locationId" aria-invalid={!!errors.locationId} disabled={isLoadingLocations}>
-                        <SelectValue placeholder={isLoadingLocations ? 'Loading locations...' : 'Select location'} />
+                      <SelectTrigger
+                        id="locationId"
+                        aria-invalid={!!errors.locationId}
+                        disabled={isLoadingLocations}
+                      >
+                        <SelectValue
+                          placeholder={
+                            isLoadingLocations ? 'Loading locations...' : 'Select location'
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {locations.map((location) => (
@@ -113,7 +139,10 @@ export function StockAdjustmentForm({ onSubmit, isSubmitting, title, submitButto
                   control={control}
                   name="reason"
                   render={({ field }) => (
-                    <Select value={String(field.value ?? 0)} onValueChange={(value) => field.onChange(Number(value))}>
+                    <Select
+                      value={String(field.value ?? 0)}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                    >
                       <SelectTrigger id="reason" aria-invalid={!!errors.reason}>
                         <SelectValue placeholder="Select reason" />
                       </SelectTrigger>
@@ -127,7 +156,9 @@ export function StockAdjustmentForm({ onSubmit, isSubmitting, title, submitButto
                     </Select>
                   )}
                 />
-                {errors.reason?.message ? <p className="text-sm text-destructive">{errors.reason.message}</p> : null}
+                {errors.reason?.message ? (
+                  <p className="text-sm text-destructive">{errors.reason.message}</p>
+                ) : null}
               </Field>
               <Field>
                 <FieldLabel htmlFor="quantityChange">Quantity change</FieldLabel>
@@ -149,14 +180,20 @@ export function StockAdjustmentForm({ onSubmit, isSubmitting, title, submitButto
                   aria-invalid={!!errors.notes}
                   {...register('notes')}
                 />
-                {errors.notes?.message ? <p className="text-sm text-destructive">{errors.notes.message}</p> : null}
+                {errors.notes?.message ? (
+                  <p className="text-sm text-destructive">{errors.notes.message}</p>
+                ) : null}
               </Field>
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? <Spinner /> : null}
                   {isSubmitting ? 'Creating...' : submitButtonText}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => navigate('/inventory/stock-adjustments')}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/inventory/stock-adjustments')}
+                >
                   Cancel
                 </Button>
               </div>

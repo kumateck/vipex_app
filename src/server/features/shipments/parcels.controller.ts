@@ -4,9 +4,11 @@ import {
   createParcelSvc,
   getParcelFullDetailsSvc,
   getParcelSvc,
+  listOpenParcelDiscrepanciesSvc,
   listParcelsSvc,
   logParcelDiscrepancySvc,
   markParcelReceivedSvc,
+  resolveParcelDiscrepancySvc,
   setPlannedToBePaidSvc,
   softDeleteParcelSvc,
   updateParcelSvc,
@@ -21,6 +23,7 @@ export async function listParcelsCtrl(
     status?: number | null;
     statuses?: number[] | null;
     senderPaid?: boolean | null;
+    hasPickupQueue?: boolean | null;
     received?: boolean | null;
     includeDeleted?: boolean | null;
   }>,
@@ -36,6 +39,7 @@ export async function listParcelsCtrl(
     status: q.filters?.status ?? null,
     statuses: q.filters?.statuses ?? null,
     senderPaid: q.filters?.senderPaid ?? null,
+    hasPickupQueue: q.filters?.hasPickupQueue ?? null,
     search: pagination.search ?? null,
     received: q.filters?.received ?? null,
     includeDeleted: q.filters?.includeDeleted ?? null,
@@ -126,3 +130,28 @@ export const markParcelReceivedCtrl = markParcelReceivedSvc;
 export const setPlannedToBePaidCtrl = setPlannedToBePaidSvc;
 export const logParcelDiscrepancyCtrl = logParcelDiscrepancySvc;
 export const softDeleteParcelCtrl = softDeleteParcelSvc;
+
+export async function listOpenParcelDiscrepanciesCtrl(input: {
+  companyId: string;
+  branchId?: string | null;
+  page: number;
+  pageSize: number;
+  search?: string | null;
+}) {
+  const page = Math.max(1, Number(input.page || 1));
+  const pageSize = Math.max(1, Math.min(100, Number(input.pageSize || 20)));
+  const { data, totalRecords } = await listOpenParcelDiscrepanciesSvc({
+    companyId: input.companyId,
+    branchId: input.branchId ?? null,
+    search: input.search?.trim() || null,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  });
+
+  return {
+    data,
+    meta: buildPaginationMeta({ totalRecords, page, pageSize }),
+  };
+}
+
+export const resolveParcelDiscrepancyCtrl = resolveParcelDiscrepancySvc;

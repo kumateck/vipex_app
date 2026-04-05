@@ -12,6 +12,7 @@ import type {
 } from '@mobile/types/communication';
 import type {
   ParcelFullDetails,
+  RiderBenchmarkResponse,
   ParcelSearchRow,
   PickupQueueCard,
   RiderDoorstepResponse,
@@ -48,12 +49,84 @@ export function getApiDebugInfo() {
   };
 }
 
+export type ApiProbeResult = {
+  apiBaseUrl: string;
+  healthUrl: string;
+  ok: boolean;
+  status: number | null;
+  latencyMs: number;
+  error: string | null;
+};
+
+function toRootUrlFromV1(baseV1Url: string) {
+  try {
+    const parsed = new URL(baseV1Url);
+    parsed.pathname = parsed.pathname.replace(/\/v1\/?$/, '');
+    return parsed.toString().replace(/\/+$/, '');
+  } catch {
+    return baseV1Url.replace(/\/v1\/?$/, '');
+  }
+}
+
+async function probeHealth(
+  healthUrl: string,
+): Promise<Omit<ApiProbeResult, 'apiBaseUrl' | 'healthUrl'>> {
+  const started = Date.now();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(healthUrl, { method: 'GET', signal: controller.signal });
+    clearTimeout(timeout);
+    return {
+      ok: res.ok,
+      status: res.status,
+      latencyMs: Date.now() - started,
+      error: null,
+    };
+  } catch (error) {
+    clearTimeout(timeout);
+    const isAbort =
+      typeof error === 'object' &&
+      error !== null &&
+      'name' in error &&
+      (error as { name?: string }).name === 'AbortError';
+    return {
+      ok: false,
+      status: null,
+      latencyMs: Date.now() - started,
+      error: isAbort ? 'timeout' : error instanceof Error ? error.message : 'network_error',
+    };
+  }
+}
+
+export async function runApiDiagnostics(): Promise<{
+  activeApiBaseUrl: string;
+  probes: ApiProbeResult[];
+}> {
+  const probes: ApiProbeResult[] = [];
+  for (const apiBaseUrl of API_BASE_URL_CANDIDATES) {
+    const rootUrl = toRootUrlFromV1(apiBaseUrl);
+    const healthUrl = `${rootUrl}/health`;
+    const result = await probeHealth(healthUrl);
+    probes.push({
+      apiBaseUrl,
+      healthUrl,
+      ...result,
+    });
+  }
+  return {
+    activeApiBaseUrl,
+    probes,
+  };
+}
+
 type RequestOptions = {
   path: string;
-  method?: 'GET' | 'POST' | 'PATCH';
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
   token?: string | null;
   query?: Record<string, string | number | boolean | null | undefined>;
+  timeoutMs?: number;
 };
 
 function toQueryString(query?: RequestOptions['query']): string {
@@ -78,6 +151,9 @@ async function request<T>(options: RequestOptions): Promise<T> {
     const targetUrl = `${baseUrl}${options.path}${toQueryString(options.query)}`;
     attemptedUrls.push(targetUrl);
     try {
+      const controller = new AbortController();
+      const timeoutMs = options.timeoutMs ?? 15000;
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
       const response = await fetch(targetUrl, {
         method: options.method ?? 'GET',
         headers: {
@@ -85,7 +161,9 @@ async function request<T>(options: RequestOptions): Promise<T> {
           ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
         },
         body: options.body ? JSON.stringify(options.body) : undefined,
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
 
       const json = (await response.json().catch(() => null)) as {
         error?: { message?: string };
@@ -100,8 +178,14 @@ async function request<T>(options: RequestOptions): Promise<T> {
       activeApiBaseUrl = baseUrl;
       return json as T;
     } catch (error) {
-      const message =
-        error instanceof Error && error.message.trim().length > 0
+      const isAbort =
+        typeof error === 'object' &&
+        error !== null &&
+        'name' in error &&
+        (error as { name?: string }).name === 'AbortError';
+      const message = isAbort
+        ? 'Request timed out'
+        : error instanceof Error && error.message.trim().length > 0
           ? error.message
           : 'Network request failed';
       lastError = new Error(`${message} (while calling ${targetUrl})`);
@@ -193,11 +277,15 @@ export async function searchParcels(
     destinationId?: string;
     status?: number;
     senderPaid?: boolean;
+    includeDeleted?: boolean;
     page?: number;
     pageSize?: number;
   },
-): Promise<{ data: ParcelSearchRow[] }> {
-  return request<{ data: ParcelSearchRow[] }>({
+): Promise<{ data: ParcelSearchRow[]; meta?: { totalRecords?: number; totalPages?: number } }> {
+  return request<{
+    data: ParcelSearchRow[];
+    meta?: { totalRecords?: number; totalPages?: number };
+  }>({
     path: '/shipments/parcels',
     token: accessToken,
     query: {
@@ -208,6 +296,7 @@ export async function searchParcels(
       destinationId: input.destinationId,
       status: input.status,
       senderPaid: input.senderPaid,
+      includeDeleted: input.includeDeleted,
     },
   });
 }
@@ -305,6 +394,17 @@ export async function listRiderParcels(
   });
 }
 
+export async function getRiderBranchBenchmark(
+  accessToken: string,
+  input: { riderUserId: string; branchId: string },
+): Promise<RiderBenchmarkResponse> {
+  return request<RiderBenchmarkResponse>({
+    path: `/deliveries/dd/rider/${input.riderUserId}/benchmark`,
+    token: accessToken,
+    query: { branchId: input.branchId },
+  });
+}
+
 export async function riderGivenToCustomer(
   accessToken: string,
   input: { parcelId: string; riderUserId: string; signatureImage: string },
@@ -356,6 +456,71 @@ export async function listCommunicationChannels(
       channelType: input?.channelType,
       includeArchived: input?.includeArchived ?? false,
     },
+  });
+}
+
+export async function createCommunicationChannel(
+  accessToken: string,
+  input: {
+    name: string;
+    description?: string | null;
+    channelType?: 'text' | 'voice';
+    visibility?: 'public' | 'private';
+    participantUserIds?: string[];
+    isCallEnabled?: boolean;
+    isAnnouncementOnly?: boolean;
+    maxParticipants?: number | null;
+  },
+): Promise<CommunicationChannel> {
+  return request<CommunicationChannel>({
+    path: '/communication/channels',
+    method: 'POST',
+    token: accessToken,
+    body: input,
+  });
+}
+
+export async function updateCommunicationChannel(
+  accessToken: string,
+  input: {
+    id: string;
+    name?: string | null;
+    description?: string | null;
+    isArchived?: boolean;
+    isCallEnabled?: boolean;
+    isAnnouncementOnly?: boolean;
+    maxParticipants?: number | null;
+  },
+): Promise<CommunicationChannel> {
+  const { id, ...body } = input;
+  return request<CommunicationChannel>({
+    path: `/communication/channels/${id}`,
+    method: 'PATCH',
+    token: accessToken,
+    body,
+  });
+}
+
+export async function addCommunicationChannelParticipants(
+  accessToken: string,
+  input: { id: string; participantUserIds: string[] },
+): Promise<CommunicationChannel> {
+  return request<CommunicationChannel>({
+    path: `/communication/channels/${input.id}/participants`,
+    method: 'POST',
+    token: accessToken,
+    body: { participantUserIds: input.participantUserIds },
+  });
+}
+
+export async function removeCommunicationChannelParticipant(
+  accessToken: string,
+  input: { id: string; userId: string },
+): Promise<CommunicationChannel> {
+  return request<CommunicationChannel>({
+    path: `/communication/channels/${input.id}/participants/${input.userId}`,
+    method: 'DELETE',
+    token: accessToken,
   });
 }
 

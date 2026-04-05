@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
 import { BranchType } from '@/db/schemas/enums';
@@ -72,7 +72,7 @@ export function AnalyticsFilters({
   const locationQueryBranchId =
     effectiveBranchId !== ANALYTICS_ALL ? effectiveBranchId : scopeMeta.fixedBranchId;
 
-  const { data: locationOptions = [] } = useListLocationOptionsQuery(
+  const { currentData: locationOptions = [] } = useListLocationOptionsQuery(
     {
       companyId,
       branchId: locationQueryBranchId,
@@ -93,6 +93,11 @@ export function AnalyticsFilters({
   const showBranchSelector = scopeMeta.mode === 'HEAD_OFFICE';
   const showLocationSelector = scopeMeta.mode !== 'LOCATION';
   const isCustomRange = dateRangeValue === 'custom';
+
+  useEffect(() => {
+    if (!showLocationSelector) return;
+    setLocationValue(ANALYTICS_ALL);
+  }, [effectiveBranchId, showLocationSelector]);
 
   return (
     <div className="rounded-md border p-3 space-y-3">

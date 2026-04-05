@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +28,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import {
   useAddCustomerCardMutation,
   useCreateCustomerMutation,
@@ -101,43 +108,46 @@ export function ParcelRiderCurrentPage() {
         id: 'action',
         header: 'Action',
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={() => {
-                setSelected(row.original);
-                setSignatureImage(undefined);
-                setHandoverTarget(row.original.secondReceiverId ? 'second' : 'main');
-                setMainCardMode('existing');
-                setMainExistingCardRecordId('');
-                setMainNewCardTypeId('');
-                setMainNewCardNumber('');
-                setSecondCardMode('new');
-                setSecondExistingCardRecordId('');
-                setSecondNewCardTypeId('');
-                setSecondNewCardNumber('');
-                setSecondNewName('');
-                setSecondNewPhone('');
-              }}
-            >
-              Delivery Details
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={async () => {
-                try {
-                  await riderReturned({ parcelId: row.original.parcelId, riderUserId }).unwrap();
-                  toast.success('Parcel returned to branch pickup');
-                } catch (error) {
-                  toast.error(error instanceof Error ? error.message : 'Failed to return parcel');
-                }
-              }}
-              disabled={isReturning}
-            >
-              Return
-            </Button>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="outline" className="h-8 w-8" disabled={isReturning}>
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelected(row.original);
+                  setSignatureImage(undefined);
+                  setHandoverTarget(row.original.secondReceiverId ? 'second' : 'main');
+                  setMainCardMode('existing');
+                  setMainExistingCardRecordId('');
+                  setMainNewCardTypeId('');
+                  setMainNewCardNumber('');
+                  setSecondCardMode('new');
+                  setSecondExistingCardRecordId('');
+                  setSecondNewCardTypeId('');
+                  setSecondNewCardNumber('');
+                  setSecondNewName('');
+                  setSecondNewPhone('');
+                }}
+              >
+                Delivery Details
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={async () => {
+                  try {
+                    await riderReturned({ parcelId: row.original.parcelId, riderUserId }).unwrap();
+                    toast.success('Parcel returned to branch pickup');
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : 'Failed to return parcel');
+                  }
+                }}
+              >
+                Return
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],

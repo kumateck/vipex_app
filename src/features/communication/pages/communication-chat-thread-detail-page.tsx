@@ -52,7 +52,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { useUploadImageMutation } from '@/features/uploads/api/uploads.api';
 import { useListUserOptionsQuery, type UserOption } from '@/features/users/api/users.api';
 import { useAuthStore } from '@/stores/auth-store';

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,16 +12,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import { formatDateTime as formatDateTimeStandard } from '@/lib/date';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useGetBranchQuery } from '@/features/branches/api/branches.api';
 import {
@@ -31,7 +39,7 @@ import {
 } from '@/features/customers/api';
 import { useGetLocationQuery } from '@/features/locations/api/locations.api';
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
-import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
+import { CashierType, ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
@@ -42,7 +50,6 @@ import {
   useSearchParcelsQuery,
   useUpdateParcelMutation,
 } from '../api/parcel.api';
-import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 import { ParcelReceiptActions, type ReceiptPrintData } from '../components/parcel-receipt-actions';
 import { ParcelSessionGuard } from '../components/parcel-session-guard';
 
@@ -54,7 +61,28 @@ function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTimeStandard(date);
+}
+
+function formatPhones(primary?: string | null, secondary?: string | null) {
+  const phones = [primary, secondary].filter((value): value is string => Boolean(value?.trim()));
+  return phones.length ? phones.join(', ') : '-';
+}
+
+function getQueueFilterBySearch(isPickupQueueEnabled: boolean, search?: string) {
+  if (!isPickupQueueEnabled) return undefined;
+  return search?.trim() ? undefined : true;
+}
+
+function getPaymentType(row: Pick<ParcelSearchRow, 'chargePsw' | 'plannedToBePaidPsw'>) {
+  const charge = Number(row.chargePsw ?? 0);
+  const receiverDue = Math.max(Number(row.plannedToBePaidPsw ?? 0), 0);
+
+  if (receiverDue >= charge) {
+    return { dotClassName: 'bg-amber-500' };
+  }
+
+  return { dotClassName: 'bg-sky-500' };
 }
 
 type CardMode = 'existing' | 'new';
@@ -75,6 +103,11 @@ const PAYMENT_METHOD_OPTIONS = [
   { value: PaymentMethod.AIRTEL, label: 'Airtel' },
 ];
 
+const PAYMENT_TYPE_LEGEND = [
+  { label: 'Receiver Pay', dotClassName: 'bg-amber-500' },
+  { label: 'Partial Pay', dotClassName: 'bg-sky-500' },
+];
+
 export function ParcelReceiverCashierPage() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
@@ -89,15 +122,18 @@ export function ParcelReceiverCashierPage() {
       destinationId?: string | null;
       status?: number | null;
       senderPaid?: boolean | null;
+      hasPickupQueue?: boolean | null;
     }>
   >({
     page: 1,
     pageSize: 20,
+    sort: [{ field: 'pickupQueueNumber', direction: 'asc' }],
     filters: {
       companyId,
       destinationId: branchId,
       status: ParcelStatus.AWAITING_PICKUP,
       senderPaid: false,
+      hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled),
     },
   });
   const [selectedParcel, setSelectedParcel] = useState<ParcelSearchRow | null>(null);
@@ -127,29 +163,41 @@ export function ParcelReceiverCashierPage() {
 
   const { data: cardOptions = [] } = useListCardOptionsQuery();
   const { data: staffOptions = [] } = useListUserOptionsQuery(
-    companyId && branchId ? { companyId, branchId } : undefined,
-    { skip: !companyId || !branchId },
+    companyId && branchId
+      ? {
+          companyId,
+          branchId,
+          locationId: selectedParcel?.pickupLocationId ?? undefined,
+        }
+      : undefined,
+    { skip: !companyId || !branchId || !selectedParcel },
   );
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
     { companyId },
     { skip: !companyId },
   );
 
-  const listQuery = useSearchParcelsQuery(query, { skip: !companyId || !branchId });
+  const shouldSearchOnly = !isPickupQueueEnabled;
+  const hasSearchTerm = Boolean(query.search?.trim());
+  const listQuery = useSearchParcelsQuery(query, {
+    skip: !companyId || !branchId || (shouldSearchOnly && !hasSearchTerm),
+  });
   const rows = listQuery.data?.data ?? [];
 
   useEffect(() => {
     setQuery((prev) => ({
       ...prev,
       page: 1,
+      sort: [{ field: 'pickupQueueNumber', direction: 'asc' }],
       filters: {
         companyId,
         destinationId: branchId,
         status: ParcelStatus.AWAITING_PICKUP,
         senderPaid: false,
+        hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, prev.search),
       },
     }));
-  }, [branchId, companyId]);
+  }, [branchId, companyId, isPickupQueueEnabled]);
 
   const { data: parcelDetails } = useGetParcelDetailsQuery(selectedParcel?.id ?? '', {
     skip: !selectedParcel?.id,
@@ -167,7 +215,10 @@ export function ParcelReceiverCashierPage() {
   );
 
   const receiverPaidPsw = useMemo(
-    () => (parcelDetails?.payments ?? []).reduce((sum, payment) => sum + payment.grossAmountPsw, 0),
+    () =>
+      (parcelDetails?.payments ?? [])
+        .filter((payment) => payment.cashierType === CashierType.TOBEPAID)
+        .reduce((sum, payment) => sum + payment.grossAmountPsw, 0),
     [parcelDetails?.payments],
   );
   const receiverDuePsw = Math.max((selectedParcel?.plannedToBePaidPsw ?? 0) - receiverPaidPsw, 0);
@@ -208,14 +259,64 @@ export function ParcelReceiverCashierPage() {
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(() => {
     const baseColumns: ColumnDef<ParcelSearchRow>[] = [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        accessorKey: 'bookingCode',
+        header: 'Booking',
+        cell: ({ row }) => {
+          const paymentType = getPaymentType(row.original);
+          return (
+            <div className="inline-flex items-center gap-2">
+              <span className={`h-2.5 w-2.5 rounded-full ${paymentType.dotClassName}`} />
+              <span>{row.original.bookingCode}</span>
+            </div>
+          );
+        },
+      },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
+      { accessorKey: 'parcelContent', header: 'Parcel Content' },
+      {
+        id: 'sender',
+        header: 'Sender',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.senderName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.senderPhone, row.original.senderPhone2)}
+            </p>
+          </div>
+        ),
+      },
       {
         id: 'receiver',
         header: 'Receiver',
-        accessorFn: (row) =>
-          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'source',
+        header: 'Source',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.sourceLocationName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.sourceName ?? '-'}</p>
+          </div>
+        ),
+      },
+      {
+        id: 'destination',
+        header: 'Destination',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.destinationName ?? '-'}</p>
+          </div>
+        ),
       },
       {
         id: 'charge',
@@ -227,21 +328,13 @@ export function ParcelReceiverCashierPage() {
         header: 'Receiver Due',
         accessorFn: (row) => formatCurrency(row.plannedToBePaidPsw),
       },
-      {
-        id: 'holder',
-        header: 'Current Holder',
-        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
-      },
     ];
 
     if (isPickupQueueEnabled) {
       baseColumns.push({
         id: 'pickupQueue',
-        header: 'Queue',
-        accessorFn: (row) =>
-          row.pickupQueueCode
-            ? `${row.pickupQueueCode}${row.pickupQueuedAt ? ` • ${formatDateTime(row.pickupQueuedAt)}` : ''}`
-            : 'Not queued',
+        header: 'Queue Code',
+        accessorFn: (row) => row.pickupQueueCode ?? '-',
       });
     }
 
@@ -250,32 +343,38 @@ export function ParcelReceiverCashierPage() {
       header: 'Action',
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => openParcelDialog(row.original)}>
-            Receive + Deliver
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              try {
-                await updateParcel({
-                  id: row.original.id,
-                  status: ParcelStatus.HOME_DELIVERY_REQUESTED,
-                }).unwrap();
-                toast.success('Parcel moved to Home Delivery Requested');
-                await listQuery.refetch();
-              } catch (error) {
-                toast.error(
-                  error instanceof Error ? error.message : 'Failed to move parcel to home delivery',
-                );
-              }
-            }}
-            disabled={isSaving}
-          >
-            Request Delivery
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="outline" className="h-8 w-8" disabled={isSaving}>
+              <EllipsisVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => openParcelDialog(row.original)}>
+              Receive + Deliver
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={async () => {
+                try {
+                  await updateParcel({
+                    id: row.original.id,
+                    status: ParcelStatus.HOME_DELIVERY_REQUESTED,
+                  }).unwrap();
+                  toast.success('Parcel moved to Home Delivery Requested');
+                  await listQuery.refetch();
+                } catch (error) {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : 'Failed to move parcel to home delivery',
+                  );
+                }
+              }}
+            >
+              Request Delivery
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     });
 
@@ -431,10 +530,24 @@ export function ParcelReceiverCashierPage() {
         <ScrollableWrapper>
           <Card>
             <CardHeader>
-              <CardTitle>Receiver Cashier</CardTitle>
-              <CardDescription>
-                Receiver-pay parcels awaiting payment collection and office handover.
-              </CardDescription>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Receiver Cashier</CardTitle>
+                  <CardDescription>
+                    {isPickupQueueEnabled
+                      ? 'Receiver-pay parcels awaiting payment collection and office handover.'
+                      : 'Search for a receiver-pay parcel to collect payment and complete handover at this branch.'}
+                  </CardDescription>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  {PAYMENT_TYPE_LEGEND.map((item) => (
+                    <div key={item.label} className="inline-flex items-center gap-1.5">
+                      <span className={`h-2.5 w-2.5 rounded-full ${item.dotClassName}`} />
+                      <span className="text-muted-foreground text-xs">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <form
@@ -445,12 +558,14 @@ export function ParcelReceiverCashierPage() {
                   setQuery((prev) => ({
                     ...prev,
                     page: 1,
+                    sort: [{ field: 'pickupQueueNumber', direction: 'asc' }],
                     search: term.length > 0 ? term : undefined,
                     filters: {
                       companyId,
                       destinationId: branchId,
                       status: ParcelStatus.AWAITING_PICKUP,
                       senderPaid: false,
+                      hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, term),
                     },
                   }));
                 }}
@@ -475,17 +590,22 @@ export function ParcelReceiverCashierPage() {
                   destinationId: branchId,
                   status: ParcelStatus.AWAITING_PICKUP,
                   senderPaid: false,
+                  hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, query.search),
                 }}
                 onRequestChange={(next) =>
                   setQuery((prev) => ({
                     ...prev,
                     ...next,
                     search: prev.search,
+                    sort: isPickupQueueEnabled
+                      ? [{ field: 'pickupQueueNumber', direction: 'asc' }]
+                      : next.sort,
                     filters: {
                       companyId,
                       destinationId: branchId,
                       status: ParcelStatus.AWAITING_PICKUP,
                       senderPaid: false,
+                      hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, prev.search),
                     },
                   }))
                 }
@@ -522,12 +642,6 @@ export function ParcelReceiverCashierPage() {
                   <p>
                     <strong>Content:</strong> {selectedParcel.parcelContent}
                   </p>
-                  <div className="flex items-center gap-2">
-                    <strong>Current Holder:</strong>
-                    <ParcelInternalHolderBadge
-                      holder={parcelDetails?.internalHolder ?? selectedParcel}
-                    />
-                  </div>
                   <p>
                     <strong>Receiver Due:</strong> {formatCurrency(receiverDuePsw)}
                   </p>

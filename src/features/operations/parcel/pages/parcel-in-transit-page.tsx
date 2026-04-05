@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Textarea } from '@/components/ui/textarea';
+import { formatDateTime } from '@/lib/date';
 import {
   Dialog,
   DialogContent,
@@ -46,7 +54,7 @@ function formatDate(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTime(date);
 }
 
 function formatCurrency(amountPsw: number) {
@@ -61,6 +69,11 @@ function formatConsignmentLabel(serialForDay: number | null | undefined) {
 function paymentMethodLabel(method: number) {
   const label = PaymentMethod[method];
   return typeof label === 'string' ? label : String(method);
+}
+
+function formatPhones(primary?: string | null, secondary?: string | null) {
+  const phones = [primary, secondary].filter((value): value is string => Boolean(value?.trim()));
+  return phones.length ? phones.join(', ') : '-';
 }
 
 export function ParcelInTransitPage({ view }: { view: InTransitView }) {
@@ -185,35 +198,60 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       { accessorKey: 'parcelContent', header: 'Parcel Content' },
       {
         id: 'sender',
         header: 'Sender',
-        accessorFn: (row) =>
-          `${row.senderName ?? '-'}${row.senderPhone ? ` (${row.senderPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.senderName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.senderPhone, row.original.senderPhone2)}
+            </p>
+          </div>
+        ),
       },
       {
         id: 'receiver',
         header: 'Receiver',
-        accessorFn: (row) =>
-          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
+            </p>
+          </div>
+        ),
       },
       ...(view === 'incoming'
         ? ([
             {
               id: 'source',
-              header: 'Source Branch',
-              accessorFn: (row: ParcelSearchRow) => branchNameById.get(row.sourceId) ?? '-',
+              header: 'Source',
+              cell: ({ row }: { row: { original: ParcelSearchRow } }) => (
+                <div className="leading-tight">
+                  <p className="font-medium">{row.original.sourceLocationName ?? '-'}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {row.original.sourceName ?? branchNameById.get(row.original.sourceId) ?? '-'}
+                  </p>
+                </div>
+              ),
             },
           ] satisfies ColumnDef<ParcelSearchRow>[])
         : ([
             {
               id: 'destination',
-              header: 'Destination Branch',
-              accessorFn: (row: ParcelSearchRow) => branchNameById.get(row.destinationId) ?? '-',
+              header: 'Destination',
+              cell: ({ row }: { row: { original: ParcelSearchRow } }) => (
+                <div className="leading-tight">
+                  <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {branchNameById.get(row.original.destinationId) ?? '-'}
+                  </p>
+                </div>
+              ),
             },
           ] satisfies ColumnDef<ParcelSearchRow>[])),
       {
@@ -222,68 +260,70 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         accessorFn: (row) => formatConsignmentLabel(row.consignmentSerialForDay),
       },
       {
-        id: 'holder',
-        header: 'Current Holder',
-        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
-      },
-      {
         id: 'actions',
-        header: 'Actions',
+        header: 'Action',
         enableSorting: false,
         cell: ({ row }) => {
           const parcel = row.original;
           return (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => setSelectedParcelId(parcel.id)}>
-                View Details
-              </Button>
-              {view === 'incoming' ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
-                  size="sm"
+                  size="icon"
                   variant="outline"
-                  onClick={() => {
-                    setEditingParcel(parcel);
-                    setEditParcelDetails(parcel.parcelDetails ?? '');
-                    setEditReceiverName(parcel.receiverName ?? '');
-                    setEditReceiverPhone(parcel.receiverPhone ?? '');
-                  }}
-                >
-                  Edit
-                </Button>
-              ) : null}
-              {view === 'incoming' ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setDiscrepancyParcel(parcel);
-                    setDiscrepancyDialogOpen(true);
-                    setDiscrepancyNotes('');
-                    setMissingTrackingCode(parcel.trackingCode);
-                    setMissingBookingCode(parcel.bookingCode);
-                  }}
-                >
-                  Log Not Physical
-                </Button>
-              ) : null}
-              {view === 'incoming' ? (
-                <Button
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      await handleMarkAsArrived(parcel);
-                    } catch (error) {
-                      toast.error(
-                        error instanceof Error ? error.message : 'Failed to update parcel status',
-                      );
-                    }
-                  }}
+                  className="h-8 w-8"
                   disabled={isUpdatingStatus}
                 >
-                  Mark Arrived
+                  <EllipsisVertical className="h-4 w-4" />
                 </Button>
-              ) : null}
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setSelectedParcelId(parcel.id)}>
+                  View Details
+                </DropdownMenuItem>
+                {view === 'incoming' ? (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setEditingParcel(parcel);
+                      setEditParcelDetails(parcel.parcelDetails ?? '');
+                      setEditReceiverName(parcel.receiverName ?? '');
+                      setEditReceiverPhone(parcel.receiverPhone ?? '');
+                    }}
+                  >
+                    Edit
+                  </DropdownMenuItem>
+                ) : null}
+                {view === 'incoming' ? (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setDiscrepancyParcel(parcel);
+                      setDiscrepancyDialogOpen(true);
+                      setDiscrepancyNotes('');
+                      setMissingTrackingCode(parcel.trackingCode);
+                      setMissingBookingCode(parcel.bookingCode);
+                    }}
+                  >
+                    Log Not Physical
+                  </DropdownMenuItem>
+                ) : null}
+                {view === 'incoming' ? (
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      try {
+                        await handleMarkAsArrived(parcel);
+                        await refetch();
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error ? error.message : 'Failed to update parcel status',
+                        );
+                      }
+                    }}
+                  >
+                    Mark Arrived
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           );
         },
       },

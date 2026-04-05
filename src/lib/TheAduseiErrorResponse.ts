@@ -9,6 +9,50 @@ type ErrorLike = {
 };
 
 let lastToast = { message: '', at: 0 };
+const STALE_BUILD_RELOAD_GUARD_KEY = 'vipex:stale-build-reload-at';
+const STALE_BUILD_RELOAD_GUARD_MS = 60_000;
+
+function errorToText(error: unknown): string {
+  if (!error) return '';
+  if (typeof error === 'string') return error;
+  if (error instanceof Error) return `${error.name} ${error.message}`.trim();
+  if (typeof error === 'object') {
+    const record = error as Record<string, unknown>;
+    const name = typeof record.name === 'string' ? record.name : '';
+    const message = typeof record.message === 'string' ? record.message : '';
+    return `${name} ${message}`.trim();
+  }
+  return '';
+}
+
+function isLikelyStaleBuildError(error: unknown): boolean {
+  const text = errorToText(error).toLowerCase();
+  if (!text) return false;
+  return (
+    text.includes('chunkloaderror') ||
+    text.includes('loading chunk') ||
+    text.includes('failed to fetch dynamically imported module') ||
+    text.includes('importing a module script failed') ||
+    text.includes('dynamically imported module')
+  );
+}
+
+function tryReloadForStaleBuild(): boolean {
+  if (typeof window === 'undefined') return false;
+  const now = Date.now();
+  const previousRaw = window.sessionStorage.getItem(STALE_BUILD_RELOAD_GUARD_KEY);
+  const previous = previousRaw ? Number(previousRaw) : 0;
+
+  if (Number.isFinite(previous) && previous > 0 && now - previous < STALE_BUILD_RELOAD_GUARD_MS) {
+    return false;
+  }
+
+  window.sessionStorage.setItem(STALE_BUILD_RELOAD_GUARD_KEY, String(now));
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.set('__hard_reload', String(now));
+  window.location.replace(nextUrl.toString());
+  return true;
+}
 
 function readMessage(error: unknown): string {
   if (!error) return 'Something went wrong';
@@ -58,10 +102,16 @@ export function installTheAduseiGlobalErrorHandlers() {
   if (typeof window === 'undefined') return () => undefined;
 
   const onError = (event: ErrorEvent) => {
+    if (isLikelyStaleBuildError(event.error ?? event.message)) {
+      if (tryReloadForStaleBuild()) return;
+    }
     TheAduseiErrorResponse(event.error ?? event.message ?? 'Unexpected error');
   };
 
   const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+    if (isLikelyStaleBuildError(event.reason)) {
+      if (tryReloadForStaleBuild()) return;
+    }
     TheAduseiErrorResponse(event.reason ?? 'Unhandled async error');
   };
 

@@ -11,7 +11,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import {
   Table,
   TableBody,
@@ -131,10 +131,14 @@ export function DailyCashierSalesPage() {
     }
   }, [effectiveBranchId, locationId]);
 
-  const { data: locationOptions = [] } = useListLocationOptionsQuery(
+  const { currentData: locationOptions = [] } = useListLocationOptionsQuery(
     { branchId: effectiveBranchId, includeDeleted: false },
     { skip: !effectiveBranchId || !canSelectCashier },
   );
+
+  useEffect(() => {
+    setLocationId('__all__');
+  }, [effectiveBranchId]);
 
   const {
     data: report,

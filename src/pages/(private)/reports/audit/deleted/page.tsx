@@ -9,6 +9,7 @@ import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useListAuditLogsQuery, type EntityAuditLog } from '@/features/audit/api';
+import { formatDateTime as formatDateTimeStandard } from '@/lib/date';
 
 type DeletedParcelAuditRow = {
   id: string;
@@ -33,7 +34,7 @@ const EMPTY_META: PaginationMeta = {
 function formatDateTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTimeStandard(date);
 }
 
 function getStringValue(record: Record<string, unknown>, key: string) {

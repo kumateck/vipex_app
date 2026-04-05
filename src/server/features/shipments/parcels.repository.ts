@@ -33,6 +33,7 @@ export type ParcelRow = {
   id: string;
   companyId: string;
   sourceId: string;
+  sourceLocationId: string | null;
   destinationId: string;
   bookingId: string;
   bookingCode: string;
@@ -77,6 +78,7 @@ export type ListParcelsParams = {
   status?: number | null;
   statuses?: number[] | null;
   senderPaid?: boolean | null;
+  hasPickupQueue?: boolean | null;
   search?: string | null; // bookingCode/trackingCode/sender/receiver names/phones
   received?: boolean | null;
   includeDeleted?: boolean | null;
@@ -92,8 +94,13 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     consignmentSerialForDay: number | null;
     senderName: string | null;
     senderPhone: string | null;
+    senderPhone2: string | null;
     receiverName: string | null;
     receiverPhone: string | null;
+    receiverPhone2: string | null;
+    secondReceiverName: string | null;
+    secondReceiverPhone: string | null;
+    secondReceiverPhone2: string | null;
     dropoffAddress: string | null;
     deliveryFeePsw: number | null;
     pickupLocationName: string | null;
@@ -134,7 +141,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   if (p.senderPaid === false) whereParts.push(gt(parcels.plannedToBePaidPsw, 0));
   const s = alias(customers, 's');
   const r = alias(customers, 'r');
+  const sr = alias(customers, 'sr');
   const d = alias(branches, 'd');
+  const sb = alias(branches, 'sb');
+  const sl = alias(locations, 'sl');
   const hb = alias(branches, 'hb');
   const ci = alias(consignmentItems, 'ci');
   const cg = alias(consignments, 'cg');
@@ -143,6 +153,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   const hw = alias(warehouses, 'hw');
 
   if (p.locationId) whereParts.push(eq(parcels.pickupLocationId, p.locationId));
+  if (p.hasPickupQueue === true) whereParts.push(isNotNull(pickupQueues.id));
+  if (p.hasPickupQueue === false) whereParts.push(isNull(pickupQueues.id));
 
   const sort = p.sort ?? [];
   const orderBy = sort.length
@@ -156,6 +168,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
               : asc(parcels.trackingCode);
           if (srt.field === 'bookingCode')
             return srt.direction === 'desc' ? desc(parcels.bookingCode) : asc(parcels.bookingCode);
+          if (srt.field === 'pickupQueueNumber')
+            return srt.direction === 'desc'
+              ? desc(pickupQueues.queueNumber)
+              : asc(pickupQueues.queueNumber);
           if (srt.field === 'id')
             return srt.direction === 'desc' ? desc(parcels.id) : asc(parcels.id);
           return null;
@@ -171,6 +187,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(r, eq(parcels.receiverId, r.id))
     .leftJoin(d, eq(parcels.destinationId, d.id))
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
+    .leftJoin(pickupQueues, eq(pickupQueues.parcelId, parcels.id))
     .where(
       whereParts.length || p.search
         ? and(
@@ -197,6 +214,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       id: parcels.id,
       companyId: parcels.companyId,
       sourceId: parcels.sourceId,
+      sourceLocationId: parcels.sourceLocationId,
       destinationId: parcels.destinationId,
       bookingId: parcels.bookingId,
       bookingCode: parcels.bookingCode,
@@ -230,14 +248,21 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       updatedAt: parcels.updatedAt,
       cashierSessionId: parcels.cashierSessionId,
       bookingCreatedAt: bookings.createdAt,
+      sourceName: sb.name,
+      sourceLocationName: sl.name,
       destinationName: d.name,
       consignmentId: cg.id,
       consignmentCode: cg.code,
       consignmentSerialForDay: cg.serialForDay,
       senderName: s.fullname,
       senderPhone: s.telephone,
+      senderPhone2: s.telephone2,
       receiverName: r.fullname,
       receiverPhone: r.telephone,
+      receiverPhone2: r.telephone2,
+      secondReceiverName: sr.fullname,
+      secondReceiverPhone: sr.telephone,
+      secondReceiverPhone2: sr.telephone2,
       dropoffAddress: deliveries.dropoffAddress,
       deliveryFeePsw: deliveries.chargePsw,
       pickupLocationName: pl.name,
@@ -258,7 +283,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(bookings, eq(parcels.bookingId, bookings.id))
     .leftJoin(s, eq(parcels.senderId, s.id))
     .leftJoin(r, eq(parcels.receiverId, r.id))
+    .leftJoin(sr, eq(parcels.secondReceiverId, sr.id))
     .leftJoin(d, eq(parcels.destinationId, d.id))
+    .leftJoin(sb, eq(parcels.sourceId, sb.id))
+    .leftJoin(sl, eq(sl.id, parcels.sourceLocationId))
     .leftJoin(pl, eq(pl.id, parcels.pickupLocationId))
     .leftJoin(ci, and(eq(ci.parcelId, parcels.id), isNull(ci.removedAt)))
     .leftJoin(cg, eq(cg.id, ci.consignmentId))
@@ -303,6 +331,7 @@ export async function getParcelRepo(
       id: parcels.id,
       companyId: parcels.companyId,
       sourceId: parcels.sourceId,
+      sourceLocationId: parcels.sourceLocationId,
       destinationId: parcels.destinationId,
       bookingId: parcels.bookingId,
       bookingCode: parcels.bookingCode,

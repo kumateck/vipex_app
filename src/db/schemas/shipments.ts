@@ -60,6 +60,7 @@ export const parcels = pgTable(
     sourceId: varchar('source_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
+    sourceLocationId: varchar('source_location_id', { length: 25 }).references(() => locations.id),
     destinationId: varchar('destination_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
@@ -130,6 +131,39 @@ export const parcels = pgTable(
     byStatus: index('parcels_status_idx').on(t.status),
   }),
 );
+
+export const parcelDiscrepancies = pgTable(
+  'parcel_discrepancies',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    parcelId: varchar('parcel_id', { length: 25 }).references(() => parcels.id),
+    branchId: varchar('branch_id', { length: 25 }).references(() => branches.id),
+    trackingCode: varchar('tracking_code', { length: 255 }),
+    bookingCode: varchar('booking_code', { length: 255 }),
+    discrepancyType: varchar('discrepancy_type', { length: 100 }).notNull(),
+    notes: varchar('notes', { length: 1000 }),
+    status: smallint('status').notNull().default(0), // 0=open, 1=resolved
+    createdBy: varchar('created_by', { length: 25 }).references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    resolvedBy: varchar('resolved_by', { length: 25 }).references(() => users.id),
+    resolvedAt: timestamp('resolved_at', { withTimezone: false }),
+    resolutionNote: varchar('resolution_note', { length: 1000 }),
+  },
+  (t) => ({
+    byCompanyStatus: index('parcel_discrepancies_company_status_idx').on(t.companyId, t.status),
+    byParcel: index('parcel_discrepancies_parcel_idx').on(t.parcelId),
+    byCreated: index('parcel_discrepancies_created_idx').on(t.createdAt),
+    uqOpenByParcel: uniqueIndex('parcel_discrepancies_open_parcel_uq')
+      .on(t.parcelId)
+      .where(sql`${t.parcelId} IS NOT NULL AND ${t.status} = 0`),
+  }),
+);
+
 export const consignments = pgTable(
   'consignments',
   {

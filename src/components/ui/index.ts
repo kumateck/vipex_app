@@ -23,6 +23,7 @@ export * from './collapsible';
 export * from './command';
 export * from './creatable-combobox';
 export * from './multi-select';
+export * from './searchable-select';
 export * from './scroll-area';
 export * from './separator';
 // export * from "./switch"

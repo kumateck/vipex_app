@@ -1,10 +1,17 @@
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -13,7 +20,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
 import { useListWarehouseOptionsQuery } from '@/features/warehouses';
 import { ParcelHolderType, ParcelInternalTransferStatus } from '@/db/schemas/enums';
@@ -246,14 +253,23 @@ export function ParcelInternalTransfersPage() {
         id: 'action',
         header: 'Action',
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => addParcel(row.original)}
-            disabled={selectedParcelIds.has(row.original.id)}
-          >
-            {selectedParcelIds.has(row.original.id) ? 'Selected' : 'Add'}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8"
+                disabled={selectedParcelIds.has(row.original.id)}
+              >
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => addParcel(row.original)}>
+                {selectedParcelIds.has(row.original.id) ? 'Selected' : 'Add'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],
@@ -285,24 +301,26 @@ export function ParcelInternalTransfersPage() {
         id: 'action',
         header: 'Action',
         cell: ({ row }) => (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setSelectedHistoryTransferId(row.original.id)}
-            >
-              View
-            </Button>
-            {canCancel && row.original.status === ParcelInternalTransferStatus.PENDING ? (
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => setCancelTransferId(row.original.id)}
-              >
-                Cancel
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="outline" className="h-8 w-8">
+                <EllipsisVertical className="h-4 w-4" />
               </Button>
-            ) : null}
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setSelectedHistoryTransferId(row.original.id)}>
+                View
+              </DropdownMenuItem>
+              {canCancel && row.original.status === ParcelInternalTransferStatus.PENDING ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => setCancelTransferId(row.original.id)}
+                >
+                  Cancel
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],

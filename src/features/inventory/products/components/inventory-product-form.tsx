@@ -6,7 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select-searchable';
 import { Spinner } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListInventoryProductCategoryOptionsQuery } from '../api/inventory-products.api';
@@ -58,10 +64,8 @@ export function InventoryProductForm({
   const navigate = useNavigate();
   const schema = mode === 'create' ? createInventoryProductSchema : editInventoryProductSchema;
   const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
-  const { data: categoryOptions, isLoading: isLoadingCategories } = useListInventoryProductCategoryOptionsQuery(
-    { companyId },
-    { skip: !companyId },
-  );
+  const { data: categoryOptions, isLoading: isLoadingCategories } =
+    useListInventoryProductCategoryOptionsQuery({ companyId }, { skip: !companyId });
 
   const {
     control,
@@ -154,8 +158,16 @@ export function InventoryProductForm({
                         field.onChange(value === UNCATEGORIZED_VALUE ? '' : value)
                       }
                     >
-                      <SelectTrigger id="categoryId" aria-invalid={!!errors.categoryId} disabled={isLoadingCategories}>
-                        <SelectValue placeholder={isLoadingCategories ? 'Loading categories...' : 'Select category'} />
+                      <SelectTrigger
+                        id="categoryId"
+                        aria-invalid={!!errors.categoryId}
+                        disabled={isLoadingCategories}
+                      >
+                        <SelectValue
+                          placeholder={
+                            isLoadingCategories ? 'Loading categories...' : 'Select category'
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={UNCATEGORIZED_VALUE}>Uncategorized</SelectItem>
@@ -175,14 +187,28 @@ export function InventoryProductForm({
               {mode === 'create' ? (
                 <Field>
                   <FieldLabel htmlFor="sku">SKU</FieldLabel>
-                  <Input id="sku" placeholder="Stock keeping unit" aria-invalid={!!errors.sku} {...register('sku')} />
-                  {errors.sku?.message ? <p className="text-sm text-destructive">{errors.sku.message}</p> : null}
+                  <Input
+                    id="sku"
+                    placeholder="Stock keeping unit"
+                    aria-invalid={!!errors.sku}
+                    {...register('sku')}
+                  />
+                  {errors.sku?.message ? (
+                    <p className="text-sm text-destructive">{errors.sku.message}</p>
+                  ) : null}
                 </Field>
               ) : null}
               <Field>
                 <FieldLabel htmlFor="name">Name</FieldLabel>
-                <Input id="name" placeholder="Product name" aria-invalid={!!errors.name} {...register('name')} />
-                {errors.name?.message ? <p className="text-sm text-destructive">{errors.name.message}</p> : null}
+                <Input
+                  id="name"
+                  placeholder="Product name"
+                  aria-invalid={!!errors.name}
+                  {...register('name')}
+                />
+                {errors.name?.message ? (
+                  <p className="text-sm text-destructive">{errors.name.message}</p>
+                ) : null}
               </Field>
               <Field>
                 <FieldLabel htmlFor="unitOfMeasure">Unit of measure</FieldLabel>
@@ -190,7 +216,10 @@ export function InventoryProductForm({
                   control={control}
                   name="unitOfMeasure"
                   render={({ field }) => (
-                    <Select value={String(field.value ?? 0)} onValueChange={(value) => field.onChange(Number(value))}>
+                    <Select
+                      value={String(field.value ?? 0)}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                    >
                       <SelectTrigger id="unitOfMeasure" aria-invalid={!!errors.unitOfMeasure}>
                         <SelectValue placeholder="Select unit" />
                       </SelectTrigger>
@@ -235,9 +264,15 @@ export function InventoryProductForm({
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? <Spinner /> : null}
-                  {isSubmitting ? `${mode === 'create' ? 'Creating...' : 'Saving...'}` : submitButtonText}
+                  {isSubmitting
+                    ? `${mode === 'create' ? 'Creating...' : 'Saving...'}`
+                    : submitButtonText}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => navigate('/inventory/products')}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/inventory/products')}
+                >
                   Cancel
                 </Button>
               </div>

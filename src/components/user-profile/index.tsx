@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Building2, User, ChevronsUpDown, Shield, KeyRound, LogOut } from 'lucide-react';
+import { Building2, User, ChevronsUpDown, Shield, KeyRound, LogOut, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/ui/sidebar';
@@ -85,13 +85,15 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
             </Avatar>
             {!isSidebarCollapsed ? (
               <>
-                <div className="flex flex-1 flex-col items-start text-left leading-tight">
-                  <span className="truncate text-sm font-semibold text-foreground">
+                <div className="min-w-0 flex flex-1 flex-col items-start text-left leading-tight">
+                  <span className="block w-full truncate text-sm font-semibold text-foreground">
                     {authUser?.fullname}
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">{authUser?.email}</span>
+                  <span className="block w-full truncate text-xs text-muted-foreground">
+                    {authUser?.email}
+                  </span>
                 </div>
-                <ChevronsUpDown className="ml-auto h-4 w-4 text-muted-foreground shrink-0" />
+                <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 text-muted-foreground" />
               </>
             ) : null}
           </button>
@@ -128,11 +130,13 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
               {initials}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-1 flex-col items-start text-left leading-tight">
-            <span className="truncate text-sm font-semibold text-foreground">
+          <div className="min-w-0 flex flex-1 flex-col items-start text-left leading-tight">
+            <span className="block w-full truncate text-sm font-semibold text-foreground">
               {authUser?.branch?.name}
             </span>
-            <span className="truncate text-xs text-muted-foreground">{authUser?.role?.name}</span>
+            <span className="block w-full truncate text-xs text-muted-foreground">
+              {authUser?.role?.name}
+            </span>
           </div>
         </button>
       </DropdownMenuTrigger>
@@ -185,6 +189,14 @@ function UserMenuContent({
                   <span className="text-xs text-muted-foreground">{userData?.branch?.name}</span>
                 </div>
               )}
+              {userData?.location?.name || userData?.locationName ? (
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    {userData?.location?.name ?? userData?.locationName}
+                  </span>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

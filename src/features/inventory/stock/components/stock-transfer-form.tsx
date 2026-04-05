@@ -5,13 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select-searchable';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
 import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
-import { createStockTransferSchema, type CreateStockTransferFormValues } from '../schemas/stock-forms.schema';
+import {
+  createStockTransferSchema,
+  type CreateStockTransferFormValues,
+} from '../schemas/stock-forms.schema';
 
 interface StockTransferFormProps {
   onSubmit: (data: CreateStockTransferFormValues) => Promise<void>;
@@ -20,17 +29,20 @@ interface StockTransferFormProps {
   submitButtonText: string;
 }
 
-export function StockTransferForm({ onSubmit, isSubmitting, title, submitButtonText }: StockTransferFormProps) {
+export function StockTransferForm({
+  onSubmit,
+  isSubmitting,
+  title,
+  submitButtonText,
+}: StockTransferFormProps) {
   const navigate = useNavigate();
   const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
   const { data: products = [], isLoading: isLoadingProducts } = useListInventoryProductOptionsQuery(
     { companyId },
     { skip: !companyId },
   );
-  const { data: locations = [], isLoading: isLoadingLocations } = useListInventoryLocationOptionsQuery(
-    { companyId },
-    { skip: !companyId },
-  );
+  const { data: locations = [], isLoading: isLoadingLocations } =
+    useListInventoryLocationOptionsQuery({ companyId }, { skip: !companyId });
 
   const {
     control,
@@ -65,8 +77,14 @@ export function StockTransferForm({ onSubmit, isSubmitting, title, submitButtonT
                   name="productId"
                   render={({ field }) => (
                     <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                      <SelectTrigger id="productId" aria-invalid={!!errors.productId} disabled={isLoadingProducts}>
-                        <SelectValue placeholder={isLoadingProducts ? 'Loading products...' : 'Select product'} />
+                      <SelectTrigger
+                        id="productId"
+                        aria-invalid={!!errors.productId}
+                        disabled={isLoadingProducts}
+                      >
+                        <SelectValue
+                          placeholder={isLoadingProducts ? 'Loading products...' : 'Select product'}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {products.map((product) => (
@@ -89,8 +107,16 @@ export function StockTransferForm({ onSubmit, isSubmitting, title, submitButtonT
                   name="fromLocationId"
                   render={({ field }) => (
                     <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                      <SelectTrigger id="fromLocationId" aria-invalid={!!errors.fromLocationId} disabled={isLoadingLocations}>
-                        <SelectValue placeholder={isLoadingLocations ? 'Loading locations...' : 'Select source location'} />
+                      <SelectTrigger
+                        id="fromLocationId"
+                        aria-invalid={!!errors.fromLocationId}
+                        disabled={isLoadingLocations}
+                      >
+                        <SelectValue
+                          placeholder={
+                            isLoadingLocations ? 'Loading locations...' : 'Select source location'
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {locations.map((location) => (
@@ -113,8 +139,18 @@ export function StockTransferForm({ onSubmit, isSubmitting, title, submitButtonT
                   name="toLocationId"
                   render={({ field }) => (
                     <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                      <SelectTrigger id="toLocationId" aria-invalid={!!errors.toLocationId} disabled={isLoadingLocations}>
-                        <SelectValue placeholder={isLoadingLocations ? 'Loading locations...' : 'Select destination location'} />
+                      <SelectTrigger
+                        id="toLocationId"
+                        aria-invalid={!!errors.toLocationId}
+                        disabled={isLoadingLocations}
+                      >
+                        <SelectValue
+                          placeholder={
+                            isLoadingLocations
+                              ? 'Loading locations...'
+                              : 'Select destination location'
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {locations.map((location) => (
@@ -132,22 +168,38 @@ export function StockTransferForm({ onSubmit, isSubmitting, title, submitButtonT
               </Field>
               <Field>
                 <FieldLabel htmlFor="quantity">Quantity</FieldLabel>
-                <Input id="quantity" placeholder="e.g. 10" aria-invalid={!!errors.quantity} {...register('quantity')} />
+                <Input
+                  id="quantity"
+                  placeholder="e.g. 10"
+                  aria-invalid={!!errors.quantity}
+                  {...register('quantity')}
+                />
                 {errors.quantity?.message ? (
                   <p className="text-sm text-destructive">{errors.quantity.message}</p>
                 ) : null}
               </Field>
               <Field>
                 <FieldLabel htmlFor="notes">Notes</FieldLabel>
-                <Textarea id="notes" placeholder="Optional" aria-invalid={!!errors.notes} {...register('notes')} />
-                {errors.notes?.message ? <p className="text-sm text-destructive">{errors.notes.message}</p> : null}
+                <Textarea
+                  id="notes"
+                  placeholder="Optional"
+                  aria-invalid={!!errors.notes}
+                  {...register('notes')}
+                />
+                {errors.notes?.message ? (
+                  <p className="text-sm text-destructive">{errors.notes.message}</p>
+                ) : null}
               </Field>
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? <Spinner /> : null}
                   {isSubmitting ? 'Creating...' : submitButtonText}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => navigate('/inventory/stock-transfers')}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/inventory/stock-transfers')}
+                >
                   Cancel
                 </Button>
               </div>

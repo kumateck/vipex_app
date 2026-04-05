@@ -5,14 +5,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select-searchable';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
 import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { STOCK_MOVEMENT_TYPE_OPTIONS } from '../constants/stock-options';
-import { createStockMovementSchema, type CreateStockMovementFormValues } from '../schemas/stock-forms.schema';
+import {
+  createStockMovementSchema,
+  type CreateStockMovementFormValues,
+} from '../schemas/stock-forms.schema';
 
 interface StockMovementFormProps {
   onSubmit: (data: CreateStockMovementFormValues) => Promise<void>;
@@ -21,17 +30,20 @@ interface StockMovementFormProps {
   submitButtonText: string;
 }
 
-export function StockMovementForm({ onSubmit, isSubmitting, title, submitButtonText }: StockMovementFormProps) {
+export function StockMovementForm({
+  onSubmit,
+  isSubmitting,
+  title,
+  submitButtonText,
+}: StockMovementFormProps) {
   const navigate = useNavigate();
   const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
   const { data: products = [], isLoading: isLoadingProducts } = useListInventoryProductOptionsQuery(
     { companyId },
     { skip: !companyId },
   );
-  const { data: locations = [], isLoading: isLoadingLocations } = useListInventoryLocationOptionsQuery(
-    { companyId },
-    { skip: !companyId },
-  );
+  const { data: locations = [], isLoading: isLoadingLocations } =
+    useListInventoryLocationOptionsQuery({ companyId }, { skip: !companyId });
 
   const {
     control,
@@ -68,8 +80,14 @@ export function StockMovementForm({ onSubmit, isSubmitting, title, submitButtonT
                   name="productId"
                   render={({ field }) => (
                     <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                      <SelectTrigger id="productId" aria-invalid={!!errors.productId} disabled={isLoadingProducts}>
-                        <SelectValue placeholder={isLoadingProducts ? 'Loading products...' : 'Select product'} />
+                      <SelectTrigger
+                        id="productId"
+                        aria-invalid={!!errors.productId}
+                        disabled={isLoadingProducts}
+                      >
+                        <SelectValue
+                          placeholder={isLoadingProducts ? 'Loading products...' : 'Select product'}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {products.map((product) => (
@@ -92,8 +110,16 @@ export function StockMovementForm({ onSubmit, isSubmitting, title, submitButtonT
                   name="locationId"
                   render={({ field }) => (
                     <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                      <SelectTrigger id="locationId" aria-invalid={!!errors.locationId} disabled={isLoadingLocations}>
-                        <SelectValue placeholder={isLoadingLocations ? 'Loading locations...' : 'Select location'} />
+                      <SelectTrigger
+                        id="locationId"
+                        aria-invalid={!!errors.locationId}
+                        disabled={isLoadingLocations}
+                      >
+                        <SelectValue
+                          placeholder={
+                            isLoadingLocations ? 'Loading locations...' : 'Select location'
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {locations.map((location) => (
@@ -115,7 +141,10 @@ export function StockMovementForm({ onSubmit, isSubmitting, title, submitButtonT
                   control={control}
                   name="movementType"
                   render={({ field }) => (
-                    <Select value={String(field.value ?? 0)} onValueChange={(value) => field.onChange(Number(value))}>
+                    <Select
+                      value={String(field.value ?? 0)}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                    >
                       <SelectTrigger id="movementType" aria-invalid={!!errors.movementType}>
                         <SelectValue placeholder="Select movement type" />
                       </SelectTrigger>
@@ -135,7 +164,12 @@ export function StockMovementForm({ onSubmit, isSubmitting, title, submitButtonT
               </Field>
               <Field>
                 <FieldLabel htmlFor="quantity">Quantity</FieldLabel>
-                <Input id="quantity" placeholder="e.g. 10" aria-invalid={!!errors.quantity} {...register('quantity')} />
+                <Input
+                  id="quantity"
+                  placeholder="e.g. 10"
+                  aria-invalid={!!errors.quantity}
+                  {...register('quantity')}
+                />
                 {errors.quantity?.message ? (
                   <p className="text-sm text-destructive">{errors.quantity.message}</p>
                 ) : null}
@@ -172,14 +206,20 @@ export function StockMovementForm({ onSubmit, isSubmitting, title, submitButtonT
                   aria-invalid={!!errors.notes}
                   {...register('notes')}
                 />
-                {errors.notes?.message ? <p className="text-sm text-destructive">{errors.notes.message}</p> : null}
+                {errors.notes?.message ? (
+                  <p className="text-sm text-destructive">{errors.notes.message}</p>
+                ) : null}
               </Field>
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? <Spinner /> : null}
                   {isSubmitting ? 'Creating...' : submitButtonText}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => navigate('/inventory/stock-movements')}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/inventory/stock-movements')}
+                >
                   Cancel
                 </Button>
               </div>

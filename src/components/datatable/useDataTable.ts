@@ -14,6 +14,8 @@ import {
 import type { PaginationRequestDto, SortField } from '@/server/types/pagination.types';
 import type { DataTableProps, DataTableStateHandlers } from './types';
 
+const SERVER_SEARCH_DEBOUNCE_MS = 3000;
+
 function toSortFields(sorting: SortingState): SortField[] {
   return sorting.map((s) => ({ field: s.id, direction: s.desc ? 'desc' : 'asc' }));
 }
@@ -62,44 +64,66 @@ export function useDataTable<TData, TValue, TFilters = Record<string, unknown>>(
       : [],
   );
   const [globalFilter, setGlobalFilter] = React.useState('');
+  const [debouncedGlobalFilter, setDebouncedGlobalFilter] = React.useState('');
   const [pagination, setPagination] = React.useState<PaginationState>({
     pageIndex: serverProps ? Math.max((serverPage ?? 1) - 1, 0) : 0,
-    pageSize:
-      serverProps
-        ? (serverPageSize ?? 10)
-        : props.mode === 'client'
-          ? (props.initialPageSize ?? 10)
-          : 10,
+    pageSize: serverProps
+      ? (serverPageSize ?? 10)
+      : props.mode === 'client'
+        ? (props.initialPageSize ?? 10)
+        : 10,
   });
 
   React.useEffect(() => {
     if (!isServer) return;
     setPagination((prev) => {
       const nextPageIndex = Math.max((serverPage ?? 1) - 1, 0);
-      if (prev.pageIndex === nextPageIndex && prev.pageSize === (serverPageSize ?? prev.pageSize)) return prev;
+      if (prev.pageIndex === nextPageIndex && prev.pageSize === (serverPageSize ?? prev.pageSize))
+        return prev;
       return { pageIndex: nextPageIndex, pageSize: serverPageSize ?? prev.pageSize };
     });
   }, [isServer, serverPage, serverPageSize]);
+
+  React.useEffect(() => {
+    if (!isServer) {
+      setDebouncedGlobalFilter(globalFilter);
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setDebouncedGlobalFilter(globalFilter);
+    }, SERVER_SEARCH_DEBOUNCE_MS);
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [globalFilter, isServer]);
 
   const serverRequest = React.useMemo(() => {
     if (!isServer) return undefined;
     return {
       page: pagination.pageIndex + 1,
       pageSize: pagination.pageSize,
-      search: globalFilter || undefined,
+      search: debouncedGlobalFilter || undefined,
       sort: toSortFields(sorting),
       filters: serverFilters,
     } satisfies PaginationRequestDto<TFilters>;
-  }, [globalFilter, isServer, pagination.pageIndex, pagination.pageSize, serverFilters, sorting]);
+  }, [
+    debouncedGlobalFilter,
+    isServer,
+    pagination.pageIndex,
+    pagination.pageSize,
+    serverFilters,
+    sorting,
+  ]);
 
   const lastRequestRef = React.useRef<PaginationRequestDto<TFilters> | null>(null);
 
   React.useEffect(() => {
     if (!isServer) return;
+    if (globalFilter !== debouncedGlobalFilter) return;
     const nextRequest: PaginationRequestDto<TFilters> = {
       page: pagination.pageIndex + 1,
       pageSize: pagination.pageSize,
-      search: globalFilter || undefined,
+      search: debouncedGlobalFilter || undefined,
       sort: toSortFields(sorting),
       filters: serverFilters,
     };
@@ -107,7 +131,16 @@ export function useDataTable<TData, TValue, TFilters = Record<string, unknown>>(
     if (isSameRequest(lastRequestRef.current, nextRequest)) return;
     lastRequestRef.current = nextRequest;
     onServerRequestChange?.(nextRequest);
-  }, [globalFilter, isServer, onServerRequestChange, pagination.pageIndex, pagination.pageSize, serverFilters, sorting]);
+  }, [
+    debouncedGlobalFilter,
+    globalFilter,
+    isServer,
+    onServerRequestChange,
+    pagination.pageIndex,
+    pagination.pageSize,
+    serverFilters,
+    sorting,
+  ]);
 
   const table = useReactTable({
     data: props.data,
