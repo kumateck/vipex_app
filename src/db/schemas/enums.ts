@@ -300,6 +300,7 @@ export enum ParcelStatus {
   RETURNED_TO_OFFICE = 12, // Parcel returned to branch office
   RETURNED_TO_SENDER = 13, // Parcel returned to sender/source
   CANCELLED = 14, // Parcel order cancelled
+  DISCREPANCY = 15, // Parcel has a reported issue or discrepancy
 }
 export enum DeliveryFeeBasis {
   DISTANCE = 0,

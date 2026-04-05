@@ -2,6 +2,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PermissionGuard } from '@/components/permissions/permission-guard';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -33,6 +34,16 @@ export function createBranchColumns(): ColumnDef<Branch>[] {
       accessorKey: 'telephone',
       header: 'Contact',
       cell: ({ row }) => row.original.telephone ?? row.original.email ?? '—',
+    },
+    {
+      id: 'pickupQueue',
+      header: 'Pickup Queue',
+      cell: ({ row }) =>
+        row.original.usePickupQueue ? (
+          <Badge variant="default">Enabled</Badge>
+        ) : (
+          <Badge variant="outline">Disabled</Badge>
+        ),
     },
     {
       id: 'actions',

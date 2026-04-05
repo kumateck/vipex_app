@@ -47,7 +47,6 @@ import {
   useSearchParcelsQuery,
   useUpdateParcelMutation,
 } from '../api/parcel.api';
-import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 
 function formatCurrency(amountPsw: number) {
   return `GHS ${(amountPsw / 100).toFixed(2)}`;
@@ -58,6 +57,16 @@ function formatDateTime(value: string | null | undefined) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
   return formatDateTimeStandard(date);
+}
+
+function formatPhones(primary?: string | null, secondary?: string | null) {
+  const phones = [primary, secondary].filter((value): value is string => Boolean(value?.trim()));
+  return phones.length ? phones.join(', ') : '-';
+}
+
+function getQueueFilterBySearch(isPickupQueueEnabled: boolean, search?: string) {
+  if (!isPickupQueueEnabled) return undefined;
+  return search?.trim() ? undefined : true;
 }
 
 type CardMode = 'existing' | 'new';
@@ -85,15 +94,18 @@ export function ParcelWaitingPickupPage() {
       destinationId?: string | null;
       status?: number | null;
       senderPaid?: boolean | null;
+      hasPickupQueue?: boolean | null;
     }>
   >({
     page: 1,
     pageSize: 20,
+    sort: [{ field: 'pickupQueueNumber', direction: 'asc' }],
     filters: {
       companyId,
       destinationId: branchId,
       status: ParcelStatus.AWAITING_PICKUP,
       senderPaid: true,
+      hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled),
     },
   });
   const [selectedParcel, setSelectedParcel] = useState<ParcelSearchRow | null>(null);
@@ -118,25 +130,37 @@ export function ParcelWaitingPickupPage() {
 
   const { data: cardOptions = [] } = useListCardOptionsQuery();
   const { data: staffOptions = [] } = useListUserOptionsQuery(
-    companyId && branchId ? { companyId, branchId } : undefined,
-    { skip: !companyId || !branchId },
+    companyId && branchId
+      ? {
+          companyId,
+          branchId,
+          locationId: selectedParcel?.pickupLocationId ?? undefined,
+        }
+      : undefined,
+    { skip: !companyId || !branchId || !selectedParcel },
   );
 
-  const listQuery = useSearchParcelsQuery(query, { skip: !companyId || !branchId });
+  const shouldSearchOnly = !isPickupQueueEnabled;
+  const hasSearchTerm = Boolean(query.search?.trim());
+  const listQuery = useSearchParcelsQuery(query, {
+    skip: !companyId || !branchId || (shouldSearchOnly && !hasSearchTerm),
+  });
   const rows = listQuery.data?.data ?? [];
 
   useEffect(() => {
     setQuery((prev) => ({
       ...prev,
       page: 1,
+      sort: [{ field: 'pickupQueueNumber', direction: 'asc' }],
       filters: {
         companyId,
         destinationId: branchId,
         status: ParcelStatus.AWAITING_PICKUP,
         senderPaid: true,
+        hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, prev.search),
       },
     }));
-  }, [branchId, companyId]);
+  }, [branchId, companyId, isPickupQueueEnabled]);
 
   const { data: parcelDetails } = useGetParcelDetailsQuery(selectedParcel?.id ?? '', {
     skip: !selectedParcel?.id,
@@ -179,35 +203,65 @@ export function ParcelWaitingPickupPage() {
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(() => {
     const baseColumns: ColumnDef<ParcelSearchRow>[] = [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        id: 'sender',
+        header: 'Sender',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.senderName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.senderPhone, row.original.senderPhone2)}
+            </p>
+          </div>
+        ),
+      },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
+      { accessorKey: 'parcelContent', header: 'Parcel Content' },
       {
         id: 'receiver',
         header: 'Receiver',
-        accessorFn: (row) =>
-          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'source',
+        header: 'Source',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.sourceLocationName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.sourceName ?? '-'}</p>
+          </div>
+        ),
+      },
+      {
+        id: 'destination',
+        header: 'Destination',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.destinationName ?? '-'}</p>
+          </div>
+        ),
       },
       {
         id: 'charge',
         header: 'Charge',
         accessorFn: (row) => formatCurrency(row.chargePsw),
       },
-      {
-        id: 'holder',
-        header: 'Current Holder',
-        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
-      },
     ];
 
     if (isPickupQueueEnabled) {
       baseColumns.push({
         id: 'pickupQueue',
-        header: 'Queue',
-        accessorFn: (row) =>
-          row.pickupQueueCode
-            ? `${row.pickupQueueCode}${row.pickupQueuedAt ? ` • ${formatDateTime(row.pickupQueuedAt)}` : ''}`
-            : 'Not queued',
+        header: 'Queue Code',
+        accessorFn: (row) => row.pickupQueueCode ?? '-',
       });
     }
 
@@ -358,7 +412,9 @@ export function ParcelWaitingPickupPage() {
           <CardHeader>
             <CardTitle>Waiting for Pickup</CardTitle>
             <CardDescription>
-              Sender-paid parcels awaiting office pickup and identity verification.
+              {isPickupQueueEnabled
+                ? 'Sender-paid parcels awaiting office pickup and identity verification.'
+                : 'Search for a sender-paid parcel to process pickup at this branch.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -370,12 +426,14 @@ export function ParcelWaitingPickupPage() {
                 setQuery((prev) => ({
                   ...prev,
                   page: 1,
+                  sort: [{ field: 'pickupQueueNumber', direction: 'asc' }],
                   search: term.length > 0 ? term : undefined,
                   filters: {
                     companyId,
                     destinationId: branchId,
                     status: ParcelStatus.AWAITING_PICKUP,
                     senderPaid: true,
+                    hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, term),
                   },
                 }));
               }}
@@ -400,17 +458,23 @@ export function ParcelWaitingPickupPage() {
                 destinationId: branchId,
                 status: ParcelStatus.AWAITING_PICKUP,
                 senderPaid: true,
+                hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, query.search),
               }}
               onRequestChange={(next) =>
                 setQuery((prev) => ({
                   ...prev,
                   ...next,
                   search: prev.search,
+                  sort:
+                    isPickupQueueEnabled && !prev.search?.trim()
+                      ? [{ field: 'pickupQueueNumber', direction: 'asc' }]
+                      : next.sort,
                   filters: {
                     companyId,
                     destinationId: branchId,
                     status: ParcelStatus.AWAITING_PICKUP,
                     senderPaid: true,
+                    hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, prev.search),
                   },
                 }))
               }
@@ -447,12 +511,6 @@ export function ParcelWaitingPickupPage() {
                 <p>
                   <strong>Content:</strong> {selectedParcel.parcelContent}
                 </p>
-                <div className="flex items-center gap-2">
-                  <strong>Current Holder:</strong>
-                  <ParcelInternalHolderBadge
-                    holder={parcelDetails?.internalHolder ?? selectedParcel}
-                  />
-                </div>
               </div>
 
               <div className="space-y-2">

@@ -71,6 +71,11 @@ function paymentMethodLabel(method: number) {
   return typeof label === 'string' ? label : String(method);
 }
 
+function formatPhones(primary?: string | null, secondary?: string | null) {
+  const phones = [primary, secondary].filter((value): value is string => Boolean(value?.trim()));
+  return phones.length ? phones.join(', ') : '-';
+}
+
 export function ParcelInTransitPage({ view }: { view: InTransitView }) {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
@@ -193,46 +198,66 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       { accessorKey: 'parcelContent', header: 'Parcel Content' },
       {
         id: 'sender',
         header: 'Sender',
-        accessorFn: (row) =>
-          `${row.senderName ?? '-'}${row.senderPhone ? ` (${row.senderPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.senderName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.senderPhone, row.original.senderPhone2)}
+            </p>
+          </div>
+        ),
       },
       {
         id: 'receiver',
         header: 'Receiver',
-        accessorFn: (row) =>
-          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+            <p className="text-muted-foreground text-xs">
+              {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
+            </p>
+          </div>
+        ),
       },
       ...(view === 'incoming'
         ? ([
             {
               id: 'source',
-              header: 'Source Branch',
-              accessorFn: (row: ParcelSearchRow) => branchNameById.get(row.sourceId) ?? '-',
+              header: 'Source',
+              cell: ({ row }: { row: { original: ParcelSearchRow } }) => (
+                <div className="leading-tight">
+                  <p className="font-medium">{row.original.sourceLocationName ?? '-'}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {row.original.sourceName ?? branchNameById.get(row.original.sourceId) ?? '-'}
+                  </p>
+                </div>
+              ),
             },
           ] satisfies ColumnDef<ParcelSearchRow>[])
         : ([
             {
               id: 'destination',
-              header: 'Destination Branch',
-              accessorFn: (row: ParcelSearchRow) => branchNameById.get(row.destinationId) ?? '-',
+              header: 'Destination',
+              cell: ({ row }: { row: { original: ParcelSearchRow } }) => (
+                <div className="leading-tight">
+                  <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {branchNameById.get(row.original.destinationId) ?? '-'}
+                  </p>
+                </div>
+              ),
             },
           ] satisfies ColumnDef<ParcelSearchRow>[])),
       {
         id: 'consignment',
         header: 'Consignment',
         accessorFn: (row) => formatConsignmentLabel(row.consignmentSerialForDay),
-      },
-      {
-        id: 'holder',
-        header: 'Current Holder',
-        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
       },
       {
         id: 'actions',
@@ -286,6 +311,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
                     onClick={async () => {
                       try {
                         await handleMarkAsArrived(parcel);
+                        await refetch();
                       } catch (error) {
                         toast.error(
                           error instanceof Error ? error.message : 'Failed to update parcel status',

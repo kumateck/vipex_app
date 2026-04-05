@@ -113,6 +113,7 @@ export function ParcelProcessedConsignmentPage() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const userBranchId = user?.branch?.id ?? null;
+  const userLocationId = user?.location?.id ?? user?.locationId ?? null;
   const isHeadOffice = user?.branch?.type === BranchType.HEADOFFICE;
   const userId = user?.id ?? null;
   const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>(ALL_VALUE);
@@ -163,6 +164,7 @@ export function ParcelProcessedConsignmentPage() {
   const [editingParcel, setEditingParcel] = useState<ProcessedParcel | null>(null);
   const [reprintData, setReprintData] = useState<ReceiptPrintData | null>(null);
   const [editDestinationId, setEditDestinationId] = useState<string>('');
+  const [editSourceLocationId, setEditSourceLocationId] = useState<string>('');
   const [editPickupLocationId, setEditPickupLocationId] = useState<string>('');
   const [editSenderPhone, setEditSenderPhone] = useState('');
   const [editSenderPhone2, setEditSenderPhone2] = useState('');
@@ -189,6 +191,13 @@ export function ParcelProcessedConsignmentPage() {
       branchId: editDestinationId || null,
     },
     { skip: !companyId || !editDestinationId },
+  );
+  const { data: sourceLocationOptions = [] } = useListLocationOptionsQuery(
+    {
+      companyId,
+      branchId: appliedSourceId,
+    },
+    { skip: !companyId || !appliedSourceId },
   );
   const [createConsignment, { isLoading: isCreatingConsignment }] = useCreateConsignmentMutation();
   const [addConsignmentItems, { isLoading: isAddingItems }] = useAddConsignmentItemsMutation();
@@ -312,8 +321,10 @@ export function ParcelProcessedConsignmentPage() {
           );
         },
       },
-      { accessorKey: 'trackingCode', header: 'Tracking' },
+
       { accessorKey: 'bookingCode', header: 'Booking' },
+      { accessorKey: 'parcelDetails', header: 'Parcel Details' },
+      { accessorKey: 'parcelContent', header: 'Parcel Content' },
       {
         id: 'sender',
         header: 'Sender',
@@ -384,6 +395,7 @@ export function ParcelProcessedConsignmentPage() {
                   const parcel = row.original;
                   setEditingParcel(parcel);
                   setEditDestinationId(parcel.destinationId);
+                  setEditSourceLocationId(parcel.sourceLocationId ?? userLocationId ?? '');
                   setEditPickupLocationId(parcel.pickupLocationId ?? '');
                   setEditSenderPhone(parcel.senderPhone ?? '');
                   setEditSenderPhone2(parcel.senderPhone2 ?? '');
@@ -531,6 +543,7 @@ export function ParcelProcessedConsignmentPage() {
         updateParcel({
           id: editingParcel.id,
           destinationId: editDestinationId,
+          sourceLocationId: editSourceLocationId || null,
           pickupLocationId: editPickupLocationId || null,
         }).unwrap(),
         updateCustomer({
@@ -753,6 +766,22 @@ export function ParcelProcessedConsignmentPage() {
           </DialogHeader>
 
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-source-location">Source Location</Label>
+              <Select value={editSourceLocationId} onValueChange={setEditSourceLocationId}>
+                <SelectTrigger id="edit-source-location">
+                  <SelectValue placeholder="Select source location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sourceLocationOptions.map((location) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="edit-destination-branch">Destination Branch</Label>
               <Select value={editDestinationId} onValueChange={handleEditDestinationChange}>
