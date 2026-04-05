@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      DEPLOY_MINIO_ENDPOINT: ${{ secrets.DEPLOY_MINIO_ENDPOINT }}
       MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
       MINIO_REGION: ${{ secrets.MINIO_REGION }}
       MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
@@ -162,7 +163,7 @@ jobs:
           retention-days: 14
 
       - name: Configure AWS CLI for MinIO
-        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        if: ${{ (env.DEPLOY_MINIO_ENDPOINT != '' || env.MINIO_ENDPOINT != '') && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
         run: |
           mkdir -p ~/.aws
           cat <<EOF > ~/.aws/credentials
@@ -177,11 +178,12 @@ jobs:
           EOF
 
       - name: Mirror APK to MinIO (optional)
-        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        if: ${{ (env.DEPLOY_MINIO_ENDPOINT != '' || env.MINIO_ENDPOINT != '') && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
         env:
           VERSION: ${{ steps.mobile_version.outputs.version }}
         run: |
           set -euo pipefail
+          UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
           PREFIX="${MOBILE_MINIO_PREFIX:-mobile/android}"
           LATEST_PREFIX="${PREFIX}/latest"
           VERSION_PREFIX="${PREFIX}/v${VERSION}"
@@ -194,12 +196,12 @@ jobs:
 
           for file in "${APK_FILES[@]}"; do
             base=$(basename "${file}")
-            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+            aws --endpoint-url "${UPLOAD_MINIO_ENDPOINT}" s3api put-object \
               --bucket "${MINIO_BUCKET}" \
               --key "${LATEST_PREFIX}/${base}" \
               --body "${file}" >/dev/null
 
-            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+            aws --endpoint-url "${UPLOAD_MINIO_ENDPOINT}" s3api put-object \
               --bucket "${MINIO_BUCKET}" \
               --key "${VERSION_PREFIX}/${base}" \
               --body "${file}" >/dev/null
@@ -213,9 +215,10 @@ jobs:
             echo "Native Gradle APK build completed."
           fi
           echo "APK artifact uploaded to GitHub artifacts."
-          if [ -n "${MINIO_ENDPOINT}" ] && [ -n "${MINIO_BUCKET}" ]; then
+          if [ -n "${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}" ] && [ -n "${MINIO_BUCKET}" ]; then
             PREFIX="${MOBILE_MINIO_PREFIX:-mobile/android}"
-            echo "MinIO mirror base: ${MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/"
+            UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
+            echo "MinIO mirror base: ${UPLOAD_MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/"
           fi
 
   build-ios:
@@ -224,6 +227,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      DEPLOY_MINIO_ENDPOINT: ${{ secrets.DEPLOY_MINIO_ENDPOINT }}
       MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
       MINIO_REGION: ${{ secrets.MINIO_REGION }}
       MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
@@ -317,7 +321,7 @@ jobs:
           retention-days: 14
 
       - name: Configure AWS CLI for MinIO
-        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        if: ${{ (env.DEPLOY_MINIO_ENDPOINT != '' || env.MINIO_ENDPOINT != '') && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
         run: |
           mkdir -p ~/.aws
           cat <<EOF > ~/.aws/credentials
@@ -332,11 +336,12 @@ jobs:
           EOF
 
       - name: Mirror iOS artifact to MinIO (optional)
-        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        if: ${{ (env.DEPLOY_MINIO_ENDPOINT != '' || env.MINIO_ENDPOINT != '') && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
         env:
           VERSION: ${{ steps.mobile_version.outputs.version }}
         run: |
           set -euo pipefail
+          UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
           PREFIX="${MOBILE_MINIO_PREFIX:-mobile/ios}"
           LATEST_PREFIX="${PREFIX}/latest"
           VERSION_PREFIX="${PREFIX}/v${VERSION}"
@@ -349,12 +354,12 @@ jobs:
 
           for file in "${FILES[@]}"; do
             base=$(basename "${file}")
-            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+            aws --endpoint-url "${UPLOAD_MINIO_ENDPOINT}" s3api put-object \
               --bucket "${MINIO_BUCKET}" \
               --key "${LATEST_PREFIX}/${base}" \
               --body "${file}" >/dev/null
 
-            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+            aws --endpoint-url "${UPLOAD_MINIO_ENDPOINT}" s3api put-object \
               --bucket "${MINIO_BUCKET}" \
               --key "${VERSION_PREFIX}/${base}" \
               --body "${file}" >/dev/null
@@ -363,7 +368,8 @@ jobs:
       - name: Distribution summary
         run: |
           echo "iOS artifact uploaded to GitHub artifacts."
-          if [ -n "${MINIO_ENDPOINT}" ] && [ -n "${MINIO_BUCKET}" ]; then
+          if [ -n "${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}" ] && [ -n "${MINIO_BUCKET}" ]; then
             PREFIX="${MOBILE_MINIO_PREFIX:-mobile/ios}"
-            echo "MinIO mirror base: ${MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/"
+            UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
+            echo "MinIO mirror base: ${UPLOAD_MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/"
           fi
