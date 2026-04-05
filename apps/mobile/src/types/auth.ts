@@ -1,6 +1,7 @@
 export type AuthUser = {
   sub: string;
   email: string;
+  userType?: number | null;
   fullname?: string | null;
   branchId?: string | null;
   companyId?: string | null;

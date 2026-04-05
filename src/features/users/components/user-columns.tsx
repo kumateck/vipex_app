@@ -22,7 +22,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import type { User } from '../types/user.types';
-import { USER_TYPE_LABELS } from '@/shared/access/constants';
+import { CASHIER_TYPE_LABELS, USER_TYPE_LABELS } from '@/shared/access/constants';
+import { UserType } from '@/db/schemas/enums';
 
 const USER_STATUS_LABELS: Record<number, string> = {
   0: 'Active',
@@ -54,6 +55,16 @@ export function createUserColumns(options?: {
       accessorFn: (row) => USER_TYPE_LABELS[row.userType] ?? row.userType,
       id: 'userType',
       header: 'User type',
+    },
+    {
+      accessorFn: (row) =>
+        row.userType === UserType.CASHIER &&
+        row.cashierType !== null &&
+        row.cashierType !== undefined
+          ? (CASHIER_TYPE_LABELS[row.cashierType] ?? String(row.cashierType))
+          : '-',
+      id: 'cashierType',
+      header: 'Cashier type',
     },
     { accessorFn: (row) => row.branchName ?? 'Unknown branch', id: 'branchName', header: 'Branch' },
     { accessorFn: (row) => row.locationName ?? '-', id: 'locationName', header: 'Location' },

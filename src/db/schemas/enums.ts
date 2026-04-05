@@ -9,9 +9,10 @@ export enum Payer {
 }
 
 export enum CashierType {
-  SENDING = 0,
-  TOBEPAID = 1,
-  DELIVERY = 2,
+  SENDING = 0, // SENDER pays at cashier for sending a parcel
+  TOBEPAID = 1, // RECIPIENT pays at cashier when picking up a parcel (if sender chose recipient to pay)
+  DELIVERY = 2, // RECIPIENT pays at cashier for home delivery (if sender chose recipient to pay and requested home delivery)
+  FULL = 3, // Cashier that does both sending and receiving payments (e.g. for walk-in customers or when payer type is not specified)
 }
 
 export enum PaymentMethod {
@@ -66,6 +67,7 @@ export enum UserType {
   CASHIER = 1,
   RIDER = 2,
 }
+
 export enum Gender {
   MALE = 0,
   FEMALE = 1,

@@ -156,7 +156,7 @@ export function RolesPageContent() {
   );
 
   return (
-    <div className="w-full p-4 space-y-4">
+    <div className="w-full h-full min-h-0 overflow-y-auto p-4 space-y-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Roles</CardTitle>

@@ -1,4 +1,4 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RefreshControl, ScrollView, StyleSheet, View, type ViewProps } from 'react-native';
 import type { PropsWithChildren } from 'react';
 import { useAppearance } from '@mobile/providers/appearance-provider';
@@ -19,13 +19,17 @@ export function AppScreen({
   ...rest
 }: AppScreenProps) {
   const { theme } = useAppearance();
+  const insets = useSafeAreaInsets();
   const content = (
-    <View style={[styles.container, style]} {...rest}>
+    <View
+      style={[styles.container, { paddingBottom: mobileSpacing.xl + insets.bottom }, style]}
+      {...rest}
+    >
       {children}
     </View>
   );
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.bg }]}>
+    <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: theme.colors.bg }]}>
       {scrollable ? (
         <ScrollView
           contentContainerStyle={styles.content}

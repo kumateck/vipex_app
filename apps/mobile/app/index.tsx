@@ -22,5 +22,5 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={session.accessToken ? '/(app)' : '/(auth)/login'} />;
+  return <Redirect href={session.accessToken ? '/(app)/(tabs)' : '/(auth)/login'} />;
 }

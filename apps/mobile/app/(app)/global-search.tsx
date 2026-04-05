@@ -16,7 +16,7 @@ import { loadGlobalSearchHistory, pushGlobalSearchHistory } from '@mobile/lib/co
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 type SearchResults = {
-  parcels: Array<{ id: string; trackingCode: string; bookingCode: string; parcelDetails: string }>;
+  parcels: Array<{ id: string; bookingCode: string; parcelDetails: string }>;
   threads: Array<{ id: string; title: string | null }>;
   channels: Array<{ id: string; name: string; channelType: string; threadId: string | null }>;
   users: Array<{ id: string; fullname: string; email: string }>;
@@ -71,7 +71,6 @@ export default function GlobalSearchScreen() {
         return {
           parcels: (parcelRes.data ?? []).map((row) => ({
             id: row.id,
-            trackingCode: row.trackingCode,
             bookingCode: row.bookingCode,
             parcelDetails: row.parcelDetails,
           })),
@@ -110,7 +109,7 @@ export default function GlobalSearchScreen() {
         <AppInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search anything..."
+          placeholder="Search..."
           autoCapitalize="none"
         />
         <View style={styles.row}>
@@ -166,11 +165,9 @@ export default function GlobalSearchScreen() {
             style={[styles.resultRow, { borderColor: theme.colors.border }]}
           >
             <Text style={{ color: theme.colors.text, fontWeight: '700' }}>
-              Parcel • {item.trackingCode}
+              Parcel • {item.bookingCode}
             </Text>
-            <Text style={{ color: theme.colors.textMuted }}>
-              {item.bookingCode} • {item.parcelDetails}
-            </Text>
+            <Text style={{ color: theme.colors.textMuted }}>{item.parcelDetails}</Text>
           </Pressable>
         ))}
         {results.channels.map((item) => (

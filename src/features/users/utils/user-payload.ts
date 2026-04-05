@@ -1,4 +1,5 @@
 import type { UserCreatePayload, UserMutationInput } from '../types/user.types';
+import { UserType } from '@/db/schemas/enums';
 
 function toOptionalString(value?: string | null) {
   const trimmed = String(value ?? '').trim();
@@ -6,6 +7,8 @@ function toOptionalString(value?: string | null) {
 }
 
 export function toCreateUserPayload(input: UserMutationInput): UserCreatePayload {
+  const cashierType = input.userType === UserType.CASHIER ? (input.cashierType ?? null) : null;
+
   return {
     fullname: input.fullname.trim(),
     telephone: input.telephone.trim(),
@@ -15,11 +18,14 @@ export function toCreateUserPayload(input: UserMutationInput): UserCreatePayload
     branchId: input.branchId.trim(),
     locationId: toOptionalString(input.locationId),
     userType: input.userType,
+    cashierType,
     sendInvite: input.sendInvite ?? true,
   };
 }
 
 export function toUpdateUserPayload(input: UserMutationInput): UserMutationInput {
+  const cashierType = input.userType === UserType.CASHIER ? (input.cashierType ?? null) : null;
+
   return {
     fullname: input.fullname.trim(),
     telephone: input.telephone.trim(),
@@ -29,5 +35,6 @@ export function toUpdateUserPayload(input: UserMutationInput): UserMutationInput
     branchId: input.branchId.trim(),
     locationId: toOptionalString(input.locationId),
     userType: input.userType,
+    cashierType,
   };
 }

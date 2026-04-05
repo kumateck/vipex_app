@@ -3,7 +3,10 @@ import { AuthenticatedLayout } from '@/components/layouts/auth';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useBreadcrumbSync } from '@/hooks/useBreadcrumbSync';
 import { useEffect, useMemo } from 'react';
-import { useGetCurrentUserPermissionsQuery } from '@/features/auth/api';
+import {
+  useGetCurrentUserPermissionsQuery,
+  useGetCurrentUserProfileQuery,
+} from '@/features/auth/api';
 import { useListCompanyModulesQuery } from '@/features/company-modules/api';
 import { useAuthStore } from '@/stores/auth-store';
 import NoAccess from '@/components/permissions/no-access';
@@ -35,6 +38,9 @@ const MainLayout = () => {
   const { data, isFetching } = useGetCurrentUserPermissionsQuery(undefined, {
     skip: !isAuthenticated,
   });
+  const { data: currentProfile } = useGetCurrentUserProfileQuery(undefined, {
+    skip: !isAuthenticated,
+  });
   const { data: companyModules, isFetching: isFetchingModules } = useListCompanyModulesQuery(
     undefined,
     {
@@ -55,6 +61,25 @@ const MainLayout = () => {
     if (!data?.permissions) return;
     updateUser({ permissions: data.permissions });
   }, [data, updateUser]);
+
+  useEffect(() => {
+    if (!currentProfile) return;
+
+    updateUser({
+      fullname: currentProfile.fullname,
+      email: currentProfile.email,
+      telephone: currentProfile.telephone,
+      employeeId: currentProfile.employeeId,
+      role: currentProfile.role,
+      branch: currentProfile.branch,
+      company: currentProfile.company,
+      location: currentProfile.location,
+      locationId: currentProfile.locationId ?? undefined,
+      locationName: currentProfile.locationName ?? undefined,
+      userType: currentProfile.userType ?? undefined,
+      cashierType: currentProfile.cashierType,
+    });
+  }, [currentProfile, updateUser]);
 
   useEffect(() => {
     const modules = normalizeModuleRows(companyModules);

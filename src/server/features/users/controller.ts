@@ -1,6 +1,6 @@
 import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
-import { UserType } from '@/db/schemas/enums';
+import { UserType, type CashierType } from '@/db/schemas/enums';
 import {
   createUserSvc,
   getUserSvc,
@@ -22,6 +22,7 @@ function toUserDto(u: {
   locationId?: string | null;
   locationName?: string | null;
   userType?: number | null;
+  cashierType?: CashierType | null;
   createdBy: string;
   createdAt: Date | string | null;
   updatedAt: Date | string | null;
@@ -41,6 +42,7 @@ function toUserDto(u: {
     locationId: u.locationId ?? null,
     locationName: u.locationName ?? null,
     userType: u.userType ?? UserType.STAFF,
+    cashierType: (u.cashierType as CashierType | null | undefined) ?? null,
     createdBy: u.createdBy,
     createdAt:
       u.createdAt && typeof u.createdAt !== 'string'
@@ -125,6 +127,7 @@ export async function createUserCtrl(input: {
   branchId: string;
   locationId?: string | null;
   userType: number;
+  cashierType?: CashierType | null;
   createdBy: string;
   actor: {
     companyId?: string | null;
@@ -147,6 +150,7 @@ export async function updateUserCtrl(
     branchId?: string;
     locationId?: string | null;
     userType?: number;
+    cashierType?: CashierType | null;
   },
 ) {
   return updateUserSvc(id, patch);
