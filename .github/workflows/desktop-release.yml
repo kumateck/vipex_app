@@ -55,6 +55,7 @@ jobs:
       run:
         shell: bash
     env:
+      DEPLOY_MINIO_ENDPOINT: ${{ secrets.DEPLOY_MINIO_ENDPOINT }}
       MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
       MINIO_REGION: ${{ secrets.MINIO_REGION }}
       MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
@@ -95,7 +96,7 @@ jobs:
           retention-days: 14
 
       - name: Configure AWS CLI for MinIO
-        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        if: ${{ (env.DEPLOY_MINIO_ENDPOINT != '' || env.MINIO_ENDPOINT != '') && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
         run: |
           mkdir -p ~/.aws
           cat <<EOF > ~/.aws/credentials
@@ -110,11 +111,12 @@ jobs:
           EOF
 
       - name: Mirror macOS build to MinIO (optional)
-        if: ${{ env.MINIO_ENDPOINT != '' && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+        if: ${{ (env.DEPLOY_MINIO_ENDPOINT != '' || env.MINIO_ENDPOINT != '') && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
         env:
           VERSION: ${{ steps.desktop_version.outputs.version }}
         run: |
           set -euo pipefail
+          UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
           PREFIX="${DESKTOP_MINIO_PREFIX:-desktop/macos}"
           LATEST_PREFIX="${PREFIX}/latest"
           VERSION_PREFIX="${PREFIX}/v${VERSION}"
@@ -128,12 +130,12 @@ jobs:
           while IFS= read -r file; do
             [ -z "${file}" ] && continue
             base=$(basename "${file}")
-            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+            aws --endpoint-url "${UPLOAD_MINIO_ENDPOINT}" s3api put-object \
               --bucket "${MINIO_BUCKET}" \
               --key "${LATEST_PREFIX}/${base}" \
               --body "${file}" >/dev/null
 
-            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+            aws --endpoint-url "${UPLOAD_MINIO_ENDPOINT}" s3api put-object \
               --bucket "${MINIO_BUCKET}" \
               --key "${VERSION_PREFIX}/${base}" \
               --body "${file}" >/dev/null
@@ -144,9 +146,10 @@ jobs:
       - name: Distribution summary
         run: |
           echo "macOS artifact uploaded to GitHub Actions artifacts."
-          if [ -n "${MINIO_ENDPOINT}" ] && [ -n "${MINIO_BUCKET}" ]; then
+          if [ -n "${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}" ] && [ -n "${MINIO_BUCKET}" ]; then
             PREFIX="${DESKTOP_MINIO_PREFIX:-desktop/macos}"
-            echo "MinIO mirror base: ${MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/"
+            UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
+            echo "MinIO mirror base: ${UPLOAD_MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/"
           fi
 
   publish-windows-feed:
@@ -154,6 +157,7 @@ jobs:
     needs: build-windows-desktop
     runs-on: ubuntu-latest
     env:
+      DEPLOY_MINIO_ENDPOINT: ${{ secrets.DEPLOY_MINIO_ENDPOINT }}
       MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
       MINIO_REGION: ${{ secrets.MINIO_REGION }}
       MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
@@ -170,7 +174,8 @@ jobs:
       - name: Validate MinIO secrets
         run: |
           set -euo pipefail
-          : "${MINIO_ENDPOINT:?MINIO_ENDPOINT secret is required}"
+          UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
+          : "${UPLOAD_MINIO_ENDPOINT:?DEPLOY_MINIO_ENDPOINT (or MINIO_ENDPOINT fallback) secret is required}"
           : "${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY secret is required}"
           : "${MINIO_SECRET_KEY:?MINIO_SECRET_KEY secret is required}"
           : "${MINIO_BUCKET:?MINIO_BUCKET secret is required}"
@@ -222,6 +227,7 @@ jobs:
           VERSION: ${{ steps.desktop_version.outputs.version }}
         run: |
           set -euo pipefail
+          UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
           PREFIX="${DESKTOP_MINIO_PREFIX:-desktop/windows}"
           LATEST_PREFIX="${PREFIX}/latest"
           VERSION_PREFIX="${PREFIX}/v${VERSION}"
@@ -240,12 +246,12 @@ jobs:
           # compatibility issues seen with some MinIO setups.
           for file in "${FILES[@]}"; do
             base=$(basename "${file}")
-            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+            aws --endpoint-url "${UPLOAD_MINIO_ENDPOINT}" s3api put-object \
               --bucket "${MINIO_BUCKET}" \
               --key "${LATEST_PREFIX}/${base}" \
               --body "${file}" >/dev/null
 
-            aws --endpoint-url "${MINIO_ENDPOINT}" s3api put-object \
+            aws --endpoint-url "${UPLOAD_MINIO_ENDPOINT}" s3api put-object \
               --bucket "${MINIO_BUCKET}" \
               --key "${VERSION_PREFIX}/${base}" \
               --body "${file}" >/dev/null
@@ -253,6 +259,7 @@ jobs:
 
       - name: Feed URL hint
         run: |
+          UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
           PREFIX="${DESKTOP_MINIO_PREFIX:-desktop/windows}"
           echo "Set DESKTOP_UPDATE_FEED_URL in desktop runtime to:"
-          echo "${MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/latest/"
+          echo "${UPLOAD_MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/latest/"
