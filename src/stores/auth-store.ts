@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { BranchType, UserType } from '@/shared/access/constants';
+import type { BranchType, CashierType, UserType } from '@/shared/access/constants';
 
 export interface AuthUser {
   id: string;
@@ -18,6 +18,7 @@ export interface AuthUser {
   role: { id: string; name: string } | null;
   permissions: string[];
   userType?: UserType;
+  cashierType: CashierType | null;
   location?: { id: string; name: string } | null;
   locationId?: string;
   locationName?: string;
@@ -41,7 +42,15 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       setAuth: ({ user, accessToken, refreshToken }) =>
-        set({ user, accessToken, refreshToken, isAuthenticated: true }),
+        set({
+          user: {
+            ...user,
+            cashierType: user.cashierType ?? null,
+          },
+          accessToken,
+          refreshToken,
+          isAuthenticated: true,
+        }),
       updateUser: (patch) =>
         set((state) => (state.user ? { user: { ...state.user, ...patch } } : state)),
       logout: () =>

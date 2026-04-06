@@ -125,6 +125,8 @@ export type ParcelSearchRow = {
   secondReceiverPhone2?: string | null;
   dropoffAddress?: string | null;
   deliveryFeePsw?: number | null;
+  riderUserId?: string | null;
+  riderName?: string | null;
   pickupQueueId?: string | null;
   pickupQueueCode?: string | null;
   pickupQueueNumber?: number | null;
@@ -158,6 +160,37 @@ export type ParcelDiscrepancyRow = {
   destinationLocationName: string | null;
   senderName: string | null;
   receiverName: string | null;
+};
+
+export type ParcelReconciliationCaseRow = {
+  id: string;
+  companyId: string;
+  parcelId: string;
+  linkedParcelId: string | null;
+  caseType: number;
+  actionType: number | null;
+  status: number;
+  notes: string | null;
+  resolutionNote: string | null;
+  evidenceUrl: string | null;
+  requestedBy: string;
+  requestedByName: string | null;
+  requestedAt: string;
+  approvedBy: string | null;
+  approvedByName: string | null;
+  approvedAt: string | null;
+  executedBy: string | null;
+  executedByName: string | null;
+  executedAt: string | null;
+  voidedPaymentCount: number;
+  metadata: unknown;
+  trackingCode: string;
+  bookingCode: string;
+  parcelStatus: number;
+  sourceId: string;
+  destinationId: string;
+  linkedTrackingCode: string | null;
+  linkedBookingCode: string | null;
 };
 
 export type ParcelInternalHolderSnapshot = {
@@ -746,6 +779,69 @@ export const parcelApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    listParcelReconciliationCases: builder.query<
+      ServerListResponse<ParcelReconciliationCaseRow>,
+      ServerListQuery<{
+        companyId?: string | null;
+        branchId?: string | null;
+        statuses?: number[] | null;
+      }>
+    >({
+      query: (query) => {
+        const { page, pageSize, search, filters } = query;
+        return {
+          url: '/shipments/parcels/reconciliation-cases',
+          params: buildServerPaginationParams({ page, pageSize, search, filters }),
+        };
+      },
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    requestParcelReconciliationCase: builder.mutation<
+      { id: string },
+      {
+        parcelId: string;
+        linkedParcelId?: string | null;
+        caseType: number;
+        actionType?: number | null;
+        notes: string;
+        evidenceUrl?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcels/reconciliation-cases/request',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    approveParcelReconciliationCase: builder.mutation<
+      { id: string },
+      { id: string; actionType: number; resolutionNote?: string | null }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/reconciliation-cases/${id}/approve`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    executeParcelReconciliationCase: builder.mutation<
+      {
+        id: string;
+        actionType: number;
+        touchedParcelIds: string[];
+        voidedPayments: number;
+        consignmentItemsUnlinked: number;
+      },
+      { id: string; executionNote?: string | null }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/reconciliation-cases/${id}/execute`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
     collectDoorstepAddress: builder.mutation<
       { id: string },
       {
@@ -953,6 +1049,10 @@ export const {
   useLogParcelDiscrepancyMutation,
   useListOpenParcelDiscrepanciesQuery,
   useResolveParcelDiscrepancyMutation,
+  useListParcelReconciliationCasesQuery,
+  useRequestParcelReconciliationCaseMutation,
+  useApproveParcelReconciliationCaseMutation,
+  useExecuteParcelReconciliationCaseMutation,
   useCollectDoorstepAddressMutation,
   useDispatchDoorstepParcelsMutation,
   useListRiderDoorstepParcelsQuery,

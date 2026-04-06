@@ -191,6 +191,7 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
         locationId: t.Union([t.String(), t.Null()]),
         locationName: t.Union([t.String(), t.Null()]),
         userType: t.Union([t.Number(), t.Null()]),
+        cashierType: t.Union([t.Number(), t.Null()]),
       }),
       beforeHandle: requireAuth(),
       detail: {

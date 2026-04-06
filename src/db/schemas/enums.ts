@@ -9,9 +9,10 @@ export enum Payer {
 }
 
 export enum CashierType {
-  SENDING = 0,
-  TOBEPAID = 1,
-  DELIVERY = 2,
+  SENDING = 0, // SENDER pays at cashier for sending a parcel
+  TOBEPAID = 1, // RECIPIENT pays at cashier when picking up a parcel (if sender chose recipient to pay)
+  DELIVERY = 2, // RECIPIENT pays at cashier for home delivery (if sender chose recipient to pay and requested home delivery)
+  FULL = 3, // Cashier that does both sending and receiving payments (e.g. for walk-in customers or when payer type is not specified)
 }
 
 export enum PaymentMethod {
@@ -66,6 +67,7 @@ export enum UserType {
   CASHIER = 1,
   RIDER = 2,
 }
+
 export enum Gender {
   MALE = 0,
   FEMALE = 1,
@@ -301,6 +303,31 @@ export enum ParcelStatus {
   RETURNED_TO_SENDER = 13, // Parcel returned to sender/source
   CANCELLED = 14, // Parcel order cancelled
   DISCREPANCY = 15, // Parcel has a reported issue or discrepancy
+}
+
+export enum ParcelReconciliationCaseStatus {
+  REQUESTED = 0,
+  APPROVED = 1,
+  EXECUTED = 2,
+  REJECTED = 3,
+}
+
+export enum ParcelReconciliationCaseType {
+  SHORTAGE = 0,
+  OVERAGE = 1,
+  WRONG_AMOUNT = 2,
+  WRONG_PARCEL_TYPE = 3,
+  DUPLICATE_ENTRY = 4,
+  CUSTOMER_CANCELLATION_BEFORE_DELIVERY = 5,
+  DATA_ENTRY_ERROR = 6,
+}
+
+export enum ParcelReconciliationActionType {
+  VOID_AND_REFUND = 0,
+  VOID_AND_REBOOK = 1,
+  VOID_TO_SUSPENSE = 2,
+  KEEP_ORIGINAL_VOID_DUPLICATE = 3,
+  MERGE_TO_SINGLE = 4,
 }
 export enum DeliveryFeeBasis {
   DISTANCE = 0,

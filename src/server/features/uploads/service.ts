@@ -15,6 +15,7 @@ export const UPLOAD_MODEL_TYPES = [
   'employee-profile-image',
   'delivery-handover-signature',
   'it-support-ticket',
+  'parcel-reconciliation-evidence',
 ] as const;
 
 function normalizeModelSegment(value: string) {

@@ -3,10 +3,10 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   DrawerContentScrollView,
   DrawerItem,
-  DrawerItemList,
   type DrawerContentComponentProps,
 } from '@react-navigation/drawer';
 import { StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
@@ -14,6 +14,7 @@ import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/lay
 export function MobileDrawerContent(props: DrawerContentComponentProps) {
   const { theme } = useAppearance();
   const { session, logout } = useAuth();
+  const insets = useSafeAreaInsets();
   const user = session.user;
   const initials =
     (user?.fullname || user?.email || 'U')
@@ -63,50 +64,46 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSubtle }]}>Navigation</Text>
-          <DrawerItemList {...props} />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSubtle }]}>
-            Quick Actions
-          </Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSubtle }]}>Menu</Text>
           <DrawerItem
-            label="Open Super Search"
+            label="Profile"
+            labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+            icon={({ size, color }) => <Ionicons name="person-outline" size={size} color={color} />}
+            onPress={() => router.push('/profile')}
+            inactiveTintColor={theme.colors.text}
+          />
+          <DrawerItem
+            label="Change Password"
+            labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+            icon={({ size, color }) => <Ionicons name="key-outline" size={size} color={color} />}
+            onPress={() => router.push('/(app)/change-password' as never)}
+            inactiveTintColor={theme.colors.text}
+          />
+          <DrawerItem
+            label="Super Search"
             labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
             icon={({ size, color }) => <Ionicons name="search-outline" size={size} color={color} />}
             onPress={() => router.push('/(app)/super-search' as never)}
             inactiveTintColor={theme.colors.text}
           />
           <DrawerItem
-            label="Open Global Search"
-            labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
-            icon={({ size, color }) => (
-              <Ionicons name="search-circle-outline" size={size} color={color} />
-            )}
-            onPress={() => router.push('/(app)/global-search' as never)}
-            inactiveTintColor={theme.colors.text}
-          />
-          <DrawerItem
-            label="Open Communication"
+            label="Channels"
             labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
             icon={({ size, color }) => (
               <Ionicons name="chatbubbles-outline" size={size} color={color} />
             )}
-            onPress={() => router.push('/communication')}
-            inactiveTintColor={theme.colors.text}
-          />
-          <DrawerItem
-            label="Go to Profile"
-            labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
-            icon={({ size, color }) => <Ionicons name="person-outline" size={size} color={color} />}
-            onPress={() => router.push('/profile')}
+            onPress={() => router.push('/(app)/(tabs)/chat' as never)}
             inactiveTintColor={theme.colors.text}
           />
         </View>
       </DrawerContentScrollView>
 
-      <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>
+      <View
+        style={[
+          styles.footer,
+          { borderTopColor: theme.colors.border, paddingBottom: insets.bottom },
+        ]}
+      >
         <DrawerItem
           label="Logout"
           labelStyle={{ color: theme.colors.danger, fontWeight: '700' }}

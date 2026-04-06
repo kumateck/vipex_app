@@ -20,7 +20,12 @@ import { useListBranchOptionsQuery } from '@/features/branches';
 import { useListRoleOptionsQuery } from '@/features/rbac';
 import { useListLocationOptionsQuery } from '@/features/locations';
 import { sanitizeNumber, sanitizeString } from '@/lib/utils';
-import { USER_TYPE_LABELS, USER_TYPES } from '@/shared/access/constants';
+import {
+  CASHIER_TYPE_LABELS,
+  CASHIER_TYPES,
+  USER_TYPE_LABELS,
+  USER_TYPES,
+} from '@/shared/access/constants';
 import { BranchType, UserType } from '@/db/schemas/enums';
 import { userFormSchema, type UserFormValues } from '../schemas/user-form.schema';
 import type { User } from '../types/user.types';
@@ -83,12 +88,15 @@ export function UserForm({
       branchId: '',
       locationId: '',
       userType: UserType.STAFF,
+      cashierType: null,
     },
     mode: 'onSubmit',
   });
 
   const selectedBranchId = watch('branchId');
   const selectedLocationId = watch('locationId');
+  const selectedUserType = sanitizeNumber(watch('userType'));
+  const isCashierUserType = selectedUserType === UserType.CASHIER;
   const effectiveBranchId = selectedBranchId || actorBranchId || '';
   const {
     currentData: locationOptions = [],
@@ -182,7 +190,7 @@ export function UserForm({
       label: USER_TYPE_LABELS[type],
     }));
 
-    const currentUserType = initialData?.userType;
+    const currentUserType = sanitizeNumber(initialData?.userType);
     if (
       mode === 'edit' &&
       currentUserType !== null &&
@@ -197,6 +205,28 @@ export function UserForm({
 
     return options;
   }, [initialData?.userType, mode]);
+
+  const cashierTypeOptions = useMemo(() => {
+    const options = CASHIER_TYPES.map((type) => ({
+      value: type,
+      label: CASHIER_TYPE_LABELS[type],
+    }));
+
+    const currentCashierType = initialData?.cashierType;
+    if (
+      mode === 'edit' &&
+      currentCashierType !== null &&
+      currentCashierType !== undefined &&
+      !CASHIER_TYPES.includes(currentCashierType)
+    ) {
+      options.push({
+        value: currentCashierType,
+        label: `Unknown (${currentCashierType})`,
+      });
+    }
+
+    return options;
+  }, [initialData?.cashierType, mode]);
 
   // FIX: Keyed on initialData?.id (stable identifier) + isLoadingOptions so this effect:
   //  - Re-runs immediately when switching between users (id changes, options already cached)
@@ -215,7 +245,11 @@ export function UserForm({
         roleId: sanitizeString(initialData.roleId),
         branchId: sanitizeString(initialData.branchId),
         locationId: sanitizeString(initialData.locationId),
-        userType: sanitizeNumber(initialData.userType ?? UserType.STAFF),
+        userType: sanitizeNumber(initialData.userType),
+        cashierType:
+          initialData.cashierType !== null && initialData.cashierType !== undefined
+            ? sanitizeNumber(initialData.cashierType)
+            : null,
       });
       return;
     }
@@ -230,6 +264,7 @@ export function UserForm({
       branchId: isHeadOfficeActor ? '' : (actorBranchId ?? ''),
       locationId: isLocationManagerActor ? (actorLocationId ?? '') : '',
       userType: UserType.STAFF,
+      cashierType: null,
     });
   }, [
     actorBranchId,
@@ -241,6 +276,11 @@ export function UserForm({
     mode,
     reset,
   ]);
+
+  useEffect(() => {
+    if (selectedUserType === UserType.CASHIER) return;
+    setValue('cashierType', null, { shouldValidate: false, shouldDirty: true });
+  }, [selectedUserType, setValue]);
 
   useEffect(() => {
     if (mode !== 'create') return;
@@ -422,24 +462,49 @@ export function UserForm({
                   control={control}
                   name="userType"
                   render={({ field }) => (
-                    <Select
+                    <SearchableSelect
                       value={sanitizeString(field.value)}
                       onValueChange={(value) => field.onChange(sanitizeNumber(value))}
-                    >
-                      <SelectTrigger id="userType" aria-invalid={!!errors.userType}>
-                        <SelectValue placeholder="Select user type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {userTypeOptions.map((type) => (
-                          <SelectItem key={type.value} value={sanitizeString(type.value)}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Select user type"
+                      searchPlaceholder="Search user type..."
+                      options={userTypeOptions.map((type) => ({
+                        value: sanitizeString(type.value),
+                        label: type.label,
+                      }))}
+                    />
                   )}
                 />
               </Field>
+              {isCashierUserType ? (
+                <Field>
+                  <FieldLabel htmlFor="cashierType">Cashier type</FieldLabel>
+                  <Controller
+                    control={control}
+                    name="cashierType"
+                    render={({ field }) => (
+                      <Select
+                        value={
+                          field.value !== null && field.value !== undefined
+                            ? sanitizeString(field.value)
+                            : ''
+                        }
+                        onValueChange={(value) => field.onChange(sanitizeNumber(value))}
+                      >
+                        <SelectTrigger id="cashierType" aria-invalid={!!errors.cashierType}>
+                          <SelectValue placeholder="Select cashier type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cashierTypeOptions.map((type) => (
+                            <SelectItem key={type.value} value={sanitizeString(type.value)}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </Field>
+              ) : null}
 
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isSubmitting}>

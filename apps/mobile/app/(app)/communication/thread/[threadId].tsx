@@ -13,6 +13,7 @@ import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import type { CommunicationMessage, MobileUserOption } from '@mobile/types/communication';
 import { useCommunicationSocket } from '@mobile/features/communication/use-communication-socket';
+import { ChatBubble } from '@mobile/components/courier';
 import {
   enqueuePendingThreadMessage,
   loadPendingThreadQueue,
@@ -422,18 +423,14 @@ export default function MobileCommunicationThreadScreen() {
               (message.senderUserId ? usersById.get(message.senderUserId)?.email : null) ||
               (isMine ? 'You' : 'Unknown user');
             return (
-              <Pressable
-                key={message.id}
-                style={[
-                  styles.messageRow,
-                  {
-                    borderColor: theme.colors.border,
-                    backgroundColor: isMine ? theme.colors.cardMuted : theme.colors.card,
-                  },
-                ]}
-              >
+              <View key={message.id}>
                 <Text style={[styles.sender, { color: theme.colors.text }]}>{sender}</Text>
-                <Text style={{ color: theme.colors.textMuted }}>{message.body ?? ''}</Text>
+                <ChatBubble
+                  body={message.body ?? ''}
+                  sentAt={message.createdAt}
+                  isMine={Boolean(isMine)}
+                  seen={!message._optimistic && !message._failed}
+                />
                 {message._optimistic ? (
                   <Text
                     style={[
@@ -447,7 +444,7 @@ export default function MobileCommunicationThreadScreen() {
                 <Text style={[styles.time, { color: theme.colors.textSubtle }]}>
                   {formatTime(message.createdAt)}
                 </Text>
-              </Pressable>
+              </View>
             );
           })}
         </View>
@@ -465,12 +462,6 @@ const styles = StyleSheet.create({
   title: { fontSize: mobileTypography.title, fontWeight: '800' },
   subtitle: { marginTop: -2, lineHeight: 20, marginBottom: mobileSpacing.xs },
   list: { gap: mobileSpacing.sm },
-  messageRow: {
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: mobileSpacing.md,
-    gap: 4,
-  },
   sender: { fontWeight: '700' },
   time: { fontSize: 11 },
   note: { fontSize: 12, textAlign: 'center', marginTop: mobileSpacing.xs },

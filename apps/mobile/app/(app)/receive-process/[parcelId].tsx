@@ -68,7 +68,7 @@ export default function ReceiveProcessParcelScreen() {
 
       const searchPayload = await withAuth((token) =>
         searchParcels(token, {
-          search: detailsPayload.parcel.trackingCode,
+          search: detailsPayload.parcel.bookingCode,
           companyId,
           page: 1,
           pageSize: 20,
@@ -178,7 +178,7 @@ export default function ReceiveProcessParcelScreen() {
       await withAuth((token) =>
         updateParcelStatus(token, parcelId, ParcelStatus.ARRIVED_AT_DESTINATION),
       );
-      notifySuccess(`Parcel ${parcel.trackingCode} marked ARRIVED_AT_DESTINATION.`);
+      notifySuccess(`Parcel ${parcel.bookingCode} marked ARRIVED_AT_DESTINATION.`);
       void hapticSuccess();
       await loadParcel();
     } catch (err) {
@@ -227,9 +227,6 @@ export default function ReceiveProcessParcelScreen() {
       {parcel ? (
         <AppCard>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Parcel Overview</Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Tracking: {parcel.trackingCode}
-          </Text>
           <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
             Booking: {parcel.bookingCode}
           </Text>
