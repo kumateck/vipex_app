@@ -45,6 +45,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { FileDropUpload } from '@/components/ui/file-drop-upload';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -791,7 +792,6 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
   const typingPresenceTimerByUserRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
   const composerInputRef = useRef<HTMLInputElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const recorderPreviewRef = useRef<HTMLVideoElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -1180,12 +1180,10 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
 
   const openFilePicker = (accept: string) => {
     setFilePickerAccept(accept);
-    fileInputRef.current?.click();
+    setIsUploadDialogOpen(true);
   };
 
-  const onPickFile: React.ChangeEventHandler<HTMLInputElement> = (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
+  const handlePickedFile = async (file: File) => {
     if (!file) return;
     if (!SUPPORTED_UPLOAD_MIME_TYPES.has(file.type)) {
       toast.error(
@@ -1194,21 +1192,28 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
       return;
     }
 
-    void (async () => {
-      try {
-        const dataUrl = await toDataUrl(file);
-        const previewUrl = URL.createObjectURL(file);
-        const kind =
-          normalizeMediaKind(file.type) ?? (file.type.startsWith('image/') ? 'image' : 'file');
-        const videoThumbnailDataUrl =
-          kind === 'video' ? ((await extractVideoThumbnailDataUrl(file)) ?? undefined) : undefined;
-        setPendingUpload({ file, dataUrl, previewUrl, kind, videoThumbnailDataUrl });
-        setUploadCaption('');
-        setIsUploadDialogOpen(true);
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to open file preview.');
+    try {
+      const dataUrl = await toDataUrl(file);
+      const previewUrl = URL.createObjectURL(file);
+      const kind =
+        normalizeMediaKind(file.type) ?? (file.type.startsWith('image/') ? 'image' : 'file');
+      const videoThumbnailDataUrl =
+        kind === 'video' ? ((await extractVideoThumbnailDataUrl(file)) ?? undefined) : undefined;
+      if (pendingUpload?.previewUrl) {
+        URL.revokeObjectURL(pendingUpload.previewUrl);
       }
-    })();
+      setPendingUpload({ file, dataUrl, previewUrl, kind, videoThumbnailDataUrl });
+      setUploadCaption('');
+      setIsUploadDialogOpen(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to open file preview.');
+    }
+  };
+
+  const onPickFilesFromDrop = (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+    void handlePickedFile(file);
   };
 
   const clearPendingUpload = () => {
@@ -2163,14 +2168,6 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
           </div>
         </div>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={filePickerAccept}
-          className="hidden"
-          onChange={onPickFile}
-        />
-
         <Dialog
           open={isUploadDialogOpen}
           onOpenChange={(open) => (open ? setIsUploadDialogOpen(true) : clearPendingUpload())}
@@ -2183,43 +2180,55 @@ export function CommunicationChatThreadDetailPage({ threadId }: { threadId: stri
               </DialogDescription>
             </DialogHeader>
 
-            {pendingUpload ? (
-              <div className="space-y-3">
-                {pendingUpload.kind === 'image' ? (
-                  <img
-                    src={pendingUpload.previewUrl}
-                    alt={pendingUpload.file.name}
-                    className="max-h-80 w-full rounded-lg border object-contain"
-                  />
-                ) : pendingUpload.kind === 'video' ? (
-                  <video
-                    src={pendingUpload.previewUrl}
-                    controls
-                    className="max-h-80 w-full rounded-lg border bg-black object-contain"
-                  />
-                ) : pendingUpload.kind === 'audio' ? (
-                  <audio
-                    src={pendingUpload.previewUrl}
-                    controls
-                    className="w-full rounded-lg border p-2"
-                  />
-                ) : (
-                  <div className="rounded-lg border bg-muted p-3 text-sm">
-                    <p className="font-medium">{pendingUpload.file.name}</p>
-                    <p className="text-muted-foreground">
-                      {formatFileSize(pendingUpload.file.size)}
-                    </p>
-                  </div>
-                )}
+            <div className="space-y-3">
+              <FileDropUpload
+                id="chat-thread-upload"
+                files={pendingUpload ? [pendingUpload.file] : []}
+                onFilesChange={onPickFilesFromDrop}
+                accept={filePickerAccept}
+                maxFiles={1}
+                disabled={isUploadingFile || isSendingMessage}
+                title="Drop a file here or click to choose"
+                helperText="Supports image, video/audio, PDF, TXT, ZIP, DOC/DOCX, XLS/XLSX."
+              />
+              {pendingUpload ? (
+                <>
+                  {pendingUpload.kind === 'image' ? (
+                    <img
+                      src={pendingUpload.previewUrl}
+                      alt={pendingUpload.file.name}
+                      className="max-h-80 w-full rounded-lg border object-contain"
+                    />
+                  ) : pendingUpload.kind === 'video' ? (
+                    <video
+                      src={pendingUpload.previewUrl}
+                      controls
+                      className="max-h-80 w-full rounded-lg border bg-black object-contain"
+                    />
+                  ) : pendingUpload.kind === 'audio' ? (
+                    <audio
+                      src={pendingUpload.previewUrl}
+                      controls
+                      className="w-full rounded-lg border p-2"
+                    />
+                  ) : (
+                    <div className="rounded-lg border bg-muted p-3 text-sm">
+                      <p className="font-medium">{pendingUpload.file.name}</p>
+                      <p className="text-muted-foreground">
+                        {formatFileSize(pendingUpload.file.size)}
+                      </p>
+                    </div>
+                  )}
 
-                <Input
-                  placeholder="Add a caption (optional)"
-                  value={uploadCaption}
-                  onChange={(event) => setUploadCaption(event.target.value)}
-                  disabled={isUploadingFile || isSendingMessage}
-                />
-              </div>
-            ) : null}
+                  <Input
+                    placeholder="Add a caption (optional)"
+                    value={uploadCaption}
+                    onChange={(event) => setUploadCaption(event.target.value)}
+                    disabled={isUploadingFile || isSendingMessage}
+                  />
+                </>
+              ) : null}
+            </div>
 
             <DialogFooter>
               <Button

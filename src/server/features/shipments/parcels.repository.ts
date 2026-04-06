@@ -23,6 +23,7 @@ import {
   consignments,
   deliveries,
   locations,
+  users,
   parcelInternalHolders,
   pickupQueues,
   warehouses,
@@ -103,6 +104,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     secondReceiverPhone2: string | null;
     dropoffAddress: string | null;
     deliveryFeePsw: number | null;
+    riderUserId: string | null;
+    riderName: string | null;
     pickupLocationName: string | null;
     pickupQueueId: string | null;
     pickupQueueCode: string | null;
@@ -142,6 +145,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   const s = alias(customers, 's');
   const r = alias(customers, 'r');
   const sr = alias(customers, 'sr');
+  const rider = alias(users, 'rider');
   const d = alias(branches, 'd');
   const sb = alias(branches, 'sb');
   const sl = alias(locations, 'sl');
@@ -265,6 +269,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       secondReceiverPhone2: sr.telephone2,
       dropoffAddress: deliveries.dropoffAddress,
       deliveryFeePsw: deliveries.chargePsw,
+      riderUserId: deliveries.riderUserId,
+      riderName: rider.fullname,
       pickupLocationName: pl.name,
       pickupQueueId: pickupQueues.id,
       pickupQueueCode: pickupQueues.queueCode,
@@ -291,6 +297,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(ci, and(eq(ci.parcelId, parcels.id), isNull(ci.removedAt)))
     .leftJoin(cg, eq(cg.id, ci.consignmentId))
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
+    .leftJoin(rider, eq(rider.id, deliveries.riderUserId))
     .leftJoin(pickupQueues, eq(pickupQueues.parcelId, parcels.id))
     .leftJoin(parcelInternalHolders, eq(parcelInternalHolders.parcelId, parcels.id))
     .leftJoin(hb, eq(hb.id, parcelInternalHolders.branchId))

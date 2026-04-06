@@ -97,7 +97,21 @@ export async function removeConsignmentItemRepo(
   return rows.length;
 }
 
-export async function listConsignmentsForParcelRepo(parcelId: string): Promise<ParcelConsignmentRow[]> {
+export async function removeActiveConsignmentItemsByParcelRepo(
+  parcelId: string,
+  removedAt: Date,
+): Promise<number> {
+  const rows = await db
+    .update(consignmentItems)
+    .set({ removedAt })
+    .where(and(eq(consignmentItems.parcelId, parcelId), isNull(consignmentItems.removedAt)))
+    .returning({ parcelId: consignmentItems.parcelId });
+  return rows.length;
+}
+
+export async function listConsignmentsForParcelRepo(
+  parcelId: string,
+): Promise<ParcelConsignmentRow[]> {
   const rows = await db
     .select({
       consignmentId: consignmentItems.consignmentId,

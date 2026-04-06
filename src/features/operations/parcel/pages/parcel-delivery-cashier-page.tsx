@@ -48,8 +48,8 @@ import {
   useGetParcelDetailsQuery,
   useSearchParcelsQuery,
 } from '../api/parcel.api';
-import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
 import { ParcelSessionGuard } from '../components/parcel-session-guard';
+import { formatDateTime } from '@/lib/date';
 
 const EMPTY_META: PaginationMeta = {
   totalRecords: 0,
@@ -61,6 +61,11 @@ const EMPTY_META: PaginationMeta = {
 };
 
 const formatMoney = (valuePsw: number) => `GHS ${(valuePsw / 100).toFixed(2)}`;
+
+function formatPhones(primary?: string | null, secondary?: string | null) {
+  const phones = [primary, secondary].filter((value): value is string => Boolean(value?.trim()));
+  return phones.length ? phones.join(', ') : '-';
+}
 
 export function ParcelDeliveryCashierPage() {
   const user = useAuthStore((state) => state.user);
@@ -94,6 +99,13 @@ export function ParcelDeliveryCashierPage() {
   });
   const [finalizeAtOffice, { isLoading: isFinalizing }] = useFinalizeDoorstepAtOfficeMutation();
 
+  const deliveryAddress =
+    details?.delivery?.dropoffAddress ?? selectedParcel?.dropoffAddress ?? '-';
+  const configuredDeliveryFeePsw =
+    (details?.delivery?.chargePsw ?? selectedParcel?.deliveryFeePsw ?? 0) > 0
+      ? (details?.delivery?.chargePsw ?? selectedParcel?.deliveryFeePsw ?? 0)
+      : 0;
+
   useEffect(() => {
     setQuery((prev) => ({
       ...prev,
@@ -120,6 +132,14 @@ export function ParcelDeliveryCashierPage() {
     };
   }, [details]);
 
+  const hasToBePaidOutstanding = outstanding.principalPsw > 0;
+  const outstandingTotalPsw = outstanding.principalPsw + outstanding.deliveryFeePsw;
+  const toBePaidAmountPsw = Math.max(
+    details?.parcel?.plannedToBePaidPsw ?? selectedParcel?.plannedToBePaidPsw ?? 0,
+    0,
+  );
+  const assignedRiderLabel = selectedParcel?.riderName ?? 'Unassigned';
+
   useEffect(() => {
     if (!selectedParcel) return;
     setPrincipalAmount((outstanding.principalPsw / 100).toFixed(2));
@@ -128,18 +148,58 @@ export function ParcelDeliveryCashierPage() {
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       {
         id: 'receiver',
         header: 'Receiver',
-        accessorFn: (row) =>
-          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="space-y-1 leading-tight">
+            <div>
+              <div>{row.original.receiverName ?? '-'}</div>
+              <div className="text-xs text-muted-foreground">
+                {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
+              </div>
+            </div>
+            {row.original.secondReceiverName ? (
+              <div>
+                <div className="text-xs font-medium text-muted-foreground">Second receiver</div>
+                <div>{row.original.secondReceiverName}</div>
+                <div className="text-xs text-muted-foreground">
+                  {formatPhones(
+                    row.original.secondReceiverPhone,
+                    row.original.secondReceiverPhone2,
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ),
       },
       {
-        id: 'holder',
-        header: 'Current Holder',
-        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
+        id: 'assignedRider',
+        header: 'Assigned Rider',
+        accessorFn: (row) => row.riderName ?? 'Unassigned',
+      },
+      {
+        id: 'address',
+        header: 'Address',
+        accessorFn: (row) => row.dropoffAddress ?? '-',
+      },
+      {
+        id: 'deliveryFee',
+        header: 'Delivery Fee',
+        accessorFn: (row) => formatMoney(row.deliveryFeePsw ?? 0),
+      },
+      {
+        id: 'toBePaid',
+        header: 'To Be Paid',
+        accessorFn: (row) =>
+          row.plannedToBePaidPsw > 0 ? formatMoney(row.plannedToBePaidPsw) : '-',
+      },
+      {
+        id: 'deliveryAt',
+        header: 'Delivery At',
+        accessorFn: (row) => (row.confirmedAt ? formatDateTime(row.confirmedAt) : '-'),
       },
       {
         id: 'action',
@@ -258,19 +318,62 @@ export function ParcelDeliveryCashierPage() {
               <DialogTitle>Finalize Rider Return</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
-              <p className="text-sm">
-                <strong>Tracking:</strong> {selectedParcel?.trackingCode}
-              </p>
-              <div className="flex items-center gap-2 text-sm">
-                <strong>Current Holder:</strong>
-                <ParcelInternalHolderBadge holder={details?.internalHolder ?? selectedParcel} />
+              <div className="text-sm">
+                <strong>Receiver:</strong>
+                <div className="mt-1 leading-tight">
+                  <div>{selectedParcel?.receiverName ?? '-'}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatPhones(selectedParcel?.receiverPhone, selectedParcel?.receiverPhone2)}
+                  </div>
+                </div>
               </div>
+              {selectedParcel?.secondReceiverName ? (
+                <div className="text-sm">
+                  <strong>Second Receiver:</strong>
+                  <div className="mt-1 leading-tight">
+                    <div>{selectedParcel.secondReceiverName}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatPhones(
+                        selectedParcel.secondReceiverPhone,
+                        selectedParcel.secondReceiverPhone2,
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              <p className="text-sm">
+                <strong>Address:</strong> {deliveryAddress}
+              </p>
+              <p className="text-sm">
+                <strong>Assigned Rider:</strong> {assignedRiderLabel}
+              </p>
+              <p className="text-sm">
+                <strong>Delivery At:</strong>{' '}
+                {details?.delivery?.deliveredAt || selectedParcel?.confirmedAt
+                  ? formatDateTime(
+                      details?.delivery?.deliveredAt ?? selectedParcel?.confirmedAt ?? '',
+                    )
+                  : '-'}
+              </p>
+              <p className="text-sm">
+                <strong>Delivery Fee:</strong> {formatMoney(configuredDeliveryFeePsw)}
+              </p>
+              {toBePaidAmountPsw > 0 ? (
+                <p className="text-sm">
+                  <strong>To Be Paid Amount:</strong> {formatMoney(toBePaidAmountPsw)}
+                </p>
+              ) : null}
               <p className="text-sm">
                 <strong>Outstanding To Be Paid:</strong> {formatMoney(outstanding.principalPsw)}
               </p>
               <p className="text-sm">
                 <strong>Outstanding Delivery Fee:</strong> {formatMoney(outstanding.deliveryFeePsw)}
               </p>
+              {hasToBePaidOutstanding ? (
+                <p className="text-sm">
+                  <strong>Total Outstanding:</strong> {formatMoney(outstandingTotalPsw)}
+                </p>
+              ) : null}
               <div className="space-y-2">
                 <Label>Principal Received (GHS)</Label>
                 <Input

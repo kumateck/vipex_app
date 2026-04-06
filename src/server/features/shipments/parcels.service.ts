@@ -1,5 +1,10 @@
 import { toPesewas } from '@/server/utils/gh-money';
-import { ParcelStatus } from '@/db/schemas';
+import {
+  ParcelReconciliationActionType,
+  ParcelReconciliationCaseStatus,
+  ParcelReconciliationCaseType,
+  ParcelStatus,
+} from '@/db/schemas';
 import { auditLogs } from '@/db/schemas/audit';
 import { db } from '@/db/config';
 import { and, desc, eq, inArray } from 'drizzle-orm';
@@ -12,6 +17,7 @@ import {
 import { getDeliveryByParcelRepo } from '../deliveries/repository';
 import { recordAuditLog } from '../audit/logger';
 import { listConsignmentsForParcelRepo } from './consignments.repository';
+import { removeActiveConsignmentItemsByParcelRepo } from './consignments.repository';
 import { getPickupQueueByParcelRepo } from '../pickup-queues/repository';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
 import { getParcelInternalHolderByParcelRepo } from '../parcel-internal-transfers/repository';
@@ -21,6 +27,13 @@ import {
   listOpenParcelDiscrepanciesRepo,
   resolveParcelDiscrepancyRepo,
 } from './parcel-discrepancies.repository';
+import {
+  createParcelReconciliationCaseRepo,
+  getOpenParcelReconciliationCaseByParcelRepo,
+  getParcelReconciliationCaseRepo,
+  listParcelReconciliationCasesRepo,
+  updateParcelReconciliationCaseRepo,
+} from './parcel-reconciliation-cases.repository';
 
 import {
   createParcelRepo,
@@ -53,6 +66,28 @@ function getAuditMetadataNote(metadata: unknown): string | null {
   if (!metadata || typeof metadata !== 'object') return null;
   const candidate = (metadata as Record<string, unknown>).notes;
   return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : null;
+}
+
+function isNonEmptyText(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function assertCaseType(value: number): ParcelReconciliationCaseType {
+  if (Object.values(ParcelReconciliationCaseType).includes(value)) {
+    return value as ParcelReconciliationCaseType;
+  }
+  throw BadRequest('Unsupported reconciliation case type');
+}
+
+function assertActionType(value: number): ParcelReconciliationActionType {
+  if (Object.values(ParcelReconciliationActionType).includes(value)) {
+    return value as ParcelReconciliationActionType;
+  }
+  throw BadRequest('Unsupported reconciliation action type');
+}
+
+function isReversalAllowedParcelStatus(status: number) {
+  return status !== ParcelStatus.DELIVERED_AT_HOME && status !== ParcelStatus.DELIVERED_BY_OFFICE;
 }
 
 export async function listParcelsSvc(p: ListParcelsParams) {
@@ -319,6 +354,275 @@ export async function softDeleteParcelSvc(input: {
       },
     };
   });
+}
+
+export async function requestParcelReconciliationCaseSvc(input: {
+  companyId: string;
+  actorUserId: string;
+  parcelId: string;
+  linkedParcelId?: string | null;
+  caseType: number;
+  notes: string;
+  evidenceUrl?: string | null;
+  actionType?: number | null;
+}) {
+  const caseType = assertCaseType(input.caseType);
+  const note = input.notes.trim();
+  if (!note) throw BadRequest('Case note is required');
+
+  const parcel = await getParcelSvc(input.parcelId);
+  if (parcel.companyId !== input.companyId) throw NotFound('Parcel not found in company');
+  if (parcel.isDeleted) throw BadRequest('Cannot open case for a deleted parcel');
+
+  if (!isReversalAllowedParcelStatus(parcel.status)) {
+    throw BadRequest('Delivered parcels require finance exception handling');
+  }
+
+  const existingOpen = await getOpenParcelReconciliationCaseByParcelRepo(input.parcelId);
+  if (existingOpen) throw Conflict('An open reconciliation case already exists for this parcel');
+
+  let linkedParcel: ParcelRow | null = null;
+  if (input.linkedParcelId) {
+    linkedParcel = await getParcelSvc(input.linkedParcelId);
+    if (linkedParcel.companyId !== input.companyId) {
+      throw BadRequest('Linked parcel does not belong to this company');
+    }
+    if (linkedParcel.id === parcel.id) throw BadRequest('Linked parcel must be different');
+  }
+
+  if (caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY && !linkedParcel) {
+    throw BadRequest('Duplicate entry case requires a linked parcel');
+  }
+  if (caseType !== ParcelReconciliationCaseType.DUPLICATE_ENTRY && linkedParcel) {
+    throw BadRequest('Linked parcel is only valid for duplicate entry cases');
+  }
+
+  const actionType = input.actionType != null ? assertActionType(input.actionType) : null;
+  if (
+    caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY &&
+    actionType != null &&
+    actionType !== ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE &&
+    actionType !== ParcelReconciliationActionType.MERGE_TO_SINGLE
+  ) {
+    throw BadRequest('Duplicate entry supports only duplicate-resolution actions');
+  }
+
+  const created = await createParcelReconciliationCaseRepo({
+    companyId: input.companyId,
+    parcelId: parcel.id,
+    linkedParcelId: linkedParcel?.id ?? null,
+    caseType,
+    actionType,
+    status: ParcelReconciliationCaseStatus.REQUESTED,
+    notes: note,
+    evidenceUrl: input.evidenceUrl?.trim() || null,
+    requestedBy: input.actorUserId,
+  });
+  if (!created) throw BadRequest('Failed to create reconciliation case');
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'parcel_reconciliation_case',
+    entityId: created.id,
+    action: 'PARCEL_RECONCILIATION_CASE_REQUESTED',
+    message: `Reconciliation case requested for parcel ${parcel.trackingCode}`,
+    metadata: {
+      parcelId: parcel.id,
+      linkedParcelId: linkedParcel?.id ?? null,
+      trackingCode: parcel.trackingCode,
+      linkedTrackingCode: linkedParcel?.trackingCode ?? null,
+      caseType,
+      actionType,
+      notes: note,
+      evidenceUrl: input.evidenceUrl?.trim() || null,
+    },
+  });
+
+  return { id: created.id };
+}
+
+export async function approveParcelReconciliationCaseSvc(input: {
+  caseId: string;
+  companyId: string;
+  actorUserId: string;
+  actionType: number;
+  resolutionNote?: string | null;
+}) {
+  const actionType = assertActionType(input.actionType);
+  const existing = await getParcelReconciliationCaseRepo(input.caseId);
+  if (!existing || existing.companyId !== input.companyId) throw NotFound('Case not found');
+  if (existing.status !== ParcelReconciliationCaseStatus.REQUESTED) {
+    throw BadRequest('Only requested cases can be approved');
+  }
+  if (existing.requestedBy === input.actorUserId) {
+    throw BadRequest('Requester cannot approve the same reconciliation case');
+  }
+  if (
+    existing.caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY &&
+    actionType !== ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE &&
+    actionType !== ParcelReconciliationActionType.MERGE_TO_SINGLE
+  ) {
+    throw BadRequest('Duplicate entry supports only duplicate-resolution actions');
+  }
+  if (
+    existing.caseType !== ParcelReconciliationCaseType.DUPLICATE_ENTRY &&
+    (actionType === ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE ||
+      actionType === ParcelReconciliationActionType.MERGE_TO_SINGLE)
+  ) {
+    throw BadRequest('Selected action is only valid for duplicate entry');
+  }
+
+  const note = input.resolutionNote?.trim() || null;
+  const updated = await updateParcelReconciliationCaseRepo(input.caseId, {
+    status: ParcelReconciliationCaseStatus.APPROVED,
+    actionType,
+    approvedBy: input.actorUserId,
+    approvedAt: new Date(),
+    resolutionNote: note,
+  });
+  if (!updated) throw NotFound('Case not found');
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'parcel_reconciliation_case',
+    entityId: input.caseId,
+    action: 'PARCEL_RECONCILIATION_CASE_APPROVED',
+    message: 'Parcel reconciliation case approved',
+    metadata: {
+      actionType,
+      resolutionNote: note,
+    },
+  });
+
+  return { id: input.caseId };
+}
+
+export async function executeParcelReconciliationCaseSvc(input: {
+  caseId: string;
+  companyId: string;
+  actorUserId: string;
+  executionNote?: string | null;
+}) {
+  return db.transaction(async (tx) => {
+    const existing = await getParcelReconciliationCaseRepo(input.caseId, tx);
+    if (!existing || existing.companyId !== input.companyId) throw NotFound('Case not found');
+    if (existing.status !== ParcelReconciliationCaseStatus.APPROVED) {
+      throw BadRequest('Only approved cases can be executed');
+    }
+    if (existing.actionType == null) throw BadRequest('Case action is not set');
+    const actionType = assertActionType(existing.actionType);
+    const primaryParcel = await getParcelSvc(existing.parcelId, tx);
+    const linkedParcel = existing.linkedParcelId
+      ? await getParcelSvc(existing.linkedParcelId, tx)
+      : null;
+    const targetParcels: ParcelRow[] = [];
+
+    if (existing.caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY) {
+      if (!linkedParcel) throw BadRequest('Duplicate case missing linked parcel');
+      targetParcels.push(linkedParcel);
+    } else {
+      targetParcels.push(primaryParcel);
+    }
+
+    let totalVoidedPayments = 0;
+    let totalConsignmentUnlinked = 0;
+    const executionReason = `Reconciliation case ${existing.id}: type ${existing.caseType}${isNonEmptyText(input.executionNote) ? ` (${input.executionNote.trim()})` : ''}`;
+    const touchedParcelIds: string[] = [];
+
+    for (const targetParcel of targetParcels) {
+      if (targetParcel.isDeleted) continue;
+      if (!isReversalAllowedParcelStatus(targetParcel.status)) {
+        throw BadRequest(`Parcel ${targetParcel.trackingCode} is already delivered`);
+      }
+
+      const allPayments = await listAllPaymentsForParcelRepo(targetParcel.id, tx);
+      const activePaymentIds = allPayments.filter((row) => !row.voidedAt).map((row) => row.id);
+      const voidedNow = await softVoidPaymentsByIdsRepo(
+        activePaymentIds,
+        input.actorUserId,
+        executionReason,
+        tx,
+      );
+      totalVoidedPayments += voidedNow;
+
+      const unlinked = await removeActiveConsignmentItemsByParcelRepo(targetParcel.id, new Date());
+      totalConsignmentUnlinked += unlinked;
+
+      await updateParcelRepo(
+        targetParcel.id,
+        {
+          status: ParcelStatus.CANCELLED,
+          isDeleted: true,
+          deletedBy: input.actorUserId,
+          deletedAt: new Date(),
+          deleteReason: executionReason,
+        },
+        tx,
+      );
+      touchedParcelIds.push(targetParcel.id);
+    }
+
+    await updateParcelReconciliationCaseRepo(
+      existing.id,
+      {
+        status: ParcelReconciliationCaseStatus.EXECUTED,
+        executedBy: input.actorUserId,
+        executedAt: new Date(),
+        voidedPaymentCount: totalVoidedPayments,
+        resolutionNote: isNonEmptyText(input.executionNote)
+          ? input.executionNote.trim()
+          : existing.resolutionNote,
+        metadata: {
+          ...(existing.metadata as Record<string, unknown> | null),
+          execution: {
+            actionType,
+            touchedParcelIds,
+            consignmentItemsUnlinked: totalConsignmentUnlinked,
+            voidedPayments: totalVoidedPayments,
+          },
+        },
+      },
+      tx,
+    );
+
+    await recordAuditLog({
+      companyId: input.companyId,
+      actorUserId: input.actorUserId,
+      entityType: 'parcel_reconciliation_case',
+      entityId: existing.id,
+      action: 'PARCEL_RECONCILIATION_CASE_EXECUTED',
+      message: 'Parcel reconciliation case executed',
+      metadata: {
+        caseType: existing.caseType,
+        actionType,
+        touchedParcelIds,
+        consignmentItemsUnlinked: totalConsignmentUnlinked,
+        voidedPayments: totalVoidedPayments,
+        executionNote: input.executionNote?.trim() || null,
+      },
+    });
+
+    return {
+      id: existing.id,
+      actionType,
+      touchedParcelIds,
+      voidedPayments: totalVoidedPayments,
+      consignmentItemsUnlinked: totalConsignmentUnlinked,
+    };
+  });
+}
+
+export async function listParcelReconciliationCasesSvc(input: {
+  companyId: string;
+  statuses?: number[] | null;
+  branchId?: string | null;
+  limit: number;
+  offset: number;
+  search?: string | null;
+}) {
+  return listParcelReconciliationCasesRepo(input);
 }
 
 export async function getParcelFullDetailsSvc(id: string) {

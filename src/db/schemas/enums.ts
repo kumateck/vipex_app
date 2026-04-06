@@ -304,6 +304,31 @@ export enum ParcelStatus {
   CANCELLED = 14, // Parcel order cancelled
   DISCREPANCY = 15, // Parcel has a reported issue or discrepancy
 }
+
+export enum ParcelReconciliationCaseStatus {
+  REQUESTED = 0,
+  APPROVED = 1,
+  EXECUTED = 2,
+  REJECTED = 3,
+}
+
+export enum ParcelReconciliationCaseType {
+  SHORTAGE = 0,
+  OVERAGE = 1,
+  WRONG_AMOUNT = 2,
+  WRONG_PARCEL_TYPE = 3,
+  DUPLICATE_ENTRY = 4,
+  CUSTOMER_CANCELLATION_BEFORE_DELIVERY = 5,
+  DATA_ENTRY_ERROR = 6,
+}
+
+export enum ParcelReconciliationActionType {
+  VOID_AND_REFUND = 0,
+  VOID_AND_REBOOK = 1,
+  VOID_TO_SUSPENSE = 2,
+  KEEP_ORIGINAL_VOID_DUPLICATE = 3,
+  MERGE_TO_SINGLE = 4,
+}
 export enum DeliveryFeeBasis {
   DISTANCE = 0,
   WEIGHT = 1,

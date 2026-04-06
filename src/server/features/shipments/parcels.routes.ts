@@ -10,13 +10,17 @@ import { PermissionKeys } from '@/shared/permissions/constants';
 import { HttpStatus } from '../../utils/http-status';
 import { UUID } from '../../schemas/common';
 import {
+  approveParcelReconciliationCaseCtrl,
   createParcelCtrl,
+  executeParcelReconciliationCaseCtrl,
   getParcelByIdCtrl,
   getParcelDetailsCtrl,
+  listParcelReconciliationCasesCtrl,
   listOpenParcelDiscrepanciesCtrl,
   listParcelsCtrl,
   logParcelDiscrepancyCtrl,
   markParcelReceivedCtrl,
+  requestParcelReconciliationCaseCtrl,
   resolveParcelDiscrepancyCtrl,
   setPlannedToBePaidCtrl,
   softDeleteParcelCtrl,
@@ -93,6 +97,32 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         includeDeleted: t.Optional(t.Boolean()),
       }),
       detail: { tags: ['Shipments'], summary: 'List/search parcels' },
+    },
+  )
+  .get(
+    '/reconciliation-cases',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      return listParcelReconciliationCasesCtrl({
+        companyId: query.companyId ?? authUser.companyId ?? '',
+        statuses: parseStatuses(query.statuses),
+        branchId: query.branchId ?? authUser.branchId ?? null,
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 20,
+        search: query.search ?? null,
+      });
+    },
+    {
+      query: t.Object({
+        companyId: t.Optional(UUID),
+        branchId: t.Optional(t.Union([UUID, t.Null()])),
+        statuses: t.Optional(t.Union([t.Array(t.Number()), t.String()])),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+        search: t.Optional(t.String()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelReconciliation)],
+      detail: { tags: ['Shipments'], summary: 'List parcel reconciliation cases' },
     },
   )
   .get('/:id', async ({ params }) => getParcelByIdCtrl(params.id), {
@@ -204,6 +234,85 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         taxReportConfirmation: t.Optional(t.Boolean()),
       }),
       detail: { tags: ['Shipments'], summary: 'Update parcel' },
+    },
+  )
+  .post(
+    '/reconciliation-cases/request',
+    async ({ body, user }) => {
+      const authUser = user as AuthUser;
+      return requestParcelReconciliationCaseCtrl({
+        companyId: authUser.companyId ?? '',
+        actorUserId: authUser.sub,
+        parcelId: (body as { parcelId: string }).parcelId,
+        linkedParcelId: (body as { linkedParcelId?: string | null }).linkedParcelId ?? null,
+        caseType: (body as { caseType: number }).caseType,
+        notes: (body as { notes: string }).notes,
+        evidenceUrl: (body as { evidenceUrl?: string | null }).evidenceUrl ?? null,
+        actionType: (body as { actionType?: number | null }).actionType ?? null,
+      });
+    },
+    {
+      body: t.Object({
+        parcelId: UUID,
+        linkedParcelId: t.Optional(t.Union([UUID, t.Null()])),
+        caseType: t.Number(),
+        actionType: t.Optional(t.Union([t.Number(), t.Null()])),
+        notes: t.String({ minLength: 3, maxLength: 1000 }),
+        evidenceUrl: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanRequestParcelReconciliation),
+      ],
+      detail: { tags: ['Shipments'], summary: 'Request parcel reconciliation case' },
+    },
+  )
+  .post(
+    '/reconciliation-cases/:id/approve',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return approveParcelReconciliationCaseCtrl({
+        caseId: params.id,
+        companyId: authUser.companyId ?? '',
+        actorUserId: authUser.sub,
+        actionType: (body as { actionType: number }).actionType,
+        resolutionNote: (body as { resolutionNote?: string | null }).resolutionNote ?? null,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        actionType: t.Number(),
+        resolutionNote: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveParcelReconciliation),
+      ],
+      detail: { tags: ['Shipments'], summary: 'Approve parcel reconciliation case' },
+    },
+  )
+  .post(
+    '/reconciliation-cases/:id/execute',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return executeParcelReconciliationCaseCtrl({
+        caseId: params.id,
+        companyId: authUser.companyId ?? '',
+        actorUserId: authUser.sub,
+        executionNote: (body as { executionNote?: string | null }).executionNote ?? null,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        executionNote: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanExecuteParcelReconciliation),
+      ],
+      detail: { tags: ['Shipments'], summary: 'Execute parcel reconciliation case' },
     },
   )
   .post(
