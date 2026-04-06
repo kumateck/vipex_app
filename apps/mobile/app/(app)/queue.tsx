@@ -21,6 +21,7 @@ import {
   canViewSenderQueueBoard,
 } from '@mobile/lib/permissions';
 import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@mobile/lib/haptics';
+import { ParcelCard, QueueCard, StatCard } from '@mobile/components/courier';
 import {
   AppButton,
   AppCard,
@@ -44,7 +45,6 @@ function formatDate(value?: string | null) {
 
 function buildQueueShareMessages(input: {
   queueCode: string;
-  trackingCode?: string | null;
   bookingCode?: string | null;
   receiverName?: string | null;
   receiverPhone?: string | null;
@@ -55,7 +55,6 @@ function buildQueueShareMessages(input: {
 }) {
   const receiverName = input.receiverName ?? '-';
   const receiverPhone = input.receiverPhone ?? '-';
-  const trackingCode = input.trackingCode ?? '-';
   const bookingCode = input.bookingCode ?? '-';
   const branchName = input.branchName ?? '-';
   const branchContact = input.branchContact?.trim();
@@ -66,7 +65,7 @@ function buildQueueShareMessages(input: {
   const shortLines = [
     `${companyName} Queue Ticket`,
     `Code: ${queueCode}`,
-    `Tracking: ${trackingCode}`,
+    `Booking: ${bookingCode}`,
     `Receiver: ${receiverName}`,
     `Branch: ${branchName}`,
   ];
@@ -75,7 +74,6 @@ function buildQueueShareMessages(input: {
 
   const fullLines = [
     `Queue Ticket: ${queueCode}`,
-    `Tracking Code: ${trackingCode}`,
     `Booking Code: ${bookingCode}`,
     `Receiver: ${receiverName} (${receiverPhone})`,
     `Branch: ${branchName}`,
@@ -207,7 +205,6 @@ export default function QueueScreen() {
       if (queueCode) {
         const messages = buildQueueShareMessages({
           queueCode,
-          trackingCode: parcelContext?.trackingCode,
           bookingCode: parcelContext?.bookingCode,
           receiverName: parcelContext?.receiverName,
           receiverPhone: parcelContext?.receiverPhone,
@@ -290,7 +287,6 @@ export default function QueueScreen() {
   async function shareQueueCard(card: PickupQueueCard, mode: 'short' | 'full') {
     const messages = buildQueueShareMessages({
       queueCode: card.queueCode,
-      trackingCode: card.trackingCode,
       bookingCode: card.bookingCode,
       receiverName: card.receiverName,
       receiverPhone: card.receiverPhone,
@@ -329,37 +325,13 @@ export default function QueueScreen() {
       </Text>
 
       <View style={styles.kpiRow}>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>Receiver Queue</Text>
-          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
-            {receiverQueueCards.length}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>Waiting Pickup</Text>
-          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
-            {waitingPickupQueueCards.length}
-          </Text>
-        </View>
+        <StatCard label="Receiver Queue" value={receiverQueueCards.length} />
+        <StatCard label="Waiting Pickup" value={waitingPickupQueueCards.length} />
       </View>
 
       <AppCard>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>Parcel Lookup</Text>
-        <AppInput
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Tracking / Booking / Customer / Phone"
-        />
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Parcel Lookup</Text>
+        <AppInput value={search} onChangeText={setSearch} placeholder="Search..." />
         <View style={styles.buttonRow}>
           <AppButton
             title={loading ? 'Searching...' : 'Search Parcels'}
@@ -382,7 +354,7 @@ export default function QueueScreen() {
 
       {canReadReceiverBoard ? (
         <>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
             Receiver Queue (To-Pay)
           </Text>
           {loadingBoards ? (
@@ -397,33 +369,12 @@ export default function QueueScreen() {
           ) : (
             <View style={styles.listWrap}>
               {receiverQueueCards.map((card) => (
-                <AppCard key={card.id}>
-                  <Text style={[styles.bold, { color: theme.colors.text }]}>{card.queueCode}</Text>
-                  <Text style={{ color: theme.colors.textMuted }}>
-                    {card.trackingCode} | {card.bookingCode}
-                  </Text>
-                  <Text style={{ color: theme.colors.textMuted }}>
-                    {card.receiverName ?? '-'} ({card.receiverPhone ?? '-'})
-                  </Text>
-                  <Text style={{ color: theme.colors.textMuted }}>{card.parcelDetails}</Text>
-                  <Text style={{ color: theme.colors.textSubtle }}>
-                    Queued: {formatDate(card.queuedAt)}
-                  </Text>
-                  <AppStatusChip
-                    label={card.paymentBucket === 'TP' ? 'To Be Paid' : 'Sender Paid'}
-                  />
-                  <View style={styles.buttonRow}>
-                    <AppButton
-                      title="Copy Code"
-                      onPress={() => void copyQueueCode(card.queueCode)}
-                      variant="secondary"
-                    />
-                    <AppButton
-                      title="Share Ticket"
-                      onPress={() => void shareQueueCard(card, 'short')}
-                    />
-                  </View>
-                </AppCard>
+                <QueueCard
+                  key={card.id}
+                  card={card}
+                  onCopy={() => void copyQueueCode(card.queueCode)}
+                  onShare={() => void shareQueueCard(card, 'short')}
+                />
               ))}
             </View>
           )}
@@ -432,7 +383,7 @@ export default function QueueScreen() {
 
       {canReadSenderBoard ? (
         <>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
             Waiting Pickup (Sender-Paid)
           </Text>
           {loadingBoards ? (
@@ -447,40 +398,19 @@ export default function QueueScreen() {
           ) : (
             <View style={styles.listWrap}>
               {waitingPickupQueueCards.map((card) => (
-                <AppCard key={card.id}>
-                  <Text style={[styles.bold, { color: theme.colors.text }]}>{card.queueCode}</Text>
-                  <Text style={{ color: theme.colors.textMuted }}>
-                    {card.trackingCode} | {card.bookingCode}
-                  </Text>
-                  <Text style={{ color: theme.colors.textMuted }}>
-                    {card.receiverName ?? '-'} ({card.receiverPhone ?? '-'})
-                  </Text>
-                  <Text style={{ color: theme.colors.textMuted }}>{card.parcelDetails}</Text>
-                  <Text style={{ color: theme.colors.textSubtle }}>
-                    Queued: {formatDate(card.queuedAt)}
-                  </Text>
-                  <AppStatusChip
-                    label={card.paymentBucket === 'SP' ? 'Sender Paid' : 'To Be Paid'}
-                  />
-                  <View style={styles.buttonRow}>
-                    <AppButton
-                      title="Copy Code"
-                      onPress={() => void copyQueueCode(card.queueCode)}
-                      variant="secondary"
-                    />
-                    <AppButton
-                      title="Share Ticket"
-                      onPress={() => void shareQueueCard(card, 'short')}
-                    />
-                  </View>
-                </AppCard>
+                <QueueCard
+                  key={card.id}
+                  card={card}
+                  onCopy={() => void copyQueueCode(card.queueCode)}
+                  onShare={() => void shareQueueCard(card, 'short')}
+                />
               ))}
             </View>
           )}
         </>
       ) : null}
 
-      <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>Search Results</Text>
+      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Search Results</Text>
       {!canReadParcels ? (
         <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
           You do not have permission to view parcel search results.
@@ -492,7 +422,7 @@ export default function QueueScreen() {
         </View>
       ) : !showSearchResults ? (
         <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
-          Enter tracking, booking, customer name, or phone to begin.
+          Enter a booking code, customer name, or phone to begin.
         </Text>
       ) : rows.length === 0 ? (
         <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
@@ -501,23 +431,12 @@ export default function QueueScreen() {
       ) : (
         <View style={styles.listWrap}>
           {rows.map((item) => (
-            <AppCard key={item.id}>
-              <Text style={[styles.bold, { color: theme.colors.text }]}>{item.trackingCode}</Text>
-              <Text style={{ color: theme.colors.textMuted }}>{item.bookingCode}</Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {item.receiverName ?? '-'} ({item.receiverPhone ?? '-'})
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>{item.parcelDetails}</Text>
-              <AppStatusChip label={item.status} />
-              <Text style={{ color: theme.colors.textSubtle }}>
-                {item.pickupQueueCode ? `Queued: ${item.pickupQueueCode}` : 'Not queued'}
-              </Text>
-              <AppButton
-                title="View Details"
-                onPress={() => void handleSelectParcel(item)}
-                variant="secondary"
-              />
-            </AppCard>
+            <ParcelCard
+              key={item.id}
+              parcel={item}
+              onPress={() => void handleSelectParcel(item)}
+              actionLabel="View Details"
+            />
           ))}
         </View>
       )}
@@ -525,9 +444,6 @@ export default function QueueScreen() {
       {selectedParcel && canReadParcels ? (
         <AppCard>
           <Text style={[styles.detailsTitle, { color: theme.colors.text }]}>Parcel Details</Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Tracking: {selectedParcel.trackingCode}
-          </Text>
           <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
             Booking: {selectedParcel.bookingCode}
           </Text>
@@ -622,9 +538,6 @@ const styles = StyleSheet.create({
   title: { fontSize: mobileTypography.title, fontWeight: '800' },
   subtitle: { marginBottom: mobileSpacing.xs, lineHeight: 20 },
   kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },
-  kpiTile: { flex: 1, borderWidth: 1, borderRadius: 16, padding: mobileSpacing.md },
-  kpiLabel: { fontSize: mobileTypography.caption, fontWeight: '600' },
-  kpiValue: { fontSize: mobileTypography.kpi, fontWeight: '800', marginTop: 1 },
   sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700', marginTop: 6 },
   buttonRow: {
     flexDirection: 'row',
@@ -635,6 +548,5 @@ const styles = StyleSheet.create({
   listWrap: { gap: mobileSpacing.sm + 2, paddingTop: mobileSpacing.sm },
   detailsTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
   detailsLine: {},
-  bold: { fontWeight: '700' },
   empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
 });

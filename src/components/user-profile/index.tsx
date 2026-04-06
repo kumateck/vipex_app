@@ -10,12 +10,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Building2, User, ChevronsUpDown, Shield, KeyRound, LogOut, MapPin } from 'lucide-react';
+import {
+  Building2,
+  User,
+  ChevronsUpDown,
+  Shield,
+  KeyRound,
+  LogOut,
+  MapPin,
+  ShieldUser,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAuthStore, type AuthUser } from '@/stores/auth-store';
 import { useLogoutMutation } from '@/features/auth/api';
+import { CASHIER_TYPE_LABELS } from '@/shared/access/constants';
+import { UserType } from '@/db/schemas/enums';
 
 export interface UserProfileData {
   name: string;
@@ -183,12 +194,21 @@ function UserMenuContent({
                   <span className="text-xs text-primary font-medium">{userData?.role?.name}</span>
                 </div>
               )}
+              {userData?.userType === UserType.CASHIER && userData?.cashierType !== null ? (
+                <div className="flex items-center gap-1.5">
+                  <ShieldUser className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    {CASHIER_TYPE_LABELS[userData.cashierType] ?? `Cashier ${userData.cashierType}`}
+                  </span>
+                </div>
+              ) : null}
               {userData?.branch && (
                 <div className="flex items-center gap-1.5">
                   <Building2 className="h-3 w-3 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">{userData?.branch?.name}</span>
                 </div>
               )}
+
               {userData?.location?.name || userData?.locationName ? (
                 <div className="flex items-center gap-1.5">
                   <MapPin className="h-3 w-3 text-muted-foreground" />

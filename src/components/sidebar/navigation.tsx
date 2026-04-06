@@ -144,6 +144,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanCreateSenderPayments,
           },
           {
+            title: 'Reconciliation Cases',
+            url: '/parcels/reconciliation-cases',
+            permissionKey: PermissionKeys.CanReadParcelReconciliation,
+          },
+          {
             title: 'Processed Consignments',
             url: '/parcels/processed',
             permissionKey: PermissionKeys.CanReadConsignments,

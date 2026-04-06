@@ -1,18 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
-import {
-  getRiderBranchBenchmark,
-  listRiderParcels,
-  riderGivenToCustomer,
-  riderReturnedToOffice,
-} from '@mobile/lib/api';
+import { listRiderParcels, riderGivenToCustomer, riderReturnedToOffice } from '@mobile/lib/api';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
-import type { RiderBenchmarkResponse, RiderDoorstepRecord } from '@mobile/types/parcels';
+import type { RiderDoorstepRecord } from '@mobile/types/parcels';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { canCompleteRiderDeliveryActions, canViewRiderScreen } from '@mobile/lib/permissions';
 import { hapticError, hapticSuccess, hapticTap } from '@mobile/lib/haptics';
+import { ParcelCard, PaymentBreakdownCard, StatCard } from '@mobile/components/courier';
 import {
   AppButton,
   AppCard,
@@ -20,39 +16,62 @@ import {
   AppSkeletonCard,
   AppStatusChip,
   MobileNoAccess,
-} from '@/components/ui/mobile';
+} from '@mobile/components/ui';
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
-
-function isSameCalendarDay(dateLike?: string) {
-  if (!dateLike) return false;
-  const date = new Date(dateLike);
-  if (Number.isNaN(date.getTime())) return false;
-  const now = new Date();
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
-}
 
 function formatCedisFromPsw(amountPsw?: number) {
   const cedis = (amountPsw ?? 0) / 100;
   return `GH₵ ${cedis.toFixed(2)}`;
 }
 
-function formatPercent(value: number) {
-  if (!Number.isFinite(value)) return '0%';
-  return `${Math.max(0, value).toFixed(1)}%`;
+function toDateKey(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
-function formatDelta(value: number, inverseGood = false) {
-  const sign = value > 0 ? '+' : '';
-  const tone = inverseGood ? (value <= 0 ? 'Good' : 'Needs focus') : value >= 0 ? 'Good' : 'Below';
-  return `${sign}${value.toFixed(1)}% (${tone})`;
+function todayDateKey() {
+  return toDateKey(new Date().toISOString()) ?? '';
 }
 
-function startOfDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+function shiftDateKey(dateKey: string, diff: number) {
+  const parsed = new Date(`${dateKey}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return dateKey;
+  parsed.setDate(parsed.getDate() + diff);
+  return toDateKey(parsed.toISOString()) ?? dateKey;
+}
+
+function isReturnedStatus(status?: string | null) {
+  const normalized = (status ?? '').toLowerCase();
+  return normalized.includes('return');
+}
+
+function isCompletedStatus(status?: string | null) {
+  const normalized = (status ?? '').toLowerCase();
+  if (isReturnedStatus(normalized)) return false;
+  return (
+    normalized.includes('deliver') ||
+    normalized.includes('given') ||
+    normalized.includes('success') ||
+    normalized.includes('complete')
+  );
+}
+
+function doorstepToParcelRow(row: RiderDoorstepRecord) {
+  return {
+    bookingCode: row.bookingCode,
+    parcelDetails: row.parcelDetails,
+    receiverName: row.receiverName ?? null,
+    receiverPhone: row.receiverPhone ?? null,
+    senderName: null,
+    senderPhone: null,
+    status: row.deliveryStatus,
+    isDeleted: false,
+  };
 }
 
 export default function RiderScreen() {
@@ -70,35 +89,27 @@ export default function RiderScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [actionParcelId, setActionParcelId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'given' | 'returned' | null>(null);
-  const [benchmark, setBenchmark] = useState<RiderBenchmarkResponse | null>(null);
+  const [selectedDate, setSelectedDate] = useState(todayDateKey());
+  const [activeSection, setActiveSection] = useState<'assigned' | 'history'>('assigned');
 
   async function load() {
     if (!riderUserId) return;
     setRefreshing(true);
     try {
-      const [current, history, benchmarkResult] = await withAuth(async (token) => {
-        const [currentRowsResult, historyRowsResult, benchmarkResult] = await Promise.all([
+      const [current, history] = await withAuth((token) =>
+        Promise.all([
           listRiderParcels(token, riderUserId, 'current'),
           listRiderParcels(token, riderUserId, 'history'),
-          session.user?.branchId
-            ? getRiderBranchBenchmark(token, {
-                riderUserId,
-                branchId: session.user.branchId,
-              })
-            : Promise.resolve(null),
-        ]);
-        return [currentRowsResult, historyRowsResult, benchmarkResult] as const;
-      });
+        ]),
+      );
       setCurrentRows(current.rows ?? []);
       setHistoryRows(history.rows ?? []);
-      setBenchmark(benchmarkResult);
     } catch (err) {
       notifyError(
         'Load failed',
         err instanceof Error ? err.message : 'Unable to load rider parcels',
       );
       void hapticError();
-      setBenchmark(null);
     } finally {
       setRefreshing(false);
     }
@@ -113,116 +124,52 @@ export default function RiderScreen() {
     [currentRows],
   );
 
-  const pendingTodayRows = useMemo(() => {
-    return currentRows.filter((row) => isSameCalendarDay(row.createdAt ?? row.updatedAt));
-  }, [currentRows]);
+  const assignedForDay = useMemo(() => {
+    return currentRows.filter((row) => toDateKey(row.createdAt ?? row.updatedAt) === selectedDate);
+  }, [currentRows, selectedDate]);
 
-  const successfulDeliveriesToday = useMemo(() => {
-    return historyRows.filter((row) => isSameCalendarDay(row.updatedAt)).length;
-  }, [historyRows]);
+  const historyForDay = useMemo(() => {
+    return historyRows.filter((row) => toDateKey(row.updatedAt ?? row.createdAt) === selectedDate);
+  }, [historyRows, selectedDate]);
 
-  const totalDeliveriesToday = useMemo(() => {
-    return pendingTodayRows.length + successfulDeliveriesToday;
-  }, [pendingTodayRows.length, successfulDeliveriesToday]);
+  const completedForDay = useMemo(
+    () => historyForDay.filter((row) => isCompletedStatus(row.deliveryStatus)),
+    [historyForDay],
+  );
 
-  const outstandingDeliveries = currentRows.length;
+  const returnedForDay = useMemo(
+    () => historyForDay.filter((row) => isReturnedStatus(row.deliveryStatus)),
+    [historyForDay],
+  );
 
-  const successfulPaymentReceivedTodayPsw = useMemo(() => {
-    return historyRows
-      .filter((row) => isSameCalendarDay(row.updatedAt))
-      .reduce((sum, row) => sum + (row.amountPaidPsw ?? 0), 0);
-  }, [historyRows]);
+  const totalAmountReceivedPsw = useMemo(
+    () => completedForDay.reduce((sum, row) => sum + (row.amountPaidPsw ?? 0), 0),
+    [completedForDay],
+  );
 
-  const riderRoleLabel = session.user?.role?.name?.trim() || 'Rider';
+  const totalDeliveryFeePsw = useMemo(
+    () => completedForDay.reduce((sum, row) => sum + (row.deliveryFeePsw ?? 0), 0),
+    [completedForDay],
+  );
 
-  const analytics = useMemo(() => {
-    const completed = historyRows.length;
-    const outstanding = currentRows.length;
-    const totalKnown = completed + outstanding;
-    const completionRate = totalKnown > 0 ? (completed / totalKnown) * 100 : 0;
+  const totalToBePaidPsw = useMemo(
+    () => completedForDay.reduce((sum, row) => sum + (row.plannedToBePaidPsw ?? 0), 0),
+    [completedForDay],
+  );
 
-    const returnedCount = historyRows.filter((row) => {
-      const status = (row.deliveryStatus ?? '').toString().toLowerCase();
-      return status.includes('return');
-    }).length;
-    const returnRate = completed > 0 ? (returnedCount / completed) * 100 : 0;
+  const historyListByDate = useMemo(() => {
+    return historyRows.filter(
+      (row) =>
+        isCompletedStatus(row.deliveryStatus) &&
+        toDateKey(row.updatedAt ?? row.createdAt) === selectedDate,
+    );
+  }, [historyRows, selectedDate]);
 
-    const totalPaidPsw = historyRows.reduce((sum, row) => sum + (row.amountPaidPsw ?? 0), 0);
-    const averagePaidPsw = completed > 0 ? totalPaidPsw / completed : 0;
-
-    const now = new Date();
-    const todayKey = startOfDay(now);
-    const dailySeries: Array<{ dayLabel: string; completed: number; created: number }> = [];
-
-    for (let offset = 6; offset >= 0; offset -= 1) {
-      const day = new Date(now);
-      day.setDate(now.getDate() - offset);
-      const key = startOfDay(day);
-      const dayLabel = day.toLocaleDateString([], { weekday: 'short' });
-
-      const completedForDay = historyRows.filter((row) => {
-        if (!row.updatedAt) return false;
-        const parsed = new Date(row.updatedAt);
-        if (Number.isNaN(parsed.getTime())) return false;
-        return startOfDay(parsed) === key;
-      }).length;
-
-      const createdForDay = currentRows.filter((row) => {
-        const sourceDate = row.createdAt ?? row.updatedAt;
-        if (!sourceDate) return false;
-        const parsed = new Date(sourceDate);
-        if (Number.isNaN(parsed.getTime())) return false;
-        return startOfDay(parsed) === key;
-      }).length;
-
-      dailySeries.push({
-        dayLabel,
-        completed: completedForDay,
-        created: createdForDay,
-      });
-    }
-
-    const todayCompleted = dailySeries[dailySeries.length - 1]?.completed ?? 0;
-    const yesterdayCompleted = dailySeries[dailySeries.length - 2]?.completed ?? 0;
-    const todayDelta =
-      yesterdayCompleted > 0
-        ? ((todayCompleted - yesterdayCompleted) / yesterdayCompleted) * 100
-        : 0;
-
-    const unresolvedOlderThanOneDay = currentRows.filter((row) => {
-      const sourceDate = row.createdAt ?? row.updatedAt;
-      if (!sourceDate) return false;
-      const parsed = new Date(sourceDate);
-      if (Number.isNaN(parsed.getTime())) return false;
-      return todayKey - startOfDay(parsed) >= 24 * 60 * 60 * 1000;
-    }).length;
-
-    return {
-      completionRate,
-      returnRate,
-      averagePaidPsw,
-      todayDelta,
-      unresolvedOlderThanOneDay,
-      dailySeries,
-    };
-  }, [currentRows, historyRows]);
-
-  const searchableRows = useMemo(() => {
-    const byParcelId = new Map<string, RiderDoorstepRecord>();
-    for (const row of [...currentRows, ...historyRows]) {
-      if (!byParcelId.has(row.parcelId)) {
-        byParcelId.set(row.parcelId, row);
-      }
-    }
-    return Array.from(byParcelId.values());
-  }, [currentRows, historyRows]);
-
-  const filteredRows = useMemo(() => {
+  const assignedList = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return searchableRows;
-    return searchableRows.filter((row) => {
+    if (!q) return currentRows;
+    return currentRows.filter((row) => {
       const haystack = [
-        row.trackingCode,
         row.bookingCode,
         row.receiverName ?? '',
         row.receiverPhone ?? '',
@@ -233,12 +180,33 @@ export default function RiderScreen() {
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [search, searchableRows]);
+  }, [currentRows, search]);
+
+  const historyList = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return historyListByDate;
+    return historyListByDate.filter((row) => {
+      const haystack = [
+        row.bookingCode,
+        row.receiverName ?? '',
+        row.receiverPhone ?? '',
+        row.parcelDetails ?? '',
+        row.parcelContent ?? '',
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [historyListByDate, search]);
 
   const selectedRow = useMemo(() => {
     if (!selectedParcelId) return null;
-    return searchableRows.find((row) => row.parcelId === selectedParcelId) ?? null;
-  }, [searchableRows, selectedParcelId]);
+    return (
+      currentRows.find((row) => row.parcelId === selectedParcelId) ??
+      historyRows.find((row) => row.parcelId === selectedParcelId) ??
+      null
+    );
+  }, [currentRows, historyRows, selectedParcelId]);
 
   async function markDelivered(parcelId: string) {
     if (!riderUserId) return;
@@ -292,318 +260,140 @@ export default function RiderScreen() {
     );
   }
 
+  const visibleList = activeSection === 'assigned' ? assignedList : historyList;
+
   return (
     <AppScreen refreshing={refreshing} onRefresh={() => void load()}>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Rider Operations</Text>
+      <Text style={[styles.title, { color: theme.colors.text }]}>Rider Dashboard</Text>
       <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-        Track today’s delivery performance and complete parcel actions quickly.
+        Daily performance, assigned parcels, and successful delivery history.
       </Text>
-      <AppButton
-        title={refreshing ? 'Refreshing...' : 'Refresh Dashboard'}
-        onPress={() => void load()}
-        variant="secondary"
-        disabled={refreshing}
-      />
-
-      <View style={styles.kpiGrid}>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
-            Successful Payment (Today)
-          </Text>
-          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
-            {formatCedisFromPsw(successfulPaymentReceivedTodayPsw)}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
-            Successful Deliveries (Today)
-          </Text>
-          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
-            {successfulDeliveriesToday}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
-            Total Deliveries (Today)
-          </Text>
-          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
-            {totalDeliveriesToday}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
-            Outstanding Deliveries
-          </Text>
-          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
-            {outstandingDeliveries}
-          </Text>
-        </View>
-      </View>
-
-      <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>
-        Rider Analytics ({riderRoleLabel})
-      </Text>
-      <View style={styles.kpiGrid}>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
-            Completion Rate (All Known)
-          </Text>
-          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
-            {formatPercent(analytics.completionRate)}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>Return Rate</Text>
-          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
-            {formatPercent(analytics.returnRate)}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
-            Avg Payment Per Delivered
-          </Text>
-          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
-            {formatCedisFromPsw(analytics.averagePaidPsw)}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.kpiTile,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
-          <Text style={[styles.kpiLabel, { color: theme.colors.textSubtle }]}>
-            Outstanding &gt; 24h
-          </Text>
-          <Text style={[styles.kpiValue, { color: theme.colors.text }]}>
-            {analytics.unresolvedOlderThanOneDay}
-          </Text>
-        </View>
-      </View>
 
       <AppCard>
-        <Text style={[styles.detailsTitle, { color: theme.colors.text }]}>
-          7-Day Throughput Trend
-        </Text>
-        <Text style={[styles.detailsLine, { color: theme.colors.textSubtle }]}>
-          Today vs yesterday completed delta: {formatPercent(analytics.todayDelta)}
-        </Text>
-        {analytics.dailySeries.map((point) => (
-          <View key={point.dayLabel} style={styles.trendRow}>
-            <Text style={[styles.trendDay, { color: theme.colors.textMuted }]}>
-              {point.dayLabel}
-            </Text>
-            <Text style={[styles.trendValue, { color: theme.colors.text }]}>
-              Completed: {point.completed}
-            </Text>
-            <Text style={[styles.trendValue, { color: theme.colors.textSubtle }]}>
-              New Assigned: {point.created}
-            </Text>
-          </View>
-        ))}
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Date Picker</Text>
+        <Text style={{ color: theme.colors.textSubtle }}>Filter date (default today).</Text>
+        <AppInput
+          value={selectedDate}
+          onChangeText={(value) => setSelectedDate(value.trim())}
+          placeholder="YYYY-MM-DD"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <View style={styles.buttonRow}>
+          <AppButton
+            title="Previous"
+            variant="secondary"
+            onPress={() => setSelectedDate((prev) => shiftDateKey(prev, -1))}
+          />
+          <AppButton
+            title="Today"
+            variant="secondary"
+            onPress={() => setSelectedDate(todayDateKey())}
+          />
+          <AppButton
+            title="Next"
+            variant="secondary"
+            onPress={() => setSelectedDate((prev) => shiftDateKey(prev, 1))}
+          />
+        </View>
       </AppCard>
 
-      {benchmark ? (
-        <AppCard>
-          <Text style={[styles.detailsTitle, { color: theme.colors.text }]}>Branch Benchmark</Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textSubtle }]}>
-            Compared with {benchmark.branch.ridersCount} riders in your branch.
-          </Text>
-          <View style={styles.benchmarkRow}>
-            <Text style={[styles.benchmarkLabel, { color: theme.colors.textMuted }]}>
-              Completion Rate
-            </Text>
-            <Text style={[styles.benchmarkValue, { color: theme.colors.text }]}>
-              {formatPercent(benchmark.rider.completionRate)} vs{' '}
-              {formatPercent(benchmark.branchAverage.completionRate)}
-            </Text>
-            <Text style={[styles.benchmarkDelta, { color: theme.colors.textSubtle }]}>
-              {formatDelta(benchmark.rider.completionRate - benchmark.branchAverage.completionRate)}
-            </Text>
-          </View>
-          <View style={styles.benchmarkRow}>
-            <Text style={[styles.benchmarkLabel, { color: theme.colors.textMuted }]}>
-              Return Rate
-            </Text>
-            <Text style={[styles.benchmarkValue, { color: theme.colors.text }]}>
-              {formatPercent(benchmark.rider.returnRate)} vs{' '}
-              {formatPercent(benchmark.branchAverage.returnRate)}
-            </Text>
-            <Text style={[styles.benchmarkDelta, { color: theme.colors.textSubtle }]}>
-              {formatDelta(benchmark.rider.returnRate - benchmark.branchAverage.returnRate, true)}
-            </Text>
-          </View>
-          <View style={styles.benchmarkRow}>
-            <Text style={[styles.benchmarkLabel, { color: theme.colors.textMuted }]}>
-              Avg Paid Per Delivery
-            </Text>
-            <Text style={[styles.benchmarkValue, { color: theme.colors.text }]}>
-              {formatCedisFromPsw(benchmark.rider.averagePaidPsw)} vs{' '}
-              {formatCedisFromPsw(benchmark.branchAverage.averagePaidPsw)}
-            </Text>
-          </View>
-          <View style={styles.benchmarkRow}>
-            <Text style={[styles.benchmarkLabel, { color: theme.colors.textMuted }]}>
-              Outstanding &gt; 24h
-            </Text>
-            <Text style={[styles.benchmarkValue, { color: theme.colors.text }]}>
-              {benchmark.rider.unresolvedOlderThanOneDay.toFixed(1)} vs{' '}
-              {benchmark.branchAverage.unresolvedOlderThanOneDay.toFixed(1)}
-            </Text>
-          </View>
-        </AppCard>
-      ) : null}
-
-      <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>
-        Parcels Yet To Deliver Today
-      </Text>
-      {refreshing ? (
-        <View style={styles.listWrap}>
-          <AppSkeletonCard lines={4} />
-          <AppSkeletonCard lines={4} />
-        </View>
-      ) : (
-        <FlatList
-          data={pendingTodayRows}
-          keyExtractor={(item) => item.parcelId}
-          contentContainerStyle={{ gap: 10, paddingTop: 8 }}
-          renderItem={({ item }) => (
-            <AppCard>
-              <Text style={[styles.bold, { color: theme.colors.text }]}>{item.trackingCode}</Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {item.receiverName ?? '-'} ({item.receiverPhone ?? '-'})
-              </Text>
-              <AppStatusChip label={item.deliveryStatus} />
-              <Text style={{ color: theme.colors.textSubtle }}>
-                Address: {item.dropoffAddress ?? '-'}
-              </Text>
-              <AppButton
-                title="Open Parcel"
-                onPress={() => {
-                  setSelectedParcelId(item.parcelId);
-                  void hapticTap();
-                }}
-                variant="secondary"
-              />
-            </AppCard>
-          )}
-          ListEmptyComponent={
-            <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
-              No pending deliveries for today.
-            </Text>
-          }
+      <View style={styles.kpiGrid}>
+        <StatCard label="Total Assigned" value={assignedForDay.length} />
+        <StatCard label="Total Completed Delivery" value={completedForDay.length} />
+        <StatCard label="Total Return To Office" value={returnedForDay.length} />
+        <StatCard
+          label="Total Amount Received"
+          value={formatCedisFromPsw(totalAmountReceivedPsw)}
         />
-      )}
+      </View>
 
-      <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>Find Any Parcel</Text>
+      <PaymentBreakdownCard
+        deliveryFeePsw={totalDeliveryFeePsw}
+        transitFeePsw={totalToBePaidPsw}
+        senderPaidTransit={false}
+      />
+
+      <View style={styles.switchRow}>
+        <AppButton
+          title="Assigned"
+          onPress={() => setActiveSection('assigned')}
+          variant={activeSection === 'assigned' ? 'primary' : 'secondary'}
+        />
+        <AppButton
+          title="History"
+          onPress={() => setActiveSection('history')}
+          variant={activeSection === 'history' ? 'primary' : 'secondary'}
+        />
+      </View>
+
       <AppInput
         value={search}
         onChangeText={setSearch}
-        placeholder="Tracking / Booking / Receiver / Phone"
+        placeholder={
+          activeSection === 'assigned' ? 'Search assigned parcels...' : 'Search history by date...'
+        }
       />
+
+      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+        {activeSection === 'assigned' ? 'Assigned Parcels' : `History (${selectedDate})`}
+      </Text>
+
       {refreshing ? (
         <View style={styles.listWrap}>
           <AppSkeletonCard lines={4} />
           <AppSkeletonCard lines={4} />
         </View>
+      ) : visibleList.length === 0 ? (
+        <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
+          {activeSection === 'assigned'
+            ? 'No assigned parcels found.'
+            : 'No successful delivery history for this date.'}
+        </Text>
       ) : (
-        <FlatList
-          data={filteredRows.slice(0, 20)}
-          keyExtractor={(item) => `${item.parcelId}-search`}
-          contentContainerStyle={{ gap: 10, paddingTop: 8 }}
-          renderItem={({ item }) => (
-            <AppCard>
-              <Text style={[styles.bold, { color: theme.colors.text }]}>{item.trackingCode}</Text>
-              <Text style={{ color: theme.colors.textMuted }}>{item.bookingCode}</Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {item.receiverName ?? '-'} ({item.receiverPhone ?? '-'})
-              </Text>
-              <AppStatusChip label={item.deliveryStatus} />
-              <AppButton
-                title="Open Parcel"
-                onPress={() => {
-                  setSelectedParcelId(item.parcelId);
-                  void hapticTap();
-                }}
-                variant="secondary"
-              />
-            </AppCard>
-          )}
-          ListEmptyComponent={
-            <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
-              No parcels match your search.
-            </Text>
-          }
-        />
+        <View style={styles.listWrap}>
+          {visibleList.map((item) => (
+            <ParcelCard
+              key={`${activeSection}-${item.parcelId}`}
+              parcel={doorstepToParcelRow(item)}
+              onPress={() => {
+                setSelectedParcelId(item.parcelId);
+                void hapticTap();
+              }}
+              actionLabel="Open Parcel"
+            />
+          ))}
+        </View>
       )}
 
       {selectedRow ? (
         <AppCard>
-          <Text style={[styles.detailsTitle, { color: theme.colors.text }]}>Parcel Details</Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Tracking: {selectedRow.trackingCode}
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Parcel Details</Text>
+          <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
             Booking: {selectedRow.bookingCode}
           </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+          <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
             Receiver: {selectedRow.receiverName ?? '-'}
           </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+          <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
             Phone: {selectedRow.receiverPhone ?? '-'}
           </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+          <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
             Address: {selectedRow.dropoffAddress ?? '-'}
           </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+          <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
             Status: {selectedRow.deliveryStatus}
           </Text>
           <AppStatusChip label={selectedRow.deliveryStatus} />
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+          <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
             Amount Paid: {formatCedisFromPsw(selectedRow.amountPaidPsw)}
           </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Delivery Fee: {formatCedisFromPsw(selectedRow.deliveryFeePsw)}
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            To Be Paid: {formatCedisFromPsw(selectedRow.plannedToBePaidPsw)}
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
+          <PaymentBreakdownCard
+            deliveryFeePsw={selectedRow.deliveryFeePsw ?? 0}
+            transitFeePsw={selectedRow.plannedToBePaidPsw ?? 0}
+            senderPaidTransit={false}
+          />
+          <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
             Details: {selectedRow.parcelDetails}
           </Text>
 
@@ -629,11 +419,7 @@ export default function RiderScreen() {
                 disabled={actionParcelId === selectedRow.parcelId || !canCompleteDelivery}
               />
             </View>
-          ) : (
-            <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
-              This parcel is not currently outstanding for rider action.
-            </Text>
-          )}
+          ) : null}
           {!canCompleteDelivery ? (
             <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
               You do not have permission to complete rider delivery actions.
@@ -651,28 +437,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: mobileTypography.sectionTitle,
     fontWeight: '700',
-    marginTop: mobileSpacing.sm,
   },
   kpiGrid: { gap: mobileSpacing.sm, flexDirection: 'row', flexWrap: 'wrap' },
-  kpiTile: { width: '48%', borderWidth: 1, borderRadius: 16, padding: mobileSpacing.md },
-  kpiLabel: { fontSize: mobileTypography.caption },
-  kpiValue: { fontSize: 20, fontWeight: '800', marginTop: 2 },
-  detailsTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
-  detailsLine: {},
-  bold: { fontWeight: '700' },
-  empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
+  switchRow: { flexDirection: 'row', gap: mobileSpacing.sm },
   buttonRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
-  listWrap: { gap: mobileSpacing.sm + 2, paddingTop: mobileSpacing.sm },
-  trendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: mobileSpacing.sm,
-  },
-  trendDay: { width: 48, fontWeight: '700' },
-  trendValue: { flex: 1, fontSize: mobileTypography.caption },
-  benchmarkRow: { gap: 4, marginTop: mobileSpacing.xs },
-  benchmarkLabel: { fontSize: mobileTypography.caption, fontWeight: '700' },
-  benchmarkValue: { fontWeight: '700' },
-  benchmarkDelta: { fontSize: mobileTypography.caption },
+  listWrap: { gap: mobileSpacing.sm + 2 },
+  empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
+  meta: { lineHeight: 19 },
 });

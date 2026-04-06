@@ -29,7 +29,7 @@ export default function AppLayout() {
       <Drawer.Screen
         name="(tabs)"
         options={{
-          title: 'Workspace',
+          title: 'Dashboard',
           headerShown: false,
           drawerIcon: ({ size, color }) => (
             <Ionicons name="grid-outline" size={size} color={color} />

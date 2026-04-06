@@ -31,5 +31,7 @@ export * from './separator';
 export * from './textarea';
 export * from './react-signature';
 export * from './input-otp';
+export * from './file-drop-upload';
+export * from './image-drop-upload';
 // export * from "./tooltip"
 // export * from "./typography"

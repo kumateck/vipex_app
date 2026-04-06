@@ -1,4 +1,4 @@
-import type { UserType } from '@/shared/access/constants';
+import type { CashierType, UserType } from '@/shared/access/constants';
 import type { ServerListQuery } from '@/services/rtk-query';
 
 export interface User {
@@ -13,6 +13,7 @@ export interface User {
   locationId?: string | null;
   locationName?: string | null;
   userType: UserType;
+  cashierType?: CashierType | null;
   createdBy: string;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -27,6 +28,7 @@ export type UserFilters = {
   locationId?: string | null;
   roleId?: string | null;
   userType?: UserType | null;
+  cashierType?: CashierType | null;
   status?: number | null;
   statuses?: string | null;
 };
@@ -42,6 +44,7 @@ export interface UserMutationInput {
   branchId: string;
   locationId?: string | null;
   userType: UserType;
+  cashierType?: CashierType | null;
   sendInvite?: boolean;
 }
 
