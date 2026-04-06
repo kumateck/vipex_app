@@ -28,19 +28,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select-searchable';
-import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
+import {
+  ParcelReconciliationActionType,
+  ParcelReconciliationCaseType,
+  ParcelStatus,
+  PaymentMethod,
+} from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useGetLocationQuery } from '@/features/locations/api/locations.api';
+import { useUploadImageMutation } from '@/features/uploads/api/uploads.api';
+import { FileUploadField } from '@/features/uploads/components/file-upload-field';
 import { Textarea } from '@/components/ui/textarea';
 import { formatDateTime } from '@/lib/date';
 import {
   type SenderCashierParcel,
   useCollectSenderAndProcessMutation,
   useListSenderCashierParcelsQuery,
+  useRequestParcelReconciliationCaseMutation,
   useSoftDeleteParcelMutation,
 } from '../api/parcel.api';
 import { ParcelReceiptActions, type ReceiptPrintData } from '../components/parcel-receipt-actions';
@@ -66,6 +74,30 @@ const PAYMENT_TYPE_LEGEND = [
   { label: 'Sender Pay', dotClassName: 'bg-emerald-500' },
   { label: 'Receiver Pay', dotClassName: 'bg-amber-500' },
   { label: 'Partial Pay', dotClassName: 'bg-sky-500' },
+];
+
+const RECON_CASE_TYPE_OPTIONS = [
+  { value: ParcelReconciliationCaseType.SHORTAGE, label: 'Shortage' },
+  { value: ParcelReconciliationCaseType.OVERAGE, label: 'Overage' },
+  { value: ParcelReconciliationCaseType.WRONG_AMOUNT, label: 'Wrong Amount' },
+  { value: ParcelReconciliationCaseType.WRONG_PARCEL_TYPE, label: 'Wrong Parcel Type' },
+  { value: ParcelReconciliationCaseType.DUPLICATE_ENTRY, label: 'Double Entry' },
+  {
+    value: ParcelReconciliationCaseType.CUSTOMER_CANCELLATION_BEFORE_DELIVERY,
+    label: 'Customer Cancellation Before Delivery',
+  },
+  { value: ParcelReconciliationCaseType.DATA_ENTRY_ERROR, label: 'Data Entry Error' },
+];
+
+const RECON_ACTION_OPTIONS = [
+  { value: ParcelReconciliationActionType.VOID_AND_REFUND, label: 'Void and Refund' },
+  { value: ParcelReconciliationActionType.VOID_AND_REBOOK, label: 'Void and Rebook' },
+  { value: ParcelReconciliationActionType.VOID_TO_SUSPENSE, label: 'Void to Suspense' },
+  {
+    value: ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE,
+    label: 'Keep Original, Void Duplicate',
+  },
+  { value: ParcelReconciliationActionType.MERGE_TO_SINGLE, label: 'Merge to Single Record' },
 ];
 
 const formatCurrency = (amountPsw: number) => `GHS ${(amountPsw / 100).toFixed(2)}`;
@@ -100,12 +132,24 @@ function getPaymentType(parcel: SenderCashierParcel) {
   return { dotClassName: 'bg-sky-500' };
 }
 
+async function toDataUrl(file: File): Promise<string> {
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`Failed reading file: ${file.name}`));
+    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.readAsDataURL(file);
+  });
+}
+
 export function ParcelSenderPaymentsPage() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
   const canDeleteParcel = (user?.permissions ?? []).includes(
     PermissionKeys.CanSoftDeleteParcelsAndPayments,
+  );
+  const canRequestReconciliation = (user?.permissions ?? []).includes(
+    PermissionKeys.CanRequestParcelReconciliation,
   );
 
   const [query, setQuery] = useState<
@@ -123,6 +167,15 @@ export function ParcelSenderPaymentsPage() {
   const [selectedParcel, setSelectedParcel] = useState<SenderCashierParcel | null>(null);
   const [deleteTargetParcel, setDeleteTargetParcel] = useState<SenderCashierParcel | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
+  const [reconTargetParcel, setReconTargetParcel] = useState<SenderCashierParcel | null>(null);
+  const [reconCaseType, setReconCaseType] = useState<number>(ParcelReconciliationCaseType.SHORTAGE);
+  const [reconActionType, setReconActionType] = useState<number>(
+    ParcelReconciliationActionType.VOID_AND_REFUND,
+  );
+  const [reconLinkedParcelId, setReconLinkedParcelId] = useState('');
+  const [reconEvidenceUrl, setReconEvidenceUrl] = useState('');
+  const [reconEvidenceFiles, setReconEvidenceFiles] = useState<File[]>([]);
+  const [reconNotes, setReconNotes] = useState('');
   const [lastPrintedReceipt, setLastPrintedReceipt] = useState<ReceiptPrintData | null>(null);
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<string>(String(PaymentMethod.CASH));
@@ -152,6 +205,9 @@ export function ParcelSenderPaymentsPage() {
   const [collectSenderAndProcess, { isLoading: isCollecting }] =
     useCollectSenderAndProcessMutation();
   const [softDeleteParcel, { isLoading: isDeletingParcel }] = useSoftDeleteParcelMutation();
+  const [requestReconciliationCase, { isLoading: isRequestingReconciliation }] =
+    useRequestParcelReconciliationCaseMutation();
+  const [uploadImage, { isLoading: isUploadingEvidence }] = useUploadImageMutation();
 
   const columns = useMemo<ColumnDef<SenderCashierParcel>[]>(
     () => [
@@ -249,12 +305,27 @@ export function ParcelSenderPaymentsPage() {
                   Delete Parcel
                 </DropdownMenuItem>
               ) : null}
+              {canRequestReconciliation ? (
+                <DropdownMenuItem
+                  onClick={() => {
+                    setReconTargetParcel(row.original);
+                    setReconCaseType(ParcelReconciliationCaseType.SHORTAGE);
+                    setReconActionType(ParcelReconciliationActionType.VOID_AND_REFUND);
+                    setReconLinkedParcelId('');
+                    setReconEvidenceUrl('');
+                    setReconEvidenceFiles([]);
+                    setReconNotes('');
+                  }}
+                >
+                  Open Reconciliation Case
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         ),
       },
     ],
-    [canDeleteParcel],
+    [canDeleteParcel, canRequestReconciliation],
   );
 
   const handleCollectPayment = async () => {
@@ -372,6 +443,48 @@ export function ParcelSenderPaymentsPage() {
       await refetch();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete parcel');
+    }
+  };
+
+  const handleRequestReconciliation = async () => {
+    if (!reconTargetParcel) return;
+    const notes = reconNotes.trim();
+    const linkedParcelId = reconLinkedParcelId.trim();
+    if (!notes) {
+      toast.error('Reconciliation note is required');
+      return;
+    }
+    if (reconCaseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY && !linkedParcelId) {
+      toast.error('Duplicate parcel ID is required for duplicate entry cases');
+      return;
+    }
+
+    try {
+      let uploadedEvidenceUrl = reconEvidenceUrl.trim() || null;
+      if (reconEvidenceFiles[0]) {
+        const upload = await uploadImage({
+          modelType: 'parcel-reconciliation-evidence',
+          modelId: reconTargetParcel.id,
+          fileName: reconEvidenceFiles[0].name,
+          dataUrl: await toDataUrl(reconEvidenceFiles[0]),
+        }).unwrap();
+        uploadedEvidenceUrl = upload.url;
+      }
+
+      await requestReconciliationCase({
+        parcelId: reconTargetParcel.id,
+        caseType: reconCaseType,
+        actionType: reconActionType,
+        linkedParcelId:
+          reconCaseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY ? linkedParcelId : null,
+        notes,
+        evidenceUrl: uploadedEvidenceUrl,
+      }).unwrap();
+      toast.success('Reconciliation case created');
+      setReconTargetParcel(null);
+      await refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create reconciliation case');
     }
   };
 
@@ -544,6 +657,141 @@ export function ParcelSenderPaymentsPage() {
                 disabled={isDeletingParcel}
               >
                 {isDeletingParcel ? 'Deleting...' : 'Delete Parcel'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={Boolean(reconTargetParcel)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setReconTargetParcel(null);
+              setReconLinkedParcelId('');
+              setReconEvidenceUrl('');
+              setReconEvidenceFiles([]);
+              setReconNotes('');
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Open Parcel Reconciliation Case</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Tracking: <strong>{reconTargetParcel?.trackingCode ?? '-'}</strong>
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="recon-case-type">Case Type</Label>
+                <Select
+                  value={String(reconCaseType)}
+                  onValueChange={(value) => {
+                    const nextCaseType = Number(value);
+                    setReconCaseType(nextCaseType);
+                    if (nextCaseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY) {
+                      setReconActionType(
+                        ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE,
+                      );
+                    } else if (
+                      reconActionType ===
+                        ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE ||
+                      reconActionType === ParcelReconciliationActionType.MERGE_TO_SINGLE
+                    ) {
+                      setReconActionType(ParcelReconciliationActionType.VOID_AND_REFUND);
+                    }
+                  }}
+                >
+                  <SelectTrigger id="recon-case-type">
+                    <SelectValue placeholder="Select case type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RECON_CASE_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={String(option.value)}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="recon-action-type">Proposed Action</Label>
+                <Select
+                  value={String(reconActionType)}
+                  onValueChange={(value) => setReconActionType(Number(value))}
+                >
+                  <SelectTrigger id="recon-action-type">
+                    <SelectValue placeholder="Select action" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RECON_ACTION_OPTIONS.filter((option) =>
+                      reconCaseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY
+                        ? option.value ===
+                            ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE ||
+                          option.value === ParcelReconciliationActionType.MERGE_TO_SINGLE
+                        : option.value !==
+                            ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE &&
+                          option.value !== ParcelReconciliationActionType.MERGE_TO_SINGLE,
+                    ).map((option) => (
+                      <SelectItem key={option.value} value={String(option.value)}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {reconCaseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY ? (
+                <div className="space-y-2">
+                  <Label htmlFor="recon-linked-parcel">Duplicate Parcel ID</Label>
+                  <Input
+                    id="recon-linked-parcel"
+                    value={reconLinkedParcelId}
+                    onChange={(event) => setReconLinkedParcelId(event.target.value)}
+                    placeholder="Paste duplicate parcel ID"
+                  />
+                </div>
+              ) : null}
+              <div className="space-y-2">
+                <FileUploadField
+                  id="recon-evidence-file"
+                  label="Evidence (optional)"
+                  files={reconEvidenceFiles}
+                  onFilesChange={(files) => setReconEvidenceFiles(files.slice(0, 1))}
+                  accept="image/*,.pdf,.doc,.docx"
+                  maxFiles={1}
+                  disabled={isUploadingEvidence}
+                  title="Drag and drop evidence file, or click to choose"
+                  helperText="Uploads one file and stores the resulting evidence URL."
+                />
+                <Input
+                  id="recon-evidence-url"
+                  value={reconEvidenceUrl}
+                  onChange={(event) => setReconEvidenceUrl(event.target.value)}
+                  placeholder="Or paste existing evidence URL"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="recon-notes">Reason</Label>
+                <Textarea
+                  id="recon-notes"
+                  value={reconNotes}
+                  onChange={(event) => setReconNotes(event.target.value)}
+                  rows={4}
+                  placeholder="Explain the reconciliation issue"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setReconTargetParcel(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRequestReconciliation}
+                disabled={isRequestingReconciliation || isUploadingEvidence}
+              >
+                {isRequestingReconciliation || isUploadingEvidence
+                  ? 'Submitting...'
+                  : 'Submit Case'}
               </Button>
             </DialogFooter>
           </DialogContent>

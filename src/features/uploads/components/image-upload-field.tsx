@@ -1,6 +1,6 @@
-import { type ChangeEvent } from 'react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { ImageDropUpload } from '@/components/ui/image-drop-upload';
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
+import { useState } from 'react';
 
 type ImageUploadFieldProps = {
   id: string;
@@ -29,10 +29,11 @@ export function ImageUploadField({
   disabled,
 }: ImageUploadFieldProps) {
   const previewUrl = value ?? '';
+  const [file, setFile] = useState<File | null>(null);
 
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
+  const handleFileChange = async (nextFile: File | null) => {
+    setFile(nextFile);
+    const file = nextFile;
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       return;
@@ -43,46 +44,24 @@ export function ImageUploadField({
   };
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <div className="flex flex-col gap-3 rounded-lg border border-dashed p-3">
-        {previewUrl ? (
-          <img src={previewUrl} alt={label} className="h-36 w-36 rounded-lg border object-cover" />
-        ) : (
-          <div className="flex h-36 w-36 items-center justify-center rounded-lg border bg-muted text-xs text-muted-foreground">
-            No image
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <input
-            id={id}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(event) => void handleFileChange(event)}
-            disabled={disabled}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => document.getElementById(id)?.click()}
-            disabled={disabled}
-          >
-            Choose image
-          </Button>
-          {previewUrl ? (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => onChange(null)}
-              disabled={disabled}
-            >
-              Remove
-            </Button>
-          ) : null}
-        </div>
-        {helperText ? <p className="text-xs text-muted-foreground">{helperText}</p> : null}
-      </div>
-    </div>
+    <Field>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <ImageDropUpload
+        id={id}
+        file={file}
+        previewUrl={previewUrl}
+        onFileChange={(nextFile) => {
+          if (!nextFile) {
+            setFile(null);
+            onChange(null);
+            return;
+          }
+          void handleFileChange(nextFile);
+        }}
+        helperText={helperText}
+        disabled={disabled}
+      />
+      {helperText ? <FieldDescription>{helperText}</FieldDescription> : null}
+    </Field>
   );
 }

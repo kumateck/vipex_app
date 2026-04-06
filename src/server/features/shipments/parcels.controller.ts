@@ -1,13 +1,17 @@
 import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import {
+  approveParcelReconciliationCaseSvc,
   createParcelSvc,
+  executeParcelReconciliationCaseSvc,
   getParcelFullDetailsSvc,
   getParcelSvc,
+  listParcelReconciliationCasesSvc,
   listOpenParcelDiscrepanciesSvc,
   listParcelsSvc,
   logParcelDiscrepancySvc,
   markParcelReceivedSvc,
+  requestParcelReconciliationCaseSvc,
   resolveParcelDiscrepancySvc,
   setPlannedToBePaidSvc,
   softDeleteParcelSvc,
@@ -155,3 +159,65 @@ export async function listOpenParcelDiscrepanciesCtrl(input: {
 }
 
 export const resolveParcelDiscrepancyCtrl = resolveParcelDiscrepancySvc;
+
+export async function requestParcelReconciliationCaseCtrl(input: {
+  companyId: string;
+  actorUserId: string;
+  parcelId: string;
+  linkedParcelId?: string | null;
+  caseType: number;
+  notes: string;
+  evidenceUrl?: string | null;
+  actionType?: number | null;
+}) {
+  return requestParcelReconciliationCaseSvc(input);
+}
+
+export async function approveParcelReconciliationCaseCtrl(input: {
+  caseId: string;
+  companyId: string;
+  actorUserId: string;
+  actionType: number;
+  resolutionNote?: string | null;
+}) {
+  return approveParcelReconciliationCaseSvc(input);
+}
+
+export async function executeParcelReconciliationCaseCtrl(input: {
+  caseId: string;
+  companyId: string;
+  actorUserId: string;
+  executionNote?: string | null;
+}) {
+  return executeParcelReconciliationCaseSvc(input);
+}
+
+export async function listParcelReconciliationCasesCtrl(input: {
+  companyId: string;
+  statuses?: number[] | null;
+  branchId?: string | null;
+  page: number;
+  pageSize: number;
+  search?: string | null;
+}) {
+  const page = Math.max(1, Number(input.page || 1));
+  const pageSize = Math.max(1, Math.min(100, Number(input.pageSize || 20)));
+  const { data, totalRecords } = await listParcelReconciliationCasesSvc({
+    companyId: input.companyId,
+    statuses: input.statuses ?? null,
+    branchId: input.branchId ?? null,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+    search: input.search?.trim() || null,
+  });
+
+  return {
+    data: data.map((row) => ({
+      ...row,
+      requestedAt: row.requestedAt.toISOString(),
+      approvedAt: row.approvedAt ? row.approvedAt.toISOString() : null,
+      executedAt: row.executedAt ? row.executedAt.toISOString() : null,
+    })),
+    meta: buildPaginationMeta({ totalRecords, page, pageSize }),
+  };
+}
