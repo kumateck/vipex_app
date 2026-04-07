@@ -1333,7 +1333,13 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
           accountantUserId?: string | null;
           confirmationDate: string;
           expectedCashCedis: number | string;
+          expectedMtnCedis?: number | string;
+          expectedTelecelCedis?: number | string;
+          expectedAirtelCedis?: number | string;
           countedCashCedis: number | string;
+          countedMtnCedis?: number | string;
+          countedTelecelCedis?: number | string;
+          countedAirtelCedis?: number | string;
           notes?: string | null;
           createdBy: string;
         }),
@@ -1350,7 +1356,13 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         accountantUserId?: string | null;
         confirmationDate: string;
         expectedCashCedis: number | string;
+        expectedMtnCedis?: number | string;
+        expectedTelecelCedis?: number | string;
+        expectedAirtelCedis?: number | string;
         countedCashCedis: number | string;
+        countedMtnCedis?: number | string;
+        countedTelecelCedis?: number | string;
+        countedAirtelCedis?: number | string;
         notes?: string | null;
         createdBy: string;
       }),
@@ -1364,7 +1376,13 @@ export const accountingRoutes = new Elysia({ name: 'accounting' })
         accountantUserId: t.Optional(t.Union([t.String(), t.Null()])),
         confirmationDate: t.String({ format: 'date-time' }),
         expectedCashCedis: t.Union([t.Number(), t.String()]),
+        expectedMtnCedis: t.Optional(t.Union([t.Number(), t.String()])),
+        expectedTelecelCedis: t.Optional(t.Union([t.Number(), t.String()])),
+        expectedAirtelCedis: t.Optional(t.Union([t.Number(), t.String()])),
         countedCashCedis: t.Union([t.Number(), t.String()]),
+        countedMtnCedis: t.Optional(t.Union([t.Number(), t.String()])),
+        countedTelecelCedis: t.Optional(t.Union([t.Number(), t.String()])),
+        countedAirtelCedis: t.Optional(t.Union([t.Number(), t.String()])),
         notes: t.Optional(t.Union([t.String(), t.Null()])),
         createdBy: t.String(),
       }),

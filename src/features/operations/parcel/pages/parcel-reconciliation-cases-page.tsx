@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
@@ -141,9 +141,11 @@ export function ParcelReconciliationCasesPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createBookingSearch, setCreateBookingSearch] = useState('');
+  const [createLinkedBookingSearch, setCreateLinkedBookingSearch] = useState('');
   const [createParcelResults, setCreateParcelResults] = useState<ParcelSearchRow[]>([]);
+  const [createLinkedParcelResults, setCreateLinkedParcelResults] = useState<ParcelSearchRow[]>([]);
   const [createSelectedParcelId, setCreateSelectedParcelId] = useState('');
-  const [createLinkedParcelId, setCreateLinkedParcelId] = useState('');
+  const [createSelectedLinkedParcelId, setCreateSelectedLinkedParcelId] = useState('');
   const [createCaseType, setCreateCaseType] = useState<number>(
     ParcelReconciliationCaseType.SHORTAGE,
   );
@@ -242,9 +244,11 @@ export function ParcelReconciliationCasesPage() {
 
   const resetCreateForm = () => {
     setCreateBookingSearch('');
+    setCreateLinkedBookingSearch('');
     setCreateParcelResults([]);
+    setCreateLinkedParcelResults([]);
     setCreateSelectedParcelId('');
-    setCreateLinkedParcelId('');
+    setCreateSelectedLinkedParcelId('');
     setCreateCaseType(ParcelReconciliationCaseType.SHORTAGE);
     setCreateActionType(ParcelReconciliationActionType.VOID_AND_REFUND);
     setCreateEvidenceUrl('');
@@ -257,11 +261,33 @@ export function ParcelReconciliationCasesPage() {
     [createParcelResults, createSelectedParcelId],
   );
 
-  const handleSearchParcelByBooking = async () => {
-    const booking = createBookingSearch.trim();
+  const selectedCreateLinkedParcel = useMemo(
+    () =>
+      createLinkedParcelResults.find((parcel) => parcel.id === createSelectedLinkedParcelId) ??
+      null,
+    [createLinkedParcelResults, createSelectedLinkedParcelId],
+  );
+
+  useEffect(() => {
+    if (!createSelectedParcelId) return;
+    setCreateLinkedParcelResults((prev) =>
+      prev.filter((parcel) => parcel.id !== createSelectedParcelId),
+    );
+    setCreateSelectedLinkedParcelId((prev) => (prev === createSelectedParcelId ? '' : prev));
+  }, [createSelectedParcelId]);
+
+  function parcelSelectLabel(parcel: ParcelSearchRow) {
+    const senderDisplay = [parcel.senderName, parcel.senderPhone ? `(${parcel.senderPhone})` : null]
+      .filter(Boolean)
+      .join(' ');
+    return `${parcel.bookingCode}${senderDisplay ? ` • ${senderDisplay}` : ''}`;
+  }
+
+  const searchParcelsByBooking = async (bookingCode: string) => {
+    const booking = bookingCode.trim();
     if (!booking) {
       toast.error('Enter a booking code to search');
-      return;
+      return [];
     }
 
     try {
@@ -278,32 +304,50 @@ export function ParcelReconciliationCasesPage() {
       const matched = response.data.filter((parcel) =>
         parcel.bookingCode.toLowerCase().includes(booking.toLowerCase()),
       );
-      setCreateParcelResults(matched);
-      const [onlyMatch] = matched;
-      if (matched.length === 1 && onlyMatch) {
-        setCreateSelectedParcelId(onlyMatch.id);
-      } else if (!matched.some((parcel) => parcel.id === createSelectedParcelId)) {
-        setCreateSelectedParcelId('');
-      }
       if (!matched.length) {
         toast.error('No parcel found for that booking code');
       }
+      return matched;
     } catch (error) {
       ThrowErrorMessage(error);
+      return [];
+    }
+  };
+
+  const handleSearchParcelByBooking = async () => {
+    const matched = await searchParcelsByBooking(createBookingSearch);
+    setCreateParcelResults(matched);
+    const [onlyMatch] = matched;
+    if (matched.length === 1 && onlyMatch) {
+      setCreateSelectedParcelId(onlyMatch.id);
+    } else if (!matched.some((parcel) => parcel.id === createSelectedParcelId)) {
+      setCreateSelectedParcelId('');
+    }
+  };
+
+  const handleSearchLinkedParcelByBooking = async () => {
+    const matched = await searchParcelsByBooking(createLinkedBookingSearch);
+    const filtered = matched.filter((parcel) => parcel.id !== createSelectedParcelId);
+    setCreateLinkedParcelResults(filtered);
+    const [onlyMatch] = filtered;
+    if (filtered.length === 1 && onlyMatch) {
+      setCreateSelectedLinkedParcelId(onlyMatch.id);
+    } else if (!filtered.some((parcel) => parcel.id === createSelectedLinkedParcelId)) {
+      setCreateSelectedLinkedParcelId('');
     }
   };
 
   const handleCreate = async () => {
     const parcelId = createSelectedParcelId.trim();
-    const linkedParcelId = createLinkedParcelId.trim();
+    const linkedParcelId = createSelectedLinkedParcelId.trim();
     const notes = createNotes.trim();
 
     if (!parcelId) {
-      toast.error('Parcel ID is required');
+      toast.error('Select a parcel from booking search results');
       return;
     }
     if (createCaseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY && !linkedParcelId) {
-      toast.error('Linked duplicate parcel ID is required');
+      toast.error('Select the linked duplicate parcel from booking search results');
       return;
     }
     if (!notes) {
@@ -447,25 +491,19 @@ export function ParcelReconciliationCasesPage() {
               <Label htmlFor="create-case-parcel-select">Select Parcel</Label>
               <Select value={createSelectedParcelId} onValueChange={setCreateSelectedParcelId}>
                 <SelectTrigger id="create-case-parcel-select">
-                  <SelectValue placeholder="Choose parcel from search results" />
+                  <SelectValue placeholder="Choose booking/sender from search results" />
                 </SelectTrigger>
                 <SelectContent>
                   {createParcelResults.map((parcel) => (
                     <SelectItem key={parcel.id} value={parcel.id}>
-                      <div className="flex flex-col">
-                        <span>
-                          {parcel.bookingCode} • {parcel.trackingCode}
-                        </span>
-                        <span className="text-xs text-muted-foreground">{parcel.id}</span>
-                      </div>
+                      {parcelSelectLabel(parcel)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               {selectedCreateParcel ? (
                 <p className="text-xs text-muted-foreground">
-                  Selected: {selectedCreateParcel.bookingCode} | Parcel ID:{' '}
-                  {selectedCreateParcel.id}
+                  Selected: {parcelSelectLabel(selectedCreateParcel)}
                 </p>
               ) : null}
             </div>
@@ -486,6 +524,11 @@ export function ParcelReconciliationCasesPage() {
                     createActionType === ParcelReconciliationActionType.MERGE_TO_SINGLE
                   ) {
                     setCreateActionType(ParcelReconciliationActionType.VOID_AND_REFUND);
+                  }
+                  if (nextCaseType !== ParcelReconciliationCaseType.DUPLICATE_ENTRY) {
+                    setCreateLinkedBookingSearch('');
+                    setCreateLinkedParcelResults([]);
+                    setCreateSelectedLinkedParcelId('');
                   }
                 }}
               >
@@ -528,15 +571,52 @@ export function ParcelReconciliationCasesPage() {
               </Select>
             </div>
             {createCaseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY ? (
-              <div className="space-y-2">
-                <Label htmlFor="create-case-linked-id">Linked Duplicate Parcel ID</Label>
-                <Input
-                  id="create-case-linked-id"
-                  value={createLinkedParcelId}
-                  onChange={(event) => setCreateLinkedParcelId(event.target.value)}
-                  placeholder="Duplicate parcel ID"
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="create-case-linked-booking-search">
+                    Linked Duplicate Booking Code Search
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="create-case-linked-booking-search"
+                      value={createLinkedBookingSearch}
+                      onChange={(event) => setCreateLinkedBookingSearch(event.target.value)}
+                      placeholder="Enter duplicate booking code"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleSearchLinkedParcelByBooking}
+                      disabled={isSearchingParcels}
+                    >
+                      {isSearchingParcels ? 'Searching...' : 'Search'}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="create-case-linked-parcel-select">Select Linked Parcel</Label>
+                  <Select
+                    value={createSelectedLinkedParcelId}
+                    onValueChange={setCreateSelectedLinkedParcelId}
+                  >
+                    <SelectTrigger id="create-case-linked-parcel-select">
+                      <SelectValue placeholder="Choose duplicate booking/sender from results" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {createLinkedParcelResults.map((parcel) => (
+                        <SelectItem key={parcel.id} value={parcel.id}>
+                          {parcelSelectLabel(parcel)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedCreateLinkedParcel ? (
+                    <p className="text-xs text-muted-foreground">
+                      Linked: {parcelSelectLabel(selectedCreateLinkedParcel)}
+                    </p>
+                  ) : null}
+                </div>
+              </>
             ) : null}
             <div className="space-y-2">
               <FileUploadField

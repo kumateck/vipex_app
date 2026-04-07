@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select-searchable';
-import { BranchType, CashConfirmationStatus, UserType } from '@/db/schemas/enums';
+import { BranchType, CashConfirmationStatus, UserStatus, UserType } from '@/db/schemas/enums';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
 import { PermissionKeys } from '@/shared/permissions/constants';
@@ -47,7 +47,9 @@ import {
 import { useAuthStore, type AuthUser } from '@/stores/auth-store';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
-export function AccountingDailyCashPage() {
+type DailyCashPageView = 'main' | 'drafts' | 'recorded' | 'approvals';
+
+export function AccountingDailyCashPage({ view = 'main' }: { view?: DailyCashPageView }) {
   const user = useAuthStore((state) => state.user);
   const permissions = new Set(user?.permissions ?? []);
   const canAccessDailyCash =
@@ -66,10 +68,28 @@ export function AccountingDailyCashPage() {
     );
   }
 
-  return <AccountingDailyCashPageContent user={user} />;
+  return <AccountingDailyCashPageContent user={user} view={view} />;
 }
 
-function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
+export function AccountingDailyCashDraftsPage() {
+  return <AccountingDailyCashPage view="drafts" />;
+}
+
+export function AccountingDailyCashRecordedPage() {
+  return <AccountingDailyCashPage view="recorded" />;
+}
+
+export function AccountingDailyCashApprovalsPage() {
+  return <AccountingDailyCashPage view="approvals" />;
+}
+
+function AccountingDailyCashPageContent({
+  user,
+  view,
+}: {
+  user: AuthUser;
+  view: DailyCashPageView;
+}) {
   const companyId = user.company?.id ?? '';
   const defaultBranchId = user?.branch?.id ?? '';
   const defaultLocationId = user?.location?.id ?? '';
@@ -83,8 +103,11 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
   const [expectedCashCedis, setExpectedCashCedis] = useState('');
   const [expectedCashOverrideScope, setExpectedCashOverrideScope] = useState<string | null>(null);
   const [countedCashCedis, setCountedCashCedis] = useState('');
+  const [countedMtnCedis, setCountedMtnCedis] = useState('0.00');
+  const [countedTelecelCedis, setCountedTelecelCedis] = useState('0.00');
+  const [countedAirtelCedis, setCountedAirtelCedis] = useState('0.00');
   const [notes, setNotes] = useState('');
-  const effectiveBranchId = isHeadOffice ? branchId : userBranchId;
+  const effectiveBranchId = isHeadOffice ? branchId : userBranchId || branchId;
 
   useEffect(() => {
     if (!isHeadOffice && userBranchId && branchId !== userBranchId) {
@@ -100,13 +123,27 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
     companyId && effectiveBranchId ? { companyId, branchId: effectiveBranchId } : undefined,
     { skip: !companyId || !effectiveBranchId },
   );
+  const locationOptionsWithFallback = useMemo(() => {
+    const options = [...locationOptions];
+    const userLocationId = user?.location?.id ?? null;
+    const userLocationName = user?.location?.name ?? null;
+    if (!userLocationId || !userLocationName || !effectiveBranchId) return options;
+    if (options.some((location) => location.id === userLocationId)) return options;
+    return [
+      ...options,
+      { id: userLocationId, name: userLocationName, branchId: effectiveBranchId },
+    ];
+  }, [effectiveBranchId, locationOptions, user?.location?.id, user?.location?.name]);
   const { data: cashierOptions = [] } = useListUserOptionsQuery(
     companyId && effectiveBranchId
       ? {
           companyId,
           branchId: effectiveBranchId,
-          locationId: locationId || undefined,
+          // Branch Level => no location filter (all branch cashiers)
+          // Specific Location => filter to selected location only.
+          locationId: locationId ? locationId : undefined,
           userType: UserType.CASHIER,
+          status: UserStatus.ACTIVE,
         }
       : undefined,
     { skip: !companyId || !effectiveBranchId },
@@ -147,8 +184,8 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
     [branchOptions, user?.branch?.id, user?.branch?.name],
   );
   const locationNameById = useMemo(
-    () => new Map(locationOptions.map((location) => [location.id, location.name])),
-    [locationOptions],
+    () => new Map(locationOptionsWithFallback.map((location) => [location.id, location.name])),
+    [locationOptionsWithFallback],
   );
   const cashierNameById = useMemo(
     () => new Map(cashierOptions.map((cashier) => [cashier.id, cashier.fullname])),
@@ -163,6 +200,18 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
   );
   const expectedCashInputValue =
     expectedCashOverrideScope === expectedScopeKey ? expectedCashCedis : suggestedExpectedCashCedis;
+  const expectedMtnCedis = useMemo(
+    () => ((expectedSummary?.mtnSalesPsw ?? 0) / 100).toFixed(2),
+    [expectedSummary?.mtnSalesPsw],
+  );
+  const expectedTelecelCedis = useMemo(
+    () => ((expectedSummary?.telecelSalesPsw ?? 0) / 100).toFixed(2),
+    [expectedSummary?.telecelSalesPsw],
+  );
+  const expectedAirtelCedis = useMemo(
+    () => ((expectedSummary?.airtelSalesPsw ?? 0) / 100).toFixed(2),
+    [expectedSummary?.airtelSalesPsw],
+  );
 
   const confirmationDateValue = confirmationDate
     ? new Date(`${confirmationDate}T00:00:00`)
@@ -185,10 +234,29 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
       return;
     }
 
+    if (countedCashCedis.trim() === '') {
+      toast.error('Enter counted cash amount');
+      return;
+    }
+
     const expected = Number(expectedCashInputValue);
     const counted = Number(countedCashCedis);
-    if (!Number.isFinite(expected) || expected < 0 || !Number.isFinite(counted) || counted < 0) {
-      toast.error('Enter valid expected and counted cash amounts');
+    const countedMtn = Number(countedMtnCedis || '0');
+    const countedTelecel = Number(countedTelecelCedis || '0');
+    const countedAirtel = Number(countedAirtelCedis || '0');
+    if (
+      !Number.isFinite(expected) ||
+      expected < 0 ||
+      !Number.isFinite(counted) ||
+      counted < 0 ||
+      !Number.isFinite(countedMtn) ||
+      countedMtn < 0 ||
+      !Number.isFinite(countedTelecel) ||
+      countedTelecel < 0 ||
+      !Number.isFinite(countedAirtel) ||
+      countedAirtel < 0
+    ) {
+      toast.error('Enter valid counted amounts for Cash, MTN, Telecel, and Airtel');
       return;
     }
 
@@ -200,7 +268,13 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
         cashierUserId: cashierUserId || null,
         confirmationDate: `${confirmationDate}T00:00:00.000Z`,
         expectedCashCedis: expected,
+        expectedMtnCedis,
+        expectedTelecelCedis,
+        expectedAirtelCedis,
         countedCashCedis: counted,
+        countedMtnCedis: countedMtn,
+        countedTelecelCedis: countedTelecel,
+        countedAirtelCedis: countedAirtel,
         notes: notes.trim() || null,
         createdBy: user.id,
       }).unwrap();
@@ -208,6 +282,9 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
       setExpectedCashCedis('');
       setExpectedCashOverrideScope(null);
       setCountedCashCedis('');
+      setCountedMtnCedis('0.00');
+      setCountedTelecelCedis('0.00');
+      setCountedAirtelCedis('0.00');
       setNotes('');
       setCashierUserId('');
       await refetch();
@@ -265,14 +342,52 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
           row.cashierUserId ? (cashierNameById.get(row.cashierUserId) ?? row.cashierUserId) : '-',
       },
       {
-        id: 'expected',
-        header: 'Expected',
-        accessorFn: (row) => formatMoney(row.expectedCashPsw),
+        id: 'cash',
+        header: 'Cash',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <div>{formatMoney(row.original.countedCashPsw)}</div>
+            <div className="text-xs text-muted-foreground">
+              Expected: {formatMoney(row.original.expectedCashPsw)}
+            </div>
+          </div>
+        ),
       },
       {
-        id: 'counted',
-        header: 'Counted',
-        accessorFn: (row) => formatMoney(row.countedCashPsw),
+        id: 'mtn',
+        header: 'MTN',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <div>{formatMoney(row.original.countedMtnPsw)}</div>
+            <div className="text-xs text-muted-foreground">
+              Expected: {formatMoney(row.original.expectedMtnPsw)}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'telecel',
+        header: 'Telecel',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <div>{formatMoney(row.original.countedTelecelPsw)}</div>
+            <div className="text-xs text-muted-foreground">
+              Expected: {formatMoney(row.original.expectedTelecelPsw)}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'airtel',
+        header: 'Airtel',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <div>{formatMoney(row.original.countedAirtelPsw)}</div>
+            <div className="text-xs text-muted-foreground">
+              Expected: {formatMoney(row.original.expectedAirtelPsw)}
+            </div>
+          </div>
+        ),
       },
       {
         id: 'variance',
@@ -304,8 +419,11 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => {
-          const canConfirm = row.original.status === CashConfirmationStatus.DRAFT;
-          const canPost = row.original.status === CashConfirmationStatus.CONFIRMED;
+          const canConfirm =
+            (view === 'drafts' || view === 'approvals') &&
+            row.original.status === CashConfirmationStatus.DRAFT;
+          const canPost =
+            view === 'recorded' && row.original.status === CashConfirmationStatus.CONFIRMED;
 
           return (
             <DropdownMenu>
@@ -346,96 +464,126 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
         },
       },
     ],
-    [branchNameById, cashierNameById, isMutating, locationNameById],
+    [branchNameById, cashierNameById, isMutating, locationNameById, view],
   );
 
   const totalExpectedPsw = confirmations.reduce((sum, row) => sum + row.expectedCashPsw, 0);
   const totalCountedPsw = confirmations.reduce((sum, row) => sum + row.countedCashPsw, 0);
+  const tableRows =
+    view === 'drafts' || view === 'approvals'
+      ? confirmations.filter((row) => row.status === CashConfirmationStatus.DRAFT)
+      : view === 'recorded'
+        ? confirmations.filter((row) => row.status !== CashConfirmationStatus.DRAFT)
+        : [];
+  const pageTitle =
+    view === 'drafts'
+      ? 'Daily Cash Drafts'
+      : view === 'recorded'
+        ? 'Recorded Confirmations'
+        : view === 'approvals'
+          ? 'Daily Cash Approvals'
+          : 'Daily Cash Confirmation';
+  const pageDescription =
+    view === 'drafts'
+      ? 'Draft confirmations awaiting accountant confirmation.'
+      : view === 'recorded'
+        ? 'Confirmed and posted confirmations. Confirmed rows can be posted into the ledger.'
+        : view === 'approvals'
+          ? 'Approve draft confirmations, then route confirmed entries for ledger posting.'
+          : 'Branch accountants can record counted cash before confirmation and posting.';
+  const isCompletedSession = expectedSummary?.session?.status === 'COMPLETED';
+  const canRecordConfirmation =
+    !!effectiveBranchId && !!cashierUserId && isCompletedSession && !isMutating;
 
   function applyExpectedCashFromOperations() {
     setExpectedCashCedis('');
     setExpectedCashOverrideScope(null);
-    toast.success('Expected cash pulled from recorded cash payments');
+    setCountedCashCedis(((expectedSummary?.cashSalesPsw ?? 0) / 100).toFixed(2));
+    setCountedMtnCedis(((expectedSummary?.mtnSalesPsw ?? 0) / 100).toFixed(2));
+    setCountedTelecelCedis(((expectedSummary?.telecelSalesPsw ?? 0) / 100).toFixed(2));
+    setCountedAirtelCedis(((expectedSummary?.airtelSalesPsw ?? 0) / 100).toFixed(2));
+    toast.success('Expected payment-mode amounts applied (Cash, MTN, Telecel, Airtel)');
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Daily Cash Confirmation</h1>
-        <p className="text-sm text-muted-foreground">
-          Branch accountants can record counted cash, confirm it against expected sales, and post
-          only the confirmed batch to the ledger.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{pageTitle}</h1>
+        <p className="text-sm text-muted-foreground">{pageDescription}</p>
       </div>
 
       <ScrollableWrapper>
         <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>Total Expected</CardDescription>
-                <CardTitle>{formatMoney(totalExpectedPsw)}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>Total Counted</CardDescription>
-                <CardTitle>{formatMoney(totalCountedPsw)}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>Open Confirmations</CardDescription>
-                <CardTitle>
-                  {
-                    confirmations.filter((row) => row.status !== CashConfirmationStatus.POSTED)
-                      .length
-                  }
-                </CardTitle>
-              </CardHeader>
-            </Card>
-          </div>
+          {view === 'main' ? (
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Total Expected</CardDescription>
+                  <CardTitle>{formatMoney(totalExpectedPsw)}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Total Counted</CardDescription>
+                  <CardTitle>{formatMoney(totalCountedPsw)}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Open Confirmations</CardDescription>
+                  <CardTitle>
+                    {
+                      confirmations.filter((row) => row.status !== CashConfirmationStatus.POSTED)
+                        .length
+                    }
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
+          ) : null}
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>Expected Physical Cash</CardDescription>
-                <CardTitle>{formatMoney(expectedSummary?.cashSalesPsw ?? 0)}</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 text-xs text-muted-foreground">
-                Cash-only collections from recorded payments for the selected day.
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>Non-Cash Collections</CardDescription>
-                <CardTitle>{formatMoney(expectedSummary?.nonCashSalesPsw ?? 0)}</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 text-xs text-muted-foreground">
-                Mobile money and other non-cash receipts are shown separately for review.
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>Total Sales In View</CardDescription>
-                <CardTitle>{formatMoney(expectedSummary?.totalSalesPsw ?? 0)}</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 text-xs text-muted-foreground">
-                Combined cash and non-cash receipts for the selected filters.
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardDescription>Payment Count</CardDescription>
-                <CardTitle>{expectedSummary?.transactionCount ?? 0}</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 text-xs text-muted-foreground">
-                Sender, receiver, and delivery collections included in the day summary.
-              </CardContent>
-            </Card>
-          </div>
+          {view === 'main' ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Expected Physical Cash</CardDescription>
+                  <CardTitle>{formatMoney(expectedSummary?.cashSalesPsw ?? 0)}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 text-xs text-muted-foreground">
+                  Cash-only collections from recorded payments for the selected day.
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Non-Cash Collections</CardDescription>
+                  <CardTitle>{formatMoney(expectedSummary?.nonCashSalesPsw ?? 0)}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 text-xs text-muted-foreground">
+                  Mobile money and other non-cash receipts are shown separately for review.
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Total Sales In View</CardDescription>
+                  <CardTitle>{formatMoney(expectedSummary?.totalSalesPsw ?? 0)}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 text-xs text-muted-foreground">
+                  Combined cash and non-cash receipts for the selected filters.
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Payment Count</CardDescription>
+                  <CardTitle>{expectedSummary?.transactionCount ?? 0}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 text-xs text-muted-foreground">
+                  Sender, receiver, and delivery collections included in the day summary.
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
 
-          {expectedSummary?.session ? (
+          {view === 'main' && expectedSummary?.session ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <Card>
                 <CardHeader className="pb-3">
@@ -471,195 +619,252 @@ function AccountingDailyCashPageContent({ user }: { user: AuthUser }) {
             </div>
           ) : null}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Record Daily Confirmation</CardTitle>
-              <CardDescription>
-                Use this when the branch accountant physically counts cash at a location or cashier
-                point.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div className="space-y-2">
-                  <Label htmlFor="daily-cash-branch">Branch</Label>
-                  {isHeadOffice ? (
+          {view === 'main' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Record Daily Confirmation</CardTitle>
+                <CardDescription>
+                  Use this when the branch accountant physically counts cash at a location or
+                  cashier point.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="daily-cash-branch">Branch</Label>
+                    {isHeadOffice ? (
+                      <Select
+                        value={branchId}
+                        onValueChange={(value) => {
+                          setBranchId(value);
+                          setLocationId('');
+                          setCashierUserId('');
+                        }}
+                      >
+                        <SelectTrigger id="daily-cash-branch">
+                          <SelectValue placeholder="Select branch" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {branchOptions.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>
+                              {branch.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input value={user?.branch?.name ?? 'My branch'} disabled />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="daily-cash-location">Location</Label>
                     <Select
-                      value={branchId}
+                      value={locationId || 'all'}
                       onValueChange={(value) => {
-                        setBranchId(value);
-                        setLocationId('');
+                        setLocationId(value === 'all' ? '' : value);
                         setCashierUserId('');
                       }}
                     >
-                      <SelectTrigger id="daily-cash-branch">
-                        <SelectValue placeholder="Select branch" />
+                      <SelectTrigger id="daily-cash-location">
+                        <SelectValue placeholder="All branch locations" />
                       </SelectTrigger>
                       <SelectContent>
-                        {branchOptions.map((branch) => (
-                          <SelectItem key={branch.id} value={branch.id}>
-                            {branch.name}
+                        <SelectItem value="all">Branch Level</SelectItem>
+                        {locationOptionsWithFallback.map((location) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  ) : (
-                    <Input value={user?.branch?.name ?? 'My branch'} disabled />
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="daily-cash-location">Location</Label>
-                  <Select
-                    value={locationId || 'all'}
-                    onValueChange={(value) => {
-                      setLocationId(value === 'all' ? '' : value);
-                      setCashierUserId('');
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="daily-cash-cashier">Cashier / Officer</Label>
+                    <Select
+                      value={cashierUserId || 'all'}
+                      onValueChange={(value) => setCashierUserId(value === 'all' ? '' : value)}
+                    >
+                      <SelectTrigger id="daily-cash-cashier">
+                        <SelectValue placeholder="Optional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Branch Rollup</SelectItem>
+                        {cashierOptions.map((cashier) => (
+                          <SelectItem key={cashier.id} value={cashier.id}>
+                            {cashier.fullname}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="daily-cash-date">Confirmation Date</Label>
+                    <DatePicker
+                      date={isConfirmationDateValid ? confirmationDateValue : undefined}
+                      onDateChange={(value) => setConfirmationDate(toDateInputValue(value))}
+                      placeholder="Select date"
+                    />
+                  </div>
+                  <QuickAmountInput
+                    id="daily-cash-expected"
+                    label="Expected Cash (GHS)"
+                    value={expectedCashInputValue}
+                    onChange={(value) => {
+                      setExpectedCashOverrideScope(expectedScopeKey);
+                      setExpectedCashCedis(value);
                     }}
-                  >
-                    <SelectTrigger id="daily-cash-location">
-                      <SelectValue placeholder="All branch locations" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Branch Level</SelectItem>
-                      {locationOptions.map((location) => (
-                        <SelectItem key={location.id} value={location.id}>
-                          {location.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="daily-cash-cashier">Cashier / Officer</Label>
-                  <Select
-                    value={cashierUserId || 'all'}
-                    onValueChange={(value) => setCashierUserId(value === 'all' ? '' : value)}
-                  >
-                    <SelectTrigger id="daily-cash-cashier">
-                      <SelectValue placeholder="Optional" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Branch Rollup</SelectItem>
-                      {cashierOptions.map((cashier) => (
-                        <SelectItem key={cashier.id} value={cashier.id}>
-                          {cashier.fullname}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="daily-cash-date">Confirmation Date</Label>
-                  <DatePicker
-                    date={isConfirmationDateValid ? confirmationDateValue : undefined}
-                    onDateChange={(value) => setConfirmationDate(toDateInputValue(value))}
-                    placeholder="Select date"
                   />
-                </div>
-                <QuickAmountInput
-                  id="daily-cash-expected"
-                  label="Expected Cash (GHS)"
-                  value={expectedCashInputValue}
-                  onChange={(value) => {
-                    setExpectedCashOverrideScope(expectedScopeKey);
-                    setExpectedCashCedis(value);
-                  }}
-                />
-                <QuickAmountInput
-                  id="daily-cash-counted"
-                  label="Counted Cash (GHS)"
-                  value={countedCashCedis}
-                  onChange={setCountedCashCedis}
-                />
-                <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="daily-cash-notes">Notes</Label>
-                  <Input
-                    id="daily-cash-notes"
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Optional notes about count, shortage, or overage"
+                  <QuickAmountInput
+                    id="daily-cash-counted"
+                    label="Counted Cash (GHS)"
+                    value={countedCashCedis}
+                    onChange={setCountedCashCedis}
                   />
+                  <QuickAmountInput
+                    id="daily-cash-counted-mtn"
+                    label={`Counted MTN (GHS) • Expected ${expectedMtnCedis}`}
+                    value={countedMtnCedis}
+                    onChange={setCountedMtnCedis}
+                    onBlur={() => {
+                      if (countedMtnCedis.trim() === '') setCountedMtnCedis('0.00');
+                    }}
+                  />
+                  <QuickAmountInput
+                    id="daily-cash-counted-telecel"
+                    label={`Counted Telecel (GHS) • Expected ${expectedTelecelCedis}`}
+                    value={countedTelecelCedis}
+                    onChange={setCountedTelecelCedis}
+                    onBlur={() => {
+                      if (countedTelecelCedis.trim() === '') setCountedTelecelCedis('0.00');
+                    }}
+                  />
+                  <QuickAmountInput
+                    id="daily-cash-counted-airtel"
+                    label={`Counted Airtel (GHS) • Expected ${expectedAirtelCedis}`}
+                    value={countedAirtelCedis}
+                    onChange={setCountedAirtelCedis}
+                    onBlur={() => {
+                      if (countedAirtelCedis.trim() === '') setCountedAirtelCedis('0.00');
+                    }}
+                  />
+                  <div className="space-y-2 xl:col-span-2">
+                    <Label htmlFor="daily-cash-notes">Notes</Label>
+                    <Input
+                      id="daily-cash-notes"
+                      value={notes}
+                      onChange={(event) => setNotes(event.target.value)}
+                      placeholder="Optional notes about count, shortage, or overage"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-3 text-sm">
-                <div className="flex-1 text-muted-foreground">
-                  Use recorded cash collections for this branch, location, cashier, and date to
-                  prefill the expected physical cash.
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={applyExpectedCashFromOperations}
-                  disabled={isFetchingExpected}
-                >
-                  Use Expected Cash
-                </Button>
-                {expectedSummary?.session?.closingBalancePsw != null ? (
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-3 text-sm">
+                  <div className="flex-1 text-muted-foreground">
+                    Use recorded cash collections for this branch, location, cashier, and date to
+                    prefill the expected physical cash.
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() =>
-                      setCountedCashCedis(
-                        ((expectedSummary.session?.closingBalancePsw ?? 0) / 100).toFixed(2),
-                      )
-                    }
+                    onClick={applyExpectedCashFromOperations}
+                    disabled={isFetchingExpected}
                   >
-                    Use Session Closing
+                    Use Expected Cash
                   </Button>
-                ) : null}
-                {expectedSummary?.session?.expectedClosingBalancePsw != null ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() =>
-                      setCountedCashCedis(
-                        ((expectedSummary.session?.expectedClosingBalancePsw ?? 0) / 100).toFixed(
-                          2,
-                        ),
-                      )
-                    }
-                  >
-                    Use Expected Closing
-                  </Button>
-                ) : null}
-                <div className="text-xs text-muted-foreground">
-                  Sender {formatMoney(expectedSummary?.senderSalesPsw ?? 0)} • Receiver{' '}
-                  {formatMoney(expectedSummary?.receiverSalesPsw ?? 0)} • Delivery{' '}
-                  {formatMoney(expectedSummary?.deliverySalesPsw ?? 0)}
+                  {expectedSummary?.session?.closingBalancePsw != null ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        setCountedCashCedis(
+                          ((expectedSummary.session?.closingBalancePsw ?? 0) / 100).toFixed(2),
+                        )
+                      }
+                    >
+                      Use Session Closing
+                    </Button>
+                  ) : null}
+                  {expectedSummary?.session?.expectedClosingBalancePsw != null ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        setCountedCashCedis(
+                          ((expectedSummary.session?.expectedClosingBalancePsw ?? 0) / 100).toFixed(
+                            2,
+                          ),
+                        )
+                      }
+                    >
+                      Use Expected Closing
+                    </Button>
+                  ) : null}
+                  <div className="text-xs text-muted-foreground">
+                    Sender {formatMoney(expectedSummary?.senderSalesPsw ?? 0)} • Receiver{' '}
+                    {formatMoney(expectedSummary?.receiverSalesPsw ?? 0)} • Delivery{' '}
+                    {formatMoney(expectedSummary?.deliverySalesPsw ?? 0)}
+                  </div>
                 </div>
-              </div>
+                <p className="text-xs text-muted-foreground">
+                  Record Confirmation is enabled only when selected cashier session status is
+                  COMPLETED.
+                </p>
 
-              <div className="flex justify-end">
-                <Button
-                  onClick={() => void handleCreate()}
-                  disabled={isMutating || !effectiveBranchId}
-                >
-                  Record Confirmation
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="flex justify-end">
+                  <Button onClick={() => void handleCreate()} disabled={!canRecordConfirmation}>
+                    Record Confirmation
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Recorded Confirmations</CardTitle>
-              <CardDescription>
-                Drafts can be confirmed, and confirmed rows can then be posted into the ledger.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                mode="client"
-                data={confirmations}
-                columns={columns}
-                loading={isFetching}
-                searchPlaceholder="Search daily cash confirmations"
-                showSearch
-                pageSizeOptions={[10, 20, 50]}
-              />
-            </CardContent>
-          </Card>
+          {view !== 'main' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {view === 'recorded'
+                    ? 'Recorded Confirmations'
+                    : view === 'approvals'
+                      ? 'Approval Queue'
+                      : 'Draft Confirmations'}
+                </CardTitle>
+                <CardDescription>
+                  {view === 'recorded'
+                    ? 'Confirmed rows can be posted into the ledger; posted rows remain as audit records.'
+                    : 'Draft rows can be confirmed before they become eligible for posting.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  mode="client"
+                  data={tableRows}
+                  columns={columns}
+                  loading={isFetching}
+                  searchPlaceholder="Search daily cash confirmations"
+                  showSearch
+                  pageSizeOptions={[10, 20, 50]}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {view === 'main' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Recorded Confirmations</CardTitle>
+                <CardDescription>
+                  Use dedicated pages for Drafts, Approvals, and Recorded confirmations.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm text-muted-foreground">
+                  Navigate to `Daily Cash / Drafts`, `Daily Cash / Approvals`, and `Daily Cash /
+                  Recorded` from the Accounting menu.
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       </ScrollableWrapper>
     </div>

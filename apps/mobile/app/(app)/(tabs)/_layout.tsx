@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { canViewQueueScreen, canViewReceiveScreen } from '@mobile/lib/permissions';
-import { UserType } from '@/db/schemas/enums';
+import { UserType } from '@mobile/constants/user-types';
 
 function DrawerMenuButton() {
   const { theme } = useAppearance();

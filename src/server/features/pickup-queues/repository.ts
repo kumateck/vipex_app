@@ -9,23 +9,48 @@ export async function getPickupQueueByParcelRepo(parcelId: string, executor: DbE
   const [row] = await executor
     .select()
     .from(pickupQueues)
-    .where(eq(pickupQueues.parcelId, parcelId))
+    .where(and(eq(pickupQueues.parcelId, parcelId), isNull(pickupQueues.endedAt)))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getPickupQueueByParcelAndDateRepo(
+  input: { parcelId: string; queueDate: Date },
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select()
+    .from(pickupQueues)
+    .where(
+      and(
+        eq(pickupQueues.parcelId, input.parcelId),
+        eq(pickupQueues.queueDate, input.queueDate),
+        isNull(pickupQueues.endedAt),
+      ),
+    )
     .limit(1);
   return row ?? null;
 }
 
 export async function getNextPickupQueueNumberRepo(
-  input: { branchId: string; queueDate: Date; paymentBucket: string },
+  input: { branchId: string; locationId?: string | null; queueDate: Date },
   executor: DbExecutor = db,
 ) {
+  const locationClause =
+    input.locationId === undefined
+      ? undefined
+      : input.locationId === null
+        ? isNull(pickupQueues.locationId)
+        : eq(pickupQueues.locationId, input.locationId);
+
   const [row] = await executor
     .select({ value: max(pickupQueues.queueNumber) })
     .from(pickupQueues)
     .where(
       and(
         eq(pickupQueues.branchId, input.branchId),
+        locationClause,
         eq(pickupQueues.queueDate, input.queueDate),
-        eq(pickupQueues.paymentBucket, input.paymentBucket),
       ),
     );
 
@@ -36,7 +61,11 @@ export async function createPickupQueueRepo(
   values: typeof pickupQueues.$inferInsert,
   executor: DbExecutor = db,
 ) {
-  const [row] = await executor.insert(pickupQueues).values(values).returning();
+  const [row] = await executor
+    .insert(pickupQueues)
+    .values(values)
+    .onConflictDoNothing()
+    .returning();
   return row ?? null;
 }
 
@@ -65,6 +94,7 @@ export async function listActivePickupQueuesForBranchRepo(
       id: pickupQueues.id,
       companyId: pickupQueues.companyId,
       branchId: pickupQueues.branchId,
+      locationId: pickupQueues.locationId,
       parcelId: pickupQueues.parcelId,
       paymentBucket: pickupQueues.paymentBucket,
       queueDate: pickupQueues.queueDate,

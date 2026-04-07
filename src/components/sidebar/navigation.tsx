@@ -227,6 +227,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanDispatchForDelivery,
           },
           {
+            title: 'Rider Assigned',
+            url: '/parcels/home-delivery/rider-assigned',
+            permissionKey: PermissionKeys.CanDispatchForDelivery,
+          },
+          {
             title: 'Delivery Cashier',
             url: '/parcels/delivery-cashier',
             permissionKey: PermissionKeys.CanCompleteDoorstepDelivery,
@@ -283,6 +288,21 @@ const BASE_ROUTES: Route[] = [
             title: 'Daily Cash',
             url: '/accounting/daily-cash',
             permissionKey: PermissionKeys.CanCreateDailyCashConfirmation,
+          },
+          {
+            title: 'Daily Cash Drafts',
+            url: '/accounting/daily-cash/drafts',
+            permissionKey: PermissionKeys.CanConfirmDailyCashConfirmation,
+          },
+          {
+            title: 'Daily Cash Approvals',
+            url: '/accounting/daily-cash/approvals',
+            permissionKey: PermissionKeys.CanConfirmDailyCashConfirmation,
+          },
+          {
+            title: 'Daily Cash Recorded',
+            url: '/accounting/daily-cash/recorded',
+            permissionKey: PermissionKeys.CanPostDailyCashConfirmation,
           },
           {
             title: 'Expenses',

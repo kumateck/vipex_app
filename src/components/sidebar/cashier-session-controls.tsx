@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -86,12 +86,37 @@ export function CashierSessionControls() {
     useGetCurrentActiveSessionQuery(undefined, {
       skip: !isCashierUser || !canAccessSessionControls,
     });
+  const summaryMode: 'sender' | 'receiver' | 'delivery' | 'full' = cashierMode;
+  const closeMode: 'sender' | 'receiver' | 'delivery' | 'full' =
+    cashierType === CashierType.FULL ? 'full' : cashierMode;
+
   const { data: summary } = useGetCurrentActiveSessionSummaryQuery(
-    { mode: cashierMode },
+    { mode: summaryMode },
     {
       skip: !isCashierUser || !canReadSessions,
     },
   );
+  const { data: closeSummary } = useGetCurrentActiveSessionSummaryQuery(
+    { mode: closeMode },
+    {
+      skip: !isCashierUser || !canReadSessions,
+    },
+  );
+
+  useEffect(() => {
+    if (!isCloseDialogOpen) return;
+    const expectedPsw =
+      closeMode === 'receiver'
+        ? (closeSummary?.totalToBePaidCollectedPsw ?? 0)
+        : closeMode === 'delivery'
+          ? (closeSummary?.totalDeliveryFeeCollectedPsw ?? 0) +
+            (closeSummary?.totalToBePaidCollectedPsw ?? 0)
+          : closeMode === 'full'
+            ? (closeSummary?.totalFullCashierExpectedPsw ?? 0)
+            : (closeSummary?.amountPaidPsw ?? 0);
+    setClosingBalance((expectedPsw / 100).toFixed(2));
+  }, [closeMode, closeSummary, isCloseDialogOpen]);
+
   const { data: sessionTypes, isLoading: isLoadingSessionTypes } = useListSessionTypesQuery(
     undefined,
     {
@@ -259,17 +284,17 @@ export function CashierSessionControls() {
               <DialogHeader>
                 <DialogTitle>Close Cashier Session</DialogTitle>
                 <DialogDescription>
-                  Confirm closing balance before ending the session.
+                  System preloads the expected total received for this cashier type. Confirm to end
+                  the session.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-2">
-                <Label htmlFor="sidebar-closing-balance">Closing Balance (GHS)</Label>
+                <Label htmlFor="sidebar-closing-balance">Expected Total Received (GHS)</Label>
                 <Input
                   id="sidebar-closing-balance"
                   inputMode="decimal"
-                  placeholder="0.00"
                   value={closingBalance}
-                  onChange={(event) => setClosingBalance(event.target.value)}
+                  readOnly
                 />
               </div>
               <DialogFooter>

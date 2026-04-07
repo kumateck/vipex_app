@@ -339,6 +339,7 @@ export const pickupQueues = pgTable(
     branchId: varchar('branch_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
+    locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
     parcelId: varchar('parcel_id', { length: 25 })
       .notNull()
       .references(() => parcels.id),
@@ -359,15 +360,17 @@ export const pickupQueues = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },
   (t) => ({
-    uqPickupQueueParcel: uniqueIndex('pickup_queues_parcel_uq').on(t.parcelId),
+    uqPickupQueueOpenParcelDaily: uniqueIndex('pickup_queues_open_parcel_daily_uq')
+      .on(t.parcelId, t.queueDate)
+      .where(sql`${t.endedAt} IS NULL`),
     uqPickupQueueDailyCode: uniqueIndex('pickup_queues_daily_code_uq').on(
       t.branchId,
+      t.locationId,
       t.queueDate,
-      t.paymentBucket,
       t.queueNumber,
     ),
     byBranchQueuedAt: index('pickup_queues_branch_queued_at_idx').on(t.branchId, t.queuedAt),
-    byQueueCode: uniqueIndex('pickup_queues_code_uq').on(t.queueCode),
+    byQueueCode: index('pickup_queues_code_idx').on(t.queueCode),
   }),
 );
 

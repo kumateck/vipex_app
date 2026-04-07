@@ -100,6 +100,7 @@ export type CommunicationChannel = {
   createdAt: string | null;
   updatedAt: string | null;
   participantCount: number;
+  participantUserIds?: string[];
 };
 
 export type CommunicationLivekitToken = {
@@ -397,6 +398,16 @@ export const communicationApi = api.injectEndpoints({
       providesTags: [{ type: 'Communication', id: 'CHANNELS' }],
     }),
 
+    getCommunicationChannelById: builder.query<CommunicationChannel, { id: string }>({
+      query: ({ id }) => ({
+        url: `/communication/channels/${id}`,
+      }),
+      providesTags: (_result, _error, { id }) => [
+        { type: 'Communication', id: 'CHANNELS' },
+        { type: 'Communication', id: `CHANNEL:${id}` },
+      ],
+    }),
+
     createCommunicationChannel: builder.mutation<
       CommunicationChannel,
       {
@@ -509,6 +520,7 @@ export const {
   useListCommunicationPresenceQuery,
   useSetCommunicationPresenceMutation,
   useListCommunicationChannelsQuery,
+  useGetCommunicationChannelByIdQuery,
   useCreateCommunicationChannelMutation,
   useUpdateCommunicationChannelMutation,
   useAddCommunicationChannelParticipantsMutation,

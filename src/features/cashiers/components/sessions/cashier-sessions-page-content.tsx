@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';
-import { BranchType } from '@/db/schemas/enums';
+import { BranchType, CashierType } from '@/db/schemas/enums';
 import {
   useCloseSessionMutation,
+  useGetCurrentActiveSessionSummaryQuery,
   useListSessionsQuery,
   useListSessionTypesQuery,
   useOpenSessionMutation,
@@ -62,9 +63,35 @@ export function CashierSessionsPageContent({ view = 'all' }: CashierSessionsPage
   });
 
   const { data: sessionTypes, isLoading: isLoadingTypes } = useListSessionTypesQuery();
+  const closeMode: 'sender' | 'receiver' | 'delivery' | 'full' =
+    authUser?.cashierType === CashierType.FULL
+      ? 'full'
+      : authUser?.cashierType === CashierType.DELIVERY
+        ? 'delivery'
+        : authUser?.cashierType === CashierType.TOBEPAID
+          ? 'receiver'
+          : 'sender';
+  const { data: closeSummary } = useGetCurrentActiveSessionSummaryQuery(
+    { mode: closeMode },
+    { skip: !authUser },
+  );
   const { data, isLoading } = useListSessionsQuery(query, { skip: !authUser });
   const [openSession, { isLoading: isOpening }] = useOpenSessionMutation();
   const [closeSession, { isLoading: isClosing }] = useCloseSessionMutation();
+
+  useEffect(() => {
+    if (!sessionIdToClose) return;
+    const expectedPsw =
+      closeMode === 'receiver'
+        ? (closeSummary?.totalToBePaidCollectedPsw ?? 0)
+        : closeMode === 'delivery'
+          ? (closeSummary?.totalDeliveryFeeCollectedPsw ?? 0) +
+            (closeSummary?.totalToBePaidCollectedPsw ?? 0)
+          : closeMode === 'full'
+            ? (closeSummary?.totalFullCashierExpectedPsw ?? 0)
+            : (closeSummary?.amountPaidPsw ?? 0);
+    setClosingBalance((expectedPsw / 100).toFixed(2));
+  }, [closeMode, closeSummary, sessionIdToClose]);
 
   const handleRequestChange = useCallback(
     (request: CashierSessionListQuery) =>
@@ -178,17 +205,17 @@ export function CashierSessionsPageContent({ view = 'all' }: CashierSessionsPage
           <DialogHeader>
             <DialogTitle>Close Cashier Session</DialogTitle>
             <DialogDescription>
-              Enter the closing balance to confirm session closure.
+              System preloads the expected total received for this cashier type. Confirm to end the
+              session.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="sessions-page-closing-balance">Closing Balance (GHS)</Label>
+            <Label htmlFor="sessions-page-closing-balance">Expected Total Received (GHS)</Label>
             <Input
               id="sessions-page-closing-balance"
               inputMode="decimal"
-              placeholder="0.00"
               value={closingBalance}
-              onChange={(event) => setClosingBalance(event.target.value)}
+              readOnly
             />
           </div>
           <DialogFooter>
