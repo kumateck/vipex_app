@@ -9,6 +9,7 @@ import {
   Mic,
   MicOff,
   PhoneCall,
+  Settings,
   Users2,
   Video,
   VideoOff,
@@ -19,6 +20,14 @@ import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { DualListTransfer } from '@/components/ui/dual-list-transfer';
 import { Field, FieldLabel } from '@/components/ui/field';
 import {
   Select,
@@ -30,6 +39,7 @@ import {
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
 import {
   useJoinVoiceChannelMutation,
+  useGetCommunicationChannelByIdQuery,
   useMarkCommunicationChannelReadMutation,
   useListCommunicationCallsQuery,
   useListCommunicationChannelUnreadCountsQuery,
@@ -38,6 +48,8 @@ import {
   useListCommunicationPresenceQuery,
   useListCommunicationThreadsQuery,
   useSetCommunicationPresenceMutation,
+  useAddCommunicationChannelParticipantsMutation,
+  useRemoveCommunicationChannelParticipantMutation,
   type CommunicationCallSession,
   type CommunicationChannel,
   type CommunicationPresence,
@@ -145,12 +157,14 @@ function ChannelListItem({
   isActive,
   unreadCount,
   mentionCount,
+  onManageMembers,
 }: {
   channel: CommunicationChannel;
   onOpen: () => void;
   isActive: boolean;
   unreadCount: number;
   mentionCount: number;
+  onManageMembers?: () => void;
 }) {
   return (
     <button
@@ -176,6 +190,17 @@ function ChannelListItem({
           {mentionCount > 0 ? <Badge variant="destructive">@{mentionCount}</Badge> : null}
           {unreadCount > 0 ? <Badge variant="default">{unreadCount}</Badge> : null}
           <Badge variant="outline">{channel.participantCount}</Badge>
+          {channel.visibility === 'private' && onManageMembers ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onManageMembers}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          ) : null}
         </div>
       </div>
     </button>
@@ -283,6 +308,8 @@ export function CommunicationChatPage() {
     >
   >({});
   const [joiningVoiceChannelId, setJoiningVoiceChannelId] = useState<string | null>(null);
+  const [managingChannel, setManagingChannel] = useState<CommunicationChannel | null>(null);
+  const [channelMemberIds, setChannelMemberIds] = useState<string[]>([]);
   const [openSections, setOpenSections] = useState({
     dms: true,
     groups: true,
@@ -330,12 +357,30 @@ export function CommunicationChatPage() {
   const [setPresenceRequest] = useSetCommunicationPresenceMutation();
   const [joinVoiceChannel] = useJoinVoiceChannelMutation();
   const [markChannelRead] = useMarkCommunicationChannelReadMutation();
+  const [addParticipants, { isLoading: isAddingParticipants }] =
+    useAddCommunicationChannelParticipantsMutation();
+  const [removeParticipant, { isLoading: isRemovingParticipant }] =
+    useRemoveCommunicationChannelParticipantMutation();
+  const { data: managingChannelDetails } = useGetCommunicationChannelByIdQuery(
+    managingChannel ? { id: managingChannel.id } : ({ id: '' } as { id: string }),
+    { skip: !managingChannel },
+  );
 
   const userLabelById = useMemo(
     () =>
       new Map(
         userOptions.map((option) => [option.id, option.fullname || option.email || option.id]),
       ),
+    [userOptions],
+  );
+
+  const allUserTransferItems = useMemo(
+    () =>
+      userOptions.map((option) => ({
+        id: option.id,
+        label: option.fullname || option.email || option.id,
+        subLabel: option.email,
+      })),
     [userOptions],
   );
 
@@ -399,6 +444,11 @@ export function CommunicationChatPage() {
       requestCallParticipants(call.id);
     }
   }, [activeCalls, isSocketConnected, requestCallParticipants]);
+
+  useEffect(() => {
+    if (!managingChannelDetails?.participantUserIds) return;
+    setChannelMemberIds(managingChannelDetails.participantUserIds);
+  }, [managingChannelDetails]);
 
   const directThreads = useMemo(
     () => threads.filter((thread) => thread.threadType === 'direct'),
@@ -485,6 +535,32 @@ export function CommunicationChatPage() {
       toast.error(error instanceof Error ? error.message : 'Failed to join voice channel.');
     } finally {
       setJoiningVoiceChannelId(null);
+    }
+  };
+
+  const onSaveChannelMembers = async () => {
+    if (!managingChannel || !managingChannelDetails) return;
+    const initialIds = new Set(managingChannelDetails.participantUserIds ?? []);
+    const nextIds = new Set(channelMemberIds);
+
+    const toAdd = [...nextIds].filter((id) => !initialIds.has(id));
+    const toRemove = [...initialIds].filter((id) => !nextIds.has(id));
+
+    try {
+      if (toAdd.length) {
+        await addParticipants({ id: managingChannel.id, participantUserIds: toAdd }).unwrap();
+      }
+
+      for (const userId of toRemove) {
+        await removeParticipant({ id: managingChannel.id, userId }).unwrap();
+      }
+
+      toast.success('Channel members updated');
+      setManagingChannel(null);
+      refetchTextChannels();
+      refetchVoiceChannels();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update channel members');
     }
   };
 
@@ -713,6 +789,7 @@ export function CommunicationChatPage() {
                           if (!channel.threadId) return;
                           navigate(`/communication/chat/${channel.threadId}`);
                         }}
+                        onManageMembers={() => setManagingChannel(channel)}
                       />
                     ))
                   ) : (
@@ -791,6 +868,42 @@ export function CommunicationChatPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog
+        open={Boolean(managingChannel)}
+        onOpenChange={(open) => {
+          if (!open) setManagingChannel(null);
+        }}
+      >
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>
+              Manage Members{managingChannel ? ` • ${managingChannel.name}` : ''}
+            </DialogTitle>
+          </DialogHeader>
+
+          <DualListTransfer
+            items={allUserTransferItems}
+            selectedIds={channelMemberIds}
+            onSelectedIdsChange={setChannelMemberIds}
+            leftTitle="Not In"
+            rightTitle="In"
+            disabled={isAddingParticipants || isRemovingParticipant}
+          />
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManagingChannel(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void onSaveChannelMembers()}
+              disabled={isAddingParticipants || isRemovingParticipant}
+            >
+              {isAddingParticipants || isRemovingParticipant ? 'Saving...' : 'Save Members'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </ScrollableWrapper>
   );
 }

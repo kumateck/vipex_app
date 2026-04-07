@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
+import { DualListTransfer } from '@/components/ui/dual-list-transfer';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
@@ -43,15 +43,15 @@ export function CommunicationChatCreatePage() {
   const [createThread, { isLoading: isCreatingThread }] = useCreateCommunicationThreadMutation();
   const [createChannel, { isLoading: isCreatingChannel }] = useCreateCommunicationChannelMutation();
 
-  const onToggleParticipant = (userId: string, checked: boolean) => {
-    setNewThreadParticipantIds((prev) => {
-      if (checked) {
-        if (prev.includes(userId)) return prev;
-        return [...prev, userId];
-      }
-      return prev.filter((item) => item !== userId);
-    });
-  };
+  const userTransferItems = useMemo(
+    () =>
+      userOptions.map((option) => ({
+        id: option.id,
+        label: option.fullname,
+        subLabel: option.email,
+      })),
+    [userOptions],
+  );
 
   const onCreateThread = async () => {
     if (!newThreadParticipantIds.length) {
@@ -174,36 +174,13 @@ export function CommunicationChatCreatePage() {
 
                   <Field className="md:col-span-2">
                     <FieldLabel>Participants</FieldLabel>
-                    <div className="max-h-[55vh] space-y-2 overflow-y-auto rounded-md border p-2">
-                      {userOptions.length ? (
-                        userOptions.map((option) => {
-                          const checked = newThreadParticipantIds.includes(option.id);
-                          return (
-                            <label
-                              key={option.id}
-                              className="flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/40"
-                            >
-                              <span className="min-w-0 text-sm">
-                                <span className="block truncate font-medium">
-                                  {option.fullname}
-                                </span>
-                                <span className="block truncate text-xs text-muted-foreground">
-                                  {option.email}
-                                </span>
-                              </span>
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(value) =>
-                                  onToggleParticipant(option.id, value === true)
-                                }
-                              />
-                            </label>
-                          );
-                        })
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No users found.</p>
-                      )}
-                    </div>
+                    <DualListTransfer
+                      items={userTransferItems}
+                      selectedIds={newThreadParticipantIds}
+                      onSelectedIdsChange={setNewThreadParticipantIds}
+                      leftTitle="Not In"
+                      rightTitle="In"
+                    />
                   </Field>
                 </>
               ) : (
@@ -265,43 +242,13 @@ export function CommunicationChatCreatePage() {
                   {newChannelVisibility === 'private' ? (
                     <Field className="md:col-span-2">
                       <FieldLabel>Participants</FieldLabel>
-                      <div className="max-h-[55vh] space-y-2 overflow-y-auto rounded-md border p-2">
-                        {userOptions.length ? (
-                          userOptions.map((option) => {
-                            const checked = newChannelParticipantIds.includes(option.id);
-                            return (
-                              <label
-                                key={option.id}
-                                className="flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/40"
-                              >
-                                <span className="min-w-0 text-sm">
-                                  <span className="block truncate font-medium">
-                                    {option.fullname}
-                                  </span>
-                                  <span className="block truncate text-xs text-muted-foreground">
-                                    {option.email}
-                                  </span>
-                                </span>
-                                <Checkbox
-                                  checked={checked}
-                                  onCheckedChange={(value) => {
-                                    const nextChecked = value === true;
-                                    setNewChannelParticipantIds((prev) => {
-                                      if (nextChecked) {
-                                        if (prev.includes(option.id)) return prev;
-                                        return [...prev, option.id];
-                                      }
-                                      return prev.filter((item) => item !== option.id);
-                                    });
-                                  }}
-                                />
-                              </label>
-                            );
-                          })
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No users found.</p>
-                        )}
-                      </div>
+                      <DualListTransfer
+                        items={userTransferItems}
+                        selectedIds={newChannelParticipantIds}
+                        onSelectedIdsChange={setNewChannelParticipantIds}
+                        leftTitle="Not In"
+                        rightTitle="In"
+                      />
                     </Field>
                   ) : null}
                 </>

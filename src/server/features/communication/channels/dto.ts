@@ -83,6 +83,7 @@ export type CommunicationChannelsItem = {
   createdAt: string | null;
   updatedAt: string | null;
   participantCount: number;
+  participantUserIds?: string[];
 };
 
 export type CommunicationChannelsUnreadCountItem = {

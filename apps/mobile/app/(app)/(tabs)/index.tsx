@@ -6,7 +6,7 @@ import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { canViewRiderScreen } from '@mobile/lib/permissions';
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
-import { UserType } from '@/db/schemas/enums';
+import { UserType } from '@mobile/constants/user-types';
 
 export default function MobileHomeTabScreen() {
   const { theme } = useAppearance();

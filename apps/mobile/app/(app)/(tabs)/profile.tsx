@@ -7,7 +7,7 @@ import { useAppearance } from '@mobile/providers/appearance-provider';
 import { AppButton, AppCard } from '@/components/ui/mobile';
 import { StatCard } from '@mobile/components/courier';
 import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
-import { UserType } from '@/db/schemas/enums';
+import { UserType } from '@mobile/constants/user-types';
 
 export default function ProfileTabScreen() {
   const { theme, mode, setMode } = useAppearance();

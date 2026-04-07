@@ -11,7 +11,7 @@ import { useAppearance } from '@mobile/providers/appearance-provider';
 import { canMarkParcelArrived, canViewReceiveScreen } from '@mobile/lib/permissions';
 import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@mobile/lib/haptics';
 import { ParcelCard, ScannerView, StatCard } from '@mobile/components/courier';
-import { UserType } from '@/db/schemas/enums';
+import { UserType } from '@mobile/constants/user-types';
 import {
   AppButton,
   AppCard,

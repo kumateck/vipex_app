@@ -13,6 +13,7 @@ export { ParcelWaitingPickupPage } from './pages/parcel-waiting-pickup-page';
 export { ParcelReceiverCashierPage } from './pages/parcel-receiver-cashier-page';
 export { ParcelHomeDeliveryAddressPage } from './pages/parcel-home-delivery-address-page';
 export { ParcelHomeDeliveryDispatchPage } from './pages/parcel-home-delivery-dispatch-page';
+export { ParcelHomeDeliveryRiderAssignedPage } from './pages/parcel-home-delivery-rider-assigned-page';
 export { ParcelRiderCurrentPage } from './pages/parcel-rider-current-page';
 export { ParcelRiderHistoryPage } from './pages/parcel-rider-history-page';
 export { ParcelDeliveryCashierPage } from './pages/parcel-delivery-cashier-page';

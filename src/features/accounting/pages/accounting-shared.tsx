@@ -261,6 +261,7 @@ export function QuickAmountInput(props: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
 }) {
   return (
     <div className="space-y-2">
@@ -272,6 +273,7 @@ export function QuickAmountInput(props: {
         step="0.01"
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
+        onBlur={props.onBlur}
       />
     </div>
   );

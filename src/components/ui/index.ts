@@ -33,5 +33,6 @@ export * from './react-signature';
 export * from './input-otp';
 export * from './file-drop-upload';
 export * from './image-drop-upload';
+export * from './dual-list-transfer';
 // export * from "./tooltip"
 // export * from "./typography"
