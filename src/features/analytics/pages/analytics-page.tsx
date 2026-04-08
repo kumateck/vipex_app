@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
@@ -19,18 +19,16 @@ import { getMockAnalyticsSnapshot } from '../api/mock-data';
 import { ANALYTICS_PERMISSION_KEYS, hasAnalyticsPermission } from '../permissions';
 import { ANALYTICS_ALL, type AnalyticsResolvedScope } from '../types';
 import { resolveAnalyticsScope } from '../utils/scope';
-import type { BranchOption } from '@/features/branches/api/branches.api';
-import type { LocationOption } from '@/features/locations/api/locations.api';
 
-function scopeBadge(scope: AnalyticsResolvedScope) {
-  // We'll fetch the actual names in the component itself to avoid the hook issues
-  // For now, return placeholders that will be replaced in the JSX
-  return [
-    `Branch: ${scope.branchId ?? ANALYTICS_ALL}`,
-    `Location: ${scope.locationId ?? ANALYTICS_ALL}`,
-    `Range: ${scope.dateRange ?? 'today'}`,
-  ];
-}
+// function scopeBadge(scope: AnalyticsResolvedScope) {
+//   // We'll fetch the actual names in the component itself to avoid the hook issues
+//   // For now, return placeholders that will be replaced in the JSX
+//   return [
+//     `Branch: ${scope.branchId ?? ANALYTICS_ALL}`,
+//     `Location: ${scope.locationId ?? ANALYTICS_ALL}`,
+//     `Range: ${scope.dateRange ?? 'today'}`,
+//   ];
+// }
 
 export function AnalyticsPage() {
   const user = useAuthStore((state) => state.user);
