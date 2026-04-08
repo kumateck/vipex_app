@@ -95,7 +95,10 @@ function AccountingJournalApprovalsContent({
             {isFetching ? (
               <p className="text-sm text-muted-foreground">Loading pending entries...</p>
             ) : pendingEntries.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No pending entries.</p>
+              <p className="text-sm text-muted-foreground">
+                No pending entries. Auto-authorized entries are posted directly and can be found
+                under Reports &gt; Journal Listing.
+              </p>
             ) : (
               pendingEntries.map((entry) => (
                 <div key={entry.id} className="space-y-2 rounded-md border p-3">

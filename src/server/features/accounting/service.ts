@@ -673,8 +673,32 @@ export async function postManualJournalEntrySvc(input: {
   entryDate?: string | null;
   lines: JournalLineInput[];
 }) {
+  if (input.lines.length < 2) {
+    throw BadRequest('Manual journal entry requires at least two lines');
+  }
+
+  for (const line of input.lines) {
+    if (!line.accountId) {
+      throw BadRequest('Each manual journal line requires an account');
+    }
+    const debitPsw = Number(line.debitPsw ?? 0);
+    const creditPsw = Number(line.creditPsw ?? 0);
+    const hasDebit = debitPsw > 0;
+    const hasCredit = creditPsw > 0;
+    if (hasDebit === hasCredit) {
+      throw BadRequest('Each manual journal line must have either debit or credit (not both)');
+    }
+  }
+
   const totalDebitPsw = input.lines.reduce((sum, line) => sum + Number(line.debitPsw ?? 0), 0);
   const totalCreditPsw = input.lines.reduce((sum, line) => sum + Number(line.creditPsw ?? 0), 0);
+  if (totalDebitPsw <= 0 || totalCreditPsw <= 0) {
+    throw BadRequest('Manual journal entry must include positive debit and credit totals');
+  }
+  if (totalDebitPsw !== totalCreditPsw) {
+    throw BadRequest('Manual journal entry is not balanced');
+  }
+
   const policy = await getManualJournalApprovalPolicySvc({ companyId: input.companyId });
   const exceedsThreshold = totalDebitPsw > policy.amountLimitPsw;
   const shouldQueue = exceedsThreshold || !policy.autoAuthorizeBelowThreshold;

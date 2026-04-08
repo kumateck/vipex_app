@@ -32,13 +32,13 @@ import {
 
 type ManualLineForm = {
   accountId: string;
-  debitCedis: string;
-  creditCedis: string;
+  entryType: 'debit' | 'credit';
+  amountCedis: string;
   description: string;
 };
 
 function createEmptyLine(): ManualLineForm {
-  return { accountId: '', debitCedis: '', creditCedis: '', description: '' };
+  return { accountId: '', entryType: 'debit', amountCedis: '', description: '' };
 }
 
 function parseCedisToPesewas(value: string) {
@@ -113,12 +113,14 @@ function AccountingJournalEntriesPageContent({
   );
   const totals = useMemo(() => {
     const debitPsw = lines.reduce((sum, line) => {
-      const debit = parseCedisToPesewas(line.debitCedis);
-      return sum + Number(debit ?? 0);
+      if (line.entryType !== 'debit') return sum;
+      const amount = parseCedisToPesewas(line.amountCedis);
+      return sum + Number(amount ?? 0);
     }, 0);
     const creditPsw = lines.reduce((sum, line) => {
-      const credit = parseCedisToPesewas(line.creditCedis);
-      return sum + Number(credit ?? 0);
+      if (line.entryType !== 'credit') return sum;
+      const amount = parseCedisToPesewas(line.amountCedis);
+      return sum + Number(amount ?? 0);
     }, 0);
     return {
       debitPsw,
@@ -137,12 +139,15 @@ function AccountingJournalEntriesPageContent({
       return;
     }
     const normalized = lines
-      .map((line) => ({
-        accountId: line.accountId,
-        debitPsw: parseCedisToPesewas(line.debitCedis) ?? 0,
-        creditPsw: parseCedisToPesewas(line.creditCedis) ?? 0,
-        description: line.description.trim() || null,
-      }))
+      .map((line) => {
+        const amountPsw = parseCedisToPesewas(line.amountCedis) ?? 0;
+        return {
+          accountId: line.accountId,
+          debitPsw: line.entryType === 'debit' ? amountPsw : 0,
+          creditPsw: line.entryType === 'credit' ? amountPsw : 0,
+          description: line.description.trim() || null,
+        };
+      })
       .filter((line) => line.accountId && (line.debitPsw > 0 || line.creditPsw > 0));
 
     if (normalized.length < 2) {
@@ -166,7 +171,7 @@ function AccountingJournalEntriesPageContent({
       toast.success(
         result.approvalMode === 'pending_approval'
           ? `Entry queued for approval (${result.manualEntryId})`
-          : `Entry auto-authorized and posted (${result.entryId})`,
+          : `Entry auto-authorized and posted (${result.entryId}). View in Reports > Journal Listing.`,
       );
       setMemo('');
       setLines([createEmptyLine(), createEmptyLine()]);
@@ -264,32 +269,39 @@ function AccountingJournalEntriesPageContent({
                     </Select>
                   </div>
                   <div className="md:col-span-2">
-                    <Label className="mb-2 block">Debit (GH₵)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={line.debitCedis}
-                      onChange={(event) =>
+                    <Label className="mb-2 block">Type</Label>
+                    <Select
+                      value={line.entryType}
+                      onValueChange={(value) =>
                         setLines((current) =>
                           current.map((row, rowIndex) =>
-                            rowIndex === index ? { ...row, debitCedis: event.target.value } : row,
+                            rowIndex === index
+                              ? { ...row, entryType: value as 'debit' | 'credit' }
+                              : row,
                           ),
                         )
                       }
-                    />
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="debit">Debit</SelectItem>
+                        <SelectItem value="credit">Credit</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="md:col-span-2">
-                    <Label className="mb-2 block">Credit (GH₵)</Label>
+                    <Label className="mb-2 block">Amount (GH₵)</Label>
                     <Input
                       type="number"
                       min="0"
                       step="0.01"
-                      value={line.creditCedis}
+                      value={line.amountCedis}
                       onChange={(event) =>
                         setLines((current) =>
                           current.map((row, rowIndex) =>
-                            rowIndex === index ? { ...row, creditCedis: event.target.value } : row,
+                            rowIndex === index ? { ...row, amountCedis: event.target.value } : row,
                           ),
                         )
                       }

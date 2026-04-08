@@ -120,7 +120,7 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
   if (pathname.startsWith('/parcels/edit/')) return 'CanCreateBookingWithParcels';
 
   if (pathname === '/accounting/tax') return 'CanReadAccounting';
-  if (pathname === '/accounting/daily-cash' || pathname === '/accounting/expenses') {
+  if (pathname === '/accounting/daily-cash' || pathname.startsWith('/accounting/expenses')) {
     return 'CanReadAccounting';
   }
 

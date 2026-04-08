@@ -310,6 +310,31 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanCreateExpenseRequest,
           },
           {
+            title: 'Expense Drafts',
+            url: '/accounting/expenses/drafts',
+            permissionKey: PermissionKeys.CanSubmitExpenseRequest,
+          },
+          {
+            title: 'Expense Approvals',
+            url: '/accounting/expenses/approvals',
+            permissionKey: PermissionKeys.CanApproveExpenseRequest,
+          },
+          {
+            title: 'Expense Payments',
+            url: '/accounting/expenses/payments',
+            permissionKey: PermissionKeys.CanPayExpenseRequest,
+          },
+          {
+            title: 'Expense Posting',
+            url: '/accounting/expenses/posting',
+            permissionKey: PermissionKeys.CanPostExpenseRequest,
+          },
+          {
+            title: 'Expense History',
+            url: '/accounting/expenses/history',
+            permissionKey: PermissionKeys.CanReadAccounting,
+          },
+          {
             title: 'Reports',
             url: '/accounting/reports',
             permissionKey: PermissionKeys.CanReadAccounting,
@@ -788,7 +813,6 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'App Updates',
             url: '/settings/app-updates',
-            permissionKey: PermissionKeys.CanManageDesktopUpdates,
           },
         ],
       },

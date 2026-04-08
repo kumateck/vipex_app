@@ -51,10 +51,13 @@ import {
 } from './accounting-shared';
 import { useAuthStore, type AuthUser } from '@/stores/auth-store';
 
-export function AccountingExpensesPage() {
+type ExpensesPageView = 'main' | 'drafts' | 'approvals' | 'payments' | 'posting' | 'history';
+
+export function AccountingExpensesPage({ view = 'main' }: { view?: ExpensesPageView }) {
   const user = useAuthStore((state) => state.user);
   const permissions = new Set(user?.permissions ?? []);
   const canAccessExpenses =
+    permissions.has(PermissionKeys.CanReadAccounting) ||
     permissions.has(PermissionKeys.CanCreateExpenseRequest) ||
     permissions.has(PermissionKeys.CanSubmitExpenseRequest) ||
     permissions.has(PermissionKeys.CanApproveExpenseRequest) ||
@@ -73,10 +76,30 @@ export function AccountingExpensesPage() {
     );
   }
 
-  return <AccountingExpensesPageContent user={user} />;
+  return <AccountingExpensesPageContent user={user} view={view} />;
 }
 
-function AccountingExpensesPageContent({ user }: { user: AuthUser }) {
+export function AccountingExpensesDraftsPage() {
+  return <AccountingExpensesPage view="drafts" />;
+}
+
+export function AccountingExpensesApprovalsPage() {
+  return <AccountingExpensesPage view="approvals" />;
+}
+
+export function AccountingExpensesPaymentsPage() {
+  return <AccountingExpensesPage view="payments" />;
+}
+
+export function AccountingExpensesPostingPage() {
+  return <AccountingExpensesPage view="posting" />;
+}
+
+export function AccountingExpensesHistoryPage() {
+  return <AccountingExpensesPage view="history" />;
+}
+
+function AccountingExpensesPageContent({ user, view }: { user: AuthUser; view: ExpensesPageView }) {
   const companyId = user.company?.id ?? '';
   const defaultBranchId = user?.branch?.id ?? '';
   const defaultLocationId = user?.location?.id ?? '';
@@ -376,14 +399,54 @@ function AccountingExpensesPageContent({ user }: { user: AuthUser }) {
   ).length;
   const totalRequestedPsw = expenseRequests.reduce((sum, row) => sum + row.amountPsw, 0);
 
+  const tableRows =
+    view === 'drafts'
+      ? expenseRequests.filter((row) => row.status === ExpenseRequestStatus.RECORDED)
+      : view === 'approvals'
+        ? expenseRequests.filter((row) => row.status === ExpenseRequestStatus.SUBMITTED)
+        : view === 'payments'
+          ? expenseRequests.filter((row) => row.status === ExpenseRequestStatus.APPROVED)
+          : view === 'posting'
+            ? expenseRequests.filter((row) => row.status === ExpenseRequestStatus.PAID)
+            : view === 'history'
+              ? expenseRequests.filter(
+                  (row) =>
+                    row.status === ExpenseRequestStatus.POSTED ||
+                    row.status === ExpenseRequestStatus.REJECTED,
+                )
+              : [];
+
+  const pageTitle =
+    view === 'drafts'
+      ? 'Expense Drafts'
+      : view === 'approvals'
+        ? 'Expense Approvals'
+        : view === 'payments'
+          ? 'Expense Payments'
+          : view === 'posting'
+            ? 'Expense Posting'
+            : view === 'history'
+              ? 'Expense History'
+              : 'Expense Requests';
+
+  const pageDescription =
+    view === 'drafts'
+      ? 'Recorded expenses waiting to be submitted into the approval flow.'
+      : view === 'approvals'
+        ? 'Submitted requests waiting for approve or reject decisions.'
+        : view === 'payments'
+          ? 'Approved requests waiting to be marked as paid.'
+          : view === 'posting'
+            ? 'Paid requests waiting to be posted to the ledger.'
+            : view === 'history'
+              ? 'Posted and rejected expense requests kept for audit visibility.'
+              : 'Record branch and location expenses, route them for approval, and post only approved and paid amounts into the ledger.';
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Expense Requests</h1>
-        <p className="text-sm text-muted-foreground">
-          Record branch and location expenses, route them for approval, and post only approved and
-          paid amounts into the ledger.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{pageTitle}</h1>
+        <p className="text-sm text-muted-foreground">{pageDescription}</p>
       </div>
 
       <ScrollableWrapper>
@@ -409,173 +472,191 @@ function AccountingExpensesPageContent({ user }: { user: AuthUser }) {
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Record Expense Request</CardTitle>
-              <CardDescription>
-                Choose the funding source carefully. Sales cash and company bank expenses should
-                still follow approval before posting.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div className="space-y-2">
-                  <Label htmlFor="expense-branch">Branch</Label>
-                  {isHeadOffice ? (
+          {view === 'main' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Record Expense Request</CardTitle>
+                <CardDescription>
+                  Choose the funding source carefully. Sales cash and company bank expenses should
+                  still follow approval before posting.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="expense-branch">Branch</Label>
+                    {isHeadOffice ? (
+                      <Select
+                        value={branchId}
+                        onValueChange={(value) => {
+                          setBranchId(value);
+                          setLocationId('');
+                        }}
+                      >
+                        <SelectTrigger id="expense-branch">
+                          <SelectValue placeholder="Select branch" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {branchOptions.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>
+                              {branch.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input value={user?.branch?.name ?? 'My branch'} disabled />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="expense-location">Location</Label>
                     <Select
-                      value={branchId}
-                      onValueChange={(value) => {
-                        setBranchId(value);
-                        setLocationId('');
-                      }}
+                      value={locationId || 'branch'}
+                      onValueChange={(value) => setLocationId(value === 'branch' ? '' : value)}
                     >
-                      <SelectTrigger id="expense-branch">
-                        <SelectValue placeholder="Select branch" />
+                      <SelectTrigger id="expense-location">
+                        <SelectValue placeholder="Branch level" />
                       </SelectTrigger>
                       <SelectContent>
-                        {branchOptions.map((branch) => (
-                          <SelectItem key={branch.id} value={branch.id}>
-                            {branch.name}
+                        <SelectItem value="branch">Branch Level</SelectItem>
+                        {locationOptions.map((location) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  ) : (
-                    <Input value={user?.branch?.name ?? 'My branch'} disabled />
-                  )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="expense-category">Expense Category</Label>
+                    <Select value={expenseCategoryId} onValueChange={setExpenseCategoryId}>
+                      <SelectTrigger id="expense-category">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {expenseCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="expense-source">Funding Source</Label>
+                    <Select value={fundingSource} onValueChange={setFundingSource}>
+                      <SelectTrigger id="expense-source">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={String(ExpenseFundingSource.PETTY_CASH)}>
+                          Petty Cash
+                        </SelectItem>
+                        <SelectItem value={String(ExpenseFundingSource.SALES_CASH)}>
+                          Sales Cash
+                        </SelectItem>
+                        <SelectItem value={String(ExpenseFundingSource.COMPANY_BANK)}>
+                          Company Bank
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <QuickAmountInput
+                    id="expense-amount"
+                    label="Amount (GHS)"
+                    value={amountCedis}
+                    onChange={setAmountCedis}
+                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="expense-reference">Reference No.</Label>
+                    <Input
+                      id="expense-reference"
+                      value={referenceNo}
+                      onChange={(event) => setReferenceNo(event.target.value)}
+                      placeholder="Receipt, requisition, or memo no."
+                    />
+                  </div>
+                  <div className="space-y-2 xl:col-span-2">
+                    <Label htmlFor="expense-bank">Company Bank Account</Label>
+                    <Select
+                      value={companyBankAccountId || 'none'}
+                      onValueChange={(value) =>
+                        setCompanyBankAccountId(value === 'none' ? '' : value)
+                      }
+                    >
+                      <SelectTrigger id="expense-bank">
+                        <SelectValue placeholder="Required when company bank is used" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Not selected</SelectItem>
+                        {bankAccounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 xl:col-span-4">
+                    <Label htmlFor="expense-purpose">Purpose</Label>
+                    <Textarea
+                      id="expense-purpose"
+                      rows={3}
+                      value={purpose}
+                      onChange={(event) => setPurpose(event.target.value)}
+                      placeholder="Describe what the expense is for"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expense-location">Location</Label>
-                  <Select
-                    value={locationId || 'branch'}
-                    onValueChange={(value) => setLocationId(value === 'branch' ? '' : value)}
+
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => void handleCreate()}
+                    disabled={isMutating || !effectiveBranchId}
                   >
-                    <SelectTrigger id="expense-location">
-                      <SelectValue placeholder="Branch level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="branch">Branch Level</SelectItem>
-                      {locationOptions.map((location) => (
-                        <SelectItem key={location.id} value={location.id}>
-                          {location.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    Record Expense
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expense-category">Expense Category</Label>
-                  <Select value={expenseCategoryId} onValueChange={setExpenseCategoryId}>
-                    <SelectTrigger id="expense-category">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {expenseCategories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expense-source">Funding Source</Label>
-                  <Select value={fundingSource} onValueChange={setFundingSource}>
-                    <SelectTrigger id="expense-source">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={String(ExpenseFundingSource.PETTY_CASH)}>
-                        Petty Cash
-                      </SelectItem>
-                      <SelectItem value={String(ExpenseFundingSource.SALES_CASH)}>
-                        Sales Cash
-                      </SelectItem>
-                      <SelectItem value={String(ExpenseFundingSource.COMPANY_BANK)}>
-                        Company Bank
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <QuickAmountInput
-                  id="expense-amount"
-                  label="Amount (GHS)"
-                  value={amountCedis}
-                  onChange={setAmountCedis}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {view !== 'main' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>{pageTitle}</CardTitle>
+                <CardDescription>{pageDescription}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  mode="client"
+                  data={tableRows}
+                  columns={columns}
+                  loading={isFetching}
+                  showSearch
+                  searchPlaceholder="Search expense requests"
+                  pageSizeOptions={[10, 20, 50]}
                 />
-                <div className="space-y-2">
-                  <Label htmlFor="expense-reference">Reference No.</Label>
-                  <Input
-                    id="expense-reference"
-                    value={referenceNo}
-                    onChange={(event) => setReferenceNo(event.target.value)}
-                    placeholder="Receipt, requisition, or memo no."
-                  />
-                </div>
-                <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="expense-bank">Company Bank Account</Label>
-                  <Select
-                    value={companyBankAccountId || 'none'}
-                    onValueChange={(value) =>
-                      setCompanyBankAccountId(value === 'none' ? '' : value)
-                    }
-                  >
-                    <SelectTrigger id="expense-bank">
-                      <SelectValue placeholder="Required when company bank is used" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Not selected</SelectItem>
-                      {bankAccounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 xl:col-span-4">
-                  <Label htmlFor="expense-purpose">Purpose</Label>
-                  <Textarea
-                    id="expense-purpose"
-                    rows={3}
-                    value={purpose}
-                    onChange={(event) => setPurpose(event.target.value)}
-                    placeholder="Describe what the expense is for"
-                  />
-                </div>
-              </div>
+              </CardContent>
+            </Card>
+          ) : null}
 
-              <div className="flex justify-end">
-                <Button
-                  onClick={() => void handleCreate()}
-                  disabled={isMutating || !effectiveBranchId}
-                >
-                  Record Expense
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Expense Workflow</CardTitle>
-              <CardDescription>
-                Move requests through submit, approve, pay, and post. Rejected items stay visible
-                for audit.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                mode="client"
-                data={expenseRequests}
-                columns={columns}
-                loading={isFetching}
-                showSearch
-                searchPlaceholder="Search expense requests"
-                pageSizeOptions={[10, 20, 50]}
-              />
-            </CardContent>
-          </Card>
+          {view === 'main' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Expense Workflow Pages</CardTitle>
+                <CardDescription>
+                  Expense stages are now split into standalone pages for faster processing.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm text-muted-foreground">
+                  Navigate to `Expenses / Drafts`, `Expenses / Approvals`, `Expenses / Payments`,
+                  `Expenses / Posting`, and `Expenses / History` from the Accounting menu.
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       </ScrollableWrapper>
 

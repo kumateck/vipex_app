@@ -167,9 +167,7 @@ function ChannelListItem({
   onManageMembers?: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onOpen}
+    <div
       className={`w-full rounded-md border p-2.5 text-left transition-colors ${
         isActive
           ? 'border-primary/50 bg-primary/10'
@@ -181,10 +179,10 @@ function ChannelListItem({
           <span className="grid h-7 w-7 shrink-0 place-content-center rounded-md bg-background text-muted-foreground">
             <Hash className="h-4 w-4" />
           </span>
-          <div className="min-w-0">
+          <button type="button" onClick={onOpen} className="min-w-0 text-left">
             <p className="truncate text-sm font-medium">{channel.name}</p>
             <p className="text-xs text-muted-foreground">{prettyValue(channel.visibility)}</p>
-          </div>
+          </button>
         </div>
         <div className="flex items-center gap-1">
           {mentionCount > 0 ? <Badge variant="destructive">@{mentionCount}</Badge> : null}
@@ -203,7 +201,7 @@ function ChannelListItem({
           ) : null}
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -217,6 +215,7 @@ function VoiceChannelListItem({
   unreadCount,
   mentionCount,
   onJoin,
+  onManageMembers,
 }: {
   channel: CommunicationChannel;
   activeCall: CommunicationCallSession | null;
@@ -227,6 +226,7 @@ function VoiceChannelListItem({
   unreadCount: number;
   mentionCount: number;
   onJoin: () => void;
+  onManageMembers?: () => void;
 }) {
   return (
     <div
@@ -252,6 +252,17 @@ function VoiceChannelListItem({
           {mentionCount > 0 ? <Badge variant="destructive">@{mentionCount}</Badge> : null}
           {unreadCount > 0 ? <Badge variant="default">{unreadCount}</Badge> : null}
           <Badge variant={activeCall ? 'default' : 'outline'}>{participantCount}</Badge>
+          {channel.visibility === 'private' && onManageMembers ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onManageMembers}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          ) : null}
         </div>
       </div>
       {participants.length ? (
@@ -842,6 +853,7 @@ export function CommunicationChatPage() {
                               : (voiceMentionsByChannelId.get(channel.id) ?? 0)
                           }
                           onJoin={() => void onJoinVoiceChannel(channel)}
+                          onManageMembers={() => setManagingChannel(channel)}
                         />
                       );
                     })
