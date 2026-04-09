@@ -2811,7 +2811,7 @@ export async function listFleetVehiclesForLifecycleRecoveryRepo(input: {
           where d.company_id = ${fleetVehicles.companyId}
             and d.vehicle_id = ${fleetVehicles.id}
             and d.expires_at is not null
-            and d.expires_at <= ${input.now}
+            and d.expires_at <= ${input.now.toISOString()}
         )`,
         sql`not exists (
           select 1 from ${fleetVehicleDowntimeEvents} e

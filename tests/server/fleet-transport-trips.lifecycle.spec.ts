@@ -502,6 +502,12 @@ describe('Fleet trips lifecycle (authenticated)', () => {
       body: JSON.stringify({ endOdometerKm: 450 }),
     });
     expect(closeRes.status).toBe(HttpStatus.CONFLICT);
+
+    const closeCleanupRes = await http('POST', `/v1/fleet-transport/trips/${created.id}/close`, {
+      headers: authHeaders,
+      body: JSON.stringify({ endOdometerKm: 550 }),
+    });
+    expect(closeCleanupRes.status).toBe(HttpStatus.OK);
   });
 
   test('rejects start for completed and cancelled trips', async () => {
