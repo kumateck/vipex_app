@@ -2077,12 +2077,13 @@ export async function runFleetAutomationOrchestrationJobSvc(input: {
   lowStockLimit?: number;
   replenishMultiplier?: number;
 }) {
-  const [lifecycle, maintenance, escalation] = await Promise.all([
-    runFleetVehicleLifecycleAutomationJobSvc({
-      companyId: input.companyId,
-      actorUserId: input.actorUserId,
-      limit: input.lifecycleLimit ?? 300,
-    }),
+  const lifecycle = await runFleetVehicleLifecycleAutomationJobSvc({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId,
+    limit: input.lifecycleLimit ?? 300,
+  });
+
+  const [maintenance, escalation] = await Promise.all([
     runFleetMaintenanceAutomationJobSvc({
       companyId: input.companyId,
       actorUserId: input.actorUserId,
