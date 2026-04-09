@@ -3,13 +3,6 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { PermissionGuard } from '@/components/permissions/permission-guard';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { Input } from '@/components/ui/input';
@@ -22,11 +15,42 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  useListFleetVehicleComplianceAlertsQuery,
   useListFleetVehiclesQuery,
   useUpdateFleetVehicleMutation,
   type FleetVehicle,
 } from '../api/fleet-transport.api';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+
+function ownershipTypeLabel(value: number) {
+  if (value === 0) return 'Company Owned';
+  if (value === 1) return 'Leased';
+  if (value === 2) return 'Third Party';
+  return 'Unknown';
+}
+
+function fuelTypeLabel(value: number) {
+  if (value === 0) return 'Petrol';
+  if (value === 1) return 'Diesel';
+  if (value === 2) return 'Electric';
+  if (value === 3) return 'Hybrid';
+  if (value === 4) return 'Gas';
+  if (value === 5) return 'Other';
+  return 'Unknown';
+}
+
+function lifecycleStatusLabel(value: number) {
+  if (value === 0) return 'Active';
+  if (value === 1) return 'In Maintenance';
+  if (value === 2) return 'Retired';
+  if (value === 3) return 'Decommissioned';
+  return 'Unknown';
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return '-';
+  return new Date(value).toLocaleString();
+}
 
 export function FleetVehiclesListPage() {
   const [searchInput, setSearchInput] = useState('');
@@ -43,10 +67,6 @@ export function FleetVehiclesListPage() {
   }, [searchInput]);
 
   const [page, setPage] = useState(1);
-  const [editing, setEditing] = useState<FleetVehicle | null>(null);
-  const [plateNumber, setPlateNumber] = useState('');
-  const [model, setModel] = useState('');
-
   const query = useMemo(
     () => ({
       page,
@@ -57,37 +77,13 @@ export function FleetVehiclesListPage() {
   );
 
   const { data, isLoading } = useListFleetVehiclesQuery(query);
+  const { data: complianceAlerts } = useListFleetVehicleComplianceAlertsQuery({
+    horizonDays: 30,
+    limit: 200,
+  });
   const [updateVehicle, { isLoading: isUpdating }] = useUpdateFleetVehicleMutation();
   const rows = data?.data ?? [];
   const meta = data?.meta;
-
-  const openEditDialog = (vehicle: FleetVehicle) => {
-    setEditing(vehicle);
-    setPlateNumber(vehicle.plateNumber);
-    setModel(vehicle.model);
-  };
-
-  const onSaveEdit = async () => {
-    if (!editing) return;
-    if (!plateNumber.trim() || !model.trim()) {
-      toast.error('Plate number and model are required');
-      return;
-    }
-
-    try {
-      await updateVehicle({
-        id: editing.id,
-        body: {
-          plateNumber: plateNumber.trim(),
-          model: model.trim(),
-        },
-      }).unwrap();
-      toast.success('Vehicle updated');
-      setEditing(null);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update vehicle');
-    }
-  };
 
   const onToggleActive = async (vehicle: FleetVehicle) => {
     try {
@@ -114,6 +110,15 @@ export function FleetVehiclesListPage() {
             </PermissionGuard>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="rounded-md border p-3 text-sm">
+              <p className="font-medium">Compliance Alerts (30 days)</p>
+              <p className="text-muted-foreground">
+                Total: {complianceAlerts?.summary.total ?? 0} | Expired:{' '}
+                {complianceAlerts?.summary.expired ?? 0} | Due soon:{' '}
+                {complianceAlerts?.summary.dueSoon ?? 0}
+              </p>
+            </div>
+
             <Input
               placeholder="Search plate/model"
               value={searchInput}
@@ -128,6 +133,10 @@ export function FleetVehiclesListPage() {
                 <TableRow>
                   <TableHead>Plate Number</TableHead>
                   <TableHead>Model</TableHead>
+                  <TableHead>Ownership</TableHead>
+                  <TableHead>Fuel</TableHead>
+                  <TableHead>Lifecycle</TableHead>
+                  <TableHead>Insurance Expiry</TableHead>
                   <TableHead>Assigned Driver</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -136,20 +145,32 @@ export function FleetVehiclesListPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5}>Loading vehicles...</TableCell>
+                    <TableCell colSpan={9}>Loading vehicles...</TableCell>
                   </TableRow>
                 ) : rows.length ? (
                   rows.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell>{row.plateNumber}</TableCell>
                       <TableCell>{row.model}</TableCell>
+                      <TableCell>{ownershipTypeLabel(row.ownershipType)}</TableCell>
+                      <TableCell>{fuelTypeLabel(row.fuelType)}</TableCell>
+                      <TableCell>{lifecycleStatusLabel(row.lifecycleStatus)}</TableCell>
+                      <TableCell>{formatDateTime(row.insuranceExpiryAt)}</TableCell>
                       <TableCell>{row.assignedDriverName ?? '-'}</TableCell>
                       <TableCell>{row.isActive ? 'Active' : 'Inactive'}</TableCell>
                       <TableCell className="text-right">
                         <PermissionGuard permissionKey={PermissionKeys.CanUpdateFleetVehicles}>
                           <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="sm" onClick={() => openEditDialog(row)}>
-                              Edit
+                            <Button asChild variant="outline" size="sm">
+                              <Link to={`/fleet-transport/vehicles/view/${row.id}`}>View</Link>
+                            </Button>
+                            <Button asChild variant="outline" size="sm">
+                              <Link to={`/fleet-transport/vehicles/edit/${row.id}`}>Edit</Link>
+                            </Button>
+                            <Button asChild variant="outline" size="sm">
+                              <Link to={`/fleet-transport/vehicles/view/${row.id}/documents`}>
+                                Documents
+                              </Link>
                             </Button>
                             <Button
                               variant="outline"
@@ -166,7 +187,7 @@ export function FleetVehiclesListPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5}>No vehicles found.</TableCell>
+                    <TableCell colSpan={9}>No vehicles found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -195,30 +216,6 @@ export function FleetVehiclesListPage() {
             </div>
           </CardContent>
         </Card>
-
-        <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Vehicle</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3">
-              <Input
-                placeholder="Plate number"
-                value={plateNumber}
-                onChange={(e) => setPlateNumber(e.target.value)}
-              />
-              <Input placeholder="Model" value={model} onChange={(e) => setModel(e.target.value)} />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditing(null)}>
-                Cancel
-              </Button>
-              <Button onClick={onSaveEdit} disabled={isUpdating}>
-                Save changes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </ScrollableWrapper>
   );

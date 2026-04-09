@@ -82,6 +82,11 @@ export function FleetFuelLogsListPage() {
                   <Link to="/fleet-transport/fuel-logs/approvals">Approvals</Link>
                 </Button>
               </PermissionGuard>
+              <PermissionGuard permissionKey={PermissionKeys.CanReadFleetTransport}>
+                <Button asChild variant="outline">
+                  <Link to="/fleet-transport/fuel-analytics">Analytics</Link>
+                </Button>
+              </PermissionGuard>
               <PermissionGuard permissionKey={PermissionKeys.CanCreateFleetFuelLogs}>
                 <Button asChild>
                   <Link to="/fleet-transport/fuel-logs/new">Create fuel log</Link>

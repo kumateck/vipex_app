@@ -76,6 +76,11 @@ export function ProcurementRequestsListPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>Purchase Requests</CardTitle>
             <div className="flex gap-2">
+              <PermissionGuard permissionKey={PermissionKeys.CanReadProcurement}>
+                <Button asChild variant="outline">
+                  <Link to="/procurement/demands">Demands</Link>
+                </Button>
+              </PermissionGuard>
               <PermissionGuard permissionKey={PermissionKeys.CanApproveProcurementPurchaseRequests}>
                 <Button asChild variant="outline">
                   <Link to="/procurement/purchase-requests/approvals">Approvals</Link>
@@ -84,6 +89,21 @@ export function ProcurementRequestsListPage() {
               <PermissionGuard permissionKey={PermissionKeys.CanCreateProcurementPurchaseRequests}>
                 <Button asChild>
                   <Link to="/procurement/purchase-requests/new">Create request</Link>
+                </Button>
+              </PermissionGuard>
+              <PermissionGuard permissionKey={PermissionKeys.CanReadProcurement}>
+                <Button asChild variant="outline">
+                  <Link to="/procurement/supplier-quotes">Supplier Quotes</Link>
+                </Button>
+              </PermissionGuard>
+              <PermissionGuard permissionKey={PermissionKeys.CanReadProcurement}>
+                <Button asChild variant="outline">
+                  <Link to="/procurement/purchase-orders">Purchase Orders</Link>
+                </Button>
+              </PermissionGuard>
+              <PermissionGuard permissionKey={PermissionKeys.CanReadProcurement}>
+                <Button asChild variant="outline">
+                  <Link to="/procurement/goods-receipts">Goods Receipts</Link>
                 </Button>
               </PermissionGuard>
             </div>

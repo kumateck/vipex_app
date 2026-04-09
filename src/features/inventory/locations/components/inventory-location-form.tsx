@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
@@ -17,6 +17,8 @@ import { Spinner } from '@/components/ui';
 import { normalizeOptionalFields } from '@/lib/optional-fields';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches';
+import { InventoryLocationType } from '@/db/schemas/enums';
+import { useListInventoryLocationOptionsQuery } from '../api/inventory-locations.api';
 import {
   createInventoryLocationSchema,
   editInventoryLocationSchema,
@@ -43,7 +45,20 @@ interface EditInventoryLocationFormProps extends InventoryLocationFormBaseProps 
 }
 
 type InventoryLocationFormProps = CreateInventoryLocationFormProps | EditInventoryLocationFormProps;
-type InventoryLocationFormValues = { name: string; branchId?: string; description?: string };
+type InventoryLocationFormValues = {
+  name: string;
+  branchId?: string;
+  locationType: number;
+  parentLocationId?: string;
+  description?: string;
+};
+
+const INVENTORY_LOCATION_TYPE_OPTIONS = [
+  { value: InventoryLocationType.MAIN_STORE, label: 'Main Store' },
+  { value: InventoryLocationType.BRANCH_STORE, label: 'Branch Store' },
+  { value: InventoryLocationType.CONSUMPTION_LOCATION, label: 'Consumption Location' },
+] as const;
+const NO_PARENT_VALUE = '__none__';
 
 export function InventoryLocationForm({
   mode,
@@ -60,46 +75,87 @@ export function InventoryLocationForm({
     { companyId },
     { skip: mode !== 'create' },
   );
-
   const {
     control,
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<InventoryLocationFormValues>({
     resolver: zodResolver(schema),
     defaultValues:
       mode === 'create'
-        ? { name: '', branchId: '', description: '' }
-        : { name: '', description: '' },
+        ? {
+            name: '',
+            branchId: '',
+            locationType: InventoryLocationType.MAIN_STORE,
+            parentLocationId: '',
+            description: '',
+          }
+        : {
+            name: '',
+            locationType: InventoryLocationType.MAIN_STORE,
+            parentLocationId: '',
+            description: '',
+          },
     mode: 'onSubmit',
   });
+  const selectedCreateBranchId = watch('branchId');
+  const locationOptionsParams = useMemo(
+    () => ({
+      companyId,
+      branchId: mode === 'create' ? selectedCreateBranchId || undefined : initialData?.branchId,
+    }),
+    [companyId, initialData?.branchId, mode, selectedCreateBranchId],
+  );
+  const { data: locationOptionsData, isLoading: isLoadingLocationOptions } =
+    useListInventoryLocationOptionsQuery(locationOptionsParams, {
+      skip: !companyId || (mode === 'create' && !selectedCreateBranchId),
+    });
 
   useEffect(() => {
     if (mode === 'edit' && initialData) {
       reset({
         name: initialData.name ?? '',
+        locationType: initialData.locationType ?? InventoryLocationType.MAIN_STORE,
+        parentLocationId: initialData.parentLocationId ?? '',
         description: initialData.description ?? '',
       });
       return;
     }
-    reset({ name: '', branchId: '', description: '' });
+    reset({
+      name: '',
+      branchId: '',
+      locationType: InventoryLocationType.MAIN_STORE,
+      parentLocationId: '',
+      description: '',
+    });
   }, [initialData, mode, reset]);
 
   const submit = async (values: InventoryLocationFormValues) => {
-    const normalized = normalizeOptionalFields(values, ['branchId', 'description'] as const);
+    const valuesWithParent =
+      values.parentLocationId === NO_PARENT_VALUE ? { ...values, parentLocationId: '' } : values;
+    const normalized = normalizeOptionalFields(valuesWithParent, [
+      'branchId',
+      'parentLocationId',
+      'description',
+    ] as const);
 
     if (mode === 'create') {
       await onSubmit({
         name: normalized.name,
         branchId: normalized.branchId as string,
+        locationType: values.locationType,
+        parentLocationId: normalized.parentLocationId ?? null,
         description: normalized.description,
       });
       return;
     }
     await onSubmit({
       name: normalized.name,
+      locationType: values.locationType,
+      parentLocationId: normalized.parentLocationId ?? null,
       description: normalized.description,
     });
   };
@@ -159,6 +215,70 @@ export function InventoryLocationForm({
                   ) : null}
                 </Field>
               ) : null}
+              <Field>
+                <FieldLabel htmlFor="locationType">Location Type</FieldLabel>
+                <Controller
+                  control={control}
+                  name="locationType"
+                  render={({ field }) => (
+                    <Select
+                      value={String(field.value ?? 0)}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                    >
+                      <SelectTrigger id="locationType" aria-invalid={!!errors.locationType}>
+                        <SelectValue placeholder="Select location type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {INVENTORY_LOCATION_TYPE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={String(option.value)}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.locationType?.message ? (
+                  <p className="text-sm text-destructive">{errors.locationType.message}</p>
+                ) : null}
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="parentLocationId">Parent Location (Optional)</FieldLabel>
+                <Controller
+                  control={control}
+                  name="parentLocationId"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value ?? ''}
+                      onValueChange={field.onChange}
+                      disabled={isLoadingLocationOptions}
+                    >
+                      <SelectTrigger id="parentLocationId" aria-invalid={!!errors.parentLocationId}>
+                        <SelectValue
+                          placeholder={
+                            isLoadingLocationOptions
+                              ? 'Loading parent locations...'
+                              : 'Select parent location'
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NO_PARENT_VALUE}>No parent</SelectItem>
+                        {(locationOptionsData ?? [])
+                          .filter((location) => location.id !== initialData?.id)
+                          .map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.parentLocationId?.message ? (
+                  <p className="text-sm text-destructive">{errors.parentLocationId.message}</p>
+                ) : null}
+              </Field>
               <Field>
                 <FieldLabel htmlFor="description">Description</FieldLabel>
                 <Input

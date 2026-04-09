@@ -1,6 +1,5 @@
 import type { Elysia } from 'elysia';
 import { BranchType } from '@/db/schemas/enums';
-import { PermissionCatalog } from '@/shared/permissions/constants';
 import { getUserByIdRepo, listRolePermissionKeysRepo } from '@/server/features/auth/repository';
 import { verifyAccessToken } from '../utils/jwt';
 import { Unauthorized as UnauthorizedError } from '../utils/http-error';
@@ -39,10 +38,6 @@ export const authPlugin = (app: Elysia) =>
           userRecord.roleId ?? null,
           userRecord.companyId ?? null,
         )) ?? [];
-      const resolvedPermissions =
-        permissions.length > 0
-          ? permissions
-          : PermissionCatalog.map((permission) => permission.key);
       return {
         user: {
           sub: userRecord.id,
@@ -55,7 +50,7 @@ export const authPlugin = (app: Elysia) =>
           locationId: userRecord.locationId ?? null,
           userType: userRecord.userType ?? null,
           cashierType: userRecord.cashierType ?? null,
-          permissions: resolvedPermissions,
+          permissions,
           iat: payload.iat,
           exp: payload.exp,
         } satisfies AuthUser,

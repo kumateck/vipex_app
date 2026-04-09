@@ -8,6 +8,7 @@ import {
   createEmployeeUserAccountSvc,
   createJobTitleSvc,
   createLeaveRequestSvc,
+  createLeaveSwapSvc,
   createLeaveTypeSvc,
   getEmployeeSvc,
   listDepartmentOptionsSvc,
@@ -18,12 +19,17 @@ import {
   listJobTitleOptionsSvc,
   listJobTitlesSvc,
   listLeaveRequestsSvc,
+  listLeaveCalendarSvc,
+  listLeaveSwapsSvc,
   listLeaveTypeOptionsSvc,
   listLeaveTypesSvc,
   approveLeaveRequestSvc,
   approveLeaveRequestByManagerSvc,
   rejectLeaveRequestSvc,
   rejectLeaveRequestByManagerSvc,
+  rejectLeaveSwapSvc,
+  confirmLeaveSwapSvc,
+  approveLeaveSwapSvc,
   updateDepartmentSvc,
   updateEmployeeSvc,
   updateJobTitleSvc,
@@ -269,8 +275,63 @@ export async function listLeaveRequestsCtrl(
   };
 }
 
+export async function listLeaveCalendarCtrl(input: {
+  companyId: string;
+  from: Date;
+  to: Date;
+  employeeId?: string | null;
+  status?: number | null;
+  branchId?: string | null;
+  departmentId?: string | null;
+}) {
+  return listLeaveCalendarSvc(input);
+}
+
 export async function createLeaveRequestCtrl(input: Parameters<typeof createLeaveRequestSvc>[0]) {
   return createLeaveRequestSvc(input);
+}
+
+export async function createLeaveSwapCtrl(input: Parameters<typeof createLeaveSwapSvc>[0]) {
+  return createLeaveSwapSvc(input);
+}
+
+export async function listLeaveSwapsCtrl(
+  q: PaginationRequestDto<{
+    companyId: string;
+    employeeId?: string | null;
+    status?: number | null;
+  }>,
+) {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listLeaveSwapsSvc({
+    companyId: q.filters!.companyId,
+    employeeId: q.filters?.employeeId ?? null,
+    status: q.filters?.status ?? null,
+    from: q.dateFrom ? new Date(q.dateFrom) : null,
+    to: q.dateTo ? new Date(q.dateTo) : null,
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+  });
+  return {
+    data,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
+  };
+}
+
+export async function confirmLeaveSwapCtrl(id: string, actorUserId: string) {
+  return confirmLeaveSwapSvc(id, actorUserId);
+}
+
+export async function approveLeaveSwapCtrl(id: string, actorUserId: string) {
+  return approveLeaveSwapSvc(id, actorUserId);
+}
+
+export async function rejectLeaveSwapCtrl(id: string, actorUserId: string, reason?: string | null) {
+  return rejectLeaveSwapSvc(id, actorUserId, reason);
 }
 
 export async function approveLeaveRequestCtrl(id: string, approvedBy: string) {

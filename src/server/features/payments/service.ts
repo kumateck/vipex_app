@@ -16,7 +16,11 @@ import {
 } from '@/server/utils/tax/profile-engine';
 import { assertActiveSessionSvc } from '../cashiers/service';
 import { recordAuditLog } from '../audit/logger';
-import { getParcelSvc } from '../shipments/parcels.service';
+import { getParcelStorageSettlementSvc, getParcelSvc } from '../shipments/parcels.service';
+import {
+  assertNoOutstandingStorageForHandover,
+  assertValidStorageCollectionAmount,
+} from '../shipments/storage-accrual-guards';
 import {
   assertParcelFullyPaid,
   getParcelPaymentSettlement,
@@ -27,6 +31,7 @@ import { recordPaymentTaxJournalItemSvc } from '../accounting/service';
 import { getActiveTaxProfileWithComponentsRepo } from '../accounting/repository';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
+const STORAGE_PAYMENT_NOTE_PREFIX = 'STORAGE_CHARGE';
 export type PaymentCreateInput = {
   companyId: string;
   branchId: string;
@@ -291,7 +296,10 @@ async function createPaymentCore(input: PaymentCreateInput, executor: DbExecutor
     }
   }
 
-  if (parcelTotalPaidPsw + amountPsw > parcelAllowedTotalPsw) {
+  if (
+    input.component !== PaymentComponent.OTHER &&
+    parcelTotalPaidPsw + amountPsw > parcelAllowedTotalPsw
+  ) {
     const remainingPsw = Math.max(parcelAllowedTotalPsw - parcelTotalPaidPsw, 0);
     throw BadRequest(
       `Payment exceeds parcel total allowed amount. Remaining collectable amount is ${(remainingPsw / 100).toFixed(2)} GHS`,
@@ -518,15 +526,21 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
   secondCardId?: string | null;
   secondCardNumber?: string | null;
   amountCedis?: number | string | null;
+  storageAmountCedis?: number | string | null;
 }) {
   try {
     const hasAmount =
       input.amountCedis !== undefined &&
       input.amountCedis !== null &&
       Number(input.amountCedis) > 0;
+    const hasStorageAmount =
+      input.storageAmountCedis !== undefined &&
+      input.storageAmountCedis !== null &&
+      Number(input.storageAmountCedis) > 0;
 
     const result = await db.transaction(async (tx) => {
       let payment: PaymentCreateResponse | null = null;
+      let storagePayment: PaymentCreateResponse | null = null;
       if (hasAmount) {
         const created = await createPaymentCore(
           {
@@ -544,6 +558,38 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
         );
         payment = created.response;
       }
+
+      const storageBefore = await getParcelStorageSettlementSvc(input.parcelId, tx);
+      const storageAmountPsw = hasStorageAmount
+        ? Number(toPesewas(input.storageAmountCedis as number | string))
+        : 0;
+      if (hasStorageAmount) {
+        assertValidStorageCollectionAmount({
+          outstandingPsw: storageBefore.outstandingPsw,
+          collectionPsw: storageAmountPsw,
+        });
+      }
+      if (hasStorageAmount) {
+        const storagePaymentResult = await createPaymentCore(
+          {
+            companyId: input.companyId,
+            branchId: input.branchId,
+            parcelId: input.parcelId,
+            component: PaymentComponent.OTHER,
+            payer: Payer.RECIPIENT,
+            cashierType: CashierType.TOBEPAID,
+            method: input.method,
+            cashierUserId: input.cashierUserId,
+            amountCedis: input.storageAmountCedis as number | string,
+            notes: `${STORAGE_PAYMENT_NOTE_PREFIX}: Receiver storage accrual payment`,
+          },
+          tx,
+        );
+        storagePayment = storagePaymentResult.response;
+      }
+
+      const storageAfter = await getParcelStorageSettlementSvc(input.parcelId, tx);
+      assertNoOutstandingStorageForHandover(storageAfter.outstandingPsw);
 
       await assertParcelFullyPaid(input.parcelId, tx);
       await updateParcelRepo(
@@ -565,7 +611,7 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
         tx,
       );
 
-      return { payment };
+      return { payment, storagePayment, storageBefore, storageAfter };
     });
 
     if (result.payment && !result.payment.id.startsWith('auto-processed:')) {
@@ -589,6 +635,8 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
       parcelId: input.parcelId,
       status: ParcelStatus.DELIVERED_BY_OFFICE,
       payment: result.payment,
+      storagePayment: result.storagePayment,
+      storageSettlement: result.storageAfter,
       message: 'Receiver cashier flow completed.',
     };
   } catch (error) {

@@ -10,10 +10,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { InventoryLocationType } from '@/db/schemas/enums';
 import type { InventoryLocation } from '../types/inventory-location.types';
+
+const locationTypeLabelByValue = new Map<number, string>([
+  [InventoryLocationType.MAIN_STORE, 'Main Store'],
+  [InventoryLocationType.BRANCH_STORE, 'Branch Store'],
+  [InventoryLocationType.CONSUMPTION_LOCATION, 'Consumption Location'],
+]);
 
 export function createInventoryLocationColumns(
   branchNameById?: ReadonlyMap<string, string>,
+  parentLocationNameById?: ReadonlyMap<string, string>,
 ): ColumnDef<InventoryLocation>[] {
   return [
     {
@@ -27,6 +35,28 @@ export function createInventoryLocationColumns(
       header: 'Branch',
       cell: ({ row }) =>
         row.original.branch?.name ?? branchNameById?.get(row.original.branchId) ?? 'Unknown branch',
+    },
+    {
+      accessorFn: (row) =>
+        locationTypeLabelByValue.get(row.locationType) ?? String(row.locationType),
+      id: 'locationType',
+      header: 'Type',
+      cell: ({ row }) =>
+        locationTypeLabelByValue.get(row.original.locationType) ??
+        String(row.original.locationType),
+    },
+    {
+      accessorFn: (row) =>
+        row.parentLocationId
+          ? (parentLocationNameById?.get(row.parentLocationId) ?? row.parentLocationId)
+          : '-',
+      id: 'parentLocationName',
+      header: 'Parent',
+      cell: ({ row }) =>
+        row.original.parentLocationId
+          ? (parentLocationNameById?.get(row.original.parentLocationId) ??
+            row.original.parentLocationId)
+          : '-',
     },
     {
       accessorKey: 'description',

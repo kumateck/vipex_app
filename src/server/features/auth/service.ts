@@ -19,7 +19,6 @@ import { sendPasswordResetEmail } from '@/server/services/mail/templates/passwor
 import { UserStatus } from '@/db/schemas/enums';
 import { HttpError } from '@/server/utils/http-error';
 import { HttpStatus } from '@/server/utils/http-status';
-import { PermissionCatalog } from '@/shared/permissions/constants';
 import {
   clearUserResetTokenRepo,
   findUserByEmailAndResetTokenRepo,
@@ -65,10 +64,6 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
   const ok = await verifyPassword(password, user?.password);
   if (!ok) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
   const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
-  const resolvedPermissionKeys =
-    permissionKeys.length > 0
-      ? permissionKeys
-      : PermissionCatalog.map((permission) => permission.key);
   const accessToken = await signAccessToken({ sub: user.id });
   const refreshPlain = generateOpaqueToken(32);
   const refreshHash = await sha256HexAsync(refreshPlain);
@@ -97,7 +92,7 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
       locationName: user.location?.name ?? null,
       userType: user.userType ?? null,
       cashierType: user.cashierType ?? null,
-      permissions: resolvedPermissionKeys,
+      permissions: permissionKeys,
     },
   };
 }
@@ -113,10 +108,6 @@ export async function refreshSvc(refreshToken: string) {
   const user = await getUserByIdRepo(current.userId);
   if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
   const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
-  const resolvedPermissionKeys =
-    permissionKeys.length > 0
-      ? permissionKeys
-      : PermissionCatalog.map((permission) => permission.key);
 
   // Rotate
   const nextPlain = generateOpaqueToken(32);
@@ -143,7 +134,7 @@ export async function refreshSvc(refreshToken: string) {
       locationName: user.location?.name ?? null,
       userType: user.userType ?? null,
       cashierType: user.cashierType ?? null,
-      permissions: resolvedPermissionKeys,
+      permissions: permissionKeys,
     },
   };
 }
@@ -226,10 +217,7 @@ export async function getCurrentUserPermissionsSvc(userId: string) {
   if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
 
   const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
-  const allPermissions =
-    permissionKeys.length > 0
-      ? permissionKeys
-      : PermissionCatalog.map((permission) => permission.key);
+  const allPermissions = permissionKeys;
   const readOnlyPermissions = allPermissions.filter((permission) =>
     /^Can(Read|List|Get)/.test(permission),
   );

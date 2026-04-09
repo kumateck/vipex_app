@@ -11,6 +11,7 @@ export { ParcelPickupQueuePage } from './pages/parcel-pickup-queue-page';
 export { ParcelPickupQueueBoardPage } from './pages/parcel-pickup-queue-board-page';
 export { ParcelWaitingPickupPage } from './pages/parcel-waiting-pickup-page';
 export { ParcelReceiverCashierPage } from './pages/parcel-receiver-cashier-page';
+export { ParcelUncollectedPage } from './pages/parcel-uncollected-page';
 export { ParcelHomeDeliveryAddressPage } from './pages/parcel-home-delivery-address-page';
 export { ParcelHomeDeliveryDispatchPage } from './pages/parcel-home-delivery-dispatch-page';
 export { ParcelHomeDeliveryRiderAssignedPage } from './pages/parcel-home-delivery-rider-assigned-page';

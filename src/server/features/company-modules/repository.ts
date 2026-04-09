@@ -140,6 +140,30 @@ export async function updateCompanyAccountingFlagRepo(input: {
   return row ?? null;
 }
 
+export async function updateCompanyModuleSettingsRepo(input: {
+  companyId: string;
+  moduleCode: string;
+  configuredBy?: string | null;
+  settings: unknown;
+}) {
+  const [row] = await db
+    .update(companyModules)
+    .set({
+      settings: input.settings,
+      configuredBy: input.configuredBy ?? null,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(companyModules.companyId, input.companyId),
+        eq(companyModules.moduleCode, input.moduleCode),
+      ),
+    )
+    .returning({ id: companyModules.id });
+
+  return row ?? null;
+}
+
 export async function getCompanyAccountingFlagRepo(companyId: string) {
   const [row] = await db
     .select({ useAccounting: companies.useAccounting })

@@ -30,6 +30,83 @@ export function ProcurementHomePage() {
                 <Link to="/procurement/purchase-requests">Purchase request list</Link>
               </Button>
             </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanReadProcurement}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/demands">Demands list</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanCreateProcurementPurchaseRequests}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/demands/new">Create demand</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanCreateProcurementPurchaseRequests}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/demands/fleet-low-stock">Fleet low-stock intake</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanCreateProcurementPurchaseRequests}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/demands/inventory-low-stock">
+                  Inventory low-stock intake
+                </Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanReadProcurement}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/demands/consolidations">Demand consolidations</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanCreateProcurementPurchaseRequests}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/demands/consolidations/new">Create consolidation</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanApproveProcurementPurchaseRequests}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/demands/approvals">Demand approvals</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanReadProcurement}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/supplier-quotes">Supplier quotes</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanCreateProcurementPurchaseRequests}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/supplier-quotes/new">Create supplier quote</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanReadProcurement}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/purchase-orders">Purchase orders</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanCreateProcurementPurchaseRequests}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/purchase-orders/new">Create purchase order</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanReadProcurement}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/goods-receipts">Goods receipts</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanCreateProcurementPurchaseRequests}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/goods-receipts/new">Create goods receipt</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanReadProcurement}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/fleet-policies">Fleet policy rules</Link>
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permissionKey={PermissionKeys.CanCreateProcurementPurchaseRequests}>
+              <Button asChild variant="outline">
+                <Link to="/procurement/fleet-policies/new">Create fleet policy rule</Link>
+              </Button>
+            </PermissionGuard>
             <PermissionGuard permissionKey={PermissionKeys.CanCreateProcurementPurchaseRequests}>
               <Button asChild variant="outline">
                 <Link to="/procurement/purchase-requests/new">Create purchase request</Link>

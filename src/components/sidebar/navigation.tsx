@@ -215,6 +215,11 @@ const BASE_ROUTES: Route[] = [
             url: '/parcels/receiver-cashier',
             permissionKey: PermissionKeys.CanCreateReceiverPayments,
           },
+          {
+            title: 'Aged & Uncollected',
+            url: '/parcels/uncollected',
+            permissionKey: PermissionKeys.CanViewReportParcelsUncollected,
+          },
         ],
       },
       {
@@ -494,6 +499,71 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadProcurement,
           },
           {
+            title: 'Demands List',
+            url: '/procurement/demands',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          {
+            title: 'Create Demand',
+            url: '/procurement/demands/new',
+            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          },
+          {
+            title: 'Fleet Intake',
+            url: '/procurement/demands/fleet-low-stock',
+            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          },
+          {
+            title: 'Inventory Intake',
+            url: '/procurement/demands/inventory-low-stock',
+            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          },
+          {
+            title: 'Demand Consolidations',
+            url: '/procurement/demands/consolidations',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          {
+            title: 'Create Consolidation',
+            url: '/procurement/demands/consolidations/new',
+            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          },
+          {
+            title: 'Demand Approvals',
+            url: '/procurement/demands/approvals',
+            permissionKey: PermissionKeys.CanApproveProcurementPurchaseRequests,
+          },
+          {
+            title: 'Supplier Quotes',
+            url: '/procurement/supplier-quotes',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          {
+            title: 'Create Quote',
+            url: '/procurement/supplier-quotes/new',
+            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          },
+          {
+            title: 'Purchase Orders',
+            url: '/procurement/purchase-orders',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          {
+            title: 'Create PO',
+            url: '/procurement/purchase-orders/new',
+            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          },
+          {
+            title: 'Goods Receipts',
+            url: '/procurement/goods-receipts',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          {
+            title: 'Create Receipt',
+            url: '/procurement/goods-receipts/new',
+            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          },
+          {
             title: 'Create Request',
             url: '/procurement/purchase-requests/new',
             permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
@@ -520,8 +590,38 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanCreateFleetVehicles,
           },
           {
+            title: 'Trips List',
+            url: '/fleet-transport/trips',
+            permissionKey: PermissionKeys.CanReadFleetTrips,
+          },
+          {
+            title: 'Create Trip',
+            url: '/fleet-transport/trips/new',
+            permissionKey: PermissionKeys.CanCreateFleetTrips,
+          },
+          {
+            title: 'Route Plans',
+            url: '/fleet-transport/routes/plans',
+            permissionKey: PermissionKeys.CanReadFleetTrips,
+          },
+          {
+            title: 'Create Route Plan',
+            url: '/fleet-transport/routes/plans/new',
+            permissionKey: PermissionKeys.CanReadFleetTrips,
+          },
+          {
             title: 'Fuel Logs List',
             url: '/fleet-transport/fuel-logs',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Fuel Analytics',
+            url: '/fleet-transport/fuel-analytics',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Fuel Fraud Signals',
+            url: '/fleet-transport/fuel-analytics/fraud-signals',
             permissionKey: PermissionKeys.CanReadFleetTransport,
           },
           {
@@ -533,6 +633,161 @@ const BASE_ROUTES: Route[] = [
             title: 'Fuel Approvals',
             url: '/fleet-transport/fuel-logs/approvals',
             permissionKey: PermissionKeys.CanApproveFleetFuelLogs,
+          },
+          {
+            title: 'Driver Compliance',
+            url: '/fleet-transport/drivers/compliance',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Add Compliance Record',
+            url: '/fleet-transport/drivers/compliance/new',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Shift Rosters',
+            url: '/fleet-transport/rosters',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Create Shift Roster',
+            url: '/fleet-transport/rosters/new',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Compliance Dashboard',
+            url: '/fleet-transport/compliance',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Compliance KPIs',
+            url: '/fleet-transport/compliance/kpis',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Compliance Ops',
+            url: '/fleet-transport/compliance/ops',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Escalation Policy',
+            url: '/fleet-transport/compliance/escalation-policy',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Record Incident',
+            url: '/fleet-transport/compliance/ops/incidents/new',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Policy Acknowledgment',
+            url: '/fleet-transport/compliance/ops/policy-acks/new',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Maintenance',
+            url: '/fleet-transport/maintenance',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Create Preventive Plan',
+            url: '/fleet-transport/maintenance/plans/new',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Create Work Order',
+            url: '/fleet-transport/maintenance/work-orders/new',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Downtime RCA Workflows',
+            url: '/fleet-transport/maintenance/downtime/workflows',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Work Order Part Movements',
+            url: '/fleet-transport/maintenance/work-orders/part-movements',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Reliability Trends',
+            url: '/fleet-transport/maintenance/reliability/trends',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Maintenance KPIs',
+            url: '/fleet-transport/maintenance/kpis',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Maintenance Traceability',
+            url: '/fleet-transport/maintenance/procurement/traceability',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Run Reorder Job',
+            url: '/fleet-transport/maintenance/procurement/reorder',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Dispatch Board',
+            url: '/fleet-transport/dispatch/board',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Route Assignment',
+            url: '/fleet-transport/dispatch/route-assignments',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Load Matching',
+            url: '/fleet-transport/dispatch/load-matching',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Load Audit Trail',
+            url: '/fleet-transport/dispatch/load-matching/audit',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Check-In Operator',
+            url: '/fleet-transport/dispatch/check-in',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Check-Out Operator',
+            url: '/fleet-transport/dispatch/check-out',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Live Status',
+            url: '/fleet-transport/dispatch/live-status',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Ops Performance',
+            url: '/fleet-transport/dispatch/ops-performance',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Exception Queue',
+            url: '/fleet-transport/dispatch/exception-queue',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Decision Support',
+            url: '/fleet-transport/decision-support',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Executive Scorecard',
+            url: '/fleet-transport/decision-support/executive-scorecard',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
+          },
+          {
+            title: 'Unit Economics',
+            url: '/fleet-transport/decision-support/unit-economics',
+            permissionKey: PermissionKeys.CanReadFleetTransport,
           },
         ],
       },
@@ -846,6 +1101,21 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadStockLevels,
           },
           {
+            title: 'Stock Lots',
+            url: '/inventory/stock-lots',
+            permissionKey: PermissionKeys.CanReadStockLevels,
+          },
+          {
+            title: 'Lot Expiry Alerts',
+            url: '/inventory/stock-lots/expiry-alerts',
+            permissionKey: PermissionKeys.CanReadStockLevels,
+          },
+          {
+            title: 'Lot Analytics',
+            url: '/inventory/stock-lots/analytics',
+            permissionKey: PermissionKeys.CanReadStockLevels,
+          },
+          {
             title: 'Stock Movements',
             url: '/inventory/stock-movements',
             permissionKey: PermissionKeys.CanReadStockMovements,
@@ -859,6 +1129,81 @@ const BASE_ROUTES: Route[] = [
             title: 'Stock Transfers',
             url: '/inventory/stock-transfers',
             permissionKey: PermissionKeys.CanReadStockTransfers,
+          },
+          {
+            title: 'Stock Requests',
+            url: '/inventory/stock-requests',
+            permissionKey: PermissionKeys.CanReadStockRequests,
+          },
+          {
+            title: 'Stock Count Sessions',
+            url: '/inventory/stock-count-sessions',
+            permissionKey: PermissionKeys.CanReadStockLevels,
+          },
+          {
+            title: 'Stock Reservations',
+            url: '/inventory/stock-reservations',
+            permissionKey: PermissionKeys.CanReadStockRequests,
+          },
+          {
+            title: 'Inventory Monitoring',
+            url: '/inventory/monitoring',
+            permissionKey: PermissionKeys.CanReadInventoryOverview,
+          },
+          {
+            title: 'Reorder Suggestions',
+            url: '/inventory/reorder-suggestions',
+            permissionKey: PermissionKeys.CanReadInventoryOverview,
+          },
+          {
+            title: 'Reservation Exceptions',
+            url: '/inventory/stock-reservations/exceptions',
+            permissionKey: PermissionKeys.CanReadStockRequests,
+          },
+          {
+            title: 'Allocation Policy',
+            url: '/inventory/stock-allocation-policy',
+            permissionKey: PermissionKeys.CanApproveStockRequest,
+          },
+          {
+            title: 'Stock Maintenance',
+            url: '/inventory/stock-maintenance',
+            permissionKey: PermissionKeys.CanReadStockMaintenanceRecords,
+          },
+          {
+            title: 'Approval Policies',
+            url: '/inventory/approval-policies',
+            permissionKey: PermissionKeys.CanReadInventoryApprovalPolicies,
+          },
+          {
+            title: 'Approval Requests',
+            url: '/inventory/approval-requests',
+            permissionKey: PermissionKeys.CanReadInventoryApprovalRequests,
+          },
+          {
+            title: 'Valuation',
+            url: '/inventory/valuation',
+            permissionKey: PermissionKeys.CanReadInventoryValuation,
+          },
+          {
+            title: 'Replenishment Proposals',
+            url: '/inventory/replenishment-proposals',
+            permissionKey: PermissionKeys.CanReadReplenishmentProposals,
+          },
+          {
+            title: 'Inventory Tasks',
+            url: '/inventory/tasks',
+            permissionKey: PermissionKeys.CanReadInventoryTasks,
+          },
+          {
+            title: 'Audit Journal',
+            url: '/inventory/audit/journal',
+            permissionKey: PermissionKeys.CanReadInventoryAuditJournal,
+          },
+          {
+            title: 'Enterprise KPIs',
+            url: '/inventory/reports/enterprise-kpis',
+            permissionKey: PermissionKeys.CanReadInventoryEnterpriseKpis,
           },
         ],
       },

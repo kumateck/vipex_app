@@ -11,12 +11,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { formatDateTime } from '@/lib/date';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
 import type { StockTransfer } from '../types/inventory-stock.types';
 import { stockTransferStatusLabelByValue } from '../constants/stock-options';
 
 export function createStockTransferColumns(
   productNameById?: ReadonlyMap<string, string>,
   locationNameById?: ReadonlyMap<string, string>,
+  productConversionsById?: ReadonlyMap<string, { unitOfMeasure: number; factorToBase: string }[]>,
 ): ColumnDef<StockTransfer>[] {
   return [
     {
@@ -37,6 +39,45 @@ export function createStockTransferColumns(
     {
       accessorKey: 'quantity',
       header: 'Quantity',
+      cell: ({ row }) =>
+        formatBaseQuantityWithBestUnits(
+          row.original.quantity,
+          (productConversionsById?.get(row.original.productId) ?? []).map((conversion) => ({
+            unitOfMeasure: conversion.unitOfMeasure,
+            factorToBase: Number.parseInt(conversion.factorToBase, 10),
+          })),
+        ),
+    },
+    {
+      accessorKey: 'fulfilledQuantity',
+      header: 'Fulfilled',
+      cell: ({ row }) =>
+        formatBaseQuantityWithBestUnits(
+          row.original.fulfilledQuantity,
+          (productConversionsById?.get(row.original.productId) ?? []).map((conversion) => ({
+            unitOfMeasure: conversion.unitOfMeasure,
+            factorToBase: Number.parseInt(conversion.factorToBase, 10),
+          })),
+        ),
+    },
+    {
+      accessorFn: (row) => {
+        const requested = Number(row.quantity);
+        const fulfilled = Number(row.fulfilledQuantity);
+        return String(Math.max(0, requested - fulfilled));
+      },
+      id: 'remainingQuantity',
+      header: 'Remaining',
+      cell: ({ row }) =>
+        formatBaseQuantityWithBestUnits(
+          String(
+            Math.max(0, Number(row.original.quantity) - Number(row.original.fulfilledQuantity)),
+          ),
+          (productConversionsById?.get(row.original.productId) ?? []).map((conversion) => ({
+            unitOfMeasure: conversion.unitOfMeasure,
+            factorToBase: Number.parseInt(conversion.factorToBase, 10),
+          })),
+        ),
     },
     {
       accessorFn: (row) => stockTransferStatusLabelByValue.get(row.status) ?? String(row.status),
@@ -62,6 +103,11 @@ export function createStockTransferColumns(
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link to={`/inventory/stock-transfers/receive/${row.original.id}`}>
+                  Receive / Acknowledge
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to={`/inventory/stock-transfers/edit/${row.original.id}`}>Edit</Link>
               </DropdownMenuItem>

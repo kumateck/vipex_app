@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { formatDateTime as formatDateTimeStandard } from '@/lib/date';
 import {
@@ -42,6 +43,7 @@ import { useListUserOptionsQuery } from '@/features/users/api/users.api';
 import { CashierType, ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   type ParcelSearchRow,
@@ -49,6 +51,7 @@ import {
   useGetParcelDetailsQuery,
   useSearchParcelsQuery,
   useUpdateParcelMutation,
+  useWaiveParcelStorageAccrualMutation,
 } from '../api/parcel.api';
 import { ParcelReceiptActions, type ReceiptPrintData } from '../components/parcel-receipt-actions';
 import { ParcelSessionGuard } from '../components/parcel-session-guard';
@@ -62,6 +65,10 @@ function formatDateTime(value: string | null | undefined) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
   return formatDateTimeStandard(date);
+}
+
+function formatStorageCharge(parcel: ParcelSearchRow) {
+  return formatCurrency(parcel.storageChargePsw ?? 0);
 }
 
 function formatPhones(primary?: string | null, secondary?: string | null) {
@@ -112,6 +119,9 @@ export function ParcelReceiverCashierPage() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
+  const canWaiveStorageAccrual = (user?.permissions ?? []).includes(
+    PermissionKeys.CanWaiveParcelStorageAccrual,
+  );
   const { data: currentBranch } = useGetBranchQuery(branchId ?? '', { skip: !branchId });
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
 
@@ -141,6 +151,9 @@ export function ParcelReceiverCashierPage() {
   const [pickerStaffId, setPickerStaffId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<string>(String(PaymentMethod.CASH));
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [storagePaymentAmount, setStoragePaymentAmount] = useState('');
+  const [waiveStorageReason, setWaiveStorageReason] = useState('');
+  const [waiveStorageAmount, setWaiveStorageAmount] = useState('');
   const [lastPrintedReceipt, setLastPrintedReceipt] = useState<ReceiptPrintData | null>(null);
 
   const [mainCardMode, setMainCardMode] = useState<CardMode>('existing');
@@ -159,6 +172,8 @@ export function ParcelReceiverCashierPage() {
   const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
   const [collectReceiverAndDeliver, { isLoading: isCollectingPayment }] =
     useCollectReceiverAndDeliverMutation();
+  const [waiveParcelStorageAccrual, { isLoading: isWaivingStorage }] =
+    useWaiveParcelStorageAccrualMutation();
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
 
   const { data: cardOptions = [] } = useListCardOptionsQuery();
@@ -230,14 +245,27 @@ export function ParcelReceiverCashierPage() {
 
   useEffect(() => {
     if (!selectedParcel) return;
+    const storageOutstandingPsw = parcelDetails?.storageSettlement?.outstandingPsw ?? 0;
+    setStoragePaymentAmount((storageOutstandingPsw / 100).toFixed(2));
+    setWaiveStorageAmount((storageOutstandingPsw / 100).toFixed(2));
+  }, [parcelDetails?.storageSettlement?.outstandingPsw, selectedParcel]);
+
+  useEffect(() => {
+    if (!selectedParcel) return;
     if (mainReceiverCards.length === 0) {
       setMainCardMode('new');
       setMainExistingCardRecordId('');
     }
   }, [mainReceiverCards.length, selectedParcel]);
 
-  const isSaving = isAddingCard || isCreatingCustomer || isCollectingPayment || isUpdatingParcel;
+  const isSaving =
+    isAddingCard ||
+    isCreatingCustomer ||
+    isCollectingPayment ||
+    isUpdatingParcel ||
+    isWaivingStorage;
   const hasPickupQueue = Boolean(parcelDetails?.pickupQueue);
+  const storageOutstandingPsw = parcelDetails?.storageSettlement?.outstandingPsw ?? 0;
 
   function openParcelDialog(parcel: ParcelSearchRow) {
     setSelectedParcel(parcel);
@@ -245,6 +273,9 @@ export function ParcelReceiverCashierPage() {
     setPickerStaffId('');
     setPaymentMethod(String(PaymentMethod.CASH));
     setPaymentAmount((parcel.plannedToBePaidPsw / 100).toFixed(2));
+    setStoragePaymentAmount('0.00');
+    setWaiveStorageAmount('0.00');
+    setWaiveStorageReason('');
     setMainCardMode('existing');
     setMainExistingCardRecordId('');
     setMainNewCardTypeId('');
@@ -327,6 +358,11 @@ export function ParcelReceiverCashierPage() {
         id: 'receiverDue',
         header: 'Receiver Due',
         accessorFn: (row) => formatCurrency(row.plannedToBePaidPsw),
+      },
+      {
+        id: 'storageAccrued',
+        header: 'Storage Accrued',
+        accessorFn: (row) => formatStorageCharge(row),
       },
     ];
 
@@ -428,6 +464,18 @@ export function ParcelReceiverCashierPage() {
       }
     }
 
+    if (storageOutstandingPsw > 0) {
+      const storageAmount = Number(storagePaymentAmount || 0);
+      if (Number.isNaN(storageAmount) || storageAmount <= 0) {
+        toast.error(
+          canWaiveStorageAccrual
+            ? `Storage accrual is outstanding (${formatCurrency(storageOutstandingPsw)}). Collect it or waive with reason before handover.`
+            : `Storage accrual is outstanding (${formatCurrency(storageOutstandingPsw)}). Collect it before handover.`,
+        );
+        return;
+      }
+    }
+
     const mainCard = await resolveCardForCustomer({
       customerId: selectedParcel.receiverId,
       mode: mainCardMode,
@@ -466,6 +514,7 @@ export function ParcelReceiverCashierPage() {
     const deliveryResult = await collectReceiverAndDeliver({
       parcelId: selectedParcel.id,
       amountCedis: receiverDueBeforePsw > 0 ? Number(paymentAmount) : null,
+      storageAmountCedis: storageOutstandingPsw > 0 ? Number(storagePaymentAmount) : null,
       method: Number(paymentMethod),
       confirmedBy: pickerStaffId,
       cardId: mainCard.cardId,
@@ -522,6 +571,34 @@ export function ParcelReceiverCashierPage() {
     toast.success('Payment received and parcel marked as DELIVERED_BY_OFFICE');
     setSelectedParcel(null);
     await listQuery.refetch();
+  }
+
+  async function handleWaiveStorageAccrual() {
+    if (!selectedParcel) return;
+    const reason = waiveStorageReason.trim();
+    if (!reason) {
+      toast.error('Enter waiver reason');
+      return;
+    }
+    const amount = Number(waiveStorageAmount || 0);
+    if (Number.isNaN(amount) || amount <= 0) {
+      toast.error('Enter waiver amount');
+      return;
+    }
+
+    try {
+      await waiveParcelStorageAccrual({
+        id: selectedParcel.id,
+        reason,
+        waivedAmountCedis: amount,
+      }).unwrap();
+      toast.success('Storage accrual waived');
+      setWaiveStorageReason('');
+      setStoragePaymentAmount('0.00');
+      setWaiveStorageAmount('0.00');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to waive storage accrual');
+    }
   }
 
   return (
@@ -619,12 +696,56 @@ export function ParcelReceiverCashierPage() {
           open={Boolean(selectedParcel)}
           onOpenChange={(open) => (!open ? setSelectedParcel(null) : null)}
         >
-          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Receiver Payment + Pickup Verification</DialogTitle>
             </DialogHeader>
             {!selectedParcel ? null : (
               <div className="space-y-4">
+                <div className="rounded-md border p-3 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium">Storage Charge Summary</p>
+                    {selectedParcel.isParcelAged ? (
+                      <Badge variant="destructive">Aged Parcel</Badge>
+                    ) : (
+                      <Badge variant="outline">Not Aged</Badge>
+                    )}
+                  </div>
+                  <div className="grid gap-2 text-sm md:grid-cols-2">
+                    <p>
+                      <strong>Received At:</strong> {formatDateTime(selectedParcel.receivedAt)}
+                    </p>
+                    <p>
+                      <strong>Age:</strong>{' '}
+                      {selectedParcel.ageingDays != null
+                        ? `${selectedParcel.ageingDays} days`
+                        : '-'}
+                    </p>
+                    <p>
+                      <strong>Storage Starts:</strong>{' '}
+                      {formatDateTime(selectedParcel.storageChargeStartAt)}
+                    </p>
+                    <p>
+                      <strong>Grace Period:</strong> {selectedParcel.storageChargeGraceDays ?? 14}{' '}
+                      days
+                    </p>
+                    <p>
+                      <strong>Rate:</strong>{' '}
+                      {formatCurrency(selectedParcel.storageFeePerDayPsw ?? 500)} / day
+                    </p>
+                    <p>
+                      <strong>Accrued Days:</strong> {selectedParcel.storageChargeDays ?? 0}
+                    </p>
+                    <p className="md:col-span-2">
+                      <strong>Accrued Storage (Info):</strong> {formatStorageCharge(selectedParcel)}
+                    </p>
+                    <p className="md:col-span-2">
+                      <strong>Outstanding Storage (Settlement):</strong>{' '}
+                      {formatCurrency(storageOutstandingPsw)}
+                    </p>
+                  </div>
+                </div>
+
                 <div className="grid gap-2 text-sm">
                   <p>
                     <strong>Tracking:</strong> {selectedParcel.trackingCode}
@@ -657,10 +778,28 @@ export function ParcelReceiverCashierPage() {
                     placeholder="0.00"
                     disabled={receiverDuePsw <= 0}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Base receiver due: {formatCurrency(receiverDuePsw)}. Suggested total with
+                    storage info:{' '}
+                    {formatCurrency(receiverDuePsw + (selectedParcel.storageChargePsw ?? 0))}.
+                  </p>
+
+                  <Label htmlFor="receiver-storage-amount">Storage Payment Amount (GHS)</Label>
+                  <Input
+                    id="receiver-storage-amount"
+                    inputMode="decimal"
+                    value={storagePaymentAmount}
+                    onChange={(event) => setStoragePaymentAmount(event.target.value)}
+                    placeholder="0.00"
+                    disabled={storageOutstandingPsw <= 0}
+                  />
 
                   <Label htmlFor="receiver-payment-method">Payment Method</Label>
                   <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                    <SelectTrigger id="receiver-payment-method" disabled={receiverDuePsw <= 0}>
+                    <SelectTrigger
+                      id="receiver-payment-method"
+                      disabled={receiverDuePsw <= 0 && storageOutstandingPsw <= 0}
+                    >
                       <SelectValue placeholder="Select payment method" />
                     </SelectTrigger>
                     <SelectContent>
@@ -672,6 +811,57 @@ export function ParcelReceiverCashierPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {storageOutstandingPsw > 0 && canWaiveStorageAccrual ? (
+                  <div className="space-y-2 rounded-md border p-3">
+                    <Label>Waive Storage Accrual</Label>
+                    <Input
+                      inputMode="decimal"
+                      value={waiveStorageAmount}
+                      onChange={(event) => setWaiveStorageAmount(event.target.value)}
+                      placeholder="Waive amount (GHS)"
+                    />
+                    <Input
+                      value={waiveStorageReason}
+                      onChange={(event) => setWaiveStorageReason(event.target.value)}
+                      placeholder="Waiver reason (required)"
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void handleWaiveStorageAccrual()}
+                        disabled={isSaving}
+                      >
+                        Waive Storage
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+                {parcelDetails?.storageWaivers?.length ? (
+                  <div className="space-y-2 rounded-md border p-3">
+                    <Label>Storage Waiver History</Label>
+                    <div className="space-y-1">
+                      {parcelDetails.storageWaivers.map((waiver) => (
+                        <div key={waiver.id} className="rounded border p-2 text-xs">
+                          <p className="font-medium">
+                            {formatCurrency(waiver.waivedAmountPsw)} waived
+                          </p>
+                          <p className="text-muted-foreground">
+                            {waiver.waivedByName ?? '-'} • {formatDateTime(waiver.waivedAt)}
+                          </p>
+                          <p className="text-muted-foreground">
+                            Accounting:{' '}
+                            {waiver.accountingJournalEntryId
+                              ? `Posted (${waiver.accountingJournalEntryId})`
+                              : 'Not posted'}
+                          </p>
+                          <p>{waiver.reason}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="space-y-2">
                   <Label>Shelf Picker Staff</Label>

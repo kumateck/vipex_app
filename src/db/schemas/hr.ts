@@ -19,6 +19,8 @@ import {
   EmploymentType,
   Gender,
   LeaveRequestStatus,
+  LeaveSelectionMode,
+  LeaveSwapStatus,
 } from './enums';
 
 export const departments = pgTable(
@@ -259,6 +261,8 @@ export const leaveTypes = pgTable(
     isPaid: boolean('is_paid').notNull().default(true),
     minAdvanceDays: integer('min_advance_days').notNull().default(0),
     allowEmergencySameDay: boolean('allow_emergency_same_day').notNull().default(true),
+    colorHex: varchar('color_hex', { length: 7 }).notNull().default('#22c55e'),
+    calendarPriority: smallint('calendar_priority').notNull().default(0),
     isActive: boolean('is_active').notNull().default(true),
     createdBy: varchar('created_by', { length: 25 }).references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
@@ -292,6 +296,10 @@ export const leaveRequests = pgTable(
     dateFrom: timestamp('date_from', { withTimezone: false }).notNull(),
     dateTo: timestamp('date_to', { withTimezone: false }).notNull(),
     daysCount: integer('days_count').notNull().default(1),
+    selectionMode: smallint('selection_mode').notNull().default(LeaveSelectionMode.DATE_RANGE),
+    weekStartDate: timestamp('week_start_date', { withTimezone: false }),
+    weekCount: integer('week_count'),
+    swapLockUntil: timestamp('swap_lock_until', { withTimezone: false }),
     isEmergency: boolean('is_emergency').notNull().default(false),
     reason: text('reason'),
     managerApprovalStatus: smallint('manager_approval_status')
@@ -312,5 +320,58 @@ export const leaveRequests = pgTable(
     byCompany: index('leave_requests_company_idx').on(t.companyId),
     byEmployee: index('leave_requests_employee_idx').on(t.employeeId, t.dateFrom),
     byStatus: index('leave_requests_company_status_idx').on(t.companyId, t.status),
+    byCompanyDateRange: index('leave_requests_company_range_idx').on(
+      t.companyId,
+      t.dateFrom,
+      t.dateTo,
+    ),
+  }),
+);
+
+export const leaveSwaps = pgTable(
+  'leave_swaps',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    requesterEmployeeId: varchar('requester_employee_id', { length: 25 })
+      .notNull()
+      .references(() => employees.id),
+    requesterLeaveRequestId: varchar('requester_leave_request_id', { length: 25 })
+      .notNull()
+      .references(() => leaveRequests.id),
+    targetEmployeeId: varchar('target_employee_id', { length: 25 })
+      .notNull()
+      .references(() => employees.id),
+    targetLeaveRequestId: varchar('target_leave_request_id', { length: 25 })
+      .notNull()
+      .references(() => leaveRequests.id),
+    requesterOriginalFrom: timestamp('requester_original_from', { withTimezone: false }).notNull(),
+    requesterOriginalTo: timestamp('requester_original_to', { withTimezone: false }).notNull(),
+    targetOriginalFrom: timestamp('target_original_from', { withTimezone: false }).notNull(),
+    targetOriginalTo: timestamp('target_original_to', { withTimezone: false }).notNull(),
+    requesterProposedFrom: timestamp('requester_proposed_from', { withTimezone: false }).notNull(),
+    requesterProposedTo: timestamp('requester_proposed_to', { withTimezone: false }).notNull(),
+    targetProposedFrom: timestamp('target_proposed_from', { withTimezone: false }).notNull(),
+    targetProposedTo: timestamp('target_proposed_to', { withTimezone: false }).notNull(),
+    status: smallint('status').notNull().default(LeaveSwapStatus.PENDING_PEER),
+    peerConfirmedBy: varchar('peer_confirmed_by', { length: 25 }).references(() => users.id),
+    peerConfirmedAt: timestamp('peer_confirmed_at', { withTimezone: false }),
+    approvedBy: varchar('approved_by', { length: 25 }).references(() => users.id),
+    approvedAt: timestamp('approved_at', { withTimezone: false }),
+    rejectedBy: varchar('rejected_by', { length: 25 }).references(() => users.id),
+    rejectedAt: timestamp('rejected_at', { withTimezone: false }),
+    rejectionReason: text('rejection_reason'),
+    createdBy: varchar('created_by', { length: 25 }).references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompanyStatus: index('leave_swaps_company_status_idx').on(t.companyId, t.status, t.createdAt),
+    byRequester: index('leave_swaps_requester_idx').on(t.requesterEmployeeId, t.createdAt),
+    byTarget: index('leave_swaps_target_idx').on(t.targetEmployeeId, t.createdAt),
   }),
 );

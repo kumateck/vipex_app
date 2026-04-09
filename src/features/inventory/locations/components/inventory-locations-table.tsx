@@ -3,6 +3,7 @@ import { DataTable } from '@/components/datatable';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches';
+import { useListInventoryLocationOptionsQuery } from '../api/inventory-locations.api';
 import { useListInventoryLocationsQuery } from '../api/inventory-locations.api';
 import { createInventoryLocationColumns } from './inventory-location-columns';
 import type { InventoryLocationListQuery } from '../types/inventory-location.types';
@@ -25,16 +26,30 @@ export function InventoryLocationsTable() {
     filters: serverFilters,
   });
 
-  const { data: locationsData, isLoading: isLoadingLocations } = useListInventoryLocationsQuery(query, {
-    skip: !companyId,
-  });
+  const { data: locationsData, isLoading: isLoadingLocations } = useListInventoryLocationsQuery(
+    query,
+    {
+      skip: !companyId,
+    },
+  );
   const { data: branchesData } = useListBranchOptionsQuery({ companyId }, { skip: !companyId });
+  const { data: locationOptionsData = [] } = useListInventoryLocationOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
 
   const branchNameById = useMemo(
     () => new Map((branchesData ?? []).map((branch) => [branch.id, branch.name] as const)),
     [branchesData],
   );
-  const columns = useMemo(() => createInventoryLocationColumns(branchNameById), [branchNameById]);
+  const parentLocationNameById = useMemo(
+    () => new Map(locationOptionsData.map((location) => [location.id, location.name] as const)),
+    [locationOptionsData],
+  );
+  const columns = useMemo(
+    () => createInventoryLocationColumns(branchNameById, parentLocationNameById),
+    [branchNameById, parentLocationNameById],
+  );
   const rows = useMemo(() => locationsData?.data ?? [], [locationsData]);
 
   const handleRequestChange = useCallback((request: InventoryLocationListQuery) => {

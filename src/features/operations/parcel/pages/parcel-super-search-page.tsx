@@ -13,17 +13,20 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
+import { ParcelDispositionActionType, ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
+import { useListWarehouseOptionsQuery } from '@/features/warehouses';
 import { useListAuditLogsQuery } from '@/features/audit/api';
 import { formatDateTime } from '@/lib/date';
 import {
   type ParcelSearchRow,
   useGetParcelDetailsQuery,
+  useRecordParcelDispositionActionMutation,
   useSearchParcelsQuery,
 } from '../api/parcel.api';
 import { ParcelInternalHolderBadge } from '../components/parcel-internal-holder-badge';
@@ -53,6 +56,11 @@ const PARCEL_STATUS_LABELS: Record<number, string> = {
   [ParcelStatus.RETURNED_TO_OFFICE]: 'Returned to Office',
   [ParcelStatus.RETURNED_TO_SENDER]: 'Returned to Sender',
   [ParcelStatus.CANCELLED]: 'Cancelled',
+  [ParcelStatus.DISCREPANCY]: 'Discrepancy',
+  [ParcelStatus.AGED_IN_WAREHOUSE]: 'Aged in Warehouse',
+  [ParcelStatus.DISPOSED_BY_SALE]: 'Disposed by Sale',
+  [ParcelStatus.DISPOSED_BY_DESTRUCTION]: 'Disposed by Destruction',
+  [ParcelStatus.DISPOSED_BY_DONATION]: 'Disposed by Donation',
 };
 
 const formatCurrency = (amountPsw: number) => `GHS ${(amountPsw / 100).toFixed(2)}`;
@@ -94,6 +102,9 @@ export function ParcelSuperSearchPage() {
     filters: { companyId, includeDeleted: true },
   });
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
+  const [dispositionNotes, setDispositionNotes] = useState('');
+  const [dispositionWarehouseId, setDispositionWarehouseId] = useState('');
+  const [dispositionRecoveryAmount, setDispositionRecoveryAmount] = useState('');
 
   const shouldSearch = submittedSearch.trim().length > 0;
 
@@ -112,6 +123,8 @@ export function ParcelSuperSearchPage() {
     selectedParcelId ?? '',
     { skip: !selectedParcelId },
   );
+  const [recordDispositionAction, { isLoading: isRecordingDispositionAction }] =
+    useRecordParcelDispositionActionMutation();
 
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
     { companyId },
@@ -120,6 +133,15 @@ export function ParcelSuperSearchPage() {
   const branchNameById = useMemo(
     () => new Map(branchOptions.map((branch) => [branch.id, branch.name])),
     [branchOptions],
+  );
+  const selectedDestinationBranchId = parcelDetails?.parcel.destinationId ?? null;
+  const { data: warehouseOptions = [] } = useListWarehouseOptionsQuery(
+    {
+      companyId: companyId ?? '',
+      branchId: selectedDestinationBranchId ?? '',
+      activeOnly: true,
+    },
+    { skip: !companyId || !selectedDestinationBranchId },
   );
 
   const rows = data?.data ?? [];
@@ -143,6 +165,30 @@ export function ParcelSuperSearchPage() {
     setSubmittedSearch(searchInput.trim());
     setQuery((prev) => ({ ...prev, page: 1, filters: { companyId, includeDeleted: true } }));
   };
+
+  async function handleRecordDispositionAction(actionType: number) {
+    if (!selectedParcelId) return;
+    try {
+      await recordDispositionAction({
+        id: selectedParcelId,
+        actionType,
+        notes: dispositionNotes.trim() || null,
+        warehouseId:
+          actionType === ParcelDispositionActionType.TRANSFERRED_TO_WAREHOUSE
+            ? dispositionWarehouseId || null
+            : null,
+        recoveredAmountCedis: dispositionRecoveryAmount.trim() || null,
+      }).unwrap();
+
+      setDispositionNotes('');
+      setDispositionRecoveryAmount('');
+      if (actionType !== ParcelDispositionActionType.TRANSFERRED_TO_WAREHOUSE) {
+        setDispositionWarehouseId('');
+      }
+    } catch {
+      // Error feedback is handled by API middleware.
+    }
+  }
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
@@ -257,7 +303,14 @@ export function ParcelSuperSearchPage() {
 
       <Dialog
         open={Boolean(selectedParcelId)}
-        onOpenChange={(open) => (!open ? setSelectedParcelId(null) : null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedParcelId(null);
+            setDispositionNotes('');
+            setDispositionWarehouseId('');
+            setDispositionRecoveryAmount('');
+          }
+        }}
       >
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -390,6 +443,152 @@ export function ParcelSuperSearchPage() {
                       {detailRow('Delivered At', formatDate(parcelDetails.delivery.deliveredAt))}
                     </>
                   )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    Aged Parcel Actions ({parcelDetails.dispositionActions.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="disposition-notes">Action Notes</Label>
+                      <Input
+                        id="disposition-notes"
+                        value={dispositionNotes}
+                        onChange={(event) => setDispositionNotes(event.target.value)}
+                        placeholder="Reason, notice details, or decision context"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="disposition-recovery">Recovered Amount (GHS)</Label>
+                      <Input
+                        id="disposition-recovery"
+                        value={dispositionRecoveryAmount}
+                        onChange={(event) => setDispositionRecoveryAmount(event.target.value)}
+                        placeholder="0.00"
+                        inputMode="decimal"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="disposition-warehouse">Warehouse (for transfer action)</Label>
+                    <select
+                      id="disposition-warehouse"
+                      value={dispositionWarehouseId}
+                      onChange={(event) => setDispositionWarehouseId(event.target.value)}
+                      className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                    >
+                      <option value="">Select warehouse</option>
+                      {warehouseOptions.map((warehouse) => (
+                        <option key={warehouse.id} value={warehouse.id}>
+                          {warehouse.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isRecordingDispositionAction}
+                      onClick={() =>
+                        void handleRecordDispositionAction(ParcelDispositionActionType.NOTICE_SENT)
+                      }
+                    >
+                      Notice Sent
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isRecordingDispositionAction}
+                      onClick={() =>
+                        void handleRecordDispositionAction(
+                          ParcelDispositionActionType.TRANSFERRED_TO_WAREHOUSE,
+                        )
+                      }
+                    >
+                      Transfer To Warehouse
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isRecordingDispositionAction}
+                      onClick={() =>
+                        void handleRecordDispositionAction(ParcelDispositionActionType.SOLD)
+                      }
+                    >
+                      Mark Sold
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isRecordingDispositionAction}
+                      onClick={() =>
+                        void handleRecordDispositionAction(ParcelDispositionActionType.DESTROYED)
+                      }
+                    >
+                      Mark Destroyed
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isRecordingDispositionAction}
+                      onClick={() =>
+                        void handleRecordDispositionAction(ParcelDispositionActionType.DONATED)
+                      }
+                    >
+                      Mark Donated
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isRecordingDispositionAction}
+                      onClick={() =>
+                        void handleRecordDispositionAction(ParcelDispositionActionType.WRITTEN_OFF)
+                      }
+                    >
+                      Write Off
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {parcelDetails.dispositionActions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No disposition actions recorded yet.
+                      </p>
+                    ) : (
+                      parcelDetails.dispositionActions.map((action) => (
+                        <div key={action.id} className="rounded-md border p-3 text-sm space-y-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-medium">
+                              {ParcelDispositionActionType[action.actionType] ??
+                                `Action ${action.actionType}`}
+                            </p>
+                            <span className="text-muted-foreground text-xs">
+                              {formatDate(action.performedAt)}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground text-xs">
+                            By: {action.performedByName ?? '-'}
+                          </p>
+                          {action.warehouseName ? (
+                            <p className="text-muted-foreground text-xs">
+                              Warehouse: {action.warehouseName}
+                            </p>
+                          ) : null}
+                          {action.recoveredAmountPsw > 0 ? (
+                            <p className="text-muted-foreground text-xs">
+                              Recovered: {formatCurrency(action.recoveredAmountPsw)}
+                            </p>
+                          ) : null}
+                          {action.notes ? <p className="text-xs">{action.notes}</p> : null}
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 

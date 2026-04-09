@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -21,6 +22,10 @@ import {
   setPrinterPreferenceMapping,
 } from '@/features/printing';
 import { useListCompanyModulesQuery, useSetCompanyModuleStateMutation } from '../api';
+import {
+  getParcelAgeingPolicyFromModuleSettings,
+  parcelAgeingPolicyToCedisPerDay,
+} from '@/shared/shipments/parcel-ageing-policy';
 
 function formatDateTime(value: string | null) {
   if (!value) return 'Never';
@@ -38,7 +43,15 @@ export function CompanySettingsPage() {
   const [invoicePrinter, setInvoicePrinter] = useState<string>('');
   const [isLoadingPrinters, setIsLoadingPrinters] = useState(false);
   const [printerNames, setPrinterNames] = useState<string[]>([]);
+  const [storageFeePerDayCedis, setStorageFeePerDayCedis] = useState('5');
+  const [storageGracePeriodDays, setStorageGracePeriodDays] = useState('14');
+  const [agedThresholdMonths, setAgedThresholdMonths] = useState('6');
+  const [isSavingParcelPolicy, setIsSavingParcelPolicy] = useState(false);
   const isDesktopRuntime = useMemo(() => getPrintRuntime() === 'desktop', []);
+  const shipmentsModule = useMemo(
+    () => modules.find((module) => module.code === 'shipments') ?? null,
+    [modules],
+  );
 
   useEffect(() => {
     const saved = getPrinterPreferenceMapping();
@@ -75,6 +88,14 @@ export function CompanySettingsPage() {
     };
   }, [isDesktopRuntime]);
 
+  useEffect(() => {
+    if (!shipmentsModule) return;
+    const policy = getParcelAgeingPolicyFromModuleSettings(shipmentsModule.settings);
+    setStorageFeePerDayCedis(String(parcelAgeingPolicyToCedisPerDay(policy)));
+    setStorageGracePeriodDays(String(policy.gracePeriodDays));
+    setAgedThresholdMonths(String(policy.agedThresholdMonths));
+  }, [shipmentsModule]);
+
   async function handleToggle(moduleCode: string, isEnabled: boolean) {
     try {
       await setCompanyModuleState({ moduleCode, isEnabled }).unwrap();
@@ -106,6 +127,58 @@ export function CompanySettingsPage() {
     setInvoicePrinter('');
     setPrinterPreferenceMapping({});
     toast.success('Printer routing cleared');
+  }
+
+  async function handleSaveParcelAgeingPolicy() {
+    if (!shipmentsModule) {
+      toast.error('Shipments module was not found');
+      return;
+    }
+
+    const storageFee = Number(storageFeePerDayCedis);
+    const graceDays = Number(storageGracePeriodDays);
+    const ageMonths = Number(agedThresholdMonths);
+
+    if (!Number.isFinite(storageFee) || storageFee <= 0) {
+      toast.error('Storage fee per day must be greater than 0');
+      return;
+    }
+    if (!Number.isFinite(graceDays) || graceDays <= 0) {
+      toast.error('Grace period days must be greater than 0');
+      return;
+    }
+    if (!Number.isFinite(ageMonths) || ageMonths <= 0) {
+      toast.error('Aging threshold months must be greater than 0');
+      return;
+    }
+
+    const storageFeePerDayPsw = Math.round(storageFee * 100);
+    const existingSettings =
+      shipmentsModule.settings && typeof shipmentsModule.settings === 'object'
+        ? (shipmentsModule.settings as Record<string, unknown>)
+        : {};
+
+    try {
+      setIsSavingParcelPolicy(true);
+      await setCompanyModuleState({
+        moduleCode: shipmentsModule.code,
+        isEnabled: shipmentsModule.isEnabled,
+        settings: {
+          ...existingSettings,
+          parcelAgeing: {
+            storageFeePerDayPsw,
+            gracePeriodDays: Math.floor(graceDays),
+            agedThresholdMonths: Math.floor(ageMonths),
+          },
+        },
+      }).unwrap();
+      toast.success('Parcel ageing policy updated');
+      await refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save parcel ageing policy');
+    } finally {
+      setIsSavingParcelPolicy(false);
+    }
   }
 
   return (
@@ -187,6 +260,59 @@ export function CompanySettingsPage() {
                   );
                 })
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Parcel Ageing & Storage Charges</CardTitle>
+              <CardDescription>
+                Company policy for uncollected parcels. Storage charges begin after the grace period
+                and aged parcels are identified from the received date.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="storage-fee-day">Storage Fee / Day (GHS)</Label>
+                  <Input
+                    id="storage-fee-day"
+                    value={storageFeePerDayCedis}
+                    onChange={(event) => setStorageFeePerDayCedis(event.target.value)}
+                    placeholder="5"
+                    inputMode="decimal"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="storage-grace-days">Grace Period (Days)</Label>
+                  <Input
+                    id="storage-grace-days"
+                    value={storageGracePeriodDays}
+                    onChange={(event) => setStorageGracePeriodDays(event.target.value)}
+                    placeholder="14"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="aged-threshold-months">Aged Threshold (Months)</Label>
+                  <Input
+                    id="aged-threshold-months"
+                    value={agedThresholdMonths}
+                    onChange={(event) => setAgedThresholdMonths(event.target.value)}
+                    placeholder="6"
+                    inputMode="numeric"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={() => void handleSaveParcelAgeingPolicy()}
+                  disabled={isSaving || isSavingParcelPolicy || !shipmentsModule}
+                >
+                  {isSavingParcelPolicy ? 'Saving...' : 'Save Parcel Policy'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

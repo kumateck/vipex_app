@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -107,6 +108,8 @@ export function ParcelInternalTransfersPage() {
   const [notes, setNotes] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedParcels, setSelectedParcels] = useState<ParcelSearchRow[]>([]);
+  const [agedOnly, setAgedOnly] = useState(true);
+  const [storageChargeAccruingOnly, setStorageChargeAccruingOnly] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelTransferId, setCancelTransferId] = useState('');
   const [selectedHistoryTransferId, setSelectedHistoryTransferId] = useState('');
@@ -154,17 +157,19 @@ export function ParcelInternalTransfersPage() {
   );
 
   async function runSearch() {
-    if (!searchTerm.trim()) {
-      toast.error('Enter a parcel search term');
+    if (!searchTerm.trim() && !agedOnly && !storageChargeAccruingOnly) {
+      toast.error('Enter a parcel search term or use an ageing filter');
       return;
     }
     await searchParcels({
       page: 1,
       pageSize: 20,
-      search: searchTerm.trim(),
+      search: searchTerm.trim() || undefined,
       filters: {
         companyId,
         destinationId: branchId,
+        agedOnly,
+        storageChargeAccruing: storageChargeAccruingOnly,
       },
     });
   }
@@ -244,6 +249,29 @@ export function ParcelInternalTransfersPage() {
       { accessorKey: 'bookingCode', header: 'Booking' },
       { accessorKey: 'receiverName', header: 'Receiver' },
       { accessorKey: 'parcelDetails', header: 'Parcel' },
+      {
+        id: 'ageing',
+        header: 'Ageing',
+        cell: ({ row }) => (
+          <div className="space-y-0.5 text-xs">
+            <p>{row.original.ageingDays != null ? `${row.original.ageingDays} days` : '-'}</p>
+            {row.original.isParcelAged ? (
+              <Badge variant="destructive" className="text-[10px] px-1 py-0">
+                Aged
+              </Badge>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        id: 'storage',
+        header: 'Storage',
+        cell: ({ row }) => (
+          <div className="text-xs">
+            GHS {(((row.original.storageChargePsw ?? 0) as number) / 100).toFixed(2)}
+          </div>
+        ),
+      },
       {
         id: 'holder',
         header: 'Current Holder',
@@ -550,6 +578,28 @@ export function ParcelInternalTransfersPage() {
                       Search
                     </Button>
                   </div>
+                  <div className="flex flex-wrap gap-4 rounded-lg border p-3">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="aged-only"
+                        checked={agedOnly}
+                        onCheckedChange={(value) => setAgedOnly(Boolean(value))}
+                      />
+                      <Label htmlFor="aged-only" className="cursor-pointer">
+                        Aged only (received 6+ months)
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="charge-only"
+                        checked={storageChargeAccruingOnly}
+                        onCheckedChange={(value) => setStorageChargeAccruingOnly(Boolean(value))}
+                      />
+                      <Label htmlFor="charge-only" className="cursor-pointer">
+                        Storage charge accruing
+                      </Label>
+                    </div>
+                  </div>
                   <DataTable
                     mode="client"
                     data={searchResults?.data ?? []}
@@ -581,6 +631,10 @@ export function ParcelInternalTransfersPage() {
                           <p className="text-sm text-muted-foreground">
                             {parcel.bookingCode} • {parcel.receiverName || '-'} •{' '}
                             {parcel.parcelDetails}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Age: {parcel.ageingDays ?? '-'} days • Storage:{' '}
+                            {`GHS ${(((parcel.storageChargePsw ?? 0) as number) / 100).toFixed(2)}`}
                           </p>
                           <ParcelInternalHolderBadge holder={parcel} />
                         </div>

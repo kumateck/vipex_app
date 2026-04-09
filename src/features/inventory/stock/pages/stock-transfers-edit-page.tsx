@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuthStore } from '@/stores/auth-store';
@@ -46,6 +47,15 @@ export function StockTransfersEditPage() {
 
   const productNameById = useMemo(
     () => new Map((productsData?.data ?? []).map((product) => [product.id, product.name] as const)),
+    [productsData],
+  );
+  const productConversionsById = useMemo(
+    () =>
+      new Map(
+        (productsData?.data ?? []).map(
+          (product) => [product.id, product.unitConversions ?? []] as const,
+        ),
+      ),
     [productsData],
   );
   const locationNameById = useMemo(
@@ -97,6 +107,13 @@ export function StockTransfersEditPage() {
   return (
     <ScrollableWrapper>
       <div className="w-full p-4">
+        <div className="mb-3 flex justify-end">
+          <Button asChild variant="outline" size="sm">
+            <Link to={`/inventory/stock-transfers/receive/${transfer.id}`}>
+              Receive / Acknowledge
+            </Link>
+          </Button>
+        </div>
         <StockTransferStatusForm
           transfer={transfer}
           onSubmit={onSubmit}
@@ -104,6 +121,7 @@ export function StockTransfersEditPage() {
           title="Update stock transfer"
           submitButtonText="Save changes"
           productNameById={productNameById}
+          productConversionsById={productConversionsById}
           locationNameById={locationNameById}
         />
       </div>

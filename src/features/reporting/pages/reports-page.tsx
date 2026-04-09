@@ -58,6 +58,7 @@ import {
   useGetPayrollOvertimeReportQuery,
   useGetPayrollRegisterReportQuery,
   useGetShiftRevenueReportQuery,
+  useGetStorageWaiverFinancialReportQuery,
   useGetToBePaidCollectionsReconciliationReportQuery,
   useGetToBePaidOutstandingReportQuery,
 } from '../api/reporting.api';
@@ -84,6 +85,7 @@ export type ReportKey =
   | 'customer-credit-aging-detail'
   | 'tobepaid-outstanding'
   | 'tobepaid-collections-reconciliation'
+  | 'storage-waivers'
   | 'daily-cash-confirmations'
   | 'expense-by-category';
 
@@ -121,6 +123,7 @@ const REPORT_LABELS: Record<ReportKey, string> = {
   'customer-credit-aging-detail': 'Customer Credit Aging Detail',
   'tobepaid-outstanding': 'To-Be-Paid Outstanding',
   'tobepaid-collections-reconciliation': 'To-Be-Paid Collections Reconciliation',
+  'storage-waivers': 'Storage Waivers (Accounting)',
   'daily-cash-confirmations': 'Daily Cash Confirmations',
   'expense-by-category': 'Expense by Category',
 };
@@ -209,6 +212,11 @@ const PARCEL_STATUS_LABELS: Record<number, string> = {
   [ParcelStatus.RETURNED_TO_OFFICE]: 'Returned to office',
   [ParcelStatus.RETURNED_TO_SENDER]: 'Returned to sender',
   [ParcelStatus.CANCELLED]: 'Cancelled',
+  [ParcelStatus.DISCREPANCY]: 'Discrepancy',
+  [ParcelStatus.AGED_IN_WAREHOUSE]: 'Aged in warehouse',
+  [ParcelStatus.DISPOSED_BY_SALE]: 'Disposed by sale',
+  [ParcelStatus.DISPOSED_BY_DESTRUCTION]: 'Disposed by destruction',
+  [ParcelStatus.DISPOSED_BY_DONATION]: 'Disposed by donation',
 };
 
 function todayDateInputValue() {
@@ -409,6 +417,7 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
         canCreditExposure ? 'customer-credit-aging-detail' : null,
         canToBePaidOutstanding ? 'tobepaid-outstanding' : null,
         canToBePaidOutstanding ? 'tobepaid-collections-reconciliation' : null,
+        canAccountingReports ? 'storage-waivers' : null,
         canAccountingReports ? 'daily-cash-confirmations' : null,
         canAccountingReports ? 'expense-by-category' : null,
       ].filter(Boolean) as ReportKey[],
@@ -728,6 +737,18 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
         !appliedFilters,
     },
   );
+
+  const { data: storageWaiverFinancialReport, isFetching: isStorageWaiverFinancialFetching } =
+    useGetStorageWaiverFinancialReportQuery(
+      {
+        branchId: appliedFilters?.branchId ?? null,
+        from: appliedFilters?.from ?? from,
+        to: appliedFilters?.to ?? to,
+      },
+      {
+        skip: activeReport !== 'storage-waivers' || !canAccountingReports || !appliedFilters,
+      },
+    );
 
   const currentReport = useMemo<CurrentReport>(() => {
     switch (activeReport) {
@@ -1943,6 +1964,64 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
           emptyMessage: 'No to-be-paid parcels matched the selected reconciliation filters.',
           csvFilename: 'tobepaid-collections-reconciliation-report.csv',
         };
+      case 'storage-waivers':
+        return {
+          title: 'Storage Waiver Financial Report',
+          description:
+            'Financially tracked parcel storage waivers, including accounting posting status.',
+          generatedAt: storageWaiverFinancialReport?.generatedAt,
+          filters: [
+            {
+              label: 'Branch',
+              value:
+                branchOptions.find((item) => item.id === selectedBranchId)?.name ?? 'All branches',
+            },
+            { label: 'From', value: from },
+            { label: 'To', value: to },
+          ],
+          summary: [
+            { label: 'Waivers', value: String(storageWaiverFinancialReport?.totals.waivers ?? 0) },
+            {
+              label: 'Total waived',
+              value: formatMoneyPsw(storageWaiverFinancialReport?.totals.waivedAmountPsw ?? 0),
+            },
+            {
+              label: 'Posted count',
+              value: String(storageWaiverFinancialReport?.totals.postedCount ?? 0),
+            },
+          ],
+          sections: [
+            {
+              heading: 'Storage Waiver Entries',
+              headers: [
+                'Waived At',
+                'Tracking',
+                'Booking',
+                'Destination',
+                'Waived By',
+                'Reason',
+                'Amount',
+                'Journal Entry',
+                'Posted At',
+              ],
+              rows:
+                storageWaiverFinancialReport?.rows.map((row) => [
+                  formatDateTime(row.waivedAt),
+                  row.trackingCode,
+                  row.bookingCode,
+                  row.destinationBranchName ?? '-',
+                  row.waivedByName ?? '-',
+                  row.reason,
+                  formatMoneyPsw(row.waivedAmountPsw),
+                  row.accountingJournalEntryId ?? 'Not posted',
+                  formatDateTime(row.accountingPostedAt),
+                ]) ?? [],
+            },
+          ],
+          loading: isStorageWaiverFinancialFetching,
+          emptyMessage: 'No storage waivers matched the selected filters.',
+          csvFilename: 'storage-waiver-financial-report.csv',
+        };
     }
   }, [
     activeReport,
@@ -1976,6 +2055,7 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
     isPayrollOvertimeFetching,
     isPayrollRegisterFetching,
     isShiftRevenueFetching,
+    isStorageWaiverFinancialFetching,
     isToBePaidOutstandingFetching,
     isToBePaidCollectionsReconciliationFetching,
     leaveReport,
@@ -1999,6 +2079,7 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
     selectedRiderUserId,
     riderOptions,
     shiftRevenueReport,
+    storageWaiverFinancialReport,
     toBePaidCollectionsReconciliationReport,
     toBePaidOutstandingReport,
     to,
@@ -2638,6 +2719,35 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
                   <div className="space-y-2">
                     <Label>Destination branch</Label>
                     <Select value={destinationBranchId} onValueChange={setDestinationBranchId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All branches" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All branches</SelectItem>
+                        {branchOptions.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Date range</Label>
+                    <DateRangePicker
+                      value={reportDateRange}
+                      onChange={setReportDateRange}
+                      placeholder="Select date range"
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {activeReport === 'storage-waivers' ? (
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>Branch</Label>
+                    <Select value={branchId} onValueChange={setBranchId}>
                       <SelectTrigger>
                         <SelectValue placeholder="All branches" />
                       </SelectTrigger>

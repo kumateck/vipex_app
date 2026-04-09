@@ -22,6 +22,8 @@ export interface InventoryLocationOption {
   id: string;
   name: string;
   branchId: string;
+  locationType: number;
+  parentLocationId: string | null;
 }
 
 export const inventoryLocationsApi = api.injectEndpoints({
@@ -44,7 +46,13 @@ export const inventoryLocationsApi = api.injectEndpoints({
 
     listInventoryLocationOptions: builder.query<
       InventoryLocationOption[],
-      { companyId?: string | null; branchId?: string | null; search?: string } | void
+      {
+        companyId?: string | null;
+        branchId?: string | null;
+        locationType?: number | null;
+        parentLocationId?: string | null;
+        search?: string;
+      } | void
     >({
       query: (params) => ({
         url: '/inventory/locations/options',
