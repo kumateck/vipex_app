@@ -1,3 +1,3 @@
-import { ProcurementSuppliersCreatePage } from '@/features/procurement';
+import { ProcurementSuppliersCreateEditPage } from '@/features/procurement';
 
-export default ProcurementSuppliersCreatePage;
+export default ProcurementSuppliersCreateEditPage;

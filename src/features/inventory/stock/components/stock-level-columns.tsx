@@ -11,11 +11,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { formatDateTime } from '@/lib/date';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
 import type { StockLevel } from '../types/inventory-stock.types';
 
 export function createStockLevelColumns(
   productNameById?: ReadonlyMap<string, string>,
   locationNameById?: ReadonlyMap<string, string>,
+  productConversionsById?: ReadonlyMap<string, { unitOfMeasure: number; factorToBase: string }[]>,
 ): ColumnDef<StockLevel>[] {
   return [
     {
@@ -31,7 +33,14 @@ export function createStockLevelColumns(
     {
       accessorKey: 'quantity',
       header: 'Quantity',
-      cell: ({ row }) => row.original.quantity ?? '0',
+      cell: ({ row }) =>
+        formatBaseQuantityWithBestUnits(
+          row.original.quantity ?? '0',
+          (productConversionsById?.get(row.original.productId) ?? []).map((conversion) => ({
+            unitOfMeasure: conversion.unitOfMeasure,
+            factorToBase: Number.parseInt(conversion.factorToBase, 10),
+          })),
+        ),
     },
     {
       accessorKey: 'updatedAt',

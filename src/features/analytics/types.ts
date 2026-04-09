@@ -1,4 +1,5 @@
 import type { DateRange } from 'react-day-picker';
+import { PermissionKeys } from '@/shared/permissions/constants';
 
 export const ANALYTICS_ALL = 'ALL';
 
@@ -9,12 +10,12 @@ export type AnalyticsContract = {
 };
 
 export type AnalyticsPermissionKey =
-  | 'view_basic_analytics'
-  | 'view_operational_analytics'
-  | 'view_financial_analytics'
-  | 'view_branch_analytics'
-  | 'view_global_analytics'
-  | 'view_personal_analytics';
+  | typeof PermissionKeys.view_basic_analytics
+  | typeof PermissionKeys.view_operational_analytics
+  | typeof PermissionKeys.view_financial_analytics
+  | typeof PermissionKeys.view_branch_analytics
+  | typeof PermissionKeys.view_global_analytics
+  | typeof PermissionKeys.view_personal_analytics;
 
 export type AnalyticsFiltersState = {
   branchId: string | typeof ANALYTICS_ALL;

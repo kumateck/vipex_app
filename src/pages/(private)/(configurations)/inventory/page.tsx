@@ -1,5 +1,3 @@
-import { Navigate } from 'react-router-dom';
+import { InventoryOverviewPage } from '@/features/inventory/stock/pages/inventory-overview-page';
 
-export default function InventoryRedirectPage() {
-  return <Navigate to="/inventory/products" replace />;
-}
+export default InventoryOverviewPage;

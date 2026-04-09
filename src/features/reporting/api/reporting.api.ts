@@ -714,6 +714,33 @@ export interface ToBePaidCollectionsReconciliationReport {
   rows: ToBePaidCollectionsReconciliationReportRow[];
 }
 
+export interface StorageWaiverFinancialReportRow {
+  waiverId: string;
+  parcelId: string;
+  bookingCode: string;
+  trackingCode: string;
+  destinationBranchId: string;
+  destinationBranchName?: string | null;
+  waivedAmountPsw: number;
+  reason: string;
+  waivedByUserId: string;
+  waivedByName?: string | null;
+  waivedAt: string;
+  accountingJournalEntryId?: string | null;
+  accountingPostedAt?: string | null;
+}
+
+export interface StorageWaiverFinancialReport {
+  filters: Record<string, unknown>;
+  generatedAt: string;
+  totals: {
+    waivers: number;
+    waivedAmountPsw: number;
+    postedCount: number;
+  };
+  rows: StorageWaiverFinancialReportRow[];
+}
+
 export const reportingApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getEmployeeMasterReport: builder.query<
@@ -940,6 +967,19 @@ export const reportingApi = api.injectEndpoints({
         params,
       }),
     }),
+    getStorageWaiverFinancialReport: builder.query<
+      StorageWaiverFinancialReport,
+      {
+        branchId?: string | null;
+        from: string;
+        to: string;
+      }
+    >({
+      query: (params) => ({
+        url: '/reports/accounting/storage-waivers',
+        params,
+      }),
+    }),
   }),
 });
 
@@ -962,4 +1002,5 @@ export const {
   useGetCustomerCreditAgingDetailReportQuery,
   useGetToBePaidOutstandingReportQuery,
   useGetToBePaidCollectionsReconciliationReportQuery,
+  useGetStorageWaiverFinancialReportQuery,
 } = reportingApi;

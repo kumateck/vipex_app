@@ -8,9 +8,17 @@ export interface InventoryProduct {
   name: string;
   description: string | null;
   unitOfMeasure: number;
+  isRecoverable: boolean;
+  unitConversions?: InventoryProductUnitConversion[];
   minStockLevel: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface InventoryProductUnitConversion {
+  unitOfMeasure: number;
+  factorToBase: string;
+  sortOrder?: number;
 }
 
 export interface InventoryProductCategoryOption {
@@ -31,6 +39,8 @@ export interface InventoryProductMutationInput {
   name: string;
   description?: string | null;
   unitOfMeasure: number;
+  isRecoverable?: boolean;
+  unitConversions?: InventoryProductUnitConversion[];
   minStockLevel?: string | null;
 }
 
@@ -41,6 +51,8 @@ export interface InventoryProductCreatePayload {
   name: string;
   description?: string;
   unitOfMeasure: number;
+  isRecoverable?: boolean;
+  unitConversions?: InventoryProductUnitConversion[];
   minStockLevel?: string;
   createdBy: string;
 }
@@ -50,5 +62,7 @@ export interface InventoryProductUpdatePayload {
   name: string;
   description: string | null;
   unitOfMeasure: number;
+  isRecoverable?: boolean;
+  unitConversions?: InventoryProductUnitConversion[];
   minStockLevel?: string;
 }

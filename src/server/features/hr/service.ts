@@ -3,6 +3,8 @@ import {
   ApprovalStatus,
   AttendanceStatus,
   EmploymentStatus,
+  LeaveSelectionMode,
+  LeaveSwapStatus,
   LeaveRequestStatus,
   UserStatus,
   UserType,
@@ -17,7 +19,9 @@ import {
   createEmployeeRepo,
   createJobTitleRepo,
   createLeaveRequestRepo,
+  createLeaveSwapRepo,
   createLeaveTypeRepo,
+  countEmployeeLeaveConflictsRepo,
   findDepartmentByNameRepo,
   findAttendanceByEmployeeDateRepo,
   findEmployeeByNumberRepo,
@@ -29,6 +33,7 @@ import {
   getEmployeeBookedLeaveDaysRepo,
   getJobTitleRepo,
   getLeaveRequestRepo,
+  getLeaveSwapRepo,
   getLeaveTypeRepo,
   listDepartmentOptionsRepo,
   listEmployeeOptionsRepo,
@@ -38,6 +43,8 @@ import {
   listJobTitleOptionsRepo,
   listJobTitlesRepo,
   listLeaveRequestsRepo,
+  listLeaveCalendarRepo,
+  listLeaveSwapsRepo,
   listLeaveTypeOptionsRepo,
   listLeaveTypesRepo,
   updateAttendanceRepo,
@@ -46,12 +53,16 @@ import {
   updateEmployeeRepo,
   updateJobTitleRepo,
   updateLeaveRequestRepo,
+  updateLeaveSwapRepo,
+  executeLeaveSwapRepo,
   type ListDepartmentParams,
   type ListAttendanceParams,
   type ListEmployeeParams,
   type ListJobTitleParams,
   type ListLeaveRequestParams,
+  type ListLeaveSwapParams,
   type ListLeaveTypeParams,
+  type ListLeaveCalendarParams,
 } from './repository';
 
 export async function listDepartmentsSvc(p: ListDepartmentParams) {
@@ -524,15 +535,26 @@ export async function listLeaveRequestsSvc(p: ListLeaveRequestParams) {
   return listLeaveRequestsRepo(p);
 }
 
-export async function createLeaveRequestSvc(input: {
+export async function listLeaveCalendarSvc(p: ListLeaveCalendarParams) {
+  return listLeaveCalendarRepo(p);
+}
+
+export async function listLeaveSwapsSvc(p: ListLeaveSwapParams) {
+  return listLeaveSwapsRepo(p);
+}
+
+async function prepareLeaveRequestPayload(input: {
   companyId: string;
   employeeId: string;
   leaveTypeId: string;
   dateFrom: Date;
   dateTo: Date;
+  selectionMode?: number;
+  weekStartDate?: Date | null;
+  weekCount?: number | null;
   isEmergency?: boolean;
   reason?: string | null;
-  createdBy: string;
+  excludeLeaveRequestIds?: string[];
 }) {
   const employee = await getEmployeeSvc(input.employeeId);
   if (employee.companyId !== input.companyId) throw NotFound('Employee not found');
@@ -541,9 +563,32 @@ export async function createLeaveRequestSvc(input: {
   if (!leaveType || leaveType.companyId !== input.companyId || !leaveType.isActive) {
     throw NotFound('Leave type not found');
   }
-  if (input.dateTo < input.dateFrom) throw Conflict('Leave end date cannot be before start date');
-  const normalizedDateFrom = startOfDay(input.dateFrom);
-  const normalizedDateTo = startOfDay(input.dateTo);
+
+  let normalizedDateFrom = startOfDay(input.dateFrom);
+  let normalizedDateTo = startOfDay(input.dateTo);
+  const selectionMode =
+    input.selectionMode === LeaveSelectionMode.WEEK_RANGE
+      ? LeaveSelectionMode.WEEK_RANGE
+      : LeaveSelectionMode.DATE_RANGE;
+  let weekStartDate: Date | null = null;
+  let weekCount: number | null = null;
+
+  if (selectionMode === LeaveSelectionMode.WEEK_RANGE) {
+    const weekStart = input.weekStartDate
+      ? startOfDay(input.weekStartDate)
+      : startOfDay(input.dateFrom);
+    const requestedWeeks = Math.max(1, Math.floor(Number(input.weekCount ?? 1)));
+    weekStartDate = weekStart;
+    weekCount = requestedWeeks;
+    normalizedDateFrom = weekStart;
+    normalizedDateTo = new Date(weekStart);
+    normalizedDateTo.setDate(normalizedDateTo.getDate() + requestedWeeks * 7 - 1);
+  }
+
+  if (normalizedDateTo < normalizedDateFrom) {
+    throw Conflict('Leave end date cannot be before start date');
+  }
+
   const today = startOfDay(new Date());
   if (normalizedDateFrom < today) {
     throw Conflict('Leave start date cannot be in the past');
@@ -582,6 +627,7 @@ export async function createLeaveRequestSvc(input: {
         employeeId: input.employeeId,
         from: yearStart,
         to: yearEnd,
+        excludeLeaveRequestIds: input.excludeLeaveRequestIds,
       });
       if (bookedDays + requestedDays > defaultLeaveDays) {
         throw Conflict(
@@ -596,17 +642,62 @@ export async function createLeaveRequestSvc(input: {
     ? ApprovalStatus.PENDING
     : ApprovalStatus.APPROVED;
 
-  const created = await createLeaveRequestRepo({
-    companyId: input.companyId,
+  return {
     employeeId: input.employeeId,
     leaveTypeId: input.leaveTypeId,
     dateFrom: normalizedDateFrom,
     dateTo: normalizedDateTo,
     daysCount: requestedDays,
+    selectionMode,
+    weekStartDate,
+    weekCount,
     isEmergency,
     reason,
     managerApprovalStatus,
-    managerApprovedAt: managerApprovalStatus === ApprovalStatus.APPROVED ? new Date() : null,
+  };
+}
+
+export async function createLeaveRequestSvc(input: {
+  companyId: string;
+  employeeId: string;
+  leaveTypeId: string;
+  dateFrom: Date;
+  dateTo: Date;
+  selectionMode?: number;
+  weekStartDate?: Date | null;
+  weekCount?: number | null;
+  isEmergency?: boolean;
+  reason?: string | null;
+  createdBy: string;
+}) {
+  const leaveRequestPayload = await prepareLeaveRequestPayload({
+    companyId: input.companyId,
+    employeeId: input.employeeId,
+    leaveTypeId: input.leaveTypeId,
+    dateFrom: input.dateFrom,
+    dateTo: input.dateTo,
+    selectionMode: input.selectionMode,
+    weekStartDate: input.weekStartDate,
+    weekCount: input.weekCount,
+    isEmergency: input.isEmergency,
+    reason: input.reason,
+  });
+
+  const created = await createLeaveRequestRepo({
+    companyId: input.companyId,
+    employeeId: leaveRequestPayload.employeeId,
+    leaveTypeId: leaveRequestPayload.leaveTypeId,
+    dateFrom: leaveRequestPayload.dateFrom,
+    dateTo: leaveRequestPayload.dateTo,
+    daysCount: leaveRequestPayload.daysCount,
+    selectionMode: leaveRequestPayload.selectionMode,
+    weekStartDate: leaveRequestPayload.weekStartDate,
+    weekCount: leaveRequestPayload.weekCount,
+    isEmergency: leaveRequestPayload.isEmergency,
+    reason: leaveRequestPayload.reason,
+    managerApprovalStatus: leaveRequestPayload.managerApprovalStatus,
+    managerApprovedAt:
+      leaveRequestPayload.managerApprovalStatus === ApprovalStatus.APPROVED ? new Date() : null,
     status: LeaveRequestStatus.PENDING,
     createdBy: input.createdBy,
   });
@@ -619,15 +710,99 @@ export async function createLeaveRequestSvc(input: {
     action: 'LEAVE_REQUEST_CREATED',
     message: 'Leave request created',
     metadata: {
-      employeeId: input.employeeId,
-      leaveTypeId: input.leaveTypeId,
-      dateFrom: input.dateFrom.toISOString(),
-      dateTo: input.dateTo.toISOString(),
-      managerApprovalStatus,
+      employeeId: leaveRequestPayload.employeeId,
+      leaveTypeId: leaveRequestPayload.leaveTypeId,
+      dateFrom: leaveRequestPayload.dateFrom.toISOString(),
+      dateTo: leaveRequestPayload.dateTo.toISOString(),
+      managerApprovalStatus: leaveRequestPayload.managerApprovalStatus,
     },
   });
 
   return { id: created?.id };
+}
+
+export async function updateLeaveRequestSvc(
+  id: string,
+  companyId: string,
+  input: {
+    employeeId?: string;
+    leaveTypeId?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    selectionMode?: number;
+    weekStartDate?: Date | null;
+    weekCount?: number | null;
+    isEmergency?: boolean;
+    reason?: string | null;
+    updatedBy: string;
+  },
+) {
+  const request = await getLeaveRequestRepo(id);
+  if (!request || request.companyId !== companyId) throw NotFound('Leave request not found');
+  if (request.status !== LeaveRequestStatus.PENDING) {
+    throw Conflict('Only pending leave requests can be edited');
+  }
+  if (
+    request.managerApprovalStatus !== ApprovalStatus.PENDING &&
+    Boolean(request.supervisorEmployeeId)
+  ) {
+    throw Conflict('Leave request cannot be edited after manager decision');
+  }
+
+  const leaveRequestPayload = await prepareLeaveRequestPayload({
+    companyId,
+    employeeId: input.employeeId ?? request.employeeId,
+    leaveTypeId: input.leaveTypeId ?? request.leaveTypeId,
+    dateFrom: input.dateFrom ?? request.dateFrom,
+    dateTo: input.dateTo ?? request.dateTo,
+    selectionMode: input.selectionMode ?? request.selectionMode,
+    weekStartDate:
+      input.weekStartDate === undefined ? (request.weekStartDate ?? null) : input.weekStartDate,
+    weekCount: input.weekCount === undefined ? (request.weekCount ?? null) : input.weekCount,
+    isEmergency: input.isEmergency ?? request.isEmergency,
+    reason: input.reason === undefined ? request.reason : input.reason,
+    excludeLeaveRequestIds: [id],
+  });
+
+  const updated = await updateLeaveRequestRepo(id, {
+    employeeId: leaveRequestPayload.employeeId,
+    leaveTypeId: leaveRequestPayload.leaveTypeId,
+    dateFrom: leaveRequestPayload.dateFrom,
+    dateTo: leaveRequestPayload.dateTo,
+    daysCount: leaveRequestPayload.daysCount,
+    selectionMode: leaveRequestPayload.selectionMode,
+    weekStartDate: leaveRequestPayload.weekStartDate,
+    weekCount: leaveRequestPayload.weekCount,
+    isEmergency: leaveRequestPayload.isEmergency,
+    reason: leaveRequestPayload.reason,
+    managerApprovalStatus: leaveRequestPayload.managerApprovalStatus,
+    managerApprovedBy: null,
+    managerApprovedAt:
+      leaveRequestPayload.managerApprovalStatus === ApprovalStatus.APPROVED ? new Date() : null,
+    managerRejectionReason: null,
+    status: LeaveRequestStatus.PENDING,
+    approvedBy: null,
+    approvedAt: null,
+    rejectionReason: null,
+  });
+
+  await recordAuditLog({
+    companyId,
+    actorUserId: input.updatedBy,
+    entityType: 'leave_request',
+    entityId: id,
+    action: 'LEAVE_REQUEST_UPDATED',
+    message: 'Leave request updated',
+    metadata: {
+      employeeId: leaveRequestPayload.employeeId,
+      leaveTypeId: leaveRequestPayload.leaveTypeId,
+      dateFrom: leaveRequestPayload.dateFrom.toISOString(),
+      dateTo: leaveRequestPayload.dateTo.toISOString(),
+      managerApprovalStatus: leaveRequestPayload.managerApprovalStatus,
+    },
+  });
+
+  return { id: updated?.id };
 }
 
 async function assertManagerCanApproveLeaveRequest(
@@ -775,6 +950,219 @@ export async function rejectLeaveRequestSvc(
       reason: reason ?? null,
     },
   });
+  return { id: updated?.id };
+}
+
+async function getActorEmployeeIdOrThrow(actorUserId: string) {
+  const actor = await getUserByIdRepo(actorUserId);
+  if (!actor?.employeeId) throw Forbidden('Current user is not linked to an employee record');
+  return actor.employeeId;
+}
+
+export async function createLeaveSwapSvc(input: {
+  companyId: string;
+  requesterLeaveRequestId: string;
+  targetLeaveRequestId: string;
+  createdBy: string;
+}) {
+  if (input.requesterLeaveRequestId === input.targetLeaveRequestId) {
+    throw Conflict('Requester and target leave requests must be different');
+  }
+
+  const requesterLeave = await getLeaveRequestRepo(input.requesterLeaveRequestId);
+  const targetLeave = await getLeaveRequestRepo(input.targetLeaveRequestId);
+  if (!requesterLeave || !targetLeave) throw NotFound('Leave request not found');
+  if (requesterLeave.companyId !== input.companyId || targetLeave.companyId !== input.companyId) {
+    throw NotFound('Leave request not found');
+  }
+  if (
+    requesterLeave.status !== LeaveRequestStatus.APPROVED ||
+    targetLeave.status !== LeaveRequestStatus.APPROVED
+  ) {
+    throw Conflict('Only approved leave requests can be swapped');
+  }
+  if (requesterLeave.employeeId === targetLeave.employeeId) {
+    throw Conflict('Leave swaps require two different employees');
+  }
+  if (requesterLeave.leaveTypeId !== targetLeave.leaveTypeId) {
+    throw Conflict('Leave swaps require compatible leave types');
+  }
+
+  const now = new Date();
+  const fortyEightHoursMs = 48 * 60 * 60 * 1000;
+  if (
+    requesterLeave.dateFrom.getTime() - now.getTime() < fortyEightHoursMs ||
+    targetLeave.dateFrom.getTime() - now.getTime() < fortyEightHoursMs
+  ) {
+    throw Conflict('Leave swap is locked within 48 hours to start date');
+  }
+
+  const requesterConflictCount = await countEmployeeLeaveConflictsRepo({
+    companyId: input.companyId,
+    employeeId: requesterLeave.employeeId,
+    from: targetLeave.dateFrom,
+    to: targetLeave.dateTo,
+    excludeLeaveRequestIds: [requesterLeave.id],
+  });
+  if (requesterConflictCount > 0) {
+    throw Conflict('Requester has another leave conflict in target range');
+  }
+
+  const targetConflictCount = await countEmployeeLeaveConflictsRepo({
+    companyId: input.companyId,
+    employeeId: targetLeave.employeeId,
+    from: requesterLeave.dateFrom,
+    to: requesterLeave.dateTo,
+    excludeLeaveRequestIds: [targetLeave.id],
+  });
+  if (targetConflictCount > 0) {
+    throw Conflict('Target employee has another leave conflict in requester range');
+  }
+
+  const created = await createLeaveSwapRepo({
+    companyId: input.companyId,
+    requesterEmployeeId: requesterLeave.employeeId,
+    requesterLeaveRequestId: requesterLeave.id,
+    targetEmployeeId: targetLeave.employeeId,
+    targetLeaveRequestId: targetLeave.id,
+    requesterOriginalFrom: requesterLeave.dateFrom,
+    requesterOriginalTo: requesterLeave.dateTo,
+    targetOriginalFrom: targetLeave.dateFrom,
+    targetOriginalTo: targetLeave.dateTo,
+    requesterProposedFrom: targetLeave.dateFrom,
+    requesterProposedTo: targetLeave.dateTo,
+    targetProposedFrom: requesterLeave.dateFrom,
+    targetProposedTo: requesterLeave.dateTo,
+    status: LeaveSwapStatus.PENDING_PEER,
+    createdBy: input.createdBy,
+  });
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.createdBy,
+    entityType: 'leave_swap',
+    entityId: created?.id ?? null,
+    action: 'LEAVE_SWAP_REQUESTED',
+    message: 'Leave swap requested',
+    metadata: {
+      requesterLeaveRequestId: requesterLeave.id,
+      targetLeaveRequestId: targetLeave.id,
+    },
+  });
+
+  return { id: created?.id };
+}
+
+export async function confirmLeaveSwapSvc(id: string, actorUserId: string) {
+  const swap = await getLeaveSwapRepo(id);
+  if (!swap) throw NotFound('Leave swap not found');
+  if (swap.status !== LeaveSwapStatus.PENDING_PEER) {
+    throw Conflict('Leave swap is not pending peer confirmation');
+  }
+  const actorEmployeeId = await getActorEmployeeIdOrThrow(actorUserId);
+  if (actorEmployeeId !== swap.targetEmployeeId) {
+    throw Forbidden('Only the target employee can confirm this leave swap');
+  }
+
+  const now = new Date();
+  const updated = await updateLeaveSwapRepo(id, {
+    status: LeaveSwapStatus.PENDING_HR,
+    peerConfirmedBy: actorUserId,
+    peerConfirmedAt: now,
+    updatedAt: now,
+  });
+
+  await recordAuditLog({
+    companyId: swap.companyId,
+    actorUserId,
+    entityType: 'leave_swap',
+    entityId: id,
+    action: 'LEAVE_SWAP_PEER_CONFIRMED',
+    message: 'Leave swap confirmed by peer employee',
+  });
+
+  return { id: updated?.id };
+}
+
+export async function rejectLeaveSwapSvc(id: string, actorUserId: string, reason?: string | null) {
+  const swap = await getLeaveSwapRepo(id);
+  if (!swap) throw NotFound('Leave swap not found');
+  if (![LeaveSwapStatus.PENDING_PEER, LeaveSwapStatus.PENDING_HR].includes(swap.status)) {
+    throw Conflict('Leave swap is not in a rejectable state');
+  }
+
+  const now = new Date();
+  const updated = await updateLeaveSwapRepo(id, {
+    status: LeaveSwapStatus.REJECTED,
+    rejectedBy: actorUserId,
+    rejectedAt: now,
+    rejectionReason: normalizeNullableString(reason),
+    updatedAt: now,
+  });
+
+  await recordAuditLog({
+    companyId: swap.companyId,
+    actorUserId,
+    entityType: 'leave_swap',
+    entityId: id,
+    action: 'LEAVE_SWAP_REJECTED',
+    message: 'Leave swap rejected',
+    metadata: { reason: normalizeNullableString(reason) },
+  });
+
+  return { id: updated?.id };
+}
+
+export async function approveLeaveSwapSvc(id: string, actorUserId: string) {
+  const swap = await getLeaveSwapRepo(id);
+  if (!swap) throw NotFound('Leave swap not found');
+  if (swap.status !== LeaveSwapStatus.PENDING_HR) {
+    throw Conflict('Leave swap must be peer-confirmed before approval');
+  }
+
+  const requesterConflictCount = await countEmployeeLeaveConflictsRepo({
+    companyId: swap.companyId,
+    employeeId: swap.requesterEmployeeId,
+    from: swap.requesterProposedFrom,
+    to: swap.requesterProposedTo,
+    excludeLeaveRequestIds: [swap.requesterLeaveRequestId],
+  });
+  if (requesterConflictCount > 0) {
+    throw Conflict('Requester has another leave conflict in proposed range');
+  }
+  const targetConflictCount = await countEmployeeLeaveConflictsRepo({
+    companyId: swap.companyId,
+    employeeId: swap.targetEmployeeId,
+    from: swap.targetProposedFrom,
+    to: swap.targetProposedTo,
+    excludeLeaveRequestIds: [swap.targetLeaveRequestId],
+  });
+  if (targetConflictCount > 0) {
+    throw Conflict('Target employee has another leave conflict in proposed range');
+  }
+
+  const now = new Date();
+  const updated = await executeLeaveSwapRepo({
+    swapId: id,
+    requesterLeaveRequestId: swap.requesterLeaveRequestId,
+    targetLeaveRequestId: swap.targetLeaveRequestId,
+    requesterProposedFrom: swap.requesterProposedFrom,
+    requesterProposedTo: swap.requesterProposedTo,
+    targetProposedFrom: swap.targetProposedFrom,
+    targetProposedTo: swap.targetProposedTo,
+    approvedBy: actorUserId,
+    approvedAt: now,
+  });
+
+  await recordAuditLog({
+    companyId: swap.companyId,
+    actorUserId,
+    entityType: 'leave_swap',
+    entityId: id,
+    action: 'LEAVE_SWAP_APPROVED',
+    message: 'Leave swap approved and executed',
+  });
+
   return { id: updated?.id };
 }
 

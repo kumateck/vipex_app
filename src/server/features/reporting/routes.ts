@@ -29,6 +29,7 @@ import {
   getPayrollOvertimeReportSvc,
   getPayrollRegisterReportSvc,
   getShiftRevenueReportSvc,
+  getStorageWaiverFinancialReportSvc,
   getToBePaidCollectionsReconciliationReportSvc,
 } from './service';
 
@@ -83,6 +84,33 @@ export const reportingRoutes = new Elysia({ name: 'reporting' })
         tags: ['Reporting'],
         summary: 'Daily cashier sales report by session and payment mode',
         operationId: 'getDailyCashierSalesReport',
+      },
+    },
+  )
+  .get(
+    '/accounting/storage-waivers',
+    async ({ user, query }) =>
+      getStorageWaiverFinancialReportSvc({
+        companyId: user!.companyId!,
+        branchId: query.branchId ?? null,
+        from: query.from,
+        to: query.to,
+      }),
+    {
+      query: t.Object({
+        branchId: t.Optional(UUID),
+        from: t.String({ format: 'date' }),
+        to: t.String({ format: 'date' }),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requireModuleEnabled('accounting'),
+        requirePermissions(PermissionKeys.CanReadAccounting),
+      ],
+      detail: {
+        tags: ['Reporting'],
+        summary: 'Storage waiver financial report',
+        operationId: 'getStorageWaiverFinancialReport',
       },
     },
   )

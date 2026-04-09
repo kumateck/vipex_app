@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +17,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
-import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { UNIT_OF_MEASURE_OPTIONS } from '@/features/inventory/products/components/inventory-product-columns';
+import { convertToBaseUnits } from '@/shared/inventory/unit-conversion';
 import { STOCK_ADJUSTMENT_REASON_OPTIONS } from '../constants/stock-options';
 import {
   createStockAdjustmentSchema,
@@ -38,8 +41,12 @@ export function StockAdjustmentForm({
 }: StockAdjustmentFormProps) {
   const navigate = useNavigate();
   const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
-  const { data: products = [], isLoading: isLoadingProducts } = useListInventoryProductOptionsQuery(
-    { companyId },
+  const { data: productsData, isLoading: isLoadingProducts } = useListInventoryProductsQuery(
+    {
+      page: 1,
+      pageSize: 500,
+      filters: { companyId },
+    },
     { skip: !companyId },
   );
   const { data: locations = [], isLoading: isLoadingLocations } =
@@ -49,6 +56,8 @@ export function StockAdjustmentForm({
     control,
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<CreateStockAdjustmentFormValues>({
     resolver: zodResolver(createStockAdjustmentSchema),
@@ -56,11 +65,57 @@ export function StockAdjustmentForm({
       productId: '',
       locationId: '',
       reason: 0,
+      quantityUnitOfMeasure: 0,
       quantityChange: '',
       notes: '',
     },
     mode: 'onSubmit',
   });
+  const products = productsData?.data ?? [];
+  const selectedProductId = watch('productId');
+  const selectedProduct = useMemo(
+    () => products.find((product) => product.id === selectedProductId),
+    [products, selectedProductId],
+  );
+  const unitOptions = useMemo(() => {
+    if (!selectedProduct) return UNIT_OF_MEASURE_OPTIONS;
+    const conversions = selectedProduct.unitConversions ?? [
+      { unitOfMeasure: selectedProduct.unitOfMeasure, factorToBase: '1' },
+    ];
+    return [...conversions]
+      .sort((a, b) => Number.parseInt(a.factorToBase, 10) - Number.parseInt(b.factorToBase, 10))
+      .map((item) => UNIT_OF_MEASURE_OPTIONS.find((option) => option.value === item.unitOfMeasure))
+      .filter((item): item is (typeof UNIT_OF_MEASURE_OPTIONS)[number] => Boolean(item));
+  }, [selectedProduct]);
+  useEffect(() => {
+    if (!selectedProduct) return;
+    setValue('quantityUnitOfMeasure', selectedProduct.unitOfMeasure);
+  }, [selectedProduct, setValue]);
+
+  const submit = async (values: CreateStockAdjustmentFormValues) => {
+    const numericInput = Number.parseFloat(values.quantityChange);
+    const sign = numericInput < 0 ? -1 : 1;
+    const absoluteInput = Math.abs(numericInput);
+
+    const conversions = selectedProduct?.unitConversions ?? [
+      { unitOfMeasure: selectedProduct?.unitOfMeasure ?? 0, factorToBase: '1' },
+    ];
+    const conversionRows = conversions.map((item) => ({
+      unitOfMeasure: item.unitOfMeasure,
+      factorToBase: Number.parseInt(item.factorToBase, 10),
+    }));
+
+    const baseQuantity = convertToBaseUnits(
+      absoluteInput,
+      values.quantityUnitOfMeasure ?? selectedProduct?.unitOfMeasure ?? 0,
+      conversionRows,
+    );
+
+    await onSubmit({
+      ...values,
+      quantityChange: String(sign * baseQuantity),
+    });
+  };
 
   return (
     <div className="w-full max-w-lg mx-auto p-4">
@@ -69,7 +124,7 @@ export function StockAdjustmentForm({
           <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(submit)} className="space-y-4">
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="productId">Product</FieldLabel>
@@ -171,6 +226,33 @@ export function StockAdjustmentForm({
                 {errors.quantityChange?.message ? (
                   <p className="text-sm text-destructive">{errors.quantityChange.message}</p>
                 ) : null}
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="quantityUnitOfMeasure">Quantity Unit</FieldLabel>
+                <Controller
+                  control={control}
+                  name="quantityUnitOfMeasure"
+                  render={({ field }) => (
+                    <Select
+                      value={String(field.value ?? selectedProduct?.unitOfMeasure ?? 0)}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                    >
+                      <SelectTrigger
+                        id="quantityUnitOfMeasure"
+                        aria-invalid={!!errors.quantityUnitOfMeasure}
+                      >
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unitOptions.map((option) => (
+                          <SelectItem key={option.value} value={String(option.value)}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </Field>
               <Field>
                 <FieldLabel htmlFor="notes">Notes</FieldLabel>

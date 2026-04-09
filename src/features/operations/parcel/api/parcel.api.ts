@@ -139,6 +139,52 @@ export type ParcelSearchRow = {
   currentHolderLocationName?: string | null;
   currentHolderWarehouseId?: string | null;
   currentHolderWarehouseName?: string | null;
+  isParcelAgeingEligible?: boolean;
+  isParcelAged?: boolean;
+  ageingDays?: number | null;
+  storageChargeStartAt?: string | null;
+  storageChargeDays?: number;
+  storageChargePsw?: number;
+  storageFeePerDayPsw?: number;
+  storageChargeGraceDays?: number;
+  ageingThresholdMonths?: number;
+};
+
+export type ParcelDispositionActionRow = {
+  id: string;
+  companyId: string;
+  parcelId: string;
+  actionType: number;
+  warehouseId: string | null;
+  warehouseName: string | null;
+  notes: string | null;
+  recoveredAmountPsw: number;
+  performedBy: string;
+  performedByName: string | null;
+  performedAt: string | null;
+  createdAt: string | null;
+};
+
+export type ParcelStorageWaiverRow = {
+  id: string;
+  companyId: string;
+  parcelId: string;
+  waivedAmountPsw: number;
+  reason: string;
+  waivedBy: string;
+  waivedByName: string | null;
+  waivedAt: string | null;
+  accountingJournalEntryId: string | null;
+  accountingPostedAt: string | null;
+  createdAt: string | null;
+};
+
+export type ParcelStorageSettlement = {
+  parcelId: string;
+  accruedPsw: number;
+  paidPsw: number;
+  waivedPsw: number;
+  outstandingPsw: number;
 };
 
 export type ParcelDiscrepancyRow = {
@@ -322,6 +368,9 @@ export type ParcelFullDetails = {
     updatedAt: string;
   };
   internalHolder: ParcelInternalHolderSnapshot | null;
+  dispositionActions: ParcelDispositionActionRow[];
+  storageWaivers: ParcelStorageWaiverRow[];
+  storageSettlement: ParcelStorageSettlement;
 };
 
 export type PickupQueueRecord = {
@@ -455,6 +504,8 @@ export type ParcelSearchFilters = {
   statuses?: number[] | null;
   senderPaid?: boolean | null;
   hasPickupQueue?: boolean | null;
+  agedOnly?: boolean | null;
+  storageChargeAccruing?: boolean | null;
   includeDeleted?: boolean | null;
 };
 
@@ -496,6 +547,46 @@ export const parcelApi = api.injectEndpoints({
         url: `/shipments/parcels/${id}/details`,
       }),
       providesTags: (_result, _error, id) => [{ type: 'Bookings', id }],
+    }),
+    listParcelDispositionActions: builder.query<ParcelDispositionActionRow[], string>({
+      query: (id) => ({
+        url: `/shipments/parcels/${id}/disposition-actions`,
+      }),
+      providesTags: (_result, _error, id) => [{ type: 'Bookings', id }],
+    }),
+    recordParcelDispositionAction: builder.mutation<
+      { id: string },
+      {
+        id: string;
+        actionType: number;
+        notes?: string | null;
+        warehouseId?: string | null;
+        recoveredAmountCedis?: number | string | null;
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/${id}/disposition-actions`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error, arg) => [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Bookings', id: arg.id },
+      ],
+    }),
+    waiveParcelStorageAccrual: builder.mutation<
+      { id: string },
+      { id: string; reason: string; waivedAmountCedis?: number | string | null }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/${id}/storage-waivers`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error, arg) => [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Bookings', id: arg.id },
+      ],
     }),
     listProcessedParcelsForConsignment: builder.query<
       ServerListResponse<ProcessedParcel>,
@@ -592,6 +683,7 @@ export const parcelApi = api.injectEndpoints({
         parcelId: string;
         status: number;
         message: string;
+        storageSettlement?: ParcelStorageSettlement;
         payment: null | {
           id: string;
           amounts: {
@@ -618,6 +710,7 @@ export const parcelApi = api.injectEndpoints({
         amountCedis?: number | null;
         method: number;
         confirmedBy: string;
+        storageAmountCedis?: number | string | null;
         secondReceiverId?: string | null;
         cardId?: string | null;
         cardNumber?: string | null;
@@ -1036,6 +1129,7 @@ export const {
   useSearchParcelsQuery,
   useLazySearchParcelsQuery,
   useGetParcelDetailsQuery,
+  useListParcelDispositionActionsQuery,
   useListProcessedParcelsForConsignmentQuery,
   useCollectSenderPaymentMutation,
   useCollectSenderAndProcessMutation,
@@ -1045,6 +1139,8 @@ export const {
   useUpdateParcelStatusMutation,
   useUpdateParcelMutation,
   useSendParcelStatusCallNotificationMutation,
+  useRecordParcelDispositionActionMutation,
+  useWaiveParcelStorageAccrualMutation,
   useSoftDeleteParcelMutation,
   useLogParcelDiscrepancyMutation,
   useListOpenParcelDiscrepanciesQuery,

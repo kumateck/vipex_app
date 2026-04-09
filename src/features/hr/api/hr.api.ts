@@ -105,6 +105,8 @@ export interface LeaveType {
   isPaid: boolean;
   minAdvanceDays: number;
   allowEmergencySameDay: boolean;
+  colorHex?: string;
+  calendarPriority?: number;
   isActive: boolean;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -122,6 +124,10 @@ export interface LeaveRequest {
   dateFrom: string;
   dateTo: string;
   daysCount: number;
+  selectionMode?: number;
+  weekStartDate?: string | null;
+  weekCount?: number | null;
+  swapLockUntil?: string | null;
   isEmergency: boolean;
   reason?: string | null;
   managerApprovalStatus: number;
@@ -132,6 +138,72 @@ export interface LeaveRequest {
   approvedBy?: string | null;
   approvedAt?: string | null;
   rejectionReason?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface LeaveCalendarEmployee {
+  id: string;
+  employeeNumber: string;
+  displayName: string;
+  branchId?: string | null;
+  branchName?: string | null;
+  departmentId?: string | null;
+  departmentName?: string | null;
+  jobTitleName?: string | null;
+}
+
+export interface LeaveCalendarItem {
+  id: string;
+  employeeId: string;
+  leaveTypeId: string;
+  leaveTypeName?: string | null;
+  leaveTypeColorHex?: string | null;
+  leaveTypeCalendarPriority?: number | null;
+  dateFrom: string;
+  dateTo: string;
+  daysCount: number;
+  status: number;
+  managerApprovalStatus: number;
+  reason?: string | null;
+  selectionMode?: number;
+  weekStartDate?: string | null;
+  weekCount?: number | null;
+  swapLockUntil?: string | null;
+  isEmergency: boolean;
+}
+
+export interface LeaveCalendarResponse {
+  employees: LeaveCalendarEmployee[];
+  leaveItems: LeaveCalendarItem[];
+}
+
+export interface LeaveSwap {
+  id: string;
+  companyId: string;
+  requesterEmployeeId: string;
+  requesterEmployeeName?: string | null;
+  requesterLeaveRequestId: string;
+  targetEmployeeId: string;
+  targetEmployeeName?: string | null;
+  targetLeaveRequestId: string;
+  requesterOriginalFrom: string;
+  requesterOriginalTo: string;
+  targetOriginalFrom: string;
+  targetOriginalTo: string;
+  requesterProposedFrom: string;
+  requesterProposedTo: string;
+  targetProposedFrom: string;
+  targetProposedTo: string;
+  status: number;
+  peerConfirmedBy?: string | null;
+  peerConfirmedAt?: string | null;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  rejectedBy?: string | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
+  createdBy?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -470,6 +542,9 @@ export const hrApi = api.injectEndpoints({
         leaveTypeId: string;
         dateFrom: string;
         dateTo: string;
+        selectionMode?: number;
+        weekStartDate?: string | null;
+        weekCount?: number | null;
         isEmergency?: boolean;
         reason?: string | null;
       }
@@ -480,6 +555,114 @@ export const hrApi = api.injectEndpoints({
         body,
       }),
       invalidatesTags: invalidateEntityListTag('HR'),
+    }),
+    updateLeaveRequest: builder.mutation<
+      { id?: string },
+      {
+        id: string;
+        body: {
+          employeeId?: string;
+          leaveTypeId?: string;
+          dateFrom?: string;
+          dateTo?: string;
+          selectionMode?: number;
+          weekStartDate?: string | null;
+          weekCount?: number | null;
+          isEmergency?: boolean;
+          reason?: string | null;
+        };
+      }
+    >({
+      query: ({ id, body }) => ({
+        url: `/hr/leave-requests/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'HR', id },
+        ...invalidateEntityListTag('HR'),
+      ],
+    }),
+    getLeaveCalendar: builder.query<
+      LeaveCalendarResponse,
+      {
+        from: string;
+        to: string;
+        employeeId?: string | null;
+        status?: number | null;
+        branchId?: string | null;
+        departmentId?: string | null;
+      }
+    >({
+      query: (params) => ({
+        url: '/hr/leave-calendar',
+        params,
+      }),
+      providesTags: [{ type: 'HR', id: 'LEAVE_CALENDAR' }],
+    }),
+    listLeaveSwaps: builder.query<
+      ServerListResponse<LeaveSwap>,
+      {
+        employeeId?: string | null;
+        status?: number | null;
+        dateFrom?: string;
+        dateTo?: string;
+        page?: number;
+        pageSize?: number;
+      } | void
+    >({
+      query: (query) => ({
+        url: '/hr/leave-swaps',
+        params: buildServerPaginationParams(query),
+      }),
+      providesTags: (result) => provideEntityListTags('HR', result),
+    }),
+    createLeaveSwap: builder.mutation<
+      { id?: string },
+      { requesterLeaveRequestId: string; targetLeaveRequestId: string }
+    >({
+      query: (body) => ({
+        url: '/hr/leave-swaps',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error, _arg) => [
+        ...invalidateEntityListTag('HR'),
+        { type: 'HR', id: 'LEAVE_CALENDAR' },
+      ],
+    }),
+    confirmLeaveSwap: builder.mutation<{ id?: string }, string>({
+      query: (id) => ({
+        url: `/hr/leave-swaps/${id}/confirm`,
+        method: 'POST',
+        body: {},
+      }),
+      invalidatesTags: (_result, _error, _arg) => [
+        ...invalidateEntityListTag('HR'),
+        { type: 'HR', id: 'LEAVE_CALENDAR' },
+      ],
+    }),
+    approveLeaveSwap: builder.mutation<{ id?: string }, string>({
+      query: (id) => ({
+        url: `/hr/leave-swaps/${id}/approve`,
+        method: 'POST',
+        body: {},
+      }),
+      invalidatesTags: (_result, _error, _arg) => [
+        ...invalidateEntityListTag('HR'),
+        { type: 'HR', id: 'LEAVE_CALENDAR' },
+      ],
+    }),
+    rejectLeaveSwap: builder.mutation<{ id?: string }, { id: string; reason?: string | null }>({
+      query: ({ id, reason }) => ({
+        url: `/hr/leave-swaps/${id}/reject`,
+        method: 'POST',
+        body: { reason: reason ?? null },
+      }),
+      invalidatesTags: (_result, _error, _arg) => [
+        ...invalidateEntityListTag('HR'),
+        { type: 'HR', id: 'LEAVE_CALENDAR' },
+      ],
     }),
     approveLeaveRequest: builder.mutation<{ id?: string }, string>({
       query: (id) => ({
@@ -554,6 +737,13 @@ export const {
   useCreateLeaveTypeMutation,
   useListLeaveRequestsQuery,
   useCreateLeaveRequestMutation,
+  useUpdateLeaveRequestMutation,
+  useGetLeaveCalendarQuery,
+  useListLeaveSwapsQuery,
+  useCreateLeaveSwapMutation,
+  useConfirmLeaveSwapMutation,
+  useApproveLeaveSwapMutation,
+  useRejectLeaveSwapMutation,
   useApproveLeaveRequestMutation,
   useApproveLeaveRequestByManagerMutation,
   useRejectLeaveRequestMutation,

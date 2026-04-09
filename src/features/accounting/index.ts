@@ -7,6 +7,13 @@ export {
   AccountingDailyCashRecordedPage,
 } from './pages/accounting-daily-cash-page';
 export { AccountingExpensesPage } from './pages/accounting-expenses-page';
+export {
+  AccountingExpensesApprovalsPage,
+  AccountingExpensesDraftsPage,
+  AccountingExpensesHistoryPage,
+  AccountingExpensesPaymentsPage,
+  AccountingExpensesPostingPage,
+} from './pages/accounting-expenses-page';
 export { AccountingTaxPage } from './pages/accounting-tax-page';
 export { AccountingReportsPage } from './pages/accounting-reports-page';
 export { AccountingJournalEntriesPage } from './pages/accounting-journal-entries-page';

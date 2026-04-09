@@ -3,8 +3,6 @@ import { ArrowDownCircle, AlertTriangle, CheckCircle2, RefreshCcw } from 'lucide
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PermissionKeys } from '@/shared/permissions/constants';
-import { useAuthStore } from '@/stores/auth-store';
 
 type DesktopUpdateStatus = NonNullable<Window['api']>['updates'] extends {
   getStatus: () => Promise<infer T>;
@@ -30,16 +28,11 @@ function isDesktopUpdaterAvailable() {
 
 export function UpdateIndicator() {
   const navigate = useNavigate();
-  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
-  const canManageUpdates = useMemo(
-    () => permissions.includes(PermissionKeys.CanManageDesktopUpdates),
-    [permissions],
-  );
   const isDesktop = useMemo(() => isDesktopUpdaterAvailable(), []);
   const [status, setStatus] = useState<DesktopUpdateStatus>({ state: 'idle' });
 
   useEffect(() => {
-    if (!isDesktop || !canManageUpdates) return;
+    if (!isDesktop) return;
     let mounted = true;
 
     const run = async () => {
@@ -63,9 +56,9 @@ export function UpdateIndicator() {
       mounted = false;
       unsubscribe();
     };
-  }, [isDesktop, canManageUpdates]);
+  }, [isDesktop]);
 
-  if (!isDesktop || !canManageUpdates) return null;
+  if (!isDesktop) return null;
   if (status.state === 'idle' || status.state === 'not-available') return null;
 
   const meta =

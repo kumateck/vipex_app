@@ -26,6 +26,7 @@ import {
   payrollPeriods,
   payrollRunEmployees,
   payrollRuns,
+  parcelStorageWaivers,
   payments,
   shiftTypes,
   users,
@@ -945,6 +946,62 @@ export async function listParcelStatusReportRowsRepo(input: {
       ),
     )
     .orderBy(desc(parcels.createdAt), desc(parcels.id));
+}
+
+export type StorageWaiverFinancialReportRow = {
+  waiverId: string;
+  parcelId: string;
+  bookingCode: string;
+  trackingCode: string;
+  destinationBranchId: string;
+  destinationBranchName: string | null;
+  waivedAmountPsw: number;
+  reason: string;
+  waivedByUserId: string;
+  waivedByName: string | null;
+  waivedAt: Date;
+  accountingJournalEntryId: string | null;
+  accountingPostedAt: Date | null;
+};
+
+export async function listStorageWaiverFinancialReportRowsRepo(input: {
+  companyId: string;
+  from: Date;
+  to: Date;
+  branchId?: string | null;
+}) {
+  const waivedBy = alias(users, 'report_storage_waived_by');
+  const destination = alias(branches, 'report_storage_destination');
+
+  return db
+    .select({
+      waiverId: parcelStorageWaivers.id,
+      parcelId: parcelStorageWaivers.parcelId,
+      bookingCode: parcels.bookingCode,
+      trackingCode: parcels.trackingCode,
+      destinationBranchId: parcels.destinationId,
+      destinationBranchName: destination.name,
+      waivedAmountPsw: parcelStorageWaivers.waivedAmountPsw,
+      reason: parcelStorageWaivers.reason,
+      waivedByUserId: parcelStorageWaivers.waivedBy,
+      waivedByName: waivedBy.fullname,
+      waivedAt: parcelStorageWaivers.waivedAt,
+      accountingJournalEntryId: parcelStorageWaivers.accountingJournalEntryId,
+      accountingPostedAt: parcelStorageWaivers.accountingPostedAt,
+    })
+    .from(parcelStorageWaivers)
+    .innerJoin(parcels, eq(parcels.id, parcelStorageWaivers.parcelId))
+    .leftJoin(waivedBy, eq(waivedBy.id, parcelStorageWaivers.waivedBy))
+    .leftJoin(destination, eq(destination.id, parcels.destinationId))
+    .where(
+      and(
+        eq(parcelStorageWaivers.companyId, input.companyId),
+        gte(parcelStorageWaivers.waivedAt, input.from),
+        lte(parcelStorageWaivers.waivedAt, input.to),
+        ...(input.branchId ? [eq(parcels.destinationId, input.branchId)] : []),
+      ),
+    )
+    .orderBy(desc(parcelStorageWaivers.waivedAt), desc(parcelStorageWaivers.id));
 }
 
 export async function listShiftRevenueSessionsRepo(input: {

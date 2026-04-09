@@ -1,14 +1,23 @@
 import { toPesewas } from '@/server/utils/gh-money';
 import {
+  ParcelHolderType,
+  ParcelDispositionActionType,
   ParcelReconciliationActionType,
   ParcelReconciliationCaseStatus,
   ParcelReconciliationCaseType,
   ParcelStatus,
+  PaymentComponent,
 } from '@/db/schemas';
+import { JournalSourceType } from '@/db/schemas/enums';
 import { auditLogs } from '@/db/schemas/audit';
 import { db } from '@/db/config';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
+import {
+  DEFAULT_PARCEL_AGEING_POLICY,
+  getParcelAgeingPolicyFromModuleSettings,
+  type ParcelAgeingPolicy,
+} from '@/shared/shipments/parcel-ageing-policy';
 import {
   listAllPaymentsForParcelRepo,
   listPaymentsForParcelRepo,
@@ -20,7 +29,15 @@ import { listConsignmentsForParcelRepo } from './consignments.repository';
 import { removeActiveConsignmentItemsByParcelRepo } from './consignments.repository';
 import { getPickupQueueByParcelRepo } from '../pickup-queues/repository';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
-import { getParcelInternalHolderByParcelRepo } from '../parcel-internal-transfers/repository';
+import {
+  getParcelInternalHolderByParcelRepo,
+  getWarehouseForTransferRepo,
+  upsertParcelInternalHolderRepo,
+} from '../parcel-internal-transfers/repository';
+import { findCompanyModuleRepo } from '../company-modules/repository';
+import { postJournalEntrySvc } from '../accounting/posting.service';
+import { getAccountByCodeRepo } from '../accounting/repository';
+import { isAccountingEnabledForCompanySvc } from '../accounting/service';
 import {
   createParcelDiscrepancyRepo,
   getOpenDiscrepancyByParcelRepo,
@@ -36,14 +53,25 @@ import {
 } from './parcel-reconciliation-cases.repository';
 
 import {
+  createParcelDispositionActionRepo,
   createParcelRepo,
+  createParcelStorageWaiverRepo,
   getParcelRepo,
+  listParcelDispositionActionsRepo,
+  listParcelStorageWaiversRepo,
   listParcelsRepo,
+  sumParcelStorageWaiversPswRepo,
+  updateParcelStorageWaiverAccountingPostingRepo,
   updateParcelRepo,
   type ListParcelsParams,
   type ParcelRow,
 } from './parcels.repository';
 import { assertParcelFullyPaid } from './parcel-payment-settlement';
+import {
+  assertNoOutstandingStorageForHandover,
+  resolveAndValidateStorageWaiverAmountPsw,
+  validateStorageWaiverReason,
+} from './storage-accrual-guards';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 function getErrorCode(error: unknown): string | undefined {
@@ -90,8 +118,176 @@ function isReversalAllowedParcelStatus(status: number) {
   return status !== ParcelStatus.DELIVERED_AT_HOME && status !== ParcelStatus.DELIVERED_BY_OFFICE;
 }
 
+const STORAGE_DAY_MS = 24 * 60 * 60 * 1000;
+const STORAGE_PAYMENT_NOTE_PREFIX = 'STORAGE_CHARGE';
+const STORAGE_WAIVER_RECEIVABLE_ACCOUNT_CODE = '1300';
+const STORAGE_WAIVER_EXPENSE_ACCOUNT_CODE = '5180';
+
+function addMonths(date: Date, months: number): Date {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
+}
+
+async function getCompanyParcelAgeingPolicy(companyId: string): Promise<ParcelAgeingPolicy> {
+  const shipmentsModule = await findCompanyModuleRepo(companyId, 'shipments');
+  return shipmentsModule?.settings
+    ? getParcelAgeingPolicyFromModuleSettings(shipmentsModule.settings)
+    : DEFAULT_PARCEL_AGEING_POLICY;
+}
+
+function computeParcelAgeingSnapshot(input: {
+  status: number;
+  receivedAt: Date | null;
+  policy: ParcelAgeingPolicy;
+  now: Date;
+}) {
+  const isCollectionStatus =
+    input.status === ParcelStatus.AWAITING_PICKUP ||
+    input.status === ParcelStatus.HOME_DELIVERY_REQUESTED;
+
+  if (!isCollectionStatus || !input.receivedAt) {
+    return {
+      isParcelAgeingEligible: false,
+      isParcelAged: false,
+      ageingDays: null,
+      storageChargeStartAt: null,
+      storageChargeDays: 0,
+      storageChargePsw: 0,
+      storageFeePerDayPsw: input.policy.storageFeePerDayPsw,
+      storageChargeGraceDays: input.policy.gracePeriodDays,
+      ageingThresholdMonths: input.policy.agedThresholdMonths,
+    };
+  }
+
+  const ageDays = Math.max(
+    0,
+    Math.floor((input.now.getTime() - input.receivedAt.getTime()) / STORAGE_DAY_MS),
+  );
+  const storageChargeStartAt = new Date(
+    input.receivedAt.getTime() + input.policy.gracePeriodDays * STORAGE_DAY_MS,
+  );
+  const chargeDays = Math.max(
+    0,
+    Math.floor((input.now.getTime() - storageChargeStartAt.getTime()) / STORAGE_DAY_MS),
+  );
+  const isAged =
+    addMonths(input.receivedAt, input.policy.agedThresholdMonths).getTime() <= input.now.getTime();
+
+  return {
+    isParcelAgeingEligible: true,
+    isParcelAged: isAged,
+    ageingDays: ageDays,
+    storageChargeStartAt: storageChargeStartAt.toISOString(),
+    storageChargeDays: chargeDays,
+    storageChargePsw: chargeDays * input.policy.storageFeePerDayPsw,
+    storageFeePerDayPsw: input.policy.storageFeePerDayPsw,
+    storageChargeGraceDays: input.policy.gracePeriodDays,
+    ageingThresholdMonths: input.policy.agedThresholdMonths,
+  };
+}
+
+function computeStorageAccrualPsw(input: {
+  status: number;
+  receivedAt: Date | null;
+  policy: ParcelAgeingPolicy;
+  now: Date;
+}) {
+  const isCollectionStatus =
+    input.status === ParcelStatus.AWAITING_PICKUP ||
+    input.status === ParcelStatus.HOME_DELIVERY_REQUESTED ||
+    input.status === ParcelStatus.AGED_IN_WAREHOUSE;
+  if (!isCollectionStatus || !input.receivedAt) return 0;
+  const storageChargeStartAt = new Date(
+    input.receivedAt.getTime() + input.policy.gracePeriodDays * STORAGE_DAY_MS,
+  );
+  const chargeDays = Math.max(
+    0,
+    Math.floor((input.now.getTime() - storageChargeStartAt.getTime()) / STORAGE_DAY_MS),
+  );
+  return chargeDays * input.policy.storageFeePerDayPsw;
+}
+
+export async function getParcelStorageSettlementSvc(
+  parcelId: string,
+  executor: DbExecutor = db,
+): Promise<{
+  parcelId: string;
+  accruedPsw: number;
+  paidPsw: number;
+  waivedPsw: number;
+  outstandingPsw: number;
+}> {
+  const parcel = await getParcelSvc(parcelId, executor);
+  const policy = await getCompanyParcelAgeingPolicy(parcel.companyId);
+  const accruedPsw = computeStorageAccrualPsw({
+    status: parcel.status,
+    receivedAt: parcel.receivedAt,
+    policy,
+    now: new Date(),
+  });
+
+  const [payments, waivedPsw] = await Promise.all([
+    listPaymentsForParcelRepo(parcelId, executor),
+    sumParcelStorageWaiversPswRepo(parcelId, executor),
+  ]);
+
+  const paidPsw = payments
+    .filter(
+      (payment) =>
+        payment.component === PaymentComponent.OTHER &&
+        (payment.notes ?? '').startsWith(STORAGE_PAYMENT_NOTE_PREFIX),
+    )
+    .reduce((sum, payment) => sum + Number(payment.grossAmountPsw ?? 0), 0);
+
+  const outstandingPsw = Math.max(accruedPsw - paidPsw - waivedPsw, 0);
+
+  return {
+    parcelId,
+    accruedPsw,
+    paidPsw,
+    waivedPsw,
+    outstandingPsw,
+  };
+}
+
 export async function listParcelsSvc(p: ListParcelsParams) {
-  return listParcelsRepo(p);
+  const policy =
+    p.companyId && (p.agedOnly || p.storageChargeAccruing)
+      ? await getCompanyParcelAgeingPolicy(p.companyId)
+      : DEFAULT_PARCEL_AGEING_POLICY;
+
+  const { data, totalRecords } = await listParcelsRepo({
+    ...p,
+    ageThresholdMonths: p.ageThresholdMonths ?? policy.agedThresholdMonths,
+    storageGraceDays: p.storageGraceDays ?? policy.gracePeriodDays,
+  });
+
+  const now = new Date();
+  const companyIds = [...new Set(data.map((row) => row.companyId).filter(Boolean))];
+  const policyByCompany = new Map<string, ParcelAgeingPolicy>();
+
+  await Promise.all(
+    companyIds.map(async (companyId) => {
+      policyByCompany.set(companyId, await getCompanyParcelAgeingPolicy(companyId));
+    }),
+  );
+
+  return {
+    data: data.map((row) => {
+      const rowPolicy = policyByCompany.get(row.companyId) ?? DEFAULT_PARCEL_AGEING_POLICY;
+      return {
+        ...row,
+        ...computeParcelAgeingSnapshot({
+          status: row.status,
+          receivedAt: row.receivedAt,
+          policy: rowPolicy,
+          now,
+        }),
+      };
+    }),
+    totalRecords,
+  };
 }
 export async function getParcelSvc(id: string, executor: DbExecutor = db): Promise<ParcelRow> {
   const row = await getParcelRepo(id, executor);
@@ -180,6 +376,8 @@ export async function updateParcelSvc(
   if (!cur) throw NotFound('Parcel not found');
   if (patch.status === ParcelStatus.DELIVERED_BY_OFFICE) {
     await assertParcelFullyPaid(id);
+    const storageSettlement = await getParcelStorageSettlementSvc(id);
+    assertNoOutstandingStorageForHandover(storageSettlement.outstandingPsw);
   }
   const setPatch: Partial<typeof cur> & { parcelValuePsw?: number } = {};
   if (patch.status !== undefined) setPatch.status = patch.status;
@@ -627,7 +825,16 @@ export async function listParcelReconciliationCasesSvc(input: {
 
 export async function getParcelFullDetailsSvc(id: string) {
   const parcel = await getParcelSvc(id);
-  const [payments, delivery, consignments, pickupQueue, internalHolder] = await Promise.all([
+  const [
+    payments,
+    delivery,
+    consignments,
+    pickupQueue,
+    internalHolder,
+    dispositionActions,
+    storageWaivers,
+    storageSettlement,
+  ] = await Promise.all([
     (async () => {
       try {
         return await listPaymentsForParcelRepo(id);
@@ -668,6 +875,32 @@ export async function getParcelFullDetailsSvc(id: string) {
         throw error;
       }
     })(),
+    (async () => {
+      try {
+        return await listParcelDispositionActionsRepo(id);
+      } catch (error) {
+        if (isSchemaCompatibilityError(error)) return [];
+        throw error;
+      }
+    })(),
+    (async () => {
+      try {
+        return await listParcelStorageWaiversRepo(id);
+      } catch (error) {
+        if (isSchemaCompatibilityError(error)) return [];
+        throw error;
+      }
+    })(),
+    (async () => {
+      try {
+        return await getParcelStorageSettlementSvc(id);
+      } catch (error) {
+        if (isSchemaCompatibilityError(error)) {
+          return { parcelId: id, accruedPsw: 0, paidPsw: 0, waivedPsw: 0, outstandingPsw: 0 };
+        }
+        throw error;
+      }
+    })(),
   ]);
 
   return {
@@ -677,7 +910,234 @@ export async function getParcelFullDetailsSvc(id: string) {
     consignments,
     pickupQueue,
     internalHolder,
+    dispositionActions,
+    storageWaivers,
+    storageSettlement,
   };
+}
+
+export async function listParcelDispositionActionsSvc(parcelId: string) {
+  await getParcelSvc(parcelId);
+  return listParcelDispositionActionsRepo(parcelId);
+}
+
+export async function waiveParcelStorageAccrualSvc(input: {
+  parcelId: string;
+  actorUserId: string;
+  reason: string;
+  waivedAmountCedis?: number | string | null;
+}) {
+  const parcel = await getParcelSvc(input.parcelId);
+  const reason = validateStorageWaiverReason(input.reason);
+
+  const before = await getParcelStorageSettlementSvc(input.parcelId);
+
+  const requestedPswRaw =
+    input.waivedAmountCedis != null
+      ? Number(toPesewas(input.waivedAmountCedis))
+      : before.outstandingPsw;
+  const requestedPsw = resolveAndValidateStorageWaiverAmountPsw({
+    outstandingPsw: before.outstandingPsw,
+    requestedPsw: requestedPswRaw,
+  });
+
+  const posting = await db.transaction(async (tx) => {
+    const createdWaiver = await createParcelStorageWaiverRepo(
+      {
+        companyId: parcel.companyId,
+        parcelId: input.parcelId,
+        waivedAmountPsw: requestedPsw,
+        reason,
+        waivedBy: input.actorUserId,
+        waivedAt: new Date(),
+      },
+      tx,
+    );
+    if (!createdWaiver) throw NotFound('Failed to record parcel storage waiver');
+
+    if (!(await isAccountingEnabledForCompanySvc(parcel.companyId, tx))) {
+      return null;
+    }
+
+    const [receivableAccount, expenseAccount] = await Promise.all([
+      getAccountByCodeRepo(parcel.companyId, STORAGE_WAIVER_RECEIVABLE_ACCOUNT_CODE, tx),
+      getAccountByCodeRepo(parcel.companyId, STORAGE_WAIVER_EXPENSE_ACCOUNT_CODE, tx),
+    ]);
+
+    if (!receivableAccount || !receivableAccount.active) {
+      throw Conflict(
+        `Accounting account ${STORAGE_WAIVER_RECEIVABLE_ACCOUNT_CODE} is required and must be active to post storage waivers`,
+      );
+    }
+    if (!expenseAccount || !expenseAccount.active) {
+      throw Conflict(
+        `Accounting account ${STORAGE_WAIVER_EXPENSE_ACCOUNT_CODE} is required and must be active to post storage waivers`,
+      );
+    }
+
+    const posted = await postJournalEntrySvc(
+      {
+        companyId: parcel.companyId,
+        sourceType: JournalSourceType.PAYMENT,
+        sourceId: createdWaiver.id,
+        description: `Parcel storage waiver: ${parcel.trackingCode}`,
+        memo: reason,
+        branchId: parcel.destinationId,
+        locationId: parcel.pickupLocationId ?? null,
+        recordedByUserId: input.actorUserId,
+        approvedByUserId: input.actorUserId,
+        postedBy: input.actorUserId,
+        lines: [
+          {
+            accountId: expenseAccount.id,
+            debitPsw: requestedPsw,
+            description: `Storage waiver expense for ${parcel.trackingCode}`,
+            metadata: { parcelId: input.parcelId, waiverId: createdWaiver.id },
+          },
+          {
+            accountId: receivableAccount.id,
+            creditPsw: requestedPsw,
+            description: `Storage receivable write-off for ${parcel.trackingCode}`,
+            metadata: { parcelId: input.parcelId, waiverId: createdWaiver.id },
+          },
+        ],
+      },
+      tx,
+    );
+
+    const postedAt = new Date();
+    await updateParcelStorageWaiverAccountingPostingRepo(
+      createdWaiver.id,
+      {
+        accountingJournalEntryId: posted.entryId,
+        accountingPostedAt: postedAt,
+      },
+      tx,
+    );
+
+    return { journalEntryId: posted.entryId, postedAt };
+  });
+
+  const after = await getParcelStorageSettlementSvc(input.parcelId);
+
+  await recordAuditLog({
+    companyId: parcel.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'parcel',
+    entityId: input.parcelId,
+    action: 'PARCEL_STORAGE_WAIVED',
+    message: `Parcel storage accrual waived for ${parcel.trackingCode}`,
+    metadata: {
+      waivedAmountPsw: requestedPsw,
+      reason,
+      beforeOutstandingPsw: before.outstandingPsw,
+      afterOutstandingPsw: after.outstandingPsw,
+      accountingPosting: posting,
+    },
+  });
+
+  return { id: input.parcelId };
+}
+
+export async function recordParcelDispositionActionSvc(input: {
+  parcelId: string;
+  actorUserId: string;
+  actionType: number;
+  notes?: string | null;
+  warehouseId?: string | null;
+  recoveredAmountCedis?: number | string | null;
+}) {
+  const parcel = await getParcelSvc(input.parcelId);
+  const normalizedNotes = input.notes?.trim() || null;
+  const recoveredAmountPsw =
+    input.recoveredAmountCedis != null ? Number(toPesewas(input.recoveredAmountCedis)) : 0;
+
+  const actionType = Number(input.actionType);
+  if (!Object.values(ParcelDispositionActionType).includes(actionType)) {
+    throw BadRequest('Unsupported parcel disposition action');
+  }
+
+  if (
+    (actionType === ParcelDispositionActionType.SOLD ||
+      actionType === ParcelDispositionActionType.DESTROYED ||
+      actionType === ParcelDispositionActionType.DONATED) &&
+    !normalizedNotes
+  ) {
+    throw BadRequest('Notes are required for final disposition actions');
+  }
+
+  let nextStatus: number | null = null;
+  if (actionType === ParcelDispositionActionType.TRANSFERRED_TO_WAREHOUSE) {
+    nextStatus = ParcelStatus.AGED_IN_WAREHOUSE;
+    if (!input.warehouseId) throw BadRequest('Warehouse is required for warehouse transfer');
+    const warehouse = await getWarehouseForTransferRepo(input.warehouseId);
+    if (!warehouse || warehouse.isDeleted) throw NotFound('Selected warehouse not found');
+    if (!warehouse.active) throw Conflict('Selected warehouse is inactive');
+    if (warehouse.companyId !== parcel.companyId || warehouse.branchId !== parcel.destinationId) {
+      throw Conflict('Selected warehouse must belong to parcel destination branch');
+    }
+  } else if (actionType === ParcelDispositionActionType.SOLD) {
+    nextStatus = ParcelStatus.DISPOSED_BY_SALE;
+  } else if (actionType === ParcelDispositionActionType.DESTROYED) {
+    nextStatus = ParcelStatus.DISPOSED_BY_DESTRUCTION;
+  } else if (actionType === ParcelDispositionActionType.DONATED) {
+    nextStatus = ParcelStatus.DISPOSED_BY_DONATION;
+  }
+
+  const performedAt = new Date();
+
+  await db.transaction(async (tx) => {
+    await createParcelDispositionActionRepo(
+      {
+        companyId: parcel.companyId,
+        parcelId: input.parcelId,
+        actionType,
+        warehouseId: input.warehouseId ?? null,
+        notes: normalizedNotes,
+        recoveredAmountPsw,
+        performedBy: input.actorUserId,
+        performedAt,
+      },
+      tx,
+    );
+
+    if (nextStatus != null && parcel.status !== nextStatus) {
+      await updateParcelRepo(input.parcelId, { status: nextStatus }, tx);
+    }
+
+    if (actionType === ParcelDispositionActionType.TRANSFERRED_TO_WAREHOUSE && input.warehouseId) {
+      await upsertParcelInternalHolderRepo(
+        {
+          parcelId: input.parcelId,
+          companyId: parcel.companyId,
+          branchId: parcel.destinationId,
+          holderType: ParcelHolderType.WAREHOUSE,
+          locationId: null,
+          warehouseId: input.warehouseId,
+          updatedBy: input.actorUserId,
+        },
+        tx,
+      );
+    }
+  });
+
+  await recordAuditLog({
+    companyId: parcel.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'parcel',
+    entityId: input.parcelId,
+    action: 'PARCEL_DISPOSITION_ACTION_RECORDED',
+    message: `Parcel disposition action recorded for ${parcel.trackingCode}`,
+    metadata: {
+      actionType,
+      warehouseId: input.warehouseId ?? null,
+      notes: normalizedNotes,
+      recoveredAmountPsw,
+      nextStatus,
+    },
+  });
+
+  return { id: input.parcelId };
 }
 
 export async function logParcelDiscrepancySvc(input: {

@@ -9,6 +9,7 @@ import {
   stockMovements,
   stockAdjustments,
   stockTransfers,
+  productUnitConversions,
   companies,
   branches,
   users,
@@ -279,6 +280,7 @@ export async function cleanupTestData() {
   await db.delete(stockAdjustments);
   await db.delete(stockMovements);
   await db.delete(stockLevels);
+  await db.delete(productUnitConversions);
   await db.delete(inventoryLocations);
   await db.delete(products);
   await db.delete(productCategories);
@@ -297,6 +299,9 @@ export async function cleanupTestCompanyData(companyId: string) {
   if (productIds.length > 0) {
     await db.delete(stockMovements).where(inArray(stockMovements.productId, productIds));
     await db.delete(stockLevels).where(inArray(stockLevels.productId, productIds));
+    await db
+      .delete(productUnitConversions)
+      .where(inArray(productUnitConversions.productId, productIds));
   }
 
   await db.delete(products).where(eq(products.companyId, companyId));
