@@ -1,7 +1,3 @@
-import { createHash } from 'node:crypto';
-import { createId } from '@paralleldrive/cuid2';
-import { db } from '@/db/client';
-import { refreshTokens } from '@/db/schemas';
 import { signAccessToken } from '@/server/utils/jwt';
 
 type CreateTestAccessTokenInput = {
@@ -19,21 +15,10 @@ type CreateTestAccessTokenInput = {
 };
 
 export async function createTestAccessToken(input: CreateTestAccessTokenInput) {
-  const sid = createId();
-
-  await db.insert(refreshTokens).values({
-    id: sid,
-    userId: input.userId,
-    tokenHash: createHash('sha256').update(`${sid}:${Date.now()}:${input.userId}`).digest('hex'),
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    permissionsSnapshot: input.permissions,
-    userAgent: 'bun-test',
-    ip: '127.0.0.1',
-  });
+  void input.permissions;
 
   return signAccessToken({
     sub: input.userId,
-    sid,
     email: input.email,
     employeeId: input.employeeId ?? null,
     roleId: input.roleId ?? null,
