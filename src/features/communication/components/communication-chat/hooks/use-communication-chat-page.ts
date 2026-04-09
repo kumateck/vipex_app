@@ -16,6 +16,7 @@ import {
 } from '../../../api/communication.api';
 import { useCommunicationSocket } from '../../../hooks/use-communication-socket';
 import { useCommunicationChatActions } from './use-communication-chat-actions';
+import { useCommunicationChatDerivedData } from './use-communication-chat-derived-data';
 import { useCommunicationChatNavigation } from './use-communication-chat-navigation';
 import { useCommunicationChatOpenSections } from './use-communication-chat-open-sections';
 import { saveChannelMembers } from '../services/communication-chat-actions';
@@ -94,23 +95,24 @@ export function useCommunicationChatPage(): CommunicationChatViewModel {
     { skip: !managingChannel },
   );
 
-  const userLabelById = useMemo(
-    () =>
-      new Map(
-        userOptions.map((option) => [option.id, option.fullname || option.email || option.id]),
-      ),
-    [userOptions],
-  );
-
-  const allUserTransferItems = useMemo(
-    () =>
-      userOptions.map((option) => ({
-        id: option.id,
-        label: option.fullname || option.email || option.id,
-        subLabel: option.email,
-      })),
-    [userOptions],
-  );
+  const {
+    userLabelById,
+    allUserTransferItems,
+    directThreads,
+    groupThreads,
+    activeCallByChannelId,
+    unreadByThreadId,
+    mentionsByThreadId,
+    voiceUnreadByChannelId,
+    voiceMentionsByChannelId,
+  } = useCommunicationChatDerivedData({
+    threads,
+    textChannels,
+    activeCalls,
+    unreadCounts,
+    voiceUnreadCounts,
+    userOptions,
+  });
 
   const {
     isConnected: isSocketConnected,
@@ -186,57 +188,6 @@ export function useCommunicationChatPage(): CommunicationChatViewModel {
     if (!managingChannelDetails?.participantUserIds) return;
     setChannelMemberIds(managingChannelDetails.participantUserIds);
   }, [managingChannelDetails]);
-
-  const directThreads = useMemo(
-    () => threads.filter((thread) => thread.threadType === 'direct'),
-    [threads],
-  );
-
-  const textChannelThreadIds = useMemo(() => {
-    const ids = textChannels
-      .map((channel) => channel.threadId)
-      .filter((id): id is string => Boolean(id));
-    return new Set(ids);
-  }, [textChannels]);
-
-  const groupThreads = useMemo(
-    () =>
-      threads.filter(
-        (thread) =>
-          thread.threadType === 'group' ||
-          (thread.threadType === 'channel' && !textChannelThreadIds.has(thread.id)),
-      ),
-    [textChannelThreadIds, threads],
-  );
-
-  const activeCallByChannelId = useMemo(() => {
-    const map = new Map<string, (typeof activeCalls)[number]>();
-    for (const call of activeCalls) {
-      if (!call.channelId) continue;
-      const existing = map.get(call.channelId);
-      const existingTime = existing?.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-      const currentTime = call.updatedAt ? new Date(call.updatedAt).getTime() : 0;
-      if (!existing || currentTime >= existingTime) {
-        map.set(call.channelId, call);
-      }
-    }
-    return map;
-  }, [activeCalls]);
-
-  const { unreadByThreadId, mentionsByThreadId, voiceUnreadByChannelId, voiceMentionsByChannelId } =
-    useMemo(
-      () => ({
-        unreadByThreadId: new Map(unreadCounts.map((item) => [item.threadId, item.unreadCount])),
-        mentionsByThreadId: new Map(unreadCounts.map((item) => [item.threadId, item.mentionCount])),
-        voiceUnreadByChannelId: new Map(
-          voiceUnreadCounts.map((item) => [item.channelId, item.unreadCount]),
-        ),
-        voiceMentionsByChannelId: new Map(
-          voiceUnreadCounts.map((item) => [item.channelId, item.mentionCount]),
-        ),
-      }),
-      [unreadCounts, voiceUnreadCounts],
-    );
 
   const onSaveChannelMembers = async () => {
     if (!managingChannel || !managingChannelDetails) return;

@@ -1,12 +1,5 @@
 import type { RefObject } from 'react';
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -28,6 +21,7 @@ import type {
   MentionSuggestion,
 } from '../types/communication-chat-thread-detail.types';
 import { getDisplayNameForUser } from '../utils/communication-chat-thread-detail-message';
+import { ChatThreadMentionMenu } from './chat-thread-mention-menu';
 
 type ChatThreadComposerProps = {
   normalizedThreadId: string;
@@ -223,39 +217,12 @@ export function ChatThreadComposer({
         </Button>
 
         <div className="relative flex-1">
-          {isMentionMenuOpen ? (
-            <div className="absolute bottom-full z-30 mb-2 w-full overflow-hidden rounded-lg border bg-popover shadow-md">
-              <Command shouldFilter={false}>
-                <CommandList>
-                  <CommandEmpty>No matching users.</CommandEmpty>
-                  <CommandGroup>
-                    {mentionSuggestions.map((suggestion, index) => (
-                      <CommandItem
-                        key={suggestion.key}
-                        value={`${suggestion.label} ${suggestion.subLabel}`}
-                        onMouseDown={(event) => {
-                          event.preventDefault();
-                          insertMentionSuggestion(suggestion);
-                        }}
-                        className={
-                          index === activeMentionIndex
-                            ? 'bg-accent text-accent-foreground'
-                            : undefined
-                        }
-                      >
-                        <div className="flex w-full min-w-0 items-center justify-between gap-2">
-                          <span className="truncate">{suggestion.label}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {suggestion.subLabel}
-                          </span>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </div>
-          ) : null}
+          <ChatThreadMentionMenu
+            activeMentionIndex={activeMentionIndex}
+            insertMentionSuggestion={insertMentionSuggestion}
+            isMentionMenuOpen={isMentionMenuOpen}
+            mentionSuggestions={mentionSuggestions}
+          />
           <Input
             ref={composerInputRef}
             placeholder={isMediaMode ? 'Add caption and send...' : 'Type a message'}
