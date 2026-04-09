@@ -1,1 +1,1 @@
-export * from './accounting-journal-entries-page';
+export { AccountingJournalEntriesPage } from './accounting-journal-entries-page';

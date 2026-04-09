@@ -1,1 +1,1 @@
-export * from './accounting-setup-page';
+export { AccountingSetupPage } from './accounting-setup-page';

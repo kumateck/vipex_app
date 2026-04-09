@@ -1,1 +1,1 @@
-export * from '../components/accounting-journal-entries';
+export { AccountingJournalEntriesPage } from '../components/accounting-journal-entries';

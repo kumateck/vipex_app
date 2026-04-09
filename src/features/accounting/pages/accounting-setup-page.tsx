@@ -1,1 +1,1 @@
-export * from '../components/accounting-setup';
+export { AccountingSetupPage } from '../components/accounting-setup';

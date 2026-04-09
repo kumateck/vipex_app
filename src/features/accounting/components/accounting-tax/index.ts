@@ -1,1 +1,1 @@
-export * from './accounting-tax-page';
+export { AccountingTaxPage } from './accounting-tax-page';

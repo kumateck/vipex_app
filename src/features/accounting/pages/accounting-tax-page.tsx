@@ -1,1 +1,1 @@
-export * from '../components/accounting-tax';
+export { AccountingTaxPage } from '../components/accounting-tax';

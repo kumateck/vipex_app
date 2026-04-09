@@ -1,1 +1,2 @@
-export * from '../components/accounting-report-route';
+export { AccountingReportRoutePage } from '../components/accounting-report-route';
+export type { AccountingRouteReportKey } from '../components/accounting-report-route';
