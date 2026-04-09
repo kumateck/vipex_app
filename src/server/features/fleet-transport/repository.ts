@@ -1516,7 +1516,16 @@ export async function listFleetDispatchLoadCandidatesRepo(input: {
   limit: number;
 }) {
   const q = input.search?.trim() ? `%${input.search.trim()}%` : null;
-  const rows = await db.execute(sql`
+  const rows = await db.execute(sql<{
+    parcel_id: string;
+    source_id: string | null;
+    destination_id: string | null;
+    parcel_status: number;
+    booking_code: string;
+    tracking_code: string;
+    active_trip_id: string | null;
+    active_load_status: number | null;
+  }>`
     with active_matches as (
       select
         m.parcel_id,
@@ -1550,16 +1559,7 @@ export async function listFleetDispatchLoadCandidatesRepo(input: {
     limit ${input.limit}
   `);
 
-  return rows.rows as Array<{
-    parcel_id: string;
-    source_id: string | null;
-    destination_id: string | null;
-    parcel_status: number;
-    booking_code: string;
-    tracking_code: string;
-    active_trip_id: string | null;
-    active_load_status: number | null;
-  }>;
+  return rows;
 }
 
 export async function listFleetTripLoadAuditTrailRepo(input: {
