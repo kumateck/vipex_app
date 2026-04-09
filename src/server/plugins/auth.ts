@@ -1,11 +1,6 @@
 import type { Elysia } from 'elysia';
 import { BranchType } from '@/db/schemas/enums';
-import {
-  findRefreshTokenByIdRepo,
-  getUserByIdRepo,
-  listRolePermissionKeysRepo,
-} from '@/server/features/auth/repository';
-import { env } from '../utils/env';
+import { findRefreshTokenByIdRepo } from '@/server/features/auth/repository';
 import { verifyAccessToken } from '../utils/jwt';
 import { Unauthorized as UnauthorizedError } from '../utils/http-error';
 import { Forbidden } from '../utils/http-error';

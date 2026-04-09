@@ -23,8 +23,8 @@ import {
   users,
 } from '@/db/schemas';
 import { HttpStatus } from '@/server/utils/http-status';
-import { signAccessToken } from '@/server/utils/jwt';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { createTestAccessToken } from '../utils/auth-session';
 import { http, json } from '../utils/request';
 
 describe('Fleet automation orchestration', () => {
@@ -32,6 +32,7 @@ describe('Fleet automation orchestration', () => {
   let branchId = '';
   let roleId = '';
   let actorUserId = '';
+  let actorEmail = '';
   let accessToken = '';
   let overdueVehicleId = '';
   let recoverVehicleId = '';
@@ -89,12 +90,13 @@ describe('Fleet automation orchestration', () => {
       },
     ]);
 
+    actorEmail = `fleet-automation-actor-${now}@example.com`;
     const [actor] = await db
       .insert(users)
       .values({
         fullname: `Fleet Automation Actor ${now}`,
         telephone: `+233${Math.floor(Math.random() * 1_000_000_000)}`,
-        email: `fleet-automation-actor-${now}@example.com`,
+        email: actorEmail,
         password: null,
         status: UserStatus.ACTIVE,
         roleId,
@@ -196,7 +198,15 @@ describe('Fleet automation orchestration', () => {
       .returning({ id: fleetMaintenanceParts.id });
     partId = part!.id;
 
-    accessToken = await signAccessToken({ sub: actorUserId });
+    accessToken = await createTestAccessToken({
+      userId: actorUserId,
+      email: actorEmail,
+      permissions: [PermissionKeys.CanReadFleetTransport, PermissionKeys.CanUpdateFleetVehicles],
+      roleId,
+      companyId,
+      branchId,
+      branchType: BranchType.AGENCY,
+    });
   });
 
   afterAll(async () => {

@@ -17,8 +17,8 @@ import {
   users,
 } from '@/db/schemas';
 import { HttpStatus } from '@/server/utils/http-status';
-import { signAccessToken } from '@/server/utils/jwt';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { createTestAccessToken } from '../utils/auth-session';
 import { http, json } from '../utils/request';
 
 describe('Procurement demands conversion', () => {
@@ -26,6 +26,7 @@ describe('Procurement demands conversion', () => {
   let branchId = '';
   let roleId = '';
   let actorUserId = '';
+  let actorEmail = '';
   let accessToken = '';
 
   beforeAll(async () => {
@@ -79,12 +80,13 @@ describe('Procurement demands conversion', () => {
       },
     ]);
 
+    actorEmail = `proc-actor-${now}@example.com`;
     const [actor] = await db
       .insert(users)
       .values({
         fullname: `Proc Actor ${now}`,
         telephone: `+233${Math.floor(Math.random() * 1_000_000_000)}`,
-        email: `proc-actor-${now}@example.com`,
+        email: actorEmail,
         password: null,
         status: UserStatus.ACTIVE,
         roleId,
@@ -105,7 +107,18 @@ describe('Procurement demands conversion', () => {
       configuredBy: actorUserId,
     });
 
-    accessToken = await signAccessToken({ sub: actorUserId });
+    accessToken = await createTestAccessToken({
+      userId: actorUserId,
+      email: actorEmail,
+      permissions: [
+        PermissionKeys.CanReadProcurement,
+        PermissionKeys.CanCreateProcurementPurchaseRequests,
+      ],
+      roleId,
+      companyId,
+      branchId,
+      branchType: BranchType.AGENCY,
+    });
   });
 
   afterAll(async () => {

@@ -22,8 +22,8 @@ import {
   users,
 } from '@/db/schemas';
 import { HttpStatus } from '@/server/utils/http-status';
-import { signAccessToken } from '@/server/utils/jwt';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { createTestAccessToken } from '../utils/auth-session';
 import { http, json } from '../utils/request';
 
 type FuelAnalyticsResponse = {
@@ -57,6 +57,7 @@ describe('Fleet fuel analytics (authenticated)', () => {
   let branchId = '';
   let roleId = '';
   let actorUserId = '';
+  let actorEmail = '';
   let driverJobTitleId = '';
   let driverEmployeeId = '';
   let vehicleWithBenchmarkId = '';
@@ -107,12 +108,13 @@ describe('Fleet fuel analytics (authenticated)', () => {
       permission: PermissionKeys.CanReadFleetTransport,
     });
 
+    actorEmail = `fuel-actor-${now}@example.com`;
     const [actor] = await db
       .insert(users)
       .values({
         fullname: `Fuel Actor ${now}`,
         telephone: `+233${Math.floor(Math.random() * 1_000_000_000)}`,
-        email: `fuel-actor-${now}@example.com`,
+        email: actorEmail,
         password: null,
         status: UserStatus.ACTIVE,
         roleId,
@@ -284,7 +286,15 @@ describe('Fleet fuel analytics (authenticated)', () => {
       },
     ]);
 
-    accessToken = await signAccessToken({ sub: actorUserId });
+    accessToken = await createTestAccessToken({
+      userId: actorUserId,
+      email: actorEmail,
+      permissions: [PermissionKeys.CanReadFleetTransport],
+      roleId,
+      companyId,
+      branchId,
+      branchType: BranchType.AGENCY,
+    });
   });
 
   afterAll(async () => {

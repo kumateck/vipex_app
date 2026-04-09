@@ -25,9 +25,9 @@ import {
   roles,
   users,
 } from '@/db/schemas';
-import { signAccessToken } from '@/server/utils/jwt';
 import { HttpStatus } from '@/server/utils/http-status';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { createTestAccessToken } from '../utils/auth-session';
 import { http, json } from '../utils/request';
 
 describe('Fleet trips lifecycle (authenticated)', () => {
@@ -37,6 +37,7 @@ describe('Fleet trips lifecycle (authenticated)', () => {
   let driverJobTitleId = '';
   let crewJobTitleId = '';
   let actorUserId = '';
+  let actorEmail = '';
   let driverEmployeeId = '';
   let crewEmployeeId = '';
   let vehicleId = '';
@@ -108,12 +109,13 @@ describe('Fleet trips lifecycle (authenticated)', () => {
       },
     ]);
 
+    actorEmail = `fleet-actor-${now}@example.com`;
     const [actor] = await db
       .insert(users)
       .values({
         fullname: `Fleet Actor ${now}`,
         telephone: `+233${Math.floor(Math.random() * 1_000_000_000)}`,
-        email: `fleet-actor-${now}@example.com`,
+        email: actorEmail,
         password: null,
         status: UserStatus.ACTIVE,
         roleId,
@@ -216,7 +218,21 @@ describe('Fleet trips lifecycle (authenticated)', () => {
       .returning({ id: fleetVehicles.id });
     vehicleId = vehicle!.id;
 
-    accessToken = await signAccessToken({ sub: actorUserId });
+    accessToken = await createTestAccessToken({
+      userId: actorUserId,
+      email: actorEmail,
+      permissions: [
+        PermissionKeys.CanReadFleetTrips,
+        PermissionKeys.CanCreateFleetTrips,
+        PermissionKeys.CanAssignFleetCrew,
+        PermissionKeys.CanStartFleetTrips,
+        PermissionKeys.CanCloseFleetTrips,
+      ],
+      roleId,
+      companyId,
+      branchId,
+      branchType: BranchType.AGENCY,
+    });
   });
 
   afterAll(async () => {

@@ -14,8 +14,8 @@ import {
   users,
 } from '@/db/schemas';
 import { HttpStatus } from '@/server/utils/http-status';
-import { signAccessToken } from '@/server/utils/jwt';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { createTestAccessToken } from '../utils/auth-session';
 import { http } from '../utils/request';
 
 describe('Fleet analytics routes RBAC', () => {
@@ -25,6 +25,8 @@ describe('Fleet analytics routes RBAC', () => {
   let blockedRoleId = '';
   let allowedUserId = '';
   let blockedUserId = '';
+  let allowedEmail = '';
+  let blockedEmail = '';
   let allowedToken = '';
   let blockedToken = '';
 
@@ -90,13 +92,15 @@ describe('Fleet analytics routes RBAC', () => {
       },
     ]);
 
+    allowedEmail = `allowed-fleet-${now}@example.com`;
+    blockedEmail = `blocked-fleet-${now}@example.com`;
     const [allowedUser, blockedUser] = await db
       .insert(users)
       .values([
         {
           fullname: `Allowed Fleet User ${now}`,
           telephone: `+233${Math.floor(Math.random() * 1_000_000_000)}`,
-          email: `allowed-fleet-${now}@example.com`,
+          email: allowedEmail,
           password: null,
           status: UserStatus.ACTIVE,
           roleId: allowedRoleId,
@@ -108,7 +112,7 @@ describe('Fleet analytics routes RBAC', () => {
         {
           fullname: `Blocked Fleet User ${now}`,
           telephone: `+233${Math.floor(Math.random() * 1_000_000_000)}`,
-          email: `blocked-fleet-${now}@example.com`,
+          email: blockedEmail,
           password: null,
           status: UserStatus.ACTIVE,
           roleId: blockedRoleId,
@@ -141,8 +145,24 @@ describe('Fleet analytics routes RBAC', () => {
       },
     ]);
 
-    allowedToken = await signAccessToken({ sub: allowedUserId });
-    blockedToken = await signAccessToken({ sub: blockedUserId });
+    allowedToken = await createTestAccessToken({
+      userId: allowedUserId,
+      email: allowedEmail,
+      permissions: [PermissionKeys.CanReadFleetTransport],
+      roleId: allowedRoleId,
+      companyId,
+      branchId,
+      branchType: BranchType.AGENCY,
+    });
+    blockedToken = await createTestAccessToken({
+      userId: blockedUserId,
+      email: blockedEmail,
+      permissions: [PermissionKeys.CanReadCustomers],
+      roleId: blockedRoleId,
+      companyId,
+      branchId,
+      branchType: BranchType.AGENCY,
+    });
   });
 
   afterAll(async () => {

@@ -23,8 +23,8 @@ import {
   users,
 } from '@/db/schemas';
 import { HttpStatus } from '@/server/utils/http-status';
-import { signAccessToken } from '@/server/utils/jwt';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { createTestAccessToken } from '../utils/auth-session';
 import { http, json } from '../utils/request';
 
 type ComplianceDashboardResponse = {
@@ -52,6 +52,7 @@ describe('Fleet compliance dashboard + alert job', () => {
   let branchBId = '';
   let roleId = '';
   let actorUserId = '';
+  let actorEmail = '';
   let accessToken = '';
   let driverEmployeeId = '';
 
@@ -109,13 +110,14 @@ describe('Fleet compliance dashboard + alert job', () => {
       permission: PermissionKeys.CanReadFleetTransport,
     });
 
+    actorEmail = `fleet-actor-${now}@example.com`;
     const [actor, recipientTwo] = await db
       .insert(users)
       .values([
         {
           fullname: `Fleet Actor ${now}`,
           telephone: `+233${Math.floor(Math.random() * 1_000_000_000)}`,
-          email: `fleet-actor-${now}@example.com`,
+          email: actorEmail,
           password: null,
           status: UserStatus.ACTIVE,
           roleId,
@@ -251,7 +253,15 @@ describe('Fleet compliance dashboard + alert job', () => {
       updatedBy: actorUserId,
     });
 
-    accessToken = await signAccessToken({ sub: actorUserId });
+    accessToken = await createTestAccessToken({
+      userId: actorUserId,
+      email: actorEmail,
+      permissions: [PermissionKeys.CanReadFleetTransport],
+      roleId,
+      companyId,
+      branchId: branchAId,
+      branchType: BranchType.AGENCY,
+    });
   });
 
   afterAll(async () => {
