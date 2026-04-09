@@ -2,16 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BranchType } from '@/db/schemas/enums';
@@ -29,6 +19,7 @@ import {
 import { createRoleColumns } from '../role-columns';
 import { RoleCreateDialog } from './role-create-dialog';
 import { RoleRenameDialog } from './role-rename-dialog';
+import { RolesDeleteDialog } from './roles-delete-dialog';
 
 const EMPTY_META: PaginationMeta = {
   totalRecords: 0,
@@ -202,32 +193,15 @@ export function RolesPageContent() {
         onSubmit={handleRenameRole}
       />
 
-      <AlertDialog
+      <RolesDeleteDialog
         open={Boolean(roleToDelete)}
+        roleName={roleToDelete?.name}
         onOpenChange={(open) => (!open ? setRoleToDelete(null) : null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete role?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove {roleToDelete ? `"${roleToDelete.name}"` : 'this role'}.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                if (!roleToDelete) return;
-                void handleDeleteRole(roleToDelete);
-              }}
-            >
-              Delete role
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onConfirm={() => {
+          if (!roleToDelete) return;
+          void handleDeleteRole(roleToDelete);
+        }}
+      />
     </div>
   );
 }

@@ -64,7 +64,6 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
   const ok = await verifyPassword(password, user?.password);
   if (!ok) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
   const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
-  const accessToken = await signAccessToken({ sub: user.id });
   const refreshPlain = generateOpaqueToken(32);
   const refreshHash = await sha256HexAsync(refreshPlain);
   const refreshExpSec = parseDurationToSeconds(env.JWT_REFRESH_EXPIRES);
@@ -74,8 +73,26 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
     userId: user.id,
     tokenHash: refreshHash,
     expiresAt: refreshExpiresAt,
+    permissionsSnapshot: permissionKeys,
     userAgent: ua,
     ip,
+  });
+
+  const persistedRefresh = await findRefreshTokenRepo(refreshHash);
+  if (!persistedRefresh) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
+
+  const accessToken = await signAccessToken({
+    sub: user.id,
+    sid: persistedRefresh.id,
+    email: user.email,
+    employeeId: user.employeeId ?? null,
+    roleId: user.roleId ?? null,
+    companyId: user.companyId ?? null,
+    branchId: user.branchId ?? null,
+    branchType: user.branch?.type ?? null,
+    locationId: user.locationId ?? null,
+    userType: user.userType ?? null,
+    cashierType: user.cashierType ?? null,
   });
   return {
     tokens: { accessToken, refreshToken: refreshPlain },
@@ -107,16 +124,34 @@ export async function refreshSvc(refreshToken: string) {
 
   const user = await getUserByIdRepo(current.userId);
   if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
-  const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
+  const permissionKeys =
+    Array.isArray(current.permissionsSnapshot) && current.permissionsSnapshot.length > 0
+      ? current.permissionsSnapshot
+      : await listRolePermissionKeysRepo(user.roleId, user.companyId);
 
   // Rotate
   const nextPlain = generateOpaqueToken(32);
   const nextHash = await sha256HexAsync(nextPlain);
   const refreshExpSec = parseDurationToSeconds(env.JWT_REFRESH_EXPIRES);
   const nextExpiresAt = new Date(Date.now() + refreshExpSec * 1000);
-  await rotateRefreshTokenRepo(hash, nextHash, nextExpiresAt);
+  await rotateRefreshTokenRepo(hash, nextHash, nextExpiresAt, permissionKeys);
 
-  const accessToken = await signAccessToken({ sub: user.id });
+  const nextRefresh = await findRefreshTokenRepo(nextHash);
+  if (!nextRefresh) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
+
+  const accessToken = await signAccessToken({
+    sub: user.id,
+    sid: nextRefresh.id,
+    email: user.email,
+    employeeId: user.employeeId ?? null,
+    roleId: user.roleId ?? null,
+    companyId: user.companyId ?? null,
+    branchId: user.branchId ?? null,
+    branchType: user.branch?.type ?? null,
+    locationId: user.locationId ?? null,
+    userType: user.userType ?? null,
+    cashierType: user.cashierType ?? null,
+  });
 
   return {
     accessToken,
@@ -210,6 +245,16 @@ export async function changePasswordSvc(userId: string, oldPassword: string, new
   const passwordHash = await hashPassword(newPassword);
   await updateUserPasswordRepo(user.id, passwordHash);
   await revokeAllUserTokensRepo(user.id);
+}
+
+export async function verifyCurrentUserPasswordSvc(userId: string, password: string) {
+  const user = await getUserByIdRepo(userId);
+  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
+
+  const ok = await verifyPassword(password, user.password);
+  if (!ok) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid password');
+
+  return { success: true };
 }
 
 export async function getCurrentUserPermissionsSvc(userId: string) {

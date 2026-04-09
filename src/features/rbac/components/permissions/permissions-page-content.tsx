@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { PermissionCatalogUi } from '@/shared/permissions/constants';
+import { PermissionCatalogUi, PermissionKeys } from '@/shared/permissions/constants';
 import { cn } from '@/lib/utils';
 import {
   MAIN_PERMISSION_TABS,
@@ -33,7 +33,9 @@ import { toast } from 'sonner';
 export function PermissionsPageContent() {
   const authUser = useAuthStore((state) => state.user);
   const companyId = authUser?.company?.id ?? null;
-  const canSetRolePermissions = authUser?.permissions?.includes('CanSetRolePermissions');
+  const canSetRolePermissions = authUser?.permissions?.includes(
+    PermissionKeys.CanSetRolePermissions,
+  );
   const [searchParams, setSearchParams] = useSearchParams();
   const [roleId, setRoleId] = useState(searchParams.get('roleId') ?? '');
   const [search, setSearch] = useState('');

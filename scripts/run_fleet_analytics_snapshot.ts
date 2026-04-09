@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { PermissionKeys } from '../src/shared/permissions/constants';
 
 type SnapshotResponse = {
   generatedAt: string;
@@ -54,7 +55,7 @@ async function discoverFleetJobUserId() {
         on cm.company_id = u.company_id
        and cm.module_code = 'fleet_transport'
        and cm.is_enabled = true
-      where rp.permission = 'CanReadFleetTransport'
+      where rp.permission = ${PermissionKeys.CanReadFleetTransport}
       order by u.created_at asc
       limit 1
     `;
@@ -80,7 +81,7 @@ async function run() {
   }
   if (!bearer.trim()) {
     throw new Error(
-      'Provide FLEET_JOB_BEARER_TOKEN (or API_BEARER_TOKEN), set FLEET_JOB_USER_ID, or ensure DB has a user with CanReadFleetTransport and fleet_transport module enabled.',
+      `Provide FLEET_JOB_BEARER_TOKEN (or API_BEARER_TOKEN), set FLEET_JOB_USER_ID, or ensure DB has a user with ${PermissionKeys.CanReadFleetTransport} and fleet_transport module enabled.`,
     );
   }
 

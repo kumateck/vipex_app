@@ -47,6 +47,7 @@ const GROUP_DEFAULTS: Record<string, GroupDefault> = {
   Reconciliation: { mainTab: 'Finance', module: 'Reconciliation' },
   'Notification Hub': { mainTab: 'CRM', module: 'Notification Hub' },
   Reports: { mainTab: 'Reports', module: 'Reports' },
+  Analytics: { mainTab: 'Reports', module: 'Analytics' },
   Audit: { mainTab: 'IT', module: 'Audit Trail' },
   Platform: { mainTab: 'IT', module: 'Platform Control' },
   HR: { mainTab: 'HR', module: 'Human Resource' },

@@ -3,10 +3,7 @@ import { AuthenticatedLayout } from '@/components/layouts/auth';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useBreadcrumbSync } from '@/hooks/useBreadcrumbSync';
 import { useEffect, useMemo } from 'react';
-import {
-  useGetCurrentUserPermissionsQuery,
-  useGetCurrentUserProfileQuery,
-} from '@/features/auth/api';
+import { useGetCurrentUserProfileQuery } from '@/features/auth/api';
 import { useListCompanyModulesQuery } from '@/features/company-modules/api';
 import { useAuthStore } from '@/stores/auth-store';
 import NoAccess from '@/components/permissions/no-access';
@@ -35,9 +32,6 @@ const MainLayout = () => {
   const userPermissions = useAuthStore((state) => state.user?.permissions ?? []);
   const updateUser = useAuthStore((state) => state.updateUser);
   const location = useLocation();
-  const { data, isFetching } = useGetCurrentUserPermissionsQuery(undefined, {
-    skip: !isAuthenticated,
-  });
   const { data: currentProfile } = useGetCurrentUserProfileQuery(undefined, {
     skip: !isAuthenticated,
   });
@@ -56,11 +50,6 @@ const MainLayout = () => {
   const requiredModule = inferRequiredModuleByPath(location.pathname);
   const hasPermissionAccess = !requiredPermission || grantedPermissions.has(requiredPermission);
   const hasModuleAccess = !requiredModule || enabledModules.has(requiredModule);
-
-  useEffect(() => {
-    if (!data?.permissions) return;
-    updateUser({ permissions: data.permissions });
-  }, [data, updateUser]);
 
   useEffect(() => {
     if (!currentProfile) return;
@@ -100,16 +89,6 @@ const MainLayout = () => {
   }, [companyModules, updateUser, user?.company]);
 
   if (!hasPermissionAccess) {
-    if (isFetching && userPermissions.length === 0) {
-      return (
-        <AuthenticatedLayout>
-          <div className="flex min-h-[calc(100vh-64px)] items-center justify-center text-sm text-muted-foreground">
-            Checking permissions...
-          </div>
-        </AuthenticatedLayout>
-      );
-    }
-
     return (
       <AuthenticatedLayout>
         <NoAccess />

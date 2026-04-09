@@ -98,6 +98,10 @@ export const ChangePasswordBody = t.Object({
   newPassword: t.String({ minLength: 8, maxLength: 128 }),
 });
 
+export const VerifyPasswordBody = t.Object({
+  password: t.String({ minLength: 1, maxLength: 128 }),
+});
+
 export const CurrentUserPermissionsResponse = t.Object({
   permissions: t.Array(t.String()),
 });

@@ -744,6 +744,7 @@ export async function getLeaveRequestRepo(id: string) {
       weekCount: leaveRequests.weekCount,
       swapLockUntil: leaveRequests.swapLockUntil,
       isEmergency: leaveRequests.isEmergency,
+      reason: leaveRequests.reason,
       managerApprovalStatus: leaveRequests.managerApprovalStatus,
       managerApprovedBy: leaveRequests.managerApprovedBy,
       managerApprovedAt: leaveRequests.managerApprovedAt,
@@ -1084,6 +1085,7 @@ export async function getEmployeeBookedLeaveDaysRepo(input: {
   employeeId: string;
   from: Date;
   to: Date;
+  excludeLeaveRequestIds?: string[];
 }) {
   const [row] = await db
     .select({
@@ -1097,6 +1099,9 @@ export async function getEmployeeBookedLeaveDaysRepo(input: {
         inArray(leaveRequests.status, [0, 1]),
         lte(leaveRequests.dateFrom, input.to),
         gte(leaveRequests.dateTo, input.from),
+        ...(input.excludeLeaveRequestIds?.length
+          ? [not(inArray(leaveRequests.id, input.excludeLeaveRequestIds))]
+          : []),
       ),
     );
 

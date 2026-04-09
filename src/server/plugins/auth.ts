@@ -1,6 +1,6 @@
 import type { Elysia } from 'elysia';
 import { BranchType } from '@/db/schemas/enums';
-import { getUserByIdRepo, listRolePermissionKeysRepo } from '@/server/features/auth/repository';
+import { findRefreshTokenByIdRepo } from '@/server/features/auth/repository';
 import { verifyAccessToken } from '../utils/jwt';
 import { Unauthorized as UnauthorizedError } from '../utils/http-error';
 import { Forbidden } from '../utils/http-error';
@@ -30,27 +30,27 @@ export const authPlugin = (app: Elysia) =>
     const token = auth.slice('Bearer '.length).trim();
     try {
       const payload = await verifyAccessToken(token);
-      const userRecord = await getUserByIdRepo(payload.sub);
-      if (!userRecord) return { user: null as AuthUser | null };
-
-      const permissions =
-        (await listRolePermissionKeysRepo(
-          userRecord.roleId ?? null,
-          userRecord.companyId ?? null,
-        )) ?? [];
+      if (!payload.sid || !payload.email) return { user: null as AuthUser | null };
+      const refreshTokenRow = await findRefreshTokenByIdRepo(payload.sid);
+      if (!refreshTokenRow) return { user: null as AuthUser | null };
+      if (refreshTokenRow.revokedAt) return { user: null as AuthUser | null };
+      if (refreshTokenRow.expiresAt.getTime() <= Date.now())
+        return { user: null as AuthUser | null };
       return {
         user: {
-          sub: userRecord.id,
-          email: userRecord.email,
-          employeeId: userRecord.employeeId ?? null,
-          roleId: userRecord.roleId ?? null,
-          companyId: userRecord.companyId ?? null,
-          branchId: userRecord.branchId ?? null,
-          branchType: userRecord.branch?.type ?? null,
-          locationId: userRecord.locationId ?? null,
-          userType: userRecord.userType ?? null,
-          cashierType: userRecord.cashierType ?? null,
-          permissions,
+          sub: payload.sub,
+          email: payload.email,
+          employeeId: payload.employeeId ?? null,
+          roleId: payload.roleId ?? null,
+          companyId: payload.companyId ?? null,
+          branchId: payload.branchId ?? null,
+          branchType: payload.branchType ?? null,
+          locationId: payload.locationId ?? null,
+          userType: payload.userType ?? null,
+          cashierType: payload.cashierType ?? null,
+          permissions: Array.isArray(refreshTokenRow.permissionsSnapshot)
+            ? refreshTokenRow.permissionsSnapshot
+            : [],
           iat: payload.iat,
           exp: payload.exp,
         } satisfies AuthUser,

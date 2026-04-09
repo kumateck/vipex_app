@@ -43,6 +43,7 @@ import {
   updateDepartmentCtrl,
   updateEmployeeCtrl,
   updateJobTitleCtrl,
+  updateLeaveRequestCtrl,
 } from './controller';
 
 export const hrRoutes = new Elysia({ name: 'hr' })
@@ -746,6 +747,56 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         requireModuleEnabled('hr'),
       ],
       detail: { tags: ['HR'], summary: 'Create leave request', operationId: 'createLeaveRequest' },
+    },
+  )
+  .patch(
+    '/leave-requests/:id',
+    async ({ params, body, user }) => {
+      const selectionMode = body.selectionMode;
+      const normalizedWeekCount =
+        body.weekCount === undefined
+          ? undefined
+          : selectionMode === 1
+            ? Math.max(1, Math.floor(Number(body.weekCount ?? 1)))
+            : body.weekCount;
+
+      return updateLeaveRequestCtrl(params.id, (user as AuthUser).companyId!, {
+        employeeId: body.employeeId,
+        leaveTypeId: body.leaveTypeId,
+        dateFrom: body.dateFrom ? new Date(body.dateFrom) : undefined,
+        dateTo: body.dateTo ? new Date(body.dateTo) : undefined,
+        selectionMode,
+        weekStartDate:
+          body.weekStartDate === undefined
+            ? undefined
+            : body.weekStartDate
+              ? new Date(body.weekStartDate)
+              : null,
+        weekCount: normalizedWeekCount,
+        isEmergency: body.isEmergency,
+        reason: body.reason,
+        updatedBy: (user as AuthUser).sub,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        employeeId: t.Optional(UUID),
+        leaveTypeId: t.Optional(UUID),
+        dateFrom: t.Optional(t.String({ format: 'date' })),
+        dateTo: t.Optional(t.String({ format: 'date' })),
+        selectionMode: t.Optional(t.Number({ minimum: 0, maximum: 1 })),
+        weekStartDate: t.Optional(t.Union([t.String({ format: 'date' }), t.Null()])),
+        weekCount: t.Optional(t.Union([t.Number({ minimum: 1 }), t.Null()])),
+        isEmergency: t.Optional(t.Boolean()),
+        reason: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCreateLeaveRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: { tags: ['HR'], summary: 'Update leave request', operationId: 'updateLeaveRequest' },
     },
   )
   .get(

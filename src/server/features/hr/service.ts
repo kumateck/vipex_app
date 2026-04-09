@@ -543,7 +543,7 @@ export async function listLeaveSwapsSvc(p: ListLeaveSwapParams) {
   return listLeaveSwapsRepo(p);
 }
 
-export async function createLeaveRequestSvc(input: {
+async function prepareLeaveRequestPayload(input: {
   companyId: string;
   employeeId: string;
   leaveTypeId: string;
@@ -554,7 +554,7 @@ export async function createLeaveRequestSvc(input: {
   weekCount?: number | null;
   isEmergency?: boolean;
   reason?: string | null;
-  createdBy: string;
+  excludeLeaveRequestIds?: string[];
 }) {
   const employee = await getEmployeeSvc(input.employeeId);
   if (employee.companyId !== input.companyId) throw NotFound('Employee not found');
@@ -563,6 +563,7 @@ export async function createLeaveRequestSvc(input: {
   if (!leaveType || leaveType.companyId !== input.companyId || !leaveType.isActive) {
     throw NotFound('Leave type not found');
   }
+
   let normalizedDateFrom = startOfDay(input.dateFrom);
   let normalizedDateTo = startOfDay(input.dateTo);
   const selectionMode =
@@ -584,8 +585,10 @@ export async function createLeaveRequestSvc(input: {
     normalizedDateTo.setDate(normalizedDateTo.getDate() + requestedWeeks * 7 - 1);
   }
 
-  if (normalizedDateTo < normalizedDateFrom)
+  if (normalizedDateTo < normalizedDateFrom) {
     throw Conflict('Leave end date cannot be before start date');
+  }
+
   const today = startOfDay(new Date());
   if (normalizedDateFrom < today) {
     throw Conflict('Leave start date cannot be in the past');
@@ -624,6 +627,7 @@ export async function createLeaveRequestSvc(input: {
         employeeId: input.employeeId,
         from: yearStart,
         to: yearEnd,
+        excludeLeaveRequestIds: input.excludeLeaveRequestIds,
       });
       if (bookedDays + requestedDays > defaultLeaveDays) {
         throw Conflict(
@@ -638,8 +642,7 @@ export async function createLeaveRequestSvc(input: {
     ? ApprovalStatus.PENDING
     : ApprovalStatus.APPROVED;
 
-  const created = await createLeaveRequestRepo({
-    companyId: input.companyId,
+  return {
     employeeId: input.employeeId,
     leaveTypeId: input.leaveTypeId,
     dateFrom: normalizedDateFrom,
@@ -651,7 +654,50 @@ export async function createLeaveRequestSvc(input: {
     isEmergency,
     reason,
     managerApprovalStatus,
-    managerApprovedAt: managerApprovalStatus === ApprovalStatus.APPROVED ? new Date() : null,
+  };
+}
+
+export async function createLeaveRequestSvc(input: {
+  companyId: string;
+  employeeId: string;
+  leaveTypeId: string;
+  dateFrom: Date;
+  dateTo: Date;
+  selectionMode?: number;
+  weekStartDate?: Date | null;
+  weekCount?: number | null;
+  isEmergency?: boolean;
+  reason?: string | null;
+  createdBy: string;
+}) {
+  const leaveRequestPayload = await prepareLeaveRequestPayload({
+    companyId: input.companyId,
+    employeeId: input.employeeId,
+    leaveTypeId: input.leaveTypeId,
+    dateFrom: input.dateFrom,
+    dateTo: input.dateTo,
+    selectionMode: input.selectionMode,
+    weekStartDate: input.weekStartDate,
+    weekCount: input.weekCount,
+    isEmergency: input.isEmergency,
+    reason: input.reason,
+  });
+
+  const created = await createLeaveRequestRepo({
+    companyId: input.companyId,
+    employeeId: leaveRequestPayload.employeeId,
+    leaveTypeId: leaveRequestPayload.leaveTypeId,
+    dateFrom: leaveRequestPayload.dateFrom,
+    dateTo: leaveRequestPayload.dateTo,
+    daysCount: leaveRequestPayload.daysCount,
+    selectionMode: leaveRequestPayload.selectionMode,
+    weekStartDate: leaveRequestPayload.weekStartDate,
+    weekCount: leaveRequestPayload.weekCount,
+    isEmergency: leaveRequestPayload.isEmergency,
+    reason: leaveRequestPayload.reason,
+    managerApprovalStatus: leaveRequestPayload.managerApprovalStatus,
+    managerApprovedAt:
+      leaveRequestPayload.managerApprovalStatus === ApprovalStatus.APPROVED ? new Date() : null,
     status: LeaveRequestStatus.PENDING,
     createdBy: input.createdBy,
   });
@@ -664,15 +710,99 @@ export async function createLeaveRequestSvc(input: {
     action: 'LEAVE_REQUEST_CREATED',
     message: 'Leave request created',
     metadata: {
-      employeeId: input.employeeId,
-      leaveTypeId: input.leaveTypeId,
-      dateFrom: input.dateFrom.toISOString(),
-      dateTo: input.dateTo.toISOString(),
-      managerApprovalStatus,
+      employeeId: leaveRequestPayload.employeeId,
+      leaveTypeId: leaveRequestPayload.leaveTypeId,
+      dateFrom: leaveRequestPayload.dateFrom.toISOString(),
+      dateTo: leaveRequestPayload.dateTo.toISOString(),
+      managerApprovalStatus: leaveRequestPayload.managerApprovalStatus,
     },
   });
 
   return { id: created?.id };
+}
+
+export async function updateLeaveRequestSvc(
+  id: string,
+  companyId: string,
+  input: {
+    employeeId?: string;
+    leaveTypeId?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    selectionMode?: number;
+    weekStartDate?: Date | null;
+    weekCount?: number | null;
+    isEmergency?: boolean;
+    reason?: string | null;
+    updatedBy: string;
+  },
+) {
+  const request = await getLeaveRequestRepo(id);
+  if (!request || request.companyId !== companyId) throw NotFound('Leave request not found');
+  if (request.status !== LeaveRequestStatus.PENDING) {
+    throw Conflict('Only pending leave requests can be edited');
+  }
+  if (
+    request.managerApprovalStatus !== ApprovalStatus.PENDING &&
+    Boolean(request.supervisorEmployeeId)
+  ) {
+    throw Conflict('Leave request cannot be edited after manager decision');
+  }
+
+  const leaveRequestPayload = await prepareLeaveRequestPayload({
+    companyId,
+    employeeId: input.employeeId ?? request.employeeId,
+    leaveTypeId: input.leaveTypeId ?? request.leaveTypeId,
+    dateFrom: input.dateFrom ?? request.dateFrom,
+    dateTo: input.dateTo ?? request.dateTo,
+    selectionMode: input.selectionMode ?? request.selectionMode,
+    weekStartDate:
+      input.weekStartDate === undefined ? (request.weekStartDate ?? null) : input.weekStartDate,
+    weekCount: input.weekCount === undefined ? (request.weekCount ?? null) : input.weekCount,
+    isEmergency: input.isEmergency ?? request.isEmergency,
+    reason: input.reason === undefined ? request.reason : input.reason,
+    excludeLeaveRequestIds: [id],
+  });
+
+  const updated = await updateLeaveRequestRepo(id, {
+    employeeId: leaveRequestPayload.employeeId,
+    leaveTypeId: leaveRequestPayload.leaveTypeId,
+    dateFrom: leaveRequestPayload.dateFrom,
+    dateTo: leaveRequestPayload.dateTo,
+    daysCount: leaveRequestPayload.daysCount,
+    selectionMode: leaveRequestPayload.selectionMode,
+    weekStartDate: leaveRequestPayload.weekStartDate,
+    weekCount: leaveRequestPayload.weekCount,
+    isEmergency: leaveRequestPayload.isEmergency,
+    reason: leaveRequestPayload.reason,
+    managerApprovalStatus: leaveRequestPayload.managerApprovalStatus,
+    managerApprovedBy: null,
+    managerApprovedAt:
+      leaveRequestPayload.managerApprovalStatus === ApprovalStatus.APPROVED ? new Date() : null,
+    managerRejectionReason: null,
+    status: LeaveRequestStatus.PENDING,
+    approvedBy: null,
+    approvedAt: null,
+    rejectionReason: null,
+  });
+
+  await recordAuditLog({
+    companyId,
+    actorUserId: input.updatedBy,
+    entityType: 'leave_request',
+    entityId: id,
+    action: 'LEAVE_REQUEST_UPDATED',
+    message: 'Leave request updated',
+    metadata: {
+      employeeId: leaveRequestPayload.employeeId,
+      leaveTypeId: leaveRequestPayload.leaveTypeId,
+      dateFrom: leaveRequestPayload.dateFrom.toISOString(),
+      dateTo: leaveRequestPayload.dateTo.toISOString(),
+      managerApprovalStatus: leaveRequestPayload.managerApprovalStatus,
+    },
+  });
+
+  return { id: updated?.id };
 }
 
 async function assertManagerCanApproveLeaveRequest(

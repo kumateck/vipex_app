@@ -33,6 +33,7 @@ import {
   updateDepartmentSvc,
   updateEmployeeSvc,
   updateJobTitleSvc,
+  updateLeaveRequestSvc,
 } from './service';
 
 export async function listDepartmentsCtrl(
@@ -289,6 +290,14 @@ export async function listLeaveCalendarCtrl(input: {
 
 export async function createLeaveRequestCtrl(input: Parameters<typeof createLeaveRequestSvc>[0]) {
   return createLeaveRequestSvc(input);
+}
+
+export async function updateLeaveRequestCtrl(
+  id: string,
+  companyId: string,
+  input: Parameters<typeof updateLeaveRequestSvc>[2],
+) {
+  return updateLeaveRequestSvc(id, companyId, input);
 }
 
 export async function createLeaveSwapCtrl(input: Parameters<typeof createLeaveSwapSvc>[0]) {

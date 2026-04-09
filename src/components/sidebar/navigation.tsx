@@ -181,8 +181,13 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadParcelScan,
           },
           {
-            title: 'Internal Transfers',
+            title: 'Internal Transfer Create',
             url: '/parcels/internal-transfers',
+            permissionKey: PermissionKeys.CanReadParcelInternalTransfers,
+          },
+          {
+            title: 'Internal Transfer History',
+            url: '/parcels/internal-transfers/history',
             permissionKey: PermissionKeys.CanReadParcelInternalTransfers,
           },
           {

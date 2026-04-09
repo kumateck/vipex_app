@@ -556,6 +556,33 @@ export const hrApi = api.injectEndpoints({
       }),
       invalidatesTags: invalidateEntityListTag('HR'),
     }),
+    updateLeaveRequest: builder.mutation<
+      { id?: string },
+      {
+        id: string;
+        body: {
+          employeeId?: string;
+          leaveTypeId?: string;
+          dateFrom?: string;
+          dateTo?: string;
+          selectionMode?: number;
+          weekStartDate?: string | null;
+          weekCount?: number | null;
+          isEmergency?: boolean;
+          reason?: string | null;
+        };
+      }
+    >({
+      query: ({ id, body }) => ({
+        url: `/hr/leave-requests/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'HR', id },
+        ...invalidateEntityListTag('HR'),
+      ],
+    }),
     getLeaveCalendar: builder.query<
       LeaveCalendarResponse,
       {
@@ -710,6 +737,7 @@ export const {
   useCreateLeaveTypeMutation,
   useListLeaveRequestsQuery,
   useCreateLeaveRequestMutation,
+  useUpdateLeaveRequestMutation,
   useGetLeaveCalendarQuery,
   useListLeaveSwapsQuery,
   useCreateLeaveSwapMutation,

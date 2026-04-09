@@ -239,6 +239,13 @@
       "when": 1775716629000,
       "tag": "0040_inventory_products_is_recoverable_hotfix",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1775731800000,
+      "tag": "0042_refresh_tokens_permissions_snapshot",
+      "breakpoints": true
     }
   ]
 }

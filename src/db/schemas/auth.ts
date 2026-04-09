@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, varchar, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, varchar, index, uniqueIndex, jsonb } from 'drizzle-orm/pg-core';
 import { users } from './core';
 import { createId } from '@paralleldrive/cuid2';
 
@@ -19,6 +19,7 @@ export const refreshTokens = pgTable(
     replacedByHash: varchar('replaced_by_hash', { length: 64 }),
     userAgent: text('user_agent'),
     ip: varchar('ip', { length: 64 }),
+    permissionsSnapshot: jsonb('permissions_snapshot').$type<string[]>().notNull().default([]),
   },
   (t) => ({
     byUser: index('rt_user_idx').on(t.userId),
