@@ -1,3 +1,3 @@
-import { ProcurementFleetPoliciesCreatePage } from '@/features/procurement';
+import { ProcurementFleetPoliciesCreateEditPage } from '@/features/procurement';
 
-export default ProcurementFleetPoliciesCreatePage;
+export default ProcurementFleetPoliciesCreateEditPage;

@@ -1,3 +1,3 @@
-import { FleetVehiclesEditPage } from '@/features/fleet-transport';
+import { FleetVehiclesCreateEditPage } from '@/features/fleet-transport';
 
-export default FleetVehiclesEditPage;
+export default FleetVehiclesCreateEditPage;

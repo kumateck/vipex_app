@@ -1,3 +1,3 @@
-import { FleetShiftRostersCreatePage } from '@/features/fleet-transport';
+import { FleetShiftRostersCreateEditPage } from '@/features/fleet-transport';
 
-export default FleetShiftRostersCreatePage;
+export default FleetShiftRostersCreateEditPage;
