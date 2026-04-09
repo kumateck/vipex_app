@@ -22,7 +22,7 @@ export function FleetDriverRosterHistoryPage() {
   const [employeeId, setEmployeeId] = useState('');
   const { data: drivers = [] } = useListFleetDriverOptionsQuery();
   const { data: rosters, isLoading } = useListFleetShiftRostersQuery(
-    { employeeId, pageSize: 50 },
+    { pageSize: 50, filters: { employeeId } },
     { skip: !employeeId },
   );
 

@@ -37,6 +37,7 @@ import {
   stockCountSessions,
   stockCountSessionLines,
   stockMovements,
+  stockAdjustments,
   stockTransferAcceptances,
   stockRequestAcknowledgements,
   inventoryApprovalPolicies,
@@ -366,6 +367,7 @@ export async function createProductSvc(input: {
       .insert(products)
       .values({ ...productValues, isDeleted: false })
       .returning({ id: products.id });
+    if (!product) throw Conflict('Failed to create product');
 
     await tx.insert(productUnitConversions).values(
       normalizedConversions.map((conversion, index) => ({
@@ -1111,7 +1113,10 @@ export async function getStockLotAnalyticsSvc(input: {
       issuedQuantity: Number(movement.quantity ?? 0).toString(),
       issuedAt: movement.createdAt?.toISOString?.() ?? movement.createdAt,
       issuedLotBatchNumber: issuedLot.batchNumber,
-      issuedLotExpiryDate: issuedLot.expiryDate?.toISOString?.() ?? issuedLot.expiryDate,
+      issuedLotExpiryDate:
+        issuedLot.expiryDate instanceof Date
+          ? issuedLot.expiryDate.toISOString()
+          : (issuedLot.expiryDate ?? null),
       expectedEarliestExpiryDate: earliestExpiryTs
         ? new Date(earliestExpiryTs).toISOString()
         : null,
@@ -1217,6 +1222,7 @@ export async function createStockCountSessionSvc(input: {
         createdBy: input.createdBy,
       })
       .returning({ id: stockCountSessions.id });
+    if (!session) throw Conflict('Failed to create stock count session');
 
     const levelRows = await tx
       .select({
@@ -2895,6 +2901,7 @@ export async function createStockRequestSvc(input: {
         requestedBy: input.requestedBy,
       })
       .returning({ id: stockRequests.id });
+    if (!request) throw Conflict('Failed to create stock request');
 
     await tx.insert(stockRequestLines).values(
       input.lines.map((line) => ({
@@ -3064,12 +3071,14 @@ export async function fulfillStockRequestLineSvc(input: {
   }
 
   await db.transaction(async (tx) => {
+    const transferLotId =
+      input.sourceLotId ?? (lotMoves.length === 1 ? (lotMoves[0]?.lotId ?? null) : null);
     await tx.insert(stockMovements).values({
       companyId: request.companyId,
       productId: line.productId,
       locationId: input.fromLocationId,
       movementType: StockMovementType.TRANSFER_OUT,
-      lotId: input.sourceLotId ?? (lotMoves.length === 1 ? lotMoves[0].lotId : null),
+      lotId: transferLotId,
       quantity: input.fulfillQuantity,
       referenceId: request.id,
       referenceType: 'stock_request',
@@ -3609,6 +3618,7 @@ export async function createInventoryApprovalPolicySvc(input: {
       createdBy: input.createdBy,
     })
     .returning({ id: inventoryApprovalPolicies.id });
+  if (!row) throw Conflict('Failed to create approval policy');
 
   await appendInventoryEventSvc({
     companyId: input.companyId,
@@ -3666,6 +3676,7 @@ export async function submitInventoryApprovalRequestSvc(input: {
       dueAt,
     })
     .returning({ id: inventoryApprovalRequests.id });
+  if (!created) throw Conflict('Failed to create approval request');
 
   await appendInventoryEventSvc({
     companyId: input.companyId,
@@ -3955,6 +3966,7 @@ export async function generateReplenishmentProposalSvc(input: {
       generatedAt: new Date(),
     })
     .returning({ id: inventoryReplenishmentProposals.id });
+  if (!proposal) throw Conflict('Failed to generate replenishment proposal');
 
   if (suggestions.rows.length) {
     await db.insert(inventoryReplenishmentProposalLines).values(
@@ -4121,6 +4133,7 @@ export async function createInventoryTaskSvc(input: {
       createdBy: input.createdBy,
     })
     .returning({ id: inventoryTasks.id });
+  if (!task) throw Conflict('Failed to create inventory task');
   await appendInventoryEventSvc({
     companyId: input.companyId,
     eventType: InventoryEventType.TASK_CREATED,
@@ -4260,6 +4273,7 @@ export async function postInventoryCorrectionSvc(input: {
       createdBy: input.actorUserId,
     })
     .returning({ id: stockMovements.id });
+  if (!movement) throw Conflict('Failed to post inventory correction movement');
 
   await db.insert(stockAdjustments).values({
     companyId: input.companyId,
@@ -4431,6 +4445,7 @@ export async function createStockMaintenanceRecordSvc(input: {
         createdBy: input.createdBy,
       })
       .returning({ id: stockMaintenanceRecords.id });
+    if (!record) throw Conflict('Failed to create stock maintenance record');
 
     await tx.insert(stockMovements).values({
       companyId: input.companyId,

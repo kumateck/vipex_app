@@ -1171,21 +1171,25 @@ export async function getFleetTripTimelineCtrl(input: { id: string; companyId: s
       return {
         ...item,
         occurredAt: item.occurredAt.toISOString(),
-        payload: toFleetTripEventDto(item.payload),
+        payload: toFleetTripEventDto(item.payload as Parameters<typeof toFleetTripEventDto>[0]),
       };
     }
     if (item.kind === 'status_update') {
       return {
         ...item,
         occurredAt: item.occurredAt.toISOString(),
-        payload: toFleetTripStatusUpdateDto(item.payload),
+        payload: toFleetTripStatusUpdateDto(
+          item.payload as Parameters<typeof toFleetTripStatusUpdateDto>[0],
+        ),
       };
     }
     if (item.kind === 'telemetry') {
       return {
         ...item,
         occurredAt: item.occurredAt.toISOString(),
-        payload: toFleetTripTelemetryDto(item.payload),
+        payload: toFleetTripTelemetryDto(
+          item.payload as Parameters<typeof toFleetTripTelemetryDto>[0],
+        ),
       };
     }
     return {

@@ -45,7 +45,9 @@ export function FleetComplianceOpsPage() {
     refetch: refetchIncidents,
   } = useListFleetComplianceIncidentsQuery({
     pageSize: 50,
-    caseStatus: caseStatus === 'all' ? undefined : caseStatus,
+    filters: {
+      caseStatus: caseStatus === 'all' ? undefined : caseStatus,
+    },
   });
   const { data: acknowledgmentsRes, isLoading: loadingAcks } =
     useListFleetPolicyAcknowledgmentsQuery({ pageSize: 50 });

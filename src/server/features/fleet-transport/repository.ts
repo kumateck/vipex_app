@@ -1241,6 +1241,7 @@ export async function listFleetTripsRepo(params: ListFleetTripsParams) {
       id: fleetTrips.id,
       tripNo: fleetTrips.tripNo,
       branchId: fleetTrips.branchId,
+      branchName: branches.name,
       vehicleId: fleetTrips.vehicleId,
       vehiclePlateNumber: fleetVehicles.plateNumber,
       routePlanId: fleetTrips.routePlanId,
@@ -1260,6 +1261,7 @@ export async function listFleetTripsRepo(params: ListFleetTripsParams) {
     })
     .from(fleetTrips)
     .leftJoin(fleetVehicles, eq(fleetVehicles.id, fleetTrips.vehicleId))
+    .leftJoin(branches, eq(branches.id, fleetTrips.branchId))
     .leftJoin(fleetRoutePlans, eq(fleetRoutePlans.id, fleetTrips.routePlanId))
     .leftJoin(employees, eq(employees.id, fleetTrips.driverEmployeeId))
     .where(and(...where))
@@ -2038,7 +2040,7 @@ export async function listFleetTripCustomerStatsRepo(companyId: string, tripIds:
     .select({
       tripId: fleetTripLoadMatches.tripId,
       senderId: parcels.senderId,
-      senderName: customers.name,
+      senderName: customers.fullname,
       parcelCount: sql<number>`count(*)`,
       revenuePsw: sql<number>`coalesce(sum(${parcels.chargePsw}), 0)`,
     })
@@ -2052,7 +2054,7 @@ export async function listFleetTripCustomerStatsRepo(companyId: string, tripIds:
         eq(fleetTripLoadMatches.status, 2),
       ),
     )
-    .groupBy(fleetTripLoadMatches.tripId, parcels.senderId, customers.name);
+    .groupBy(fleetTripLoadMatches.tripId, parcels.senderId, customers.fullname);
 }
 
 export async function sumApprovedFuelLogsForTripWindowRepo(input: {

@@ -2036,7 +2036,7 @@ export const fleetTransportApi = api.injectEndpoints({
 
     listFleetMaintenancePartMovements: builder.query<
       ServerListResponse<FleetMaintenancePartMovement>,
-      ServerListQuery<{ partId: string }>
+      { partId: string; page?: number; pageSize?: number; search?: string }
     >({
       query: ({ partId, ...query }) => ({
         url: `/fleet-transport/maintenance/parts/${partId}/stock-movements`,

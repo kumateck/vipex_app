@@ -68,9 +68,10 @@ async function run() {
   const apiBaseUrl = process.env.API_BASE_URL ?? 'http://localhost:3000';
   let bearer = process.env.FLEET_JOB_BEARER_TOKEN ?? process.env.API_BEARER_TOKEN ?? '';
   if (!bearer.trim()) {
-    let jobUserId = process.env.FLEET_JOB_USER_ID?.trim();
+    let jobUserId: string | undefined = process.env.FLEET_JOB_USER_ID?.trim();
     if (!jobUserId) {
-      jobUserId = await discoverFleetJobUserId();
+      const discovered = await discoverFleetJobUserId();
+      jobUserId = discovered ?? undefined;
     }
     if (jobUserId) {
       const { signAccessToken } = await import('../src/server/utils/jwt');

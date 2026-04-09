@@ -593,7 +593,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
         actorUserId: (user as AuthUser).sub,
         severity: body.severity ?? undefined,
         actionTaken: body.actionTaken ?? undefined,
-        resolvedAt: body.resolvedAt ? new Date(body.resolvedAt) : body.resolvedAt,
+        resolvedAt: body.resolvedAt == null ? body.resolvedAt : new Date(body.resolvedAt),
       }),
     {
       params: t.Object({ id: UUID }),
@@ -619,7 +619,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
         actorUserId: (user as AuthUser).sub,
         action: body.action,
         actionTaken: body.actionTaken ?? undefined,
-        resolvedAt: body.resolvedAt ? new Date(body.resolvedAt) : body.resolvedAt,
+        resolvedAt: body.resolvedAt == null ? body.resolvedAt : new Date(body.resolvedAt),
       }),
     {
       params: t.Object({ id: UUID }),

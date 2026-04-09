@@ -176,8 +176,8 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
   if (pathname.startsWith('/fleet-transport/compliance')) return 'CanReadFleetTransport';
   if (pathname.startsWith('/fleet-transport/maintenance')) return 'CanReadFleetTransport';
   if (pathname.startsWith('/fleet-transport/dispatch/route-assignments'))
-    return 'CanAssignFleetTrips';
-  if (pathname.startsWith('/fleet-transport/dispatch/load-matching')) return 'CanAssignFleetTrips';
+    return 'CanAssignFleetCrew';
+  if (pathname.startsWith('/fleet-transport/dispatch/load-matching')) return 'CanAssignFleetCrew';
   if (pathname.startsWith('/fleet-transport/dispatch/check-in')) return 'CanStartFleetTrips';
   if (pathname.startsWith('/fleet-transport/dispatch/check-out')) return 'CanCloseFleetTrips';
   if (pathname.startsWith('/fleet-transport/dispatch')) return 'CanReadFleetTransport';

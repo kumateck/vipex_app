@@ -91,27 +91,6 @@ export function FleetMaintenancePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Parts Snapshot</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            {(dashboard?.partsSnapshot.length ?? 0) === 0 ? (
-              <p className="text-muted-foreground">No parts added yet.</p>
-            ) : null}
-            {dashboard?.partsSnapshot.map((part) => (
-              <div key={part.partId} className="rounded border p-3">
-                <p className="font-medium">
-                  {part.sku} - {part.name}
-                </p>
-                <p className="text-muted-foreground">
-                  Qty on hand: {part.qtyOnHand} {part.unit} | Reorder level: {part.reorderLevel}
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
             <CardTitle>Reliability (MTBF/MTTR)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">

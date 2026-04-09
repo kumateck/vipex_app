@@ -117,6 +117,11 @@ type StockRequestLineLike = {
   acknowledgements?: TransferAcceptanceRowLike[];
 } & Record<string, unknown>;
 
+function toIsoIfDate(value: Date | string | null | undefined) {
+  if (value instanceof Date) return value.toISOString();
+  return value ?? null;
+}
+
 // Product Categories
 export async function listProductCategoriesCtrl(
   q: PaginationRequestDto<{ companyId?: string | null }>,
@@ -191,7 +196,9 @@ export async function listProductsCtrl(
     data: data.map((p) => ({
       ...p,
       minStockLevel: p.minStockLevel.toString(),
-      unitConversions: (p.unitConversions ?? []).map((conversion: UnitConversionLike) => ({
+      unitConversions: (
+        (p as { unitConversions?: UnitConversionLike[] }).unitConversions ?? []
+      ).map((conversion: UnitConversionLike) => ({
         ...conversion,
         factorToBase: conversion.factorToBase.toString(),
       })),
@@ -864,9 +871,9 @@ export async function getStockTransferCtrl(id: string) {
             acceptedQuantity: Number(row.acceptedQuantity ?? 0).toString(),
             damagedQuantity: Number(row.damagedQuantity ?? 0).toString(),
             missingQuantity: Number(row.missingQuantity ?? 0).toString(),
-            acknowledgedAt: row.acknowledgedAt?.toISOString?.() ?? row.acknowledgedAt,
-            createdAt: row.createdAt?.toISOString?.() ?? row.createdAt,
-            updatedAt: row.updatedAt?.toISOString?.() ?? row.updatedAt,
+            acknowledgedAt: toIsoIfDate(row.acknowledgedAt),
+            createdAt: toIsoIfDate(row.createdAt),
+            updatedAt: toIsoIfDate(row.updatedAt),
           })),
         }
       : undefined,
@@ -1109,9 +1116,9 @@ export async function getStockRequestCtrl(id: string) {
       ).map((row) => ({
         ...row,
         acknowledgedQuantity: Number(row.acknowledgedQuantity ?? 0).toString(),
-        acknowledgedAt: row.acknowledgedAt?.toISOString?.() ?? row.acknowledgedAt,
-        createdAt: row.createdAt?.toISOString?.() ?? row.createdAt,
-        updatedAt: row.updatedAt?.toISOString?.() ?? row.updatedAt,
+        acknowledgedAt: toIsoIfDate(row.acknowledgedAt),
+        createdAt: toIsoIfDate(row.createdAt),
+        updatedAt: toIsoIfDate(row.updatedAt),
       })),
       createdAt: line.createdAt?.toISOString?.() ?? line.createdAt,
       updatedAt: line.updatedAt?.toISOString?.() ?? line.updatedAt,
@@ -1654,7 +1661,9 @@ export async function getReplenishmentProposalCtrl(id: string) {
       minStockLevel: Number(line.minStockLevel ?? 0).toString(),
       suggestedQuantity: Number(line.suggestedQuantity ?? 0).toString(),
       approvedQuantity:
-        line.approvedQuantity === null ? null : Number(line.approvedQuantity).toString(),
+        (line as { approvedQuantity?: number | null }).approvedQuantity === null
+          ? null
+          : Number((line as { approvedQuantity?: number | null }).approvedQuantity ?? 0).toString(),
       createdAt: line.createdAt?.toISOString?.() ?? line.createdAt,
       updatedAt: line.updatedAt?.toISOString?.() ?? line.updatedAt,
     })),
@@ -1680,7 +1689,7 @@ export async function listInventoryTasksCtrl(input: {
     ...row,
     plannedQuantity: Number(row.plannedQuantity ?? 0).toString(),
     processedQuantity: Number(row.processedQuantity ?? 0).toString(),
-    dueAt: row.dueAt?.toISOString?.() ?? row.dueAt,
+    dueAt: toIsoIfDate((row as { dueAt?: Date | string | null }).dueAt),
     startedAt: row.startedAt?.toISOString?.() ?? row.startedAt,
     completedAt: row.completedAt?.toISOString?.() ?? row.completedAt,
     createdAt: row.createdAt?.toISOString?.() ?? row.createdAt,
@@ -1694,7 +1703,7 @@ export async function getInventoryTaskCtrl(id: string) {
     ...row,
     plannedQuantity: Number(row.plannedQuantity ?? 0).toString(),
     processedQuantity: Number(row.processedQuantity ?? 0).toString(),
-    dueAt: row.dueAt?.toISOString?.() ?? row.dueAt,
+    dueAt: toIsoIfDate((row as { dueAt?: Date | string | null }).dueAt),
     startedAt: row.startedAt?.toISOString?.() ?? row.startedAt,
     completedAt: row.completedAt?.toISOString?.() ?? row.completedAt,
     createdAt: row.createdAt?.toISOString?.() ?? row.createdAt,
@@ -1704,7 +1713,7 @@ export async function getInventoryTaskCtrl(id: string) {
       quantity: Number(scan.quantity ?? 0).toString(),
       scannedAt: scan.scannedAt?.toISOString?.() ?? scan.scannedAt,
       createdAt: scan.createdAt?.toISOString?.() ?? scan.createdAt,
-      updatedAt: scan.updatedAt?.toISOString?.() ?? scan.updatedAt,
+      updatedAt: toIsoIfDate((scan as { updatedAt?: Date | string | null }).updatedAt),
     })),
   };
 }

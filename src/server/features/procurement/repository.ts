@@ -486,7 +486,12 @@ export async function findProcurementFleetPolicyByBranchRepo(
     where.push(eq(procurementFleetPolicies.branchId, branchId));
   }
   const [row] = await db
-    .select({ id: procurementFleetPolicies.id })
+    .select({
+      id: procurementFleetPolicies.id,
+      preferredSupplierId: procurementFleetPolicies.preferredSupplierId,
+      demandUrgency: procurementFleetPolicies.demandUrgency,
+      replenishMultiplier: procurementFleetPolicies.replenishMultiplier,
+    })
     .from(procurementFleetPolicies)
     .where(and(...where))
     .limit(1);
@@ -551,13 +556,10 @@ export type ListProcurementGoodsReceiptsParams = {
 export async function createProcurementDemandConsolidationRepo(
   values: typeof procurementDemandConsolidations.$inferInsert,
 ) {
-  const [row] = await db
-    .insert(procurementDemandConsolidations)
-    .values(values)
-    .returning({
-      id: procurementDemandConsolidations.id,
-      consolidationNo: procurementDemandConsolidations.consolidationNo,
-    });
+  const [row] = await db.insert(procurementDemandConsolidations).values(values).returning({
+    id: procurementDemandConsolidations.id,
+    consolidationNo: procurementDemandConsolidations.consolidationNo,
+  });
   return row ?? null;
 }
 

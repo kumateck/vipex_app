@@ -1559,8 +1559,13 @@ export async function setFleetComplianceEscalationPolicySvc(input: {
     moduleState.settings && typeof moduleState.settings === 'object'
       ? (moduleState.settings as Record<string, unknown>)
       : {};
+  const rawExistingPolicy = baseSettings.complianceEscalationPolicy;
+  const existingPolicy =
+    rawExistingPolicy && typeof rawExistingPolicy === 'object'
+      ? (rawExistingPolicy as Record<string, unknown>)
+      : {};
   const nextPolicy = normalizeFleetComplianceEscalationPolicy({
-    ...baseSettings.complianceEscalationPolicy,
+    ...existingPolicy,
     ...input.policy,
   });
   const nextSettings = {
@@ -4697,6 +4702,24 @@ export async function getFleetDispatchExceptionQueueSvc(input: {
   branchId?: string | null;
   limit?: number;
 }) {
+  type DispatchExceptionItem = {
+    tripId: string;
+    tripNo: string;
+    branchId: string | null;
+    branchName: string | null;
+    vehicleId: string;
+    vehiclePlateNumber: string | null;
+    driverEmployeeId: string;
+    driverEmployeeName: string | null;
+    status: number;
+    category: 'missing_schedule' | 'route_unassigned' | 'resource_conflict' | 'delayed_in_progress';
+    reason: string;
+    plannedStartAt: Date | null;
+    plannedEndAt: Date | null;
+    startedAt: Date | null;
+    endedAt: Date | null;
+  };
+
   const limit = Math.max(1, Math.min(500, input.limit ?? 200));
   const now = Date.now();
   const [routeQueue, inProgressTrips] = await Promise.all([
@@ -4716,7 +4739,7 @@ export async function getFleetDispatchExceptionQueueSvc(input: {
     }),
   ]);
 
-  const routeExceptions = routeQueue.data
+  const routeExceptions: DispatchExceptionItem[] = routeQueue.data
     .filter((row) => !row.scheduleComplete || !row.routeAssigned || row.hasConflict)
     .map((row) => ({
       tripId: row.id,
@@ -4746,7 +4769,7 @@ export async function getFleetDispatchExceptionQueueSvc(input: {
       endedAt: row.endedAt,
     }));
 
-  const delayedExceptions = inProgressTrips.data
+  const delayedExceptions: DispatchExceptionItem[] = inProgressTrips.data
     .filter((row) => row.plannedEndAt && row.plannedEndAt.getTime() < now)
     .map((row) => ({
       tripId: row.id,
@@ -4766,7 +4789,7 @@ export async function getFleetDispatchExceptionQueueSvc(input: {
       endedAt: row.endedAt,
     }));
 
-  const dedup = new Map<string, (typeof routeExceptions)[number]>();
+  const dedup = new Map<string, DispatchExceptionItem>();
   for (const item of [...routeExceptions, ...delayedExceptions]) {
     const key = `${item.tripId}:${item.category}`;
     if (!dedup.has(key)) dedup.set(key, item);

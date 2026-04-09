@@ -13,6 +13,14 @@ function formatDateTime(value: string | null | undefined) {
   return new Date(value).toLocaleString();
 }
 
+function durationMinutes(startedAt: string, endedAt: string | null) {
+  if (!endedAt) return null;
+  const start = new Date(startedAt).getTime();
+  const end = new Date(endedAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+  return (end - start) / 60000;
+}
+
 export function FleetMaintenanceDowntimePage() {
   const { data: events = [] } = useListFleetDowntimeEventsQuery();
   const [closeDowntime, { isLoading: closingDowntime }] = useCloseFleetDowntimeEventMutation();
@@ -57,8 +65,8 @@ export function FleetMaintenanceDowntimePage() {
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Ended: {formatDateTime(event.endedAt)} | Duration(min):{' '}
-                  {typeof event.durationMinutes === 'number'
-                    ? event.durationMinutes.toFixed(2)
+                  {typeof durationMinutes(event.startedAt, event.endedAt) === 'number'
+                    ? durationMinutes(event.startedAt, event.endedAt)?.toFixed(2)
                     : '-'}
                 </p>
                 {!event.endedAt ? (

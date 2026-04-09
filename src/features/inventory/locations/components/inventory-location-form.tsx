@@ -147,7 +147,7 @@ export function InventoryLocationForm({
         name: normalized.name,
         branchId: normalized.branchId as string,
         locationType: values.locationType,
-        parentLocationId: normalized.parentLocationId ?? null,
+        parentLocationId: normalized.parentLocationId ? normalized.parentLocationId : undefined,
         description: normalized.description,
       });
       return;
@@ -155,7 +155,7 @@ export function InventoryLocationForm({
     await onSubmit({
       name: normalized.name,
       locationType: values.locationType,
-      parentLocationId: normalized.parentLocationId ?? null,
+      parentLocationId: normalized.parentLocationId ? normalized.parentLocationId : undefined,
       description: normalized.description,
     });
   };

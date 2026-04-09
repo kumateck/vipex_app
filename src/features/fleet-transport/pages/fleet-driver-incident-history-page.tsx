@@ -22,7 +22,7 @@ export function FleetDriverIncidentHistoryPage() {
   const [employeeId, setEmployeeId] = useState('');
   const { data: drivers = [] } = useListFleetDriverOptionsQuery();
   const { data: incidents, isLoading } = useListFleetComplianceIncidentsQuery(
-    { employeeId, pageSize: 50 },
+    { pageSize: 50, filters: { employeeId } },
     { skip: !employeeId },
   );
 

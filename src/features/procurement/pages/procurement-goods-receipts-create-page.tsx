@@ -17,7 +17,7 @@ function parseLines(value: string): {
   manufacturedAt?: string | null;
   expiryDate?: string | null;
 }[] {
-  return value
+  const parsed = value
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
@@ -41,12 +41,19 @@ function parseLines(value: string): {
         expiryDate: expiryRaw ? new Date(expiryRaw).toISOString() : null,
       };
     })
-    .filter(
-      (line) =>
-        line.purchaseOrderItemId &&
-        Number.isFinite(line.receivedQuantity) &&
-        line.receivedQuantity > 0,
-    );
+    .filter((line) => Boolean(line.purchaseOrderItemId));
+
+  return parsed
+    .filter((line) => Number.isFinite(line.receivedQuantity) && line.receivedQuantity > 0)
+    .map((line) => ({
+      purchaseOrderItemId: line.purchaseOrderItemId as string,
+      receivedQuantity: line.receivedQuantity,
+      locationId: line.locationId,
+      batchNumber: line.batchNumber,
+      supplierBatchNumber: line.supplierBatchNumber,
+      manufacturedAt: line.manufacturedAt,
+      expiryDate: line.expiryDate,
+    }));
 }
 
 export function ProcurementGoodsReceiptsCreatePage() {

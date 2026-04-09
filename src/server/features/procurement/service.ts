@@ -924,7 +924,9 @@ export async function createProcurementPurchaseOrderFromAcceptedQuotesSvc(input:
       `Only accepted quotes can be converted to PO. Blocked quote: ${blocked.quoteNo}`,
     );
 
-  const supplierId = rows[0].supplierId;
+  const firstRow = rows[0];
+  if (!firstRow) throw Conflict('Select at least one accepted quote');
+  const supplierId = firstRow.supplierId;
   const mixed = rows.find((row) => row.supplierId !== supplierId);
   if (mixed) throw Conflict('All selected quotes must belong to the same supplier');
 

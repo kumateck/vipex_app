@@ -49,11 +49,11 @@ export function FleetDriverCompliancePage() {
   });
   const { data: incidentHistory, isLoading: loadingIncidents } =
     useListFleetComplianceIncidentsQuery(
-      { employeeId: selectedDriverId, pageSize: 20 },
+      { pageSize: 20, filters: { employeeId: selectedDriverId } },
       { skip: !selectedDriverId },
     );
   const { data: rosterHistory, isLoading: loadingRosters } = useListFleetShiftRostersQuery(
-    { employeeId: selectedDriverId, pageSize: 20 },
+    { pageSize: 20, filters: { employeeId: selectedDriverId } },
     { skip: !selectedDriverId },
   );
 

@@ -174,15 +174,15 @@ function toGoodsReceiptDto(row: {
   companyId: string;
   purchaseOrderId: string;
   receiptNo: string;
+  receivedAt: Date;
   note: string | null;
   receivedBy: string;
   createdAt: Date;
-  updatedAt: Date;
 }) {
   return {
     ...row,
+    receivedAt: row.receivedAt.toISOString(),
     createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
   };
 }
 

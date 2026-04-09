@@ -42,6 +42,7 @@ export const createInventoryProductSchema = z
 
     for (let i = 0; i < values.unitConversions.length; i += 1) {
       const item = values.unitConversions[i];
+      if (!item) continue;
       if (item.unitOfMeasure === values.unitOfMeasure) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -102,6 +103,7 @@ export const editInventoryProductSchema = z
 
     for (let i = 0; i < values.unitConversions.length; i += 1) {
       const item = values.unitConversions[i];
+      if (!item) continue;
       if (item.unitOfMeasure === values.unitOfMeasure) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
