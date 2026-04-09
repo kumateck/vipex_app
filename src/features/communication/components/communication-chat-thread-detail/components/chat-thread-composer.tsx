@@ -101,6 +101,10 @@ export function ChatThreadComposer({
   isPreparingRecording,
 }: ChatThreadComposerProps) {
   const isMediaMode = messageKind !== 'text';
+  const resetToTextComposer = () => {
+    setMessageKind('text');
+    setShowMediaComposer(false);
+  };
 
   return (
     <div className="z-20 shrink-0 border-t bg-background/95 px-2 py-2 backdrop-blur sm:px-3">
@@ -194,30 +198,9 @@ export function ChatThreadComposer({
             <DropdownMenuItem onClick={onOpenMeetingDialog}>Schedule meeting</DropdownMenuItem>
             <DropdownMenuItem onClick={onRecordAudio}>Record audio</DropdownMenuItem>
             <DropdownMenuItem onClick={onRecordVideo}>Record video</DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                setMessageKind('text');
-                setShowMediaComposer(false);
-              }}
-            >
-              Contact
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                setMessageKind('text');
-                setShowMediaComposer(false);
-              }}
-            >
-              Poll
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                setMessageKind('text');
-                setShowMediaComposer(false);
-              }}
-            >
-              Event
-            </DropdownMenuItem>
+            <DropdownMenuItem onClick={resetToTextComposer}>Contact</DropdownMenuItem>
+            <DropdownMenuItem onClick={resetToTextComposer}>Poll</DropdownMenuItem>
+            <DropdownMenuItem onClick={resetToTextComposer}>Event</DropdownMenuItem>
             <DropdownMenuItem onClick={() => openFilePicker('image/png,image/jpeg,image/webp')}>
               AI images
             </DropdownMenuItem>
