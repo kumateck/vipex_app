@@ -1,16 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select-searchable';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card } from '@/components/ui/card';
 import { PermissionCatalogUi, PermissionKeys } from '@/shared/permissions/constants';
 import {
   MAIN_PERMISSION_TABS,
@@ -23,9 +13,8 @@ import {
   useListRoleOptionsQuery,
   useSetRolePermissionsMutation,
 } from '../../api/rbac.api';
-import { PermissionModuleSections } from './permission-module-sections';
-import { PermissionSelectionToolbar } from './permission-selection-toolbar';
-import { PermissionSubdomainSidebar } from './permission-subdomain-sidebar';
+import { PermissionsPageCardContent } from './permissions-page-card-content';
+import { PermissionsPageCardHeader } from './permissions-page-card-header';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
 
@@ -205,102 +194,39 @@ export function PermissionsPageContent() {
   return (
     <div className="w-full p-4 space-y-4">
       <Card>
-        <CardHeader className="space-y-3">
-          <CardTitle>Role permissions</CardTitle>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="permission-role-select">Role</Label>
-              <Select
-                value={roleId || undefined}
-                onValueChange={handleRoleChange}
-                disabled={isLoadingRoles || roleOptions.length === 0}
-              >
-                <SelectTrigger id="permission-role-select">
-                  <SelectValue placeholder={isLoadingRoles ? 'Loading roles...' : 'Select role'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {roleOptions.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      {role.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="permission-search">Search permissions</Label>
-              <Input
-                id="permission-search"
-                placeholder="Search permissions..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-            </div>
-          </div>
-          <PermissionSelectionToolbar
-            allPermissionCount={allPermissionKeys.length}
-            canSetRolePermissions={canSetRolePermissions}
-            isSavingPermissions={isSavingPermissions}
-            roleId={roleId}
-            selectedPermissionCount={selectedPermissionKeys.length}
-            onApply={handleSave}
-            onCheckAll={() => setSelectedPermissionKeys(allPermissionKeys)}
-            onClearAll={() => setSelectedPermissionKeys([])}
-            onReset={handleReset}
-          />
-        </CardHeader>
-        <CardContent>
-          {!roleId ? (
-            <p className="text-sm text-muted-foreground">Select a role to manage permissions.</p>
-          ) : isLoadingRolePermissions ? (
-            <p className="text-sm text-muted-foreground">Loading role permissions...</p>
-          ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No permissions found.</p>
-          ) : (
-            <Tabs
-              value={activeMainTab}
-              onValueChange={(value) => setActiveMainTab(value as MainPermissionTab)}
-              className="space-y-4"
-            >
-              <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2">
-                {MAIN_PERMISSION_TABS.map((tab) => (
-                  <TabsTrigger key={tab} value={tab}>
-                    {tab}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-
-              {MAIN_PERMISSION_TABS.map((tab) => (
-                <TabsContent key={tab} value={tab}>
-                  {(byMainTab.get(tab) ?? []).length === 0 ? (
-                    <div className="rounded-md border p-3 text-sm text-muted-foreground">
-                      No permissions in this section.
-                    </div>
-                  ) : (
-                    <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[240px_1fr]">
-                      <PermissionSubdomainSidebar
-                        activeSubdomain={activeSubdomain}
-                        domain={tab}
-                        entries={subdomainsInActiveTab}
-                        onSelectSubdomain={setActiveSubdomain}
-                      />
-
-                      <PermissionModuleSections
-                        activeSubdomain={activeSubdomain}
-                        activeSubdomainPermissionCount={activeSubdomainPermissionCount}
-                        canSetRolePermissions={canSetRolePermissions}
-                        modulesInActiveSubdomain={modulesInActiveSubdomain}
-                        selectedPermissionKeySet={selectedPermissionKeySet}
-                        onTogglePermission={handleTogglePermission}
-                        onToggleModulePermissions={handleToggleModulePermissions}
-                      />
-                    </div>
-                  )}
-                </TabsContent>
-              ))}
-            </Tabs>
-          )}
-        </CardContent>
+        <PermissionsPageCardHeader
+          roleId={roleId}
+          search={search}
+          roleOptions={roleOptions}
+          isLoadingRoles={isLoadingRoles}
+          canSetRolePermissions={canSetRolePermissions}
+          isSavingPermissions={isSavingPermissions}
+          allPermissionCount={allPermissionKeys.length}
+          selectedPermissionCount={selectedPermissionKeys.length}
+          onRoleChange={handleRoleChange}
+          onSearchChange={setSearch}
+          onApply={handleSave}
+          onCheckAll={() => setSelectedPermissionKeys(allPermissionKeys)}
+          onClearAll={() => setSelectedPermissionKeys([])}
+          onReset={handleReset}
+        />
+        <PermissionsPageCardContent
+          roleId={roleId}
+          isLoadingRolePermissions={isLoadingRolePermissions}
+          filteredLength={filtered.length}
+          activeMainTab={activeMainTab}
+          activeSubdomain={activeSubdomain}
+          byMainTab={byMainTab}
+          subdomainsInActiveTab={subdomainsInActiveTab}
+          modulesInActiveSubdomain={modulesInActiveSubdomain}
+          activeSubdomainPermissionCount={activeSubdomainPermissionCount}
+          canSetRolePermissions={canSetRolePermissions}
+          selectedPermissionKeySet={selectedPermissionKeySet}
+          onMainTabChange={setActiveMainTab}
+          onSelectSubdomain={setActiveSubdomain}
+          onTogglePermission={handleTogglePermission}
+          onToggleModulePermissions={handleToggleModulePermissions}
+        />
       </Card>
     </div>
   );
