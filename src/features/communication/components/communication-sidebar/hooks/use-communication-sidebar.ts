@@ -20,22 +20,7 @@ import {
   useMarkCommunicationChannelReadMutation,
 } from '../../../api/communication.api';
 import { useCommunicationActivityState } from './use-communication-activity-state';
-type ChatContact = {
-  id: string;
-  fullname: string;
-  initials: string;
-  roleName: string | null;
-  branchName: string | null;
-  locationName: string | null;
-  threadId: string | null;
-  lastMessageAt: string | null;
-  draftMessage: string | null;
-  unreadCount: number;
-  mentionCount: number;
-  isOnline: boolean;
-  isTyping: boolean;
-  requiresRequest: boolean;
-};
+import type { ChatContact } from '../types/communication-sidebar.types';
 
 function toInitials(value: string): string {
   const parts = value.trim().split(/\s+/).filter(Boolean).slice(0, 2);
@@ -270,10 +255,6 @@ export function useCommunicationSidebar() {
     }
   };
 
-  const openCreateConversation = () => {
-    navigate('/communication/chat/create?target=conversation');
-  };
-
   const openCreateChannel = (channelType: 'text' | 'voice') => {
     navigate(`/communication/chat/create?target=channel&channelType=${channelType}`);
   };
@@ -304,7 +285,6 @@ export function useCommunicationSidebar() {
     declineChatRequest,
     openTextChannel,
     openVoiceChannel,
-    openCreateConversation,
     openCreateChannel,
   };
 }
