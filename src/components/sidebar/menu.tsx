@@ -51,7 +51,7 @@ type NestedNavItem = {
   children?: NestedNavItem[];
 };
 
-export function NavMain({ title, items }: NavMainProps) {
+export function NavMain({ items }: NavMainProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;

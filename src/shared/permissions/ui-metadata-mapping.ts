@@ -241,9 +241,8 @@ function resolveShipmentsModule(permissionKey: PermissionKey) {
     permissionKey.includes('Receiving') ||
     permissionKey.includes('Incoming') ||
     permissionKey.includes('ParcelScan')
-  ) {
+  )
     return 'Parcel Receiving';
-  }
   return 'Booking & Shipping';
 }
 
@@ -296,9 +295,10 @@ export function resolveModule(permission: { group: string; key: PermissionKey },
   if (permission.group === 'Cashiers' && permission.key.includes('Close'))
     return 'Cashier Session Closing';
   if (permission.group === 'Cashiers') return 'Cashier Session Management';
-  if (permission.group === 'Users' && permission.key.includes('Inactive'))
-    return 'User Lifecycle Monitoring';
-  if (permission.group === 'Users' && permission.key.includes('Active'))
+  if (
+    permission.group === 'Users' &&
+    (permission.key.includes('Inactive') || permission.key.includes('Active'))
+  )
     return 'User Lifecycle Monitoring';
   if (permission.group === 'Users') return 'User Administration';
   return fallback;
