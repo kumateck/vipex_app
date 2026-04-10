@@ -1,7 +1,8 @@
 import { ArrowLeft, Phone, Video } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/stores/auth-store';
 import { CreateCallBubbleDialog } from '../create-call-bubble-dialog';
 import { RecorderDialog } from '../recorder-dialog';
@@ -19,6 +20,7 @@ import { ChatThreadMessages } from './chat-thread-messages';
 export function CommunicationChatThreadDetail({ threadId }: { threadId: string }) {
   const currentUserId = useAuthStore((state) => state.user?.id ?? '');
   const navigate = useNavigate();
+  const location = useLocation();
   const normalizedThreadId = threadId.trim();
 
   const data = useChatThreadData({ normalizedThreadId, currentUserId });
@@ -51,6 +53,17 @@ export function CommunicationChatThreadDetail({ threadId }: { threadId: string }
     composer.setReplyToMessage(null);
   };
 
+  const directPeerLabel =
+    data.selectedThread?.directPeerUserId &&
+    data.usersById.get(data.selectedThread.directPeerUserId)?.fullname;
+  const optimisticThreadTitle =
+    (location.state as { optimisticThreadTitle?: string } | null)?.optimisticThreadTitle?.trim() ||
+    '';
+  const threadTitle = data.selectedThread?.title || directPeerLabel || optimisticThreadTitle;
+  const displayThreadTitle = threadTitle || 'Conversation thread';
+  const avatarInitial = displayThreadTitle.slice(0, 1).toUpperCase();
+  const showHeaderSkeleton = !threadTitle && !data.selectedThread;
+
   return (
     <div className="w-full p-3">
       <div className="flex h-[calc(100vh-7rem)] flex-col overflow-hidden rounded-2xl border bg-background shadow">
@@ -65,20 +78,27 @@ export function CommunicationChatThreadDetail({ threadId }: { threadId: string }
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold">
-              {(data.selectedThread?.title || 'T').slice(0, 1).toUpperCase()}
+              {avatarInitial}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">
-                {data.selectedThread?.title || 'Untitled thread'}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {data.selectedThread
-                  ? prettyValue(data.selectedThread.threadType)
-                  : 'Conversation thread'}
-                {data.selectedThread?.participantCount
-                  ? ` • ${data.selectedThread.participantCount} members`
-                  : ''}
-              </p>
+              {showHeaderSkeleton ? (
+                <div className="space-y-1">
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-3 w-28" />
+                </div>
+              ) : (
+                <>
+                  <p className="truncate text-sm font-semibold">{displayThreadTitle}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {data.selectedThread
+                      ? prettyValue(data.selectedThread.threadType)
+                      : 'Conversation thread'}
+                    {data.selectedThread?.participantCount
+                      ? ` • ${data.selectedThread.participantCount} members`
+                      : ''}
+                  </p>
+                </>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1">

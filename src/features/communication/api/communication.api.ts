@@ -11,6 +11,7 @@ export type CommunicationThread = {
   lastMessageAt: string | null;
   createdAt: string | null;
   participantCount?: number;
+  directPeerUserId?: string | null;
 };
 
 export type CommunicationMessage = {
@@ -79,6 +80,42 @@ export type CommunicationPresence = {
   status: 'online' | 'away' | 'busy' | 'offline' | string;
   lastSeenAt: string | null;
   updatedAt: string | null;
+};
+
+export type CommunicationEngagementRequest = {
+  id: string;
+  companyId: string;
+  requesterUserId: string;
+  targetUserId: string;
+  status: 'pending' | 'approved' | 'declined' | string;
+  reasonCode: string | null;
+  reasonNote: string | null;
+  linkedEntityType: string | null;
+  linkedEntityId: string | null;
+  scope: 'temporary' | 'persistent' | string;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  declinedBy: string | null;
+  declinedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  requesterFullname?: string | null;
+  requesterRoleName?: string | null;
+  requesterBranchName?: string | null;
+  requesterLocationName?: string | null;
+  targetFullname?: string | null;
+  targetRoleName?: string | null;
+  targetBranchName?: string | null;
+  targetLocationName?: string | null;
+};
+
+export type CommunicationEngagementTarget = {
+  id: string;
+  fullname: string;
+  roleName: string | null;
+  branchName: string | null;
+  locationName: string | null;
 };
 
 export type CommunicationChannel = {
@@ -387,6 +424,66 @@ export const communicationApi = api.injectEndpoints({
       invalidatesTags: [{ type: 'Communication', id: 'PRESENCE' }],
     }),
 
+    listCommunicationEngagementTargets: builder.query<CommunicationEngagementTarget[], void>({
+      query: () => ({
+        url: '/communication/engagement-requests/targets',
+      }),
+      providesTags: [{ type: 'Communication', id: 'ENGAGEMENT_TARGETS' }],
+    }),
+
+    listCommunicationEngagementRequests: builder.query<
+      CommunicationEngagementRequest[],
+      {
+        view?: 'incoming' | 'outgoing' | 'all';
+        status?: 'pending' | 'approved' | 'declined';
+      } | void
+    >({
+      query: (params) => ({
+        url: '/communication/engagement-requests',
+        params: params ?? undefined,
+      }),
+      providesTags: [{ type: 'Communication', id: 'ENGAGEMENT_REQUESTS' }],
+    }),
+
+    createCommunicationEngagementRequest: builder.mutation<
+      CommunicationEngagementRequest,
+      { targetUserId: string; reasonNote?: string | null }
+    >({
+      query: (body) => ({
+        url: '/communication/engagement-requests',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Communication', id: 'ENGAGEMENT_REQUESTS' }],
+    }),
+
+    approveCommunicationEngagementRequest: builder.mutation<
+      CommunicationEngagementRequest,
+      { id: string }
+    >({
+      query: ({ id }) => ({
+        url: `/communication/engagement-requests/${id}/approve`,
+        method: 'POST',
+        body: {},
+      }),
+      invalidatesTags: [
+        { type: 'Communication', id: 'ENGAGEMENT_REQUESTS' },
+        { type: 'Communication', id: 'THREADS' },
+      ],
+    }),
+
+    declineCommunicationEngagementRequest: builder.mutation<
+      CommunicationEngagementRequest,
+      { id: string }
+    >({
+      query: ({ id }) => ({
+        url: `/communication/engagement-requests/${id}/decline`,
+        method: 'POST',
+        body: {},
+      }),
+      invalidatesTags: [{ type: 'Communication', id: 'ENGAGEMENT_REQUESTS' }],
+    }),
+
     listCommunicationChannels: builder.query<
       CommunicationChannel[],
       { channelType?: 'text' | 'voice'; includeArchived?: boolean } | void
@@ -519,6 +616,11 @@ export const {
   useCreateCommunicationCallLivekitTokenMutation,
   useListCommunicationPresenceQuery,
   useSetCommunicationPresenceMutation,
+  useListCommunicationEngagementTargetsQuery,
+  useListCommunicationEngagementRequestsQuery,
+  useCreateCommunicationEngagementRequestMutation,
+  useApproveCommunicationEngagementRequestMutation,
+  useDeclineCommunicationEngagementRequestMutation,
   useListCommunicationChannelsQuery,
   useGetCommunicationChannelByIdQuery,
   useCreateCommunicationChannelMutation,

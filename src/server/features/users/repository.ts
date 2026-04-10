@@ -21,6 +21,12 @@ export type UserOptionRow = {
   id: string;
   fullname: string;
   email: string;
+  branchId: string | null;
+  locationId: string | null;
+  branchType: number | null;
+  roleName: string | null;
+  branchName: string | null;
+  locationName: string | null;
 };
 
 export async function listUsersRepo(p: ListUserParams) {
@@ -158,8 +164,17 @@ export async function listUserOptionsRepo(p: {
       id: users.id,
       fullname: users.fullname,
       email: users.email,
+      branchId: users.branchId,
+      locationId: users.locationId,
+      branchType: branches.type,
+      roleName: roles.name,
+      branchName: branches.name,
+      locationName: locations.name,
     })
     .from(users)
+    .leftJoin(roles, eq(roles.id, users.roleId))
+    .leftJoin(branches, eq(branches.id, users.branchId))
+    .leftJoin(locations, eq(locations.id, users.locationId))
     .where(where.length ? and(...where) : undefined)
     .orderBy(asc(users.fullname), asc(users.id));
 }

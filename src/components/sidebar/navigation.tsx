@@ -7,6 +7,7 @@ import {
 
 // Define the sub-item structure for nested menu items.
 interface SubItem {
+  id?: string;
   title: string;
   url?: string;
   icon?: LucideIconProps;
@@ -17,6 +18,7 @@ interface SubItem {
 
 // Define the main menu item structure.
 export interface MenuItem {
+  id?: string;
   title: string;
   url?: string;
   icon: LucideIconProps;
@@ -110,7 +112,7 @@ function applyPermissionOverridesToMenuItem(menuItem: MenuItem): MenuItem {
 
 const BASE_ROUTES: Route[] = [
   {
-    title: 'Main',
+    title: 'Workspace',
     menu: [
       {
         title: 'Dashboard',
@@ -123,13 +125,36 @@ const BASE_ROUTES: Route[] = [
         icon: 'Package',
         permissionKey: PermissionKeys.CanReadParcels,
       },
+      {
+        title: 'Internal Communication',
+        icon: 'MessageSquare',
+        items: [
+          {
+            title: 'Team Chat',
+            url: '/communication/chat',
+          },
+          {
+            title: 'Calls',
+            url: '/communication/calls',
+          },
+          {
+            title: 'Events',
+            url: '/communication/events',
+          },
+        ],
+      },
+      {
+        title: 'Appearance',
+        url: '/settings/appearance',
+        icon: 'Palette',
+      },
     ],
   },
   {
     title: 'Operations',
     menu: [
       {
-        title: 'Sending',
+        title: 'Booking & Shipping',
         icon: 'PackagePlus',
         permissionKey: PermissionKeys.CanReadParcelSendingModule,
         items: [
@@ -149,7 +174,7 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadParcelReconciliation,
           },
           {
-            title: 'Processed Consignments',
+            title: 'Consignments',
             url: '/parcels/processed',
             permissionKey: PermissionKeys.CanReadConsignments,
           },
@@ -161,7 +186,7 @@ const BASE_ROUTES: Route[] = [
         ],
       },
       {
-        title: 'Receiving',
+        title: 'Parcel Receiving',
         icon: 'PackageCheck',
         permissionKey: PermissionKeys.CanReadParcelReceivingModule,
         items: [
@@ -180,9 +205,37 @@ const BASE_ROUTES: Route[] = [
             url: '/parcels/receive',
             permissionKey: PermissionKeys.CanReadParcelScan,
           },
+        ],
+      },
+      {
+        title: 'Call Center',
+        icon: 'Search',
+        items: [
+          {
+            title: 'Call Outcomes',
+            url: '/parcels/status',
+            permissionKey: PermissionKeys.CanReadCallCenterParcelStatus,
+          },
+          {
+            title: 'Address Collection',
+            url: '/parcels/home-delivery/address',
+            permissionKey: PermissionKeys.CanMarkDoorstepCalled,
+          },
+        ],
+      },
+      {
+        title: 'Internal Transfers',
+        icon: 'ArrowRightLeft',
+        permissionKey: PermissionKeys.CanReadParcelInternalTransfers,
+        items: [
           {
             title: 'Internal Transfer Create',
             url: '/parcels/internal-transfers',
+            permissionKey: PermissionKeys.CanReadParcelInternalTransfers,
+          },
+          {
+            title: 'Transfer Ack',
+            url: '/parcels/internal-transfers/acknowledge',
             permissionKey: PermissionKeys.CanReadParcelInternalTransfers,
           },
           {
@@ -190,11 +243,13 @@ const BASE_ROUTES: Route[] = [
             url: '/parcels/internal-transfers/history',
             permissionKey: PermissionKeys.CanReadParcelInternalTransfers,
           },
-          {
-            title: 'Transfer Acknowledgement',
-            url: '/parcels/internal-transfers/acknowledge',
-            permissionKey: PermissionKeys.CanReadParcelInternalTransfers,
-          },
+        ],
+      },
+      {
+        title: 'Pickup & Collection',
+        icon: 'ListChecks',
+        permissionKey: PermissionKeys.CanCreatePickupQueue,
+        items: [
           {
             title: 'Pickup Queue',
             url: '/parcels/pickup-queue',
@@ -228,7 +283,7 @@ const BASE_ROUTES: Route[] = [
         ],
       },
       {
-        title: 'Deliveries',
+        title: 'Last Mile Delivery',
         icon: 'Truck',
         items: [
           {
@@ -249,373 +304,57 @@ const BASE_ROUTES: Route[] = [
         ],
       },
       {
-        title: 'Call Center',
-        icon: 'Search',
+        title: 'Rider Workforce',
+        icon: 'Bike',
         items: [
           {
-            title: 'Parcel Status',
-            url: '/parcels/status',
-            permissionKey: PermissionKeys.CanReadCallCenterParcelStatus,
+            title: 'Current Deliveries',
+            url: '/parcels/rider/current',
+            permissionKey: PermissionKeys.CanReadRiderCurrentParcels,
           },
           {
-            title: 'Address Collection',
-            url: '/parcels/home-delivery/address',
-            permissionKey: PermissionKeys.CanMarkDoorstepCalled,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'CRM',
-    menu: [
-      {
-        title: 'Customer Mgt',
-        icon: 'Users',
-        items: [
-          {
-            title: 'All Customers',
-            url: '/customers',
-            permissionKey: PermissionKeys.CanReadCustomers,
-          },
-          {
-            title: 'Add Customer',
-            url: '/customers/create',
-            permissionKey: PermissionKeys.CanCreateCustomers,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'Finance',
-    menu: [
-      {
-        title: 'Accounting',
-        icon: 'BookOpen',
-        items: [
-          {
-            title: 'Daily Cash',
-            url: '/accounting/daily-cash',
-            permissionKey: PermissionKeys.CanCreateDailyCashConfirmation,
-          },
-          {
-            title: 'Daily Cash Drafts',
-            url: '/accounting/daily-cash/drafts',
-            permissionKey: PermissionKeys.CanConfirmDailyCashConfirmation,
-          },
-          {
-            title: 'Daily Cash Approvals',
-            url: '/accounting/daily-cash/approvals',
-            permissionKey: PermissionKeys.CanConfirmDailyCashConfirmation,
-          },
-          {
-            title: 'Daily Cash Recorded',
-            url: '/accounting/daily-cash/recorded',
-            permissionKey: PermissionKeys.CanPostDailyCashConfirmation,
-          },
-          {
-            title: 'Expenses',
-            url: '/accounting/expenses',
-            permissionKey: PermissionKeys.CanCreateExpenseRequest,
-          },
-          {
-            title: 'Expense Drafts',
-            url: '/accounting/expenses/drafts',
-            permissionKey: PermissionKeys.CanSubmitExpenseRequest,
-          },
-          {
-            title: 'Expense Approvals',
-            url: '/accounting/expenses/approvals',
-            permissionKey: PermissionKeys.CanApproveExpenseRequest,
-          },
-          {
-            title: 'Expense Payments',
-            url: '/accounting/expenses/payments',
-            permissionKey: PermissionKeys.CanPayExpenseRequest,
-          },
-          {
-            title: 'Expense Posting',
-            url: '/accounting/expenses/posting',
-            permissionKey: PermissionKeys.CanPostExpenseRequest,
-          },
-          {
-            title: 'Expense History',
-            url: '/accounting/expenses/history',
-            permissionKey: PermissionKeys.CanReadAccounting,
-          },
-          {
-            title: 'Reports',
-            url: '/accounting/reports',
-            permissionKey: PermissionKeys.CanReadAccounting,
-          },
-          {
-            title: 'Accounting Setup',
-            url: '/accounting/setup',
-            permissionKey: PermissionKeys.CanReadAccountingSetup,
-          },
-          {
-            title: 'Journal Entries',
-            url: '/accounting/journal-entries',
-            permissionKey: PermissionKeys.CanReadAccountingManualEntries,
-          },
-          {
-            title: 'Journal Approvals',
-            url: '/accounting/journal-approvals',
-            permissionKey: PermissionKeys.CanApproveAccountingManualEntries,
+            title: 'History',
+            url: '/parcels/rider/history',
+            permissionKey: PermissionKeys.CanReadRiderHistory,
           },
         ],
       },
       {
-        title: 'Taxes',
-        icon: 'Receipt',
-        items: [
-          {
-            title: 'Tax Filing',
-            url: '/accounting/tax',
-            permissionKey: PermissionKeys.CanCreateTaxFilingPeriod,
-          },
-        ],
-      },
-      {
-        title: 'Payroll',
-        icon: 'BadgeDollarSign',
-        items: [
-          {
-            title: 'Compensation Setup',
-            url: '/payroll/compensation',
-            permissionKey: PermissionKeys.CanReadCompensation,
-          },
-          {
-            title: 'Payroll Groups',
-            url: '/payroll/groups',
-            permissionKey: PermissionKeys.CanReadPayrollGroups,
-          },
-          {
-            title: 'Payroll Cycles',
-            url: '/payroll/cycles',
-            permissionKey: PermissionKeys.CanListPayrollCycles,
-          },
-          {
-            title: 'Payroll Inputs',
-            url: '/payroll/inputs',
-            permissionKey: PermissionKeys.CanReadPayrollInputs,
-          },
-        ],
-      },
-      {
-        title: 'Cashier Sessions',
-        icon: 'Wallet',
-        items: [
-          {
-            title: 'Active Sessions',
-            url: '/cashier/sessions/active',
-            permissionKey: PermissionKeys.CanReadActiveCashierSessions,
-          },
-          {
-            title: 'Session History',
-            url: '/cashier/sessions/history',
-            permissionKey: PermissionKeys.CanReadCashierSessionsHistory,
-          },
-          {
-            title: 'Open Session',
-            url: '/cashier/sessions/open',
-            permissionKey: PermissionKeys.CanReadOpenCashierSessions,
-          },
-          {
-            title: 'Close Session',
-            url: '/cashier/sessions/close',
-            permissionKey: PermissionKeys.CanReadCloseCashierSessions,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'HR',
-    menu: [
-      {
-        title: 'Employees',
-        url: '/hr/employees',
-        icon: 'Briefcase',
-        permissionKey: PermissionKeys.CanListEmployees,
-      },
-      {
-        title: 'Departments',
-        url: '/hr/departments',
-        icon: 'Network',
-        permissionKey: PermissionKeys.CanReadDepartments,
-      },
-      {
-        title: 'Job Titles',
-        url: '/hr/job-titles',
-        icon: 'UserCog',
-        permissionKey: PermissionKeys.CanReadJobTitles,
-      },
-      {
-        title: 'Attendance',
-        url: '/hr/attendance',
-        icon: 'Clock3',
-        permissionKey: PermissionKeys.CanReadAttendance,
-      },
-      {
-        title: 'Leave Mgt',
-        icon: 'CalendarDays',
-        items: [
-          {
-            title: 'Leave Requests',
-            url: '/hr/leave/requests',
-            permissionKey: PermissionKeys.CanReadLeaveRequests,
-          },
-          {
-            title: 'Leave Types',
-            url: '/hr/leave/types',
-            permissionKey: PermissionKeys.CanReadLeaveTypes,
-          },
-          {
-            title: 'Leave History',
-            url: '/hr/leave/history',
-            permissionKey: PermissionKeys.CanReadLeaveRequests,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'Growth',
-    menu: [
-      {
-        title: 'Procurement',
-        icon: 'BookOpen',
-        items: [
-          {
-            title: 'Suppliers List',
-            url: '/procurement/suppliers',
-            permissionKey: PermissionKeys.CanReadProcurement,
-          },
-          {
-            title: 'Create Supplier',
-            url: '/procurement/suppliers/new',
-            permissionKey: PermissionKeys.CanCreateProcurementSuppliers,
-          },
-          {
-            title: 'Request List',
-            url: '/procurement/purchase-requests',
-            permissionKey: PermissionKeys.CanReadProcurement,
-          },
-          {
-            title: 'Demands List',
-            url: '/procurement/demands',
-            permissionKey: PermissionKeys.CanReadProcurement,
-          },
-          {
-            title: 'Create Demand',
-            url: '/procurement/demands/new',
-            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
-          },
-          {
-            title: 'Fleet Intake',
-            url: '/procurement/demands/fleet-low-stock',
-            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
-          },
-          {
-            title: 'Inventory Intake',
-            url: '/procurement/demands/inventory-low-stock',
-            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
-          },
-          {
-            title: 'Demand Consolidations',
-            url: '/procurement/demands/consolidations',
-            permissionKey: PermissionKeys.CanReadProcurement,
-          },
-          {
-            title: 'Create Consolidation',
-            url: '/procurement/demands/consolidations/new',
-            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
-          },
-          {
-            title: 'Demand Approvals',
-            url: '/procurement/demands/approvals',
-            permissionKey: PermissionKeys.CanApproveProcurementPurchaseRequests,
-          },
-          {
-            title: 'Supplier Quotes',
-            url: '/procurement/supplier-quotes',
-            permissionKey: PermissionKeys.CanReadProcurement,
-          },
-          {
-            title: 'Create Quote',
-            url: '/procurement/supplier-quotes/new',
-            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
-          },
-          {
-            title: 'Purchase Orders',
-            url: '/procurement/purchase-orders',
-            permissionKey: PermissionKeys.CanReadProcurement,
-          },
-          {
-            title: 'Create PO',
-            url: '/procurement/purchase-orders/new',
-            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
-          },
-          {
-            title: 'Goods Receipts',
-            url: '/procurement/goods-receipts',
-            permissionKey: PermissionKeys.CanReadProcurement,
-          },
-          {
-            title: 'Create Receipt',
-            url: '/procurement/goods-receipts/new',
-            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
-          },
-          {
-            title: 'Create Request',
-            url: '/procurement/purchase-requests/new',
-            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
-          },
-          {
-            title: 'Approvals',
-            url: '/procurement/purchase-requests/approvals',
-            permissionKey: PermissionKeys.CanApproveProcurementPurchaseRequests,
-          },
-        ],
-      },
-      {
-        title: 'Fleet & Transport',
+        title: 'Fleet Transport',
         icon: 'Truck',
         items: [
           {
-            title: 'Vehicles List',
+            title: 'Vehicles',
             url: '/fleet-transport/vehicles',
             permissionKey: PermissionKeys.CanReadFleetTransport,
           },
+          // {
+          //   title: 'Create Vehicle',
+          //   url: '/fleet-transport/vehicles/new',
+          //   permissionKey: PermissionKeys.CanCreateFleetVehicles,
+          // },
           {
-            title: 'Create Vehicle',
-            url: '/fleet-transport/vehicles/new',
-            permissionKey: PermissionKeys.CanCreateFleetVehicles,
-          },
-          {
-            title: 'Trips List',
+            title: 'Trips',
             url: '/fleet-transport/trips',
             permissionKey: PermissionKeys.CanReadFleetTrips,
           },
-          {
-            title: 'Create Trip',
-            url: '/fleet-transport/trips/new',
-            permissionKey: PermissionKeys.CanCreateFleetTrips,
-          },
+          // {
+          //   title: 'Create Trip',
+          //   url: '/fleet-transport/trips/new',
+          //   permissionKey: PermissionKeys.CanCreateFleetTrips,
+          // },
           {
             title: 'Route Plans',
             url: '/fleet-transport/routes/plans',
             permissionKey: PermissionKeys.CanReadFleetTrips,
           },
+          // {
+          //   title: 'Create Route Plan',
+          //   url: '/fleet-transport/routes/plans/new',
+          //   permissionKey: PermissionKeys.CanReadFleetTrips,
+          // },
           {
-            title: 'Create Route Plan',
-            url: '/fleet-transport/routes/plans/new',
-            permissionKey: PermissionKeys.CanReadFleetTrips,
-          },
-          {
-            title: 'Fuel Logs List',
+            title: 'Fuel Logs ',
             url: '/fleet-transport/fuel-logs',
             permissionKey: PermissionKeys.CanReadFleetTransport,
           },
@@ -629,11 +368,11 @@ const BASE_ROUTES: Route[] = [
             url: '/fleet-transport/fuel-analytics/fraud-signals',
             permissionKey: PermissionKeys.CanReadFleetTransport,
           },
-          {
-            title: 'Create Fuel Log',
-            url: '/fleet-transport/fuel-logs/new',
-            permissionKey: PermissionKeys.CanCreateFleetFuelLogs,
-          },
+          // {
+          //   title: 'Create Fuel Log',
+          //   url: '/fleet-transport/fuel-logs/new',
+          //   permissionKey: PermissionKeys.CanCreateFleetFuelLogs,
+          // },
           {
             title: 'Fuel Approvals',
             url: '/fleet-transport/fuel-logs/approvals',
@@ -644,21 +383,21 @@ const BASE_ROUTES: Route[] = [
             url: '/fleet-transport/drivers/compliance',
             permissionKey: PermissionKeys.CanReadFleetTransport,
           },
-          {
-            title: 'Add Compliance Record',
-            url: '/fleet-transport/drivers/compliance/new',
-            permissionKey: PermissionKeys.CanReadFleetTransport,
-          },
+          // {
+          //   title: 'Add Compliance Record',
+          //   url: '/fleet-transport/drivers/compliance/new',
+          //   permissionKey: PermissionKeys.CanReadFleetTransport,
+          // },
           {
             title: 'Shift Rosters',
             url: '/fleet-transport/rosters',
             permissionKey: PermissionKeys.CanReadFleetTransport,
           },
-          {
-            title: 'Create Shift Roster',
-            url: '/fleet-transport/rosters/new',
-            permissionKey: PermissionKeys.CanReadFleetTransport,
-          },
+          // {
+          //   title: 'Create Shift Roster',
+          //   url: '/fleet-transport/rosters/new',
+          //   permissionKey: PermissionKeys.CanReadFleetTransport,
+          // },
           {
             title: 'Compliance Dashboard',
             url: '/fleet-transport/compliance',
@@ -685,7 +424,7 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadFleetTransport,
           },
           {
-            title: 'Policy Acknowledgment',
+            title: 'Policy Ack',
             url: '/fleet-transport/compliance/ops/policy-acks/new',
             permissionKey: PermissionKeys.CanReadFleetTransport,
           },
@@ -694,23 +433,23 @@ const BASE_ROUTES: Route[] = [
             url: '/fleet-transport/maintenance',
             permissionKey: PermissionKeys.CanReadFleetTransport,
           },
-          {
-            title: 'Create Preventive Plan',
-            url: '/fleet-transport/maintenance/plans/new',
-            permissionKey: PermissionKeys.CanReadFleetTransport,
-          },
-          {
-            title: 'Create Work Order',
-            url: '/fleet-transport/maintenance/work-orders/new',
-            permissionKey: PermissionKeys.CanReadFleetTransport,
-          },
+          // {
+          //   title: 'Create Preventive Plan',
+          //   url: '/fleet-transport/maintenance/plans/new',
+          //   permissionKey: PermissionKeys.CanReadFleetTransport,
+          // },
+          // {
+          //   title: 'Create Work Order',
+          //   url: '/fleet-transport/maintenance/work-orders/new',
+          //   permissionKey: PermissionKeys.CanReadFleetTransport,
+          // },
           {
             title: 'Downtime RCA Workflows',
             url: '/fleet-transport/maintenance/downtime/workflows',
             permissionKey: PermissionKeys.CanReadFleetTransport,
           },
           {
-            title: 'Work Order Part Movements',
+            title: 'Work Ord Part Movements',
             url: '/fleet-transport/maintenance/work-orders/part-movements',
             permissionKey: PermissionKeys.CanReadFleetTransport,
           },
@@ -797,7 +536,334 @@ const BASE_ROUTES: Route[] = [
         ],
       },
       {
-        title: 'Customer Wallet',
+        title: 'Dispatch Optimization',
+        url: '/dispatch-optimization',
+        icon: 'Route',
+      },
+    ],
+  },
+  {
+    title: 'Commercial',
+    menu: [
+      {
+        title: 'Customer Master ',
+        icon: 'Users',
+        items: [
+          {
+            title: 'All Customers',
+            url: '/customers',
+            permissionKey: PermissionKeys.CanReadCustomers,
+          },
+          // {
+          //   title: 'Add Customer',
+          //   url: '/customers/create',
+          //   permissionKey: PermissionKeys.CanCreateCustomers,
+          // },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'Finance',
+    menu: [
+      {
+        title: 'GL & Controls',
+        icon: 'BookOpen',
+        items: [
+          {
+            title: 'Daily Cash',
+            url: '/accounting/daily-cash',
+            permissionKey: PermissionKeys.CanCreateDailyCashConfirmation,
+          },
+          {
+            title: 'Daily Cash Drafts',
+            url: '/accounting/daily-cash/drafts',
+            permissionKey: PermissionKeys.CanConfirmDailyCashConfirmation,
+          },
+          {
+            title: 'Daily Cash Approvals',
+            url: '/accounting/daily-cash/approvals',
+            permissionKey: PermissionKeys.CanConfirmDailyCashConfirmation,
+          },
+          {
+            title: 'Daily Cash Recorded',
+            url: '/accounting/daily-cash/recorded',
+            permissionKey: PermissionKeys.CanPostDailyCashConfirmation,
+          },
+          {
+            title: 'Expenses',
+            url: '/accounting/expenses',
+            permissionKey: PermissionKeys.CanCreateExpenseRequest,
+          },
+          {
+            title: 'Expense Drafts',
+            url: '/accounting/expenses/drafts',
+            permissionKey: PermissionKeys.CanSubmitExpenseRequest,
+          },
+          {
+            title: 'Expense Approvals',
+            url: '/accounting/expenses/approvals',
+            permissionKey: PermissionKeys.CanApproveExpenseRequest,
+          },
+          {
+            title: 'Expense Payments',
+            url: '/accounting/expenses/payments',
+            permissionKey: PermissionKeys.CanPayExpenseRequest,
+          },
+          {
+            title: 'Expense Posting',
+            url: '/accounting/expenses/posting',
+            permissionKey: PermissionKeys.CanPostExpenseRequest,
+          },
+          {
+            title: 'Expense History',
+            url: '/accounting/expenses/history',
+            permissionKey: PermissionKeys.CanReadAccounting,
+          },
+          {
+            title: 'Insights',
+            url: '/accounting/reports',
+            permissionKey: PermissionKeys.CanReadAccounting,
+          },
+          {
+            title: 'Accounting Setup',
+            url: '/accounting/setup',
+            permissionKey: PermissionKeys.CanReadAccountingSetup,
+          },
+          {
+            title: 'Journal Entries',
+            url: '/accounting/journal-entries',
+            permissionKey: PermissionKeys.CanReadAccountingManualEntries,
+          },
+          {
+            title: 'Journal Approvals',
+            url: '/accounting/journal-approvals',
+            permissionKey: PermissionKeys.CanApproveAccountingManualEntries,
+          },
+        ],
+      },
+      {
+        title: 'Tax Computation & Filing',
+        icon: 'Receipt',
+        items: [
+          {
+            title: 'Tax Filing',
+            url: '/accounting/tax',
+            permissionKey: PermissionKeys.CanCreateTaxFilingPeriod,
+          },
+        ],
+      },
+      {
+        title: 'Cashier Session Mgt',
+        icon: 'Wallet',
+        items: [
+          {
+            title: 'Active Sessions',
+            url: '/cashier/sessions/active',
+            permissionKey: PermissionKeys.CanReadActiveCashierSessions,
+          },
+          {
+            title: 'Session History',
+            url: '/cashier/sessions/history',
+            permissionKey: PermissionKeys.CanReadCashierSessionsHistory,
+          },
+          {
+            title: 'Open Session',
+            url: '/cashier/sessions/open',
+            permissionKey: PermissionKeys.CanReadOpenCashierSessions,
+          },
+          {
+            title: 'Close Session',
+            url: '/cashier/sessions/close',
+            permissionKey: PermissionKeys.CanReadCloseCashierSessions,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'Human Capital',
+    menu: [
+      {
+        title: 'Payroll Operations',
+        icon: 'BadgeDollarSign',
+        items: [
+          {
+            title: 'Compensation Setup',
+            url: '/payroll/compensation',
+            permissionKey: PermissionKeys.CanReadCompensation,
+          },
+          {
+            title: 'Payroll Groups',
+            url: '/payroll/groups',
+            permissionKey: PermissionKeys.CanReadPayrollGroups,
+          },
+          {
+            title: 'Payroll Cycles',
+            url: '/payroll/cycles',
+            permissionKey: PermissionKeys.CanListPayrollCycles,
+          },
+          {
+            title: 'Payroll Inputs',
+            url: '/payroll/inputs',
+            permissionKey: PermissionKeys.CanReadPayrollInputs,
+          },
+        ],
+      },
+      {
+        title: 'Employee Administration',
+        url: '/hr/employees',
+        icon: 'Briefcase',
+        permissionKey: PermissionKeys.CanListEmployees,
+      },
+      {
+        title: 'Department Administration',
+        url: '/hr/departments',
+        icon: 'Network',
+        permissionKey: PermissionKeys.CanReadDepartments,
+      },
+      {
+        title: 'Job Title Administration',
+        url: '/hr/job-titles',
+        icon: 'UserCog',
+        permissionKey: PermissionKeys.CanReadJobTitles,
+      },
+      {
+        title: 'Attendance Management',
+        url: '/hr/attendance',
+        icon: 'Clock3',
+        permissionKey: PermissionKeys.CanReadAttendance,
+      },
+      {
+        title: 'Leave Management',
+        icon: 'CalendarDays',
+        items: [
+          {
+            title: 'Leave Requests',
+            url: '/hr/leave/requests',
+            permissionKey: PermissionKeys.CanReadLeaveRequests,
+          },
+          {
+            title: 'Leave Types',
+            url: '/hr/leave/types',
+            permissionKey: PermissionKeys.CanReadLeaveTypes,
+          },
+          {
+            title: 'Leave History',
+            url: '/hr/leave/history',
+            permissionKey: PermissionKeys.CanReadLeaveRequests,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'Supply Chain',
+    menu: [
+      {
+        title: 'Sourcing & Purchasing',
+        icon: 'BookOpen',
+        items: [
+          {
+            title: 'Suppliers List',
+            url: '/procurement/suppliers',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          // {
+          //   title: 'Create Supplier',
+          //   url: '/procurement/suppliers/new',
+          //   permissionKey: PermissionKeys.CanCreateProcurementSuppliers,
+          // },
+          {
+            title: 'Request List',
+            url: '/procurement/purchase-requests',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          {
+            title: 'Demands List',
+            url: '/procurement/demands',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          // {
+          //   title: 'Create Demand',
+          //   url: '/procurement/demands/new',
+          //   permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          // },
+          {
+            title: 'Fleet Intake',
+            url: '/procurement/demands/fleet-low-stock',
+            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          },
+          {
+            title: 'Inventory Intake',
+            url: '/procurement/demands/inventory-low-stock',
+            permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          },
+          {
+            title: 'Demand Consolidations',
+            url: '/procurement/demands/consolidations',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          // {
+          //   title: 'Create Consolidation',
+          //   url: '/procurement/demands/consolidations/new',
+          //   permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          // },
+          {
+            title: 'Demand Approvals',
+            url: '/procurement/demands/approvals',
+            permissionKey: PermissionKeys.CanApproveProcurementPurchaseRequests,
+          },
+          {
+            title: 'Supplier Quotes',
+            url: '/procurement/supplier-quotes',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          // {
+          //   title: 'Create Quote',
+          //   url: '/procurement/supplier-quotes/new',
+          //   permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          // },
+          {
+            title: 'Purchase Orders',
+            url: '/procurement/purchase-orders',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          // {
+          //   title: 'Create PO',
+          //   url: '/procurement/purchase-orders/new',
+          //   permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          // },
+          {
+            title: 'Goods Receipts',
+            url: '/procurement/goods-receipts',
+            permissionKey: PermissionKeys.CanReadProcurement,
+          },
+          // {
+          //   title: 'Create Receipt',
+          //   url: '/procurement/goods-receipts/new',
+          //   permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          // },
+          // {
+          //   title: 'Create Request',
+          //   url: '/procurement/purchase-requests/new',
+          //   permissionKey: PermissionKeys.CanCreateProcurementPurchaseRequests,
+          // },
+          {
+            title: 'Approvals',
+            url: '/procurement/purchase-requests/approvals',
+            permissionKey: PermissionKeys.CanApproveProcurementPurchaseRequests,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    title: 'Finance',
+    menu: [
+      {
+        title: 'Customer Wallet & Credit Control',
         icon: 'Wallet',
         items: [
           {
@@ -818,12 +884,7 @@ const BASE_ROUTES: Route[] = [
         ],
       },
       {
-        title: 'SLA & Claims',
-        url: '/sla-claims',
-        icon: 'Shield',
-      },
-      {
-        title: 'Reconciliation',
+        title: 'Operational Reconciliation',
         icon: 'Receipt',
         items: [
           {
@@ -858,18 +919,28 @@ const BASE_ROUTES: Route[] = [
           },
         ],
       },
+    ],
+  },
+  {
+    title: 'Governance',
+    menu: [
+      {
+        title: 'SLA & Claims Governance',
+        url: '/sla-claims',
+        icon: 'Shield',
+      },
       {
         title: 'Document Compliance',
         url: '/document-compliance',
         icon: 'FileText',
       },
+    ],
+  },
+  {
+    title: 'Commercial',
+    menu: [
       {
-        title: 'Dispatch Optimization',
-        url: '/dispatch-optimization',
-        icon: 'Route',
-      },
-      {
-        title: 'Notification Hub',
+        title: 'Notification Orchestration',
         icon: 'BellRing',
         items: [
           {
@@ -915,11 +986,6 @@ const BASE_ROUTES: Route[] = [
         ],
       },
       {
-        title: 'BI Dashboard',
-        url: '/bi-executive-dashboard',
-        icon: 'ChartBar',
-      },
-      {
         title: 'Partner Portal',
         url: '/partner-agent-portal',
         icon: 'Users',
@@ -927,10 +993,20 @@ const BASE_ROUTES: Route[] = [
     ],
   },
   {
-    title: 'IT',
+    title: 'Insights',
     menu: [
       {
-        title: 'User Management',
+        title: 'Business Analytics',
+        url: '/bi-executive-dashboard',
+        icon: 'ChartBar',
+      },
+    ],
+  },
+  {
+    title: 'Technology',
+    menu: [
+      {
+        title: 'User Administration',
         icon: 'UserCog',
         items: [
           {
@@ -961,7 +1037,7 @@ const BASE_ROUTES: Route[] = [
         ],
       },
       {
-        title: 'Role Management',
+        title: 'Role & Permission Governance',
         icon: 'Shield',
         items: [
           {
@@ -977,23 +1053,7 @@ const BASE_ROUTES: Route[] = [
         ],
       },
       {
-        title: 'Riders',
-        icon: 'Bike',
-        items: [
-          {
-            title: 'Current Status',
-            url: '/parcels/rider/current',
-            permissionKey: PermissionKeys.CanReadRiderCurrentParcels,
-          },
-          {
-            title: 'History',
-            url: '/parcels/rider/history',
-            permissionKey: PermissionKeys.CanReadRiderHistory,
-          },
-        ],
-      },
-      {
-        title: 'IT Support',
+        title: 'IT Support Desk',
         icon: 'Wrench',
         items: [
           {
@@ -1008,31 +1068,14 @@ const BASE_ROUTES: Route[] = [
           },
         ],
       },
-      {
-        title: 'Communication',
-        icon: 'MessageSquare',
-        items: [
-          {
-            title: 'Team Chat',
-            url: '/communication/chat',
-          },
-          {
-            title: 'Calls',
-            url: '/communication/calls',
-          },
-          {
-            title: 'Events',
-            url: '/communication/events',
-          },
-        ],
-      },
     ],
   },
+
   {
-    title: 'Setups',
+    title: 'Technology',
     menu: [
       {
-        title: 'Company Setup',
+        title: 'Platform Configuration',
         icon: 'Building',
         items: [
           {
@@ -1065,19 +1108,20 @@ const BASE_ROUTES: Route[] = [
             url: '/settings/cards',
             permissionKey: PermissionKeys.CanReadCards,
           },
-          {
-            title: 'Appearance',
-            url: '/settings/appearance',
-            permissionKey: PermissionKeys.CanManageAppearance,
-          },
+
           {
             title: 'App Updates',
             url: '/settings/app-updates',
           },
         ],
       },
+    ],
+  },
+  {
+    title: 'Supply Chain',
+    menu: [
       {
-        title: 'Inventory Setup',
+        title: 'Inventory Control',
         icon: 'Package2',
         items: [
           {
@@ -1215,10 +1259,10 @@ const BASE_ROUTES: Route[] = [
     ],
   },
   {
-    title: 'Reports',
+    title: 'Insights',
     menu: [
       {
-        title: 'Financial Reports',
+        title: 'Financial Statements & Ledger Reports',
         icon: 'ChartBar',
         items: [
           {
@@ -1379,7 +1423,7 @@ const BASE_ROUTES: Route[] = [
       },
 
       {
-        title: 'HR & Employees',
+        title: 'Workforce Administration Reports',
         icon: 'Users',
         items: [
           {
@@ -1545,7 +1589,7 @@ const BASE_ROUTES: Route[] = [
       },
 
       {
-        title: 'Customers & CRM',
+        title: 'Customer Insights',
         icon: 'UserRound',
         items: [
           {
@@ -1770,7 +1814,7 @@ const BASE_ROUTES: Route[] = [
       },
 
       {
-        title: 'Audit & Control',
+        title: 'Audit & Compliance Reports',
         icon: 'ShieldCheck',
         items: [
           {
@@ -1809,7 +1853,7 @@ const BASE_ROUTES: Route[] = [
   },
 ];
 
-export const ROUTES: Route[] = BASE_ROUTES.map((route) => {
+const FILTERED_BASE_ROUTES: Route[] = BASE_ROUTES.map((route) => {
   const filteredMenu: MenuItem[] = [];
   for (const menuItem of route.menu) {
     const nextItems = filterSubItems(menuItem.items);
@@ -1820,3 +1864,17 @@ export const ROUTES: Route[] = BASE_ROUTES.map((route) => {
   }
   return { ...route, menu: filteredMenu };
 }).filter((route) => route.menu.length > 0);
+
+export const ROUTES: Route[] = (() => {
+  const order: string[] = [];
+  const byDomain = new Map<string, MenuItem[]>();
+  for (const route of FILTERED_BASE_ROUTES) {
+    if (!byDomain.has(route.title)) order.push(route.title);
+    const list = byDomain.get(route.title) ?? [];
+    list.push(...route.menu);
+    byDomain.set(route.title, list);
+  }
+  return order
+    .map((title) => ({ title, menu: byDomain.get(title) ?? [] }))
+    .filter((route) => route.menu.length > 0);
+})();

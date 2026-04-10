@@ -6,12 +6,18 @@ import { ScreenTimeoutGuard } from '@/features/auth/components/screen-timeout-gu
 
 export function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider>
+    <SidebarProvider
+      style={
+        {
+          '--sidebar-width': '370px',
+        } as React.CSSProperties
+      }
+    >
       <ScreenTimeoutGuard />
       <AppSidebar variant="inset" />
-      <SidebarInset className="flex flex-col overflow-hidden">
+      <SidebarInset>
         <SiteHeader />
-        <div className="flex-1 overflow-auto w-full max-w-full p-5">{children}</div>
+        <div className="flex flex-1 flex-col gap-4 ">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );
