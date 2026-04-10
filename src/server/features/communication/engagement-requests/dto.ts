@@ -35,6 +35,14 @@ export type CommunicationEngagementRequestsItem = {
   expiresAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  requesterFullname?: string | null;
+  requesterRoleName?: string | null;
+  requesterBranchName?: string | null;
+  requesterLocationName?: string | null;
+  targetFullname?: string | null;
+  targetRoleName?: string | null;
+  targetBranchName?: string | null;
+  targetLocationName?: string | null;
 };
 
 export type CommunicationEngagementRequestsDecideInput = {
@@ -42,4 +50,12 @@ export type CommunicationEngagementRequestsDecideInput = {
   companyId: string;
   actingUserId: string;
   approve: boolean;
+};
+
+export type CommunicationEngagementRequestTargetItem = {
+  id: string;
+  fullname: string;
+  roleName: string | null;
+  branchName: string | null;
+  locationName: string | null;
 };

@@ -18,6 +18,12 @@ export interface UserOption {
   id: string;
   fullname: string;
   email: string;
+  branchId?: string | null;
+  locationId?: string | null;
+  branchType?: number | null;
+  roleName?: string | null;
+  branchName?: string | null;
+  locationName?: string | null;
 }
 
 export const usersApi = api.injectEndpoints({

@@ -186,12 +186,11 @@
 'use client';
 
 import { ChevronRight } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -239,7 +238,18 @@ type NestedNavItem = {
 
 export function NavMain({ title, items }: NavMainProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
+
+  const getFirstNavigableUrl = (nodes?: NestedNavItem[]): string | null => {
+    if (!nodes?.length) return null;
+    for (const node of nodes) {
+      if (node.url) return node.url;
+      const nested = getFirstNavigableUrl(node.children);
+      if (nested) return nested;
+    }
+    return null;
+  };
 
   const hasActiveDescendant = (children: NestedNavItem[]): boolean =>
     children.some(
@@ -255,6 +265,7 @@ export function NavMain({ title, items }: NavMainProps) {
       const hasActiveNestedChild = hasNestedChildren && hasActiveDescendant(nestedItem.children!);
 
       if (hasNestedChildren) {
+        const fallbackUrl = nestedItem.url ?? getFirstNavigableUrl(nestedItem.children);
         return (
           <Collapsible
             key={nestedItem.title}
@@ -264,7 +275,12 @@ export function NavMain({ title, items }: NavMainProps) {
           >
             <SidebarMenuSubItem>
               <CollapsibleTrigger asChild>
-                <SidebarMenuSubButton isActive={isNestedActive}>
+                <SidebarMenuSubButton
+                  isActive={isNestedActive}
+                  onClick={() => {
+                    if (fallbackUrl && currentPath !== fallbackUrl) navigate(fallbackUrl);
+                  }}
+                >
                   <span>{nestedItem.title}</span>
                   <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                 </SidebarMenuSubButton>
@@ -290,7 +306,6 @@ export function NavMain({ title, items }: NavMainProps) {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>{title}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
           const hasChildren = !!item.items?.length;
@@ -298,6 +313,7 @@ export function NavMain({ title, items }: NavMainProps) {
           const hasActiveChild = hasChildren && hasActiveDescendant(item.items!);
 
           if (hasChildren) {
+            const fallbackUrl = item.url ?? getFirstNavigableUrl(item.items);
             return (
               <Collapsible
                 key={item.title}
@@ -307,7 +323,13 @@ export function NavMain({ title, items }: NavMainProps) {
               >
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip={item.title} isActive={isItemActive}>
+                    <SidebarMenuButton
+                      tooltip={item.title}
+                      isActive={isItemActive}
+                      onClick={() => {
+                        if (fallbackUrl && currentPath !== fallbackUrl) navigate(fallbackUrl);
+                      }}
+                    >
                       {item.icon && <Icon name={item.icon} />}
                       <span>{item.title}</span>
                       <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />

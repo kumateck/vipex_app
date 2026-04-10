@@ -38,7 +38,7 @@ export interface UserProfileData {
 }
 
 interface UserProfileProps {
-  variant?: 'sidebar' | 'header';
+  variant?: 'sidebar' | 'header' | 'icon';
   user?: UserProfileData;
   className?: string;
 }
@@ -114,6 +114,38 @@ export function UserProfile({ variant = 'header', user, className }: UserProfile
           align="end"
           side={isMobile ? 'bottom' : 'right'}
           sideOffset={4}
+          forceMount
+        >
+          <UserMenuContent userData={authUser} onNavigate={navigate} onLogout={handleLogout} />
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  if (variant === 'icon') {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className={cn(
+              'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-ring data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground flex h-9 w-9 items-center justify-center rounded-full border border-sidebar-border bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2',
+              className,
+            )}
+            aria-label="Open user menu"
+          >
+            <Avatar className="h-9 w-9 rounded-full">
+              <AvatarImage src={userData.avatar} alt={authUser?.fullname} />
+              <AvatarFallback className="bg-primary text-primary-foreground text-[11px] font-semibold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          className="w-72"
+          align="end"
+          side={isMobile ? 'top' : 'right'}
+          sideOffset={8}
           forceMount
         >
           <UserMenuContent userData={authUser} onNavigate={navigate} onLogout={handleLogout} />

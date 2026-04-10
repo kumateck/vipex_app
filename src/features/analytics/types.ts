@@ -10,12 +10,12 @@ export type AnalyticsContract = {
 };
 
 export type AnalyticsPermissionKey =
-  | typeof PermissionKeys.view_basic_analytics
-  | typeof PermissionKeys.view_operational_analytics
-  | typeof PermissionKeys.view_financial_analytics
-  | typeof PermissionKeys.view_branch_analytics
-  | typeof PermissionKeys.view_global_analytics
-  | typeof PermissionKeys.view_personal_analytics;
+  | typeof PermissionKeys.CanViewBasicAnalytics
+  | typeof PermissionKeys.CanViewOperationalAnalytics
+  | typeof PermissionKeys.CanViewFinancialAnalytics
+  | typeof PermissionKeys.CanViewBranchAnalytics
+  | typeof PermissionKeys.CanViewGlobalAnalytics
+  | typeof PermissionKeys.CanViewPersonalAnalytics;
 
 export type AnalyticsFiltersState = {
   branchId: string | typeof ANALYTICS_ALL;

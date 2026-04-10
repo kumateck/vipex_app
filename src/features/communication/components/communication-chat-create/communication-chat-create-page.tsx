@@ -20,6 +20,7 @@ import {
   useCreateCommunicationChannelMutation,
   useCreateCommunicationThreadMutation,
 } from '../../api/communication.api';
+import { useChatCreateDefaults } from './hooks/use-chat-create-defaults';
 
 type ThreadTypeCreate = 'direct' | 'group' | 'channel';
 
@@ -30,13 +31,16 @@ function asThreadType(value: string): ThreadTypeCreate {
 
 export function CommunicationChatCreatePage() {
   const navigate = useNavigate();
-  const [createTarget, setCreateTarget] = useState<'conversation' | 'channel'>('conversation');
-  const [newThreadType, setNewThreadType] = useState<ThreadTypeCreate>('direct');
+  const defaults = useChatCreateDefaults();
+  const [createTarget, setCreateTarget] = useState<'conversation' | 'channel'>(defaults.target);
+  const [newThreadType, setNewThreadType] = useState<ThreadTypeCreate>(defaults.threadType);
   const [newThreadTitle, setNewThreadTitle] = useState('');
-  const [newThreadParticipantIds, setNewThreadParticipantIds] = useState<string[]>([]);
+  const [newThreadParticipantIds, setNewThreadParticipantIds] = useState<string[]>(
+    defaults.participantUserIds,
+  );
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelDescription, setNewChannelDescription] = useState('');
-  const [newChannelType, setNewChannelType] = useState<'text' | 'voice'>('text');
+  const [newChannelType, setNewChannelType] = useState<'text' | 'voice'>(defaults.channelType);
   const [newChannelVisibility, setNewChannelVisibility] = useState<'public' | 'private'>('public');
   const [newChannelParticipantIds, setNewChannelParticipantIds] = useState<string[]>([]);
   const { data: userOptions = [] } = useListUserOptionsQuery();
