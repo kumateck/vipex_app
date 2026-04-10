@@ -8,11 +8,13 @@ export type AuthUser = {
   branch?: {
     id: string;
     name: string;
+    type?: number | null;
     telephone?: string | null;
     phone?: string | null;
     address?: string | null;
     location?: string | null;
   } | null;
+  branchType?: number | null;
   location?: { id: string; name: string } | null;
   company?: { id: string; name: string } | null;
   role?: { id?: string; name?: string } | null;

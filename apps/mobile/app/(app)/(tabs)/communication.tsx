@@ -4,26 +4,33 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
 import {
   addCommunicationChannelParticipants,
-  createCommunicationChannel,
+  approveCommunicationEngagementRequest,
+  createCommunicationEngagementRequest,
+  createCommunicationThread,
+  declineCommunicationEngagementRequest,
   joinCommunicationVoiceChannel,
   listCommunicationCalls,
   listCommunicationChannelUnreadCounts,
   listCommunicationChannels,
+  listCommunicationEngagementRequests,
+  listCommunicationEngagementRequestTargets,
   listCommunicationThreads,
   listCommunicationUnreadCounts,
   listMobileUserOptions,
   markCommunicationChannelRead,
   updateCommunicationChannel,
 } from '@mobile/lib/api';
-import { notifyError } from '@mobile/lib/notify';
+import { notifyError, notifySuccess } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import type {
   CommunicationCallSession,
   CommunicationChannel,
+  CommunicationEngagementRequest,
+  CommunicationEngagementRequestTarget,
   CommunicationThread,
+  MobileUserOption,
 } from '@mobile/types/communication';
-import type { MobileUserOption } from '@mobile/types/communication';
 import { useCommunicationSocket } from '@mobile/features/communication/use-communication-socket';
 import {
   loadChannelNotificationPrefs,
@@ -33,15 +40,38 @@ import {
 import { AppButton, AppCard, AppInput, AppSkeletonCard } from '@/components/ui/mobile';
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
+type CommunicationTabKey = 'chats' | 'channels' | 'users' | 'requests';
+
 type CommunicationLoadState = {
   threads: CommunicationThread[];
   textChannels: CommunicationChannel[];
   voiceChannels: CommunicationChannel[];
   users: MobileUserOption[];
+  requestTargets: CommunicationEngagementRequestTarget[];
+  incomingRequests: CommunicationEngagementRequest[];
+  outgoingRequests: CommunicationEngagementRequest[];
   activeCalls: CommunicationCallSession[];
   threadUnreadById: Map<string, { unread: number; mentions: number }>;
   voiceUnreadById: Map<string, { unread: number; mentions: number }>;
 };
+
+type UserChatEntry = {
+  id: string;
+  fullname: string;
+  roleName: string | null;
+  branchName: string | null;
+  locationName: string | null;
+  thread: CommunicationThread | null;
+  requiresRequest: boolean;
+  canRequest: boolean;
+};
+
+const TAB_OPTIONS: Array<{ key: CommunicationTabKey; label: string }> = [
+  { key: 'chats', label: 'Chats' },
+  { key: 'channels', label: 'Channels' },
+  { key: 'users', label: 'Users' },
+  { key: 'requests', label: 'Requests' },
+];
 
 function formatTime(value?: string | null) {
   if (!value) return '-';
@@ -53,19 +83,20 @@ function formatTime(value?: string | null) {
 export default function CommunicationTabScreen() {
   const { theme } = useAppearance();
   const { withAuth, session } = useAuth();
+  const currentUser = session.user;
+  const currentUserId = currentUser?.sub ?? null;
+  const [activeTab, setActiveTab] = useState<CommunicationTabKey>('chats');
   const [loading, setLoading] = useState(true);
   const [joiningChannelId, setJoiningChannelId] = useState<string | null>(null);
+  const [startingUserId, setStartingUserId] = useState<string | null>(null);
+  const [selectedRequestTargetId, setSelectedRequestTargetId] = useState<string | null>(null);
+  const [requestReasonNote, setRequestReasonNote] = useState('');
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+  const [decidingRequestId, setDecidingRequestId] = useState<string | null>(null);
   const [callOccupancyByCallId, setCallOccupancyByCallId] = useState<Record<string, number>>({});
-  const [userOptions, setUserOptions] = useState<MobileUserOption[]>([]);
   const [channelNotifModes, setChannelNotifModes] = useState<
     Record<string, ChannelNotificationMode>
   >({});
-  const [createName, setCreateName] = useState('');
-  const [createDescription, setCreateDescription] = useState('');
-  const [createChannelType, setCreateChannelType] = useState<'text' | 'voice'>('text');
-  const [createVisibility, setCreateVisibility] = useState<'public' | 'private'>('public');
-  const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
-  const [creatingChannel, setCreatingChannel] = useState(false);
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [editingChannelName, setEditingChannelName] = useState('');
   const [editingArchive, setEditingArchive] = useState(false);
@@ -76,6 +107,9 @@ export default function CommunicationTabScreen() {
     textChannels: [],
     voiceChannels: [],
     users: [],
+    requestTargets: [],
+    incomingRequests: [],
+    outgoingRequests: [],
     activeCalls: [],
     threadUnreadById: new Map(),
     voiceUnreadById: new Map(),
@@ -93,6 +127,9 @@ export default function CommunicationTabScreen() {
           voiceUnread,
           activeCalls,
           users,
+          requestTargets,
+          incomingRequests,
+          outgoingRequests,
         ] = await Promise.all([
           listCommunicationThreads(token),
           listCommunicationChannels(token, { channelType: 'text' }),
@@ -101,6 +138,9 @@ export default function CommunicationTabScreen() {
           listCommunicationChannelUnreadCounts(token, { channelType: 'voice' }),
           listCommunicationCalls(token, { status: 'active' }),
           listMobileUserOptions(token),
+          listCommunicationEngagementRequestTargets(token),
+          listCommunicationEngagementRequests(token, { view: 'incoming', status: 'pending' }),
+          listCommunicationEngagementRequests(token, { view: 'outgoing', status: 'pending' }),
         ]);
 
         const threadUnreadById = new Map<string, { unread: number; mentions: number }>(
@@ -121,13 +161,15 @@ export default function CommunicationTabScreen() {
           textChannels,
           voiceChannels,
           users,
+          requestTargets,
+          incomingRequests,
+          outgoingRequests,
           activeCalls,
           threadUnreadById,
           voiceUnreadById,
         } as CommunicationLoadState;
       });
       setData(next);
-      setUserOptions(next.users);
     } catch (error) {
       notifyError(
         'Communication load failed',
@@ -177,6 +219,18 @@ export default function CommunicationTabScreen() {
     () => data.threads.filter((thread) => thread.threadType === 'group'),
     [data.threads],
   );
+  const directThreadByUserId = useMemo(() => {
+    const map = new Map<string, CommunicationThread>();
+    for (const thread of directThreads) {
+      if (!thread.directPeerUserId) continue;
+      map.set(thread.directPeerUserId, thread);
+    }
+    return map;
+  }, [directThreads]);
+  const requestTargetIdSet = useMemo(
+    () => new Set(data.requestTargets.map((target) => target.id)),
+    [data.requestTargets],
+  );
   const activeCallByChannelId = useMemo(() => {
     const map = new Map<string, CommunicationCallSession>();
     for (const call of data.activeCalls) {
@@ -185,6 +239,65 @@ export default function CommunicationTabScreen() {
     }
     return map;
   }, [data.activeCalls]);
+
+  const userEntries = useMemo<UserChatEntry[]>(() => {
+    const branchType = currentUser?.branch?.type ?? currentUser?.branchType ?? null;
+    const isHeadOffice = branchType === 0;
+    const currentBranchId = currentUser?.branch?.id ?? currentUser?.branchId ?? null;
+    const currentLocationId = currentUser?.location?.id ?? null;
+
+    return data.users
+      .filter((user) => user.id !== currentUserId)
+      .map((user) => {
+        const thread = directThreadByUserId.get(user.id) ?? null;
+        const sameBranch = Boolean(currentBranchId && user.branchId === currentBranchId);
+        const sameLocation = Boolean(currentLocationId && user.locationId === currentLocationId);
+        const canDirect = isHeadOffice
+          ? true
+          : currentLocationId
+            ? sameBranch && sameLocation
+            : sameBranch;
+        const requiresRequest = !canDirect;
+        const canRequest = requestTargetIdSet.has(user.id);
+
+        return {
+          id: user.id,
+          fullname: user.fullname,
+          roleName: user.roleName ?? null,
+          branchName: user.branchName ?? null,
+          locationName: user.locationName ?? null,
+          thread,
+          requiresRequest,
+          canRequest,
+        };
+      })
+      .sort((a, b) => {
+        const aTime = a.thread?.lastMessageAt ? new Date(a.thread.lastMessageAt).getTime() : 0;
+        const bTime = b.thread?.lastMessageAt ? new Date(b.thread.lastMessageAt).getTime() : 0;
+        if (aTime !== bTime) return bTime - aTime;
+        return a.fullname.localeCompare(b.fullname);
+      });
+  }, [currentUser, currentUserId, data.users, directThreadByUserId, requestTargetIdSet]);
+
+  const chatEntries = useMemo(
+    () => userEntries.filter((entry) => Boolean(entry.thread)),
+    [userEntries],
+  );
+  const requestableUsers = useMemo(
+    () => userEntries.filter((entry) => !entry.thread && entry.requiresRequest && entry.canRequest),
+    [userEntries],
+  );
+
+  const selectedRequestTarget = useMemo(
+    () => requestableUsers.find((entry) => entry.id === selectedRequestTargetId) ?? null,
+    [requestableUsers, selectedRequestTargetId],
+  );
+
+  useEffect(() => {
+    if (!selectedRequestTargetId) return;
+    const stillExists = requestableUsers.some((entry) => entry.id === selectedRequestTargetId);
+    if (!stillExists) setSelectedRequestTargetId(null);
+  }, [requestableUsers, selectedRequestTargetId]);
 
   const openThread = (thread: CommunicationThread) => {
     router.push({
@@ -205,6 +318,86 @@ export default function CommunicationTabScreen() {
         title: `#${channel.name}`,
       },
     });
+  };
+
+  const startDirectChat = async (entry: UserChatEntry) => {
+    if (entry.thread) {
+      openThread(entry.thread);
+      return;
+    }
+    if (entry.requiresRequest) {
+      setSelectedRequestTargetId(entry.id);
+      setActiveTab('requests');
+      return;
+    }
+
+    setStartingUserId(entry.id);
+    try {
+      const created = await withAuth((token) =>
+        createCommunicationThread(token, {
+          threadType: 'direct',
+          participantUserIds: [entry.id],
+          title: entry.fullname,
+        }),
+      );
+      notifySuccess('Chat thread created.');
+      openThread(created);
+      await loadData();
+    } catch (error) {
+      notifyError(
+        'Chat start failed',
+        error instanceof Error ? error.message : 'Unable to start direct chat',
+      );
+    } finally {
+      setStartingUserId(null);
+    }
+  };
+
+  const submitChatRequest = async () => {
+    if (!selectedRequestTarget) {
+      notifyError('Request target required', 'Select one user to request chat access.');
+      return;
+    }
+    setIsSubmittingRequest(true);
+    try {
+      await withAuth((token) =>
+        createCommunicationEngagementRequest(token, {
+          targetUserId: selectedRequestTarget.id,
+          reasonNote: requestReasonNote.trim() || null,
+        }),
+      );
+      notifySuccess('Chat request sent.');
+      setRequestReasonNote('');
+      setSelectedRequestTargetId(null);
+      await loadData();
+    } catch (error) {
+      notifyError(
+        'Request failed',
+        error instanceof Error ? error.message : 'Unable to submit chat request',
+      );
+    } finally {
+      setIsSubmittingRequest(false);
+    }
+  };
+
+  const decideRequest = async (requestId: string, approve: boolean) => {
+    setDecidingRequestId(requestId);
+    try {
+      await withAuth((token) =>
+        approve
+          ? approveCommunicationEngagementRequest(token, { id: requestId })
+          : declineCommunicationEngagementRequest(token, { id: requestId }),
+      );
+      notifySuccess(approve ? 'Request approved.' : 'Request declined.');
+      await loadData();
+    } catch (error) {
+      notifyError(
+        approve ? 'Approve failed' : 'Decline failed',
+        error instanceof Error ? error.message : 'Unable to decide request',
+      );
+    } finally {
+      setDecidingRequestId(null);
+    }
   };
 
   const joinVoice = async (channel: CommunicationChannel) => {
@@ -241,35 +434,6 @@ export default function CommunicationTabScreen() {
     const merged = { ...channelNotifModes, [channelId]: next };
     setChannelNotifModes(merged);
     await saveChannelNotificationPrefs(merged);
-  };
-
-  const onCreateChannel = async () => {
-    const name = createName.trim();
-    if (!name) return;
-    setCreatingChannel(true);
-    try {
-      await withAuth((token) =>
-        createCommunicationChannel(token, {
-          name,
-          description: createDescription.trim() || null,
-          channelType: createChannelType,
-          visibility: createVisibility,
-          participantUserIds: createVisibility === 'private' ? selectedParticipantIds : [],
-          isCallEnabled: createChannelType === 'voice',
-        }),
-      );
-      setCreateName('');
-      setCreateDescription('');
-      setSelectedParticipantIds([]);
-      await loadData();
-    } catch (error) {
-      notifyError(
-        'Create channel failed',
-        error instanceof Error ? error.message : 'Unable to create channel',
-      );
-    } finally {
-      setCreatingChannel(false);
-    }
   };
 
   const onSaveChannelSettings = async () => {
@@ -313,73 +477,43 @@ export default function CommunicationTabScreen() {
     <AppScreen refreshing={loading} onRefresh={() => void loadData()}>
       <Text style={[styles.title, { color: theme.colors.text }]}>Communication</Text>
       <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-        DMs, channels, and always-available voice rooms on mobile.
+        WhatsApp-style chat on mobile: chats, channels, users, and requests.
       </Text>
       <Text style={[styles.socketLabel, { color: theme.colors.textSubtle }]}>
         Socket: {isSocketConnected ? 'Live' : 'Offline'}
       </Text>
 
-      <AppCard>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>Create Channel</Text>
-        <AppInput value={createName} onChangeText={setCreateName} placeholder="Channel name" />
-        <AppInput
-          value={createDescription}
-          onChangeText={setCreateDescription}
-          placeholder="Description (optional)"
-        />
-        <View style={styles.controlsRow}>
-          <AppButton
-            title={`Type: ${createChannelType}`}
-            onPress={() => setCreateChannelType((prev) => (prev === 'text' ? 'voice' : 'text'))}
-            variant="secondary"
-          />
-          <AppButton
-            title={`Visibility: ${createVisibility}`}
-            onPress={() =>
-              setCreateVisibility((prev) => (prev === 'public' ? 'private' : 'public'))
-            }
-            variant="secondary"
-          />
-        </View>
-        {createVisibility === 'private' ? (
-          <View style={styles.userPills}>
-            {userOptions.slice(0, 20).map((user) => {
-              const selected = selectedParticipantIds.includes(user.id);
-              return (
-                <Pressable
-                  key={user.id}
-                  onPress={() =>
-                    setSelectedParticipantIds((prev) =>
-                      selected ? prev.filter((id) => id !== user.id) : [...prev, user.id],
-                    )
-                  }
-                  style={[
-                    styles.userPill,
-                    {
-                      borderColor: theme.colors.border,
-                      backgroundColor: selected ? theme.colors.primary : theme.colors.cardMuted,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={{
-                      color: selected ? theme.colors.primaryText : theme.colors.text,
-                      fontSize: 12,
-                    }}
-                  >
-                    {user.fullname}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        ) : null}
-        <AppButton
-          title={creatingChannel ? 'Creating...' : 'Create Channel'}
-          onPress={() => void onCreateChannel()}
-          disabled={creatingChannel || createName.trim().length === 0}
-        />
-      </AppCard>
+      <View
+        style={[
+          styles.tabsWrap,
+          { borderColor: theme.colors.border, backgroundColor: theme.colors.cardMuted },
+        ]}
+      >
+        {TAB_OPTIONS.map((tab) => {
+          const active = activeTab === tab.key;
+          return (
+            <Pressable
+              key={tab.key}
+              onPress={() => setActiveTab(tab.key)}
+              style={[
+                styles.tabButton,
+                {
+                  backgroundColor: active ? theme.colors.primary : 'transparent',
+                },
+              ]}
+            >
+              <Text
+                style={{
+                  color: active ? theme.colors.primaryText : theme.colors.text,
+                  fontWeight: '700',
+                }}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       {loading ? (
         <>
@@ -387,15 +521,18 @@ export default function CommunicationTabScreen() {
           <AppSkeletonCard lines={3} />
           <AppSkeletonCard lines={3} />
         </>
-      ) : (
+      ) : null}
+
+      {!loading && activeTab === 'chats' ? (
         <>
-          <SectionTitle title="Direct Messages" />
-          {directThreads.length ? (
-            directThreads.map((thread) => {
+          <SectionTitle title="Direct Chats" />
+          {chatEntries.length ? (
+            chatEntries.map((entry) => {
+              const thread = entry.thread!;
               const unread = data.threadUnreadById.get(thread.id);
               return (
                 <Pressable
-                  key={thread.id}
+                  key={entry.id}
                   style={[
                     styles.row,
                     { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
@@ -403,26 +540,36 @@ export default function CommunicationTabScreen() {
                   onPress={() => openThread(thread)}
                 >
                   <View style={styles.rowMain}>
-                    <Text style={[styles.rowTitle, { color: theme.colors.text }]}>
-                      {thread.title ?? 'Direct chat'}
+                    <Text numberOfLines={1} style={[styles.rowTitle, { color: theme.colors.text }]}>
+                      {entry.fullname}
                     </Text>
-                    <Text style={[styles.rowSub, { color: theme.colors.textSubtle }]}>
-                      {formatTime(thread.lastMessageAt)}
+                    <Text
+                      numberOfLines={1}
+                      style={[styles.rowSub, { color: theme.colors.textSubtle }]}
+                    >
+                      {[entry.roleName, entry.branchName, entry.locationName]
+                        .filter(Boolean)
+                        .join(' • ') || 'Conversation'}
                     </Text>
                   </View>
-                  <View style={styles.badges}>
-                    {unread?.mentions ? (
-                      <BadgeText value={`@${unread.mentions}`} tone="danger" />
-                    ) : null}
-                    {unread?.unread ? (
-                      <BadgeText value={`${unread.unread}`} tone="primary" />
-                    ) : null}
+                  <View style={styles.rowMeta}>
+                    <Text style={[styles.rowTime, { color: theme.colors.textSubtle }]}>
+                      {formatTime(thread.lastMessageAt)}
+                    </Text>
+                    <View style={styles.badges}>
+                      {unread?.mentions ? (
+                        <BadgeText value={`@${unread.mentions}`} tone="danger" />
+                      ) : null}
+                      {unread?.unread ? (
+                        <BadgeText value={`${unread.unread}`} tone="primary" />
+                      ) : null}
+                    </View>
                   </View>
                 </Pressable>
               );
             })
           ) : (
-            <EmptyText />
+            <EmptyText value="No chats yet." />
           )}
 
           <SectionTitle title="Group Chats" />
@@ -439,28 +586,37 @@ export default function CommunicationTabScreen() {
                   onPress={() => openThread(thread)}
                 >
                   <View style={styles.rowMain}>
-                    <Text style={[styles.rowTitle, { color: theme.colors.text }]}>
-                      {thread.title ?? 'Group'}
+                    <Text numberOfLines={1} style={[styles.rowTitle, { color: theme.colors.text }]}>
+                      {thread.title ?? 'Group chat'}
                     </Text>
                     <Text style={[styles.rowSub, { color: theme.colors.textSubtle }]}>
-                      {formatTime(thread.lastMessageAt)}
+                      {thread.participantCount ?? 0} participants
                     </Text>
                   </View>
-                  <View style={styles.badges}>
-                    {unread?.mentions ? (
-                      <BadgeText value={`@${unread.mentions}`} tone="danger" />
-                    ) : null}
-                    {unread?.unread ? (
-                      <BadgeText value={`${unread.unread}`} tone="primary" />
-                    ) : null}
+                  <View style={styles.rowMeta}>
+                    <Text style={[styles.rowTime, { color: theme.colors.textSubtle }]}>
+                      {formatTime(thread.lastMessageAt)}
+                    </Text>
+                    <View style={styles.badges}>
+                      {unread?.mentions ? (
+                        <BadgeText value={`@${unread.mentions}`} tone="danger" />
+                      ) : null}
+                      {unread?.unread ? (
+                        <BadgeText value={`${unread.unread}`} tone="primary" />
+                      ) : null}
+                    </View>
                   </View>
                 </Pressable>
               );
             })
           ) : (
-            <EmptyText />
+            <EmptyText value="No group chats yet." />
           )}
+        </>
+      ) : null}
 
+      {!loading && activeTab === 'channels' ? (
+        <>
           <SectionTitle title="Text Channels" />
           {data.textChannels.length ? (
             data.textChannels.map((channel) => {
@@ -498,7 +654,7 @@ export default function CommunicationTabScreen() {
               );
             })
           ) : (
-            <EmptyText />
+            <EmptyText value="No text channels found." />
           )}
 
           <SectionTitle title="Voice Channels" />
@@ -528,12 +684,7 @@ export default function CommunicationTabScreen() {
                     </View>
                   </View>
                   <Pressable
-                    style={[
-                      styles.voiceButton,
-                      {
-                        backgroundColor: theme.colors.primary,
-                      },
-                    ]}
+                    style={[styles.voiceButton, { backgroundColor: theme.colors.primary }]}
                     disabled={joiningChannelId === channel.id}
                     onPress={() => void joinVoice(channel)}
                   >
@@ -587,10 +738,173 @@ export default function CommunicationTabScreen() {
               );
             })
           ) : (
-            <EmptyText />
+            <EmptyText value="No voice channels found." />
           )}
         </>
-      )}
+      ) : null}
+
+      {!loading && activeTab === 'users' ? (
+        <>
+          <SectionTitle title="People You Can Reach" />
+          {userEntries.length ? (
+            userEntries.map((entry) => (
+              <AppCard key={entry.id}>
+                <View style={styles.userRow}>
+                  <View style={styles.rowMain}>
+                    <Text numberOfLines={1} style={[styles.rowTitle, { color: theme.colors.text }]}>
+                      {entry.fullname}
+                    </Text>
+                    <Text
+                      numberOfLines={1}
+                      style={[styles.rowSub, { color: theme.colors.textSubtle }]}
+                    >
+                      {[entry.roleName, entry.branchName, entry.locationName]
+                        .filter(Boolean)
+                        .join(' • ') || 'No profile metadata'}
+                    </Text>
+                  </View>
+                  {entry.thread ? (
+                    <AppButton title="Open" onPress={() => openThread(entry.thread!)} />
+                  ) : entry.requiresRequest ? (
+                    <AppButton
+                      title={selectedRequestTargetId === entry.id ? 'Selected' : 'Request'}
+                      onPress={() => {
+                        setSelectedRequestTargetId(entry.id);
+                        setActiveTab('requests');
+                      }}
+                      disabled={!entry.canRequest}
+                      variant="secondary"
+                    />
+                  ) : (
+                    <AppButton
+                      title={startingUserId === entry.id ? 'Starting...' : 'Chat'}
+                      onPress={() => void startDirectChat(entry)}
+                      disabled={startingUserId === entry.id}
+                    />
+                  )}
+                </View>
+              </AppCard>
+            ))
+          ) : (
+            <EmptyText value="No users available." />
+          )}
+        </>
+      ) : null}
+
+      {!loading && activeTab === 'requests' ? (
+        <>
+          <SectionTitle title="New Request" />
+          <AppCard>
+            <Text style={[styles.rowSub, { color: theme.colors.textSubtle }]}>
+              Bottom-up chat needs approval. Select one target and send request.
+            </Text>
+            <View style={styles.controlsRow}>
+              {requestableUsers.slice(0, 30).map((entry) => (
+                <Pressable
+                  key={entry.id}
+                  onPress={() => setSelectedRequestTargetId(entry.id)}
+                  style={[
+                    styles.requestTargetPill,
+                    {
+                      borderColor: theme.colors.border,
+                      backgroundColor:
+                        selectedRequestTargetId === entry.id
+                          ? theme.colors.primary
+                          : theme.colors.cardMuted,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color:
+                        selectedRequestTargetId === entry.id
+                          ? theme.colors.primaryText
+                          : theme.colors.text,
+                      fontWeight: '700',
+                      fontSize: 12,
+                    }}
+                  >
+                    {entry.fullname}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <AppInput
+              value={requestReasonNote}
+              onChangeText={setRequestReasonNote}
+              placeholder={
+                selectedRequestTarget
+                  ? `Reason for ${selectedRequestTarget.fullname} (optional)`
+                  : 'Select one user to request'
+              }
+            />
+            <AppButton
+              title={isSubmittingRequest ? 'Sending...' : 'Send Request'}
+              onPress={() => void submitChatRequest()}
+              disabled={!selectedRequestTarget || isSubmittingRequest}
+            />
+          </AppCard>
+
+          <SectionTitle title="Incoming Requests" />
+          {data.incomingRequests.length ? (
+            data.incomingRequests.map((request) => (
+              <AppCard key={request.id}>
+                <Text style={[styles.rowTitle, { color: theme.colors.text }]}>
+                  {request.requesterFullname ?? 'Requester'}
+                </Text>
+                <Text style={[styles.rowSub, { color: theme.colors.textSubtle }]}>
+                  {[
+                    request.requesterRoleName,
+                    request.requesterBranchName,
+                    request.requesterLocationName,
+                  ]
+                    .filter(Boolean)
+                    .join(' • ') || 'No profile metadata'}
+                </Text>
+                <Text style={[styles.rowSub, { color: theme.colors.textSubtle }]}>
+                  {request.reasonNote?.trim() ? request.reasonNote : 'No reason provided'}
+                </Text>
+                <View style={styles.controlsRow}>
+                  <AppButton
+                    title={decidingRequestId === request.id ? 'Approving...' : 'Approve'}
+                    onPress={() => void decideRequest(request.id, true)}
+                    disabled={decidingRequestId === request.id}
+                  />
+                  <AppButton
+                    title={decidingRequestId === request.id ? 'Declining...' : 'Decline'}
+                    onPress={() => void decideRequest(request.id, false)}
+                    disabled={decidingRequestId === request.id}
+                    variant="secondary"
+                  />
+                </View>
+              </AppCard>
+            ))
+          ) : (
+            <EmptyText value="No incoming requests." />
+          )}
+
+          <SectionTitle title="Outgoing Requests" />
+          {data.outgoingRequests.length ? (
+            data.outgoingRequests.map((request) => (
+              <AppCard key={request.id}>
+                <Text style={[styles.rowTitle, { color: theme.colors.text }]}>
+                  {request.targetFullname ?? 'Target user'}
+                </Text>
+                <Text style={[styles.rowSub, { color: theme.colors.textSubtle }]}>
+                  {[request.targetRoleName, request.targetBranchName, request.targetLocationName]
+                    .filter(Boolean)
+                    .join(' • ') || 'No profile metadata'}
+                </Text>
+                <Text style={[styles.rowSub, { color: theme.colors.textSubtle }]}>
+                  Sent {formatTime(request.createdAt)}
+                </Text>
+              </AppCard>
+            ))
+          ) : (
+            <EmptyText value="No outgoing requests." />
+          )}
+        </>
+      ) : null}
     </AppScreen>
   );
 }
@@ -600,9 +914,9 @@ function SectionTitle({ title }: { title: string }) {
   return <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>{title}</Text>;
 }
 
-function EmptyText() {
+function EmptyText({ value }: { value: string }) {
   const { theme } = useAppearance();
-  return <Text style={{ color: theme.colors.textSubtle }}>No items yet.</Text>;
+  return <Text style={{ color: theme.colors.textSubtle }}>{value}</Text>;
 }
 
 function BadgeText({ value, tone }: { value: string; tone: 'primary' | 'danger' }) {
@@ -626,6 +940,19 @@ const styles = StyleSheet.create({
   title: { fontSize: mobileTypography.title, fontWeight: '800' },
   subtitle: { marginTop: -2, lineHeight: 20, marginBottom: mobileSpacing.xs },
   socketLabel: { fontSize: 12, marginBottom: mobileSpacing.xs },
+  tabsWrap: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 4,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  tabButton: {
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
   sectionTitle: {
     fontSize: mobileTypography.sectionTitle,
     fontWeight: '700',
@@ -641,8 +968,10 @@ const styles = StyleSheet.create({
     gap: mobileSpacing.sm,
   },
   rowMain: { flex: 1, gap: 2 },
+  rowMeta: { alignItems: 'flex-end', gap: 6 },
   rowTitle: { fontSize: 15, fontWeight: '700' },
   rowSub: { fontSize: 12 },
+  rowTime: { fontSize: 11 },
   badges: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   badge: {
     borderRadius: 999,
@@ -653,13 +982,6 @@ const styles = StyleSheet.create({
   },
   voiceHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: mobileSpacing.sm },
   controlsRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
-  userPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  userPill: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
   manageWrap: { marginTop: mobileSpacing.sm, gap: 8 },
   voiceButton: {
     marginTop: mobileSpacing.sm,
@@ -667,5 +989,12 @@ const styles = StyleSheet.create({
     minHeight: 42,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  userRow: { flexDirection: 'row', alignItems: 'center', gap: mobileSpacing.sm },
+  requestTargetPill: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
 });

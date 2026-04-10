@@ -4,6 +4,8 @@ import type {
   CommunicationCallSession,
   CommunicationChannel,
   CommunicationChannelUnreadCount,
+  CommunicationEngagementRequest,
+  CommunicationEngagementRequestTarget,
   CommunicationMessage,
   CommunicationThread,
   CommunicationUnreadCount,
@@ -445,6 +447,24 @@ export async function listCommunicationThreads(
   });
 }
 
+export async function createCommunicationThread(
+  accessToken: string,
+  input: {
+    threadType: 'direct' | 'group' | 'channel';
+    title?: string | null;
+    participantUserIds: string[];
+    branchId?: string | null;
+    locationId?: string | null;
+  },
+): Promise<CommunicationThread> {
+  return request<CommunicationThread>({
+    path: '/communication/threads',
+    method: 'POST',
+    token: accessToken,
+    body: input,
+  });
+}
+
 export async function listCommunicationChannels(
   accessToken: string,
   input?: { channelType?: 'text' | 'voice'; includeArchived?: boolean },
@@ -629,6 +649,74 @@ export async function joinCommunicationVoiceChannel(
 export async function listMobileUserOptions(accessToken: string): Promise<MobileUserOption[]> {
   return request<MobileUserOption[]>({
     path: '/users/options',
+    token: accessToken,
+  });
+}
+
+export async function listCommunicationEngagementRequestTargets(
+  accessToken: string,
+): Promise<CommunicationEngagementRequestTarget[]> {
+  return request<CommunicationEngagementRequestTarget[]>({
+    path: '/communication/engagement-requests/targets',
+    token: accessToken,
+  });
+}
+
+export async function listCommunicationEngagementRequests(
+  accessToken: string,
+  input?: {
+    view?: 'incoming' | 'outgoing' | 'all';
+    status?: 'pending' | 'approved' | 'declined';
+  },
+): Promise<CommunicationEngagementRequest[]> {
+  return request<CommunicationEngagementRequest[]>({
+    path: '/communication/engagement-requests',
+    token: accessToken,
+    query: {
+      view: input?.view,
+      status: input?.status,
+    },
+  });
+}
+
+export async function createCommunicationEngagementRequest(
+  accessToken: string,
+  input: {
+    targetUserId: string;
+    reasonCode?: string | null;
+    reasonNote?: string | null;
+    linkedEntityType?: string | null;
+    linkedEntityId?: string | null;
+    scope?: 'temporary' | 'persistent';
+    expiresAt?: string | null;
+  },
+): Promise<CommunicationEngagementRequest> {
+  return request<CommunicationEngagementRequest>({
+    path: '/communication/engagement-requests',
+    method: 'POST',
+    token: accessToken,
+    body: input,
+  });
+}
+
+export async function approveCommunicationEngagementRequest(
+  accessToken: string,
+  input: { id: string },
+): Promise<CommunicationEngagementRequest> {
+  return request<CommunicationEngagementRequest>({
+    path: `/communication/engagement-requests/${input.id}/approve`,
+    method: 'POST',
+    token: accessToken,
+  });
+}
+
+export async function declineCommunicationEngagementRequest(
+  accessToken: string,
+  input: { id: string },
+): Promise<CommunicationEngagementRequest> {
+  return request<CommunicationEngagementRequest>({
+    path: `/communication/engagement-requests/${input.id}/decline`,
+    method: 'POST',
     token: accessToken,
   });
 }
