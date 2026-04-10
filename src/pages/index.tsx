@@ -7,10 +7,11 @@ import {
 
 function appendDomainDashboardRoutes(items: RouteObject[]): RouteObject[] {
   return items.map((route) => {
-    if (!route) return route;
-
     const children = route.children ? appendDomainDashboardRoutes(route.children) : route.children;
-    if (route.id !== 'layout-1') return { ...route, children };
+    if (route.id !== 'layout-1') {
+      if ('index' in route && route.index) return route;
+      return children ? { ...route, children } : route;
+    }
 
     const hasDomainDashboard = children?.some((child) => child.path === 'app/:domain/dashboard');
     const hasDomainModule = children?.some(

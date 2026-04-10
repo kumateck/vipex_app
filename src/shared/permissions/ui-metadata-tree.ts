@@ -1,10 +1,11 @@
 import {
   MAIN_PERMISSION_TABS,
   type MainPermissionTab,
+  type PermissionTree,
   type PermissionUiCatalogItem,
 } from './ui-metadata-types';
 
-export function buildPermissionTree(catalog: PermissionUiCatalogItem[]) {
+export function buildPermissionTree(catalog: PermissionUiCatalogItem[]): PermissionTree {
   const domainMap = new Map<
     MainPermissionTab,
     Map<string, Map<string, PermissionUiCatalogItem[]>>
@@ -21,7 +22,8 @@ export function buildPermissionTree(catalog: PermissionUiCatalogItem[]) {
   }
 
   return MAIN_PERMISSION_TABS.map((domain) => {
-    const subdomains = domainMap.get(domain) ?? new Map();
+    const subdomains =
+      domainMap.get(domain) ?? new Map<string, Map<string, PermissionUiCatalogItem[]>>();
     return {
       domain,
       subdomains: [...subdomains.entries()]
@@ -32,7 +34,10 @@ export function buildPermissionTree(catalog: PermissionUiCatalogItem[]) {
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([moduleName, permissions]) => ({
               name: moduleName,
-              permissions: permissions.sort((a, b) => a.title.localeCompare(b.title)),
+              permissions: permissions.sort(
+                (a: PermissionUiCatalogItem, b: PermissionUiCatalogItem) =>
+                  a.title.localeCompare(b.title),
+              ),
             })),
         })),
     };

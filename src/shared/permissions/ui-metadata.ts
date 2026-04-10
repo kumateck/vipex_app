@@ -55,7 +55,9 @@ export const PermissionTreeCatalog = buildPermissionTreeImpl(PermissionUiCatalog
 
 const flattenedTreePermissions = PermissionTreeCatalog.flatMap((domain) =>
   domain.subdomains.flatMap((subdomain) =>
-    subdomain.modules.flatMap((module) => module.permissions.map((permission) => permission.key)),
+    subdomain.modules.flatMap((module) =>
+      module.permissions.map((permission: PermissionUiCatalogItem) => permission.key),
+    ),
   ),
 );
 
