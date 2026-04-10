@@ -1,5 +1,7 @@
 import { and, asc, desc, eq, gte, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
+import { createId } from '@paralleldrive/cuid2';
+import { bigint, pgTable, smallint, timestamp, varchar } from 'drizzle-orm/pg-core';
 import {
   accountingApprovalPolicies,
   chartOfAccounts,
@@ -35,9 +37,76 @@ import { ApprovalStatus, CashierType, PaymentComponent, PaymentMethod } from '@/
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
+const dailyCashConfirmationsLegacy = pgTable('daily_cash_confirmations', {
+  id: varchar('id', { length: 25 }).primaryKey(),
+  companyId: varchar('company_id', { length: 25 }).notNull(),
+  branchId: varchar('branch_id', { length: 25 }).notNull(),
+  locationId: varchar('location_id', { length: 25 }),
+  cashierUserId: varchar('cashier_user_id', { length: 25 }),
+  accountantUserId: varchar('accountant_user_id', { length: 25 }),
+  confirmationDate: timestamp('confirmation_date', { withTimezone: false }).notNull(),
+  expectedCashPsw: bigint('expected_cash_psw', { mode: 'number' }).notNull(),
+  countedCashPsw: bigint('counted_cash_psw', { mode: 'number' }).notNull(),
+  shortagePsw: bigint('shortage_psw', { mode: 'number' }).notNull(),
+  overagePsw: bigint('overage_psw', { mode: 'number' }).notNull(),
+  notes: varchar('notes', { length: 1000 }),
+  status: smallint('status').notNull(),
+  journalEntryId: varchar('journal_entry_id', { length: 25 }),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: false }),
+  postedAt: timestamp('posted_at', { withTimezone: false }),
+  createdBy: varchar('created_by', { length: 25 }),
+  createdAt: timestamp('created_at', { withTimezone: false }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: false }).notNull(),
+});
+
 function toDateOnlyParam(value: Date | string) {
   if (typeof value === 'string') return value.length > 10 ? value.slice(0, 10) : value;
   return value.toISOString().slice(0, 10);
+}
+
+function readErrorCode(value: unknown, depth = 0): string | null {
+  if (!value || typeof value !== 'object' || depth > 6) return null;
+  const obj = value as { code?: unknown; cause?: unknown };
+  if (typeof obj.code === 'string' && obj.code.length > 0) return obj.code;
+  return readErrorCode(obj.cause, depth + 1);
+}
+
+function readErrorMessage(value: unknown, depth = 0): string {
+  if (!value || typeof value !== 'object' || depth > 6) return '';
+  const obj = value as { message?: unknown; cause?: unknown };
+  const message = typeof obj.message === 'string' ? obj.message : '';
+  return `${message} ${readErrorMessage(obj.cause, depth + 1)}`.trim();
+}
+
+function isMissingDailyCashPaymentModeColumnsError(error: unknown) {
+  if (readErrorCode(error) !== '42703') return false;
+  const message = readErrorMessage(error);
+  return (
+    message.includes('expected_mtn_psw') ||
+    message.includes('expected_telecel_psw') ||
+    message.includes('expected_airtel_psw') ||
+    message.includes('counted_mtn_psw') ||
+    message.includes('counted_telecel_psw') ||
+    message.includes('counted_airtel_psw')
+  );
+}
+
+async function hasDailyCashPaymentModeColumns(executor: DbExecutor = db): Promise<boolean> {
+  const rows = await executor.execute(sql<{ total: string | number }>`
+    select count(*)::int as total
+    from information_schema.columns
+    where table_schema = current_schema()
+      and table_name = 'daily_cash_confirmations'
+      and column_name in (
+        'expected_mtn_psw',
+        'expected_telecel_psw',
+        'expected_airtel_psw',
+        'counted_mtn_psw',
+        'counted_telecel_psw',
+        'counted_airtel_psw'
+      )
+  `);
+  return Number(rows[0]?.total ?? 0) === 6;
 }
 
 export async function listAccountsRepo(input: { companyId: string; active?: boolean | null }) {
@@ -1135,20 +1204,152 @@ export async function createDailyCashConfirmationRepo(
   values: typeof dailyCashConfirmations.$inferInsert,
   executor: DbExecutor = db,
 ) {
-  const [row] = await executor
-    .insert(dailyCashConfirmations)
-    .values(values)
-    .returning({ id: dailyCashConfirmations.id });
-  return row ?? null;
+  const supportsPaymentModeColumns = await hasDailyCashPaymentModeColumns(executor);
+  if (!supportsPaymentModeColumns) {
+    const now = new Date();
+    const [row] = await executor
+      .insert(dailyCashConfirmationsLegacy)
+      .values({
+        id: values.id ?? createId(),
+        companyId: values.companyId,
+        branchId: values.branchId,
+        locationId: values.locationId ?? null,
+        cashierUserId: values.cashierUserId ?? null,
+        accountantUserId: values.accountantUserId ?? null,
+        confirmationDate: values.confirmationDate,
+        expectedCashPsw: values.expectedCashPsw ?? 0,
+        countedCashPsw: values.countedCashPsw ?? 0,
+        shortagePsw: values.shortagePsw ?? 0,
+        overagePsw: values.overagePsw ?? 0,
+        notes: values.notes ?? null,
+        status: values.status ?? 0,
+        journalEntryId: values.journalEntryId ?? null,
+        confirmedAt: values.confirmedAt ?? null,
+        postedAt: values.postedAt ?? null,
+        createdBy: values.createdBy ?? null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: dailyCashConfirmationsLegacy.id });
+    return row ?? null;
+  }
+
+  try {
+    const [row] = await executor
+      .insert(dailyCashConfirmations)
+      .values(values)
+      .returning({ id: dailyCashConfirmations.id });
+    return row ?? null;
+  } catch (error) {
+    if (!isMissingDailyCashPaymentModeColumnsError(error)) throw error;
+    const now = new Date();
+    const [row] = await executor
+      .insert(dailyCashConfirmationsLegacy)
+      .values({
+        id: values.id ?? createId(),
+        companyId: values.companyId,
+        branchId: values.branchId,
+        locationId: values.locationId ?? null,
+        cashierUserId: values.cashierUserId ?? null,
+        accountantUserId: values.accountantUserId ?? null,
+        confirmationDate: values.confirmationDate,
+        expectedCashPsw: values.expectedCashPsw ?? 0,
+        countedCashPsw: values.countedCashPsw ?? 0,
+        shortagePsw: values.shortagePsw ?? 0,
+        overagePsw: values.overagePsw ?? 0,
+        notes: values.notes ?? null,
+        status: values.status ?? 0,
+        journalEntryId: values.journalEntryId ?? null,
+        confirmedAt: values.confirmedAt ?? null,
+        postedAt: values.postedAt ?? null,
+        createdBy: values.createdBy ?? null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: dailyCashConfirmationsLegacy.id });
+    return row ?? null;
+  }
 }
 
 export async function getDailyCashConfirmationRepo(id: string, executor: DbExecutor = db) {
-  const [row] = await executor
-    .select()
-    .from(dailyCashConfirmations)
-    .where(eq(dailyCashConfirmations.id, id))
-    .limit(1);
-  return row ?? null;
+  const supportsPaymentModeColumns = await hasDailyCashPaymentModeColumns(executor);
+  if (!supportsPaymentModeColumns) {
+    const [row] = await executor
+      .select({
+        id: dailyCashConfirmations.id,
+        companyId: dailyCashConfirmations.companyId,
+        branchId: dailyCashConfirmations.branchId,
+        locationId: dailyCashConfirmations.locationId,
+        cashierUserId: dailyCashConfirmations.cashierUserId,
+        accountantUserId: dailyCashConfirmations.accountantUserId,
+        confirmationDate: dailyCashConfirmations.confirmationDate,
+        expectedCashPsw: dailyCashConfirmations.expectedCashPsw,
+        expectedMtnPsw: sql<number>`0::bigint`,
+        expectedTelecelPsw: sql<number>`0::bigint`,
+        expectedAirtelPsw: sql<number>`0::bigint`,
+        countedCashPsw: dailyCashConfirmations.countedCashPsw,
+        countedMtnPsw: sql<number>`0::bigint`,
+        countedTelecelPsw: sql<number>`0::bigint`,
+        countedAirtelPsw: sql<number>`0::bigint`,
+        shortagePsw: dailyCashConfirmations.shortagePsw,
+        overagePsw: dailyCashConfirmations.overagePsw,
+        notes: dailyCashConfirmations.notes,
+        status: dailyCashConfirmations.status,
+        journalEntryId: dailyCashConfirmations.journalEntryId,
+        confirmedAt: dailyCashConfirmations.confirmedAt,
+        postedAt: dailyCashConfirmations.postedAt,
+        createdBy: dailyCashConfirmations.createdBy,
+        createdAt: dailyCashConfirmations.createdAt,
+        updatedAt: dailyCashConfirmations.updatedAt,
+      })
+      .from(dailyCashConfirmations)
+      .where(eq(dailyCashConfirmations.id, id))
+      .limit(1);
+    return row ?? null;
+  }
+
+  try {
+    const [row] = await executor
+      .select()
+      .from(dailyCashConfirmations)
+      .where(eq(dailyCashConfirmations.id, id))
+      .limit(1);
+    return row ?? null;
+  } catch (error) {
+    if (!isMissingDailyCashPaymentModeColumnsError(error)) throw error;
+    const [row] = await executor
+      .select({
+        id: dailyCashConfirmations.id,
+        companyId: dailyCashConfirmations.companyId,
+        branchId: dailyCashConfirmations.branchId,
+        locationId: dailyCashConfirmations.locationId,
+        cashierUserId: dailyCashConfirmations.cashierUserId,
+        accountantUserId: dailyCashConfirmations.accountantUserId,
+        confirmationDate: dailyCashConfirmations.confirmationDate,
+        expectedCashPsw: dailyCashConfirmations.expectedCashPsw,
+        expectedMtnPsw: sql<number>`0::bigint`,
+        expectedTelecelPsw: sql<number>`0::bigint`,
+        expectedAirtelPsw: sql<number>`0::bigint`,
+        countedCashPsw: dailyCashConfirmations.countedCashPsw,
+        countedMtnPsw: sql<number>`0::bigint`,
+        countedTelecelPsw: sql<number>`0::bigint`,
+        countedAirtelPsw: sql<number>`0::bigint`,
+        shortagePsw: dailyCashConfirmations.shortagePsw,
+        overagePsw: dailyCashConfirmations.overagePsw,
+        notes: dailyCashConfirmations.notes,
+        status: dailyCashConfirmations.status,
+        journalEntryId: dailyCashConfirmations.journalEntryId,
+        confirmedAt: dailyCashConfirmations.confirmedAt,
+        postedAt: dailyCashConfirmations.postedAt,
+        createdBy: dailyCashConfirmations.createdBy,
+        createdAt: dailyCashConfirmations.createdAt,
+        updatedAt: dailyCashConfirmations.updatedAt,
+      })
+      .from(dailyCashConfirmations)
+      .where(eq(dailyCashConfirmations.id, id))
+      .limit(1);
+    return row ?? null;
+  }
 }
 
 export async function listDailyCashConfirmationsRepo(
@@ -1157,11 +1358,81 @@ export async function listDailyCashConfirmationsRepo(
 ) {
   const where: SQL<unknown>[] = [eq(dailyCashConfirmations.companyId, input.companyId)];
   if (input.branchId) where.push(eq(dailyCashConfirmations.branchId, input.branchId));
-  return executor
-    .select()
-    .from(dailyCashConfirmations)
-    .where(and(...where))
-    .orderBy(asc(dailyCashConfirmations.confirmationDate), asc(dailyCashConfirmations.id));
+  const supportsPaymentModeColumns = await hasDailyCashPaymentModeColumns(executor);
+  if (!supportsPaymentModeColumns) {
+    return executor
+      .select({
+        id: dailyCashConfirmations.id,
+        companyId: dailyCashConfirmations.companyId,
+        branchId: dailyCashConfirmations.branchId,
+        locationId: dailyCashConfirmations.locationId,
+        cashierUserId: dailyCashConfirmations.cashierUserId,
+        accountantUserId: dailyCashConfirmations.accountantUserId,
+        confirmationDate: dailyCashConfirmations.confirmationDate,
+        expectedCashPsw: dailyCashConfirmations.expectedCashPsw,
+        expectedMtnPsw: sql<number>`0::bigint`,
+        expectedTelecelPsw: sql<number>`0::bigint`,
+        expectedAirtelPsw: sql<number>`0::bigint`,
+        countedCashPsw: dailyCashConfirmations.countedCashPsw,
+        countedMtnPsw: sql<number>`0::bigint`,
+        countedTelecelPsw: sql<number>`0::bigint`,
+        countedAirtelPsw: sql<number>`0::bigint`,
+        shortagePsw: dailyCashConfirmations.shortagePsw,
+        overagePsw: dailyCashConfirmations.overagePsw,
+        notes: dailyCashConfirmations.notes,
+        status: dailyCashConfirmations.status,
+        journalEntryId: dailyCashConfirmations.journalEntryId,
+        confirmedAt: dailyCashConfirmations.confirmedAt,
+        postedAt: dailyCashConfirmations.postedAt,
+        createdBy: dailyCashConfirmations.createdBy,
+        createdAt: dailyCashConfirmations.createdAt,
+        updatedAt: dailyCashConfirmations.updatedAt,
+      })
+      .from(dailyCashConfirmations)
+      .where(and(...where))
+      .orderBy(asc(dailyCashConfirmations.confirmationDate), asc(dailyCashConfirmations.id));
+  }
+
+  try {
+    return await executor
+      .select()
+      .from(dailyCashConfirmations)
+      .where(and(...where))
+      .orderBy(asc(dailyCashConfirmations.confirmationDate), asc(dailyCashConfirmations.id));
+  } catch (error) {
+    if (!isMissingDailyCashPaymentModeColumnsError(error)) throw error;
+    return executor
+      .select({
+        id: dailyCashConfirmations.id,
+        companyId: dailyCashConfirmations.companyId,
+        branchId: dailyCashConfirmations.branchId,
+        locationId: dailyCashConfirmations.locationId,
+        cashierUserId: dailyCashConfirmations.cashierUserId,
+        accountantUserId: dailyCashConfirmations.accountantUserId,
+        confirmationDate: dailyCashConfirmations.confirmationDate,
+        expectedCashPsw: dailyCashConfirmations.expectedCashPsw,
+        expectedMtnPsw: sql<number>`0::bigint`,
+        expectedTelecelPsw: sql<number>`0::bigint`,
+        expectedAirtelPsw: sql<number>`0::bigint`,
+        countedCashPsw: dailyCashConfirmations.countedCashPsw,
+        countedMtnPsw: sql<number>`0::bigint`,
+        countedTelecelPsw: sql<number>`0::bigint`,
+        countedAirtelPsw: sql<number>`0::bigint`,
+        shortagePsw: dailyCashConfirmations.shortagePsw,
+        overagePsw: dailyCashConfirmations.overagePsw,
+        notes: dailyCashConfirmations.notes,
+        status: dailyCashConfirmations.status,
+        journalEntryId: dailyCashConfirmations.journalEntryId,
+        confirmedAt: dailyCashConfirmations.confirmedAt,
+        postedAt: dailyCashConfirmations.postedAt,
+        createdBy: dailyCashConfirmations.createdBy,
+        createdAt: dailyCashConfirmations.createdAt,
+        updatedAt: dailyCashConfirmations.updatedAt,
+      })
+      .from(dailyCashConfirmations)
+      .where(and(...where))
+      .orderBy(asc(dailyCashConfirmations.confirmationDate), asc(dailyCashConfirmations.id));
+  }
 }
 
 export async function getDailyCashExpectedSummaryRepo(
@@ -1188,6 +1459,9 @@ export async function getDailyCashExpectedSummaryRepo(
   const [row] = await executor
     .select({
       cashSalesPsw: sql<number>`coalesce(sum(case when ${payments.method} = ${PaymentMethod.CASH} then ${payments.grossAmountPsw} else 0 end), 0)`,
+      mtnSalesPsw: sql<number>`coalesce(sum(case when ${payments.method} = ${PaymentMethod.MTN} then ${payments.grossAmountPsw} else 0 end), 0)`,
+      telecelSalesPsw: sql<number>`coalesce(sum(case when ${payments.method} = ${PaymentMethod.TELECEL} then ${payments.grossAmountPsw} else 0 end), 0)`,
+      airtelSalesPsw: sql<number>`coalesce(sum(case when ${payments.method} = ${PaymentMethod.AIRTEL} then ${payments.grossAmountPsw} else 0 end), 0)`,
       nonCashSalesPsw: sql<number>`coalesce(sum(case when ${payments.method} <> ${PaymentMethod.CASH} then ${payments.grossAmountPsw} else 0 end), 0)`,
       totalSalesPsw: sql<number>`coalesce(sum(${payments.grossAmountPsw}), 0)`,
       senderSalesPsw: sql<number>`coalesce(sum(case when ${payments.cashierType} = ${CashierType.SENDING} then ${payments.grossAmountPsw} else 0 end), 0)`,
@@ -1204,6 +1478,9 @@ export async function getDailyCashExpectedSummaryRepo(
 
   return {
     cashSalesPsw: Number(row?.cashSalesPsw ?? 0),
+    mtnSalesPsw: Number(row?.mtnSalesPsw ?? 0),
+    telecelSalesPsw: Number(row?.telecelSalesPsw ?? 0),
+    airtelSalesPsw: Number(row?.airtelSalesPsw ?? 0),
     nonCashSalesPsw: Number(row?.nonCashSalesPsw ?? 0),
     totalSalesPsw: Number(row?.totalSalesPsw ?? 0),
     senderSalesPsw: Number(row?.senderSalesPsw ?? 0),
@@ -1261,12 +1538,54 @@ export async function updateDailyCashConfirmationRepo(
   patch: Partial<typeof dailyCashConfirmations.$inferInsert>,
   executor: DbExecutor = db,
 ) {
-  const [row] = await executor
-    .update(dailyCashConfirmations)
-    .set(patch)
-    .where(eq(dailyCashConfirmations.id, id))
-    .returning();
-  return row ?? null;
+  const supportsPaymentModeColumns = await hasDailyCashPaymentModeColumns(executor);
+  if (!supportsPaymentModeColumns) {
+    const [row] = await executor
+      .update(dailyCashConfirmationsLegacy)
+      .set({
+        ...(patch.accountantUserId !== undefined
+          ? { accountantUserId: patch.accountantUserId ?? null }
+          : {}),
+        ...(patch.status !== undefined ? { status: patch.status } : {}),
+        ...(patch.confirmedAt !== undefined ? { confirmedAt: patch.confirmedAt ?? null } : {}),
+        ...(patch.journalEntryId !== undefined
+          ? { journalEntryId: patch.journalEntryId ?? null }
+          : {}),
+        ...(patch.postedAt !== undefined ? { postedAt: patch.postedAt ?? null } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(dailyCashConfirmationsLegacy.id, id))
+      .returning({ id: dailyCashConfirmationsLegacy.id });
+    return row ?? null;
+  }
+
+  try {
+    const [row] = await executor
+      .update(dailyCashConfirmations)
+      .set(patch)
+      .where(eq(dailyCashConfirmations.id, id))
+      .returning();
+    return row ?? null;
+  } catch (error) {
+    if (!isMissingDailyCashPaymentModeColumnsError(error)) throw error;
+    const [row] = await executor
+      .update(dailyCashConfirmationsLegacy)
+      .set({
+        ...(patch.accountantUserId !== undefined
+          ? { accountantUserId: patch.accountantUserId ?? null }
+          : {}),
+        ...(patch.status !== undefined ? { status: patch.status } : {}),
+        ...(patch.confirmedAt !== undefined ? { confirmedAt: patch.confirmedAt ?? null } : {}),
+        ...(patch.journalEntryId !== undefined
+          ? { journalEntryId: patch.journalEntryId ?? null }
+          : {}),
+        ...(patch.postedAt !== undefined ? { postedAt: patch.postedAt ?? null } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(dailyCashConfirmationsLegacy.id, id))
+      .returning({ id: dailyCashConfirmationsLegacy.id });
+    return row ?? null;
+  }
 }
 
 export async function createExpenseRequestRepo(

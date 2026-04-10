@@ -9,6 +9,7 @@ import {
   setPasswordSvc,
   getCurrentUserPermissionsSvc,
   updateCurrentUserProfileSvc,
+  verifyCurrentUserPasswordSvc,
 } from './service';
 
 export async function loginCtrl(input: {
@@ -59,6 +60,10 @@ export async function setPasswordCtrl(email: string, otp: string, password: stri
 export async function changePasswordCtrl(userId: string, oldPassword: string, newPassword: string) {
   await changePasswordSvc(userId, oldPassword, newPassword);
   return { success: true };
+}
+
+export async function verifyCurrentUserPasswordCtrl(userId: string, password: string) {
+  return verifyCurrentUserPasswordSvc(userId, password);
 }
 
 export async function currentUserPermissionsCtrl(userId: string) {

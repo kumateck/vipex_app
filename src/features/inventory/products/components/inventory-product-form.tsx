@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useEffect, useMemo } from 'react';
+import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,8 @@ type InventoryProductFormValues = {
   name: string;
   description?: string;
   unitOfMeasure: number;
+  isRecoverable: boolean;
+  unitConversions: { unitOfMeasure: number; factorToBase: string }[];
   minStockLevel?: string;
 };
 const UNCATEGORIZED_VALUE = '__uncategorized__';
@@ -72,6 +74,7 @@ export function InventoryProductForm({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<InventoryProductFormValues>({
     resolver: zodResolver(schema) as never,
@@ -83,6 +86,8 @@ export function InventoryProductForm({
             name: '',
             description: '',
             unitOfMeasure: 0,
+            isRecoverable: false,
+            unitConversions: [],
             minStockLevel: '',
           }
         : {
@@ -90,10 +95,22 @@ export function InventoryProductForm({
             name: '',
             description: '',
             unitOfMeasure: 0,
+            isRecoverable: false,
+            unitConversions: [],
             minStockLevel: '',
           },
     mode: 'onSubmit',
   });
+  const { fields, append, remove, replace } = useFieldArray({
+    control,
+    name: 'unitConversions',
+  });
+  const selectedBaseUnit = watch('unitOfMeasure');
+  const watchedConversions = watch('unitConversions');
+  const availableConversionUnitOptions = useMemo(
+    () => UNIT_OF_MEASURE_OPTIONS.filter((option) => option.value !== selectedBaseUnit),
+    [selectedBaseUnit],
+  );
 
   useEffect(() => {
     if (mode === 'edit' && initialData) {
@@ -102,6 +119,13 @@ export function InventoryProductForm({
         name: initialData.name ?? '',
         description: initialData.description ?? '',
         unitOfMeasure: initialData.unitOfMeasure ?? 0,
+        isRecoverable: Boolean(initialData.isRecoverable),
+        unitConversions: (initialData.unitConversions ?? [])
+          .filter((conversion) => conversion.factorToBase !== '1')
+          .map((conversion) => ({
+            unitOfMeasure: conversion.unitOfMeasure,
+            factorToBase: conversion.factorToBase,
+          })),
         minStockLevel: initialData.minStockLevel ?? '',
       });
       return;
@@ -112,9 +136,18 @@ export function InventoryProductForm({
       name: '',
       description: '',
       unitOfMeasure: 0,
+      isRecoverable: false,
+      unitConversions: [],
       minStockLevel: '',
     });
   }, [initialData, mode, reset]);
+
+  useEffect(() => {
+    const next = (watchedConversions ?? []).filter((row) => row.unitOfMeasure !== selectedBaseUnit);
+    if (next.length !== (watchedConversions ?? []).length) {
+      replace(next);
+    }
+  }, [replace, selectedBaseUnit, watchedConversions]);
 
   const submit = async (values: InventoryProductFormValues) => {
     if (mode === 'create') {
@@ -124,6 +157,8 @@ export function InventoryProductForm({
         name: values.name,
         description: values.description ?? '',
         unitOfMeasure: values.unitOfMeasure,
+        isRecoverable: values.isRecoverable,
+        unitConversions: values.unitConversions,
         minStockLevel: values.minStockLevel ?? '',
       });
       return;
@@ -133,6 +168,8 @@ export function InventoryProductForm({
       name: values.name,
       description: values.description ?? '',
       unitOfMeasure: values.unitOfMeasure,
+      isRecoverable: values.isRecoverable,
+      unitConversions: values.unitConversions,
       minStockLevel: values.minStockLevel ?? '',
     });
   };
@@ -236,6 +273,88 @@ export function InventoryProductForm({
                 {errors.unitOfMeasure?.message ? (
                   <p className="text-sm text-destructive">{errors.unitOfMeasure.message}</p>
                 ) : null}
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="isRecoverable">Recoverable item</FieldLabel>
+                <Controller
+                  control={control}
+                  name="isRecoverable"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value ? 'yes' : 'no'}
+                      onValueChange={(value) => field.onChange(value === 'yes')}
+                    >
+                      <SelectTrigger id="isRecoverable">
+                        <SelectValue placeholder="Select recoverability" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no">No (consumable)</SelectItem>
+                        <SelectItem value="yes">Yes (recoverable)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+              <Field>
+                <div className="flex items-center justify-between">
+                  <FieldLabel>Additional Unit Conversions</FieldLabel>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      append({
+                        unitOfMeasure: availableConversionUnitOptions[0]?.value ?? 0,
+                        factorToBase: '',
+                      })
+                    }
+                    disabled={!availableConversionUnitOptions.length}
+                  >
+                    Add Unit
+                  </Button>
+                </div>
+                <div className="space-y-3 pt-2">
+                  {fields.length ? null : (
+                    <p className="text-sm text-muted-foreground">
+                      Optional. Example: pack = 12 (base pieces), box = 120.
+                    </p>
+                  )}
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                      <Controller
+                        control={control}
+                        name={`unitConversions.${index}.unitOfMeasure`}
+                        render={({ field: conversionField }) => (
+                          <Select
+                            value={String(conversionField.value)}
+                            onValueChange={(value) => conversionField.onChange(Number(value))}
+                          >
+                            <SelectTrigger
+                              aria-invalid={!!errors.unitConversions?.[index]?.unitOfMeasure}
+                            >
+                              <SelectValue placeholder="Unit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableConversionUnitOptions.map((option) => (
+                                <SelectItem key={option.value} value={String(option.value)}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      <Input
+                        placeholder="Factor to base"
+                        inputMode="numeric"
+                        aria-invalid={!!errors.unitConversions?.[index]?.factorToBase}
+                        {...register(`unitConversions.${index}.factorToBase`)}
+                      />
+                      <Button type="button" variant="outline" onClick={() => remove(index)}>
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </Field>
               <Field>
                 <FieldLabel htmlFor="minStockLevel">Minimum stock level</FieldLabel>

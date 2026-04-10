@@ -5,6 +5,7 @@ import {
   approveCommunicationEngagementRequestsCtrl,
   createCommunicationEngagementRequestsCtrl,
   declineCommunicationEngagementRequestsCtrl,
+  listCommunicationEngagementRequestTargetsCtrl,
   listCommunicationEngagementRequestsCtrl,
 } from './controller';
 import {
@@ -15,6 +16,17 @@ import {
 
 export const CommunicationEngagementRequestsRoutes = new Elysia({ name: 'engagement-requests' })
   .use(authPlugin)
+  .get(
+    '/targets',
+    async ({ user }) =>
+      listCommunicationEngagementRequestTargetsCtrl({
+        companyId: (user as AuthUser | null)?.companyId ?? '',
+        requesterUserId: (user as AuthUser | null)?.sub ?? '',
+      }),
+    {
+      beforeHandle: [requireAuth(), requireModuleEnabled('communication_internal')],
+    },
+  )
   .get(
     '/',
     async ({ query, user }) =>

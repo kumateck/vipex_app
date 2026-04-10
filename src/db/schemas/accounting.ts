@@ -483,7 +483,25 @@ export const dailyCashConfirmations = pgTable(
     expectedCashPsw: bigint('expected_cash_psw', { mode: 'number' })
       .notNull()
       .default(sql`0`),
+    expectedMtnPsw: bigint('expected_mtn_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    expectedTelecelPsw: bigint('expected_telecel_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    expectedAirtelPsw: bigint('expected_airtel_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
     countedCashPsw: bigint('counted_cash_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    countedMtnPsw: bigint('counted_mtn_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    countedTelecelPsw: bigint('counted_telecel_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    countedAirtelPsw: bigint('counted_airtel_psw', { mode: 'number' })
       .notNull()
       .default(sql`0`),
     shortagePsw: bigint('shortage_psw', { mode: 'number' })

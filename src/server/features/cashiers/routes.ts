@@ -23,12 +23,10 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
   .post(
     '/session-types',
     async ({ body, set, user }) => {
-      const res = await createSessionTypeCtrl(
-        {
-          ...(body as { sessionType: string; startTime: string; endTime: string }),
-          createdBy: (user as AuthUser).sub,
-        },
-      );
+      const res = await createSessionTypeCtrl({
+        ...(body as { sessionType: string; startTime: string; endTime: string }),
+        createdBy: (user as AuthUser).sub,
+      });
       set.status = HttpStatus.CREATED;
       return res;
     },
@@ -38,7 +36,10 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
         startTime: t.String({ minLength: 4, maxLength: 5 }), // "08:00"
         endTime: t.String({ minLength: 4, maxLength: 5 }),
       }),
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateCashierSessionTypes)],
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCreateCashierSessionTypes),
+      ],
       detail: { tags: ['Cashiers'], summary: 'Create session type' },
     },
   )
@@ -96,7 +97,14 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
       }),
     {
       query: t.Object({
-        mode: t.Optional(t.Union([t.Literal('sender'), t.Literal('receiver'), t.Literal('delivery')])),
+        mode: t.Optional(
+          t.Union([
+            t.Literal('sender'),
+            t.Literal('receiver'),
+            t.Literal('delivery'),
+            t.Literal('full'),
+          ]),
+        ),
       }),
       response: t.Union([
         t.Null(),
@@ -108,7 +116,13 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
           totalCreditCreatedPsw: t.Number(),
           totalToBePaidCollectedPsw: t.Number(),
           totalDeliveryFeeCollectedPsw: t.Number(),
-          mode: t.Union([t.Literal('sender'), t.Literal('receiver'), t.Literal('delivery')]),
+          totalFullCashierExpectedPsw: t.Number(),
+          mode: t.Union([
+            t.Literal('sender'),
+            t.Literal('receiver'),
+            t.Literal('delivery'),
+            t.Literal('full'),
+          ]),
         }),
       ]),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCashierSessions)],
@@ -130,7 +144,9 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
         actorUserId: authUser.sub,
         cashierId: authUser.sub,
         branchId: authUser.branchId ?? '',
-        allowSameDayReopen: !!authUser.permissions?.includes(PermissionKeys.CanReopenCashierSessions),
+        allowSameDayReopen: !!authUser.permissions?.includes(
+          PermissionKeys.CanReopenCashierSessions,
+        ),
       });
       set.status = HttpStatus.CREATED;
       return response;
@@ -148,14 +164,11 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
   .post(
     '/sessions/:id/close',
     async ({ params, body, user }) =>
-      closeSessionCtrl(
-        params.id,
-        {
-          ...(body as { endTime: string; closingBalanceCedis?: number | string | null }),
-          companyId: (user as AuthUser).companyId ?? null,
-          actorUserId: (user as AuthUser).sub,
-        },
-      ),
+      closeSessionCtrl(params.id, {
+        ...(body as { endTime: string; closingBalanceCedis?: number | string | null }),
+        companyId: (user as AuthUser).companyId ?? null,
+        actorUserId: (user as AuthUser).sub,
+      }),
     {
       params: t.Object({ id: UUID }),
       body: t.Object({

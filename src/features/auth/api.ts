@@ -105,6 +105,14 @@ export interface UpdateCurrentUserProfileRequest {
   telephone?: string;
 }
 
+export interface VerifyCurrentUserPasswordRequest {
+  password: string;
+}
+
+export interface VerifyCurrentUserPasswordResponse {
+  success: boolean;
+}
+
 export const authApi = api.injectEndpoints({
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, LoginRequest>({
@@ -224,6 +232,17 @@ export const authApi = api.injectEndpoints({
       invalidatesTags: ['Auth'],
     }),
 
+    verifyCurrentUserPassword: builder.mutation<
+      VerifyCurrentUserPasswordResponse,
+      VerifyCurrentUserPasswordRequest
+    >({
+      query: (body) => ({
+        url: '/auth/me/verify-password',
+        method: 'POST',
+        body,
+      }),
+    }),
+
     getCurrentUserPermissions: builder.query<CurrentUserPermissionsResponse, void>({
       query: () => ({
         url: '/auth/me/permissions',
@@ -279,6 +298,7 @@ export const {
   useResetPasswordMutation,
   useSetPasswordMutation,
   useChangePasswordMutation,
+  useVerifyCurrentUserPasswordMutation,
   useGetCurrentUserPermissionsQuery,
   useGetCurrentUserReadOnlyPermissionsQuery,
   useGetCurrentUserProfileQuery,

@@ -78,7 +78,7 @@ export async function getCurrentActiveSessionCtrl(input: {
 export async function getCurrentActiveSessionSummaryCtrl(input: {
   cashierId: string;
   branchId?: string | null;
-  mode?: 'sender' | 'receiver' | 'delivery';
+  mode?: 'sender' | 'receiver' | 'delivery' | 'full';
 }) {
   return getCurrentActiveSessionSummarySvc(input);
 }

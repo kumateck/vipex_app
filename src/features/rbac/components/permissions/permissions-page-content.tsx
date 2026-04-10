@@ -1,21 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select-searchable';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { PermissionCatalogUi } from '@/shared/permissions/constants';
-import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
+import { PermissionCatalogUi, PermissionKeys } from '@/shared/permissions/constants';
 import {
   MAIN_PERMISSION_TABS,
   type MainPermissionTab,
@@ -27,19 +13,23 @@ import {
   useListRoleOptionsQuery,
   useSetRolePermissionsMutation,
 } from '../../api/rbac.api';
+import { PermissionsPageCardContent } from './permissions-page-card-content';
+import { PermissionsPageCardHeader } from './permissions-page-card-header';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
 
 export function PermissionsPageContent() {
   const authUser = useAuthStore((state) => state.user);
   const companyId = authUser?.company?.id ?? null;
-  const canSetRolePermissions = authUser?.permissions?.includes('CanSetRolePermissions');
+  const canSetRolePermissions = authUser?.permissions?.includes(
+    PermissionKeys.CanSetRolePermissions,
+  );
   const [searchParams, setSearchParams] = useSearchParams();
   const [roleId, setRoleId] = useState(searchParams.get('roleId') ?? '');
   const [search, setSearch] = useState('');
   const [selectedPermissionKeys, setSelectedPermissionKeys] = useState<string[]>([]);
-  const [activeMainTab, setActiveMainTab] = useState<MainPermissionTab>('Main');
-  const [activeModule, setActiveModule] = useState('');
+  const [activeMainTab, setActiveMainTab] = useState<MainPermissionTab>('Operations');
+  const [activeSubdomain, setActiveSubdomain] = useState('');
 
   const { data: roleOptionsData, isLoading: isLoadingRoles } = useListRoleOptionsQuery(
     { companyId, includeDeleted: false },
@@ -60,8 +50,10 @@ export function PermissionsPageContent() {
         permission.key.toLowerCase().includes(query) ||
         permission.title.toLowerCase().includes(query) ||
         permission.description.toLowerCase().includes(query) ||
-        permission.mainTab.toLowerCase().includes(query) ||
-        permission.module.toLowerCase().includes(query),
+        permission.domain.toLowerCase().includes(query) ||
+        permission.subdomain.toLowerCase().includes(query) ||
+        permission.module.toLowerCase().includes(query) ||
+        permission.group.toLowerCase().includes(query),
     );
   }, [classifiedCatalog, search]);
 
@@ -69,17 +61,34 @@ export function PermissionsPageContent() {
     const groups = new Map<MainPermissionTab, PermissionUiCatalogItem[]>();
     for (const tab of MAIN_PERMISSION_TABS) groups.set(tab, []);
     for (const permission of filtered) {
-      const bucket = groups.get(permission.mainTab) ?? [];
+      const bucket = groups.get(permission.domain) ?? [];
       bucket.push(permission);
-      groups.set(permission.mainTab, bucket);
+      groups.set(permission.domain, bucket);
     }
     return groups;
   }, [filtered]);
 
-  const modulesInActiveTab = useMemo(() => {
+  const subdomainsInActiveTab = useMemo(() => {
     const permissions = byMainTab.get(activeMainTab) ?? [];
-    const moduleMap = new Map<string, PermissionUiCatalogItem[]>();
+    const subdomainMap = new Map<string, PermissionUiCatalogItem[]>();
     for (const permission of permissions) {
+      const list = subdomainMap.get(permission.subdomain) ?? [];
+      list.push(permission);
+      subdomainMap.set(permission.subdomain, list);
+    }
+    return [...subdomainMap.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([subdomain, permissions]) => ({
+        subdomain,
+        permissions: permissions.sort((a, b) => a.title.localeCompare(b.title)),
+      }));
+  }, [activeMainTab, byMainTab]);
+
+  const modulesInActiveSubdomain = useMemo(() => {
+    const activeSubdomainPermissions =
+      subdomainsInActiveTab.find((entry) => entry.subdomain === activeSubdomain)?.permissions ?? [];
+    const moduleMap = new Map<string, PermissionUiCatalogItem[]>();
+    for (const permission of activeSubdomainPermissions) {
       const list = moduleMap.get(permission.module) ?? [];
       list.push(permission);
       moduleMap.set(permission.module, list);
@@ -90,38 +99,17 @@ export function PermissionsPageContent() {
         module,
         permissions: permissions.sort((a, b) => a.title.localeCompare(b.title)),
       }));
-  }, [activeMainTab, byMainTab]);
+  }, [activeSubdomain, subdomainsInActiveTab]);
 
-  const activeModulePermissions = useMemo(
-    () => modulesInActiveTab.find((entry) => entry.module === activeModule)?.permissions ?? [],
-    [activeModule, modulesInActiveTab],
+  const activeSubdomainPermissionCount = useMemo(
+    () => modulesInActiveSubdomain.reduce((sum, module) => sum + module.permissions.length, 0),
+    [modulesInActiveSubdomain],
   );
 
   const selectedPermissionKeySet = useMemo(
     () => new Set(selectedPermissionKeys),
     [selectedPermissionKeys],
   );
-
-  const selectedInActiveModuleCount = useMemo(
-    () =>
-      activeModulePermissions.filter((permission) => selectedPermissionKeySet.has(permission.key))
-        .length,
-    [activeModulePermissions, selectedPermissionKeySet],
-  );
-
-  const areAllInActiveModuleSelected =
-    activeModulePermissions.length > 0 &&
-    selectedInActiveModuleCount === activeModulePermissions.length;
-
-  const isSomeInActiveModuleSelected =
-    selectedInActiveModuleCount > 0 && !areAllInActiveModuleSelected;
-
-  const activeModuleCheckboxState: boolean | 'indeterminate' = areAllInActiveModuleSelected
-    ? true
-    : isSomeInActiveModuleSelected
-      ? 'indeterminate'
-      : false;
-
   const allPermissionKeys = useMemo(
     () => PermissionCatalogUi.map((permission) => permission.key),
     [],
@@ -136,19 +124,19 @@ export function PermissionsPageContent() {
     const hasAnyInTab = (byMainTab.get(activeMainTab) ?? []).length > 0;
     if (!hasAnyInTab) {
       const fallback =
-        MAIN_PERMISSION_TABS.find((tab) => (byMainTab.get(tab) ?? []).length > 0) ?? 'Main';
+        MAIN_PERMISSION_TABS.find((tab) => (byMainTab.get(tab) ?? []).length > 0) ?? 'Operations';
       setActiveMainTab(fallback);
       return;
     }
-    if (!modulesInActiveTab.length) {
-      setActiveModule('');
+    if (!subdomainsInActiveTab.length) {
+      setActiveSubdomain('');
       return;
     }
-    const exists = modulesInActiveTab.some((entry) => entry.module === activeModule);
+    const exists = subdomainsInActiveTab.some((entry) => entry.subdomain === activeSubdomain);
     if (!exists) {
-      setActiveModule(modulesInActiveTab[0]!.module);
+      setActiveSubdomain(subdomainsInActiveTab[0]!.subdomain);
     }
-  }, [activeMainTab, activeModule, byMainTab, modulesInActiveTab]);
+  }, [activeMainTab, activeSubdomain, byMainTab, subdomainsInActiveTab]);
 
   const roleOptions = roleOptionsData ?? [];
 
@@ -171,11 +159,14 @@ export function PermissionsPageContent() {
     );
   };
 
-  const handleToggleActiveModulePermissions = (enabled: boolean) => {
+  const handleToggleModulePermissions = (
+    permissions: PermissionUiCatalogItem[],
+    enabled: boolean,
+  ) => {
     if (!canSetRolePermissions) return;
     setSelectedPermissionKeys((current) => {
       const next = new Set(current);
-      for (const permission of activeModulePermissions) {
+      for (const permission of permissions) {
         if (enabled) next.add(permission.key);
         else next.delete(permission.key);
       }
@@ -203,213 +194,39 @@ export function PermissionsPageContent() {
   return (
     <div className="w-full p-4 space-y-4">
       <Card>
-        <CardHeader className="space-y-3">
-          <CardTitle>Role permissions</CardTitle>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="permission-role-select">Role</Label>
-              <Select
-                value={roleId || undefined}
-                onValueChange={handleRoleChange}
-                disabled={isLoadingRoles || roleOptions.length === 0}
-              >
-                <SelectTrigger id="permission-role-select">
-                  <SelectValue placeholder={isLoadingRoles ? 'Loading roles...' : 'Select role'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {roleOptions.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      {role.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="permission-search">Search permissions</Label>
-              <Input
-                id="permission-search"
-                placeholder="Search permissions..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-between rounded-md border p-3">
-            <p className="text-sm text-muted-foreground">
-              {selectedPermissionKeys.length} of {allPermissionKeys.length} selected
-            </p>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setSelectedPermissionKeys(allPermissionKeys)}
-                disabled={!roleId || !canSetRolePermissions}
-              >
-                Check all
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setSelectedPermissionKeys([])}
-                disabled={!roleId || !canSetRolePermissions}
-              >
-                Clear all
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleReset}
-                disabled={!roleId || !canSetRolePermissions}
-              >
-                Reset
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={!roleId || isSavingPermissions || !canSetRolePermissions}
-              >
-                {isSavingPermissions ? 'Saving...' : 'Apply changes'}
-              </Button>
-            </div>
-          </div>
-          {!canSetRolePermissions ? (
-            <p className="text-sm text-muted-foreground">
-              You can view permissions, but your role cannot modify role permissions.
-            </p>
-          ) : null}
-        </CardHeader>
-        <CardContent>
-          {!roleId ? (
-            <p className="text-sm text-muted-foreground">Select a role to manage permissions.</p>
-          ) : isLoadingRolePermissions ? (
-            <p className="text-sm text-muted-foreground">Loading role permissions...</p>
-          ) : filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No permissions found.</p>
-          ) : (
-            <Tabs
-              value={activeMainTab}
-              onValueChange={(value) => setActiveMainTab(value as MainPermissionTab)}
-              className="space-y-4"
-            >
-              <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2">
-                {MAIN_PERMISSION_TABS.map((tab) => (
-                  <TabsTrigger key={tab} value={tab}>
-                    {tab}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-
-              {MAIN_PERMISSION_TABS.map((tab) => (
-                <TabsContent key={tab} value={tab}>
-                  {(byMainTab.get(tab) ?? []).length === 0 ? (
-                    <div className="rounded-md border p-3 text-sm text-muted-foreground">
-                      No permissions in this section.
-                    </div>
-                  ) : (
-                    <div className="grid gap-3 rounded-md border p-3 md:grid-cols-[240px_1fr]">
-                      <div className="border-r pr-3">
-                        <h3 className="mb-2 text-sm font-semibold">{tab} Modules</h3>
-                        <ScrollableWrapper>
-                          <div className="space-y-2 pr-1">
-                            {modulesInActiveTab.map((entry) => (
-                              <button
-                                key={entry.module}
-                                type="button"
-                                onClick={() => setActiveModule(entry.module)}
-                                className={cn(
-                                  'w-full rounded-md border px-3 py-2 text-left text-sm transition-colors',
-                                  activeModule === entry.module
-                                    ? 'border-primary bg-primary/10 text-primary'
-                                    : 'hover:bg-muted',
-                                )}
-                              >
-                                <div className="font-medium">{entry.module}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {entry.permissions.length} permissions
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </ScrollableWrapper>
-                      </div>
-
-                      <div>
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <h3 className="text-sm font-semibold">{activeModule || 'Permissions'}</h3>
-                          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Checkbox
-                              checked={activeModuleCheckboxState}
-                              onCheckedChange={(checked) =>
-                                handleToggleActiveModulePermissions(checked === true)
-                              }
-                              disabled={
-                                !canSetRolePermissions || activeModulePermissions.length === 0
-                              }
-                            />
-                            <span>Check all in module</span>
-                            <span>
-                              ({selectedInActiveModuleCount}/{activeModulePermissions.length})
-                            </span>
-                          </label>
-                        </div>
-                        <ScrollableWrapper>
-                          <div className="space-y-2 pr-1">
-                            {activeModulePermissions.map((permission) => {
-                              const isSelected = selectedPermissionKeySet.has(permission.key);
-                              return (
-                                <div
-                                  key={permission.key}
-                                  role="button"
-                                  tabIndex={canSetRolePermissions ? 0 : -1}
-                                  onClick={() =>
-                                    handleTogglePermission(permission.key, !isSelected)
-                                  }
-                                  onKeyDown={(event) => {
-                                    if (event.key !== 'Enter' && event.key !== ' ') return;
-                                    event.preventDefault();
-                                    handleTogglePermission(permission.key, !isSelected);
-                                  }}
-                                  className={cn(
-                                    'flex items-start justify-between gap-3 rounded border p-3 text-sm transition-colors',
-                                    canSetRolePermissions ? 'cursor-pointer' : '',
-                                    isSelected
-                                      ? 'border-primary bg-primary/10'
-                                      : 'border-border hover:bg-muted/40',
-                                  )}
-                                >
-                                  <div>
-                                    <div className="font-medium">{permission.title}</div>
-                                    <div className="text-muted-foreground">
-                                      {permission.description} [{permission.mainTab} /{' '}
-                                      {permission.module}]
-                                    </div>
-                                    <div className="font-mono text-xs text-muted-foreground/80">
-                                      {permission.key}
-                                    </div>
-                                  </div>
-                                  <div onClick={(event) => event.stopPropagation()}>
-                                    <Checkbox
-                                      checked={isSelected}
-                                      onCheckedChange={(checked) =>
-                                        handleTogglePermission(permission.key, checked === true)
-                                      }
-                                      disabled={!canSetRolePermissions}
-                                    />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </ScrollableWrapper>
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-              ))}
-            </Tabs>
-          )}
-        </CardContent>
+        <PermissionsPageCardHeader
+          roleId={roleId}
+          search={search}
+          roleOptions={roleOptions}
+          isLoadingRoles={isLoadingRoles}
+          canSetRolePermissions={canSetRolePermissions}
+          isSavingPermissions={isSavingPermissions}
+          allPermissionCount={allPermissionKeys.length}
+          selectedPermissionCount={selectedPermissionKeys.length}
+          onRoleChange={handleRoleChange}
+          onSearchChange={setSearch}
+          onApply={handleSave}
+          onCheckAll={() => setSelectedPermissionKeys(allPermissionKeys)}
+          onClearAll={() => setSelectedPermissionKeys([])}
+          onReset={handleReset}
+        />
+        <PermissionsPageCardContent
+          roleId={roleId}
+          isLoadingRolePermissions={isLoadingRolePermissions}
+          filteredLength={filtered.length}
+          activeMainTab={activeMainTab}
+          activeSubdomain={activeSubdomain}
+          byMainTab={byMainTab}
+          subdomainsInActiveTab={subdomainsInActiveTab}
+          modulesInActiveSubdomain={modulesInActiveSubdomain}
+          activeSubdomainPermissionCount={activeSubdomainPermissionCount}
+          canSetRolePermissions={canSetRolePermissions}
+          selectedPermissionKeySet={selectedPermissionKeySet}
+          onMainTabChange={setActiveMainTab}
+          onSelectSubdomain={setActiveSubdomain}
+          onTogglePermission={handleTogglePermission}
+          onToggleModulePermissions={handleToggleModulePermissions}
+        />
       </Card>
     </div>
   );

@@ -839,6 +839,7 @@ export const pendingBookingsRelations = relations(pendingBookings, ({ one }) => 
 export const pickupQueuesRelations = relations(pickupQueues, ({ one }) => ({
   company: one(companies, { fields: [pickupQueues.companyId], references: [companies.id] }),
   branch: one(branches, { fields: [pickupQueues.branchId], references: [branches.id] }),
+  location: one(locations, { fields: [pickupQueues.locationId], references: [locations.id] }),
   parcel: one(parcels, { fields: [pickupQueues.parcelId], references: [parcels.id] }),
   pickerStaff: one(users, { fields: [pickupQueues.pickerStaffId], references: [users.id] }),
   queuedByUser: one(users, { fields: [pickupQueues.queuedBy], references: [users.id] }),

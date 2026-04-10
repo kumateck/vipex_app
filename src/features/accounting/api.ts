@@ -201,7 +201,13 @@ export interface DailyCashConfirmationRow {
   accountantUserId?: string | null;
   confirmationDate: string;
   expectedCashPsw: number;
+  expectedMtnPsw: number;
+  expectedTelecelPsw: number;
+  expectedAirtelPsw: number;
   countedCashPsw: number;
+  countedMtnPsw: number;
+  countedTelecelPsw: number;
+  countedAirtelPsw: number;
   shortagePsw: number;
   overagePsw: number;
   notes?: string | null;
@@ -215,6 +221,9 @@ export interface DailyCashConfirmationRow {
 
 export interface DailyCashExpectedSummary {
   cashSalesPsw: number;
+  mtnSalesPsw: number;
+  telecelSalesPsw: number;
+  airtelSalesPsw: number;
   nonCashSalesPsw: number;
   totalSalesPsw: number;
   senderSalesPsw: number;

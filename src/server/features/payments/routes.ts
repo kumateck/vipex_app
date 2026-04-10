@@ -110,6 +110,7 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
           secondCardId?: string | null;
           secondCardNumber?: string | null;
           amountCedis?: number | string | null;
+          storageAmountCedis?: number | string | null;
         }),
         companyId: authUser.companyId ?? '',
         branchId: authUser.branchId ?? '',
@@ -127,6 +128,7 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
         secondCardId: t.Optional(t.Union([UUID, t.Null()])),
         secondCardNumber: t.Optional(t.Union([t.String(), t.Null()])),
         amountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
+        storageAmountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
       }),
       detail: {
         tags: ['Payments'],
