@@ -1,16 +1,26 @@
-import { createHashRouter, RouterProvider, type RouteObject } from 'react-router-dom';
+import {
+  createHashRouter,
+  RouterProvider,
+  type IndexRouteObject,
+  type RouteObject,
+} from 'react-router-dom';
 import { routes } from '@/routes/generated';
 import {
   DomainDashboardRoutePage,
   DomainModuleRoutePage,
 } from '@/features/dashboard/domain-dashboard';
 
+function isIndexRoute(route: RouteObject): route is IndexRouteObject {
+  return route.index === true;
+}
+
 function appendDomainDashboardRoutes(items: RouteObject[]): RouteObject[] {
   return items.map((route) => {
+    if (isIndexRoute(route)) return route;
+
     const children = route.children ? appendDomainDashboardRoutes(route.children) : route.children;
     if (route.id !== 'layout-1') {
-      if ('index' in route && route.index) return route;
-      return children ? { ...route, children } : route;
+      return children ? { ...route, index: false, children } : route;
     }
 
     const hasDomainDashboard = children?.some((child) => child.path === 'app/:domain/dashboard');
@@ -34,6 +44,7 @@ function appendDomainDashboardRoutes(items: RouteObject[]): RouteObject[] {
 
     return {
       ...route,
+      index: false,
       children: nextChildren,
     };
   });
