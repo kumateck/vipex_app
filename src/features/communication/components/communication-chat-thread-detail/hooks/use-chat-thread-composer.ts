@@ -26,6 +26,7 @@ import {
 
 type UseChatThreadComposerParams = {
   normalizedThreadId: string;
+  currentUserId: string;
   userOptions: UserOption[];
   usersById: Map<string, { fullname?: string | null; email?: string | null }>;
   setTyping: (threadId: string, isTyping: boolean) => void;
@@ -34,6 +35,7 @@ type UseChatThreadComposerParams = {
 
 export function useChatThreadComposer({
   normalizedThreadId,
+  currentUserId,
   userOptions,
   usersById,
   setTyping,
@@ -168,18 +170,29 @@ export function useChatThreadComposer({
         }).unwrap();
         setEditingMessage(null);
       } else {
+        const isReplyFromCurrentUser =
+          Boolean(currentUserId) && replyToMessage?.senderUserId === currentUserId;
+        const replySenderName = isReplyFromCurrentUser
+          ? 'You'
+          : replyToMessage?.senderUserId
+            ? getDisplayNameForUser(
+                usersById,
+                replyToMessage.senderUserId,
+                replyToMessage.senderName?.trim() || 'Unknown user',
+              )
+            : replyToMessage?.senderName?.trim() || 'Unknown user';
         const replyMetadata = replyToMessage
           ? {
               replyTo: {
                 id: replyToMessage.id,
                 body: replyToMessage.body ?? '',
-                sender: getDisplayNameForUser(usersById, replyToMessage.senderUserId),
-                senderName: getDisplayNameForUser(usersById, replyToMessage.senderUserId),
+                sender: replySenderName,
+                senderName: replySenderName,
                 senderUserId: replyToMessage.senderUserId ?? null,
               },
               replyToBody: replyToMessage.body ?? '',
-              replyToSender: getDisplayNameForUser(usersById, replyToMessage.senderUserId),
-              replyToSenderName: getDisplayNameForUser(usersById, replyToMessage.senderUserId),
+              replyToSender: replySenderName,
+              replyToSenderName: replySenderName,
               replyToSenderUserId: replyToMessage.senderUserId ?? null,
             }
           : {};
@@ -224,14 +237,17 @@ export function useChatThreadComposer({
     sender?: string;
     senderUserId?: string | null;
   }) => {
+    if (replyPreview.senderUserId && replyPreview.senderUserId === currentUserId) {
+      return 'You';
+    }
     if (replyPreview.senderUserId) {
       return getDisplayNameForUser(
         usersById,
         replyPreview.senderUserId,
-        replyPreview.sender?.trim() || 'Unknown user',
+        replyPreview.sender?.trim() || 'Original message',
       );
     }
-    return replyPreview.sender?.trim() || 'Unknown user';
+    return replyPreview.sender?.trim() || 'Original message';
   };
 
   const onInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {

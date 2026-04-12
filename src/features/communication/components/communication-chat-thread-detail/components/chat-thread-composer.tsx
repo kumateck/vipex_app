@@ -25,6 +25,7 @@ import { ChatThreadMentionMenu } from './chat-thread-mention-menu';
 
 type ChatThreadComposerProps = {
   normalizedThreadId: string;
+  currentUserId: string;
   replyToMessage: CommunicationMessage | null;
   setReplyToMessage: (message: CommunicationMessage | null) => void;
   editingMessage: CommunicationMessage | null;
@@ -61,6 +62,7 @@ type ChatThreadComposerProps = {
 
 export function ChatThreadComposer({
   normalizedThreadId,
+  currentUserId,
   replyToMessage,
   setReplyToMessage,
   editingMessage,
@@ -95,6 +97,17 @@ export function ChatThreadComposer({
   isPreparingRecording,
 }: ChatThreadComposerProps) {
   const isMediaMode = messageKind !== 'text';
+  const replySenderLabel = replyToMessage
+    ? replyToMessage.senderUserId === currentUserId
+      ? 'You'
+      : replyToMessage.senderUserId
+        ? getDisplayNameForUser(
+            usersById,
+            replyToMessage.senderUserId,
+            replyToMessage.senderName?.trim() || 'message',
+          )
+        : replyToMessage.senderName?.trim() || 'message'
+    : 'message';
   const resetToTextComposer = () => {
     setMessageKind('text');
     setShowMediaComposer(false);
@@ -105,11 +118,9 @@ export function ChatThreadComposer({
       {replyToMessage ? (
         <div className="mb-2 flex items-start justify-between rounded-lg border bg-muted/40 px-3 py-2 text-xs">
           <div>
-            <p className="font-medium">
-              Replying to {getDisplayNameForUser(usersById, replyToMessage.senderUserId, 'message')}
-            </p>
+            <p className="font-medium">Replying to {replySenderLabel}</p>
             <p className="line-clamp-1 text-muted-foreground">
-              {replyToMessage.body ?? '(attachment)'}
+              {replyToMessage.body?.trim() || '(attachment)'}
             </p>
           </div>
           <Button size="sm" variant="ghost" onClick={() => setReplyToMessage(null)}>

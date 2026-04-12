@@ -55,6 +55,7 @@ export function SectionHeader({
 
 export function ThreadListItem({
   thread,
+  title,
   onClick,
   icon,
   isActive,
@@ -62,6 +63,7 @@ export function ThreadListItem({
   mentionCount,
 }: {
   thread: CommunicationThread;
+  title?: string;
   onClick: () => void;
   icon: 'dm' | 'group';
   isActive: boolean;
@@ -88,7 +90,9 @@ export function ThreadListItem({
             )}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{thread.title || 'Untitled thread'}</p>
+            <p className="truncate text-sm font-medium">
+              {title?.trim() || thread.title || 'Untitled thread'}
+            </p>
             <p className="text-xs text-muted-foreground">{formatDateTime(thread.lastMessageAt)}</p>
           </div>
         </div>

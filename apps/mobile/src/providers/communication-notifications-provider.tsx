@@ -44,6 +44,7 @@ export function CommunicationNotificationsProvider({ children }: PropsWithChildr
 
       const threadId = typeof data.threadId === 'string' ? data.threadId : null;
       const threadTitle = typeof data.threadTitle === 'string' ? data.threadTitle : 'Chat Thread';
+      const threadType = typeof data.threadType === 'string' ? data.threadType : undefined;
       const channelId = typeof data.channelId === 'string' ? data.channelId : null;
       const channelName = typeof data.channelName === 'string' ? data.channelName : 'Voice Channel';
       const callId = typeof data.callId === 'string' ? data.callId : undefined;
@@ -54,7 +55,7 @@ export function CommunicationNotificationsProvider({ children }: PropsWithChildr
         if (!threadId) return;
         router.push({
           pathname: '/communication/thread/[threadId]' as never,
-          params: { threadId, title: threadTitle },
+          params: { threadId, title: threadTitle, threadType },
         });
         return;
       }

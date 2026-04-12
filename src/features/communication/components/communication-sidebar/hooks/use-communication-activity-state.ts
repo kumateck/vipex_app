@@ -2,11 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { useCommunicationSocket } from '@/features/communication/hooks/use-communication-socket';
 
 type UseCommunicationActivityStateInput = {
-  currentUserId: string | null;
+  currentUserIdentitySet: Set<string>;
 };
 
+function normalizeIdentity(value?: string | null) {
+  return (value ?? '').trim().toLowerCase();
+}
+
 export function useCommunicationActivityState({
-  currentUserId,
+  currentUserIdentitySet,
 }: UseCommunicationActivityStateInput) {
   const [typingUserIdsByThread, setTypingUserIdsByThread] = useState<Record<string, string[]>>({});
   const [draftByThreadId, setDraftByThreadId] = useState<Record<string, string>>({});
@@ -41,7 +45,7 @@ export function useCommunicationActivityState({
 
   useCommunicationSocket({
     onTypingUpdated: ({ threadId, userId, isTyping }) => {
-      if (userId === currentUserId) return;
+      if (currentUserIdentitySet.has(normalizeIdentity(userId))) return;
 
       const timerKey = `${threadId}:${userId}`;
       const timers = typingTimersRef.current;

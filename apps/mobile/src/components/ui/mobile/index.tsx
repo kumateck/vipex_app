@@ -1,15 +1,21 @@
-import type { PropsWithChildren, ReactNode } from 'react';
+import { useState, type PropsWithChildren, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
-
 type AppButtonProps = {
   title: string;
   onPress: () => void;
   disabled?: boolean;
   variant?: 'primary' | 'secondary';
 };
-
+type AppPageHeaderProps = {
+  title: string;
+  subtitle?: string;
+};
+type PasswordInputProps = Omit<
+  React.ComponentProps<typeof TextInput>,
+  'style' | 'placeholderTextColor' | 'secureTextEntry'
+>;
 export function AppCard({ children }: PropsWithChildren) {
   const { theme } = useAppearance();
   return (
@@ -26,12 +32,10 @@ export function AppCard({ children }: PropsWithChildren) {
     </View>
   );
 }
-
 export function AppLabel({ children }: { children: ReactNode }) {
   const { theme } = useAppearance();
   return <Text style={[styles.label, { color: theme.colors.textMuted }]}>{children}</Text>;
 }
-
 export function AppInput(
   props: Omit<React.ComponentProps<typeof TextInput>, 'style' | 'placeholderTextColor'>,
 ) {
@@ -51,7 +55,36 @@ export function AppInput(
     />
   );
 }
-
+export function PasswordInput(props: PasswordInputProps) {
+  const { theme } = useAppearance();
+  const [hidden, setHidden] = useState(true);
+  return (
+    <View
+      style={[
+        styles.passwordWrap,
+        {
+          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.inputBg,
+        },
+      ]}
+    >
+      <TextInput
+        {...props}
+        secureTextEntry={hidden}
+        style={[styles.passwordInput, { color: theme.colors.inputText }]}
+        placeholderTextColor={theme.colors.inputPlaceholder}
+      />
+      <Pressable
+        onPress={() => setHidden((prev) => !prev)}
+        style={({ pressed }) => [styles.passwordToggle, { opacity: pressed ? 0.7 : 1 }]}
+      >
+        <Text style={[styles.passwordToggleText, { color: theme.colors.textMuted }]}>
+          {hidden ? 'Show' : 'Hide'}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
 export function AppButton({ title, onPress, disabled, variant = 'primary' }: AppButtonProps) {
   const { theme } = useAppearance();
   const primary = variant === 'primary';
@@ -79,7 +112,17 @@ export function AppButton({ title, onPress, disabled, variant = 'primary' }: App
     </Pressable>
   );
 }
-
+export function AppPageHeader({ title, subtitle }: AppPageHeaderProps) {
+  const { theme } = useAppearance();
+  return (
+    <View style={styles.pageHeader}>
+      <Text style={[styles.pageTitle, { color: theme.colors.text }]}>{title}</Text>
+      {subtitle ? (
+        <Text style={[styles.pageSubtitle, { color: theme.colors.textSubtle }]}>{subtitle}</Text>
+      ) : null}
+    </View>
+  );
+}
 export function AppStatusChip({ label }: { label: string | number }) {
   const normalizedLabel = String(label);
   const { theme } = useAppearance();
@@ -111,7 +154,6 @@ export function AppStatusChip({ label }: { label: string | number }) {
     </View>
   );
 }
-
 export function AppSkeletonCard({ lines = 3 }: { lines?: number }) {
   const { theme } = useAppearance();
   const items = new Array(lines).fill(0);
@@ -137,7 +179,6 @@ export function AppSkeletonCard({ lines = 3 }: { lines?: number }) {
     </View>
   );
 }
-
 export function MobileNoAccess({
   title = 'Access Denied',
   message = 'You do not have permission to view this section.',
@@ -161,7 +202,6 @@ export function MobileNoAccess({
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
@@ -180,6 +220,27 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     fontSize: 16,
   },
+  passwordWrap: {
+    borderWidth: 1,
+    borderRadius: mobileRadius.md,
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 11,
+    paddingLeft: mobileSpacing.md,
+    fontSize: 16,
+  },
+  passwordToggle: {
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.sm,
+  },
+  passwordToggleText: {
+    fontSize: mobileTypography.label,
+    fontWeight: '700',
+  },
   button: {
     borderWidth: 1,
     borderRadius: mobileRadius.md,
@@ -192,6 +253,17 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  pageHeader: {
+    gap: 4,
+    paddingTop: 2,
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  pageSubtitle: {
+    fontSize: mobileTypography.subtitle,
   },
   statusChip: {
     borderWidth: 1,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Constants from 'expo-constants';
+import { getApiDebugInfo } from '@mobile/lib/api';
 import type { CommunicationCallSession, CommunicationMessage } from '@mobile/types/communication';
 
 type CommunicationSocketEvent =
@@ -54,6 +55,39 @@ type UseCommunicationSocketOptions = {
 
 const SOCKET_ENDPOINT_PATH = '/v1/communication/ws';
 
+function sanitizeSocketUrl(raw: string | null | undefined) {
+  if (!raw?.trim()) return null;
+  try {
+    const parsed = new URL(raw.trim());
+    parsed.searchParams.delete('token');
+    parsed.searchParams.delete('access_token');
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
+function logMobileSocketError(
+  message: string,
+  context: Record<string, unknown> = {},
+  cause?: unknown,
+) {
+  if (cause) {
+    console.error('[mobile-socket] request failed', {
+      message,
+      at: new Date().toISOString(),
+      ...context,
+      cause,
+    });
+    return;
+  }
+  console.error('[mobile-socket] request failed', {
+    message,
+    at: new Date().toISOString(),
+    ...context,
+  });
+}
+
 function toSocketBaseUrl(raw?: string | null) {
   if (!raw?.trim()) return null;
   try {
@@ -70,6 +104,7 @@ function toSocketBaseUrl(raw?: string | null) {
 }
 
 function resolveSocketCandidates() {
+  const apiDebug = getApiDebugInfo();
   const expoExtra = (Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string };
   const mobileExtra = (Constants.expoConfig?.extra ?? {}) as {
     communicationWsUrl?: string;
@@ -84,6 +119,8 @@ function resolveSocketCandidates() {
     process.env.EXPO_PUBLIC_COMMUNICATION_WS_URL,
     process.env.EXPO_PUBLIC_WS_BASE_URL,
     process.env.EXPO_PUBLIC_API_BASE_URL,
+    apiDebug.activeApiBaseUrl,
+    ...apiDebug.candidates,
     mobileExtra.communicationWsUrl,
     mobileExtra.wsBaseUrl,
     expoExtra.apiBaseUrl,
@@ -120,6 +157,8 @@ export function useCommunicationSocket(
     if (!accessToken?.trim()) return [];
     return resolveSocketCandidates().map((base) => {
       const url = new URL(base);
+      url.searchParams.delete('token');
+      url.searchParams.delete('access_token');
       url.searchParams.set('token', accessToken.trim());
       return url.toString();
     });
@@ -137,6 +176,7 @@ export function useCommunicationSocket(
     const connect = () => {
       const targetUrl = socketUrls[index] ?? socketUrls[0];
       if (!targetUrl) return;
+      const endpointUrl = sanitizeSocketUrl(targetUrl);
 
       const socket = new WebSocket(targetUrl);
       socketRef.current = socket;
@@ -157,42 +197,123 @@ export function useCommunicationSocket(
         try {
           const parsed = JSON.parse(String(event.data)) as CommunicationSocketEvent;
           if (parsed.type === 'communication.thread.created') {
-            optionsRef.current.onThreadCreated?.(parsed.payload);
+            try {
+              optionsRef.current.onThreadCreated?.(parsed.payload);
+            } catch (handlerError) {
+              logMobileSocketError(
+                'onThreadCreated handler failed',
+                { endpointUrl, eventType: parsed.type },
+                handlerError,
+              );
+            }
             return;
           }
           if (parsed.type === 'communication.message.created') {
-            optionsRef.current.onMessageCreated?.(parsed.payload);
+            try {
+              optionsRef.current.onMessageCreated?.(parsed.payload);
+            } catch (handlerError) {
+              logMobileSocketError(
+                'onMessageCreated handler failed',
+                { endpointUrl, eventType: parsed.type },
+                handlerError,
+              );
+            }
             return;
           }
           if (parsed.type === 'communication.call.created') {
-            optionsRef.current.onCallCreated?.(parsed.payload);
+            try {
+              optionsRef.current.onCallCreated?.(parsed.payload);
+            } catch (handlerError) {
+              logMobileSocketError(
+                'onCallCreated handler failed',
+                { endpointUrl, eventType: parsed.type },
+                handlerError,
+              );
+            }
             return;
           }
           if (parsed.type === 'communication.call.updated') {
-            optionsRef.current.onCallUpdated?.(parsed.payload);
+            try {
+              optionsRef.current.onCallUpdated?.(parsed.payload);
+            } catch (handlerError) {
+              logMobileSocketError(
+                'onCallUpdated handler failed',
+                { endpointUrl, eventType: parsed.type },
+                handlerError,
+              );
+            }
             return;
           }
           if (parsed.type === 'communication.call.participants.updated') {
-            optionsRef.current.onCallParticipantsUpdated?.(parsed.payload);
+            try {
+              optionsRef.current.onCallParticipantsUpdated?.(parsed.payload);
+            } catch (handlerError) {
+              logMobileSocketError(
+                'onCallParticipantsUpdated handler failed',
+                { endpointUrl, eventType: parsed.type },
+                handlerError,
+              );
+            }
             return;
           }
           if (parsed.type === 'communication.typing.updated') {
-            optionsRef.current.onTypingUpdated?.(parsed.payload);
+            try {
+              optionsRef.current.onTypingUpdated?.(parsed.payload);
+            } catch (handlerError) {
+              logMobileSocketError(
+                'onTypingUpdated handler failed',
+                { endpointUrl, eventType: parsed.type },
+                handlerError,
+              );
+            }
+            return;
           }
-        } catch {
-          // Ignore malformed payloads.
+          if (parsed.type === 'communication.pong') {
+            return;
+          }
+          logMobileSocketError('Unhandled socket event type', {
+            endpointUrl,
+            eventType: (parsed as { type?: string }).type ?? 'unknown',
+            payloadPreview: JSON.stringify(
+              parsed,
+              (_key, value) =>
+                typeof value === 'string' && value.length > 300
+                  ? `${value.slice(0, 300)}...`
+                  : value,
+              2,
+            ),
+          });
+        } catch (parseError) {
+          const rawData = String(event.data ?? '');
+          logMobileSocketError(
+            'Failed to parse socket payload',
+            {
+              endpointUrl,
+              rawPayloadPreview: rawData.length > 400 ? `${rawData.slice(0, 400)}...` : rawData,
+            },
+            parseError,
+          );
         }
       };
 
-      socket.onerror = () => {
+      socket.onerror = (errorEvent) => {
+        logMobileSocketError('Socket error event', { endpointUrl }, errorEvent);
         // close handles reconnect
       };
 
-      socket.onclose = () => {
+      socket.onclose = (closeEvent) => {
         setIsConnected(false);
         socketRef.current = null;
         if (pingTimer) clearInterval(pingTimer);
         pingTimer = null;
+        if (closeEvent.code !== 1000) {
+          logMobileSocketError('Socket closed unexpectedly', {
+            endpointUrl,
+            code: closeEvent.code,
+            reason: closeEvent.reason,
+            wasClean: closeEvent.wasClean,
+          });
+        }
         if (stopped) return;
         if (!opened && socketUrls.length > 1) {
           index = (index + 1) % socketUrls.length;

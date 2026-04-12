@@ -16,6 +16,7 @@ import {
   AppButton,
   AppCard,
   AppInput,
+  AppPageHeader,
   AppSkeletonCard,
   MobileNoAccess,
 } from '@/components/ui/mobile';
@@ -127,10 +128,10 @@ export default function ReceiveScanScreen() {
 
   return (
     <AppScreen refreshing={searchBusy} onRefresh={() => void loadIncomingList()}>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Scan To Receive</Text>
-      <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-        Scan incoming in-transit parcels for {session.user?.branch?.name ?? '-'}.
-      </Text>
+      <AppPageHeader
+        title="Parcel Scanner"
+        subtitle={`Mark as received • ${session.user?.branch?.name ?? '-'}`}
+      />
 
       <AppCard>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Overview</Text>
@@ -203,8 +204,6 @@ export default function ReceiveScanScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: mobileTypography.title, fontWeight: '800' },
-  subtitle: { marginTop: -2, lineHeight: 20, marginBottom: mobileSpacing.xs },
   kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },
   sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
   buttonRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },

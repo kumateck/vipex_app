@@ -63,7 +63,7 @@ export function looksLikeInternalId(value: string) {
 
 export function extractReplyPreview(
   message: CommunicationMessage,
-): { sender?: string; senderUserId?: string | null; body: string } | null {
+): { sender?: string; senderUserId?: string | null; body: string; replyId?: string | null } | null {
   const metadata = asRecord(message.metadataJson);
   if (!metadata) return null;
   const nestedReply = asRecord(metadata.replyTo);
@@ -86,9 +86,21 @@ export function extractReplyPreview(
     nestedReply?.body,
     nestedReply?.text,
   ]);
-  if (!body) return null;
+  const replyId = firstString([
+    message.replyToMessageId,
+    metadata.replyToMessageId,
+    metadata.replyToId,
+    metadata.replyId,
+    nestedReply?.id,
+  ]);
+  if (!body && !replyId) return null;
   const safeSender = sender && looksLikeInternalId(sender) ? undefined : sender;
-  return { sender: safeSender ?? undefined, senderUserId: senderUserId ?? null, body };
+  return {
+    sender: safeSender ?? undefined,
+    senderUserId: senderUserId ?? null,
+    body: body ?? '',
+    replyId: replyId ?? null,
+  };
 }
 
 export function extractReactions(

@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable } from 'react-native';
+import { Pressable, View } from 'react-native';
+import type { ComponentProps } from 'react';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppearance } from '@mobile/providers/appearance-provider';
@@ -23,6 +24,32 @@ function DrawerMenuButton() {
   );
 }
 
+function TabIcon({
+  name,
+  color,
+  focused,
+}: {
+  name: ComponentProps<typeof Ionicons>['name'];
+  color: string;
+  focused: boolean;
+}) {
+  const { theme } = useAppearance();
+  return (
+    <View
+      style={{
+        width: 40,
+        height: 34,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: focused ? theme.colors.primary : theme.colors.cardMuted,
+      }}
+    >
+      <Ionicons name={name} size={18} color={focused ? theme.colors.primaryText : color} />
+    </View>
+  );
+}
+
 export default function AppTabsLayout() {
   const { theme } = useAppearance();
   const { session } = useAuth();
@@ -31,7 +58,7 @@ export default function AppTabsLayout() {
   const isRider = session.user?.userType === UserType.RIDER;
 
   const canUseQueue = canViewQueueScreen(permissions) && !isRider;
-  const canUseScan = canViewReceiveScreen(permissions) || isRider;
+  const canUseScan = canViewReceiveScreen(permissions) && !isRider;
 
   return (
     <Tabs
@@ -44,17 +71,18 @@ export default function AppTabsLayout() {
         tabBarStyle: {
           backgroundColor: theme.colors.bgElevated,
           borderTopColor: theme.colors.border,
-          height: 60 + insets.bottom,
+          height: 70 + insets.bottom,
           paddingBottom: Math.max(insets.bottom, 6),
-          paddingTop: 6,
-          paddingHorizontal: 8,
+          paddingTop: 8,
+          paddingHorizontal: 10,
         },
         tabBarItemStyle: {
           paddingHorizontal: 2,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
+          fontSize: 10,
+          fontWeight: '700',
+          marginTop: 2,
         },
         tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: theme.colors.primary,
@@ -65,8 +93,8 @@ export default function AppTabsLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="speedometer-outline" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="speedometer-outline" color={color} focused={focused} />
           ),
         }}
       />
@@ -74,8 +102,8 @@ export default function AppTabsLayout() {
         name="parcels"
         options={{
           title: 'Parcels',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cube-outline" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="cube-outline" color={color} focused={focused} />
           ),
         }}
       />
@@ -84,8 +112,8 @@ export default function AppTabsLayout() {
           name="queue"
           options={{
             title: 'Queue',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="ticket-outline" size={size} color={color} />
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="ticket-outline" color={color} focused={focused} />
             ),
           }}
         />
@@ -94,8 +122,9 @@ export default function AppTabsLayout() {
         name="chat"
         options={{
           title: 'Chat',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles-outline" size={size} color={color} />
+          headerShown: false,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="chatbubbles-outline" color={color} focused={focused} />
           ),
         }}
       />
@@ -104,8 +133,8 @@ export default function AppTabsLayout() {
           name="scan"
           options={{
             title: 'Scan',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="qr-code-outline" size={size} color={color} />
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="qr-code-outline" color={color} focused={focused} />
             ),
           }}
         />
@@ -114,8 +143,8 @@ export default function AppTabsLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-circle-outline" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="person-circle-outline" color={color} focused={focused} />
           ),
         }}
       />

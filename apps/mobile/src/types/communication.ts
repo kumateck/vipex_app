@@ -4,6 +4,11 @@ export type CommunicationThread = {
   title: string | null;
   participantCount?: number;
   lastMessageAt: string | null;
+  lastMessagePreview?: string | null;
+  lastMessageType?: string | null;
+  isArchived?: boolean;
+  isPinned?: boolean;
+  isFavourite?: boolean;
   directPeerUserId?: string | null;
 };
 
@@ -30,6 +35,7 @@ export type CommunicationMessage = {
   id: string;
   threadId: string;
   senderUserId: string | null;
+  senderName?: string | null;
   messageType: string;
   body: string | null;
   metadataJson: unknown;

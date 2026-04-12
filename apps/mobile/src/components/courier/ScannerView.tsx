@@ -30,9 +30,16 @@ export function ScannerView({ onCodeScanned }: ScannerViewProps) {
             onBarcodeScanned={onScan}
             barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
           />
+          <View
+            pointerEvents="none"
+            style={[
+              styles.scanFrame,
+              { borderColor: theme.colors.primary, backgroundColor: 'transparent' },
+            ]}
+          />
         </View>
       )}
-      <Text style={{ color: theme.colors.textSubtle }}>Scan booking QR code to continue.</Text>
+      <Text style={{ color: theme.colors.textSubtle }}>Align QR code inside frame to scan.</Text>
     </View>
   );
 }
@@ -46,4 +53,14 @@ const styles = StyleSheet.create({
     marginBottom: mobileSpacing.sm,
   },
   camera: { flex: 1 },
+  scanFrame: {
+    position: 'absolute',
+    left: '16%',
+    right: '16%',
+    top: '18%',
+    bottom: '18%',
+    borderWidth: 2,
+    borderRadius: 18,
+    borderStyle: 'dashed',
+  },
 });

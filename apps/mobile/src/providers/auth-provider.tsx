@@ -19,6 +19,18 @@ const EMPTY_SESSION: SessionState = {
   refreshToken: null,
 };
 
+function isSessionExpiredError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return (
+    message.includes('token revoked') ||
+    message.includes('invalid refresh token') ||
+    message.includes('session expired') ||
+    message.includes('unauthorized') ||
+    message.includes('(401)')
+  );
+}
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
@@ -53,9 +65,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const withAuth = useCallback(
     async <T,>(run: (accessToken: string) => Promise<T>): Promise<T> => {
-      return authorizedRequestWithRefresh<T>(session, run, setSession);
+      try {
+        return await authorizedRequestWithRefresh<T>(session, run, setSession);
+      } catch (error) {
+        if (session.refreshToken && isSessionExpiredError(error)) {
+          await logout();
+          throw new Error('Session expired. Please sign in again.');
+        }
+        throw error;
+      }
     },
-    [session, setSession],
+    [logout, session, setSession],
   );
 
   const value = useMemo<AuthContextValue>(

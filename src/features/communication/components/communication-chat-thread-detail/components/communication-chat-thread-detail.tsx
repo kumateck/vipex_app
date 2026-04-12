@@ -1,5 +1,5 @@
-import { ArrowLeft, Phone, Video } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Phone, Video } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,13 +19,15 @@ import { ChatThreadMessages } from './chat-thread-messages';
 
 export function CommunicationChatThreadDetail({ threadId }: { threadId: string }) {
   const currentUserId = useAuthStore((state) => state.user?.id ?? '');
-  const navigate = useNavigate();
+  const currentUserFullname = useAuthStore((state) => state.user?.fullname ?? '');
+  const currentUserEmail = useAuthStore((state) => state.user?.email ?? '');
   const location = useLocation();
   const normalizedThreadId = threadId.trim();
 
   const data = useChatThreadData({ normalizedThreadId, currentUserId });
   const composer = useChatThreadComposer({
     normalizedThreadId,
+    currentUserId,
     userOptions: data.userOptions,
     usersById: data.usersById,
     setTyping: data.setTyping,
@@ -56,10 +58,46 @@ export function CommunicationChatThreadDetail({ threadId }: { threadId: string }
   const directPeerLabel =
     data.selectedThread?.directPeerUserId &&
     data.usersById.get(data.selectedThread.directPeerUserId)?.fullname;
+  const directPeerLabelFromMessages = (() => {
+    for (let index = data.messages.length - 1; index >= 0; index -= 1) {
+      const message = data.messages[index];
+      if (!message) continue;
+      if (message.senderUserId && message.senderUserId === currentUserId) continue;
+      if (message.senderUserId) {
+        const labelFromUsers = data.usersById.get(message.senderUserId)?.fullname;
+        if (labelFromUsers?.trim()) return labelFromUsers.trim();
+      }
+      if (message.senderName?.trim()) return message.senderName.trim();
+    }
+    return null;
+  })();
+  const selfIdentitySet = new Set(
+    [currentUserId, currentUserFullname, currentUserEmail]
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  const selectedThreadTitle = data.selectedThread?.title?.trim() ?? '';
+  const safeThreadTitle =
+    selectedThreadTitle && !selfIdentitySet.has(selectedThreadTitle.toLowerCase())
+      ? selectedThreadTitle
+      : '';
   const optimisticThreadTitle =
     (location.state as { optimisticThreadTitle?: string } | null)?.optimisticThreadTitle?.trim() ||
     '';
-  const threadTitle = data.selectedThread?.title || directPeerLabel || optimisticThreadTitle;
+  const threadTitle =
+    data.selectedThread?.threadType === 'direct'
+      ? directPeerLabel || directPeerLabelFromMessages || safeThreadTitle || optimisticThreadTitle
+      : safeThreadTitle || optimisticThreadTitle;
+  const isDirectThread = data.selectedThread?.threadType === 'direct';
+  const headerMeta = data.selectedThread
+    ? isDirectThread
+      ? ''
+      : `${prettyValue(data.selectedThread.threadType)}${
+          data.selectedThread.participantCount
+            ? ` • ${data.selectedThread.participantCount} members`
+            : ''
+        }`
+    : 'Conversation thread';
   const displayThreadTitle = threadTitle || 'Conversation thread';
   const avatarInitial = displayThreadTitle.slice(0, 1).toUpperCase();
   const showHeaderSkeleton = !threadTitle && !data.selectedThread;
@@ -69,14 +107,6 @@ export function CommunicationChatThreadDetail({ threadId }: { threadId: string }
       <div className="flex h-[calc(100vh-7rem)] flex-col overflow-hidden rounded-2xl border bg-background shadow">
         <div className="z-20 flex shrink-0 items-center justify-between border-b bg-background/95 px-3 py-2 backdrop-blur">
           <div className="flex min-w-0 items-center gap-2">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8"
-              onClick={() => navigate('/communication/chat')}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold">
               {avatarInitial}
             </div>
@@ -89,14 +119,9 @@ export function CommunicationChatThreadDetail({ threadId }: { threadId: string }
               ) : (
                 <>
                   <p className="truncate text-sm font-semibold">{displayThreadTitle}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {data.selectedThread
-                      ? prettyValue(data.selectedThread.threadType)
-                      : 'Conversation thread'}
-                    {data.selectedThread?.participantCount
-                      ? ` • ${data.selectedThread.participantCount} members`
-                      : ''}
-                  </p>
+                  {headerMeta ? (
+                    <p className="truncate text-xs text-muted-foreground">{headerMeta}</p>
+                  ) : null}
                 </>
               )}
             </div>
@@ -139,6 +164,7 @@ export function CommunicationChatThreadDetail({ threadId }: { threadId: string }
           isLoadingOlder={data.isLoadingOlder}
           isLoadingMessages={data.isLoadingMessages}
           messages={data.messages}
+          selectedThreadType={data.selectedThread?.threadType}
           currentUserId={currentUserId}
           usersById={data.usersById}
           threadCalls={data.threadCalls}
@@ -164,6 +190,7 @@ export function CommunicationChatThreadDetail({ threadId }: { threadId: string }
 
         <ChatThreadComposer
           normalizedThreadId={normalizedThreadId}
+          currentUserId={currentUserId}
           replyToMessage={composer.replyToMessage}
           setReplyToMessage={composer.setReplyToMessage}
           editingMessage={composer.editingMessage}

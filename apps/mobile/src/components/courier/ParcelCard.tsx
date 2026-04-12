@@ -22,19 +22,20 @@ type ParcelCardProps = {
 
 export function ParcelCard({ parcel, onPress, actionLabel = 'Open Parcel' }: ParcelCardProps) {
   const { theme } = useAppearance();
+  const routeText =
+    [parcel.senderName ?? '-', parcel.receiverName ?? '-'].filter(Boolean).join(' → ') || '-';
 
   return (
     <AppCard>
-      <Text style={[styles.title, { color: theme.colors.text }]}>
-        Booking: {parcel.bookingCode}
-      </Text>
-      <Text style={{ color: theme.colors.textMuted }}>
+      <Text style={[styles.bookingCode, { color: theme.colors.text }]}>{parcel.bookingCode}</Text>
+      <Text style={[styles.route, { color: theme.colors.textMuted }]}>{routeText}</Text>
+      <Text style={[styles.body, { color: theme.colors.textMuted }]}>
         Sender: {parcel.senderName ?? '-'} ({parcel.senderPhone ?? '-'})
       </Text>
-      <Text style={{ color: theme.colors.textMuted }}>
+      <Text style={[styles.body, { color: theme.colors.textMuted }]}>
         Receiver: {parcel.receiverName ?? '-'} ({parcel.receiverPhone ?? '-'})
       </Text>
-      <Text style={{ color: theme.colors.textMuted }}>{parcel.parcelDetails}</Text>
+      <Text style={[styles.body, { color: theme.colors.textSubtle }]}>{parcel.parcelDetails}</Text>
       <AppStatusChip label={parcel.status} />
       {parcel.isDeleted ? (
         <Text style={[styles.deleted, { color: theme.colors.danger }]}>Deleted Record</Text>
@@ -45,6 +46,8 @@ export function ParcelCard({ parcel, onPress, actionLabel = 'Open Parcel' }: Par
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
+  bookingCode: { fontSize: mobileTypography.sectionTitle, fontWeight: '800' },
+  route: { fontSize: mobileTypography.body, fontWeight: '600' },
+  body: { fontSize: mobileTypography.body, lineHeight: 19 },
   deleted: { fontWeight: '700' },
 });

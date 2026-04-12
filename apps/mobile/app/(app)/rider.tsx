@@ -13,6 +13,7 @@ import {
   AppButton,
   AppCard,
   AppInput,
+  AppPageHeader,
   AppSkeletonCard,
   AppStatusChip,
   MobileNoAccess,
@@ -264,10 +265,7 @@ export default function RiderScreen() {
 
   return (
     <AppScreen refreshing={refreshing} onRefresh={() => void load()}>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Rider Dashboard</Text>
-      <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-        Daily performance, assigned parcels, and successful delivery history.
-      </Text>
+      <AppPageHeader title="My Deliveries" subtitle={`Assigned and history for ${selectedDate}`} />
 
       <AppCard>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Date Picker</Text>
@@ -432,8 +430,6 @@ export default function RiderScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: mobileTypography.title, fontWeight: '800' },
-  subtitle: { marginTop: -2, marginBottom: mobileSpacing.xs, lineHeight: 20 },
   sectionTitle: {
     fontSize: mobileTypography.sectionTitle,
     fontWeight: '700',
