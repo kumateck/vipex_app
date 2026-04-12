@@ -54,5 +54,6 @@ export interface CashierSessionSummary {
   totalCreditCreatedPsw: number;
   totalToBePaidCollectedPsw: number;
   totalDeliveryFeeCollectedPsw: number;
-  mode: 'sender' | 'receiver' | 'delivery';
+  totalFullCashierExpectedPsw: number;
+  mode: 'sender' | 'receiver' | 'delivery' | 'full';
 }

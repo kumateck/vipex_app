@@ -26,6 +26,7 @@ import {
   AppButton,
   AppCard,
   AppInput,
+  AppPageHeader,
   AppSkeletonCard,
   AppStatusChip,
   MobileNoAccess,
@@ -319,10 +320,10 @@ export default function QueueScreen() {
 
   return (
     <AppScreen refreshing={loadingBoards} onRefresh={() => void loadQueueBoards()}>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Queue Operations</Text>
-      <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-        Search parcels fast, issue queue tickets, and monitor active boards.
-      </Text>
+      <AppPageHeader
+        title="Queue Manager"
+        subtitle={`${branchName} • Search, issue, and monitor queue tickets`}
+      />
 
       <View style={styles.kpiRow}>
         <StatCard label="Receiver Queue" value={receiverQueueCards.length} />
@@ -535,8 +536,6 @@ export default function QueueScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: mobileTypography.title, fontWeight: '800' },
-  subtitle: { marginBottom: mobileSpacing.xs, lineHeight: 20 },
   kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },
   sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700', marginTop: 6 },
   buttonRow: {

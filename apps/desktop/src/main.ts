@@ -4,10 +4,12 @@ import {
   desktopCapturer,
   dialog,
   ipcMain,
+  net,
   session,
   shell,
   type WebContentsPrintOptions,
 } from 'electron';
+import { lookup } from 'node:dns/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { autoUpdater } from 'electron-updater';
@@ -20,6 +22,8 @@ const DEV_WEB_BASE_URL = 'http://localhost:5173/';
 const DEFAULT_DESKTOP_UPDATE_FEED_URL =
   'http://164.90.142.68:9000/vipex-uploads/desktop/windows/latest/';
 let pendingDeepLink: string | null = null;
+let activeDesktopBaseUrl: string | null = null;
+let lastDesktopLoadError: string | null = null;
 let updateStatus: {
   state:
     | 'idle'
@@ -48,21 +52,130 @@ type ParallelPrintRequest = {
   jobs: [PrintHtmlRequest, PrintHtmlRequest];
 };
 
+type DesktopNetworkProbe = {
+  host: string;
+  ok: boolean;
+  resolvedAddress?: string;
+  error?: string;
+};
+
+type DesktopNetworkDiagnostics = {
+  timestamp: string;
+  appVersion: string;
+  isPackaged: boolean;
+  selectedBaseUrl: string;
+  activeBaseUrl: string | null;
+  candidateBaseUrls: string[];
+  electronOnline: boolean;
+  proxy: string;
+  probes: DesktopNetworkProbe[];
+  lastLoadError: string | null;
+};
+
 if (!app.isPackaged) {
   // Avoid stale CSS/asset cache during desktop dev.
   app.commandLine.appendSwitch('disable-http-cache');
 }
 
+function normalizeWebBaseUrl(raw?: string | null): string | null {
+  if (!raw?.trim()) return null;
+  try {
+    const parsed = new URL(raw.trim());
+    parsed.pathname = parsed.pathname.replace(/\/v1\/?$/, '/');
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.toString().replace(/\/+$/, '/') || null;
+  } catch {
+    return null;
+  }
+}
+
 function getWebBaseUrl() {
-  return app.isPackaged ? PACKAGED_WEB_BASE_URL : DEV_WEB_BASE_URL;
+  if (!app.isPackaged) return DEV_WEB_BASE_URL;
+  const [firstCandidate] = getPackagedWebBaseUrlCandidates();
+  return firstCandidate ?? PACKAGED_WEB_BASE_URL;
 }
 
 function getPackagedWebBaseUrlCandidates() {
   const override = process.env.DESKTOP_WEB_BASE_URL?.trim();
-  const urls = [override, PACKAGED_WEB_BASE_URL].filter((entry): entry is string =>
-    Boolean(entry && entry.length > 0),
-  );
+  const overrideMany = process.env.DESKTOP_WEB_BASE_URLS?.trim();
+  const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+  const viteApiBase = process.env.VITE_API_BASE_URL?.trim();
+
+  const urls = [
+    ...(overrideMany ? overrideMany.split(',') : []),
+    override,
+    apiBase,
+    viteApiBase,
+    PACKAGED_WEB_BASE_URL,
+  ]
+    .map((entry) => normalizeWebBaseUrl(entry))
+    .filter((entry): entry is string => Boolean(entry));
+
   return [...new Set(urls)];
+}
+
+function logDesktopRoutingSelection() {
+  const candidates = getPackagedWebBaseUrlCandidates();
+  const selectedBaseUrl = candidates[0] ?? PACKAGED_WEB_BASE_URL;
+  const envOverrides = {
+    DESKTOP_WEB_BASE_URLS: process.env.DESKTOP_WEB_BASE_URLS?.trim() || '(unset)',
+    DESKTOP_WEB_BASE_URL: process.env.DESKTOP_WEB_BASE_URL?.trim() || '(unset)',
+    EXPO_PUBLIC_API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL?.trim() || '(unset)',
+    VITE_API_BASE_URL: process.env.VITE_API_BASE_URL?.trim() || '(unset)',
+  };
+
+  console.info(`[desktop-routing] selected-base-url=${selectedBaseUrl}`);
+  console.info(`[desktop-routing] candidates=${candidates.join(', ')}`);
+  console.info(`[desktop-routing] overrides=${JSON.stringify(envOverrides)}`);
+}
+
+async function buildDesktopNetworkDiagnostics(): Promise<DesktopNetworkDiagnostics> {
+  const candidates = getPackagedWebBaseUrlCandidates();
+  const selectedBaseUrl = candidates[0] ?? PACKAGED_WEB_BASE_URL;
+  const uniqueHosts = [...new Set(candidates.map((entry) => new URL(entry).hostname))];
+  const probes = await Promise.all(
+    uniqueHosts.map(async (host): Promise<DesktopNetworkProbe> => {
+      try {
+        const result = await lookup(host);
+        return { host, ok: true, resolvedAddress: result.address };
+      } catch (error) {
+        return {
+          host,
+          ok: false,
+          error: error instanceof Error ? error.message : 'DNS lookup failed.',
+        };
+      }
+    }),
+  );
+
+  let proxy = 'unknown';
+  try {
+    proxy = await session.defaultSession.resolveProxy(selectedBaseUrl);
+  } catch (error) {
+    proxy = `resolve-proxy-error: ${error instanceof Error ? error.message : 'unknown error'}`;
+  }
+
+  return {
+    timestamp: new Date().toISOString(),
+    appVersion: app.getVersion(),
+    isPackaged: app.isPackaged,
+    selectedBaseUrl,
+    activeBaseUrl: activeDesktopBaseUrl,
+    candidateBaseUrls: candidates,
+    electronOnline: net.isOnline(),
+    proxy,
+    probes,
+    lastLoadError: lastDesktopLoadError,
+  };
+}
+
+function attachDesktopNetworkLogging() {
+  session.defaultSession.webRequest.onErrorOccurred((details) => {
+    console.warn(
+      `[desktop-network] request-error resource=${details.resourceType} status=${details.error} url=${details.url}`,
+    );
+  });
 }
 
 function escapeHtml(value: string) {
@@ -165,13 +278,19 @@ async function loadPackagedMainContent() {
     try {
       if (!mainWindow || mainWindow.isDestroyed()) return;
       await mainWindow.loadURL(baseUrl);
+      activeDesktopBaseUrl = baseUrl;
+      lastDesktopLoadError = null;
+      console.info(`[desktop-routing] loaded-base-url=${baseUrl}`);
       return;
     } catch (error) {
       lastError = error instanceof Error ? error.message : 'Unknown load failure';
+      lastDesktopLoadError = `${baseUrl}: ${lastError}`;
+      console.warn(`[desktop-routing] failed-base-url=${baseUrl} reason=${lastError}`);
     }
   }
 
   const primaryBase = candidates[0] ?? PACKAGED_WEB_BASE_URL;
+  activeDesktopBaseUrl = null;
   await showDesktopLoadError(primaryBase, lastError);
 }
 
@@ -385,6 +504,8 @@ function registerIpcHandlers() {
     return { ok: true };
   });
 
+  ipcMain.handle('app:get-network-diagnostics', async () => buildDesktopNetworkDiagnostics());
+
   ipcMain.handle('print:html', async (_event, request: PrintHtmlRequest) => {
     if (!request?.html) {
       return { ok: false, reason: 'No printable HTML payload was provided.' };
@@ -521,6 +642,8 @@ function createWindow() {
     (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
       if (!isMainFrame) return;
       const details = `${errorDescription} (code: ${errorCode}) while loading ${validatedURL}`;
+      lastDesktopLoadError = details;
+      console.error(`[desktop-routing] did-fail-load ${details}`);
       void showDesktopLoadError(
         getPackagedWebBaseUrlCandidates()[0] ?? PACKAGED_WEB_BASE_URL,
         details,
@@ -530,6 +653,8 @@ function createWindow() {
 
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     const reason = `${details.reason}${details.exitCode ? ` (exit: ${details.exitCode})` : ''}`;
+    lastDesktopLoadError = `Renderer process crashed: ${reason}`;
+    console.error(`[desktop-runtime] render-process-gone ${reason}`);
     void showDesktopLoadError(
       getPackagedWebBaseUrlCandidates()[0] ?? PACKAGED_WEB_BASE_URL,
       `Renderer process crashed: ${reason}`,
@@ -537,6 +662,8 @@ function createWindow() {
   });
 
   mainWindow.on('unresponsive', () => {
+    lastDesktopLoadError = 'The renderer became unresponsive.';
+    console.error('[desktop-runtime] renderer unresponsive');
     void showDesktopLoadError(
       getPackagedWebBaseUrlCandidates()[0] ?? PACKAGED_WEB_BASE_URL,
       'The renderer became unresponsive.',
@@ -635,6 +762,9 @@ app.on('open-url', (event, url) => {
 });
 
 app.whenReady().then(() => {
+  logDesktopRoutingSelection();
+  attachDesktopNetworkLogging();
+
   if (app.isPackaged) {
     app.setAsDefaultProtocolClient('vipex');
   }

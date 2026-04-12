@@ -27,7 +27,7 @@ export const usersRoutes = new Elysia({ name: 'users' })
       return listUserOptionsCtrl({
         companyId: authUser.companyId ?? null,
         branchId: isHeadOffice ? (query.branchId ?? null) : (authUser.branchId ?? null),
-        locationId: isHeadOffice ? (query.locationId ?? null) : (query.locationId ?? null),
+        locationId: isHeadOffice ? (query.locationId ?? null) : (authUser.locationId ?? null),
         roleId: query.roleId ?? null,
         userType: parseOptionalUserType(query.userType),
         status: query.status ?? null,

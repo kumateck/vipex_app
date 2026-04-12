@@ -15,6 +15,7 @@ import { companies, branches, users, locations, warehouses } from './core';
 import { customers, cards } from './customers';
 import { sql } from 'drizzle-orm';
 import {
+  ParcelDispositionActionType,
   ParcelReconciliationActionType,
   ParcelReconciliationCaseStatus,
   ParcelReconciliationCaseType,
@@ -339,6 +340,7 @@ export const pickupQueues = pgTable(
     branchId: varchar('branch_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
+    locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
     parcelId: varchar('parcel_id', { length: 25 })
       .notNull()
       .references(() => parcels.id),
@@ -359,15 +361,17 @@ export const pickupQueues = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },
   (t) => ({
-    uqPickupQueueParcel: uniqueIndex('pickup_queues_parcel_uq').on(t.parcelId),
+    uqPickupQueueOpenParcelDaily: uniqueIndex('pickup_queues_open_parcel_daily_uq')
+      .on(t.parcelId, t.queueDate)
+      .where(sql`${t.endedAt} IS NULL`),
     uqPickupQueueDailyCode: uniqueIndex('pickup_queues_daily_code_uq').on(
       t.branchId,
+      t.locationId,
       t.queueDate,
-      t.paymentBucket,
       t.queueNumber,
     ),
     byBranchQueuedAt: index('pickup_queues_branch_queued_at_idx').on(t.branchId, t.queuedAt),
-    byQueueCode: uniqueIndex('pickup_queues_code_uq').on(t.queueCode),
+    byQueueCode: index('pickup_queues_code_idx').on(t.queueCode),
   }),
 );
 
@@ -466,5 +470,75 @@ export const parcelInternalTransferItems = pgTable(
   (t) => ({
     pk: uniqueIndex('parcel_internal_transfer_items_uq').on(t.transferId, t.parcelId),
     byParcel: index('parcel_internal_transfer_items_parcel_idx').on(t.parcelId),
+  }),
+);
+
+export const parcelDispositionActions = pgTable(
+  'parcel_disposition_actions',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    parcelId: varchar('parcel_id', { length: 25 })
+      .notNull()
+      .references(() => parcels.id),
+    actionType: smallint('action_type').notNull().default(ParcelDispositionActionType.NOTICE_SENT),
+    warehouseId: varchar('warehouse_id', { length: 25 }).references(() => warehouses.id),
+    notes: text('notes'),
+    recoveredAmountPsw: bigint('recovered_amount_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    performedBy: varchar('performed_by', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+    performedAt: timestamp('performed_at', { withTimezone: false }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompanyPerformedAt: index('parcel_disposition_actions_company_performed_idx').on(
+      t.companyId,
+      t.performedAt,
+    ),
+    byParcelPerformedAt: index('parcel_disposition_actions_parcel_performed_idx').on(
+      t.parcelId,
+      t.performedAt,
+    ),
+    byWarehouse: index('parcel_disposition_actions_warehouse_idx').on(t.warehouseId),
+  }),
+);
+
+export const parcelStorageWaivers = pgTable(
+  'parcel_storage_waivers',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    parcelId: varchar('parcel_id', { length: 25 })
+      .notNull()
+      .references(() => parcels.id),
+    waivedAmountPsw: bigint('waived_amount_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    reason: text('reason').notNull(),
+    waivedBy: varchar('waived_by', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+    waivedAt: timestamp('waived_at', { withTimezone: false }).notNull().defaultNow(),
+    accountingJournalEntryId: varchar('accounting_journal_entry_id', { length: 25 }),
+    accountingPostedAt: timestamp('accounting_posted_at', { withTimezone: false }),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompanyWaivedAt: index('parcel_storage_waivers_company_waived_idx').on(
+      t.companyId,
+      t.waivedAt,
+    ),
+    byParcelWaivedAt: index('parcel_storage_waivers_parcel_waived_idx').on(t.parcelId, t.waivedAt),
   }),
 );

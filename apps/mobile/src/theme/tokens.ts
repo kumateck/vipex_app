@@ -17,48 +17,63 @@ export type AppTheme = {
     textSubtle: string;
     primary: string;
     primaryText: string;
+    secondary: string;
+    secondaryText: string;
     danger: string;
+    warning: string;
     success: string;
     inputBg: string;
     inputText: string;
     inputPlaceholder: string;
+    indicatorOnline: string;
+    indicatorMuted: string;
   };
 };
 
 const lightPalette = {
-  bg: '#F3F5FA',
+  bg: '#F4F6FB',
   bgElevated: '#FFFFFF',
   card: '#FFFFFF',
-  cardMuted: '#F8FAFC',
-  border: '#E2E8F0',
-  text: '#0F172A',
-  textMuted: '#334155',
-  textSubtle: '#64748B',
-  primary: '#C05500',
+  cardMuted: '#EEF2F8',
+  border: '#D7DEE8',
+  text: '#142847',
+  textMuted: '#3B4F72',
+  textSubtle: '#7184A6',
+  primary: '#C83D2F',
   primaryText: '#FFFFFF',
+  secondary: '#1C315B',
+  secondaryText: '#FFFFFF',
   danger: '#B42318',
-  success: '#067647',
+  warning: '#B88100',
+  success: '#138C5A',
   inputBg: '#FFFFFF',
-  inputText: '#0F172A',
-  inputPlaceholder: '#94A3B8',
+  inputText: '#142847',
+  inputPlaceholder: '#8C9BB5',
+  indicatorOnline: '#00C982',
+  indicatorMuted: '#A1ACBF',
 };
 
 const darkPalette = {
-  bg: '#060A12',
-  bgElevated: '#0C1323',
-  card: '#111827',
-  cardMuted: '#0F172A',
-  border: '#1F2937',
-  text: '#E2E8F0',
-  textMuted: '#CBD5E1',
-  textSubtle: '#94A3B8',
-  primary: '#F97316',
-  primaryText: '#111827',
-  danger: '#EF4444',
-  success: '#22C55E',
-  inputBg: '#0B1220',
-  inputText: '#E2E8F0',
-  inputPlaceholder: '#64748B',
+  bg: '#070C16',
+  bgElevated: '#0F1D38',
+  card: '#131F37',
+  cardMuted: '#0A162C',
+  border: '#23365D',
+  text: '#E6EEFA',
+  textMuted: '#C4D3EA',
+  textSubtle: '#95A9CC',
+  primary: '#E45443',
+  primaryText: '#FFFFFF',
+  secondary: '#203864',
+  secondaryText: '#E6EEFA',
+  danger: '#F97066',
+  warning: '#F6C453',
+  success: '#2BC67A',
+  inputBg: '#0A162C',
+  inputText: '#E6EEFA',
+  inputPlaceholder: '#7388AB',
+  indicatorOnline: '#19D88C',
+  indicatorMuted: '#62789B',
 };
 
 export function createTheme(mode: AppearanceMode, scheme: ThemeScheme): AppTheme {

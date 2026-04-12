@@ -7,10 +7,13 @@ import {
   getParcelFullDetailsSvc,
   getParcelSvc,
   listParcelReconciliationCasesSvc,
+  listParcelDispositionActionsSvc,
+  waiveParcelStorageAccrualSvc,
   listOpenParcelDiscrepanciesSvc,
   listParcelsSvc,
   logParcelDiscrepancySvc,
   markParcelReceivedSvc,
+  recordParcelDispositionActionSvc,
   requestParcelReconciliationCaseSvc,
   resolveParcelDiscrepancySvc,
   setPlannedToBePaidSvc,
@@ -28,6 +31,8 @@ export async function listParcelsCtrl(
     statuses?: number[] | null;
     senderPaid?: boolean | null;
     hasPickupQueue?: boolean | null;
+    agedOnly?: boolean | null;
+    storageChargeAccruing?: boolean | null;
     received?: boolean | null;
     includeDeleted?: boolean | null;
   }>,
@@ -44,6 +49,8 @@ export async function listParcelsCtrl(
     statuses: q.filters?.statuses ?? null,
     senderPaid: q.filters?.senderPaid ?? null,
     hasPickupQueue: q.filters?.hasPickupQueue ?? null,
+    agedOnly: q.filters?.agedOnly ?? null,
+    storageChargeAccruing: q.filters?.storageChargeAccruing ?? null,
     search: pagination.search ?? null,
     received: q.filters?.received ?? null,
     includeDeleted: q.filters?.includeDeleted ?? null,
@@ -126,6 +133,18 @@ export async function getParcelDetailsCtrl(id: string) {
           updatedAt: result.internalHolder.updatedAt.toISOString(),
         }
       : null,
+    dispositionActions: result.dispositionActions.map((row) => ({
+      ...row,
+      performedAt: row.performedAt ? row.performedAt.toISOString() : null,
+      createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+    })),
+    storageWaivers: result.storageWaivers.map((row) => ({
+      ...row,
+      waivedAt: row.waivedAt ? row.waivedAt.toISOString() : null,
+      accountingPostedAt: row.accountingPostedAt ? row.accountingPostedAt.toISOString() : null,
+      createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+    })),
+    storageSettlement: result.storageSettlement,
   };
 }
 export const createParcelCtrl = createParcelSvc;
@@ -134,6 +153,9 @@ export const markParcelReceivedCtrl = markParcelReceivedSvc;
 export const setPlannedToBePaidCtrl = setPlannedToBePaidSvc;
 export const logParcelDiscrepancyCtrl = logParcelDiscrepancySvc;
 export const softDeleteParcelCtrl = softDeleteParcelSvc;
+export const listParcelDispositionActionsCtrl = listParcelDispositionActionsSvc;
+export const recordParcelDispositionActionCtrl = recordParcelDispositionActionSvc;
+export const waiveParcelStorageAccrualCtrl = waiveParcelStorageAccrualSvc;
 
 export async function listOpenParcelDiscrepanciesCtrl(input: {
   companyId: string;

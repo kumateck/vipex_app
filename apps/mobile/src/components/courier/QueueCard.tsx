@@ -14,10 +14,13 @@ export function QueueCard({ card, onCopy, onShare }: QueueCardProps) {
   const { theme } = useAppearance();
   return (
     <AppCard>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Queue #{card.queueNumber}</Text>
-      <Text style={{ color: theme.colors.textMuted }}>Code: {card.queueCode}</Text>
-      <Text style={{ color: theme.colors.textMuted }}>Booking: {card.bookingCode}</Text>
-      <Text style={{ color: theme.colors.textMuted }}>
+      <Text style={[styles.label, { color: theme.colors.textMuted }]}>Queue Number</Text>
+      <Text style={[styles.title, { color: theme.colors.secondary }]}>{card.queueNumber}</Text>
+      <Text style={[styles.meta, { color: theme.colors.textMuted }]}>Code: {card.queueCode}</Text>
+      <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
+        Booking: {card.bookingCode}
+      </Text>
+      <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
         Receiver: {card.receiverName ?? '-'} ({card.receiverPhone ?? '-'})
       </Text>
       <View style={styles.row}>
@@ -29,6 +32,8 @@ export function QueueCard({ card, onCopy, onShare }: QueueCardProps) {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
+  label: { fontSize: mobileTypography.caption, fontWeight: '700', textTransform: 'uppercase' },
+  title: { fontSize: 36, lineHeight: 40, fontWeight: '800' },
+  meta: { fontSize: mobileTypography.body, lineHeight: 19 },
   row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
 });

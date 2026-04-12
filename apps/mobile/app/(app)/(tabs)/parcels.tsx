@@ -2,7 +2,7 @@ import RiderScreen from '../rider';
 import SuperSearchScreen from '../super-search';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { canViewRiderScreen } from '@mobile/lib/permissions';
-import { UserType } from '@/db/schemas/enums';
+import { UserType } from '@mobile/constants/user-types';
 
 export default function ParcelsTabScreen() {
   const { session } = useAuth();

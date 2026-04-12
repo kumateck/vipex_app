@@ -25,4 +25,5 @@ export type CommunicationThreadsItem = {
   lastMessageAt: string | null;
   createdAt: string | null;
   participantCount?: number;
+  directPeerUserId?: string | null;
 };

@@ -6,6 +6,7 @@ import type {
 import {
   createCommunicationEngagementRequestsSvc,
   decideCommunicationEngagementRequestsSvc,
+  listCommunicationEngagementRequestTargetsSvc,
   listCommunicationEngagementRequestsSvc,
 } from './service';
 
@@ -19,6 +20,13 @@ export async function createCommunicationEngagementRequestsCtrl(
   input: CommunicationEngagementRequestsCreateInput,
 ) {
   return createCommunicationEngagementRequestsSvc(input);
+}
+
+export async function listCommunicationEngagementRequestTargetsCtrl(input: {
+  companyId: string;
+  requesterUserId: string;
+}) {
+  return listCommunicationEngagementRequestTargetsSvc(input);
 }
 
 export async function approveCommunicationEngagementRequestsCtrl(

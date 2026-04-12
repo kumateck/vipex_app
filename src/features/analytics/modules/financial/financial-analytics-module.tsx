@@ -62,9 +62,9 @@ export function FinancialAnalyticsModule({ data }: { data: FinancialAnalyticsDat
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.transactions.map((row) => (
+              {data.transactions.map((row, index) => (
                 <TableRow key={row.id}>
-                  <TableCell>{row.id}</TableCell>
+                  <TableCell>TXN-{index + 1}</TableCell>
                   <TableCell>{row.date}</TableCell>
                   <TableCell>{row.method}</TableCell>
                   <TableCell>{row.status}</TableCell>

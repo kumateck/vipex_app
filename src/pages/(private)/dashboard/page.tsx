@@ -1,7 +1,14 @@
-import { AnalyticsPage } from '@/features/analytics/pages/analytics-page';
+import {
+  dashboardPathForDomain,
+  resolvePrimaryDomain,
+} from '@/features/dashboard/domain-dashboard';
+import { useAuthStore } from '@/stores/auth-store';
+import { Navigate } from 'react-router-dom';
 
 const DashboardHomePage = () => {
-  return <AnalyticsPage />;
+  const user = useAuthStore((state) => state.user);
+  const domain = resolvePrimaryDomain(user);
+  return <Navigate to={dashboardPathForDomain(domain)} replace />;
 };
 
 export default DashboardHomePage;

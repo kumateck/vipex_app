@@ -1,43 +1,43 @@
+const PermissionKeys = {
+  CanCreatePickupQueue: 'CanCreatePickupQueue',
+  CanReadSenderPickupQueue: 'CanReadSenderPickupQueue',
+  CanReadReceiverPickupQueue: 'CanReadReceiverPickupQueue',
+  CanReadParcels: 'CanReadParcels',
+  CanReadRiderCurrentParcels: 'CanReadRiderCurrentParcels',
+  CanReadRiderHistory: 'CanReadRiderHistory',
+  CanCompleteDoorstepDelivery: 'CanCompleteDoorstepDelivery',
+  CanReadParcelScan: 'CanReadParcelScan',
+  CanReadParcelIncoming: 'CanReadParcelIncoming',
+  CanUpdateParcels: 'CanUpdateParcels',
+} as const;
+
 export function hasPermission(permissions: string[] | undefined, key: string): boolean {
   return Boolean(permissions?.includes(key));
 }
 
-export const MobilePermissionKeys = Object.freeze({
-  CanReadParcels: 'CanReadParcels',
-  CanUpdateParcels: 'CanUpdateParcels',
-  CanCreatePickupQueue: 'CanCreatePickupQueue',
-  CanReadSenderPickupQueue: 'CanReadSenderPickupQueue',
-  CanReadReceiverPickupQueue: 'CanReadReceiverPickupQueue',
-  CanReadParcelScan: 'CanReadParcelScan',
-  CanReadParcelIncoming: 'CanReadParcelIncoming',
-  CanReadRiderCurrentParcels: 'CanReadRiderCurrentParcels',
-  CanReadRiderHistory: 'CanReadRiderHistory',
-  CanCompleteDoorstepDelivery: 'CanCompleteDoorstepDelivery',
-});
-
 export function canViewQueueScreen(permissions: string[] | undefined): boolean {
   return (
-    hasPermission(permissions, MobilePermissionKeys.CanCreatePickupQueue) ||
-    hasPermission(permissions, MobilePermissionKeys.CanReadSenderPickupQueue) ||
-    hasPermission(permissions, MobilePermissionKeys.CanReadReceiverPickupQueue) ||
-    hasPermission(permissions, MobilePermissionKeys.CanReadParcels)
+    hasPermission(permissions, PermissionKeys.CanCreatePickupQueue) ||
+    hasPermission(permissions, PermissionKeys.CanReadSenderPickupQueue) ||
+    hasPermission(permissions, PermissionKeys.CanReadReceiverPickupQueue) ||
+    hasPermission(permissions, PermissionKeys.CanReadParcels)
   );
 }
 
 export function canCreateQueueTicket(permissions: string[] | undefined): boolean {
-  return hasPermission(permissions, MobilePermissionKeys.CanCreatePickupQueue);
+  return hasPermission(permissions, PermissionKeys.CanCreatePickupQueue);
 }
 
 export function canViewReceiverQueueBoard(permissions: string[] | undefined): boolean {
-  return hasPermission(permissions, MobilePermissionKeys.CanReadReceiverPickupQueue);
+  return hasPermission(permissions, PermissionKeys.CanReadReceiverPickupQueue);
 }
 
 export function canViewSenderQueueBoard(permissions: string[] | undefined): boolean {
-  return hasPermission(permissions, MobilePermissionKeys.CanReadSenderPickupQueue);
+  return hasPermission(permissions, PermissionKeys.CanReadSenderPickupQueue);
 }
 
 export function canSearchParcelsForQueue(permissions: string[] | undefined): boolean {
-  return hasPermission(permissions, MobilePermissionKeys.CanReadParcels);
+  return hasPermission(permissions, PermissionKeys.CanReadParcels);
 }
 
 export function canUseQueueModule(permissions: string[] | undefined): boolean {
@@ -46,14 +46,14 @@ export function canUseQueueModule(permissions: string[] | undefined): boolean {
 
 export function canViewRiderScreen(permissions: string[] | undefined): boolean {
   return (
-    hasPermission(permissions, MobilePermissionKeys.CanReadRiderCurrentParcels) ||
-    hasPermission(permissions, MobilePermissionKeys.CanReadRiderHistory) ||
-    hasPermission(permissions, MobilePermissionKeys.CanCompleteDoorstepDelivery)
+    hasPermission(permissions, PermissionKeys.CanReadRiderCurrentParcels) ||
+    hasPermission(permissions, PermissionKeys.CanReadRiderHistory) ||
+    hasPermission(permissions, PermissionKeys.CanCompleteDoorstepDelivery)
   );
 }
 
 export function canCompleteRiderDeliveryActions(permissions: string[] | undefined): boolean {
-  return hasPermission(permissions, MobilePermissionKeys.CanCompleteDoorstepDelivery);
+  return hasPermission(permissions, PermissionKeys.CanCompleteDoorstepDelivery);
 }
 
 export function canUseRiderModule(permissions: string[] | undefined): boolean {
@@ -62,18 +62,18 @@ export function canUseRiderModule(permissions: string[] | undefined): boolean {
 
 export function canViewReceiveScreen(permissions: string[] | undefined): boolean {
   return (
-    hasPermission(permissions, MobilePermissionKeys.CanReadParcelScan) ||
-    hasPermission(permissions, MobilePermissionKeys.CanReadParcelIncoming)
+    hasPermission(permissions, PermissionKeys.CanReadParcelScan) ||
+    hasPermission(permissions, PermissionKeys.CanReadParcelIncoming)
   );
 }
 
 export function canMarkParcelArrived(permissions: string[] | undefined): boolean {
-  return hasPermission(permissions, MobilePermissionKeys.CanUpdateParcels);
+  return hasPermission(permissions, PermissionKeys.CanUpdateParcels);
 }
 
 export function canUseTransitReceiveScan(permissions: string[] | undefined): boolean {
   return (
-    hasPermission(permissions, MobilePermissionKeys.CanReadParcelScan) ||
-    hasPermission(permissions, MobilePermissionKeys.CanReadParcelIncoming)
+    hasPermission(permissions, PermissionKeys.CanReadParcelScan) ||
+    hasPermission(permissions, PermissionKeys.CanReadParcelIncoming)
   );
 }

@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
 import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { MobileDrawerContent } from '@mobile/components/navigation/mobile-drawer-content';
@@ -9,7 +10,20 @@ export default function AppLayout() {
   const { bootstrapped, session } = useAuth();
   const { theme } = useAppearance();
 
-  if (!bootstrapped) return null;
+  if (!bootstrapped) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.bg,
+        }}
+      >
+        <ActivityIndicator color={theme.colors.primary} />
+      </View>
+    );
+  }
   if (!session.accessToken) return <Redirect href="/(auth)/login" />;
 
   return (
@@ -108,6 +122,7 @@ export default function AppLayout() {
         name="communication/thread/[threadId]"
         options={{
           title: 'Chat Thread',
+          headerShown: false,
           drawerItemStyle: { display: 'none' },
         }}
       />
@@ -115,6 +130,7 @@ export default function AppLayout() {
         name="communication/voice/[channelId]"
         options={{
           title: 'Voice Channel',
+          headerShown: false,
           drawerItemStyle: { display: 'none' },
         }}
       />

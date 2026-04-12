@@ -25,13 +25,13 @@ export function PaymentBreakdownCard({
   return (
     <AppCard>
       <Text style={[styles.title, { color: theme.colors.text }]}>Payment Breakdown</Text>
-      <View style={styles.row}>
+      <View style={[styles.row, { borderBottomColor: theme.colors.border }]}>
         <Text style={[styles.label, { color: theme.colors.textMuted }]}>Delivery Fee</Text>
         <Text style={[styles.value, { color: theme.colors.text }]}>
           {formatPsw(deliveryFeePsw)}
         </Text>
       </View>
-      <View style={styles.row}>
+      <View style={[styles.row, { borderBottomColor: theme.colors.border }]}>
         <Text style={[styles.label, { color: theme.colors.textMuted }]}>Transit Fee</Text>
         <Text style={[styles.value, { color: theme.colors.text }]}>
           {formatPsw(collectTransit)}
@@ -47,7 +47,13 @@ export function PaymentBreakdownCard({
 
 const styles = StyleSheet.create({
   title: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    paddingBottom: 8,
+  },
   label: { fontSize: mobileTypography.body, fontWeight: '600' },
   value: { fontSize: mobileTypography.body, fontWeight: '700' },
   total: { paddingTop: 4 },

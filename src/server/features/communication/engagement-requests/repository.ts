@@ -1,54 +1,32 @@
-import { and, desc, eq, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { commEngagementRequests } from '@/db/schemas';
+import { BranchType } from '@/db/schemas/enums';
+import {
+  branches,
+  commEngagementRequests,
+  commThreadParticipants,
+  commThreads,
+  locations,
+  roles,
+  users,
+} from '@/db/schemas';
 import type {
   CommunicationEngagementRequestsCreateInput,
-  CommunicationEngagementRequestsDecideInput,
+  CommunicationEngagementRequestTargetItem,
   CommunicationEngagementRequestsItem,
   CommunicationEngagementRequestsListInput,
 } from './dto';
-
-function toItem(row: {
-  id: string;
-  companyId: string;
-  requesterUserId: string;
-  targetUserId: string;
-  status: string;
-  reasonCode: string | null;
-  reasonNote: string | null;
-  linkedEntityType: string | null;
-  linkedEntityId: string | null;
-  scope: string;
-  approvedBy: string | null;
-  approvedAt: Date | null;
-  declinedBy: string | null;
-  declinedAt: Date | null;
-  expiresAt: Date | null;
-  createdAt: Date | null;
-  updatedAt: Date | null;
-}): CommunicationEngagementRequestsItem {
-  return {
-    ...row,
-    approvedAt: row.approvedAt ? row.approvedAt.toISOString() : null,
-    declinedAt: row.declinedAt ? row.declinedAt.toISOString() : null,
-    expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
-    createdAt: row.createdAt ? row.createdAt.toISOString() : null,
-    updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
-  };
-}
+import { canDirectChatByScope, getCommunicationUserScopeRepo, toItem } from './repository.helpers';
 
 export async function listCommunicationEngagementRequestsRepo(
   input: CommunicationEngagementRequestsListInput,
 ): Promise<CommunicationEngagementRequestsItem[]> {
   const where = [eq(commEngagementRequests.companyId, input.companyId)];
-  if (input.status) {
-    where.push(eq(commEngagementRequests.status, input.status));
-  }
-  if (input.view === 'incoming') {
-    where.push(eq(commEngagementRequests.targetUserId, input.userId));
-  } else if (input.view === 'outgoing') {
+  if (input.status) where.push(eq(commEngagementRequests.status, input.status));
+  if (input.view === 'incoming') where.push(eq(commEngagementRequests.targetUserId, input.userId));
+  else if (input.view === 'outgoing')
     where.push(eq(commEngagementRequests.requesterUserId, input.userId));
-  } else {
+  else {
     where.push(
       or(
         eq(commEngagementRequests.requesterUserId, input.userId),
@@ -81,7 +59,38 @@ export async function listCommunicationEngagementRequestsRepo(
     .where(and(...where))
     .orderBy(desc(commEngagementRequests.createdAt), desc(commEngagementRequests.id));
 
-  return rows.map(toItem);
+  if (!rows.length) return [];
+  const userIds = [...new Set(rows.flatMap((row) => [row.requesterUserId, row.targetUserId]))];
+  const relatedUsers = await db
+    .select({
+      id: users.id,
+      fullname: users.fullname,
+      roleName: roles.name,
+      branchName: branches.name,
+      locationName: locations.name,
+    })
+    .from(users)
+    .leftJoin(roles, eq(roles.id, users.roleId))
+    .leftJoin(branches, eq(branches.id, users.branchId))
+    .leftJoin(locations, eq(locations.id, users.locationId))
+    .where(inArray(users.id, userIds));
+  const relatedById = new Map(relatedUsers.map((row) => [row.id, row]));
+
+  return rows.map((row) => {
+    const requester = relatedById.get(row.requesterUserId);
+    const target = relatedById.get(row.targetUserId);
+    return toItem({
+      ...row,
+      requesterFullname: requester?.fullname ?? null,
+      requesterRoleName: requester?.roleName ?? null,
+      requesterBranchName: requester?.branchName ?? null,
+      requesterLocationName: requester?.locationName ?? null,
+      targetFullname: target?.fullname ?? null,
+      targetRoleName: target?.roleName ?? null,
+      targetBranchName: target?.branchName ?? null,
+      targetLocationName: target?.locationName ?? null,
+    });
+  });
 }
 
 export async function createCommunicationEngagementRequestsRepo(
@@ -123,75 +132,90 @@ export async function createCommunicationEngagementRequestsRepo(
   return toItem(created);
 }
 
-export async function getPendingEngagementRequestForDecisionRepo(input: {
-  id: string;
+export async function listCommunicationEngagementRequestTargetsRepo(input: {
   companyId: string;
-}) {
-  const [row] = await db
+  requesterUserId: string;
+}): Promise<CommunicationEngagementRequestTargetItem[]> {
+  const requesterScope = await getCommunicationUserScopeRepo({
+    companyId: input.companyId,
+    userId: input.requesterUserId,
+  });
+  if (!requesterScope || requesterScope.branchType === BranchType.HEADOFFICE) return [];
+
+  const candidates = await db
     .select({
-      id: commEngagementRequests.id,
-      targetUserId: commEngagementRequests.targetUserId,
-      status: commEngagementRequests.status,
+      id: users.id,
+      fullname: users.fullname,
+      branchId: users.branchId,
+      roleName: roles.name,
+      branchName: branches.name,
+      locationName: locations.name,
+      branchType: branches.type,
+      locationId: users.locationId,
     })
-    .from(commEngagementRequests)
+    .from(users)
+    .innerJoin(branches, eq(branches.id, users.branchId))
+    .leftJoin(roles, eq(roles.id, users.roleId))
+    .leftJoin(locations, eq(locations.id, users.locationId))
+    .where(eq(users.companyId, input.companyId));
+
+  const directPeerRows = await db
+    .select({ threadId: commThreadParticipants.threadId, userId: commThreadParticipants.userId })
+    .from(commThreadParticipants)
+    .innerJoin(commThreads, eq(commThreads.id, commThreadParticipants.threadId))
     .where(
       and(
-        eq(commEngagementRequests.id, input.id),
-        eq(commEngagementRequests.companyId, input.companyId),
-        eq(commEngagementRequests.status, 'pending'),
+        eq(commThreads.companyId, input.companyId),
+        eq(commThreads.threadType, 'direct'),
+        eq(commThreads.isDeleted, false),
+        eq(commThreadParticipants.isDeleted, false),
+        isNull(commThreadParticipants.leftAt),
       ),
+    );
+
+  const participantsByThread = new Map<string, Set<string>>();
+  for (const row of directPeerRows) {
+    const bucket = participantsByThread.get(row.threadId) ?? new Set<string>();
+    bucket.add(row.userId);
+    participantsByThread.set(row.threadId, bucket);
+  }
+  const existingDirectPeerIds = new Set<string>();
+  for (const participants of participantsByThread.values()) {
+    if (!participants.has(input.requesterUserId)) continue;
+    for (const userId of participants)
+      if (userId !== input.requesterUserId) existingDirectPeerIds.add(userId);
+  }
+
+  return candidates
+    .filter((row) => row.id !== input.requesterUserId)
+    .filter((row) => !existingDirectPeerIds.has(row.id))
+    .filter(
+      (row) =>
+        !canDirectChatByScope({
+          requester: requesterScope,
+          target: {
+            userId: row.id,
+            branchType: row.branchType,
+            branchId: row.branchId,
+            locationId: row.locationId,
+          },
+        }),
     )
-    .limit(1);
-  return row ?? null;
+    .map((row) => ({
+      id: row.id,
+      fullname: row.fullname,
+      roleName: row.roleName ?? null,
+      branchName: row.branchName ?? null,
+      locationName: row.locationName ?? null,
+    }))
+    .sort((a, b) => a.fullname.localeCompare(b.fullname));
 }
 
-export async function decideCommunicationEngagementRequestRepo(
-  input: CommunicationEngagementRequestsDecideInput,
-): Promise<CommunicationEngagementRequestsItem> {
-  const now = new Date();
-  const [updated] = await db
-    .update(commEngagementRequests)
-    .set(
-      input.approve
-        ? {
-            status: 'approved',
-            approvedBy: input.actingUserId,
-            approvedAt: now,
-            updatedAt: now,
-          }
-        : {
-            status: 'declined',
-            declinedBy: input.actingUserId,
-            declinedAt: now,
-            updatedAt: now,
-          },
-    )
-    .where(
-      and(
-        eq(commEngagementRequests.id, input.id),
-        eq(commEngagementRequests.companyId, input.companyId),
-        eq(commEngagementRequests.status, 'pending'),
-      ),
-    )
-    .returning({
-      id: commEngagementRequests.id,
-      companyId: commEngagementRequests.companyId,
-      requesterUserId: commEngagementRequests.requesterUserId,
-      targetUserId: commEngagementRequests.targetUserId,
-      status: commEngagementRequests.status,
-      reasonCode: commEngagementRequests.reasonCode,
-      reasonNote: commEngagementRequests.reasonNote,
-      linkedEntityType: commEngagementRequests.linkedEntityType,
-      linkedEntityId: commEngagementRequests.linkedEntityId,
-      scope: commEngagementRequests.scope,
-      approvedBy: commEngagementRequests.approvedBy,
-      approvedAt: commEngagementRequests.approvedAt,
-      declinedBy: commEngagementRequests.declinedBy,
-      declinedAt: commEngagementRequests.declinedAt,
-      expiresAt: commEngagementRequests.expiresAt,
-      createdAt: commEngagementRequests.createdAt,
-      updatedAt: commEngagementRequests.updatedAt,
-    });
-  if (!updated) throw new Error('Failed to update engagement request');
-  return toItem(updated);
-}
+export {
+  decideCommunicationEngagementRequestRepo,
+  getCommunicationUserScopeRepo,
+  getPendingEngagementRequestForDecisionRepo,
+  hasApprovedEngagementAccessRepo,
+  hasPendingEngagementRequestRepo,
+  requiresRequestForDirectThreadRepo,
+} from './repository.helpers';

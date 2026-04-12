@@ -118,6 +118,19 @@ export type SendMailInput = {
 };
 
 export async function sendMail(input: SendMailInput) {
+  // In automated tests we default to a no-op transport to avoid network-dependent flakiness.
+  // Set `SMTP_ALLOW_IN_TEST=true` to exercise real SMTP even in test mode.
+  const isTestEnv = process.env.NODE_ENV === 'test';
+  const allowSmtpInTest = parseBool(process.env.SMTP_ALLOW_IN_TEST, false);
+  if (isTestEnv && !allowSmtpInTest) {
+    return {
+      messageId: `test-${Date.now()}`,
+      accepted: Array.isArray(input.to) ? input.to : [input.to],
+      rejected: [],
+      response: 'SMTP skipped in test mode',
+    };
+  }
+
   const tx = await getTransporter();
   const info = await tx.sendMail({
     from: input.from ?? getFromAddress(),

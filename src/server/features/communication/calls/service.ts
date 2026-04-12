@@ -27,9 +27,15 @@ import {
 import { getCommunicationChannelByIdRepo } from '../channels/repository';
 import { ensureCommunicationChannelThreadSvc } from '../channels/service';
 
+function toLivekitClientSocketOrigin(rawUrl: string) {
+  const parsed = new URL(rawUrl);
+  parsed.protocol = parsed.protocol === 'https:' || parsed.protocol === 'wss:' ? 'wss:' : 'ws:';
+  return parsed.origin;
+}
+
 function resolveLivekitClientUrl(requestOrigin?: string | null) {
   if (env.LIVEKIT_PUBLIC_URL) {
-    return env.LIVEKIT_PUBLIC_URL;
+    return toLivekitClientSocketOrigin(env.LIVEKIT_PUBLIC_URL);
   }
   if (!env.LIVEKIT_URL) {
     throw BadRequest('LiveKit is not configured on this environment');
@@ -43,19 +49,19 @@ function resolveLivekitClientUrl(requestOrigin?: string | null) {
     configured.hostname.endsWith('.internal');
 
   if (!likelyInternalHost) {
-    return configured.origin;
+    return toLivekitClientSocketOrigin(configured.toString());
   }
 
-  if (!requestOrigin) return configured.origin;
+  if (!requestOrigin) return toLivekitClientSocketOrigin(configured.toString());
   try {
     const origin = new URL(requestOrigin);
     const derived = new URL(env.LIVEKIT_URL);
     // Keep LiveKit port/path, but use browser-resolvable host/protocol.
     derived.hostname = origin.hostname;
-    derived.protocol = origin.protocol === 'https:' ? 'https:' : 'http:';
+    derived.protocol = origin.protocol === 'https:' ? 'wss:' : 'ws:';
     return derived.origin;
   } catch {
-    return configured.origin;
+    return toLivekitClientSocketOrigin(configured.toString());
   }
 }
 
@@ -152,7 +158,11 @@ export async function updateCommunicationCallStatusSvc(
 export async function createCommunicationCallLivekitTokenSvc(
   input: CommunicationCallsCreateLivekitTokenInput,
 ): Promise<CommunicationCallsLivekitTokenItem> {
-  if (!env.LIVEKIT_URL || !env.LIVEKIT_API_KEY || !env.LIVEKIT_API_SECRET) {
+  if (
+    (!env.LIVEKIT_URL && !env.LIVEKIT_PUBLIC_URL) ||
+    !env.LIVEKIT_API_KEY ||
+    !env.LIVEKIT_API_SECRET
+  ) {
     throw BadRequest('LiveKit is not configured on this environment');
   }
 

@@ -13,6 +13,7 @@ import {
   AuthUserResponse,
   PermissionsField,
   SetPasswordBody,
+  VerifyPasswordBody,
 } from './schemas';
 import {
   changePasswordCtrl,
@@ -26,6 +27,7 @@ import {
   resetPasswordCtrl,
   setPasswordCtrl,
   updateCurrentUserProfileCtrl,
+  verifyCurrentUserPasswordCtrl,
 } from './controller';
 
 export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/auth', (app) =>
@@ -126,6 +128,23 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
           tags: ['Auth'],
           summary: 'Set password with invitation OTP',
           operationId: 'setPassword',
+        },
+      },
+    )
+    .post(
+      '/me/verify-password',
+      async ({ user, body }) => {
+        return verifyCurrentUserPasswordCtrl(user!.sub, body.password);
+      },
+      {
+        body: VerifyPasswordBody,
+        response: t.Object({ success: t.Boolean() }),
+        beforeHandle: requireAuth(),
+        detail: {
+          tags: ['Auth'],
+          summary: 'Verify current user password',
+          operationId: 'verifyCurrentUserPassword',
+          security: [{ bearerAuth: [] }],
         },
       },
     )

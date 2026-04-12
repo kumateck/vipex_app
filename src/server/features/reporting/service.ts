@@ -35,6 +35,7 @@ import {
   listShiftRevenueSessionsRepo,
   listShiftRevenueTransactionRowsRepo,
   listSessionTransactionsRepo,
+  listStorageWaiverFinancialReportRowsRepo,
   listToBePaidCollectionsReconciliationReportRowsRepo,
   listToBePaidOutstandingReportRowsRepo,
 } from './repository';
@@ -845,6 +846,43 @@ export async function getParcelStatusSummaryReportSvc(input: {
       ...row,
       createdAt: row.createdAt?.toISOString() ?? null,
       receivedAt: row.receivedAt?.toISOString() ?? null,
+    })),
+  };
+}
+
+export async function getStorageWaiverFinancialReportSvc(input: {
+  companyId: string;
+  branchId?: string | null;
+  from: string;
+  to: string;
+}) {
+  const from = parseDateInput(input.from);
+  const to = parseDateInput(input.to, true);
+  if (to < from) throw BadRequest('Invalid date range');
+
+  const rows = await listStorageWaiverFinancialReportRowsRepo({
+    companyId: input.companyId,
+    branchId: input.branchId ?? null,
+    from,
+    to,
+  });
+
+  return {
+    filters: {
+      ...input,
+      from: from.toISOString(),
+      to: to.toISOString(),
+    },
+    generatedAt: new Date().toISOString(),
+    totals: {
+      waivers: rows.length,
+      waivedAmountPsw: rows.reduce((sum, row) => sum + Number(row.waivedAmountPsw ?? 0), 0),
+      postedCount: rows.filter((row) => Boolean(row.accountingJournalEntryId)).length,
+    },
+    rows: rows.map((row) => ({
+      ...row,
+      waivedAt: row.waivedAt.toISOString(),
+      accountingPostedAt: row.accountingPostedAt?.toISOString() ?? null,
     })),
   };
 }

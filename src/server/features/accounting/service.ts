@@ -673,8 +673,32 @@ export async function postManualJournalEntrySvc(input: {
   entryDate?: string | null;
   lines: JournalLineInput[];
 }) {
+  if (input.lines.length < 2) {
+    throw BadRequest('Manual journal entry requires at least two lines');
+  }
+
+  for (const line of input.lines) {
+    if (!line.accountId) {
+      throw BadRequest('Each manual journal line requires an account');
+    }
+    const debitPsw = Number(line.debitPsw ?? 0);
+    const creditPsw = Number(line.creditPsw ?? 0);
+    const hasDebit = debitPsw > 0;
+    const hasCredit = creditPsw > 0;
+    if (hasDebit === hasCredit) {
+      throw BadRequest('Each manual journal line must have either debit or credit (not both)');
+    }
+  }
+
   const totalDebitPsw = input.lines.reduce((sum, line) => sum + Number(line.debitPsw ?? 0), 0);
   const totalCreditPsw = input.lines.reduce((sum, line) => sum + Number(line.creditPsw ?? 0), 0);
+  if (totalDebitPsw <= 0 || totalCreditPsw <= 0) {
+    throw BadRequest('Manual journal entry must include positive debit and credit totals');
+  }
+  if (totalDebitPsw !== totalCreditPsw) {
+    throw BadRequest('Manual journal entry is not balanced');
+  }
+
   const policy = await getManualJournalApprovalPolicySvc({ companyId: input.companyId });
   const exceedsThreshold = totalDebitPsw > policy.amountLimitPsw;
   const shouldQueue = exceedsThreshold || !policy.autoAuthorizeBelowThreshold;
@@ -1754,31 +1778,97 @@ export async function createDailyCashConfirmationSvc(input: {
   accountantUserId?: string | null;
   confirmationDate: string;
   expectedCashCedis: number | string;
+  expectedMtnCedis?: number | string;
+  expectedTelecelCedis?: number | string;
+  expectedAirtelCedis?: number | string;
   countedCashCedis: number | string;
+  countedMtnCedis?: number | string;
+  countedTelecelCedis?: number | string;
+  countedAirtelCedis?: number | string;
   notes?: string | null;
   createdBy: string;
 }) {
+  if (!input.cashierUserId) {
+    throw BadRequest('Select a cashier with a completed session before recording confirmation');
+  }
+
+  const dateFrom = normalizeDate(input.confirmationDate, false);
+  if (!dateFrom) throw BadRequest('Valid confirmation date is required');
+  const dateToExclusive = new Date(dateFrom);
+  dateToExclusive.setDate(dateToExclusive.getDate() + 1);
+
+  const sessionSummary = await getDailyCashSessionSummaryRepo({
+    branchId: input.branchId,
+    cashierUserId: input.cashierUserId,
+    dateFrom,
+    dateToExclusive,
+  });
+
+  if (!sessionSummary || sessionSummary.status !== 'COMPLETED') {
+    throw Conflict(
+      'Daily cash confirmation can only be recorded after the selected cashier session is completed',
+    );
+  }
+
   const expectedCashPsw = toPsw(input.expectedCashCedis);
+  const expectedMtnPsw = toPsw(input.expectedMtnCedis ?? 0);
+  const expectedTelecelPsw = toPsw(input.expectedTelecelCedis ?? 0);
+  const expectedAirtelPsw = toPsw(input.expectedAirtelCedis ?? 0);
   const countedCashPsw = toPsw(input.countedCashCedis);
+  const countedMtnPsw = toPsw(input.countedMtnCedis ?? 0);
+  const countedTelecelPsw = toPsw(input.countedTelecelCedis ?? 0);
+  const countedAirtelPsw = toPsw(input.countedAirtelCedis ?? 0);
   const difference = countedCashPsw - expectedCashPsw;
   const shortagePsw = difference < 0 ? Math.abs(difference) : 0;
   const overagePsw = difference > 0 ? difference : 0;
-
-  const created = await createDailyCashConfirmationRepo({
+  const existingConfirmations = await listDailyCashConfirmationsRepo({
     companyId: input.companyId,
     branchId: input.branchId,
-    locationId: input.locationId ?? null,
-    cashierUserId: input.cashierUserId ?? null,
-    accountantUserId: input.accountantUserId ?? null,
-    confirmationDate: new Date(input.confirmationDate),
-    expectedCashPsw,
-    countedCashPsw,
-    shortagePsw,
-    overagePsw,
-    notes: input.notes ?? null,
-    status: CashConfirmationStatus.DRAFT,
-    createdBy: input.createdBy,
   });
+  const existingForScope = existingConfirmations.find((row) => {
+    const rowDay = row.confirmationDate.toISOString().slice(0, 10);
+    const sameDay = rowDay === dateFrom.toISOString().slice(0, 10);
+    const sameLocation = (row.locationId ?? null) === (input.locationId ?? null);
+    const sameCashier = (row.cashierUserId ?? null) === (input.cashierUserId ?? null);
+    return sameDay && sameLocation && sameCashier;
+  });
+  if (existingForScope) {
+    throw Conflict(
+      'A daily cash confirmation already exists for this branch, location, cashier, and date',
+    );
+  }
+
+  let created: { id: string } | null = null;
+  try {
+    created = await createDailyCashConfirmationRepo({
+      companyId: input.companyId,
+      branchId: input.branchId,
+      locationId: input.locationId ?? null,
+      cashierUserId: input.cashierUserId ?? null,
+      accountantUserId: input.accountantUserId ?? null,
+      confirmationDate: new Date(input.confirmationDate),
+      expectedCashPsw,
+      expectedMtnPsw,
+      expectedTelecelPsw,
+      expectedAirtelPsw,
+      countedCashPsw,
+      countedMtnPsw,
+      countedTelecelPsw,
+      countedAirtelPsw,
+      shortagePsw,
+      overagePsw,
+      notes: input.notes ?? null,
+      status: CashConfirmationStatus.DRAFT,
+      createdBy: input.createdBy,
+    });
+  } catch (error) {
+    if (readErrorCode(error) === '23505') {
+      throw Conflict(
+        'A daily cash confirmation already exists for this branch, location, cashier, and date',
+      );
+    }
+    throw error;
+  }
 
   if (!created) throw NotFound('Failed to create daily cash confirmation');
   return { id: created.id };

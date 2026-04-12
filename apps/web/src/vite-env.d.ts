@@ -24,6 +24,24 @@ type DesktopUpdateStatus = {
   message?: string;
 };
 
+type DesktopNetworkDiagnostics = {
+  timestamp: string;
+  appVersion: string;
+  isPackaged: boolean;
+  selectedBaseUrl: string;
+  activeBaseUrl: string | null;
+  candidateBaseUrls: string[];
+  electronOnline: boolean;
+  proxy: string;
+  probes: Array<{
+    host: string;
+    ok: boolean;
+    resolvedAddress?: string;
+    error?: string;
+  }>;
+  lastLoadError: string | null;
+};
+
 declare global {
   const __APP_BUILD_ID__: string;
 
@@ -31,6 +49,7 @@ declare global {
     api?: {
       platform: () => Promise<NodeJS.Platform>;
       ping: () => Promise<string>;
+      getNetworkDiagnostics: () => Promise<DesktopNetworkDiagnostics>;
       printHtml: (request: {
         html: string;
         layout: PrintLayout;

@@ -27,6 +27,8 @@ import {
   parcelInternalHolders,
   pickupQueues,
   warehouses,
+  parcelDispositionActions,
+  parcelStorageWaivers,
 } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
@@ -80,6 +82,10 @@ export type ListParcelsParams = {
   statuses?: number[] | null;
   senderPaid?: boolean | null;
   hasPickupQueue?: boolean | null;
+  agedOnly?: boolean | null;
+  storageChargeAccruing?: boolean | null;
+  ageThresholdMonths?: number | null;
+  storageGraceDays?: number | null;
   search?: string | null; // bookingCode/trackingCode/sender/receiver names/phones
   received?: boolean | null;
   includeDeleted?: boolean | null;
@@ -159,6 +165,24 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   if (p.locationId) whereParts.push(eq(parcels.pickupLocationId, p.locationId));
   if (p.hasPickupQueue === true) whereParts.push(isNotNull(pickupQueues.id));
   if (p.hasPickupQueue === false) whereParts.push(isNull(pickupQueues.id));
+  if (p.agedOnly === true || p.storageChargeAccruing === true) {
+    const now = new Date();
+    const graceDays = Math.max(1, Number(p.storageGraceDays ?? 14));
+    const ageThresholdMonths = Math.max(1, Number(p.ageThresholdMonths ?? 6));
+
+    whereParts.push(inArray(parcels.status, [5, 7]));
+    whereParts.push(isNotNull(parcels.receivedAt));
+
+    if (p.storageChargeAccruing === true) {
+      const chargeCutoff = new Date(now.getTime() - graceDays * 24 * 60 * 60 * 1000);
+      whereParts.push(lte(parcels.receivedAt, chargeCutoff));
+    }
+    if (p.agedOnly === true) {
+      const agedCutoff = new Date(now);
+      agedCutoff.setMonth(agedCutoff.getMonth() - ageThresholdMonths);
+      whereParts.push(lte(parcels.receivedAt, agedCutoff));
+    }
+  }
 
   const sort = p.sort ?? [];
   const orderBy = sort.length
@@ -412,4 +436,112 @@ export async function updateParcelsStatusRepo(
     .returning({ id: parcels.id });
 
   return rows.length;
+}
+
+export async function createParcelDispositionActionRepo(
+  values: typeof parcelDispositionActions.$inferInsert,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .insert(parcelDispositionActions)
+    .values(values)
+    .returning({ id: parcelDispositionActions.id });
+  return row ?? null;
+}
+
+export async function listParcelDispositionActionsRepo(parcelId: string) {
+  const performedBy = alias(users, 'pda_performed_by');
+
+  return db
+    .select({
+      id: parcelDispositionActions.id,
+      companyId: parcelDispositionActions.companyId,
+      parcelId: parcelDispositionActions.parcelId,
+      actionType: parcelDispositionActions.actionType,
+      warehouseId: parcelDispositionActions.warehouseId,
+      warehouseName: warehouses.name,
+      notes: parcelDispositionActions.notes,
+      recoveredAmountPsw: parcelDispositionActions.recoveredAmountPsw,
+      performedBy: parcelDispositionActions.performedBy,
+      performedByName: performedBy.fullname,
+      performedAt: parcelDispositionActions.performedAt,
+      createdAt: parcelDispositionActions.createdAt,
+    })
+    .from(parcelDispositionActions)
+    .leftJoin(warehouses, eq(warehouses.id, parcelDispositionActions.warehouseId))
+    .leftJoin(performedBy, eq(performedBy.id, parcelDispositionActions.performedBy))
+    .where(eq(parcelDispositionActions.parcelId, parcelId))
+    .orderBy(desc(parcelDispositionActions.performedAt), desc(parcelDispositionActions.id));
+}
+
+export async function createParcelStorageWaiverRepo(
+  values: typeof parcelStorageWaivers.$inferInsert,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .insert(parcelStorageWaivers)
+    .values(values)
+    .returning({ id: parcelStorageWaivers.id });
+  return row ?? null;
+}
+
+export async function listParcelStorageWaiversRepo(parcelId: string) {
+  const waivedBy = alias(users, 'psw_waived_by');
+
+  return db
+    .select({
+      id: parcelStorageWaivers.id,
+      companyId: parcelStorageWaivers.companyId,
+      parcelId: parcelStorageWaivers.parcelId,
+      waivedAmountPsw: parcelStorageWaivers.waivedAmountPsw,
+      reason: parcelStorageWaivers.reason,
+      waivedBy: parcelStorageWaivers.waivedBy,
+      waivedByName: waivedBy.fullname,
+      waivedAt: parcelStorageWaivers.waivedAt,
+      accountingJournalEntryId: parcelStorageWaivers.accountingJournalEntryId,
+      accountingPostedAt: parcelStorageWaivers.accountingPostedAt,
+      createdAt: parcelStorageWaivers.createdAt,
+    })
+    .from(parcelStorageWaivers)
+    .leftJoin(waivedBy, eq(waivedBy.id, parcelStorageWaivers.waivedBy))
+    .where(eq(parcelStorageWaivers.parcelId, parcelId))
+    .orderBy(desc(parcelStorageWaivers.waivedAt), desc(parcelStorageWaivers.id));
+}
+
+export async function updateParcelStorageWaiverAccountingPostingRepo(
+  id: string,
+  patch: {
+    accountingJournalEntryId?: string | null;
+    accountingPostedAt?: Date | null;
+  },
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .update(parcelStorageWaivers)
+    .set({
+      ...(patch.accountingJournalEntryId !== undefined
+        ? { accountingJournalEntryId: patch.accountingJournalEntryId ?? null }
+        : {}),
+      ...(patch.accountingPostedAt !== undefined
+        ? { accountingPostedAt: patch.accountingPostedAt ?? null }
+        : {}),
+    })
+    .where(eq(parcelStorageWaivers.id, id))
+    .returning({ id: parcelStorageWaivers.id });
+
+  return row ?? null;
+}
+
+export async function sumParcelStorageWaiversPswRepo(
+  parcelId: string,
+  executor: DbExecutor = db,
+): Promise<number> {
+  const rows = await executor
+    .select({
+      waivedAmountPsw: parcelStorageWaivers.waivedAmountPsw,
+    })
+    .from(parcelStorageWaivers)
+    .where(eq(parcelStorageWaivers.parcelId, parcelId));
+
+  return rows.reduce((sum, row) => sum + Number(row.waivedAmountPsw ?? 0), 0);
 }

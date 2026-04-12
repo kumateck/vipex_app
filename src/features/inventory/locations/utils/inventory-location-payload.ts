@@ -12,6 +12,10 @@ export function sanitizeInventoryLocationMutationInput(
 ): InventoryLocationUpdatePayload {
   return {
     name: input.name.trim(),
+    ...(input.locationType !== undefined ? { locationType: input.locationType } : {}),
+    ...(input.parentLocationId !== undefined
+      ? { parentLocationId: toNullable(input.parentLocationId) }
+      : {}),
     description: toNullable(input.description),
   };
 }
@@ -29,6 +33,10 @@ export function toCreateInventoryLocationPayload(
   return {
     name: sanitized.name,
     branchId,
+    ...(sanitized.locationType !== undefined ? { locationType: sanitized.locationType } : {}),
+    ...(sanitized.parentLocationId !== undefined
+      ? { parentLocationId: sanitized.parentLocationId }
+      : {}),
     ...(sanitized.description ? { description: sanitized.description } : {}),
     companyId: context.companyId,
     createdBy: context.createdBy,

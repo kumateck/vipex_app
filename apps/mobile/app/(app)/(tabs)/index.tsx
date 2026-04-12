@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
 import { StyleSheet, Text } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
-import { AppButton, AppCard } from '@mobile/components/ui';
+import { AppButton, AppCard, AppPageHeader } from '@mobile/components/ui';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { canViewRiderScreen } from '@mobile/lib/permissions';
-import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
-import { UserType } from '@/db/schemas/enums';
+import { mobileTypography } from '@mobile/theme/layout';
+import { UserType } from '@mobile/constants/user-types';
 
 export default function MobileHomeTabScreen() {
   const { theme } = useAppearance();
@@ -18,18 +18,19 @@ export default function MobileHomeTabScreen() {
   if (isRider) {
     return (
       <AppScreen>
-        <Text style={[styles.title, { color: theme.colors.text }]}>Dashboard</Text>
-        <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-          Rider workspace with daily stats, assigned parcels, and delivery history.
-        </Text>
+        <AppPageHeader
+          title="My Deliveries"
+          subtitle={`Today • ${new Date().toLocaleDateString()}`}
+        />
 
         <AppCard>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Rider Workspace</Text>
-          <Text style={{ color: theme.colors.textSubtle }}>
-            Open parcels to view assigned items, filter history by date, and complete delivery
-            actions.
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            Delivery Workspace
           </Text>
-          <AppButton title="Open Rider Parcels" onPress={() => router.push('/parcels' as never)} />
+          <Text style={{ color: theme.colors.textSubtle }}>
+            Open assigned parcels, confirm deliveries, and monitor today’s totals.
+          </Text>
+          <AppButton title="Open Delivery Board" onPress={() => router.push('/parcels' as never)} />
         </AppCard>
 
         <AppCard>
@@ -49,10 +50,10 @@ export default function MobileHomeTabScreen() {
 
   return (
     <AppScreen>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Dashboard</Text>
-      <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-        Welcome back, {user?.fullname ?? user?.email ?? 'User'}
-      </Text>
+      <AppPageHeader
+        title="Home Dashboard"
+        subtitle={`Welcome back, ${user?.fullname ?? user?.email ?? 'User'}`}
+      />
 
       <AppCard>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Account</Text>
@@ -65,7 +66,5 @@ export default function MobileHomeTabScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: mobileTypography.title, fontWeight: '800' },
-  subtitle: { marginTop: -2, lineHeight: 20, marginBottom: mobileSpacing.xs },
   sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
 });

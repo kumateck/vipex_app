@@ -43,13 +43,18 @@ type ChannelRow = {
   updatedAt: Date | null;
 };
 
-function toChannelItem(row: ChannelRow, participantCount: number): CommunicationChannelsItem {
+function toChannelItem(
+  row: ChannelRow,
+  participantCount: number,
+  participantUserIds?: string[],
+): CommunicationChannelsItem {
   return {
     ...row,
     archivedAt: row.archivedAt ? row.archivedAt.toISOString() : null,
     createdAt: row.createdAt ? row.createdAt.toISOString() : null,
     updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
     participantCount,
+    participantUserIds,
   };
 }
 
@@ -119,7 +124,11 @@ export async function getCommunicationChannelByIdRepo(
     row.visibility === 'public'
       ? (await listCompanyUserIds(input.companyId)).length
       : members.length;
-  return toChannelItem(row, participantCount);
+  return toChannelItem(
+    row,
+    participantCount,
+    members.map((member) => member.userId),
+  );
 }
 
 export async function listCommunicationChannelsRepo(
@@ -191,6 +200,7 @@ export async function listCommunicationChannelsRepo(
         row.visibility === 'public'
           ? companyUserCount
           : (membersByChannelId.get(row.id)?.size ?? 0),
+        row.visibility === 'public' ? companyUserIds : [...(membersByChannelId.get(row.id) ?? [])],
       ),
     );
 }
@@ -294,7 +304,7 @@ export async function createCommunicationChannelsRepo(
       }
     }
 
-    return toChannelItem(created, participants.length);
+    return toChannelItem(created, participants.length, participants);
   });
 }
 
@@ -421,7 +431,11 @@ export async function updateCommunicationChannelsRepo(
     updated.visibility === 'public'
       ? (await listCompanyUserIds(updated.companyId)).length
       : members.length;
-  return toChannelItem(updated, participantCount);
+  return toChannelItem(
+    updated,
+    participantCount,
+    members.map((member) => member.userId),
+  );
 }
 
 export async function addCommunicationChannelParticipantsRepo(

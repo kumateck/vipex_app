@@ -13,6 +13,7 @@ import { BranchType } from '@/db/schemas/enums';
 import {
   approveLeaveRequestCtrl,
   approveLeaveRequestByManagerCtrl,
+  approveLeaveSwapCtrl,
   checkInAttendanceCtrl,
   checkOutAttendanceCtrl,
   createDepartmentCtrl,
@@ -20,23 +21,29 @@ import {
   createEmployeeUserAccountCtrl,
   createJobTitleCtrl,
   createLeaveRequestCtrl,
+  createLeaveSwapCtrl,
   createLeaveTypeCtrl,
+  confirmLeaveSwapCtrl,
   getEmployeeCtrl,
   listDepartmentOptionsCtrl,
   listDepartmentsCtrl,
   listAttendanceCtrl,
+  listLeaveCalendarCtrl,
   listEmployeesCtrl,
   listEmployeeOptionsCtrl,
   listJobTitleOptionsCtrl,
   listJobTitlesCtrl,
   listLeaveRequestsCtrl,
+  listLeaveSwapsCtrl,
   listLeaveTypeOptionsCtrl,
   listLeaveTypesCtrl,
   rejectLeaveRequestCtrl,
   rejectLeaveRequestByManagerCtrl,
+  rejectLeaveSwapCtrl,
   updateDepartmentCtrl,
   updateEmployeeCtrl,
   updateJobTitleCtrl,
+  updateLeaveRequestCtrl,
 } from './controller';
 
 export const hrRoutes = new Elysia({ name: 'hr' })
@@ -665,15 +672,56 @@ export const hrRoutes = new Elysia({ name: 'hr' })
       detail: { tags: ['HR'], summary: 'List leave requests', operationId: 'listLeaveRequests' },
     },
   )
+  .get(
+    '/leave-calendar',
+    async ({ query, user }) =>
+      listLeaveCalendarCtrl({
+        companyId: (user as AuthUser).companyId!,
+        from: new Date(query.from),
+        to: new Date(query.to),
+        employeeId: query.employeeId ?? null,
+        status: query.status ?? null,
+        branchId: query.branchId ?? null,
+        departmentId: query.departmentId ?? null,
+      }),
+    {
+      query: t.Object({
+        from: t.String({ format: 'date' }),
+        to: t.String({ format: 'date' }),
+        employeeId: t.Optional(UUID),
+        status: t.Optional(t.Number()),
+        branchId: t.Optional(UUID),
+        departmentId: t.Optional(UUID),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanViewLeaveCalendar),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Leave calendar timeline',
+        operationId: 'listLeaveCalendar',
+      },
+    },
+  )
   .post(
     '/leave-requests',
     async ({ body, set, user }) => {
+      const selectionMode = body.selectionMode ?? 0;
+      const normalizedWeekCount =
+        selectionMode === 1
+          ? Math.max(1, Math.floor(Number(body.weekCount ?? 1)))
+          : (body.weekCount ?? null);
       const result = await createLeaveRequestCtrl({
         companyId: (user as AuthUser).companyId!,
         employeeId: body.employeeId,
         leaveTypeId: body.leaveTypeId,
         dateFrom: new Date(body.dateFrom),
         dateTo: new Date(body.dateTo),
+        selectionMode,
+        weekStartDate: body.weekStartDate ? new Date(body.weekStartDate) : null,
+        weekCount: normalizedWeekCount,
         isEmergency: body.isEmergency ?? false,
         reason: body.reason ?? null,
         createdBy: (user as AuthUser).sub,
@@ -687,6 +735,9 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         leaveTypeId: UUID,
         dateFrom: t.String({ format: 'date' }),
         dateTo: t.String({ format: 'date' }),
+        selectionMode: t.Optional(t.Number({ minimum: 0, maximum: 1 })),
+        weekStartDate: t.Optional(t.Union([t.String({ format: 'date' }), t.Null()])),
+        weekCount: t.Optional(t.Union([t.Number({ minimum: 1 }), t.Null()])),
         isEmergency: t.Optional(t.Boolean()),
         reason: t.Optional(t.Union([t.String(), t.Null()])),
       }),
@@ -696,6 +747,166 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         requireModuleEnabled('hr'),
       ],
       detail: { tags: ['HR'], summary: 'Create leave request', operationId: 'createLeaveRequest' },
+    },
+  )
+  .patch(
+    '/leave-requests/:id',
+    async ({ params, body, user }) => {
+      const selectionMode = body.selectionMode;
+      const normalizedWeekCount =
+        body.weekCount === undefined
+          ? undefined
+          : selectionMode === 1
+            ? Math.max(1, Math.floor(Number(body.weekCount ?? 1)))
+            : body.weekCount;
+
+      return updateLeaveRequestCtrl(params.id, (user as AuthUser).companyId!, {
+        employeeId: body.employeeId,
+        leaveTypeId: body.leaveTypeId,
+        dateFrom: body.dateFrom ? new Date(body.dateFrom) : undefined,
+        dateTo: body.dateTo ? new Date(body.dateTo) : undefined,
+        selectionMode,
+        weekStartDate:
+          body.weekStartDate === undefined
+            ? undefined
+            : body.weekStartDate
+              ? new Date(body.weekStartDate)
+              : null,
+        weekCount: normalizedWeekCount,
+        isEmergency: body.isEmergency,
+        reason: body.reason,
+        updatedBy: (user as AuthUser).sub,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        employeeId: t.Optional(UUID),
+        leaveTypeId: t.Optional(UUID),
+        dateFrom: t.Optional(t.String({ format: 'date' })),
+        dateTo: t.Optional(t.String({ format: 'date' })),
+        selectionMode: t.Optional(t.Number({ minimum: 0, maximum: 1 })),
+        weekStartDate: t.Optional(t.Union([t.String({ format: 'date' }), t.Null()])),
+        weekCount: t.Optional(t.Union([t.Number({ minimum: 1 }), t.Null()])),
+        isEmergency: t.Optional(t.Boolean()),
+        reason: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCreateLeaveRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: { tags: ['HR'], summary: 'Update leave request', operationId: 'updateLeaveRequest' },
+    },
+  )
+  .get(
+    '/leave-swaps',
+    async ({ query, user }) =>
+      listLeaveSwapsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: (user as AuthUser).companyId!,
+          employeeId: query.employeeId ?? null,
+          status: query.status ?? null,
+        },
+      }),
+    {
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        employeeId: t.Optional(UUID),
+        status: t.Optional(t.Number()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanViewLeaveCalendar),
+        requireModuleEnabled('hr'),
+      ],
+      detail: { tags: ['HR'], summary: 'List leave swaps', operationId: 'listLeaveSwaps' },
+    },
+  )
+  .post(
+    '/leave-swaps',
+    async ({ body, set, user }) => {
+      const result = await createLeaveSwapCtrl({
+        companyId: (user as AuthUser).companyId!,
+        requesterLeaveRequestId: body.requesterLeaveRequestId,
+        targetLeaveRequestId: body.targetLeaveRequestId,
+        createdBy: (user as AuthUser).sub,
+      });
+      set.status = HttpStatus.CREATED;
+      return result;
+    },
+    {
+      body: t.Object({
+        requesterLeaveRequestId: UUID,
+        targetLeaveRequestId: UUID,
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCreateLeaveSwapRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Create leave swap request',
+        operationId: 'createLeaveSwap',
+      },
+    },
+  )
+  .post(
+    '/leave-swaps/:id/confirm',
+    async ({ params, user }) => confirmLeaveSwapCtrl(params.id, (user as AuthUser).sub),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanConfirmLeaveSwapRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Confirm leave swap request by target employee',
+        operationId: 'confirmLeaveSwap',
+      },
+    },
+  )
+  .post(
+    '/leave-swaps/:id/approve',
+    async ({ params, user }) => approveLeaveSwapCtrl(params.id, (user as AuthUser).sub),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveLeaveSwapRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Approve leave swap request',
+        operationId: 'approveLeaveSwap',
+      },
+    },
+  )
+  .post(
+    '/leave-swaps/:id/reject',
+    async ({ params, body, user }) =>
+      rejectLeaveSwapCtrl(params.id, (user as AuthUser).sub, body.reason ?? null),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({ reason: t.Optional(t.Union([t.String(), t.Null()])) }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveLeaveSwapRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Reject leave swap request',
+        operationId: 'rejectLeaveSwap',
+      },
     },
   )
   .post(
