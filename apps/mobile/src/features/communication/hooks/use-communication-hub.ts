@@ -15,8 +15,13 @@ import {
 } from '@mobile/lib/communication-local';
 import { notifyError } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
-import type { CommunicationCallSession } from '@mobile/types/communication';
 import { useCommunicationSocket } from '@mobile/features/communication/use-communication-socket';
+import {
+  EMPTY_DATA,
+  toActiveCallByChannelId,
+  toChatEntries,
+  toUserEntries,
+} from './use-communication-hub-helpers';
 import {
   buildCurrentUserTypingIdentitySet,
   buildDirectThreadByUserId,
@@ -26,19 +31,6 @@ import {
 } from '@mobile/features/communication/utils/hub-dedupe';
 import type { CommunicationLoadState, CommunicationTabKey, UserChatEntry } from '../types';
 import { useCommunicationHubActions } from './use-communication-hub-actions';
-
-const EMPTY_DATA: CommunicationLoadState = {
-  threads: [],
-  textChannels: [],
-  voiceChannels: [],
-  users: [],
-  requestTargets: [],
-  incomingRequests: [],
-  outgoingRequests: [],
-  activeCalls: [],
-  threadUnreadById: new Map(),
-  voiceUnreadById: new Map(),
-};
 
 export function useCommunicationHub() {
   const { withAuth, session } = useAuth();
@@ -183,66 +175,24 @@ export function useCommunicationHub() {
     () => new Set(data.requestTargets.map((target) => target.id)),
     [data.requestTargets],
   );
-  const activeCallByChannelId = useMemo(() => {
-    const map = new Map<string, CommunicationCallSession>();
-    data.activeCalls.forEach((call) => {
-      if (call.channelId) map.set(call.channelId, call);
-    });
-    return map;
-  }, [data.activeCalls]);
+  const activeCallByChannelId = useMemo(
+    () => toActiveCallByChannelId(data.activeCalls),
+    [data.activeCalls],
+  );
 
-  const userEntries = useMemo<UserChatEntry[]>(() => {
-    const branchType = currentUser?.branch?.type ?? currentUser?.branchType ?? null;
-    const isHeadOffice = branchType === 0;
-    const currentBranchId = currentUser?.branch?.id ?? currentUser?.branchId ?? null;
-    const currentLocationId = currentUser?.location?.id ?? null;
-
-    return data.users
-      .filter((user) => user.id !== currentUserId)
-      .map((user) => {
-        const sameBranch = Boolean(currentBranchId && user.branchId === currentBranchId);
-        const sameLocation = Boolean(currentLocationId && user.locationId === currentLocationId);
-        const canDirect = isHeadOffice
-          ? true
-          : currentLocationId
-            ? sameBranch && sameLocation
-            : sameBranch;
-        return {
-          id: user.id,
-          fullname: user.fullname,
-          roleName: user.roleName ?? null,
-          branchName: user.branchName ?? null,
-          locationName: user.locationName ?? null,
-          thread: null,
-          requiresRequest: !canDirect,
-          canRequest: requestTargetIdSet.has(user.id),
-        };
-      })
-      .sort((a, b) => a.fullname.localeCompare(b.fullname));
-  }, [currentUser, currentUserId, data.users, requestTargetIdSet]);
+  const userEntries = useMemo<UserChatEntry[]>(
+    () =>
+      toUserEntries({
+        users: data.users,
+        currentUserId,
+        currentUser: currentUser ?? null,
+        requestTargetIdSet,
+      }),
+    [currentUser, currentUserId, data.users, requestTargetIdSet],
+  );
 
   const chatEntries = useMemo<UserChatEntry[]>(
-    () =>
-      [...directThreadByUserId.entries()]
-        .map(([peerId, thread]) => {
-          const user = userById.get(peerId);
-          return {
-            id: peerId,
-            fullname: user?.fullname?.trim() || thread.title?.trim() || 'Unknown user',
-            roleName: user?.roleName ?? null,
-            branchName: user?.branchName ?? null,
-            locationName: user?.locationName ?? null,
-            thread,
-            requiresRequest: false,
-            canRequest: false,
-          } satisfies UserChatEntry;
-        })
-        .sort((a, b) => {
-          const aTime = a.thread?.lastMessageAt ? new Date(a.thread.lastMessageAt).getTime() : 0;
-          const bTime = b.thread?.lastMessageAt ? new Date(b.thread.lastMessageAt).getTime() : 0;
-          if (aTime !== bTime) return bTime - aTime;
-          return a.fullname.localeCompare(b.fullname);
-        }),
+    () => toChatEntries({ directThreadByUserId, userById }),
     [directThreadByUserId, userById],
   );
 

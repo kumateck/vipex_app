@@ -1,10 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Pressable } from 'react-native';
 import { AppButton } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 import { VoiceCallTiles } from './voice-call-tiles';
+import { VoiceControlIconButton } from './voice-control-icon-button';
 import type { VoiceSocketParticipant } from '@mobile/features/communication/hooks/use-voice-channel';
 
 type VoiceChannelStageProps = {
@@ -177,7 +176,7 @@ export function VoiceChannelStage({
         ]}
       >
         <View style={styles.iconDockRow}>
-          <ControlIconButton
+          <VoiceControlIconButton
             icon={isMuted ? 'mic-off' : 'mic'}
             label={isMuted ? 'Unmute' : 'Mute'}
             active={connected && !isMuted}
@@ -186,8 +185,11 @@ export function VoiceChannelStage({
             primaryColor={theme.colors.primary}
             textColor={stageColors.text}
             mutedBg={stageColors.cardMuted}
+            iconButtonWrapStyle={styles.iconButtonWrap}
+            iconButtonStyle={styles.iconButton}
+            iconButtonLabelStyle={styles.iconButtonLabel}
           />
-          <ControlIconButton
+          <VoiceControlIconButton
             icon={isVideoOff ? 'videocam-off' : 'videocam'}
             label={isVideoOff ? 'Camera Off' : 'Camera On'}
             active={connected && !isVideoOff}
@@ -196,8 +198,11 @@ export function VoiceChannelStage({
             primaryColor={theme.colors.primary}
             textColor={stageColors.text}
             mutedBg={stageColors.cardMuted}
+            iconButtonWrapStyle={styles.iconButtonWrap}
+            iconButtonStyle={styles.iconButton}
+            iconButtonLabelStyle={styles.iconButtonLabel}
           />
-          <ControlIconButton
+          <VoiceControlIconButton
             icon={speakerOn ? 'volume-high' : 'volume-mute'}
             label={speakerOn ? 'Speaker' : 'Earpiece'}
             active={connected && speakerOn}
@@ -206,6 +211,9 @@ export function VoiceChannelStage({
             primaryColor={theme.colors.primary}
             textColor={stageColors.text}
             mutedBg={stageColors.cardMuted}
+            iconButtonWrapStyle={styles.iconButtonWrap}
+            iconButtonStyle={styles.iconButton}
+            iconButtonLabelStyle={styles.iconButtonLabel}
           />
         </View>
         {!connected ? (
@@ -222,43 +230,6 @@ export function VoiceChannelStage({
         )}
       </View>
     </View>
-  );
-}
-
-function ControlIconButton({
-  icon,
-  label,
-  active,
-  disabled,
-  onPress,
-  primaryColor,
-  textColor,
-  mutedBg,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  active: boolean;
-  disabled: boolean;
-  onPress: () => void;
-  primaryColor: string;
-  textColor: string;
-  mutedBg: string;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={[styles.iconButtonWrap, { opacity: disabled ? 0.55 : 1 }]}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-    >
-      <View style={[styles.iconButton, { backgroundColor: active ? primaryColor : mutedBg }]}>
-        <Ionicons name={icon} size={20} color={active ? '#fff' : textColor} />
-      </View>
-      <Text style={[styles.iconButtonLabel, { color: textColor }]} numberOfLines={1}>
-        {label}
-      </Text>
-    </Pressable>
   );
 }
 

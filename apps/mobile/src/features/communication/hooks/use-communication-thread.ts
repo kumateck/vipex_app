@@ -1,21 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
-import {
-  createCommunicationMessage,
-  listCommunicationMessages,
-  listMobileUserOptions,
-  markCommunicationThreadRead,
-} from '@mobile/lib/api';
+import { markCommunicationThreadRead } from '@mobile/lib/api';
 import { notifyError } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
 import type { CommunicationMessage, MobileUserOption } from '@mobile/types/communication';
 import { useCommunicationSocket } from '@mobile/features/communication/use-communication-socket';
-import {
-  loadPendingThreadQueue,
-  loadThreadMessageCache,
-  removePendingThreadMessage,
-  saveThreadMessageCache,
-} from '@mobile/lib/communication-local';
+import { saveThreadMessageCache } from '@mobile/lib/communication-local';
 import {
   buildMentionLookup,
   extractActiveMention,
@@ -24,9 +14,14 @@ import {
 import {
   buildCurrentUserIdentitySet,
   normalizeIdentity,
-  resolveDirectThreadTitle,
 } from '@mobile/features/communication/utils/thread-identity';
 import { useThreadMessageSender } from '@mobile/features/communication/hooks/use-thread-message-sender';
+import {
+  getParticipantCount,
+  getTypingUsers,
+  resolveThreadTitle,
+} from './use-communication-thread-helpers';
+import { flushThreadPendingQueue, loadThreadData } from './use-communication-thread-sync';
 type ThreadMessage = CommunicationMessage & { _optimistic?: boolean; _failed?: boolean };
 export function useCommunicationThread() {
   const { withAuth, session } = useAuth();
@@ -97,27 +92,16 @@ export function useCommunicationThread() {
     return deduped;
   }, []);
   const loadMessages = useCallback(async () => {
-    if (!threadId) return;
-    const cached = await loadThreadMessageCache(threadId);
-    if (cached.length) {
-      setMessages(dedupeMessages(cached));
-      setLoading(false);
-    } else {
-      setLoading(true);
-    }
     try {
-      const [nextMessages, users] = await withAuth(async (token) =>
-        Promise.all([
-          listCommunicationMessages(token, { threadId, limit: 200 }),
-          listMobileUserOptions(token),
-        ]),
-      );
-      setMessages(dedupeMessages(nextMessages));
-      await saveThreadMessageCache(threadId, nextMessages);
-      setUserOptions(users);
-      await withAuth((token) => markCommunicationThreadRead(token, { threadId }));
-      const queued = await loadPendingThreadQueue(threadId);
-      setPendingQueueCount(queued.length);
+      await loadThreadData({
+        threadId,
+        withAuth,
+        dedupeMessages,
+        setMessages,
+        setUserOptions,
+        setPendingQueueCount,
+        setLoading,
+      });
     } catch (error) {
       notifyError(
         'Chat load failed',
@@ -171,32 +155,7 @@ export function useCommunicationThread() {
     [],
   );
   const flushPendingQueue = useCallback(async () => {
-    if (!threadId) return;
-    const queue = await loadPendingThreadQueue(threadId);
-    if (!queue.length) return;
-    for (const pending of queue) {
-      try {
-        const created = await withAuth((token) =>
-          createCommunicationMessage(token, {
-            threadId,
-            body: pending.body,
-            replyToMessageId: pending.replyToMessageId ?? null,
-            metadataJson:
-              pending.metadataJson && typeof pending.metadataJson === 'object'
-                ? (pending.metadataJson as Record<string, unknown>)
-                : null,
-          }),
-        );
-        setMessages((prev) =>
-          dedupeMessages(prev.map((item) => (item.id === pending.tempId ? created : item))),
-        );
-        await removePendingThreadMessage(threadId, pending.tempId);
-      } catch {
-        break;
-      }
-    }
-    const latest = await loadPendingThreadQueue(threadId);
-    if (!latest.length) return;
+    await flushThreadPendingQueue({ threadId, withAuth, dedupeMessages, setMessages });
   }, [dedupeMessages, threadId, withAuth]);
   useEffect(() => {
     if (!isConnected) return;
@@ -266,39 +225,27 @@ export function useCommunicationThread() {
     },
     [currentUserIdentitySet],
   );
-  const participantCount = useMemo(() => {
-    const ids = new Set<string>();
-    if (currentUserId) ids.add(currentUserId);
-    messages.forEach((message) => {
-      const sender = normalizeIdentity(message.senderUserId);
-      if (sender) ids.add(sender);
-    });
-    return Math.max(1, ids.size);
-  }, [currentUserId, messages]);
+  const participantCount = useMemo(
+    () => getParticipantCount(messages, currentUserId),
+    [currentUserId, messages],
+  );
   const typingUsers = useMemo(
-    () => [
-      ...new Set(
-        Object.entries(typingByUserId)
-          .filter(([, typing]) => typing)
-          .map(([userId]) => usersById.get(userId)?.fullname?.trim() || 'Someone'),
-      ),
-    ],
+    () => getTypingUsers(typingByUserId, usersById),
     [typingByUserId, usersById],
   );
   const title = useMemo(
     () =>
-      threadType === 'direct'
-        ? resolveDirectThreadTitle({
-            routeTitle,
-            messages,
-            usersById,
-            directPeerUserId: peerUserId || null,
-            currentUserIdentitySet,
-            currentUserSub: session.user?.sub,
-            currentUserFullname: session.user?.fullname,
-            currentUserEmail: session.user?.email,
-          })
-        : routeTitle,
+      resolveThreadTitle({
+        threadType,
+        routeTitle,
+        messages,
+        usersById,
+        peerUserId,
+        currentUserIdentitySet,
+        currentUserSub: session.user?.sub,
+        currentUserFullname: session.user?.fullname,
+        currentUserEmail: session.user?.email,
+      }),
     [
       messages,
       peerUserId,
