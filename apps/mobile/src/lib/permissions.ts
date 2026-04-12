@@ -1,4 +1,15 @@
-import { PermissionKeys } from '@/shared/permissions/constants';
+const PermissionKeys = {
+  CanCreatePickupQueue: 'CanCreatePickupQueue',
+  CanReadSenderPickupQueue: 'CanReadSenderPickupQueue',
+  CanReadReceiverPickupQueue: 'CanReadReceiverPickupQueue',
+  CanReadParcels: 'CanReadParcels',
+  CanReadRiderCurrentParcels: 'CanReadRiderCurrentParcels',
+  CanReadRiderHistory: 'CanReadRiderHistory',
+  CanCompleteDoorstepDelivery: 'CanCompleteDoorstepDelivery',
+  CanReadParcelScan: 'CanReadParcelScan',
+  CanReadParcelIncoming: 'CanReadParcelIncoming',
+  CanUpdateParcels: 'CanUpdateParcels',
+} as const;
 
 export function hasPermission(permissions: string[] | undefined, key: string): boolean {
   return Boolean(permissions?.includes(key));

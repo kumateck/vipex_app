@@ -39,6 +39,8 @@ export function CommunicationChatConversationPanel({
     onJoinVoiceChannel,
     setManagingChannel,
   } = viewModel;
+  const getDirectThreadTitle = (thread: (typeof directThreads)[number]) =>
+    userLabelById.get(thread.directPeerUserId ?? '') ?? thread.title ?? 'Direct chat';
 
   return (
     <Card>
@@ -61,6 +63,7 @@ export function CommunicationChatConversationPanel({
                 <ThreadListItem
                   key={thread.id}
                   thread={thread}
+                  title={getDirectThreadTitle(thread)}
                   icon="dm"
                   isActive={selectedThreadId === thread.id}
                   unreadCount={
@@ -93,6 +96,7 @@ export function CommunicationChatConversationPanel({
                 <ThreadListItem
                   key={thread.id}
                   thread={thread}
+                  title={thread.title ?? 'Group chat'}
                   icon="group"
                   isActive={selectedThreadId === thread.id}
                   unreadCount={

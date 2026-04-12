@@ -3,6 +3,7 @@ import { Room, RoomEvent, Track, type LocalVideoTrack } from 'livekit-client';
 import { toast } from 'sonner';
 import {
   useCreateCommunicationCallLivekitTokenMutation,
+  useJoinVoiceChannelMutation,
   useUpdateCommunicationCallStatusMutation,
   type CommunicationCallSession,
 } from '../../../api/communication.api';
@@ -39,6 +40,7 @@ export function useCommunicationCallRoomMedia({
   const [isScreenSharing, setIsScreenSharing] = useState(false);
 
   const [createLivekitToken] = useCreateCommunicationCallLivekitTokenMutation();
+  const [joinVoiceChannel] = useJoinVoiceChannelMutation();
   const [updateCallStatus] = useUpdateCommunicationCallStatusMutation();
   const {
     audioInputDevices,
@@ -102,7 +104,9 @@ export function useCommunicationCallRoomMedia({
     setMediaError(null);
     setIsMediaConnecting(true);
     try {
-      const tokenPayload = await createLivekitToken({ id: call.id }).unwrap();
+      const tokenPayload = call.channelId
+        ? (await joinVoiceChannel({ channelId: call.channelId }).unwrap()).livekit
+        : await createLivekitToken({ id: call.id }).unwrap();
       const room = new Room();
       roomRef.current = room;
 

@@ -131,6 +131,42 @@ type RequestOptions = {
   timeoutMs?: number;
 };
 
+class ApiRequestError extends Error {
+  status: number | null;
+  url: string;
+  constructor(message: string, input: { status: number | null; url: string }) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = input.status;
+    this.url = input.url;
+  }
+}
+
+function logMobileApiError(input: {
+  method: string;
+  path: string;
+  url: string;
+  activeBaseUrl: string;
+  candidateBaseUrl: string;
+  status?: number | null;
+  message: string;
+  responseBody?: unknown;
+  attempt: number;
+}) {
+  console.error('[mobile-api] request failed', {
+    method: input.method,
+    path: input.path,
+    endpoint: input.url,
+    status: input.status ?? null,
+    message: input.message,
+    responseBody: input.responseBody ?? null,
+    activeBaseUrl: input.activeBaseUrl,
+    candidateBaseUrl: input.candidateBaseUrl,
+    attempt: input.attempt,
+    at: new Date().toISOString(),
+  });
+}
+
 function toQueryString(query?: RequestOptions['query']): string {
   if (!query) return '';
   const params = new URLSearchParams();
@@ -145,11 +181,14 @@ function toQueryString(query?: RequestOptions['query']): string {
 async function request<T>(options: RequestOptions): Promise<T> {
   let lastError: Error | null = null;
   const attemptedUrls: string[] = [];
+  const method = options.method ?? 'GET';
 
+  let attempt = 0;
   for (const baseUrl of [
     activeApiBaseUrl,
     ...API_BASE_URL_CANDIDATES.filter((u) => u !== activeApiBaseUrl),
   ]) {
+    attempt += 1;
     const targetUrl = `${baseUrl}${options.path}${toQueryString(options.query)}`;
     attemptedUrls.push(targetUrl);
     try {
@@ -157,7 +196,7 @@ async function request<T>(options: RequestOptions): Promise<T> {
       const timeoutMs = options.timeoutMs ?? 15000;
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
       const response = await fetch(targetUrl, {
-        method: options.method ?? 'GET',
+        method,
         headers: {
           'content-type': 'application/json',
           ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
@@ -172,14 +211,34 @@ async function request<T>(options: RequestOptions): Promise<T> {
       } | null;
 
       if (!response.ok) {
-        throw new Error(
-          json?.error?.message ?? `Request failed (${response.status}) at ${targetUrl}`,
+        const serverMessage = json?.error?.message?.trim();
+        logMobileApiError({
+          method,
+          path: options.path,
+          url: targetUrl,
+          activeBaseUrl: activeApiBaseUrl,
+          candidateBaseUrl: baseUrl,
+          status: response.status,
+          message: serverMessage || 'Request failed',
+          responseBody: json,
+          attempt,
+        });
+        throw new ApiRequestError(
+          `${serverMessage || 'Request failed'} (${response.status}) at ${targetUrl}`,
+          {
+            status: response.status,
+            url: targetUrl,
+          },
         );
       }
 
       activeApiBaseUrl = baseUrl;
       return json as T;
     } catch (error) {
+      if (error instanceof ApiRequestError) {
+        lastError = error;
+        continue;
+      }
       const isAbort =
         typeof error === 'object' &&
         error !== null &&
@@ -190,6 +249,16 @@ async function request<T>(options: RequestOptions): Promise<T> {
         : error instanceof Error && error.message.trim().length > 0
           ? error.message
           : 'Network request failed';
+      logMobileApiError({
+        method,
+        path: options.path,
+        url: targetUrl,
+        activeBaseUrl: activeApiBaseUrl,
+        candidateBaseUrl: baseUrl,
+        status: null,
+        message,
+        attempt,
+      });
       lastError = new Error(`${message} (while calling ${targetUrl})`);
     }
   }
@@ -232,6 +301,29 @@ export async function refreshToken(
     refreshToken: data.tokens.refreshToken,
     user: data.user,
   };
+}
+
+const inFlightRefreshByToken = new Map<
+  string,
+  Promise<TokenPair & { user?: SessionState['user'] }>
+>();
+
+async function refreshTokenOnce(
+  refreshTokenValue: string,
+): Promise<TokenPair & { user?: SessionState['user'] }> {
+  const existing = inFlightRefreshByToken.get(refreshTokenValue);
+  if (existing) {
+    return existing;
+  }
+
+  const promise = refreshToken(refreshTokenValue).finally(() => {
+    if (inFlightRefreshByToken.get(refreshTokenValue) === promise) {
+      inFlightRefreshByToken.delete(refreshTokenValue);
+    }
+  });
+  inFlightRefreshByToken.set(refreshTokenValue, promise);
+
+  return promise;
 }
 
 export async function forgotPassword(email: string): Promise<void> {
@@ -565,6 +657,7 @@ export async function createCommunicationMessage(
     body?: string | null;
     messageType?: string | null;
     metadataJson?: Record<string, unknown> | null;
+    replyToMessageId?: string | null;
   },
 ): Promise<CommunicationMessage> {
   return request<CommunicationMessage>({
@@ -756,9 +849,11 @@ export async function authorizedRequestWithRefresh<T>(
     return await run(session.accessToken);
   } catch (error) {
     const err = error as Error;
-    if (!err.message.includes('401') || !session.refreshToken) throw error;
+    const isUnauthorized =
+      err.message.includes('401') || err.message.toLowerCase().includes('unauthorized');
+    if (!isUnauthorized || !session.refreshToken) throw error;
 
-    const refreshed = await refreshToken(session.refreshToken);
+    const refreshed = await refreshTokenOnce(session.refreshToken);
     const next: SessionState = {
       user: refreshed.user ?? session.user,
       accessToken: refreshed.accessToken,

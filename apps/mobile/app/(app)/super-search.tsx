@@ -10,7 +10,13 @@ import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { hapticError, hapticTap } from '@mobile/lib/haptics';
 import { ParcelCard, StatCard } from '@mobile/components/courier';
-import { AppButton, AppCard, AppInput, AppSkeletonCard } from '@/components/ui/mobile';
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  AppPageHeader,
+  AppSkeletonCard,
+} from '@/components/ui/mobile';
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 export default function SuperSearchScreen() {
@@ -64,10 +70,7 @@ export default function SuperSearchScreen() {
 
   return (
     <AppScreen refreshing={searchBusy} onRefresh={() => void runSearch()}>
-      <Text style={[styles.title, { color: theme.colors.text }]}>All Records Super Search</Text>
-      <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-        Search by booking code, sender or receiver name, or phone.
-      </Text>
+      <AppPageHeader title="Super Track" subtitle="Search any parcel record quickly" />
 
       <AppCard>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Search</Text>
@@ -152,8 +155,6 @@ export default function SuperSearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: mobileTypography.title, fontWeight: '800' },
-  subtitle: { marginTop: -2, lineHeight: 20, marginBottom: mobileSpacing.xs },
   sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
   buttonRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
   kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },

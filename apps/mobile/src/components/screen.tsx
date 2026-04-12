@@ -22,7 +22,14 @@ export function AppScreen({
   const insets = useSafeAreaInsets();
   const content = (
     <View
-      style={[styles.container, { paddingBottom: mobileSpacing.xl + insets.bottom }, style]}
+      style={[
+        styles.container,
+        {
+          paddingBottom: mobileSpacing.xl + insets.bottom,
+          backgroundColor: theme.colors.bg,
+        },
+        style,
+      ]}
       {...rest}
     >
       {children}
@@ -55,5 +62,10 @@ export function AppScreen({
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f5f7fb' },
   content: { flexGrow: 1 },
-  container: { flex: 1, padding: mobileSpacing.lg, gap: mobileSpacing.md },
+  container: {
+    flex: 1,
+    paddingHorizontal: mobileSpacing.lg,
+    paddingTop: mobileSpacing.md,
+    gap: mobileSpacing.md,
+  },
 });

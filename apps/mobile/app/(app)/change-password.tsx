@@ -4,7 +4,7 @@ import { AppScreen } from '@mobile/components/screen';
 import { changePassword } from '@mobile/lib/api';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { AppButton, AppCard, AppInput } from '@/components/ui/mobile';
+import { AppButton, AppCard, PasswordInput } from '@/components/ui/mobile';
 import { mobileTypography } from '@mobile/theme/layout';
 
 export default function ChangePasswordScreen() {
@@ -31,16 +31,14 @@ export default function ChangePasswordScreen() {
         User: {session.user?.email ?? '-'}
       </Text>
       <AppCard>
-        <AppInput
+        <PasswordInput
           value={oldPassword}
           onChangeText={setOldPassword}
-          secureTextEntry
           placeholder="Current password"
         />
-        <AppInput
+        <PasswordInput
           value={newPassword}
           onChangeText={setNewPassword}
-          secureTextEntry
           placeholder="New password"
         />
         <AppButton title="Update password" onPress={() => void handleChange()} />

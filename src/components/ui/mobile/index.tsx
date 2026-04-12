@@ -2,6 +2,7 @@ import type { PropsWithChildren, ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+export { PasswordInput } from './password-input';
 
 type AppButtonProps = {
   title: string;
@@ -30,6 +31,39 @@ export function AppCard({ children }: PropsWithChildren) {
 export function AppLabel({ children }: { children: ReactNode }) {
   const { theme } = useAppearance();
   return <Text style={[styles.label, { color: theme.colors.textMuted }]}>{children}</Text>;
+}
+
+export function AppPageHeader({
+  title,
+  subtitle,
+  rightSlot,
+}: {
+  title: string;
+  subtitle?: string;
+  rightSlot?: ReactNode;
+}) {
+  const { theme } = useAppearance();
+  return (
+    <View
+      style={[
+        styles.pageHeader,
+        {
+          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.secondary,
+        },
+      ]}
+    >
+      <View style={styles.pageHeaderBody}>
+        <Text style={[styles.pageHeaderTitle, { color: theme.colors.secondaryText }]}>{title}</Text>
+        {subtitle ? (
+          <Text style={[styles.pageHeaderSubtitle, { color: theme.colors.textSubtle }]}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+      {rightSlot ? <View>{rightSlot}</View> : null}
+    </View>
+  );
 }
 
 export function AppInput(
@@ -63,7 +97,7 @@ export function AppButton({ title, onPress, disabled, variant = 'primary' }: App
         styles.button,
         {
           opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
-          backgroundColor: primary ? theme.colors.primary : theme.colors.cardMuted,
+          backgroundColor: primary ? theme.colors.primary : theme.colors.bgElevated,
           borderColor: primary ? theme.colors.primary : theme.colors.border,
         },
       ]}
@@ -93,7 +127,7 @@ export function AppStatusChip({ label }: { label: string | number }) {
     normalized.includes('transit') ||
     normalized.includes('awaiting');
   const icon = isGood ? '✓' : isWarn ? '⏳' : '•';
-  const fg = isGood ? theme.colors.success : isWarn ? '#b37a00' : theme.colors.textMuted;
+  const fg = isGood ? theme.colors.success : isWarn ? theme.colors.warning : theme.colors.textMuted;
   const bg = isGood
     ? theme.scheme === 'dark'
       ? '#0f2a1a'
@@ -165,10 +199,22 @@ export function MobileNoAccess({
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderRadius: mobileRadius.lg,
+    borderRadius: mobileRadius.xl,
     padding: mobileSpacing.md,
     gap: mobileSpacing.sm,
   },
+  pageHeader: {
+    borderWidth: 1,
+    borderRadius: mobileRadius.xl,
+    padding: mobileSpacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: mobileSpacing.sm,
+  },
+  pageHeaderBody: { flex: 1, gap: 2 },
+  pageHeaderTitle: { fontSize: 30, fontWeight: '800' },
+  pageHeaderSubtitle: { fontSize: mobileTypography.subtitle, fontWeight: '600' },
   label: {
     fontSize: mobileTypography.label,
     fontWeight: '600',
@@ -177,17 +223,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: mobileRadius.md,
     paddingHorizontal: mobileSpacing.md,
-    paddingVertical: 11,
+    paddingVertical: 12,
     fontSize: 16,
   },
   button: {
     borderWidth: 1,
     borderRadius: mobileRadius.md,
-    paddingVertical: 11,
+    paddingVertical: 12,
     paddingHorizontal: mobileSpacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: 46,
   },
   buttonText: {
     fontSize: 15,

@@ -14,10 +14,30 @@ type UpdateStatus = {
   message?: string;
 };
 
+type DesktopNetworkDiagnostics = {
+  timestamp: string;
+  appVersion: string;
+  isPackaged: boolean;
+  selectedBaseUrl: string;
+  activeBaseUrl: string | null;
+  candidateBaseUrls: string[];
+  electronOnline: boolean;
+  proxy: string;
+  probes: Array<{
+    host: string;
+    ok: boolean;
+    resolvedAddress?: string;
+    error?: string;
+  }>;
+  lastLoadError: string | null;
+};
+
 contextBridge.exposeInMainWorld('api', {
   platform: async () => process.platform,
   ping: async () => 'pong',
   retryDesktopLoad: async () => ipcRenderer.invoke('app:retry-load'),
+  getNetworkDiagnostics: async () =>
+    ipcRenderer.invoke('app:get-network-diagnostics') as Promise<DesktopNetworkDiagnostics>,
   openInBrowser: async (url: string) => ipcRenderer.invoke('app:open-external', url),
   printHtml: async (request: {
     html: string;
