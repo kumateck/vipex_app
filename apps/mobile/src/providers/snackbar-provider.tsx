@@ -1,6 +1,8 @@
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { NotifyVariant, registerNotifyHandler, unregisterNotifyHandler } from '@mobile/lib/notify';
-import { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { registerNotifyHandler, unregisterNotifyHandler } from '@mobile/lib/notify';
+import type { NotifyVariant } from '@mobile/lib/notify';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { PropsWithChildren } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
