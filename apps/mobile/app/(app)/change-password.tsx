@@ -5,7 +5,6 @@ import { changePassword } from '@mobile/lib/api';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { AppButton, AppCard, PasswordInput } from '@/components/ui/mobile';
-import { mobileTypography } from '@mobile/theme/layout';
 
 export default function ChangePasswordScreen() {
   const { theme } = useAppearance();
@@ -26,7 +25,6 @@ export default function ChangePasswordScreen() {
 
   return (
     <AppScreen>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Change Password</Text>
       <Text style={[styles.meta, { color: theme.colors.textSubtle }]}>
         User: {session.user?.email ?? '-'}
       </Text>
@@ -48,6 +46,5 @@ export default function ChangePasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: mobileTypography.title, fontWeight: '700' },
   meta: {},
 });

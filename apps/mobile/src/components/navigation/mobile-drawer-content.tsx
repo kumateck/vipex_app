@@ -16,6 +16,9 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
   const { session, logout } = useAuth();
   const insets = useSafeAreaInsets();
   const user = session.user;
+  const companyName = user?.company?.name || '-';
+  const branchName = user?.branch?.name || 'No branch';
+  const locationName = user?.location?.name || user?.branch?.location || 'No location';
   const initials =
     (user?.fullname || user?.email || 'U')
       .split(/\s+/)
@@ -28,7 +31,10 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
     <View style={[styles.root, { backgroundColor: theme.colors.bgElevated }]}>
       <DrawerContentScrollView
         {...props}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + mobileSpacing.sm },
+        ]}
         style={{ backgroundColor: theme.colors.bgElevated }}
       >
         <View
@@ -58,7 +64,7 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
           <View style={styles.metaRow}>
             <View style={[styles.statusDot, { backgroundColor: theme.colors.success }]} />
             <Text style={[styles.metaText, { color: theme.colors.textMuted }]}>
-              {user?.company?.name || '-'} • {user?.branch?.name || 'No branch'}
+              {companyName} • {branchName} • {locationName}
             </Text>
           </View>
         </View>

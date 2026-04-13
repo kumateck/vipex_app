@@ -32,6 +32,17 @@ import {
 import type { CommunicationLoadState, CommunicationTabKey, UserChatEntry } from '../types';
 import { useCommunicationHubActions } from './use-communication-hub-actions';
 
+function isAuthorizationError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  const msg = error.message.toLowerCase();
+  return (
+    msg.includes('401') ||
+    msg.includes('403') ||
+    msg.includes('unauthorized') ||
+    msg.includes('forbidden')
+  );
+}
+
 export function useCommunicationHub() {
   const { withAuth, session } = useAuth();
   const currentUser = session.user;
@@ -55,6 +66,7 @@ export function useCommunicationHub() {
   const [editingArchive, setEditingArchive] = useState(false);
   const [participantInput, setParticipantInput] = useState('');
   const [updatingChannel, setUpdatingChannel] = useState(false);
+  const [engagementApisAvailable, setEngagementApisAvailable] = useState(true);
   const [data, setData] = useState<CommunicationLoadState>(EMPTY_DATA);
 
   const loadData = useCallback(async () => {
@@ -69,9 +81,6 @@ export function useCommunicationHub() {
           voiceUnread,
           activeCalls,
           users,
-          requestTargets,
-          incomingRequests,
-          outgoingRequests,
         ] = await Promise.all([
           listCommunicationThreads(token),
           listCommunicationChannels(token, { channelType: 'text' }),
@@ -80,10 +89,34 @@ export function useCommunicationHub() {
           listCommunicationChannelUnreadCounts(token, { channelType: 'voice' }),
           listCommunicationCalls(token, { status: 'active' }),
           listMobileUserOptions(token),
-          listCommunicationEngagementRequestTargets(token),
-          listCommunicationEngagementRequests(token, { view: 'incoming', status: 'pending' }),
-          listCommunicationEngagementRequests(token, { view: 'outgoing', status: 'pending' }),
         ]);
+
+        let requestTargets: Awaited<ReturnType<typeof listCommunicationEngagementRequestTargets>> =
+          [];
+        let incomingRequests: Awaited<ReturnType<typeof listCommunicationEngagementRequests>> = [];
+        let outgoingRequests: Awaited<ReturnType<typeof listCommunicationEngagementRequests>> = [];
+
+        if (engagementApisAvailable) {
+          try {
+            [requestTargets, incomingRequests, outgoingRequests] = await Promise.all([
+              listCommunicationEngagementRequestTargets(token),
+              listCommunicationEngagementRequests(token, {
+                view: 'incoming',
+                status: 'pending',
+              }),
+              listCommunicationEngagementRequests(token, {
+                view: 'outgoing',
+                status: 'pending',
+              }),
+            ]);
+          } catch (error) {
+            if (isAuthorizationError(error)) {
+              setEngagementApisAvailable(false);
+            } else {
+              throw error;
+            }
+          }
+        }
 
         const dedupedUsers = dedupeMobileUserOptions(users);
         const dedupedRequestTargets = dedupeRequestTargets(requestTargets);
@@ -120,7 +153,11 @@ export function useCommunicationHub() {
     } finally {
       setLoading(false);
     }
-  }, [withAuth]);
+  }, [engagementApisAvailable, withAuth]);
+
+  useEffect(() => {
+    setEngagementApisAvailable(true);
+  }, [currentUserId, session.accessToken]);
 
   useEffect(() => {
     void loadData();

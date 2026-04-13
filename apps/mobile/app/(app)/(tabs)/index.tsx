@@ -13,24 +13,35 @@ export default function MobileHomeTabScreen() {
   const { session } = useAuth();
 
   const user = session.user;
-  const isRider = user?.userType === UserType.RIDER || canViewRiderScreen(user?.permissions ?? []);
+  const userTypeRaw = user?.userType;
+  const normalizedUserType =
+    typeof userTypeRaw === 'number'
+      ? userTypeRaw
+      : typeof userTypeRaw === 'string'
+        ? Number.parseInt(userTypeRaw, 10)
+        : null;
+  const roleName = user?.role?.name?.toLowerCase() ?? '';
+  const isRider =
+    normalizedUserType === UserType.RIDER ||
+    roleName.includes('rider') ||
+    canViewRiderScreen(user?.permissions ?? []);
 
   if (isRider) {
     return (
       <AppScreen>
-        <AppPageHeader
-          title="My Deliveries"
-          subtitle={`Today • ${new Date().toLocaleDateString()}`}
-        />
+        <AppPageHeader title="Dashboard" subtitle={`Today • ${new Date().toLocaleDateString()}`} />
 
         <AppCard>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-            Delivery Workspace
+            Super Search Workspace
           </Text>
           <Text style={{ color: theme.colors.textSubtle }}>
-            Open assigned parcels, confirm deliveries, and monitor today’s totals.
+            Search parcels quickly and open full parcel details.
           </Text>
-          <AppButton title="Open Delivery Board" onPress={() => router.push('/parcels' as never)} />
+          <AppButton
+            title="Open Super Search"
+            onPress={() => router.push('/super-search' as never)}
+          />
         </AppCard>
 
         <AppCard>

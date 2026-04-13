@@ -14,9 +14,11 @@ export function QueueCard({ card, onCopy, onShare }: QueueCardProps) {
   const { theme } = useAppearance();
   return (
     <AppCard>
-      <Text style={[styles.label, { color: theme.colors.textMuted }]}>Queue Number</Text>
-      <Text style={[styles.title, { color: theme.colors.secondary }]}>{card.queueNumber}</Text>
-      <Text style={[styles.meta, { color: theme.colors.textMuted }]}>Code: {card.queueCode}</Text>
+      <Text style={[styles.label, { color: theme.colors.textMuted }]}>Queue Code</Text>
+      <Text style={[styles.title, { color: theme.colors.secondary }]}>{card.queueCode}</Text>
+      <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
+        Number: {card.queueNumber}
+      </Text>
       <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
         Booking: {card.bookingCode}
       </Text>

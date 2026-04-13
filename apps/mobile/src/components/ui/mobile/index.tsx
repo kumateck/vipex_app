@@ -1,5 +1,6 @@
 import { useState, type PropsWithChildren, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { getParcelStatusLabel } from '@mobile/constants/parcel-status';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 type AppButtonProps = {
@@ -124,19 +125,38 @@ export function AppPageHeader({ title, subtitle }: AppPageHeaderProps) {
   );
 }
 export function AppStatusChip({ label }: { label: string | number }) {
-  const normalizedLabel = String(label);
+  const rawLabel = String(label).trim();
+  const numericStatus = /^\d+$/.test(rawLabel) ? Number.parseInt(rawLabel, 10) : null;
+  const normalizedLabel = numericStatus === null ? rawLabel : getParcelStatusLabel(numericStatus);
   const { theme } = useAppearance();
   const normalized = normalizedLabel.toLowerCase();
+  const isNumericStatus = numericStatus !== null;
+  const numericIsSuccess = isNumericStatus && [6, 7].includes(numericStatus);
+  const numericIsWarn = isNumericStatus && [0, 1, 2, 3, 4, 5].includes(numericStatus);
+  const numericIsError = isNumericStatus && !numericIsSuccess && !numericIsWarn;
   const isGood =
+    numericIsSuccess ||
     normalized.includes('arrived') ||
     normalized.includes('delivered') ||
     normalized.includes('paid');
   const isWarn =
+    numericIsWarn ||
     normalized.includes('pending') ||
     normalized.includes('transit') ||
     normalized.includes('awaiting');
-  const icon = isGood ? '✓' : isWarn ? '⏳' : '•';
-  const fg = isGood ? theme.colors.success : isWarn ? '#b37a00' : theme.colors.textMuted;
+  const isError =
+    numericIsError ||
+    normalized.includes('failed') ||
+    normalized.includes('cancel') ||
+    normalized.includes('error');
+  const icon = isGood ? '✓' : isWarn ? '⏳' : isError ? '!' : '•';
+  const fg = isGood
+    ? theme.colors.success
+    : isWarn
+      ? '#b37a00'
+      : isError
+        ? theme.colors.danger
+        : theme.colors.textMuted;
   const bg = isGood
     ? theme.scheme === 'dark'
       ? '#0f2a1a'
@@ -145,7 +165,11 @@ export function AppStatusChip({ label }: { label: string | number }) {
       ? theme.scheme === 'dark'
         ? '#2b1f08'
         : '#fff7e6'
-      : theme.colors.cardMuted;
+      : isError
+        ? theme.scheme === 'dark'
+          ? '#2f1212'
+          : '#fdecec'
+        : theme.colors.cardMuted;
   return (
     <View style={[styles.statusChip, { backgroundColor: bg, borderColor: theme.colors.border }]}>
       <Text style={[styles.statusChipText, { color: fg }]}>
