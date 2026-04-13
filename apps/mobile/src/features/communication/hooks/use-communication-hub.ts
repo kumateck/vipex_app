@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   listCommunicationCalls,
   listCommunicationChannelUnreadCounts,
@@ -16,21 +16,15 @@ import {
 import { notifyError } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useCommunicationSocket } from '@mobile/features/communication/use-communication-socket';
+import { EMPTY_DATA } from './use-communication-hub-helpers';
 import {
-  EMPTY_DATA,
-  toActiveCallByChannelId,
-  toChatEntries,
-  toUserEntries,
-} from './use-communication-hub-helpers';
-import {
-  buildCurrentUserTypingIdentitySet,
-  buildDirectThreadByUserId,
   dedupeMobileUserOptions,
   dedupeRequestTargets,
   normalizeIdentity,
 } from '@mobile/features/communication/utils/hub-dedupe';
-import type { CommunicationLoadState, CommunicationTabKey, UserChatEntry } from '../types';
+import type { CommunicationLoadState, CommunicationTabKey } from '../types';
 import { useCommunicationHubActions } from './use-communication-hub-actions';
+import { useCommunicationHubDerived } from './use-communication-hub-derived';
 
 function isAuthorizationError(error: unknown) {
   if (!(error instanceof Error)) return false;
@@ -166,14 +160,14 @@ export function useCommunicationHub() {
   useEffect(() => {
     void loadChannelNotificationPrefs().then(setChannelNotifModes);
   }, []);
-  const currentUserTypingIdentitySet = useMemo(() => {
-    return buildCurrentUserTypingIdentitySet({
-      currentUserId,
-      currentUserEmail: currentUser?.email,
-      currentUserFullname: currentUser?.fullname,
-      users: data.users,
-    });
-  }, [currentUser?.email, currentUser?.fullname, currentUserId, data.users]);
+
+  const derived = useCommunicationHubDerived({
+    data,
+    currentUser: currentUser ?? null,
+    currentUserId,
+    selectedRequestTargetId,
+    setSelectedRequestTargetId,
+  });
 
   const { isConnected, requestCallParticipants } = useCommunicationSocket(session.accessToken, {
     onThreadCreated: () => void loadData(),
@@ -185,7 +179,7 @@ export function useCommunicationHub() {
     },
     onTypingUpdated: ({ threadId, userId, isTyping }) => {
       if (!threadId || !userId) return;
-      if (currentUserTypingIdentitySet.has(normalizeIdentity(userId))) return;
+      if (derived.currentUserTypingIdentitySet.has(normalizeIdentity(userId))) return;
       setTypingByThreadId((prev) => ({ ...prev, [threadId]: isTyping }));
     },
   });
@@ -195,65 +189,11 @@ export function useCommunicationHub() {
     data.activeCalls.forEach((call) => requestCallParticipants(call.id));
   }, [data.activeCalls, isConnected, requestCallParticipants]);
 
-  const directThreads = useMemo(
-    () => data.threads.filter((thread) => thread.threadType === 'direct'),
-    [data.threads],
-  );
-  const groupThreads = useMemo(
-    () => data.threads.filter((thread) => thread.threadType === 'group'),
-    [data.threads],
-  );
-  const userById = useMemo(() => new Map(data.users.map((user) => [user.id, user])), [data.users]);
-  const directThreadByUserId = useMemo(
-    () => buildDirectThreadByUserId(directThreads),
-    [directThreads],
-  );
-  const requestTargetIdSet = useMemo(
-    () => new Set(data.requestTargets.map((target) => target.id)),
-    [data.requestTargets],
-  );
-  const activeCallByChannelId = useMemo(
-    () => toActiveCallByChannelId(data.activeCalls),
-    [data.activeCalls],
-  );
-
-  const userEntries = useMemo<UserChatEntry[]>(
-    () =>
-      toUserEntries({
-        users: data.users,
-        currentUserId,
-        currentUser: currentUser ?? null,
-        requestTargetIdSet,
-      }),
-    [currentUser, currentUserId, data.users, requestTargetIdSet],
-  );
-
-  const chatEntries = useMemo<UserChatEntry[]>(
-    () => toChatEntries({ directThreadByUserId, userById }),
-    [directThreadByUserId, userById],
-  );
-
-  const usersWithoutThread = useMemo(
-    () => userEntries.filter((entry) => !directThreadByUserId.has(entry.id)),
-    [directThreadByUserId, userEntries],
-  );
-
-  const requestableUsers = useMemo(
-    () => usersWithoutThread.filter((entry) => entry.requiresRequest && entry.canRequest),
-    [usersWithoutThread],
-  );
-
-  useEffect(() => {
-    if (!selectedRequestTargetId) return;
-    const exists = requestableUsers.some((entry) => entry.id === selectedRequestTargetId);
-    if (!exists) setSelectedRequestTargetId(null);
-  }, [requestableUsers, selectedRequestTargetId]);
-
   const actions = useCommunicationHubActions({
     withAuth,
     loadData,
     dataThreads: data.threads,
-    requestableUsers,
+    requestableUsers: derived.requestableUsers,
     selectedRequestTargetId,
     requestReasonNote,
     channelNotifModes,
@@ -279,12 +219,12 @@ export function useCommunicationHub() {
     loading,
     loadData,
     data,
-    directThreads,
-    groupThreads,
-    activeCallByChannelId,
-    chatEntries,
-    requestableUsers,
-    userEntries: usersWithoutThread,
+    directThreads: derived.directThreads,
+    groupThreads: derived.groupThreads,
+    activeCallByChannelId: derived.activeCallByChannelId,
+    chatEntries: derived.chatEntries,
+    requestableUsers: derived.requestableUsers,
+    userEntries: derived.usersWithoutThread,
     selectedRequestTargetId,
     setSelectedRequestTargetId,
     requestReasonNote,

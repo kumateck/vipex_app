@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { AppScreen } from '@mobile/components/screen';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 import { searchParcels, updateParcelStatus } from '@mobile/lib/api';
@@ -13,6 +11,7 @@ import { useAppearance } from '@mobile/providers/appearance-provider';
 import { canMarkParcelArrived, canViewReceiveScreen } from '@mobile/lib/permissions';
 import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@mobile/lib/haptics';
 import { ParcelCard, ScannerView, StatCard } from '@mobile/components/courier';
+import { ReceiveMode, ReceiveScreenHeader } from '@mobile/features/receive';
 import {
   AppButton,
   AppCard,
@@ -22,12 +21,9 @@ import {
 } from '@/components/ui/mobile';
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
-type ReceiveMode = 'scan' | 'manual';
-
 export default function ReceiveScanScreen() {
   const { theme } = useAppearance();
   const { session, withAuth } = useAuth();
-  const navigation = useNavigation();
   const permissions = session.user?.permissions ?? [];
   const canView = canViewReceiveScreen(permissions);
   const canMarkArrived = canMarkParcelArrived(permissions);
@@ -131,74 +127,11 @@ export default function ReceiveScanScreen() {
 
   return (
     <AppScreen refreshing={searchBusy} onRefresh={() => void loadIncomingList()}>
-      <View style={styles.topRow}>
-        <View style={styles.titleWrap}>
-          <View style={styles.titleRow}>
-            <Pressable
-              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
-              style={styles.menuButton}
-              accessibilityRole="button"
-              accessibilityLabel="Open side menu"
-            >
-              <Ionicons name="menu-outline" size={22} color={theme.colors.text} />
-            </Pressable>
-            <Text style={[styles.pageTitle, { color: theme.colors.text }]}>Parcel Scanner</Text>
-          </View>
-          <Text style={[styles.pageSubtitle, { color: theme.colors.textSubtle }]}>
-            Mark as received • {session.user?.branch?.name ?? '-'}
-          </Text>
-        </View>
-        <View style={styles.modeTabs}>
-          <Pressable
-            onPress={() => setMode('scan')}
-            style={[
-              styles.modeTabButton,
-              {
-                borderColor: mode === 'scan' ? theme.colors.primary : theme.colors.border,
-                backgroundColor: mode === 'scan' ? theme.colors.primary : theme.colors.card,
-              },
-            ]}
-          >
-            <Ionicons
-              name="qr-code-outline"
-              size={16}
-              color={mode === 'scan' ? theme.colors.primaryText : theme.colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.modeTabLabel,
-                { color: mode === 'scan' ? theme.colors.primaryText : theme.colors.textMuted },
-              ]}
-            >
-              Scan
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setMode('manual')}
-            style={[
-              styles.modeTabButton,
-              {
-                borderColor: mode === 'manual' ? theme.colors.primary : theme.colors.border,
-                backgroundColor: mode === 'manual' ? theme.colors.primary : theme.colors.card,
-              },
-            ]}
-          >
-            <Ionicons
-              name="search-outline"
-              size={16}
-              color={mode === 'manual' ? theme.colors.primaryText : theme.colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.modeTabLabel,
-                { color: mode === 'manual' ? theme.colors.primaryText : theme.colors.textMuted },
-              ]}
-            >
-              Manual
-            </Text>
-          </Pressable>
-        </View>
-      </View>
+      <ReceiveScreenHeader
+        mode={mode}
+        onChangeMode={setMode}
+        branchName={session.user?.branch?.name}
+      />
 
       <AppCard>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Overview</Text>
@@ -277,29 +210,6 @@ export default function ReceiveScanScreen() {
 }
 
 const styles = StyleSheet.create({
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: mobileSpacing.sm,
-  },
-  titleWrap: { flex: 1, gap: 2 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  menuButton: { paddingHorizontal: 4, paddingVertical: 2 },
-  pageTitle: { fontSize: mobileTypography.title, fontWeight: '800' },
-  pageSubtitle: { fontSize: mobileTypography.subtitle, lineHeight: 20 },
-  modeTabs: { flexDirection: 'row', gap: 6 },
-  modeTabButton: {
-    minWidth: 64,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  modeTabLabel: { fontSize: 11, fontWeight: '700' },
   kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },
   sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
   buttonRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
