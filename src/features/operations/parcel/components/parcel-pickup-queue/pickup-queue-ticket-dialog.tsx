@@ -19,6 +19,16 @@ type PickupQueueTicketDialogProps = {
   onGenerateQueueTicket: () => void;
 };
 
+function toLocalDateKey(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export function PickupQueueTicketDialog({
   open,
   parcel,
@@ -28,6 +38,10 @@ export function PickupQueueTicketDialog({
   onClose,
   onGenerateQueueTicket,
 }: PickupQueueTicketDialogProps) {
+  const queueDateKey = toLocalDateKey(parcelDetails?.pickupQueue?.queuedAt);
+  const todayDateKey = toLocalDateKey(new Date().toISOString());
+  const hasQueueForToday = Boolean(queueDateKey && todayDateKey && queueDateKey === todayDateKey);
+
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? onClose() : null)}>
       <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
@@ -84,12 +98,12 @@ export function PickupQueueTicketDialog({
           <Button variant="outline" type="button" onClick={onClose}>
             Close
           </Button>
-          {!parcelDetails?.pickupQueue ? (
+          {!hasQueueForToday ? (
             <Button
               onClick={onGenerateQueueTicket}
               disabled={isCreatingQueue || !isPickupQueueEnabled}
             >
-              Issue Queue Number
+              {parcelDetails?.pickupQueue ? 'Issue New Queue Number' : 'Issue Queue Number'}
             </Button>
           ) : null}
         </DialogFooter>

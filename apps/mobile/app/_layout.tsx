@@ -1,5 +1,6 @@
 import 'react-native-gesture-handler';
 import '@mobile/lib/polyfills';
+import { installGlobalMobileErrorHandlers } from '@mobile/lib/mobile-error-reporter';
 import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -7,9 +8,14 @@ import { AuthProvider } from '@mobile/providers/auth-provider';
 import { AppUpdateProvider } from '@mobile/providers/app-update-provider';
 import { CommunicationNotificationsProvider } from '@mobile/providers/communication-notifications-provider';
 import { AppearanceProvider, useAppearance } from '@mobile/providers/appearance-provider';
+import { SnackbarProvider } from '@mobile/providers/snackbar-provider';
 
 function RootShell() {
   const { theme } = useAppearance();
+
+  useEffect(() => {
+    installGlobalMobileErrorHandlers();
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -27,8 +33,10 @@ function RootShell() {
     <AppUpdateProvider>
       <AuthProvider>
         <CommunicationNotificationsProvider>
-          <StatusBar style={theme.statusBarStyle} />
-          <Slot />
+          <SnackbarProvider>
+            <StatusBar style={theme.statusBarStyle} />
+            <Slot />
+          </SnackbarProvider>
         </CommunicationNotificationsProvider>
       </AuthProvider>
     </AppUpdateProvider>

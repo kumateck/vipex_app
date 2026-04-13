@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { reportMobileErrorToDiscord } from '@mobile/lib/mobile-error-reporter';
 import type { LoginResponse, SessionState, TokenPair } from '@mobile/types/auth';
 import type {
   CommunicationCallSession,
@@ -153,7 +154,7 @@ function logMobileApiError(input: {
   responseBody?: unknown;
   attempt: number;
 }) {
-  console.error('[mobile-api] request failed', {
+  const payload = {
     method: input.method,
     path: input.path,
     endpoint: input.url,
@@ -164,6 +165,12 @@ function logMobileApiError(input: {
     candidateBaseUrl: input.candidateBaseUrl,
     attempt: input.attempt,
     at: new Date().toISOString(),
+  };
+  console.error('[mobile-api] request failed', payload);
+  reportMobileErrorToDiscord({
+    source: 'mobile-api',
+    message: input.message,
+    context: payload,
   });
 }
 
@@ -399,10 +406,32 @@ export async function getParcelDetails(
   accessToken: string,
   parcelId: string,
 ): Promise<ParcelFullDetails> {
-  return request<ParcelFullDetails>({
-    path: `/shipments/parcels/${parcelId}`,
+  const payload = await request<unknown>({
+    path: `/shipments/parcels/${parcelId}/details`,
     token: accessToken,
   });
+  const candidate =
+    typeof payload === 'object' && payload !== null && 'data' in payload
+      ? (payload as { data?: unknown }).data
+      : payload;
+
+  const details = candidate as Partial<ParcelFullDetails> | null;
+  if (!details?.parcel) {
+    throw new Error('Parcel details response missing parcel object');
+  }
+
+  return {
+    ...(details as ParcelFullDetails),
+    parcel: details.parcel,
+    pickupQueue: details.pickupQueue ?? null,
+    delivery: details.delivery ?? null,
+    payments: Array.isArray(details.payments) ? details.payments : [],
+    consignments: Array.isArray(details.consignments) ? details.consignments : [],
+    internalHolder: details.internalHolder ?? null,
+    dispositionActions: Array.isArray(details.dispositionActions) ? details.dispositionActions : [],
+    storageWaivers: Array.isArray(details.storageWaivers) ? details.storageWaivers : [],
+    storageSettlement: details.storageSettlement ?? null,
+  };
 }
 
 export async function updateParcelStatus(
@@ -564,10 +593,12 @@ export async function listCommunicationChannels(
   return request<CommunicationChannel[]>({
     path: '/communication/channels',
     token: accessToken,
-    query: {
-      channelType: input?.channelType,
-      includeArchived: input?.includeArchived ?? false,
-    },
+    query: input
+      ? {
+          channelType: input.channelType,
+          includeArchived: input.includeArchived,
+        }
+      : undefined,
   });
 }
 
@@ -576,6 +607,8 @@ export async function createCommunicationChannel(
   input: {
     name: string;
     description?: string | null;
+    branchId?: string | null;
+    locationId?: string | null;
     channelType?: 'text' | 'voice';
     visibility?: 'public' | 'private';
     participantUserIds?: string[];
@@ -800,6 +833,7 @@ export async function approveCommunicationEngagementRequest(
     path: `/communication/engagement-requests/${input.id}/approve`,
     method: 'POST',
     token: accessToken,
+    body: {},
   });
 }
 
@@ -811,6 +845,7 @@ export async function declineCommunicationEngagementRequest(
     path: `/communication/engagement-requests/${input.id}/decline`,
     method: 'POST',
     token: accessToken,
+    body: {},
   });
 }
 

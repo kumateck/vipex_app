@@ -11,12 +11,12 @@ import { useAppearance } from '@mobile/providers/appearance-provider';
 import { canMarkParcelArrived, canViewReceiveScreen } from '@mobile/lib/permissions';
 import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@mobile/lib/haptics';
 import { ParcelCard, ScannerView, StatCard } from '@mobile/components/courier';
-import { UserType } from '@mobile/constants/user-types';
+import { ReceiveScreenHeader } from '@mobile/features/receive';
+import type { ReceiveMode } from '@mobile/features/receive';
 import {
   AppButton,
   AppCard,
   AppInput,
-  AppPageHeader,
   AppSkeletonCard,
   MobileNoAccess,
 } from '@/components/ui/mobile';
@@ -26,8 +26,7 @@ export default function ReceiveScanScreen() {
   const { theme } = useAppearance();
   const { session, withAuth } = useAuth();
   const permissions = session.user?.permissions ?? [];
-  const isRider = session.user?.userType === UserType.RIDER;
-  const canView = canViewReceiveScreen(permissions) || isRider;
+  const canView = canViewReceiveScreen(permissions);
   const canMarkArrived = canMarkParcelArrived(permissions);
   const companyId = session.user?.company?.id ?? session.user?.companyId;
   const branchId = session.user?.branch?.id ?? session.user?.branchId;
@@ -38,6 +37,7 @@ export default function ReceiveScanScreen() {
   const [search, setSearch] = useState('');
   const [searchAllCompany, setSearchAllCompany] = useState(false);
   const [rows, setRows] = useState<ParcelSearchRow[]>([]);
+  const [mode, setMode] = useState<ReceiveMode>('scan');
 
   async function loadIncomingList() {
     if (!companyId) {
@@ -54,7 +54,7 @@ export default function ReceiveScanScreen() {
           destinationId: searchAllCompany ? undefined : (branchId ?? undefined),
           status: ParcelStatus.IN_TRANSIT,
           page: 1,
-          pageSize: 50,
+          pageSize: 20,
         }),
       );
       setRows(response.data ?? []);
@@ -128,9 +128,10 @@ export default function ReceiveScanScreen() {
 
   return (
     <AppScreen refreshing={searchBusy} onRefresh={() => void loadIncomingList()}>
-      <AppPageHeader
-        title="Parcel Scanner"
-        subtitle={`Mark as received • ${session.user?.branch?.name ?? '-'}`}
+      <ReceiveScreenHeader
+        mode={mode}
+        onChangeMode={setMode}
+        branchName={session.user?.branch?.name}
       />
 
       <AppCard>
@@ -141,63 +142,69 @@ export default function ReceiveScanScreen() {
         </View>
       </AppCard>
 
-      <AppCard>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Scanner</Text>
-        <ScannerView onCodeScanned={(code) => void receiveByCode(code)} />
+      {mode === 'scan' ? (
+        <AppCard>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Scanner</Text>
+          <ScannerView onCodeScanned={(code) => void receiveByCode(code)} />
 
-        {scanBusy ? (
-          <Text style={{ color: theme.colors.textSubtle }}>Processing scanned parcel...</Text>
-        ) : null}
-        <Text style={{ color: theme.colors.textSubtle }}>Most recent scan: {lastCode || '-'}</Text>
-        {!canMarkArrived ? (
+          {scanBusy ? (
+            <Text style={{ color: theme.colors.textSubtle }}>Processing scanned parcel...</Text>
+          ) : null}
           <Text style={{ color: theme.colors.textSubtle }}>
-            You can scan and view parcels, but cannot mark arrival.
+            Most recent scan: {lastCode || '-'}
           </Text>
-        ) : null}
-      </AppCard>
-
-      <AppCard>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-          Incoming List And Search
-        </Text>
-        <AppInput value={search} onChangeText={setSearch} placeholder="Search..." />
-        <View style={styles.buttonRow}>
-          <AppButton
-            title={searchAllCompany ? 'Scope: All Branches' : 'Scope: My Branch'}
-            onPress={() => setSearchAllCompany((prev) => !prev)}
-            variant="secondary"
-          />
-          <AppButton
-            title={searchBusy ? 'Searching...' : 'Search Incoming Parcels'}
-            onPress={() => void loadIncomingList()}
-            disabled={searchBusy}
-          />
-        </View>
-      </AppCard>
-
-      {searchBusy ? (
-        <View style={styles.listWrap}>
-          <AppSkeletonCard lines={4} />
-          <AppSkeletonCard lines={4} />
-        </View>
-      ) : rows.length === 0 ? (
-        <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
-          No incoming in-transit parcels found yet.
-        </Text>
+          {!canMarkArrived ? (
+            <Text style={{ color: theme.colors.textSubtle }}>
+              You can scan and view parcels, but cannot mark arrival.
+            </Text>
+          ) : null}
+        </AppCard>
       ) : (
-        <View style={styles.listWrap}>
-          {rows.map((item) => (
-            <ParcelCard
-              key={item.id}
-              parcel={item}
-              onPress={() => {
-                router.push(`/(app)/receive-process/${item.id}`);
-                void hapticTap();
-              }}
-              actionLabel="View Details"
-            />
-          ))}
-        </View>
+        <>
+          <AppCard>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+              Incoming List And Search
+            </Text>
+            <AppInput value={search} onChangeText={setSearch} placeholder="Search..." />
+            <View style={styles.buttonRow}>
+              <AppButton
+                title={searchAllCompany ? 'Scope: All Branches' : 'Scope: My Branch'}
+                onPress={() => setSearchAllCompany((prev) => !prev)}
+                variant="secondary"
+              />
+              <AppButton
+                title={searchBusy ? 'Searching...' : 'Search Incoming Parcels'}
+                onPress={() => void loadIncomingList()}
+                disabled={searchBusy}
+              />
+            </View>
+          </AppCard>
+
+          {searchBusy ? (
+            <View style={styles.listWrap}>
+              <AppSkeletonCard lines={4} />
+              <AppSkeletonCard lines={4} />
+            </View>
+          ) : rows.length === 0 ? (
+            <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
+              No incoming in-transit parcels found yet.
+            </Text>
+          ) : (
+            <View style={styles.listWrap}>
+              {rows.map((item) => (
+                <ParcelCard
+                  key={item.id}
+                  parcel={item}
+                  onPress={() => {
+                    router.push(`/(app)/receive-process/${item.id}`);
+                    void hapticTap();
+                  }}
+                  actionLabel="View Details"
+                />
+              ))}
+            </View>
+          )}
+        </>
       )}
     </AppScreen>
   );

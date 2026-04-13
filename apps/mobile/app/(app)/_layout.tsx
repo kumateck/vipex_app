@@ -1,7 +1,8 @@
 import { Redirect } from 'expo-router';
 import { Drawer } from 'expo-router/drawer';
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, View } from 'react-native';
+import { DrawerActions } from '@react-navigation/native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { MobileDrawerContent } from '@mobile/components/navigation/mobile-drawer-content';
@@ -52,12 +53,20 @@ export default function AppLayout() {
       />
       <Drawer.Screen
         name="super-search"
-        options={{
+        options={({ navigation }) => ({
           title: 'Super Search',
-          drawerIcon: ({ size, color }) => (
-            <Ionicons name="search-outline" size={size} color={color} />
+          headerLeft: () => (
+            <Pressable
+              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+              style={{ paddingHorizontal: 12, paddingVertical: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="Open side menu"
+            >
+              <Ionicons name="menu-outline" size={22} color={theme.colors.text} />
+            </Pressable>
           ),
-        }}
+          drawerItemStyle: { display: 'none' },
+        })}
       />
       <Drawer.Screen
         name="global-search"
@@ -87,6 +96,20 @@ export default function AppLayout() {
         }}
       />
       <Drawer.Screen
+        name="rider-assigned"
+        options={{
+          title: 'Assigned Deliveries',
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+      <Drawer.Screen
+        name="rider-history"
+        options={{
+          title: 'Delivery History',
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+      <Drawer.Screen
         name="receive"
         options={{
           title: 'Scan To Receive',
@@ -97,19 +120,52 @@ export default function AppLayout() {
       />
       <Drawer.Screen
         name="change-password"
-        options={{
+        options={({ navigation }) => ({
           title: 'Change Password',
+          headerLeft: () => (
+            <Pressable
+              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+              style={{ paddingHorizontal: 12, paddingVertical: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="Open side menu"
+            >
+              <Ionicons name="menu-outline" size={22} color={theme.colors.text} />
+            </Pressable>
+          ),
           drawerIcon: ({ size, color }) => (
             <Ionicons name="key-outline" size={size} color={color} />
           ),
-        }}
+        })}
       />
       <Drawer.Screen
         name="super-search/[parcelId]"
-        options={{
-          title: 'Record Details',
+        options={({ navigation, route }) => ({
+          // Expo Drawer route params are loosely typed; read booking code defensively.
+          ...(function resolveTitle() {
+            const params =
+              route.params && typeof route.params === 'object'
+                ? (route.params as Record<string, unknown>)
+                : null;
+            const bookingCode = typeof params?.bookingCode === 'string' ? params.bookingCode : '';
+            return {
+              title:
+                bookingCode.trim().length > 0
+                  ? `Parcel Details for ${bookingCode}`
+                  : 'Parcel Details',
+            };
+          })(),
+          headerLeft: () => (
+            <Pressable
+              onPress={() => navigation.goBack()}
+              style={{ paddingHorizontal: 12, paddingVertical: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
+            </Pressable>
+          ),
           drawerItemStyle: { display: 'none' },
-        }}
+        })}
       />
       <Drawer.Screen
         name="receive-process/[parcelId]"

@@ -52,16 +52,6 @@ export default function OperationsTabScreen() {
       </AppCard>
 
       <AppCard>
-        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Rider Dashboard</Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          View assignments and complete doorstep delivery actions.
-        </Text>
-        <Link href="/(app)/rider" style={[styles.link, { color: theme.colors.primary }]}>
-          Open Rider
-        </Link>
-      </AppCard>
-
-      <AppCard>
         <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Scan To Receive</Text>
         <Text style={{ color: theme.colors.textMuted }}>
           Scan incoming parcels and mark them at destination.

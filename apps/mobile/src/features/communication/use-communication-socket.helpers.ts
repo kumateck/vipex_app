@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { getApiDebugInfo } from '@mobile/lib/api';
+import { reportMobileErrorToDiscord } from '@mobile/lib/mobile-error-reporter';
 import type { CommunicationCallSession, CommunicationMessage } from '@mobile/types/communication';
 
 export type CommunicationSocketEvent =
@@ -71,13 +72,19 @@ export function logMobileSocketError(
   context: Record<string, unknown> = {},
   cause?: unknown,
 ) {
-  const payload = {
+  const payload: Record<string, unknown> = {
     message,
     at: new Date().toISOString(),
     ...context,
     ...(cause ? { cause } : {}),
   };
   console.error('[mobile-socket] request failed', payload);
+  reportMobileErrorToDiscord({
+    source: 'mobile-socket',
+    message,
+    context: payload,
+    cause,
+  });
 }
 
 function toSocketBaseUrl(raw?: string | null) {

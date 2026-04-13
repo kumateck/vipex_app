@@ -1,4 +1,5 @@
 import { StyleSheet, Text } from 'react-native';
+import { ParcelStatus } from '@mobile/constants/parcel-status';
 import { AppButton, AppCard, AppStatusChip } from '@mobile/components/ui';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileTypography } from '@mobile/theme/layout';
@@ -24,6 +25,9 @@ export function ParcelCard({ parcel, onPress, actionLabel = 'Open Parcel' }: Par
   const { theme } = useAppearance();
   const routeText =
     [parcel.senderName ?? '-', parcel.receiverName ?? '-'].filter(Boolean).join(' → ') || '-';
+  const isVoidStatus =
+    (typeof parcel.status === 'number' && parcel.status === ParcelStatus.CANCELLED) ||
+    (typeof parcel.status === 'string' && parcel.status.toLowerCase().includes('cancel'));
 
   return (
     <AppCard>
@@ -37,6 +41,9 @@ export function ParcelCard({ parcel, onPress, actionLabel = 'Open Parcel' }: Par
       </Text>
       <Text style={[styles.body, { color: theme.colors.textSubtle }]}>{parcel.parcelDetails}</Text>
       <AppStatusChip label={parcel.status} />
+      {isVoidStatus ? (
+        <Text style={[styles.void, { color: theme.colors.danger }]}>Void Record</Text>
+      ) : null}
       {parcel.isDeleted ? (
         <Text style={[styles.deleted, { color: theme.colors.danger }]}>Deleted Record</Text>
       ) : null}
@@ -49,5 +56,6 @@ const styles = StyleSheet.create({
   bookingCode: { fontSize: mobileTypography.sectionTitle, fontWeight: '800' },
   route: { fontSize: mobileTypography.body, fontWeight: '600' },
   body: { fontSize: mobileTypography.body, lineHeight: 19 },
+  void: { fontWeight: '700' },
   deleted: { fontWeight: '700' },
 });

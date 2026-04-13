@@ -5,8 +5,7 @@ import { AppScreen } from '@mobile/components/screen';
 import type { AppearanceMode } from '@mobile/lib/storage';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { AppButton, AppCard, AppPageHeader } from '@/components/ui/mobile';
-import { StatCard } from '@mobile/components/courier';
+import { AppButton, AppCard } from '@/components/ui/mobile';
 import {
   runNetworkDiagnostics,
   type NetworkDiagnosticsResult,
@@ -50,20 +49,6 @@ export default function ProfileTabScreen() {
 
   return (
     <AppScreen>
-      <AppPageHeader title="Settings" subtitle="Account details and app preferences" />
-
-      <AppCard>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Account Snapshot</Text>
-        <View style={styles.statsGrid}>
-          <StatCard label="User Type" value={userType} />
-          <StatCard label="Role" value={session.user?.role?.name ?? '-'} />
-          <StatCard label="Name" value={session.user?.fullname ?? '-'} />
-          <StatCard label="Branch" value={session.user?.branch?.name ?? '-'} />
-          <StatCard label="Location" value={locationLabel} />
-          <StatCard label="Email" value={session.user?.email ?? '-'} />
-        </View>
-      </AppCard>
-
       <AppCard>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Appearance</Text>
         <View style={styles.modeRow}>
@@ -202,7 +187,6 @@ export default function ProfileTabScreen() {
 
 const styles = StyleSheet.create({
   sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
-  statsGrid: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
   metaRow: { lineHeight: 19 },
   modeRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
   modeChip: {

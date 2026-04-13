@@ -32,8 +32,6 @@ export function ParcelPickupQueueBoardPage({
   const branchId = user?.branch?.id ?? null;
   const { data: currentBranch } = useGetBranchQuery(branchId ?? '', {
     skip: !branchId,
-    refetchOnMountOrArgChange: true,
-    pollingInterval: 5000,
   });
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
   const {
