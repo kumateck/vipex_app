@@ -23,6 +23,7 @@ export function useParcelCreateFormWorkflow() {
   const userId = user?.id ?? '';
 
   const [latestReceipt, setLatestReceipt] = useState<ReceiptSummary | null>(null);
+  const [shouldPrintOnSubmit, setShouldPrintOnSubmit] = useState(false);
   const [openParcels, setOpenParcels] = useState<Record<string, boolean>>({});
 
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
@@ -255,6 +256,7 @@ export function useParcelCreateFormWorkflow() {
   const handleCancel = () => {
     form.reset(createInitialFormValues());
     setLatestReceipt(null);
+    setShouldPrintOnSubmit(false);
   };
 
   return {
@@ -265,6 +267,8 @@ export function useParcelCreateFormWorkflow() {
     openParcels,
     setOpenParcels,
     latestReceipt,
+    shouldPrintOnSubmit,
+    setShouldPrintOnSubmit,
     destinationBranchOptions,
     userBranchType,
     companyId,

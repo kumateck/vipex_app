@@ -10,6 +10,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { Spinner } from '@/components/ui/spinner';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { BranchType } from '@/db/schemas/enums';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { CustomerLookupSection } from './parcel-create/customer-lookup-section';
@@ -26,6 +28,8 @@ export function ParcelCreateForm() {
     openParcels,
     setOpenParcels,
     latestReceipt,
+    shouldPrintOnSubmit,
+    setShouldPrintOnSubmit,
     destinationBranchOptions,
     userBranchType,
     companyId,
@@ -48,6 +52,19 @@ export function ParcelCreateForm() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2 md:justify-end">
+              <div className="flex items-center gap-2 rounded-md border border-border/70 px-3 py-2">
+                <Checkbox
+                  id="print-parcel-receipt-on-submit"
+                  checked={shouldPrintOnSubmit}
+                  onCheckedChange={(checked) => setShouldPrintOnSubmit(Boolean(checked))}
+                />
+                <Label
+                  htmlFor="print-parcel-receipt-on-submit"
+                  className="text-sm font-normal cursor-pointer"
+                >
+                  Print after submit
+                </Label>
+              </div>
               <Button type="button" variant="outline" onClick={handleCancel} disabled={isSaving}>
                 Cancel
               </Button>
@@ -151,7 +168,7 @@ export function ParcelCreateForm() {
         </form>
       </Form>
 
-      <ParcelReceipts receipt={latestReceipt} />
+      <ParcelReceipts receipt={latestReceipt} autoPrint={shouldPrintOnSubmit} />
     </div>
   );
 }

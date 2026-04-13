@@ -81,19 +81,35 @@ export function CashierSessionControls() {
               : permissions.has(PermissionKeys.CanCompleteOfficePickup)
                 ? 'receiver'
                 : routeMode;
+  const isFullCashier = cashierType === CashierType.FULL;
 
   const { data: activeSession, isLoading: isLoadingActiveSession } =
     useGetCurrentActiveSessionQuery(undefined, {
       skip: !isCashierUser || !canAccessSessionControls,
     });
-  const summaryMode: 'sender' | 'receiver' | 'delivery' | 'full' = cashierMode;
-  const closeMode: 'sender' | 'receiver' | 'delivery' | 'full' =
-    cashierType === CashierType.FULL ? 'full' : cashierMode;
+  const summaryMode: 'sender' | 'receiver' | 'delivery' | 'full' = isFullCashier
+    ? 'full'
+    : cashierMode;
+  const closeMode: 'sender' | 'receiver' | 'delivery' | 'full' = isFullCashier
+    ? 'full'
+    : cashierMode;
 
   const { data: summary } = useGetCurrentActiveSessionSummaryQuery(
     { mode: summaryMode },
     {
       skip: !isCashierUser || !canReadSessions,
+    },
+  );
+  const { data: senderSummary } = useGetCurrentActiveSessionSummaryQuery(
+    { mode: 'sender' },
+    {
+      skip: !isCashierUser || !canReadSessions || !isFullCashier,
+    },
+  );
+  const { data: receiverSummary } = useGetCurrentActiveSessionSummaryQuery(
+    { mode: 'receiver' },
+    {
+      skip: !isCashierUser || !canReadSessions || !isFullCashier,
     },
   );
   const { data: closeSummary } = useGetCurrentActiveSessionSummaryQuery(
@@ -240,7 +256,19 @@ export function CashierSessionControls() {
 
   return (
     <div className="flex items-center gap-2">
-      {cashierMode === 'receiver' ? (
+      {isFullCashier ? (
+        <>
+          <Badge variant="secondary">
+            Amount Paid: {formatCedisFromPsw(senderSummary?.amountPaidPsw ?? 0)}
+          </Badge>
+          <Badge variant="outline">
+            To Be Paid: {formatCedisFromPsw(senderSummary?.toBePaidPsw ?? 0)}
+          </Badge>
+          <Badge variant="outline">
+            Receiver Payments: {formatCedisFromPsw(receiverSummary?.totalToBePaidCollectedPsw ?? 0)}
+          </Badge>
+        </>
+      ) : cashierMode === 'receiver' ? (
         <Badge variant="secondary">
           Receiver Payments: {formatCedisFromPsw(summary?.totalToBePaidCollectedPsw ?? 0)}
         </Badge>
