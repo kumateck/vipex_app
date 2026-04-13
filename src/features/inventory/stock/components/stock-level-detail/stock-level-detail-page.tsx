@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
-import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { useGetStockLevelQuery } from '@/features/inventory/api';
 import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
 import { StockLoadError } from '../../components/stock-load-error';
@@ -22,12 +22,8 @@ export function StockLevelDetailPage() {
     { skip: !productId || !locationId },
   );
 
-  const { data: productsData } = useListInventoryProductsQuery(
-    {
-      page: 1,
-      pageSize: 500,
-      filters: { companyId },
-    },
+  const { data: productsData = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
     { skip: !companyId },
   );
   const { data: locationsData = [] } = useListInventoryLocationOptionsQuery(
@@ -36,16 +32,12 @@ export function StockLevelDetailPage() {
   );
 
   const productNameById = useMemo(
-    () => new Map((productsData?.data ?? []).map((product) => [product.id, product.name] as const)),
+    () => new Map(productsData.map((product) => [product.id, product.name] as const)),
     [productsData],
   );
   const productConversionsById = useMemo(
     () =>
-      new Map(
-        (productsData?.data ?? []).map(
-          (product) => [product.id, product.unitConversions ?? []] as const,
-        ),
-      ),
+      new Map(productsData.map((product) => [product.id, product.unitConversions ?? []] as const)),
     [productsData],
   );
   const locationNameById = useMemo(

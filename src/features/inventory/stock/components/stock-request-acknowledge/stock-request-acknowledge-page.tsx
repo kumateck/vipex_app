@@ -9,7 +9,7 @@ import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useGetStockRequestQuery } from '@/features/inventory/api';
-import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
 import { useAuthStore } from '@/stores/auth-store';
 import { StockLoadError } from '../stock-load-error';
@@ -28,18 +28,14 @@ export function StockRequestAcknowledgePage() {
     isLoading,
     error,
   } = useGetStockRequestQuery(requestId, { skip: !requestId });
-  const { data: productsData } = useListInventoryProductsQuery(
-    {
-      page: 1,
-      pageSize: 500,
-      filters: { companyId },
-    },
+  const { data: productsData = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
     { skip: !companyId },
   );
   const { onSubmit, isSubmitting } = useAcknowledgeStockRequestLineAction(requestId);
 
   const line = request?.lines?.find((row) => row.id === lineId);
-  const product = (productsData?.data ?? []).find((row) => row.id === line?.productId);
+  const product = productsData.find((row) => row.id === line?.productId);
   const remainingAck = Math.max(0, Number(line?.pendingAcknowledgementQuantity ?? 0));
   const conversionRows = (product?.unitConversions ?? []).map((item) => ({
     unitOfMeasure: item.unitOfMeasure,

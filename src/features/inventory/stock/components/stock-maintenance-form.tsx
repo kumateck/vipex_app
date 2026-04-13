@@ -16,7 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
-import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import {
   createStockMaintenanceSchema,
   type CreateStockMaintenanceFormValues,
@@ -35,11 +35,10 @@ export function StockMaintenanceForm({ onSubmit, isSubmitting }: StockMaintenanc
     { companyId },
     { skip: !companyId },
   );
-  const { data: productsData } = useListInventoryProductsQuery(
-    { page: 1, pageSize: 500, filters: { companyId } },
+  const { data: products = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
     { skip: !companyId },
   );
-  const products = productsData?.data ?? [];
 
   const {
     control,

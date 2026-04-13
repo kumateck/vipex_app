@@ -317,7 +317,32 @@ export async function listProductOptionsSvc(p: {
   categoryId?: string | null;
   search?: string | null;
 }) {
-  return listProductOptionsRepo(p);
+  const options = await listProductOptionsRepo(p);
+  if (!options.length) return options;
+
+  const conversions = await listProductUnitConversionsByProductIdsRepo(
+    options.map((product) => product.id),
+  );
+  const conversionsByProductId = new Map<
+    string,
+    { unitOfMeasure: number; factorToBase: number; sortOrder: number }[]
+  >();
+  for (const row of conversions) {
+    const existing = conversionsByProductId.get(row.productId) ?? [];
+    existing.push({
+      unitOfMeasure: row.unitOfMeasure,
+      factorToBase: row.factorToBase,
+      sortOrder: row.sortOrder,
+    });
+    conversionsByProductId.set(row.productId, existing);
+  }
+
+  return options.map((product) => ({
+    ...product,
+    unitConversions: conversionsByProductId.get(product.id) ?? [
+      { unitOfMeasure: product.unitOfMeasure, factorToBase: 1, sortOrder: 0 },
+    ],
+  }));
 }
 
 export async function getProductSvc(id: string) {

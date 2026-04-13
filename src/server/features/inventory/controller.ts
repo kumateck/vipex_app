@@ -230,7 +230,16 @@ export async function listProductOptionsCtrl(filters: {
   categoryId?: string | null;
   search?: string | null;
 }) {
-  return listProductOptionsSvc(filters);
+  const options = await listProductOptionsSvc(filters);
+  return options.map((product) => ({
+    ...product,
+    unitConversions: (
+      (product as { unitConversions?: UnitConversionLike[] }).unitConversions ?? []
+    ).map((conversion: UnitConversionLike) => ({
+      ...conversion,
+      factorToBase: conversion.factorToBase.toString(),
+    })),
+  }));
 }
 
 export async function createProductCtrl(input: {
