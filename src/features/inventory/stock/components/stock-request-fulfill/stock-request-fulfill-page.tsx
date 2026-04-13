@@ -21,7 +21,7 @@ import {
   useGetStockRequestQuery,
 } from '@/features/inventory/api';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
-import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { UNIT_OF_MEASURE_OPTIONS } from '@/features/inventory/products/components/inventory-product-columns';
 import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
 import { convertToBaseUnits } from '@/shared/inventory/unit-conversion';
@@ -46,18 +46,16 @@ export function StockRequestFulfillPage() {
     { companyId },
     { skip: !companyId },
   );
-  const { data: productsData } = useListInventoryProductsQuery({
-    page: 1,
-    pageSize: 500,
-    filters: { companyId },
-  });
+  const { data: products = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
   const { onSubmit, isSubmitting } = useFulfillStockRequestLineAction(requestId);
   const { data: allocation } = useGetStockRequestLineAllocationQuery(
     { requestId, lineId },
     { skip: !requestId || !lineId },
   );
 
-  const products = productsData?.data ?? [];
   const productById = useMemo(
     () => new Map(products.map((product) => [product.id, product] as const)),
     [products],

@@ -3,7 +3,7 @@ import { DataTable } from '@/components/datatable';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
-import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { useListStockTransfersQuery } from '@/features/inventory/api';
 import { createStockTransferColumns } from './stock-transfer-columns';
 import type { StockTransferListQuery } from '../types/inventory-stock.types';
@@ -30,12 +30,8 @@ export function StockTransfersTable() {
     skip: !companyId,
   });
 
-  const { data: productsData } = useListInventoryProductsQuery(
-    {
-      page: 1,
-      pageSize: 500,
-      filters: { companyId },
-    },
+  const { data: productsData = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
     { skip: !companyId },
   );
   const { data: locationsData = [] } = useListInventoryLocationOptionsQuery(
@@ -44,16 +40,12 @@ export function StockTransfersTable() {
   );
 
   const productNameById = useMemo(
-    () => new Map((productsData?.data ?? []).map((product) => [product.id, product.name] as const)),
+    () => new Map(productsData.map((product) => [product.id, product.name] as const)),
     [productsData],
   );
   const productConversionsById = useMemo(
     () =>
-      new Map(
-        (productsData?.data ?? []).map(
-          (product) => [product.id, product.unitConversions ?? []] as const,
-        ),
-      ),
+      new Map(productsData.map((product) => [product.id, product.unitConversions ?? []] as const)),
     [productsData],
   );
   const locationNameById = useMemo(

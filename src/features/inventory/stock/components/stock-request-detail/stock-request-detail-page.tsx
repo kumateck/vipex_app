@@ -11,7 +11,7 @@ import {
   useSyncStockReservationsForRequestMutation,
 } from '@/features/inventory/api';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
-import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { formatDateTime } from '@/lib/date';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
@@ -37,17 +37,15 @@ export function StockRequestDetailPage() {
     { companyId },
     { skip: !companyId },
   );
-  const { data: productsData } = useListInventoryProductsQuery({
-    page: 1,
-    pageSize: 500,
-    filters: { companyId },
-  });
+  const { data: products = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
 
   const locationNameById = useMemo(
     () => new Map(locations.map((location) => [location.id, location.name] as const)),
     [locations],
   );
-  const products = productsData?.data ?? [];
   const productById = useMemo(
     () => new Map(products.map((product) => [product.id, product] as const)),
     [products],

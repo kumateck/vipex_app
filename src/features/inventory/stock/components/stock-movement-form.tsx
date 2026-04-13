@@ -17,7 +17,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
-import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { UNIT_OF_MEASURE_OPTIONS } from '@/features/inventory/products/components/inventory-product-columns';
 import { convertToBaseUnits } from '@/shared/inventory/unit-conversion';
 import { STOCK_MOVEMENT_TYPE_OPTIONS } from '../constants/stock-options';
@@ -41,12 +41,8 @@ export function StockMovementForm({
 }: StockMovementFormProps) {
   const navigate = useNavigate();
   const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
-  const { data: productsData, isLoading: isLoadingProducts } = useListInventoryProductsQuery(
-    {
-      page: 1,
-      pageSize: 500,
-      filters: { companyId },
-    },
+  const { data: products = [], isLoading: isLoadingProducts } = useListInventoryProductOptionsQuery(
+    { companyId },
     { skip: !companyId },
   );
   const { data: locations = [], isLoading: isLoadingLocations } =
@@ -73,7 +69,6 @@ export function StockMovementForm({
     },
     mode: 'onSubmit',
   });
-  const products = productsData?.data ?? [];
   const selectedProductId = watch('productId');
   const selectedProduct = useMemo(
     () => products.find((product) => product.id === selectedProductId),

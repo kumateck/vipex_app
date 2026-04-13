@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { Icon } from '@/components/ui';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarRail } from '@/components/ui/sidebar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import appLogo from '@/assets/logo.png';
 import { useListCompanyModulesQuery } from '@/features/company-modules/api';
 import { CommunicationSidebarPanel } from '@/features/communication/components/communication-sidebar';
@@ -169,18 +170,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               const isActive = activeGroup?.id === group.id;
               return (
                 <div key={group.id} className="px-1.5">
-                  <button
-                    type="button"
-                    title={group.title}
-                    onClick={() => setActiveGroupId(group.id)}
-                    className={cn(
-                      'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex h-9 w-full items-center justify-center rounded-md transition-colors',
-                      isActive && 'bg-primary text-primary-foreground',
-                    )}
-                    aria-label={group.title}
-                  >
-                    <Icon name={group.iconName} className="h-5 w-5" />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        title={group.title}
+                        onClick={() => setActiveGroupId(group.id)}
+                        className={cn(
+                          'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex h-9 w-full items-center justify-center rounded-md transition-colors',
+                          isActive && 'bg-primary text-primary-foreground',
+                        )}
+                        aria-label={group.title}
+                      >
+                        <Icon name={group.iconName} className="h-5 w-5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" align="center">
+                      {group.title}
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               );
             })}

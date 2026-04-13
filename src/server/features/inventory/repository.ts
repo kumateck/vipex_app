@@ -160,6 +160,7 @@ export type ProductOptionRow = {
   id: string;
   name: string;
   sku: string;
+  unitOfMeasure: number;
 };
 
 export async function listProductsRepo(p: ListProductsParams) {
@@ -264,6 +265,7 @@ export async function listProductOptionsRepo(p: {
       id: products.id,
       name: products.name,
       sku: products.sku,
+      unitOfMeasure: products.unitOfMeasure,
     })
     .from(products)
     .where(and(...where))

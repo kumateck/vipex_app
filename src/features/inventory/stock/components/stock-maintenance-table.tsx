@@ -4,7 +4,7 @@ import type { PaginationMeta } from '@/server/types/pagination.types';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListStockMaintenanceRecordsQuery } from '@/features/inventory/api';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
-import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { createStockMaintenanceColumns } from './stock-maintenance-columns';
 import type { StockMaintenanceListQuery } from '../types/inventory-stock.types';
 
@@ -31,13 +31,13 @@ export function StockMaintenanceTable() {
     { companyId },
     { skip: !companyId },
   );
-  const { data: productsData } = useListInventoryProductsQuery(
-    { page: 1, pageSize: 500, filters: { companyId } },
+  const { data: productsData = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
     { skip: !companyId },
   );
 
   const productNameById = useMemo(
-    () => new Map((productsData?.data ?? []).map((row) => [row.id, row.name] as const)),
+    () => new Map(productsData.map((row) => [row.id, row.name] as const)),
     [productsData],
   );
   const locationNameById = useMemo(

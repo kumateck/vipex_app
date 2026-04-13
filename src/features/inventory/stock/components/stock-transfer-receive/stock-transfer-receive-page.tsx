@@ -10,7 +10,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useGetStockTransferQuery } from '@/features/inventory/api';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
-import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
 import { useAuthStore } from '@/stores/auth-store';
 import { StockLoadError } from '../stock-load-error';
@@ -25,8 +25,8 @@ export function StockTransferReceivePage() {
   const { id = '' } = useParams<{ id: string }>();
   const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
   const { data: transfer, isLoading, error } = useGetStockTransferQuery(id, { skip: !id });
-  const { data: productsData } = useListInventoryProductsQuery(
-    { page: 1, pageSize: 500, filters: { companyId } },
+  const { data: productsData = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
     { skip: !companyId },
   );
   const { data: locations = [] } = useListInventoryLocationOptionsQuery(
@@ -35,7 +35,7 @@ export function StockTransferReceivePage() {
   );
   const { onSubmit, isSubmitting } = useAcknowledgeStockTransferReceiptAction(id);
 
-  const product = (productsData?.data ?? []).find((row) => row.id === transfer?.productId);
+  const product = productsData.find((row) => row.id === transfer?.productId);
   const locationNameById = new Map(
     locations.map((location) => [location.id, location.name] as const),
   );
