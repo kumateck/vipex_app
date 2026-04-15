@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { formatDateTime } from '@/lib/date';
+import { formatDateTime } from '@/lib/dates';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
 import type { StockTransfer } from '../types/inventory-stock.types';

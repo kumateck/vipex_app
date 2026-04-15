@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
@@ -85,6 +85,7 @@ export function StockRequestFulfillPage() {
     control,
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<FulfillStockRequestLineFormValues>({
     resolver: zodResolver(fulfillStockRequestLineSchema),
@@ -97,6 +98,8 @@ export function StockRequestFulfillPage() {
     },
     mode: 'onSubmit',
   });
+  const enteredQuantity = watch('fulfillQuantity');
+  const selectedUnit = watch('fulfillQuantityUnitOfMeasure');
 
   if (isLoading) {
     return (
@@ -111,13 +114,15 @@ export function StockRequestFulfillPage() {
   if (error || !request || !line) {
     return (
       <ScrollableWrapper>
-        <StockLoadError
-          message="Failed to load stock request line"
-          onBack={() => navigate(`/inventory/stock-requests/view/${requestId}`)}
-        />
+        <StockLoadError message="Failed to load stock request line" onBack={() => navigate(-1)} />
       </ScrollableWrapper>
     );
   }
+
+  const sourceLocationId = request.requestedToLocationId ?? '';
+  const sourceLocationName = sourceLocationId
+    ? (locationNameById.get(sourceLocationId) ?? sourceLocationId)
+    : '-';
 
   const submit = async (values: FulfillStockRequestLineFormValues) => {
     const sourceUnit = values.fulfillQuantityUnitOfMeasure ?? product?.unitOfMeasure ?? 0;
@@ -126,13 +131,34 @@ export function StockRequestFulfillPage() {
       sourceUnit,
       conversions,
     );
+    const selectedCandidate = allocation?.candidates?.find(
+      (candidate) => candidate.locationId === sourceLocationId,
+    );
+    const availableAtSource = Number(selectedCandidate?.availableQuantity ?? 0);
+    const maxFulfillableNow = Math.max(0, Math.min(remaining, availableAtSource));
+    if (fulfillBase > maxFulfillableNow) return;
+
     await onSubmit({
       lineId: values.lineId,
-      fromLocationId: values.fromLocationId,
+      fromLocationId: sourceLocationId,
       fulfillQuantity: String(fulfillBase),
       notes: values.notes,
     });
   };
+  const selectedCandidate = (allocation?.candidates ?? []).find(
+    (candidate) => candidate.locationId === sourceLocationId,
+  );
+  const availableAtSource = Number(selectedCandidate?.availableQuantity ?? 0);
+  const maxFulfillableNow = Math.max(0, Math.min(remaining, availableAtSource));
+  const sourceUnitForPreview = selectedUnit ?? product?.unitOfMeasure ?? 0;
+  const enteredBase = enteredQuantity
+    ? convertToBaseUnits(
+        Number.parseFloat(enteredQuantity || '0'),
+        sourceUnitForPreview,
+        conversions,
+      )
+    : 0;
+  const exceedsAvailable = enteredBase > maxFulfillableNow;
 
   return (
     <ScrollableWrapper>
@@ -200,28 +226,12 @@ export function StockRequestFulfillPage() {
               <form onSubmit={handleSubmit(submit)} className="space-y-4">
                 <FieldGroup>
                   <Field>
-                    <FieldLabel htmlFor="fromLocationId">Source location</FieldLabel>
-                    <Controller
-                      control={control}
-                      name="fromLocationId"
-                      render={({ field }) => (
-                        <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                          <SelectTrigger id="fromLocationId" aria-invalid={!!errors.fromLocationId}>
-                            <SelectValue placeholder="Select source location" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {locations.map((location) => (
-                              <SelectItem key={location.id} value={location.id}>
-                                {location.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.fromLocationId?.message ? (
-                      <p className="text-sm text-destructive">{errors.fromLocationId.message}</p>
-                    ) : null}
+                    <FieldLabel>Issuing location</FieldLabel>
+                    <p className="text-sm">{sourceLocationName}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Available at source: {availableAtSource} base | Max fulfillable now:{' '}
+                      {maxFulfillableNow} base
+                    </p>
                   </Field>
 
                   <div className="grid gap-3 md:grid-cols-2">
@@ -235,6 +245,11 @@ export function StockRequestFulfillPage() {
                       />
                       {errors.fulfillQuantity?.message ? (
                         <p className="text-sm text-destructive">{errors.fulfillQuantity.message}</p>
+                      ) : null}
+                      {exceedsAvailable ? (
+                        <p className="text-sm text-destructive">
+                          Quantity exceeds available source stock for this request line.
+                        </p>
                       ) : null}
                     </Field>
 
@@ -270,14 +285,23 @@ export function StockRequestFulfillPage() {
                   </Field>
 
                   <input type="hidden" {...register('lineId')} />
+                  <input type="hidden" value={sourceLocationId} {...register('fromLocationId')} />
 
                   <div className="flex gap-2 pt-2">
-                    <Button type="submit" disabled={isSubmitting}>
+                    <Button
+                      type="submit"
+                      disabled={
+                        isSubmitting ||
+                        !sourceLocationId ||
+                        maxFulfillableNow <= 0 ||
+                        exceedsAvailable
+                      }
+                    >
                       {isSubmitting ? <Spinner /> : null}
                       {isSubmitting ? 'Saving...' : 'Fulfill'}
                     </Button>
-                    <Button type="button" variant="outline" asChild>
-                      <Link to={`/inventory/stock-requests/view/${requestId}`}>Cancel</Link>
+                    <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+                      Cancel
                     </Button>
                   </div>
                 </FieldGroup>

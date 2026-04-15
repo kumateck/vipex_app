@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,7 @@ import {
   type FleetTrip,
 } from '../../api/fleet-transport.api';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import { useEffect, useMemo, useState } from 'react';
 
 function tripStatusLabel(status: number) {
   if (status === 0) return 'Planned';
@@ -167,7 +168,7 @@ export function FleetTripsListPage() {
                       <TableCell>{row.driverEmployeeName ?? row.driverEmployeeId}</TableCell>
                       <TableCell>{tripStatusLabel(row.status)}</TableCell>
                       <TableCell>
-                        {row.plannedStartAt ? new Date(row.plannedStartAt).toLocaleString() : '-'}
+                        {row.plannedStartAt ? formatDateTimeShared(row.plannedStartAt) : '-'}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">

@@ -100,6 +100,8 @@ export const ListStockLevelsQuery = t.Object({
   companyId: t.Optional(UUID),
   productId: t.Optional(UUID),
   locationId: t.Optional(UUID),
+  branchId: t.Optional(UUID),
+  locationType: t.Optional(SmallInt),
 });
 
 export const UpdateStockLevelBody = t.Object({
@@ -112,6 +114,8 @@ export const ListStockMovementsQuery = t.Object({
   companyId: t.Optional(UUID),
   productId: t.Optional(UUID),
   locationId: t.Optional(UUID),
+  branchId: t.Optional(UUID),
+  locationType: t.Optional(SmallInt),
   movementType: t.Optional(SmallInt),
 });
 
@@ -133,6 +137,8 @@ export const ListStockAdjustmentsQuery = t.Object({
   companyId: t.Optional(UUID),
   productId: t.Optional(UUID),
   locationId: t.Optional(UUID),
+  branchId: t.Optional(UUID),
+  locationType: t.Optional(SmallInt),
 });
 
 export const CreateStockAdjustmentBody = t.Object({
@@ -150,6 +156,8 @@ export const ListStockTransfersQuery = t.Object({
   ...PaginationRequestQueryProps,
   companyId: t.Optional(UUID),
   productId: t.Optional(UUID),
+  branchId: t.Optional(UUID),
+  locationType: t.Optional(SmallInt),
   status: t.Optional(SmallInt),
 });
 
@@ -181,6 +189,7 @@ export const CreateStockRequestBody = t.Object({
   companyId: UUID,
   requesterLocationId: UUID,
   requestedToLocationId: t.Optional(t.Union([UUID, t.Null()])),
+  requestType: SmallInt,
   notes: t.Optional(t.String()),
   requestedBy: UUID,
   submit: t.Optional(t.Boolean()),

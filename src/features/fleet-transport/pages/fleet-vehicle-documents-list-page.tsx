@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -9,7 +9,7 @@ import {
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
-  return new Date(value).toLocaleString();
+  return sharedFormatDateTime(value);
 }
 
 export function FleetVehicleDocumentsListPage() {

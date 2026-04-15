@@ -5,7 +5,12 @@ export interface StockLevel {
   companyId: string;
   productId: string;
   locationId: string;
+  productName?: string | null;
+  locationName?: string | null;
   quantity: string;
+  pendingIncomingQuantity?: string;
+  pendingReceiptByDestinationQuantity?: string;
+  pendingToIssueQuantity?: string;
   updatedAt?: string;
 }
 
@@ -13,6 +18,8 @@ export type StockLevelFilters = {
   companyId?: string | null;
   productId?: string | null;
   locationId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
 };
 
 export type StockLevelListQuery = ServerListQuery<StockLevelFilters>;
@@ -22,6 +29,8 @@ export interface StockMovement {
   companyId: string;
   productId: string;
   locationId: string;
+  productName?: string | null;
+  locationName?: string | null;
   movementType: number;
   quantity: string;
   referenceId?: string | null;
@@ -35,6 +44,8 @@ export type StockMovementFilters = {
   companyId?: string | null;
   productId?: string | null;
   locationId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
   movementType?: number | null;
 };
 
@@ -77,6 +88,8 @@ export type StockAdjustmentFilters = {
   companyId?: string | null;
   productId?: string | null;
   locationId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
 };
 
 export type StockAdjustmentListQuery = ServerListQuery<StockAdjustmentFilters>;
@@ -128,6 +141,8 @@ export type StockTransferFilters = {
   companyId?: string | null;
   productId?: string | null;
   status?: number | null;
+  branchId?: string | null;
+  locationType?: number | null;
 };
 
 export type StockTransferListQuery = ServerListQuery<StockTransferFilters>;
@@ -205,7 +220,14 @@ export interface StockRequest {
   companyId: string;
   requesterLocationId: string;
   requestedToLocationId?: string | null;
+  requestType: number;
   status: number;
+  lineCount?: number;
+  totalRequestedQuantity?: string;
+  totalFulfilledQuantity?: string;
+  totalAcknowledgedQuantity?: string;
+  totalPendingIssueQuantity?: string;
+  totalPendingAcknowledgementQuantity?: string;
   notes?: string | null;
   requestedBy: string;
   approvedBy?: string | null;
@@ -221,6 +243,8 @@ export interface StockRequest {
 export type StockRequestFilters = {
   companyId?: string | null;
   requesterLocationId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
   status?: number | null;
 };
 
@@ -235,6 +259,7 @@ export interface StockRequestCreateLineInput {
 export interface StockRequestCreateInput {
   requesterLocationId: string;
   requestedToLocationId?: string;
+  requestType: number;
   notes?: string;
   submit?: boolean;
   lines: StockRequestCreateLineInput[];
@@ -244,6 +269,7 @@ export interface StockRequestCreatePayload {
   companyId: string;
   requesterLocationId: string;
   requestedToLocationId?: string;
+  requestType: number;
   notes?: string;
   requestedBy: string;
   submit?: boolean;
@@ -355,6 +381,8 @@ export interface StockMaintenanceRecord {
 export type StockMaintenanceFilters = {
   companyId?: string | null;
   locationId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
   issueType?: number | null;
   status?: number | null;
 };
@@ -494,6 +522,8 @@ export type StockLotFilters = {
   companyId: string;
   productId?: string | null;
   locationId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
   status?: number | null;
   batchNumber?: string | null;
 };
@@ -666,6 +696,8 @@ export interface ReorderSuggestion {
   locationType: number;
   currentQuantity: string;
   minStockLevel: string;
+  targetLevel: string;
+  thresholdSource: 'product_default' | 'branch_location_type' | 'location_override';
   reorderQuantity: string;
   suggestedSources: {
     locationId: string;
@@ -681,6 +713,39 @@ export interface ReorderSuggestionsResponse {
   locationId?: string | null;
   totalRows: number;
   rows: ReorderSuggestion[];
+}
+
+export interface InventoryReorderPolicy {
+  id: string;
+  companyId: string;
+  productId: string;
+  branchId: string;
+  locationType: number;
+  locationId?: string | null;
+  reorderPoint: string;
+  targetLevel: string;
+  safetyStock: string;
+  active: boolean;
+  notes?: string | null;
+  createdBy: string;
+  createdAt?: string;
+  updatedAt?: string;
+  productName?: string | null;
+  productSku?: string | null;
+  branchName?: string | null;
+  locationName?: string | null;
+}
+
+export interface InventoryReorderPolicyUpsertInput {
+  productId: string;
+  branchId: string;
+  locationType: number;
+  locationId?: string | null;
+  reorderPoint: string;
+  targetLevel?: string;
+  safetyStock?: string;
+  active?: boolean;
+  notes?: string;
 }
 
 export interface InventoryApprovalPolicy {

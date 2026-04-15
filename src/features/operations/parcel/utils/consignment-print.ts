@@ -1,4 +1,5 @@
 import type { ProcessedParcel } from '../api/parcel.api';
+import { formatDateTime } from '@/lib/dates';
 
 type ConsignmentPrintPayload = {
   consignmentCode: string;
@@ -12,7 +13,7 @@ type ConsignmentPrintPayload = {
 function formatDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+  return formatDateTime(date);
 }
 
 function escapeHtml(value: string | null | undefined) {

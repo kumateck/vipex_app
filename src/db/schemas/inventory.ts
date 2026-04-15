@@ -22,6 +22,7 @@ import {
   StockReservationAllocationStatus,
   StockReservationStatus,
   StockRequestStatus,
+  StockRequestType,
   TransferStatus,
   UnitOfMeasure,
   InventoryApprovalEntityType,
@@ -344,6 +345,7 @@ export const stockRequests = pgTable(
     requestedToLocationId: varchar('requested_to_location_id', { length: 25 }).references(
       () => inventoryLocations.id,
     ),
+    requestType: smallint('request_type').notNull().default(StockRequestType.INTER_BRANCH),
     status: smallint('status').notNull().default(StockRequestStatus.DRAFT),
     notes: text('notes'),
     requestedBy: varchar('requested_by', { length: 25 }).notNull(),
@@ -361,6 +363,7 @@ export const stockRequests = pgTable(
     byRequestedToLocation: index('stock_requests_requested_to_location_idx').on(
       t.requestedToLocationId,
     ),
+    byRequestType: index('stock_requests_request_type_idx').on(t.requestType),
     byStatus: index('stock_requests_status_idx').on(t.status),
     byCreated: index('stock_requests_created_idx').on(t.createdAt),
   }),
@@ -879,6 +882,50 @@ export const inventoryFinancialPostings = pgTable(
     byCompany: index('inventory_financial_postings_company_idx').on(t.companyId),
     byMovement: uniqueIndex('inventory_financial_postings_movement_uq').on(t.movementId),
     byPostingDate: index('inventory_financial_postings_date_idx').on(t.postingDate),
+  }),
+);
+
+export const inventoryReorderPolicies = pgTable(
+  'inventory_reorder_policies',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    productId: varchar('product_id', { length: 25 })
+      .notNull()
+      .references(() => products.id),
+    branchId: varchar('branch_id', { length: 25 })
+      .notNull()
+      .references(() => branches.id),
+    locationType: smallint('location_type').notNull(),
+    locationId: varchar('location_id', { length: 25 }).references(() => inventoryLocations.id),
+    reorderPoint: bigint('reorder_point', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    targetLevel: bigint('target_level', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    safetyStock: bigint('safety_stock', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    active: boolean('active').notNull().default(true),
+    notes: text('notes'),
+    createdBy: varchar('created_by', { length: 25 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompany: index('inventory_reorder_policies_company_idx').on(t.companyId),
+    byProduct: index('inventory_reorder_policies_product_idx').on(t.productId),
+    byBranchType: index('inventory_reorder_policies_branch_type_idx').on(
+      t.branchId,
+      t.locationType,
+    ),
+    byLocation: index('inventory_reorder_policies_location_idx').on(t.locationId),
+    byActive: index('inventory_reorder_policies_active_idx').on(t.active),
   }),
 );
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
@@ -20,6 +21,9 @@ import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locat
 import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { UNIT_OF_MEASURE_OPTIONS } from '@/features/inventory/products/components/inventory-product-columns';
 import { convertToBaseUnits } from '@/shared/inventory/unit-conversion';
+import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
+import { useGetStockLevelQuery, useListStockTransfersQuery } from '@/features/inventory/api';
+import { TransferStatus } from '@/db/schemas/enums';
 import {
   createStockTransferSchema,
   type CreateStockTransferFormValues,
@@ -67,10 +71,78 @@ export function StockTransferForm({
     mode: 'onSubmit',
   });
   const selectedProductId = watch('productId');
+  const selectedFromLocationId = watch('fromLocationId');
+  const selectedQuantity = watch('quantity');
+  const selectedQuantityUnitOfMeasure = watch('quantityUnitOfMeasure');
   const selectedProduct = useMemo(
     () => products.find((product) => product.id === selectedProductId),
     [products, selectedProductId],
   );
+  const selectedProductConversions = useMemo(
+    () =>
+      (
+        selectedProduct?.unitConversions ?? [
+          { unitOfMeasure: selectedProduct?.unitOfMeasure ?? 0, factorToBase: '1' },
+        ]
+      ).map((item) => ({
+        unitOfMeasure: item.unitOfMeasure,
+        factorToBase: Number.parseInt(item.factorToBase, 10),
+      })),
+    [selectedProduct],
+  );
+  const { data: sourceStockLevel } = useGetStockLevelQuery(
+    { productId: selectedProductId, locationId: selectedFromLocationId },
+    { skip: !selectedProductId || !selectedFromLocationId },
+  );
+  const { data: stockTransfersResponse } = useListStockTransfersQuery(
+    {
+      page: 1,
+      pageSize: 100,
+      filters: { companyId, productId: selectedProductId || null },
+    },
+    { skip: !companyId || !selectedProductId },
+  );
+  const sourceOnHandBase = Number(sourceStockLevel?.quantity ?? 0);
+  const committedTransferBase = useMemo(
+    () =>
+      (stockTransfersResponse?.data ?? [])
+        .filter(
+          (transfer) =>
+            transfer.productId === selectedProductId &&
+            transfer.fromLocationId === selectedFromLocationId &&
+            [
+              TransferStatus.PENDING,
+              TransferStatus.IN_TRANSIT,
+              TransferStatus.PARTIALLY_FULFILLED,
+            ].includes(transfer.status),
+        )
+        .reduce(
+          (sum, transfer) =>
+            sum +
+            Math.max(0, Number(transfer.quantity ?? 0) - Number(transfer.fulfilledQuantity ?? 0)),
+          0,
+        ),
+    [selectedFromLocationId, selectedProductId, stockTransfersResponse?.data],
+  );
+  const availableToTransferBase = Math.max(0, sourceOnHandBase - committedTransferBase);
+  const requestedTransferBase = useMemo(() => {
+    const parsedQuantity = Number.parseFloat(selectedQuantity);
+    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) return 0;
+    return convertToBaseUnits(
+      parsedQuantity,
+      selectedQuantityUnitOfMeasure ?? selectedProduct?.unitOfMeasure ?? 0,
+      selectedProductConversions,
+    );
+  }, [
+    selectedProduct?.unitOfMeasure,
+    selectedProductConversions,
+    selectedQuantity,
+    selectedQuantityUnitOfMeasure,
+  ]);
+  const exceedsAvailableTransfer =
+    !!selectedProductId &&
+    !!selectedFromLocationId &&
+    requestedTransferBase > availableToTransferBase;
   const unitOptions = useMemo(() => {
     if (!selectedProduct) return UNIT_OF_MEASURE_OPTIONS;
     const conversions = selectedProduct.unitConversions ?? [
@@ -85,20 +157,29 @@ export function StockTransferForm({
     if (!selectedProduct) return;
     setValue('quantityUnitOfMeasure', selectedProduct.unitOfMeasure);
   }, [selectedProduct, setValue]);
+  const selectedToLocationId = watch('toLocationId');
+  useEffect(() => {
+    if (!selectedFromLocationId) return;
+    if (selectedToLocationId === selectedFromLocationId) {
+      setValue('toLocationId', '');
+    }
+  }, [selectedFromLocationId, selectedToLocationId, setValue]);
 
   const submit = async (values: CreateStockTransferFormValues) => {
-    const conversions = selectedProduct?.unitConversions ?? [
-      { unitOfMeasure: selectedProduct?.unitOfMeasure ?? 0, factorToBase: '1' },
-    ];
-    const conversionRows = conversions.map((item) => ({
-      unitOfMeasure: item.unitOfMeasure,
-      factorToBase: Number.parseInt(item.factorToBase, 10),
-    }));
     const baseQuantity = convertToBaseUnits(
       Number.parseFloat(values.quantity),
       values.quantityUnitOfMeasure ?? selectedProduct?.unitOfMeasure ?? 0,
-      conversionRows,
+      selectedProductConversions,
     );
+    if (baseQuantity > availableToTransferBase) {
+      toast.error(
+        `Transfer quantity exceeds available stock. Available: ${formatBaseQuantityWithBestUnits(
+          availableToTransferBase,
+          selectedProductConversions,
+        )}`,
+      );
+      return;
+    }
 
     await onSubmit({
       ...values,
@@ -198,17 +279,24 @@ export function StockTransferForm({
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
+                        {locations
+                          .filter((location) => location.id !== selectedFromLocationId)
+                          .map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   )}
                 />
                 {errors.toLocationId?.message ? (
                   <p className="text-sm text-destructive">{errors.toLocationId.message}</p>
+                ) : null}
+                {selectedFromLocationId ? (
+                  <p className="text-xs text-muted-foreground">
+                    Destination must be different from source location.
+                  </p>
                 ) : null}
               </Field>
               <Field>
@@ -221,6 +309,36 @@ export function StockTransferForm({
                 />
                 {errors.quantity?.message ? (
                   <p className="text-sm text-destructive">{errors.quantity.message}</p>
+                ) : null}
+                {selectedProductId && selectedFromLocationId ? (
+                  <p className="text-xs text-muted-foreground">
+                    On hand:{' '}
+                    {formatBaseQuantityWithBestUnits(sourceOnHandBase, selectedProductConversions)}{' '}
+                    | Committed:{' '}
+                    {formatBaseQuantityWithBestUnits(
+                      committedTransferBase,
+                      selectedProductConversions,
+                    )}{' '}
+                    | Available:{' '}
+                    {formatBaseQuantityWithBestUnits(
+                      availableToTransferBase,
+                      selectedProductConversions,
+                    )}
+                  </p>
+                ) : null}
+                {selectedProductId && selectedFromLocationId ? (
+                  <p className="text-xs text-muted-foreground">
+                    Max transferable now:{' '}
+                    {formatBaseQuantityWithBestUnits(
+                      availableToTransferBase,
+                      selectedProductConversions,
+                    )}
+                  </p>
+                ) : null}
+                {exceedsAvailableTransfer ? (
+                  <p className="text-sm text-destructive">
+                    Requested quantity exceeds available source stock.
+                  </p>
                 ) : null}
               </Field>
               <Field>
@@ -263,7 +381,7 @@ export function StockTransferForm({
                 ) : null}
               </Field>
               <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting || exceedsAvailableTransfer}>
                   {isSubmitting ? <Spinner /> : null}
                   {isSubmitting ? 'Creating...' : submitButtonText}
                 </Button>

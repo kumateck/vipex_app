@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
-import { formatDateTime } from '@/lib/date';
+import { formatDateTime } from '@/lib/dates';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   type ParcelSearchRow,

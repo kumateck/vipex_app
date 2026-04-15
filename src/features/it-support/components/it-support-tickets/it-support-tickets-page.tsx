@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { MoreHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -333,7 +333,14 @@ export function ItSupportTicketsPage() {
                           <div className="space-y-1">
                             <p className="font-medium">{ticket.subject}</p>
                             {ticket.description ? (
-                              <p className="text-xs text-muted-foreground line-clamp-2">
+                              <p
+                                className="text-xs text-muted-foreground whitespace-pre-wrap break-words overflow-hidden"
+                                style={{
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                }}
+                              >
                                 {ticket.description}
                               </p>
                             ) : null}
@@ -377,7 +384,7 @@ export function ItSupportTicketsPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : '-'}
+                          {ticket.createdAt ? formatDateTimeShared(ticket.createdAt) : '-'}
                         </TableCell>
                         <TableCell>
                           <div className="flex justify-end">

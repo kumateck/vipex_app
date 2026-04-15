@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link, useParams } from 'react-router-dom';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,11 +11,32 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useGetStockLotTraceabilityQuery } from '@/features/inventory/api';
+import { useAuthStore } from '@/stores/auth-store';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
+import { useMemo } from 'react';
 
 export function StockLotTraceabilityPage() {
   const { id = '' } = useParams();
+  const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
   const queryArg = useMemo(() => id, [id]);
   const { data, isLoading } = useGetStockLotTraceabilityQuery(queryArg, { skip: !id });
+  const { data: products = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
+  const { data: locations = [] } = useListInventoryLocationOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
+  const productNameById = useMemo(
+    () => new Map(products.map((product) => [product.id, product.name] as const)),
+    [products],
+  );
+  const locationNameById = useMemo(
+    () => new Map(locations.map((location) => [location.id, location.name] as const)),
+    [locations],
+  );
 
   return (
     <ScrollableWrapper>
@@ -42,10 +63,12 @@ export function StockLotTraceabilityPage() {
                     <strong>Batch:</strong> {data.lot.batchNumber}
                   </p>
                   <p>
-                    <strong>Product:</strong> {data.lot.productId}
+                    <strong>Product:</strong>{' '}
+                    {productNameById.get(data.lot.productId) ?? data.lot.productId}
                   </p>
                   <p>
-                    <strong>Location:</strong> {data.lot.locationId}
+                    <strong>Location:</strong>{' '}
+                    {locationNameById.get(data.lot.locationId) ?? data.lot.locationId}
                   </p>
                 </div>
 
@@ -68,7 +91,7 @@ export function StockLotTraceabilityPage() {
                           <TableCell>{row.supplierName ?? row.supplierId ?? 'N/A'}</TableCell>
                           <TableCell>{row.receivedQuantity}</TableCell>
                           <TableCell>
-                            {row.receivedAt ? new Date(row.receivedAt).toLocaleString() : 'N/A'}
+                            {row.receivedAt ? formatDateTimeShared(row.receivedAt) : 'N/A'}
                           </TableCell>
                         </TableRow>
                       ))

@@ -1,5 +1,5 @@
 import { ParcelReconciliationActionType, ParcelReconciliationCaseType } from '@/db/schemas/enums';
-import { formatDateTime } from '@/lib/date';
+import { formatDateTime } from '@/lib/dates';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { ACTION_OPTIONS } from './constants';
 

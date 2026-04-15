@@ -16,6 +16,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/auth-store';
+import { StockMovementType } from '@/db/schemas/enums';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
 import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { UNIT_OF_MEASURE_OPTIONS } from '@/features/inventory/products/components/inventory-product-columns';
@@ -60,7 +61,7 @@ export function StockMovementForm({
     defaultValues: {
       productId: '',
       locationId: '',
-      movementType: 0,
+      movementType: StockMovementType.ISSUE,
       quantityUnitOfMeasure: 0,
       quantity: '',
       referenceId: '',
@@ -73,6 +74,11 @@ export function StockMovementForm({
   const selectedProduct = useMemo(
     () => products.find((product) => product.id === selectedProductId),
     [products, selectedProductId],
+  );
+  const movementTypeOptions = useMemo(
+    () =>
+      STOCK_MOVEMENT_TYPE_OPTIONS.filter((option) => option.value !== StockMovementType.RECEIPT),
+    [],
   );
   const unitOptions = useMemo(() => {
     if (!selectedProduct) return UNIT_OF_MEASURE_OPTIONS;
@@ -194,7 +200,7 @@ export function StockMovementForm({
                         <SelectValue placeholder="Select movement type" />
                       </SelectTrigger>
                       <SelectContent>
-                        {STOCK_MOVEMENT_TYPE_OPTIONS.map((option) => (
+                        {movementTypeOptions.map((option) => (
                           <SelectItem key={option.value} value={String(option.value)}>
                             {option.label}
                           </SelectItem>
@@ -206,6 +212,9 @@ export function StockMovementForm({
                 {errors.movementType?.message ? (
                   <p className="text-sm text-destructive">{errors.movementType.message}</p>
                 ) : null}
+                <p className="text-xs text-muted-foreground">
+                  Receipts are created from Stock Lots to keep inbound stock consistent.
+                </p>
               </Field>
               <Field>
                 <FieldLabel htmlFor="quantity">Quantity</FieldLabel>

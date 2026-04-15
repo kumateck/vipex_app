@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -18,6 +18,7 @@ import {
   useListFleetTripsQuery,
   useUpdateFleetTripLoadMatchStatusMutation,
 } from '../../api/fleet-transport.api';
+import { useMemo, useState } from 'react';
 
 function loadStatusLabel(value: number) {
   if (value === 0) return 'Assigned';
@@ -202,7 +203,7 @@ export function FleetDispatchLoadMatchingPage() {
                 <p className="font-medium">Parcel {match.trackingCode ?? match.parcelId}</p>
                 <p className="text-muted-foreground">
                   Status: {loadStatusLabel(match.status)} | Matched at{' '}
-                  {new Date(match.matchedAt).toLocaleString()}
+                  {formatDateTimeShared(match.matchedAt)}
                 </p>
                 <p className="text-muted-foreground">
                   Booking: {match.bookingCode ?? '-'} | Note: {match.note ?? '-'}

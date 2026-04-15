@@ -142,7 +142,19 @@ export async function sendMail(input: SendMailInput) {
     replyTo: input.replyTo,
   });
 
-  devLogger.info('📬 Email sent:', info.messageId);
+  devLogger.info('📬 Email sent:', {
+    messageId: info.messageId,
+    accepted: info.accepted,
+    rejected: info.rejected,
+    response: info.response,
+  });
+  // Explicit stdout log for environments where pino info logs are filtered.
+  console.log('[MAIL_SUCCESS]', {
+    messageId: info.messageId,
+    accepted: info.accepted,
+    rejected: info.rejected,
+    response: info.response,
+  });
 
   if ((env.SMTP_HOST as string | undefined)?.includes('ethereal.email')) {
     const url = nodemailer.getTestMessageUrl(info);

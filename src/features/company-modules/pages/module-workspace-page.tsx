@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { useGetModuleWorkspaceOverviewQuery } from '../api/module-workspace.api';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 
@@ -54,7 +54,7 @@ export function ModuleWorkspacePage({
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Overview refreshed at {new Date(data!.snapshotAt).toLocaleString()}.
+                Overview refreshed at {formatDateTimeShared(data!.snapshotAt)}.
               </p>
             )}
             <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">

@@ -6,13 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select-searchable';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Spinner } from '@/components/ui';
 import { normalizeOptionalFields } from '@/lib/optional-fields';
 import { useAuthStore } from '@/stores/auth-store';
@@ -188,26 +182,18 @@ export function InventoryLocationForm({
                     control={control}
                     name="branchId"
                     render={({ field }) => (
-                      <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                        <SelectTrigger
-                          id="branchId"
-                          aria-invalid={!!errors.branchId}
-                          disabled={isLoadingBranches}
-                        >
-                          <SelectValue
-                            placeholder={
-                              isLoadingBranches ? 'Loading branches...' : 'Select branch'
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(branchesData ?? []).map((branch) => (
-                            <SelectItem key={branch.id} value={branch.id}>
-                              {branch.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        options={(branchesData ?? []).map((branch) => ({
+                          value: branch.id,
+                          label: branch.name,
+                          searchText: `${branch.name} ${branch.code ?? ''}`.trim(),
+                        }))}
+                        value={field.value ?? ''}
+                        onValueChange={field.onChange}
+                        placeholder={isLoadingBranches ? 'Loading branches...' : 'Select branch'}
+                        disabled={isLoadingBranches}
+                        isLoading={isLoadingBranches}
+                      />
                     )}
                   />
                   {errors.branchId?.message ? (
@@ -221,21 +207,15 @@ export function InventoryLocationForm({
                   control={control}
                   name="locationType"
                   render={({ field }) => (
-                    <Select
-                      value={String(field.value ?? 0)}
+                    <SearchableSelect
+                      options={INVENTORY_LOCATION_TYPE_OPTIONS.map((option) => ({
+                        value: String(option.value),
+                        label: option.label,
+                      }))}
+                      value={String(field.value ?? InventoryLocationType.MAIN_STORE)}
                       onValueChange={(value) => field.onChange(Number(value))}
-                    >
-                      <SelectTrigger id="locationType" aria-invalid={!!errors.locationType}>
-                        <SelectValue placeholder="Select location type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {INVENTORY_LOCATION_TYPE_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={String(option.value)}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Select location type"
+                    />
                   )}
                 />
                 {errors.locationType?.message ? (
@@ -248,31 +228,26 @@ export function InventoryLocationForm({
                   control={control}
                   name="parentLocationId"
                   render={({ field }) => (
-                    <Select
+                    <SearchableSelect
+                      options={[
+                        { value: NO_PARENT_VALUE, label: 'No parent' },
+                        ...((locationOptionsData ?? [])
+                          .filter((location) => location.id !== initialData?.id)
+                          .map((location) => ({
+                            value: location.id,
+                            label: location.name,
+                          })) ?? []),
+                      ]}
                       value={field.value ?? ''}
                       onValueChange={field.onChange}
                       disabled={isLoadingLocationOptions}
-                    >
-                      <SelectTrigger id="parentLocationId" aria-invalid={!!errors.parentLocationId}>
-                        <SelectValue
-                          placeholder={
-                            isLoadingLocationOptions
-                              ? 'Loading parent locations...'
-                              : 'Select parent location'
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NO_PARENT_VALUE}>No parent</SelectItem>
-                        {(locationOptionsData ?? [])
-                          .filter((location) => location.id !== initialData?.id)
-                          .map((location) => (
-                            <SelectItem key={location.id} value={location.id}>
-                              {location.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                      isLoading={isLoadingLocationOptions}
+                      placeholder={
+                        isLoadingLocationOptions
+                          ? 'Loading parent locations...'
+                          : 'Select parent location'
+                      }
+                    />
                   )}
                 />
                 {errors.parentLocationId?.message ? (

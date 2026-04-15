@@ -1165,44 +1165,69 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadStockLevels,
           },
           {
-            title: 'Stock Movements',
-            url: '/inventory/stock-movements',
-            permissionKey: PermissionKeys.CanReadStockMovements,
+            title: 'Operate Daily Inventory',
+            children: [
+              {
+                title: 'Stock Movements',
+                url: '/inventory/stock-movements',
+                permissionKey: PermissionKeys.CanReadStockMovements,
+              },
+              {
+                title: 'Stock Adjustments',
+                url: '/inventory/stock-adjustments',
+                permissionKey: PermissionKeys.CanReadStockAdjustments,
+              },
+              {
+                title: 'Consumption',
+                url: '/inventory/stock-consumption',
+                permissionKey: PermissionKeys.CanReadStockMovements,
+              },
+              {
+                title: 'Stock Count Sessions',
+                url: '/inventory/stock-count-sessions',
+                permissionKey: PermissionKeys.CanReadStockLevels,
+              },
+              {
+                title: 'Transfer Shipments',
+                url: '/inventory/stock-transfers',
+                permissionKey: PermissionKeys.CanReadStockTransfers,
+              },
+              {
+                title: 'Inventory Monitoring',
+                url: '/inventory/monitoring',
+                permissionKey: PermissionKeys.CanReadInventoryOverview,
+              },
+              {
+                title: 'Reorder Suggestions',
+                url: '/inventory/reorder-suggestions',
+                permissionKey: PermissionKeys.CanReadInventoryOverview,
+              },
+            ],
           },
           {
-            title: 'Stock Adjustments',
-            url: '/inventory/stock-adjustments',
-            permissionKey: PermissionKeys.CanReadStockAdjustments,
-          },
-          {
-            title: 'Stock Transfers',
-            url: '/inventory/stock-transfers',
-            permissionKey: PermissionKeys.CanReadStockTransfers,
-          },
-          {
-            title: 'Stock Requests',
-            url: '/inventory/stock-requests',
-            permissionKey: PermissionKeys.CanReadStockRequests,
-          },
-          {
-            title: 'Stock Count Sessions',
-            url: '/inventory/stock-count-sessions',
-            permissionKey: PermissionKeys.CanReadStockLevels,
+            title: 'Stock Requests (Primary)',
+            children: [
+              {
+                title: 'My Requests',
+                url: '/inventory/stock-requests',
+                permissionKey: PermissionKeys.CanReadStockRequests,
+              },
+              {
+                title: 'Issue Queue',
+                url: '/inventory/stock-requests/issue',
+                permissionKey: PermissionKeys.CanReadStockRequests,
+              },
+              {
+                title: 'Acknowledge Queue',
+                url: '/inventory/stock-requests/receive',
+                permissionKey: PermissionKeys.CanReadStockRequests,
+              },
+            ],
           },
           {
             title: 'Stock Reservations',
             url: '/inventory/stock-reservations',
             permissionKey: PermissionKeys.CanReadStockRequests,
-          },
-          {
-            title: 'Inventory Monitoring',
-            url: '/inventory/monitoring',
-            permissionKey: PermissionKeys.CanReadInventoryOverview,
-          },
-          {
-            title: 'Reorder Suggestions',
-            url: '/inventory/reorder-suggestions',
-            permissionKey: PermissionKeys.CanReadInventoryOverview,
           },
           {
             title: 'Reservation Exceptions',

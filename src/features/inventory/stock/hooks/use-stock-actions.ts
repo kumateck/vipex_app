@@ -27,7 +27,6 @@ import type {
   CreateStockTransferFormValues,
   UpdateStockTransferFormValues,
   StockRequestLineAcknowledgeFormValues,
-  AcknowledgeStockTransferReceiptFormValues,
 } from '../schemas/stock-forms.schema';
 import { getInventoryStockErrorMessage } from '../utils/inventory-stock-error';
 
@@ -104,7 +103,12 @@ export function useAcknowledgeStockTransferReceiptAction(transferId: string) {
   const [acknowledgeTransferReceipt, { isLoading: isSubmitting }] =
     useAcknowledgeStockTransferReceiptMutation();
 
-  const onSubmit = async (values: AcknowledgeStockTransferReceiptFormValues) => {
+  const onSubmit = async (values: {
+    acceptedQuantity: string;
+    damagedQuantity?: string;
+    missingQuantity?: string;
+    notes?: string;
+  }) => {
     try {
       await acknowledgeTransferReceipt({
         transferId,
@@ -203,7 +207,7 @@ export function useFulfillStockRequestLineAction(requestId: string) {
         },
       }).unwrap();
       toast.success('Stock request line fulfilled successfully');
-      navigate(`/inventory/stock-requests/view/${requestId}`, { replace: true });
+      navigate(`/inventory/stock-requests/issue/${requestId}`, { replace: true });
     } catch (error) {
       toast.error(getInventoryStockErrorMessage(error));
     }

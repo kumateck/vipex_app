@@ -39,6 +39,8 @@ export function inferReadPermissionByPath(pathname?: string): PermissionKey | un
   if (pathname.startsWith('/inventory/stock-lots')) return PermissionKeys.CanListStockLevels;
   if (pathname.startsWith('/inventory/stock-movements'))
     return PermissionKeys.CanListStockMovements;
+  if (pathname.startsWith('/inventory/stock-consumption'))
+    return PermissionKeys.CanListStockMovements;
   if (pathname.startsWith('/inventory/stock-adjustments'))
     return PermissionKeys.CanListStockAdjustments;
   if (pathname.startsWith('/inventory/stock-transfers'))
@@ -132,6 +134,7 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
   if (pathname === '/inventory/products/new') return PermissionKeys.CanCreateProduct;
   if (pathname.startsWith('/inventory/products/edit/')) return PermissionKeys.CanUpdateProduct;
   if (pathname === '/inventory/stock-movements/new') return PermissionKeys.CanCreateStockMovement;
+  if (pathname === '/inventory/stock-consumption') return PermissionKeys.CanReadStockMovements;
   if (pathname.startsWith('/inventory/stock-movements/edit/'))
     return PermissionKeys.CanCreateStockMovement;
   if (pathname === '/inventory/stock-lots/new') return PermissionKeys.CanCreateStockMovement;
@@ -149,6 +152,10 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
     return PermissionKeys.CanUpdateStockTransfer;
   if (pathname.startsWith('/inventory/stock-transfers/receive/'))
     return PermissionKeys.CanUpdateStockTransfer;
+  if (pathname === '/inventory/stock-requests/issue') return PermissionKeys.CanReadStockRequests;
+  if (pathname === '/inventory/stock-requests/receive') return PermissionKeys.CanReadStockRequests;
+  if (pathname.startsWith('/inventory/stock-requests/receive/'))
+    return PermissionKeys.CanGetStockRequest;
   if (pathname === '/inventory/stock-requests/new') return PermissionKeys.CanCreateStockRequest;
   if (pathname.startsWith('/inventory/stock-requests/view/'))
     return PermissionKeys.CanGetStockRequest;

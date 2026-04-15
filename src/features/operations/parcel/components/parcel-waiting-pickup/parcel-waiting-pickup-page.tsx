@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { EllipsisVertical } from 'lucide-react';
@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { formatDateTime as formatDateTimeStandard } from '@/lib/date';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { useGetBranchQuery } from '@/features/branches/api/branches.api';
 import type { PaginationMeta } from '@/server/types/pagination.types';
@@ -42,7 +41,7 @@ function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return formatDateTimeStandard(date);
+  return sharedFormatDateTime(value);
 }
 
 function formatPhones(primary?: string | null, secondary?: string | null) {

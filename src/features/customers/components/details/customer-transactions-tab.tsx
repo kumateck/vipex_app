@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { CustomerTransaction } from '@/features/customers/api';
@@ -59,7 +59,7 @@ export function CustomerTransactionsTab({
               </div>
               <p className="text-muted-foreground">Booking: {row.bookingCode}</p>
               <p className="text-muted-foreground">Charge: {formatMoney(row.chargePsw)}</p>
-              <p className="text-muted-foreground">{new Date(row.createdAt).toLocaleString()}</p>
+              <p className="text-muted-foreground">{formatDateTimeShared(row.createdAt)}</p>
               <div className="mt-2">
                 <Button
                   type="button"

@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import type { CustomerCreditOpenItem, CustomerPayment } from '@/features/customers/api';
@@ -77,7 +77,7 @@ export function CustomerPaymentsTab({
                   Charged: {formatMoney(item.chargeAmountPsw)} • Allocated:{' '}
                   {formatMoney(item.allocatedAmountPsw)}
                 </p>
-                <p className="text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</p>
+                <p className="text-muted-foreground">{formatDateTimeShared(item.createdAt)}</p>
               </div>
             ))
           )}
@@ -97,7 +97,7 @@ export function CustomerPaymentsTab({
                 {row.trackingCode ? `Tracking: ${row.trackingCode}` : 'No tracking'}{' '}
                 {row.method != null ? `• ${paymentMethodLabel(row.method)}` : ''}
               </p>
-              <p className="text-muted-foreground">{new Date(row.createdAt).toLocaleString()}</p>
+              <p className="text-muted-foreground">{formatDateTimeShared(row.createdAt)}</p>
             </div>
           ))}
 

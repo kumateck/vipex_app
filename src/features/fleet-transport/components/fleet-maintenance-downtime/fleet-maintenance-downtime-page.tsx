@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import {
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
-  return new Date(value).toLocaleString();
+  return sharedFormatDateTime(value);
 }
 
 function durationMinutes(startedAt: string, endedAt: string | null) {

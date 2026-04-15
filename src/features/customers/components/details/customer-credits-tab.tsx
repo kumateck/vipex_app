@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import type { CustomerCreditSummary, CustomerCreditTransaction } from '@/features/customers/api';
 import { formatMoney } from './customer-details.utils';
 
@@ -40,7 +40,7 @@ export function CustomerCreditsTab({ creditSummary, creditTransactions }: Custom
                   {formatMoney(Math.abs(row.signedAmountPsw))}
                 </p>
               </div>
-              <p className="text-muted-foreground">{new Date(row.createdAt).toLocaleString()}</p>
+              <p className="text-muted-foreground">{formatDateTimeShared(row.createdAt)}</p>
               {row.notes ? <p className="text-muted-foreground">{row.notes}</p> : null}
             </div>
           ))}

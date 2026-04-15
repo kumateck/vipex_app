@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -152,7 +152,7 @@ export function NotificationDispatchesListPage() {
                       <TableCell className="max-w-[240px] truncate">
                         {row.errorMessage ?? '-'}
                       </TableCell>
-                      <TableCell>{new Date(row.createdAt).toLocaleString()}</TableCell>
+                      <TableCell>{formatDateTimeShared(row.createdAt)}</TableCell>
                       <TableCell className="text-right">
                         {row.status === 'failed' ? (
                           <Button size="sm" onClick={() => onRetry(row.id)} disabled={isRetrying}>

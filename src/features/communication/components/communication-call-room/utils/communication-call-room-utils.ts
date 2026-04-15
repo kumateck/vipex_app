@@ -1,4 +1,4 @@
-import { Track } from 'livekit-client';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 
 export const AUDIO_INPUT_STORAGE_KEY = 'communication.audioInputDeviceId';
 export const VIDEO_INPUT_STORAGE_KEY = 'communication.videoInputDeviceId';
@@ -26,7 +26,7 @@ export function formatDateTime(value?: string | null) {
   if (!value) return '-';
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return '-';
-  return parsed.toLocaleString();
+  return sharedFormatDateTime(value);
 }
 
 export function getParticipantLabel(params: {

@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
@@ -11,7 +11,7 @@ function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return sharedFormatDateTime(value);
 }
 
 function formatCurrency(amountPsw: number) {
