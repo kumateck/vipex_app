@@ -24,6 +24,7 @@ import {
   type StockRequestLineReceiptAcknowledgeFormValues,
 } from '../../schemas/stock-forms.schema';
 import { StockRequestAcknowledgeVarianceField } from './stock-request-acknowledge-variance-field';
+import { StockRequestAcknowledgeSummary } from './stock-request-acknowledge-summary';
 
 interface StockRequestAcknowledgeFormProps {
   requestId: string;
@@ -227,28 +228,14 @@ export function StockRequestAcknowledgeForm({
               </div>
             ) : null}
 
-            <div className="rounded-md border p-3 text-sm space-y-1">
-              <p>
-                <span className="font-medium">Received:</span>{' '}
-                {formatBaseQuantityWithBestUnits(String(receivedBase), conversionRows)}
-              </p>
-              <p>
-                <span className="font-medium">Damaged:</span>{' '}
-                {formatBaseQuantityWithBestUnits(String(damagedBase), conversionRows)}
-              </p>
-              <p>
-                <span className="font-medium">Missing:</span>{' '}
-                {formatBaseQuantityWithBestUnits(String(missingBase), conversionRows)}
-              </p>
-              <p>
-                <span className="font-medium">Acknowledged (auto):</span>{' '}
-                {formatBaseQuantityWithBestUnits(String(acknowledgedBase), conversionRows)}
-              </p>
-              <p>
-                <span className="font-medium">Pending after this acknowledgement:</span>{' '}
-                {formatBaseQuantityWithBestUnits(String(pendingAfterBase), conversionRows)}
-              </p>
-            </div>
+            <StockRequestAcknowledgeSummary
+              receivedBase={receivedBase}
+              damagedBase={damagedBase}
+              missingBase={missingBase}
+              acknowledgedBase={acknowledgedBase}
+              pendingAfterBase={pendingAfterBase}
+              conversionRows={conversionRows}
+            />
 
             <div className="grid gap-3 md:grid-cols-2">
               <StockRequestAcknowledgeVarianceField

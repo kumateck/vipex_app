@@ -17,7 +17,6 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { UNIT_OF_MEASURE_OPTIONS } from '@/features/inventory/products/components/inventory-product-columns';
-import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
 import { convertToBaseUnits } from '@/shared/inventory/unit-conversion';
 import {
   acknowledgeStockTransferReceiptSchema,
@@ -25,6 +24,7 @@ import {
 } from '../../schemas/stock-forms.schema';
 import type { StockTransfer } from '../../types/inventory-stock.types';
 import { StockTransferReceiveVarianceField } from './stock-transfer-receive-variance-field';
+import { StockTransferReceiveSummary } from './stock-transfer-receive-summary';
 
 interface StockTransferReceiveFormProps {
   transfer: StockTransfer;
@@ -223,28 +223,14 @@ export function StockTransferReceiveForm({
               </div>
             ) : null}
 
-            <div className="rounded-md border p-3 text-sm space-y-1">
-              <p>
-                <span className="font-medium">Received:</span>{' '}
-                {formatBaseQuantityWithBestUnits(String(receivedBase), conversionRows)}
-              </p>
-              <p>
-                <span className="font-medium">Damaged:</span>{' '}
-                {formatBaseQuantityWithBestUnits(String(damagedBase), conversionRows)}
-              </p>
-              <p>
-                <span className="font-medium">Missing:</span>{' '}
-                {formatBaseQuantityWithBestUnits(String(missingBase), conversionRows)}
-              </p>
-              <p>
-                <span className="font-medium">Accepted (auto):</span>{' '}
-                {formatBaseQuantityWithBestUnits(String(acceptedBase), conversionRows)}
-              </p>
-              <p>
-                <span className="font-medium">Pending after this acknowledgement:</span>{' '}
-                {formatBaseQuantityWithBestUnits(String(remainingAfterAckBase), conversionRows)}
-              </p>
-            </div>
+            <StockTransferReceiveSummary
+              receivedBase={receivedBase}
+              damagedBase={damagedBase}
+              missingBase={missingBase}
+              acceptedBase={acceptedBase}
+              remainingAfterAckBase={remainingAfterAckBase}
+              conversionRows={conversionRows}
+            />
 
             <div className="grid gap-3 md:grid-cols-2">
               <StockTransferReceiveVarianceField

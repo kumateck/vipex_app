@@ -32,6 +32,7 @@ import {
   type FulfillStockRequestLineFormValues,
 } from '../../schemas/stock-forms.schema';
 import { useAuthStore } from '@/stores/auth-store';
+import { StockRequestAllocationCandidatesTable } from './stock-request-allocation-candidates-table';
 
 export function StockRequestFulfillPage() {
   const navigate = useNavigate();
@@ -196,33 +197,10 @@ export function StockRequestFulfillPage() {
               <CardTitle>Fulfillment details</CardTitle>
             </CardHeader>
             <CardContent>
-              {allocation?.candidates?.length ? (
-                <div className="mb-4">
-                  <p className="text-sm font-medium mb-2">
-                    Suggested source order (auto-allocation)
-                  </p>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm border-collapse">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-2 pr-4">Location</th>
-                          <th className="text-left py-2 pr-4">Available (base)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allocation.candidates.map((candidate) => (
-                          <tr key={candidate.locationId} className="border-b">
-                            <td className="py-2 pr-4">
-                              {locationNameById.get(candidate.locationId) ?? candidate.locationId}
-                            </td>
-                            <td className="py-2 pr-4">{candidate.availableQuantity}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ) : null}
+              <StockRequestAllocationCandidatesTable
+                candidates={allocation?.candidates ?? []}
+                locationNameById={locationNameById}
+              />
               <form onSubmit={handleSubmit(submit)} className="space-y-4">
                 <FieldGroup>
                   <Field>
