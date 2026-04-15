@@ -186,7 +186,7 @@ export function InventoryLocationForm({
                         options={(branchesData ?? []).map((branch) => ({
                           value: branch.id,
                           label: branch.name,
-                          searchText: `${branch.name} ${branch.code ?? ''}`.trim(),
+                          searchText: branch.name,
                         }))}
                         value={field.value ?? ''}
                         onValueChange={field.onChange}

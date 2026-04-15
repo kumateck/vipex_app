@@ -1,4 +1,5 @@
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
+import { Track } from 'livekit-client';
 
 export const AUDIO_INPUT_STORAGE_KEY = 'communication.audioInputDeviceId';
 export const VIDEO_INPUT_STORAGE_KEY = 'communication.videoInputDeviceId';

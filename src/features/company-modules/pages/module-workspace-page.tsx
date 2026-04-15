@@ -1,4 +1,5 @@
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGetModuleWorkspaceOverviewQuery } from '../api/module-workspace.api';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 

@@ -1,4 +1,5 @@
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGetEntityAuditHistoryQuery } from '../api';
 
 export function EntityAuditHistoryCard(props: {

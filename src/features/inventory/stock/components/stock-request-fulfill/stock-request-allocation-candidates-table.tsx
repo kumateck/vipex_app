@@ -1,7 +1,4 @@
-interface StockRequestAllocationCandidate {
-  locationId: string;
-  availableQuantity: string;
-}
+import type { StockRequestAllocationCandidate } from '@/features/inventory/stock/types/inventory-stock.types';
 
 interface StockRequestAllocationCandidatesTableProps {
   candidates: StockRequestAllocationCandidate[];

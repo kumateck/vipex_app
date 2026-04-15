@@ -1,4 +1,5 @@
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { CustomerCreditSummary, CustomerCreditTransaction } from '@/features/customers/api';
 import { formatMoney } from './customer-details.utils';
 

@@ -1,4 +1,5 @@
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
+import { Link, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';

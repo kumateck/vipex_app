@@ -1,4 +1,5 @@
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
+import { Bell } from 'lucide-react';
 import type { CommunicationMessage } from '../../../api/communication.api';
 import { asRecord, firstString } from './communication-chat-thread-detail-media';
 

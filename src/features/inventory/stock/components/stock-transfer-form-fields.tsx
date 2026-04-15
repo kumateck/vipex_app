@@ -39,7 +39,7 @@ interface StockTransferFormFieldsProps {
   selectedProductId: string;
   selectedProductUnitOfMeasure: number;
   selectedProductConversions: { unitOfMeasure: number; factorToBase: number }[];
-  unitOptions: UnitOption[];
+  unitOptions: readonly UnitOption[];
   isLoadingProducts: boolean;
   isLoadingLocations: boolean;
   sourceOnHandBase: number;
