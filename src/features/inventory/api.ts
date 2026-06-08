@@ -502,10 +502,19 @@ export const inventoryApi = api.injectEndpoints({
       ServerListResponse<StockRequest>,
       StockRequestListQuery | void
     >({
-      query: (query) => ({
-        url: '/inventory/stock-requests',
-        params: buildServerPaginationParams(query),
-      }),
+      query: (query) => {
+        const normalizedQuery = query
+          ? {
+              ...query,
+              pageSize: Math.min(Math.max(query.pageSize ?? 20, 1), 100),
+            }
+          : undefined;
+
+        return {
+          url: '/inventory/stock-requests',
+          params: buildServerPaginationParams(normalizedQuery),
+        };
+      },
       providesTags: (result) => provideEntityListTags('Inventory', result),
     }),
     getStockRequest: builder.query<StockRequest, string>({

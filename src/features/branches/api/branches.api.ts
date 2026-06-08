@@ -22,6 +22,11 @@ export interface BranchOption {
   type: BranchType;
 }
 
+export type BranchOperationsSettings = {
+  id: string;
+  usePickupQueue: boolean;
+};
+
 export const branchesApi = api.injectEndpoints({
   endpoints: (builder) => ({
     listBranches: builder.query<ServerListResponse<Branch>, BranchListQuery | void>({
@@ -34,6 +39,11 @@ export const branchesApi = api.injectEndpoints({
 
     getBranch: builder.query<Branch, string>({
       query: (id) => ({ url: `/branches/${id}` }),
+      providesTags: (_result, _err, id) => [{ type: 'Branches', id }],
+    }),
+
+    getBranchOperationsSettings: builder.query<BranchOperationsSettings, string>({
+      query: (id) => ({ url: `/branches/${id}/operations-settings` }),
       providesTags: (_result, _err, id) => [{ type: 'Branches', id }],
     }),
 
@@ -93,6 +103,7 @@ export const branchesApi = api.injectEndpoints({
 export const {
   useListBranchesQuery,
   useGetBranchQuery,
+  useGetBranchOperationsSettingsQuery,
   useListBranchOptionsQuery,
   useUpdateBranchMutation,
   useCreateBranchMutation,

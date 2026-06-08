@@ -14,10 +14,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { BranchType } from '@/db/schemas/enums';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { CustomerLookupSection } from './parcel-create/customer-lookup-section';
-import { ParcelCard } from './parcel-create/parcel-card';
-import { ParcelReceipts } from './parcel-create/parcel-receipts';
-import { useParcelCreateFormWorkflow } from './parcel-create/use-parcel-create-form-workflow';
+import {
+  CustomerLookupSection,
+  ParcelCard,
+  ParcelCreateSenderPaymentDialog,
+  ParcelReceipts,
+  useParcelCreateFormWorkflow,
+} from './parcel-create';
 
 export function ParcelCreateForm() {
   const {
@@ -30,6 +33,8 @@ export function ParcelCreateForm() {
     latestReceipt,
     shouldPrintOnSubmit,
     setShouldPrintOnSubmit,
+    canPrintAfterSubmit,
+    senderPayment,
     destinationBranchOptions,
     userBranchType,
     companyId,
@@ -56,6 +61,7 @@ export function ParcelCreateForm() {
                 <Checkbox
                   id="print-parcel-receipt-on-submit"
                   checked={shouldPrintOnSubmit}
+                  disabled={!canPrintAfterSubmit}
                   onCheckedChange={(checked) => setShouldPrintOnSubmit(Boolean(checked))}
                 />
                 <Label
@@ -169,6 +175,14 @@ export function ParcelCreateForm() {
       </Form>
 
       <ParcelReceipts receipt={latestReceipt} autoPrint={shouldPrintOnSubmit} />
+      <ParcelCreateSenderPaymentDialog
+        parcels={senderPayment.pendingParcels}
+        paymentMethod={senderPayment.paymentMethod}
+        onPaymentMethodChange={senderPayment.setPaymentMethod}
+        isSubmitting={senderPayment.isSubmittingPayment}
+        onClose={senderPayment.closePaymentDialog}
+        onSubmit={senderPayment.handlePayAndPrint}
+      />
     </div>
   );
 }

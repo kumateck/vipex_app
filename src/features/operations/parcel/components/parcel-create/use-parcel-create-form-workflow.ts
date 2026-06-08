@@ -7,12 +7,15 @@ import { useAuthStore } from '@/stores/auth-store';
 import { BranchType, PaymentMethod, PaymentResponsibility } from '@/db/schemas/enums';
 import { useCreateBookingWithParcelsMutation } from '../../api/parcel.api';
 import type { ParcelBookingFormValues, ReceiptSummary } from './parcel-form.types';
+import { buildParcelCreateReceipt } from './build-parcel-create-receipt';
 import {
   createEmptyParcel,
   createInitialFormValues,
   isApiRejectionError,
   parseAmount,
 } from './parcel-create-form.utils';
+import { useParcelCreatePrintPreference } from './use-parcel-create-print-preference';
+import { useParcelCreateSenderPayment } from './use-parcel-create-sender-payment';
 import { sanitizeNumber, sanitizeString } from '@/lib/utils';
 
 export function useParcelCreateFormWorkflow() {
@@ -41,6 +44,19 @@ export function useParcelCreateFormWorkflow() {
   const form = useForm<ParcelBookingFormValues>({
     defaultValues: createInitialFormValues(),
     mode: 'onSubmit',
+  });
+
+  const senderPayment = useParcelCreateSenderPayment({
+    onPaidReceiptsReady: (receipt) => {
+      setLatestReceipt(receipt);
+      setShouldPrintOnSubmit(true);
+    },
+  });
+
+  const printPreference = useParcelCreatePrintPreference({
+    form,
+    shouldPrintOnSubmit,
+    setShouldPrintOnSubmit,
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -214,36 +230,20 @@ export function useParcelCreateFormWorkflow() {
         }),
       }).unwrap();
 
-      setLatestReceipt({
-        bookingId: response.bookingId,
-        parcels: response.parcels.map((parcel, index) => ({
-          bookingCode: parcel.bookingCode ?? response.bookingId,
-          trackingCode: parcel.trackingCode ?? '-',
-          parcelDetails: values.parcels[index]?.parcelDetails ?? '-',
-          senderName: values.sender.fullname,
-          senderTelephone: values.sender.telephone,
-          receiverName: values.parcels[index]?.receiver.fullname ?? '-',
-          receiverTelephone: values.parcels[index]?.receiver.telephone ?? '-',
-          destinationBranchName:
-            branchOptions.find((branch) => branch.id === values.parcels[index]?.destinationBranchId)
-              ?.name ?? '-',
-          destinationLocationName: values.parcels[index]?.destinationLocationId ?? '-',
-          totalChargeCedis: amounts[index]?.charge ?? 0,
-          senderPaidCedis:
-            values.parcels[index]?.paymentResponsibility === 'SENDER'
-              ? (amounts[index]?.charge ?? 0)
-              : values.parcels[index]?.paymentResponsibility === 'SPLIT'
-                ? (amounts[index]?.partial ?? 0)
-                : 0,
-          receiverToPayCedis:
-            values.parcels[index]?.paymentResponsibility === 'RECEIVER'
-              ? (amounts[index]?.charge ?? 0)
-              : values.parcels[index]?.paymentResponsibility === 'SPLIT'
-                ? Math.max((amounts[index]?.charge ?? 0) - (amounts[index]?.partial ?? 0), 0)
-                : 0,
-          issuedAt: new Date().toISOString(),
-        })),
+      const receipt = buildParcelCreateReceipt({
+        response,
+        values,
+        amounts,
+        branchOptions,
       });
+      const openedPaymentDialog =
+        shouldPrintOnSubmit && printPreference.canPrintAfterSubmit
+          ? await senderPayment.openPaymentDialog(receipt)
+          : false;
+
+      if (!openedPaymentDialog) {
+        setLatestReceipt(receipt);
+      }
 
       form.reset(createInitialFormValues());
       toast.success('Parcel transaction created successfully');
@@ -257,6 +257,7 @@ export function useParcelCreateFormWorkflow() {
     form.reset(createInitialFormValues());
     setLatestReceipt(null);
     setShouldPrintOnSubmit(false);
+    senderPayment.closePaymentDialog();
   };
 
   return {
@@ -269,6 +270,8 @@ export function useParcelCreateFormWorkflow() {
     latestReceipt,
     shouldPrintOnSubmit,
     setShouldPrintOnSubmit,
+    canPrintAfterSubmit: printPreference.canPrintAfterSubmit,
+    senderPayment,
     destinationBranchOptions,
     userBranchType,
     companyId,

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { useGetBranchQuery } from '@/features/branches/api/branches.api';
+import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { useAuthStore } from '@/stores/auth-store';
 import {
@@ -23,7 +23,7 @@ export function ParcelPickupQueuePage() {
   const navigate = useNavigate();
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
-  const { data: currentBranch } = useGetBranchQuery(branchId ?? '', {
+  const { data: currentBranch } = useGetBranchOperationsSettingsQuery(branchId ?? '', {
     skip: !branchId,
   });
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;

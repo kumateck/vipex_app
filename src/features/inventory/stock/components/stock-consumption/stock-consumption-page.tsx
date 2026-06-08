@@ -64,6 +64,27 @@ export function StockConsumptionPage() {
     () => products.find((item) => item.id === productId),
     [products, productId],
   );
+  const productNameById = useMemo(
+    () => new Map(products.map((product) => [product.id, product.name] as const)),
+    [products],
+  );
+  const locationNameById = useMemo(
+    () => new Map(consumptionLocations.map((location) => [location.id, location.name] as const)),
+    [consumptionLocations],
+  );
+  const productConversionsById = useMemo(
+    () =>
+      new Map(
+        products.map((product) => [
+          product.id,
+          (product.unitConversions ?? []).map((item) => ({
+            unitOfMeasure: item.unitOfMeasure,
+            factorToBase: Number(item.factorToBase),
+          })),
+        ]),
+      ),
+    [products],
+  );
 
   const unitOptions = useMemo(() => {
     if (!selectedProduct) return UNIT_OF_MEASURE_OPTIONS;
@@ -105,8 +126,14 @@ export function StockConsumptionPage() {
 
   const consumptionRows = useMemo(
     () =>
-      (movementsData?.data ?? []).filter((row) => row.referenceType === CONSUMPTION_REFERENCE_TYPE),
-    [movementsData],
+      (movementsData?.data ?? [])
+        .filter((row) => row.referenceType === CONSUMPTION_REFERENCE_TYPE)
+        .map((row) => ({
+          ...row,
+          productName: row.productName ?? productNameById.get(row.productId) ?? null,
+          locationName: row.locationName ?? locationNameById.get(row.locationId) ?? null,
+        })),
+    [locationNameById, movementsData?.data, productNameById],
   );
 
   const availableBase = Number(stockLevel?.quantity ?? 0);
@@ -118,6 +145,18 @@ export function StockConsumptionPage() {
       })),
     [selectedProduct?.unitConversions],
   );
+  const baseUnitLabel = useMemo(() => {
+    const baseUnit = selectedProduct?.unitOfMeasure;
+    const option = UNIT_OF_MEASURE_OPTIONS.find((item) => item.value === baseUnit);
+    return option?.label?.toLowerCase() ?? 'unit';
+  }, [selectedProduct?.unitOfMeasure]);
+  const availableQuantityText = useMemo(() => {
+    const pretty = formatBaseQuantityWithBestUnits(
+      String(availableBase),
+      selectedProductConversions,
+    );
+    return `${pretty} (${availableBase} ${baseUnitLabel})`;
+  }, [availableBase, baseUnitLabel, selectedProductConversions]);
 
   const handleSubmit = async () => {
     if (!selectedProduct || !locationId) {
@@ -243,10 +282,7 @@ export function StockConsumptionPage() {
               </Field>
             </FieldGroup>
 
-            <div className="text-sm text-muted-foreground">
-              Available:{' '}
-              {formatBaseQuantityWithBestUnits(String(availableBase), selectedProductConversions)}
-            </div>
+            <div className="text-sm text-muted-foreground">Available: {availableQuantityText}</div>
 
             <div className="flex justify-end">
               <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
@@ -255,8 +291,10 @@ export function StockConsumptionPage() {
             </div>
           </CardContent>
         </Card>
-
-        <StockConsumptionHistoryTable rows={consumptionRows} />
+        <StockConsumptionHistoryTable
+          rows={consumptionRows}
+          productConversionsById={productConversionsById}
+        />
       </div>
     </ScrollableWrapper>
   );

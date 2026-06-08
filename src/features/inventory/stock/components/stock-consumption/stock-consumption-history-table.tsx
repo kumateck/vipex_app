@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
+import type { UnitConversion } from '@/shared/inventory/unit-conversion';
 
 interface StockConsumptionHistoryRow {
   id: string;
@@ -15,9 +16,13 @@ interface StockConsumptionHistoryRow {
 
 interface StockConsumptionHistoryTableProps {
   rows: StockConsumptionHistoryRow[];
+  productConversionsById?: Map<string, UnitConversion[]>;
 }
 
-export function StockConsumptionHistoryTable({ rows }: StockConsumptionHistoryTableProps) {
+export function StockConsumptionHistoryTable({
+  rows,
+  productConversionsById,
+}: StockConsumptionHistoryTableProps) {
   return (
     <Card>
       <CardHeader>
@@ -41,7 +46,10 @@ export function StockConsumptionHistoryTable({ rows }: StockConsumptionHistoryTa
                   <td className="py-2 pr-4">{row.productName || row.productId}</td>
                   <td className="py-2 pr-4">{row.locationName || row.locationId}</td>
                   <td className="py-2 pr-4">
-                    {formatBaseQuantityWithBestUnits(row.quantity, undefined)}
+                    {formatBaseQuantityWithBestUnits(
+                      row.quantity,
+                      productConversionsById?.get(row.productId),
+                    )}
                   </td>
                   <td className="py-2 pr-4">
                     {row.createdAt ? formatDateTimeShared(row.createdAt) : '-'}

@@ -250,7 +250,7 @@ export function useAcknowledgeStockRequestLineAction(requestId: string) {
         },
       }).unwrap();
       toast.success('Request line acknowledged successfully');
-      navigate(`/inventory/stock-requests/view/${requestId}`, { replace: true });
+      navigate(`/inventory/stock-requests/receive/${requestId}`, { replace: true });
     } catch (error) {
       toast.error(getInventoryStockErrorMessage(error));
     }

@@ -68,7 +68,6 @@ function filterSidebarTreeByPermissions(
     (node.children?.length ?? 0) > 0 || (node.items?.length ?? 0) > 0,
   );
 
-  if (isContainerNode && !node.url && node.permissionKey && !isDirectlyVisible) return null;
   if (!isDirectlyVisible && !hasVisibleDescendant) return null;
   if (isContainerNode && !hasVisibleDescendant) return null;
   if (!node.url && !hasVisibleDescendant) return null;

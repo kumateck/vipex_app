@@ -62,7 +62,7 @@ export const pickupQueuesRoutes = new Elysia({ name: 'pickup-queues' })
         idCardTypeId: t.Optional(t.Union([UUID, t.Null()])),
         idCardNumber: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
       }),
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateParcels)],
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreatePickupQueue)],
       detail: { tags: ['Pickup Queues'], summary: 'Create pickup queue ticket for a parcel' },
     },
   );

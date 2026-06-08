@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { useListBranchOptionsQuery, useGetBranchQuery } from '@/features/branches/api/branches.api';
+import {
+  useGetBranchOperationsSettingsQuery,
+  useListBranchOptionsQuery,
+} from '@/features/branches/api/branches.api';
 import {
   useAddCustomerCardMutation,
   useCreateCustomerMutation,
@@ -40,7 +43,9 @@ export function useParcelReceiverCashierWorkflow() {
   const canWaiveStorageAccrual = (user?.permissions ?? []).includes(
     PermissionKeys.CanWaiveParcelStorageAccrual,
   );
-  const { data: currentBranch } = useGetBranchQuery(branchId ?? '', { skip: !branchId });
+  const { data: currentBranch } = useGetBranchOperationsSettingsQuery(branchId ?? '', {
+    skip: !branchId,
+  });
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
 
   const [searchInput, setSearchInput] = useState('');

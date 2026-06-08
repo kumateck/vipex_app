@@ -1129,6 +1129,7 @@ export const {
   useSearchParcelsQuery,
   useLazySearchParcelsQuery,
   useGetParcelDetailsQuery,
+  useLazyGetParcelDetailsQuery,
   useListParcelDispositionActionsQuery,
   useListProcessedParcelsForConsignmentQuery,
   useCollectSenderPaymentMutation,

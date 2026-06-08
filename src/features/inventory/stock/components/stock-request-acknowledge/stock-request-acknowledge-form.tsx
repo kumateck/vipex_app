@@ -280,7 +280,7 @@ export function StockRequestAcknowledgeForm({
                 {isSubmitting ? 'Saving...' : 'Acknowledge Receipt'}
               </Button>
               <Button type="button" variant="outline" asChild>
-                <Link to={`/inventory/stock-requests/view/${requestId}`}>Cancel</Link>
+                <Link to={`/inventory/stock-requests/receive/${requestId}`}>Cancel</Link>
               </Button>
             </div>
           </FieldGroup>

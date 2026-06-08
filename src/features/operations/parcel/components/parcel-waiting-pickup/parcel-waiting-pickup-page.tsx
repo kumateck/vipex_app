@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { ParcelStatus } from '@/db/schemas/enums';
-import { useGetBranchQuery } from '@/features/branches/api/branches.api';
+import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import {
@@ -85,7 +85,9 @@ export function ParcelWaitingPickupPage() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
-  const { data: currentBranch } = useGetBranchQuery(branchId ?? '', { skip: !branchId });
+  const { data: currentBranch } = useGetBranchOperationsSettingsQuery(branchId ?? '', {
+    skip: !branchId,
+  });
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
 
   const [searchInput, setSearchInput] = useState('');

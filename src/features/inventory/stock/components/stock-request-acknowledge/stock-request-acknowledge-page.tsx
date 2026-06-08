@@ -54,7 +54,7 @@ export function StockRequestAcknowledgePage() {
       <ScrollableWrapper>
         <StockLoadError
           message="Failed to load stock request acknowledgement details"
-          onBack={() => navigate(`/inventory/stock-requests/view/${requestId}`)}
+          onBack={() => navigate(`/inventory/stock-requests/receive/${requestId}`)}
         />
       </ScrollableWrapper>
     );
