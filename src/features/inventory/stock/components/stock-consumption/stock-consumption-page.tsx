@@ -26,9 +26,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
 import { convertToBaseUnits } from '@/shared/inventory/unit-conversion';
 import { StockConsumptionHistoryTable } from './stock-consumption-history-table';
-
 const CONSUMPTION_REFERENCE_TYPE = 'stock_consumption';
-
 export function StockConsumptionPage() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
@@ -39,7 +37,6 @@ export function StockConsumptionPage() {
   const [quantity, setQuantity] = useState('');
   const [quantityUnit, setQuantityUnit] = useState(0);
   const [notes, setNotes] = useState('');
-
   const { data: products = [] } = useListInventoryProductOptionsQuery(
     { companyId },
     { skip: !companyId },
