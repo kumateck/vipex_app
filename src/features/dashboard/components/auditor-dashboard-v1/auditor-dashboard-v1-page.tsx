@@ -32,7 +32,7 @@ export function AuditorDashboardV1Page() {
 
   const canListAudit = permissions.has(PermissionKeys.CanListAuditLogs);
   const canReadAccounting = permissions.has(PermissionKeys.CanReadAccounting);
-  const canViewOutstanding = permissions.has(PermissionKeys.CanGetOutstandingToBePaidReport);
+  const canViewOutstanding = permissions.has(PermissionKeys.CanViewReportCashToBePaidOutstanding);
 
   const scopeFrom = scope?.dateRange?.from;
   const scopeTo = scope?.dateRange?.to ?? scope?.dateRange?.from;

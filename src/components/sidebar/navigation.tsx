@@ -1,9 +1,5 @@
 import { type LucideIconProps } from '@/components/ui';
-import {
-  PermissionKeys,
-  type PermissionKey,
-  RoutePermissionOverrides,
-} from '@/shared/permissions/constants';
+import { PermissionKeys, type PermissionKey } from '@/shared/permissions/constants';
 
 // Define the sub-item structure for nested menu items.
 interface SubItem {
@@ -90,24 +86,6 @@ function filterSubItems(items?: SubItem[]): SubItem[] | undefined {
     filtered.push({ ...item, children: nextChildren });
   }
   return filtered.length ? filtered : undefined;
-}
-
-function applyPermissionOverridesToSubItem(item: SubItem): SubItem {
-  const override = item.url ? RoutePermissionOverrides[item.url] : undefined;
-  return {
-    ...item,
-    permissionKey: override ?? item.permissionKey,
-    children: item.children?.map(applyPermissionOverridesToSubItem),
-  };
-}
-
-function applyPermissionOverridesToMenuItem(menuItem: MenuItem): MenuItem {
-  const override = menuItem.url ? RoutePermissionOverrides[menuItem.url] : undefined;
-  return {
-    ...menuItem,
-    permissionKey: override ?? menuItem.permissionKey,
-    items: menuItem.items?.map(applyPermissionOverridesToSubItem),
-  };
 }
 
 const BASE_ROUTES: Route[] = [
@@ -1885,7 +1863,7 @@ const FILTERED_BASE_ROUTES: Route[] = BASE_ROUTES.map((route) => {
     const keepByUrl = isImplementedReportUrl(menuItem.url);
     const hasItems = Boolean(nextItems?.length);
     if (!keepByUrl && !hasItems) continue;
-    filteredMenu.push(applyPermissionOverridesToMenuItem({ ...menuItem, items: nextItems }));
+    filteredMenu.push({ ...menuItem, items: nextItems });
   }
   return { ...route, menu: filteredMenu };
 }).filter((route) => route.menu.length > 0);

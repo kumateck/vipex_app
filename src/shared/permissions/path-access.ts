@@ -1,4 +1,9 @@
-import { PermissionKeys, RoutePermissionOverrides, type PermissionKey } from './constants';
+import {
+  PermissionKeys,
+  ReportPermissionKeys,
+  RoutePermissionOverrides,
+  type PermissionKey,
+} from './constants';
 
 export function inferReadPermissionByPath(pathname?: string): PermissionKey | undefined {
   if (!pathname) return undefined;
@@ -78,7 +83,7 @@ export function inferReadPermissionByPath(pathname?: string): PermissionKey | un
 
   if (pathname.startsWith('/reports/financial/')) return PermissionKeys.CanReadAccounting;
   if (pathname.startsWith('/reports/branch/'))
-    return PermissionKeys.CanGetBranchProfitabilityReport;
+    return PermissionKeys.CanViewReportBranchProfitSummary;
   if (pathname.startsWith('/reports/payroll/')) return PermissionKeys.CanReadPayrollRun;
   if (pathname.startsWith('/reports/hr/')) return PermissionKeys.CanListEmployees;
   if (pathname.startsWith('/reports/attendance/')) return PermissionKeys.CanListAttendance;
@@ -87,12 +92,13 @@ export function inferReadPermissionByPath(pathname?: string): PermissionKey | un
   if (pathname.startsWith('/reports/cash/')) return PermissionKeys.CanReadAccounting;
   if (pathname.startsWith('/reports/customers/')) return PermissionKeys.CanReadCustomers;
   if (pathname.startsWith('/reports/parcels/'))
-    return PermissionKeys.CanGetParcelStatusSummaryReport;
+    return PermissionKeys.CanViewReportParcelsStatusSummary;
   if (pathname.startsWith('/reports/consignments/')) return PermissionKeys.CanReadConsignments;
   if (pathname.startsWith('/reports/transfers/'))
     return PermissionKeys.CanReadParcelInternalTransfers;
-  if (pathname.startsWith('/reports/cashier/')) return PermissionKeys.CanGetShiftRevenueReport;
-  if (pathname.startsWith('/reports/inventory/')) return PermissionKeys.CanGetLowStockReport;
+  if (pathname.startsWith('/reports/cashier/')) return PermissionKeys.CanViewReportCashierRevenue;
+  if (pathname.startsWith('/reports/inventory/'))
+    return PermissionKeys.CanViewReportInventoryLowStock;
   if (pathname.startsWith('/reports/audit/')) return PermissionKeys.CanListAuditLogs;
 
   return undefined;
@@ -292,4 +298,19 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
   if (pathname === '/parcels/create') return PermissionKeys.CanCreateBookingWithParcels;
 
   return inferReadPermissionByPath(pathname);
+}
+
+export function hasRequiredPermissionForPath(
+  pathname: string | undefined,
+  grantedPermissions: Iterable<string>,
+) {
+  const requiredPermission = inferRequiredPermissionByPath(pathname);
+  if (!requiredPermission) return true;
+
+  const granted = new Set(grantedPermissions);
+  if (requiredPermission === PermissionKeys.CanReadReportsHub) {
+    return ReportPermissionKeys.some((permissionKey) => granted.has(permissionKey));
+  }
+
+  return granted.has(requiredPermission);
 }

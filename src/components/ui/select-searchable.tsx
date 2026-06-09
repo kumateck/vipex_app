@@ -4,6 +4,7 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 import { Input } from './input';
+import { Spinner } from './spinner';
 
 type FilterResult = {
   node: React.ReactNode;
@@ -116,14 +117,19 @@ function SelectTrigger({
 function SelectContent({
   className,
   children,
+  isLoading = false,
+  loadingText = 'Loading options...',
   position = 'popper',
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Content>) {
+}: React.ComponentProps<typeof SelectPrimitive.Content> & {
+  isLoading?: boolean;
+  loadingText?: string;
+}) {
   const [query, setQuery] = React.useState('');
   const normalizedQuery = query.trim().toLowerCase();
   const filtered = React.useMemo(
-    () => filterSelectChildren(children, normalizedQuery),
-    [children, normalizedQuery],
+    () => (isLoading ? { node: null, count: 0 } : filterSelectChildren(children, normalizedQuery)),
+    [children, isLoading, normalizedQuery],
   );
 
   return (
@@ -158,7 +164,12 @@ function SelectContent({
               'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1',
           )}
         >
-          {filtered.count > 0 ? (
+          {isLoading ? (
+            <div className="text-muted-foreground flex items-center gap-2 px-2 py-1.5 text-sm">
+              <Spinner className="size-3.5" />
+              {loadingText}
+            </div>
+          ) : filtered.count > 0 ? (
             filtered.node
           ) : (
             <div className="text-muted-foreground px-2 py-1.5 text-sm">No options found.</div>

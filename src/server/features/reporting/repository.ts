@@ -1,4 +1,18 @@
-import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, lt, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  lt,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
 import {
@@ -34,6 +48,7 @@ import {
 import {
   CustomerCreditSourceType,
   CustomerCreditTransactionType,
+  CashierType,
   ParcelStatus,
   PaymentComponent,
   PaymentMethod,
@@ -285,11 +300,13 @@ export type DailyCashierSalesSessionRow = {
 };
 
 export type DailyCashierSalesTransactionRow = {
-  sessionId: string | null;
+  sessionId: string;
   paymentId: string;
   parcelId: string;
   bookingCode: string;
   trackingCode: string;
+  senderName: string | null;
+  receiverName: string | null;
   cashierType: number;
   method: number;
   component: number;
@@ -299,6 +316,16 @@ export type DailyCashierSalesTransactionRow = {
   taxTotalPsw: number;
   receivedAt: Date;
   receiptNo: string | null;
+};
+
+export type DailyCashierSalesToBePaidRow = {
+  parcelId: string;
+  sessionId: string | null;
+  bookingCode: string;
+  senderName: string | null;
+  receiverName: string | null;
+  plannedToBePaidPsw: number;
+  createdAt: Date;
 };
 
 export async function listCashierSessionsForDayRepo(input: {
@@ -402,8 +429,18 @@ export async function listDailyCashierSalesSessionsRepo(input: {
     .where(
       and(
         eq(users.companyId, input.companyId),
-        gte(cashierSessions.scheduledStartTime, dayStart),
-        lt(cashierSessions.scheduledStartTime, nextDayStart),
+        or(
+          and(
+            isNotNull(cashierSessions.actualStartTime),
+            gte(cashierSessions.actualStartTime, dayStart),
+            lt(cashierSessions.actualStartTime, nextDayStart),
+          ),
+          and(
+            isNull(cashierSessions.actualStartTime),
+            gte(cashierSessions.scheduledStartTime, dayStart),
+            lt(cashierSessions.scheduledStartTime, nextDayStart),
+          ),
+        ),
         ...(input.branchId ? [eq(cashierSessions.branchId, input.branchId)] : []),
         ...(input.locationId ? [eq(users.locationId, input.locationId)] : []),
       ),
@@ -417,13 +454,24 @@ export async function listDailyCashierSalesTransactionsRepo(input: {
 }): Promise<DailyCashierSalesTransactionRow[]> {
   if (!input.sessionIds.length) return [];
 
+  const sender = alias(customers, 'daily_cashier_sales_sender');
+  const receiver = alias(customers, 'daily_cashier_sales_receiver');
+  const cashierTypeFilter =
+    input.cashierType === CashierType.FULL
+      ? [inArray(payments.cashierType, [CashierType.SENDING, CashierType.TOBEPAID])]
+      : input.cashierType !== null && input.cashierType !== undefined
+        ? [eq(payments.cashierType, input.cashierType)]
+        : [];
+
   return db
     .select({
-      sessionId: parcels.cashierSessionId,
+      sessionId: cashierSessions.id,
       paymentId: payments.id,
       parcelId: payments.parcelId,
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
+      senderName: sender.fullname,
+      receiverName: receiver.fullname,
       cashierType: payments.cashierType,
       method: payments.method,
       component: payments.component,
@@ -435,17 +483,70 @@ export async function listDailyCashierSalesTransactionsRepo(input: {
       receiptNo: payments.receiptNo,
     })
     .from(payments)
+    .innerJoin(cashierSessions, eq(cashierSessions.cashierId, payments.cashierUserId))
     .innerJoin(parcels, eq(parcels.id, payments.parcelId))
+    .leftJoin(sender, eq(sender.id, parcels.senderId))
+    .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
     .where(
       and(
-        inArray(parcels.cashierSessionId, input.sessionIds),
+        inArray(cashierSessions.id, input.sessionIds),
+        eq(payments.branchId, cashierSessions.branchId),
+        gte(
+          payments.receivedAt,
+          sql<Date>`coalesce(${cashierSessions.actualStartTime}, ${cashierSessions.scheduledStartTime})`,
+        ),
+        or(
+          isNull(cashierSessions.actualEndTime),
+          lte(payments.receivedAt, cashierSessions.actualEndTime),
+        ),
         isNull(payments.voidedAt),
-        ...(input.cashierType !== null && input.cashierType !== undefined
-          ? [eq(payments.cashierType, input.cashierType)]
-          : []),
+        ...cashierTypeFilter,
       ),
     )
     .orderBy(asc(payments.receivedAt), asc(payments.id));
+}
+
+export async function listDailyCashierSalesToBePaidRowsRepo(input: {
+  companyId: string;
+  date: Date;
+  branchId?: string | null;
+  locationId?: string | null;
+  cashierUserId?: string | null;
+}): Promise<DailyCashierSalesToBePaidRow[]> {
+  const dayStart = new Date(input.date);
+  dayStart.setHours(0, 0, 0, 0);
+  const nextDayStart = new Date(dayStart);
+  nextDayStart.setDate(nextDayStart.getDate() + 1);
+
+  const sender = alias(customers, 'daily_cashier_sales_tbp_sender');
+  const receiver = alias(customers, 'daily_cashier_sales_tbp_receiver');
+
+  return db
+    .select({
+      parcelId: parcels.id,
+      sessionId: parcels.cashierSessionId,
+      bookingCode: parcels.bookingCode,
+      senderName: sender.fullname,
+      receiverName: receiver.fullname,
+      plannedToBePaidPsw: parcels.plannedToBePaidPsw,
+      createdAt: parcels.createdAt,
+    })
+    .from(parcels)
+    .leftJoin(sender, eq(sender.id, parcels.senderId))
+    .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
+    .where(
+      and(
+        eq(parcels.companyId, input.companyId),
+        gte(parcels.createdAt, dayStart),
+        lt(parcels.createdAt, nextDayStart),
+        sql`${parcels.plannedToBePaidPsw} > 0`,
+        eq(parcels.isDeleted, false),
+        ...(input.branchId ? [eq(parcels.sourceId, input.branchId)] : []),
+        ...(input.locationId ? [eq(parcels.sourceLocationId, input.locationId)] : []),
+        ...(input.cashierUserId ? [eq(parcels.createdBy, input.cashierUserId)] : []),
+      ),
+    )
+    .orderBy(asc(parcels.createdAt), asc(parcels.id));
 }
 
 export async function listDailyCashConfirmationReportRowsRepo(input: {

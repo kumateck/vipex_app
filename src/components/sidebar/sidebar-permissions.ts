@@ -1,5 +1,8 @@
 import { AccountingSetupPermissionKeys, PermissionKeys } from '@/shared/permissions/constants';
-import { inferRequiredPermissionByPath } from '@/shared/permissions/path-access';
+import {
+  hasRequiredPermissionForPath,
+  inferRequiredPermissionByPath,
+} from '@/shared/permissions/path-access';
 import { inferRequiredModuleByPath } from '@/shared/company-modules/route-modules';
 import { ROUTES, type MenuItem } from './navigation';
 
@@ -43,9 +46,10 @@ function canRenderSidebarNode(node: SidebarNode, allowedPermissions: Set<string>
     );
     return hasLegacySetupAccess || hasGranularSetupAccess;
   }
-  const effectivePermissionKey = node.permissionKey ?? inferRequiredPermissionByPath(node.url);
-  if (!effectivePermissionKey) return true;
-  return allowedPermissions.has(effectivePermissionKey);
+  const inferredPermissionKey = inferRequiredPermissionByPath(node.url);
+  if (inferredPermissionKey) return hasRequiredPermissionForPath(node.url, allowedPermissions);
+  if (!node.permissionKey) return true;
+  return allowedPermissions.has(node.permissionKey);
 }
 
 function filterSidebarTreeByPermissions(

@@ -26,9 +26,9 @@ export function CashierDashboardV1Page() {
   const permissions = new Set(user?.permissions ?? []);
   const [scope, setScope] = useState<DashboardScope | null>(null);
 
-  const canViewSales = permissions.has(PermissionKeys.CanGetShiftRevenueReport);
+  const canViewSales = permissions.has(PermissionKeys.CanViewReportCashierRevenue);
   const canViewCash = permissions.has(PermissionKeys.CanReadAccounting);
-  const canViewOutstanding = permissions.has(PermissionKeys.CanGetOutstandingToBePaidReport);
+  const canViewOutstanding = permissions.has(PermissionKeys.CanViewReportCashToBePaidOutstanding);
 
   const scopeFrom = scope?.dateRange?.from;
   const scopeTo = scope?.dateRange?.to ?? scope?.dateRange?.from;

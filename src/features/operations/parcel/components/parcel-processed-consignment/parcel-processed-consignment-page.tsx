@@ -38,7 +38,10 @@ import {
   useUpdateParcelMutation,
 } from '../../api/parcel.api';
 import { ParcelReceiptActions, type ReceiptPrintData } from '../parcel-receipt-actions';
-import { printConsignmentSlip } from '../../utils/consignment-print';
+import {
+  ConsignmentPrintController,
+  type ConsignmentPrintPayload,
+} from './consignment-print-controller';
 import { EditParcelDetailsDialog } from './edit-parcel-details-dialog';
 
 const EMPTY_META: PaginationMeta = {
@@ -156,6 +159,8 @@ export function ParcelProcessedConsignmentPage() {
   const [lockedDestinationId, setLockedDestinationId] = useState<string | null>(null);
   const [editingParcel, setEditingParcel] = useState<ProcessedParcel | null>(null);
   const [reprintData, setReprintData] = useState<ReceiptPrintData | null>(null);
+  const [consignmentPrintPayload, setConsignmentPrintPayload] =
+    useState<ConsignmentPrintPayload | null>(null);
   const [editDestinationId, setEditDestinationId] = useState<string>('');
   const [editSourceLocationId, setEditSourceLocationId] = useState<string>('');
   const [editPickupLocationId, setEditPickupLocationId] = useState<string>('');
@@ -459,15 +464,8 @@ export function ParcelProcessedConsignmentPage() {
         parcelIds,
       }).unwrap();
 
-      const sourceBranchName = (appliedSourceId && branchNameById.get(appliedSourceId)) ?? '-';
-      const destinationBranchName = branchNameById.get(lockedDestinationId) ?? '-';
-      const createdByLabel = user?.id ?? 'SYSTEM';
-      printConsignmentSlip({
+      setConsignmentPrintPayload({
         consignmentCode: created.code,
-        consignmentDate: `${getTodayDateOnlyLocal()}T00:00:00.000Z`,
-        sourceBranchName,
-        destinationBranchName,
-        createdByLabel,
         items: selectedParcels,
       });
 
@@ -779,6 +777,10 @@ export function ParcelProcessedConsignmentPage() {
           onAutoPrintComplete={() => setReprintData(null)}
         />
       ) : null}
+      <ConsignmentPrintController
+        payload={consignmentPrintPayload}
+        onPrinted={() => setConsignmentPrintPayload(null)}
+      />
     </div>
   );
 }

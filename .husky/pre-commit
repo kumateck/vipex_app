@@ -12,4 +12,4 @@ if git diff --cached --name-only | grep -q '^src/assets/'; then
 fi
 
 echo "Running pre-commit checks (staged files only)..."
-bunx --bun lint-staged
+bunx lint-staged --quiet --no-stash
