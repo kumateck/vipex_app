@@ -37,7 +37,8 @@ import {
   useListProcessedParcelsForConsignmentQuery,
   useUpdateParcelMutation,
 } from '../../api/parcel.api';
-import { ParcelReceiptActions, type ReceiptPrintData } from '../parcel-receipt-actions';
+import { ParcelReceiptActions } from '../parcel-receipt-actions';
+import type { ReceiptPrintData } from '../parcel-receipt.types';
 import {
   ConsignmentPrintController,
   type ConsignmentPrintPayload,
@@ -93,8 +94,10 @@ function toReceiptPrintData(
         : Number(parcel.parcelValuePsw) / 100,
     senderName: parcel.senderName ?? '-',
     senderTelephone: parcel.senderPhone ?? '-',
+    senderTelephone2: parcel.senderPhone2 ?? null,
     receiverName: parcel.receiverName ?? '-',
     receiverTelephone: parcel.receiverPhone ?? '-',
+    receiverTelephone2: parcel.receiverPhone2 ?? null,
     destinationBranchName,
     destinationLocationName: parcel.pickupLocationName ?? '-',
     totalChargeCedis,

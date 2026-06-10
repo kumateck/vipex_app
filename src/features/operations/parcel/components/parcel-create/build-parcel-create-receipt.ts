@@ -48,8 +48,10 @@ export function buildParcelCreateReceipt({
         parcelValueCedis: amount?.value ?? 0,
         senderName: values.sender.fullname,
         senderTelephone: values.sender.telephone,
+        senderTelephone2: values.sender.telephone2 || null,
         receiverName: formParcel?.receiver.fullname ?? '-',
         receiverTelephone: formParcel?.receiver.telephone ?? '-',
+        receiverTelephone2: formParcel?.receiver.telephone2 || null,
         destinationBranchName:
           branchOptions.find((branch) => branch.id === formParcel?.destinationBranchId)?.name ??
           '-',

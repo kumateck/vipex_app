@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PaymentMethod } from '@/db/schemas/enums';
 import type { ParcelSearchRow } from '../../api/parcel.api';
-import type { ReceiptPrintData } from '../parcel-receipt-actions';
+import type { ReceiptPrintData } from '../parcel-receipt.types';
 import type { CardMode, HandoverTarget } from './receiver-cashier-types';
 
 export function useReceiverCashierDialogState() {

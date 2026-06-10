@@ -14,7 +14,7 @@ import {
   useRequestParcelReconciliationCaseMutation,
   useSoftDeleteParcelMutation,
 } from '../../api/parcel.api';
-import type { ReceiptPrintData } from '../parcel-receipt-actions';
+import type { ReceiptPrintData } from '../parcel-receipt.types';
 import { buildSenderReceiptData } from './build-sender-receipt-data';
 import { useReconciliationRequestState } from './use-reconciliation-request-state';
 import { getSenderDuePsw, toDataUrl } from './utils';

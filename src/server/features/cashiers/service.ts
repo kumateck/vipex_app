@@ -202,7 +202,7 @@ export async function getCurrentActiveSessionSummarySvc(input: {
       cashierId: input.cashierId,
     }),
     getSessionFullCashierExpectedPswRepo({ sessionId: session.id, cashierId: input.cashierId }),
-    getSessionCreditCreatedPswRepo(session.id),
+    getSessionCreditCreatedPswRepo({ sessionId: session.id, cashierId: input.cashierId }),
   ]);
 
   const mode = input.mode ?? 'sender';

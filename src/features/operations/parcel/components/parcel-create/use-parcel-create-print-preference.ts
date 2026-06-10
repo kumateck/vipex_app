@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useWatch, type UseFormReturn } from 'react-hook-form';
 import { CashierType } from '@/db/schemas/enums';
+import { useGetCurrentActiveSessionQuery } from '@/features/cashiers/api/cashiers.api';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
 import type { ParcelBookingFormValues } from './parcel-form.types';
@@ -18,6 +19,7 @@ export function useParcelCreatePrintPreference({
 }: UseParcelCreatePrintPreferenceArgs) {
   const user = useAuthStore((state) => state.user);
   const parcels = useWatch({ control: form.control, name: 'parcels' });
+  const { data: activeSession } = useGetCurrentActiveSessionQuery();
 
   const canCollectSenderPayments = useMemo(() => {
     const cashierType = user?.cashierType;
@@ -25,18 +27,9 @@ export function useParcelCreatePrintPreference({
     return canCollect && (cashierType === CashierType.SENDING || cashierType === CashierType.FULL);
   }, [user?.cashierType, user?.permissions]);
 
-  const hasSenderPayParcel = useMemo(
-    () =>
-      (parcels ?? []).some(
-        (parcel) =>
-          (parcel.paymentResponsibility === 'SENDER' &&
-            parcel.senderSettlementMode === 'PAY_NOW') ||
-          (parcel.paymentResponsibility === 'SPLIT' && Number(parcel.senderPartialPayment) > 0),
-      ),
-    [parcels],
-  );
+  const hasPrintableParcel = useMemo(() => (parcels ?? []).length > 0, [parcels]);
 
-  const canPrintAfterSubmit = canCollectSenderPayments && hasSenderPayParcel;
+  const canPrintAfterSubmit = canCollectSenderPayments && hasPrintableParcel && !!activeSession;
 
   useEffect(() => {
     if (canPrintAfterSubmit) {
@@ -48,5 +41,5 @@ export function useParcelCreatePrintPreference({
     }
   }, [canPrintAfterSubmit, setShouldPrintOnSubmit, shouldPrintOnSubmit]);
 
-  return { canCollectSenderPayments, hasSenderPayParcel, canPrintAfterSubmit };
+  return { canCollectSenderPayments, hasPrintableParcel, canPrintAfterSubmit };
 }

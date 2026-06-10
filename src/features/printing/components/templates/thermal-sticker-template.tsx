@@ -2,12 +2,13 @@ import { QRCode } from 'react-qrcode-logo';
 import logoPng from '@/assets/logo.png';
 
 type ThermalStickerTemplateProps = {
-  senderName: string;
-  senderTelephone: string;
   bookingCode: string;
-  parcelDetails: string;
+  receiverName: string;
+  receiverTelephone: string;
+  receiverTelephone2?: string | null;
   destinationBranchName: string;
   destinationLocationName: string;
+  isPaid: boolean;
   toBePaidCedis?: number;
   qrValue: string;
   formatMoney: (amount: number) => string;
@@ -15,16 +16,19 @@ type ThermalStickerTemplateProps = {
 
 export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
   const {
-    senderName,
-    senderTelephone,
     bookingCode,
-    parcelDetails,
+    receiverName,
+    receiverTelephone,
+    receiverTelephone2,
     destinationBranchName,
     destinationLocationName,
+    isPaid,
     toBePaidCedis,
     qrValue,
     formatMoney,
   } = props;
+  const hasToBePaid = typeof toBePaidCedis === 'number' && toBePaidCedis > 0;
+  const statusLabel = hasToBePaid ? `TO BE PAID ${formatMoney(toBePaidCedis)}` : 'PAID';
 
   return (
     <div
@@ -32,7 +36,7 @@ export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
       style={{
         width: '78mm',
         border: '0.35mm solid #111',
-        padding: '1.3mm',
+        padding: '1.4mm',
         fontFamily: 'Arial, sans-serif',
         display: 'grid',
         gridTemplateColumns: '1fr 28mm',
@@ -43,92 +47,29 @@ export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
         <div
           style={{
             fontWeight: 700,
-            fontSize: '7.6mm',
-            lineHeight: 1.02,
+            fontSize: hasToBePaid ? '4.1mm' : '5mm',
+            lineHeight: 1,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
+            border: '0.35mm solid #111',
+            borderRadius: '1.1mm',
+            padding: '0.9mm 1.2mm',
+            textAlign: 'center',
+            background: isPaid && !hasToBePaid ? '#dcfce7' : '#fef3c7',
           }}
         >
-          {senderName}
-        </div>
-        <div style={{ borderTop: '0.35mm solid #111', margin: '0.8mm 0' }} />
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: '6.7mm',
-            lineHeight: 1.02,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {senderTelephone || '-'}
-        </div>
-        <div style={{ borderTop: '0.35mm solid #111', margin: '0.8mm 0' }} />
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: '7.2mm',
-            lineHeight: 1.02,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {bookingCode}
-        </div>
-        <div style={{ borderTop: '0.35mm solid #111', margin: '0.8mm 0' }} />
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: '6.6mm',
-            lineHeight: 1.02,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {parcelDetails || '-'}
+          {statusLabel}
         </div>
 
-        {typeof toBePaidCedis === 'number' && toBePaidCedis > 0 ? (
-          <>
-            <div style={{ borderTop: '0.35mm solid #111', margin: '0.8mm 0' }} />
-            <div
-              style={{ fontWeight: 700, fontSize: '5.8mm', lineHeight: 1.02, whiteSpace: 'nowrap' }}
-            >
-              TO BE PAID: {formatMoney(toBePaidCedis)}
-            </div>
-          </>
+        <StickerRow label="Booking" value={bookingCode} emphasis />
+        <StickerRow label="Receiver" value={receiverName} emphasis />
+        <StickerRow label="Tel 1" value={receiverTelephone} />
+        {receiverTelephone2?.trim() ? (
+          <StickerRow label="Tel 2" value={receiverTelephone2} />
         ) : null}
-
-        <div style={{ borderTop: '0.35mm solid #111', margin: '0.8mm 0' }} />
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: '6.6mm',
-            lineHeight: 1.02,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {destinationBranchName}
-        </div>
-        <div style={{ borderTop: '0.35mm solid #111', margin: '0.8mm 0' }} />
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: '6.6mm',
-            lineHeight: 1.02,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {destinationLocationName}
-        </div>
+        <StickerRow label="Branch" value={destinationBranchName} emphasis />
+        <StickerRow label="Location" value={destinationLocationName} />
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.2mm' }}>
@@ -140,5 +81,44 @@ export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
         <QRCode value={qrValue} size={88} quietZone={1} ecLevel="M" />
       </div>
     </div>
+  );
+}
+
+type StickerRowProps = {
+  label: string;
+  value?: string | null;
+  emphasis?: boolean;
+};
+
+function StickerRow({ label, value, emphasis = false }: StickerRowProps) {
+  return (
+    <>
+      <div style={{ borderTop: '0.35mm solid #111', margin: '0.8mm 0' }} />
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: '2.4mm',
+            fontWeight: 700,
+            lineHeight: 1,
+            textTransform: 'uppercase',
+            letterSpacing: '0',
+          }}
+        >
+          {label}
+        </div>
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: emphasis ? '4.9mm' : '4.35mm',
+            lineHeight: 1.04,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {value?.trim() || '-'}
+        </div>
+      </div>
+    </>
   );
 }

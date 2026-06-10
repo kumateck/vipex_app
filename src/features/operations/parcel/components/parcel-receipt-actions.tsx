@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -13,34 +14,10 @@ import {
   printParallelViaDesktop,
   useManagedReactPrint,
 } from '@/features/printing';
+import { useGetCurrentActiveSessionQuery } from '@/features/cashiers/api/cashiers.api';
+import { useAuthStore } from '@/stores/auth-store';
 import { ParcelReceiptPrintContent } from './parcel-receipt-print-content';
-
-export type ReceiptPrintData = {
-  bookingCode: string;
-  trackingCode: string;
-  parcelDetails: string;
-  parcelContent?: string | null;
-  parcelValueCedis?: number | null;
-  receivedByName?: string | null;
-  senderName: string;
-  senderTelephone: string;
-  receiverName: string;
-  receiverTelephone: string;
-  destinationBranchName: string;
-  destinationLocationName: string;
-  totalChargeCedis: number;
-  senderPaidCedis: number;
-  receiverToPayCedis: number;
-  amountPaidCedis?: number;
-  issuedAt: string;
-  taxBreakdown?: {
-    vatCedis: number;
-    getfundCedis: number;
-    nhilCedis: number;
-    covidCedis?: number;
-    taxTotalCedis: number;
-  };
-};
+import type { ReceiptPrintData } from './parcel-receipt.types';
 
 type ParcelReceiptActionsProps = {
   data: ReceiptPrintData;
@@ -61,6 +38,11 @@ export function ParcelReceiptActions({
   showSelectionMenu = false,
   onAutoPrintComplete,
 }: ParcelReceiptActionsProps) {
+  const cashierType = useAuthStore((state) => state.user?.cashierType ?? null);
+  const isCashier = cashierType !== null && cashierType !== undefined;
+  const { data: activeSession, isLoading: isLoadingActiveSession } =
+    useGetCurrentActiveSessionQuery(undefined, { skip: !isCashier });
+  const canPrintForSession = !isCashier || !!activeSession;
   const stickerRef = useRef<HTMLDivElement>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const hasAutoPrinted = useRef(false);
@@ -122,6 +104,10 @@ export function ParcelReceiptActions({
   });
 
   const handlePrintBoth = () => {
+    if (!canPrintForSession) {
+      toast.error('Open a cashier session before printing parcel stickers');
+      return;
+    }
     if (!isSenderPaid) {
       void printSticker();
       return;
@@ -134,6 +120,7 @@ export function ParcelReceiptActions({
     if (
       mode !== 'sender-payment' ||
       !isSenderPaid ||
+      !canPrintForSession ||
       typeof window === 'undefined' ||
       typeof window.api?.printParallel !== 'function'
     ) {
@@ -191,15 +178,25 @@ export function ParcelReceiptActions({
   };
 
   const handlePrintInvoiceOnly = () => {
+    if (!canPrintForSession) {
+      toast.error('Open a cashier session before printing receipts');
+      return;
+    }
     void printInvoice();
   };
 
   const handlePrintStickerOnly = () => {
+    if (!canPrintForSession) {
+      toast.error('Open a cashier session before printing parcel stickers');
+      return;
+    }
     void printSticker();
   };
 
   useEffect(() => {
-    if (!autoPrint || hasAutoPrinted.current) return;
+    if (!autoPrint || hasAutoPrinted.current || isLoadingActiveSession || !canPrintForSession) {
+      return;
+    }
     hasAutoPrinted.current = true;
     if (autoPrintSelection === 'sticker') {
       handlePrintStickerOnly();
@@ -215,7 +212,7 @@ export function ParcelReceiptActions({
         handlePrintBoth();
       }
     })();
-  }, [autoPrint, autoPrintSelection, mode]);
+  }, [autoPrint, autoPrintSelection, canPrintForSession, isLoadingActiveSession, mode]);
 
   const amountPaidCedis = data.amountPaidCedis ?? data.senderPaidCedis;
 
@@ -241,7 +238,11 @@ export function ParcelReceiptActions({
           {showSelectionMenu ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isLoadingActiveSession || !canPrintForSession}
+                >
                   {triggerLabel}
                 </Button>
               </DropdownMenuTrigger>
@@ -258,7 +259,11 @@ export function ParcelReceiptActions({
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button type="button" onClick={handlePrintBoth}>
+            <Button
+              type="button"
+              onClick={handlePrintBoth}
+              disabled={isLoadingActiveSession || !canPrintForSession}
+            >
               {isSenderPaid ? triggerLabel : 'Print Sticker'}
             </Button>
           )}

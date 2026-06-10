@@ -38,8 +38,10 @@ export type ReceiptSummary = {
     parcelValueCedis?: number | null;
     senderName: string;
     senderTelephone: string;
+    senderTelephone2?: string | null;
     receiverName: string;
     receiverTelephone: string;
+    receiverTelephone2?: string | null;
     destinationBranchName: string;
     destinationLocationName: string;
     totalChargeCedis: number;

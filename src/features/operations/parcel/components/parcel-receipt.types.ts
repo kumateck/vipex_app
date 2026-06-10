@@ -1,0 +1,28 @@
+export type ReceiptPrintData = {
+  bookingCode: string;
+  trackingCode: string;
+  parcelDetails: string;
+  parcelContent?: string | null;
+  parcelValueCedis?: number | null;
+  receivedByName?: string | null;
+  senderName: string;
+  senderTelephone: string;
+  senderTelephone2?: string | null;
+  receiverName: string;
+  receiverTelephone: string;
+  receiverTelephone2?: string | null;
+  destinationBranchName: string;
+  destinationLocationName: string;
+  totalChargeCedis: number;
+  senderPaidCedis: number;
+  receiverToPayCedis: number;
+  amountPaidCedis?: number;
+  issuedAt: string;
+  taxBreakdown?: {
+    vatCedis: number;
+    getfundCedis: number;
+    nhilCedis: number;
+    covidCedis?: number;
+    taxTotalCedis: number;
+  };
+};
