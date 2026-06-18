@@ -6,6 +6,7 @@ export type DesktopPrintRequest = {
   title?: string;
   silent?: boolean;
   deviceName?: string;
+  copies?: number;
 };
 
 export type DesktopPrintResult = {

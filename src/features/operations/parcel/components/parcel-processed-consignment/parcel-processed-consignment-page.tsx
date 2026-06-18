@@ -1,17 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
-import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { formatDateTime } from '@/lib/dates';
@@ -50,6 +43,7 @@ import {
   type ConsignmentPrintPayload,
 } from './consignment-print-controller';
 import { EditParcelDetailsDialog } from './edit-parcel-details-dialog';
+import { ParcelReprintActions } from './parcel-reprint-actions';
 
 const EMPTY_META: PaginationMeta = {
   totalRecords: 0,
@@ -60,6 +54,7 @@ const EMPTY_META: PaginationMeta = {
   hasPreviousPage: false,
 };
 const ALL_VALUE = '__all__';
+const EMPTY_ROWS: ProcessedParcel[] = [];
 
 function formatDate(isoDate: string) {
   const date = new Date(isoDate);
@@ -168,6 +163,8 @@ export function ParcelProcessedConsignmentPage() {
   const [lockedDestinationId, setLockedDestinationId] = useState<string | null>(null);
   const [editingParcel, setEditingParcel] = useState<ProcessedParcel | null>(null);
   const [reprintData, setReprintData] = useState<ReceiptPrintData | null>(null);
+  const [reprintSelection, setReprintSelection] = useState<'sticker' | 'invoice'>('sticker');
+  const [reprintStickerCopies, setReprintStickerCopies] = useState(1);
   const [consignmentPrintPayload, setConsignmentPrintPayload] =
     useState<ConsignmentPrintPayload | null>(null);
   const [editDestinationId, setEditDestinationId] = useState<string>('');
@@ -224,7 +221,32 @@ export function ParcelProcessedConsignmentPage() {
     setLockedDestinationId(null);
   };
 
-  const rows = data?.data ?? [];
+  const rows = useMemo(() => data?.data ?? EMPTY_ROWS, [data?.data]);
+  const queueReprint = useCallback(
+    (parcel: ProcessedParcel, selection: 'sticker' | 'invoice', stickerCopies = 1) => {
+      const destinationName =
+        parcel.destinationName ?? branchNameById.get(parcel.destinationId) ?? '-';
+      setReprintSelection(selection);
+      setReprintStickerCopies(stickerCopies);
+      setReprintData(toReceiptPrintData(parcel, destinationName));
+    },
+    [branchNameById],
+  );
+
+  const startEditingParcel = useCallback(
+    (parcel: ProcessedParcel) => {
+      setEditingParcel(parcel);
+      setEditDestinationId(parcel.destinationId);
+      setEditSourceLocationId(parcel.sourceLocationId ?? userLocationId ?? '');
+      setEditPickupLocationId(parcel.pickupLocationId ?? '');
+      setEditSenderPhone(parcel.senderPhone ?? '');
+      setEditSenderPhone2(parcel.senderPhone2 ?? '');
+      setEditReceiverPhone(parcel.receiverPhone ?? '');
+      setEditReceiverPhone2(parcel.receiverPhone2 ?? '');
+    },
+    [userLocationId],
+  );
+
   const loadData = () => {
     setQuery((prev) => ({
       ...prev,
@@ -235,60 +257,66 @@ export function ParcelProcessedConsignmentPage() {
     resetSelection();
   };
 
-  const toggleRowSelection = (parcel: ProcessedParcel, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
+  const toggleRowSelection = useCallback(
+    (parcel: ProcessedParcel, checked: boolean) => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
 
-      if (!checked) {
-        next.delete(parcel.id);
-        if (next.size === 0) {
-          setLockedDestinationId(null);
+        if (!checked) {
+          next.delete(parcel.id);
+          if (next.size === 0) {
+            setLockedDestinationId(null);
+          }
+          return next;
         }
+
+        if (lockedDestinationId && lockedDestinationId !== parcel.destinationId) {
+          toast.error('You cannot mix destination branches in a single consignment');
+          return prev;
+        }
+
+        next.add(parcel.id);
+        if (!lockedDestinationId) {
+          setLockedDestinationId(parcel.destinationId);
+        }
+
         return next;
-      }
+      });
+    },
+    [lockedDestinationId],
+  );
 
-      if (lockedDestinationId && lockedDestinationId !== parcel.destinationId) {
-        toast.error('You cannot mix destination branches in a single consignment');
-        return prev;
-      }
+  const toggleSelectAllEligible = useCallback(
+    (checked: boolean) => {
+      if (rows.length === 0) return;
 
-      next.add(parcel.id);
-      if (!lockedDestinationId) {
-        setLockedDestinationId(parcel.destinationId);
-      }
+      const effectiveDestinationId = lockedDestinationId ?? rows[0]?.destinationId ?? null;
+      if (!effectiveDestinationId) return;
 
-      return next;
-    });
-  };
+      const eligibleRows = rows.filter((row) => row.destinationId === effectiveDestinationId);
+      if (eligibleRows.length === 0) return;
 
-  const toggleSelectAllEligible = (checked: boolean) => {
-    if (rows.length === 0) return;
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (!checked) {
+          for (const row of eligibleRows) {
+            next.delete(row.id);
+          }
+          if (next.size === 0) {
+            setLockedDestinationId(null);
+          }
+          return next;
+        }
 
-    const effectiveDestinationId = lockedDestinationId ?? rows[0]?.destinationId ?? null;
-    if (!effectiveDestinationId) return;
-
-    const eligibleRows = rows.filter((row) => row.destinationId === effectiveDestinationId);
-    if (eligibleRows.length === 0) return;
-
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (!checked) {
         for (const row of eligibleRows) {
-          next.delete(row.id);
+          next.add(row.id);
         }
-        if (next.size === 0) {
-          setLockedDestinationId(null);
-        }
+        setLockedDestinationId(effectiveDestinationId);
         return next;
-      }
-
-      for (const row of eligibleRows) {
-        next.add(row.id);
-      }
-      setLockedDestinationId(effectiveDestinationId);
-      return next;
-    });
-  };
+      });
+    },
+    [lockedDestinationId, rows],
+  );
 
   const eligibleDestinationId = lockedDestinationId ?? rows[0]?.destinationId ?? null;
   const eligibleRows = eligibleDestinationId
@@ -380,40 +408,12 @@ export function ParcelProcessedConsignmentPage() {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="outline" className="h-8 w-8">
-                <EllipsisVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => {
-                  const parcel = row.original;
-                  const destinationName =
-                    parcel.destinationName ?? branchNameById.get(parcel.destinationId) ?? '-';
-                  setReprintData(toReceiptPrintData(parcel, destinationName));
-                }}
-              >
-                Reprint
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  const parcel = row.original;
-                  setEditingParcel(parcel);
-                  setEditDestinationId(parcel.destinationId);
-                  setEditSourceLocationId(parcel.sourceLocationId ?? userLocationId ?? '');
-                  setEditPickupLocationId(parcel.pickupLocationId ?? '');
-                  setEditSenderPhone(parcel.senderPhone ?? '');
-                  setEditSenderPhone2(parcel.senderPhone2 ?? '');
-                  setEditReceiverPhone(parcel.receiverPhone ?? '');
-                  setEditReceiverPhone2(parcel.receiverPhone2 ?? '');
-                }}
-              >
-                Edit
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ParcelReprintActions
+            parcel={row.original}
+            onEdit={startEditingParcel}
+            onReprintReceipt={(parcel) => queueReprint(parcel, 'invoice')}
+            onReprintSticker={(parcel, copies) => queueReprint(parcel, 'sticker', copies)}
+          />
         ),
       },
     ],
@@ -424,6 +424,9 @@ export function ParcelProcessedConsignmentPage() {
       selectedIds,
       lockedDestinationId,
       branchNameById,
+      queueReprint,
+      startEditingParcel,
+      toggleRowSelection,
       toggleSelectAllEligible,
     ],
   );
@@ -798,6 +801,8 @@ export function ParcelProcessedConsignmentPage() {
         <ParcelReceiptActions
           data={reprintData}
           autoPrint
+          autoPrintSelection={reprintSelection}
+          stickerCopies={reprintStickerCopies}
           mode="reprint"
           onAutoPrintComplete={() => setReprintData(null)}
         />

@@ -46,6 +46,7 @@ type PrintHtmlRequest = {
   title?: string;
   silent?: boolean;
   deviceName?: string;
+  copies?: number;
 };
 
 type ParallelPrintRequest = {
@@ -441,6 +442,26 @@ function getPrintOptions(request: PrintHtmlRequest): WebContentsPrintOptions {
 
   if (request.deviceName) {
     baseOptions.deviceName = request.deviceName;
+  }
+
+  if (request.copies && request.copies > 1) {
+    baseOptions.copies = request.copies;
+  }
+
+  if (request.layout === 'thermal-sticker') {
+    baseOptions.pageSize = {
+      width: 80000,
+      height: 82000,
+    };
+    baseOptions.landscape = false;
+    baseOptions.scaleFactor = 100;
+    baseOptions.margins = {
+      marginType: 'custom',
+      top: 2,
+      bottom: 2,
+      left: 2,
+      right: 2,
+    };
   }
 
   if (request.layout === 'invoice-a5' || request.layout === 'invoice-a5-receipt') {

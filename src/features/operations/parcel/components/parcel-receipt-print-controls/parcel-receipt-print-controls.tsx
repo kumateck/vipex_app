@@ -47,9 +47,9 @@ export function ParcelReceiptPrintControls({
             {isStickerPrintEnabled ? (
               <DropdownMenuItem onClick={onPrintSticker}>Reprint Sticker</DropdownMenuItem>
             ) : null}
-            <DropdownMenuItem onClick={onPrintInvoice}>Reprint Invoice</DropdownMenuItem>
+            <DropdownMenuItem onClick={onPrintInvoice}>Reprint Receipt</DropdownMenuItem>
             {isStickerPrintEnabled ? (
-              <DropdownMenuItem onClick={onPrintBoth}>Reprint Sticker + Invoice</DropdownMenuItem>
+              <DropdownMenuItem onClick={onPrintBoth}>Reprint Sticker + Receipt</DropdownMenuItem>
             ) : null}
           </DropdownMenuContent>
         </DropdownMenu>

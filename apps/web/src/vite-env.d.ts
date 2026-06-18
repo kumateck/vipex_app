@@ -56,6 +56,7 @@ declare global {
         title?: string;
         silent?: boolean;
         deviceName?: string;
+        copies?: number;
       }) => Promise<{ ok: boolean; reason?: string }>;
       printParallel: (request: {
         jobs: Array<{
@@ -64,6 +65,7 @@ declare global {
           title?: string;
           silent?: boolean;
           deviceName?: string;
+          copies?: number;
         }>;
       }) => Promise<{
         ok: boolean;
