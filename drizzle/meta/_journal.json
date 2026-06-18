@@ -260,6 +260,13 @@
       "when": 1776252000000,
       "tag": "0044_inventory_reorder_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1776255600000,
+      "tag": "0045_sticker_print_module",
+      "breakpoints": true
     }
   ]
 }

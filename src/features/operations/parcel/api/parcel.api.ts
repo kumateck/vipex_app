@@ -520,7 +520,11 @@ export const parcelApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION' },
+        { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
+      ],
     }),
     listSenderCashierParcels: builder.query<
       ServerListResponse<SenderCashierParcel>,

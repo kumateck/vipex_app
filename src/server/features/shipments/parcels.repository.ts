@@ -227,8 +227,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
                     ilike(parcels.trackingCode, `%${p.search}%`),
                     ilike(s.fullname, `%${p.search}%`),
                     ilike(s.telephone, `%${p.search}%`),
+                    ilike(s.telephone2, `%${p.search}%`),
                     ilike(r.fullname, `%${p.search}%`),
                     ilike(r.telephone, `%${p.search}%`),
+                    ilike(r.telephone2, `%${p.search}%`),
                   ),
                 ]
               : []),
@@ -338,8 +340,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
                     ilike(parcels.trackingCode, `%${p.search}%`),
                     ilike(s.fullname, `%${p.search}%`),
                     ilike(s.telephone, `%${p.search}%`),
+                    ilike(s.telephone2, `%${p.search}%`),
                     ilike(r.fullname, `%${p.search}%`),
                     ilike(r.telephone, `%${p.search}%`),
+                    ilike(r.telephone2, `%${p.search}%`),
                   ),
                 ]
               : []),

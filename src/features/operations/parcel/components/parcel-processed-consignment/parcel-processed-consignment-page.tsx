@@ -16,6 +16,12 @@ import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { formatDateTime } from '@/lib/dates';
 import {
+  isOptionalTenDigitPhone,
+  isTenDigitPhone,
+  normalizePhoneDigits,
+  phoneLengthMessage,
+} from '@/lib/phone';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -518,17 +524,33 @@ export function ParcelProcessedConsignmentPage() {
 
   const handleSaveEdit = async () => {
     if (!editingParcel) return;
-    const senderPhone = editSenderPhone.trim();
-    const senderPhone2 = editSenderPhone2.trim();
-    const receiverPhone = editReceiverPhone.trim();
-    const receiverPhone2 = editReceiverPhone2.trim();
+    const senderPhone = normalizePhoneDigits(editSenderPhone);
+    const senderPhone2 = normalizePhoneDigits(editSenderPhone2);
+    const receiverPhone = normalizePhoneDigits(editReceiverPhone);
+    const receiverPhone2 = normalizePhoneDigits(editReceiverPhone2);
 
     if (!senderPhone) {
       toast.error('Sender telephone is required');
       return;
     }
+    if (!isTenDigitPhone(senderPhone)) {
+      toast.error(phoneLengthMessage('Sender telephone'));
+      return;
+    }
+    if (!isOptionalTenDigitPhone(senderPhone2)) {
+      toast.error(phoneLengthMessage('Sender telephone 2'));
+      return;
+    }
     if (!receiverPhone) {
       toast.error('Receiver telephone is required');
+      return;
+    }
+    if (!isTenDigitPhone(receiverPhone)) {
+      toast.error(phoneLengthMessage('Receiver telephone'));
+      return;
+    }
+    if (!isOptionalTenDigitPhone(receiverPhone2)) {
+      toast.error(phoneLengthMessage('Receiver telephone 2'));
       return;
     }
 

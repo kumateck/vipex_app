@@ -37,6 +37,10 @@ function formatDate(value?: string | null) {
   return d.toLocaleString();
 }
 
+const PHONE_DIGITS = 10;
+const normalizePhoneDigits = (value: string) => value.replace(/\D/g, '');
+const limitPhoneDigits = (value: string) => normalizePhoneDigits(value).slice(0, PHONE_DIGITS);
+
 export default function ReceiveProcessParcelScreen() {
   const { theme } = useAppearance();
   const { session, withAuth } = useAuth();
@@ -102,7 +106,7 @@ export default function ReceiveProcessParcelScreen() {
     const receiverId = parcel.receiverId;
     const parcelDetailsValue = editParcelDetails.trim();
     const receiverNameValue = editReceiverName.trim();
-    const receiverPhoneValue = editReceiverPhone.trim();
+    const receiverPhoneValue = normalizePhoneDigits(editReceiverPhone);
 
     if (!parcelDetailsValue) {
       Alert.alert('Validation', 'Parcel details is required.');
@@ -111,6 +115,11 @@ export default function ReceiveProcessParcelScreen() {
     }
     if (!receiverNameValue) {
       Alert.alert('Validation', 'Receiver name is required.');
+      void hapticWarning();
+      return;
+    }
+    if (receiverPhoneValue.length > 0 && receiverPhoneValue.length !== PHONE_DIGITS) {
+      Alert.alert('Validation', `Receiver telephone must be exactly ${PHONE_DIGITS} digits.`);
       void hapticWarning();
       return;
     }
@@ -279,8 +288,10 @@ export default function ReceiveProcessParcelScreen() {
           <AppLabel>Receiver Telephone</AppLabel>
           <AppInput
             value={editReceiverPhone}
-            onChangeText={setEditReceiverPhone}
+            onChangeText={(value) => setEditReceiverPhone(limitPhoneDigits(value))}
             placeholder="Receiver telephone"
+            keyboardType="number-pad"
+            maxLength={PHONE_DIGITS}
           />
           {!canEdit ? (
             <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>

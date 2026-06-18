@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useWatch, type UseFormReturn } from 'react-hook-form';
-import { CashierType } from '@/db/schemas/enums';
+import { CashierType, UserType } from '@/db/schemas/enums';
 import { useGetCurrentActiveSessionQuery } from '@/features/cashiers/api/cashiers.api';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
@@ -19,7 +19,12 @@ export function useParcelCreatePrintPreference({
 }: UseParcelCreatePrintPreferenceArgs) {
   const user = useAuthStore((state) => state.user);
   const parcels = useWatch({ control: form.control, name: 'parcels' });
-  const { data: activeSession } = useGetCurrentActiveSessionQuery();
+  const isCashierUser =
+    user?.userType === UserType.CASHIER ||
+    (user?.cashierType !== null && user?.cashierType !== undefined);
+  const { data: activeSession } = useGetCurrentActiveSessionQuery(undefined, {
+    skip: !isCashierUser,
+  });
 
   const canCollectSenderPayments = useMemo(() => {
     const cashierType = user?.cashierType;

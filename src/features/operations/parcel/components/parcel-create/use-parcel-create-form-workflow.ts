@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useCreateCustomerMutation } from '@/features/customers/api';
 import { useAuthStore } from '@/stores/auth-store';
-import { BranchType, PaymentMethod, PaymentResponsibility } from '@/db/schemas/enums';
+import { BranchType, PaymentMethod, PaymentResponsibility, UserType } from '@/db/schemas/enums';
 import { useCreateBookingWithParcelsMutation } from '../../api/parcel.api';
 import type { ParcelBookingFormValues, ReceiptSummary } from './parcel-form.types';
 import { buildParcelCreateReceipt } from './build-parcel-create-receipt';
@@ -24,6 +24,9 @@ export function useParcelCreateFormWorkflow() {
   const userBranchId = user?.branch?.id ?? '';
   const userBranchType = user?.branch?.type ?? null;
   const userId = user?.id ?? '';
+  const isCashierUser =
+    user?.userType === UserType.CASHIER ||
+    (user?.cashierType !== null && user?.cashierType !== undefined);
 
   const [latestReceipt, setLatestReceipt] = useState<ReceiptSummary | null>(null);
   const [shouldPrintOnSubmit, setShouldPrintOnSubmit] = useState(false);
@@ -72,6 +75,18 @@ export function useParcelCreateFormWorkflow() {
     isCreatingCustomer ||
     form.formState.isSubmitting;
   const isSaving = isSubmitting || isCreatingCustomer || form.formState.isSubmitting;
+
+  const resetCreateForm = ({
+    closePaymentDialog = true,
+  }: { closePaymentDialog?: boolean } = {}) => {
+    form.reset(createInitialFormValues());
+    setOpenParcels({});
+    setLatestReceipt(null);
+    setShouldPrintOnSubmit(false);
+    if (closePaymentDialog) {
+      senderPayment.closePaymentDialog();
+    }
+  };
 
   const resolveCustomerId = async (
     params: {
@@ -245,8 +260,12 @@ export function useParcelCreateFormWorkflow() {
         setLatestReceipt(receipt);
       }
 
-      form.reset(createInitialFormValues());
-      toast.success('Parcel transaction created successfully');
+      resetCreateForm({ closePaymentDialog: !openedPaymentDialog });
+      toast.success(
+        isCashierUser
+          ? 'Parcel transaction created successfully'
+          : 'Booking saved and sent to Sender Cashier Payments',
+      );
     } catch (error) {
       if (isApiRejectionError(error)) return;
       toast.error(error instanceof Error ? error.message : 'Failed to create parcel transaction');
@@ -254,10 +273,7 @@ export function useParcelCreateFormWorkflow() {
   };
 
   const handleCancel = () => {
-    form.reset(createInitialFormValues());
-    setLatestReceipt(null);
-    setShouldPrintOnSubmit(false);
-    senderPayment.closePaymentDialog();
+    resetCreateForm();
   };
 
   return {

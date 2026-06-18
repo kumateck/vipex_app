@@ -21,6 +21,7 @@ export type CreateBookingWithParcelsBody = {
   createdBy: string;
   cashierSessionId?: string | null;
   bookingCode?: string | null;
+  requireActiveCashierSession?: boolean;
   parcels: Array<{
     destinationId: string;
     pickupLocationId?: string | null;
@@ -90,11 +91,6 @@ export async function createBookingWithParcelsSvc(
     throw BadRequest('Cashier user and branch are required for parcel booking');
   }
 
-  const activeSession = await assertActiveSessionSvc({
-    cashierId: primaryParcel.cashierUserId,
-    branchId: primaryParcel.branchId,
-  });
-
   const hasMixedCashierOrBranch = body.parcels.some(
     (parcel) =>
       parcel.cashierUserId !== primaryParcel.cashierUserId ||
@@ -104,7 +100,15 @@ export async function createBookingWithParcelsSvc(
     throw BadRequest('All parcels in one booking must belong to the same cashier and branch');
   }
 
-  const resolvedCashierSessionId: string | null = body.cashierSessionId ?? activeSession.id;
+  const activeSession = body.requireActiveCashierSession
+    ? await assertActiveSessionSvc({
+        cashierId: primaryParcel.cashierUserId,
+        branchId: primaryParcel.branchId,
+      })
+    : null;
+  const resolvedCashierSessionId: string | null = activeSession
+    ? (body.cashierSessionId ?? activeSession.id)
+    : null;
 
   const input: CreateBookingWithParcelsInput = {
     senderId: body.senderId,

@@ -5,7 +5,7 @@ import { createBookingWithParcelsCtrl } from './booking-with-parcels.controller'
 import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { Forbidden } from '@/server/utils/http-error';
-import { BranchType, PaymentResponsibility } from '@/db/schemas/enums';
+import { BranchType, PaymentResponsibility, UserType } from '@/db/schemas/enums';
 
 export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-parcels' })
   .use(authPlugin)
@@ -47,6 +47,8 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
         createdBy: authUser.sub,
         cashierSessionId: payload.cashierSessionId ?? null,
         bookingCode: payload.bookingCode ?? null,
+        requireActiveCashierSession:
+          authUser.userType === UserType.CASHIER || authUser.cashierType != null,
         parcels: payload.parcels.map((parcel) => ({
           ...parcel,
           cashierUserId: authUser.sub,

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -16,8 +17,9 @@ import {
   SelectValue,
 } from '@/components/ui/select-searchable';
 import type { SenderCashierParcel } from '../../api/parcel.api';
+import { ParcelSenderPaymentSummary } from '../parcel-sender-payment-summary';
 import { PAYMENT_METHOD_OPTIONS } from './constants';
-import { formatCurrency, getSenderDuePsw } from './utils';
+import { getSenderDuePsw } from './utils';
 
 type CollectSenderPaymentDialogProps = {
   parcel: SenderCashierParcel | null;
@@ -42,6 +44,33 @@ export function CollectSenderPaymentDialog({
   onClose,
   onSubmit,
 }: CollectSenderPaymentDialogProps) {
+  const senderDuePsw = parcel ? getSenderDuePsw(parcel) : 0;
+  const summaryItems = useMemo(
+    () =>
+      parcel
+        ? [
+            {
+              parcelId: parcel.id,
+              bookingCode: parcel.bookingCode,
+              destinationBranchName: parcel.destinationName ?? parcel.destinationId,
+              destinationLocationName: pickupLocationName || parcel.pickupLocationName,
+              parcelDetails: parcel.parcelDetails,
+              parcelContent: parcel.parcelContent,
+              parcelValueCedis: Number(parcel.parcelValuePsw ?? 0) / 100,
+              expectedChargeCedis: parcel.chargePsw / 100,
+              senderShouldPayCedis: senderDuePsw / 100,
+              senderName: parcel.senderName,
+              senderPhone: parcel.senderPhone,
+              senderPhone2: parcel.senderPhone2,
+              receiverName: parcel.receiverName,
+              receiverPhone: parcel.receiverPhone,
+              receiverPhone2: parcel.receiverPhone2,
+            },
+          ]
+        : [],
+    [parcel, pickupLocationName, senderDuePsw],
+  );
+
   return (
     <Dialog open={Boolean(parcel)} onOpenChange={(open) => (!open ? onClose() : null)}>
       <DialogContent>
@@ -50,29 +79,7 @@ export function CollectSenderPaymentDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Tracking</p>
-            <p className="font-medium">{parcel?.trackingCode ?? '-'}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Destination</p>
-            <div className="leading-tight">
-              <p className="font-medium">
-                {parcel?.destinationName ?? parcel?.destinationId ?? '-'}
-              </p>
-              <p className="text-muted-foreground text-xs">
-                {pickupLocationName || parcel?.pickupLocationName || '-'}
-              </p>
-            </div>
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Expected Charge</p>
-            <p className="font-medium">{parcel ? formatCurrency(parcel.chargePsw) : '-'}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Sender Should Pay</p>
-            <p className="font-medium">{parcel ? formatCurrency(getSenderDuePsw(parcel)) : '-'}</p>
-          </div>
+          <ParcelSenderPaymentSummary items={summaryItems} />
 
           <div className="space-y-2">
             <Label htmlFor="sender-payment-amount">Amount (GHS)</Label>
@@ -82,7 +89,7 @@ export function CollectSenderPaymentDialog({
               value={amount}
               onChange={(event) => onAmountChange(event.target.value)}
               placeholder="0.00"
-              disabled={parcel ? getSenderDuePsw(parcel) <= 0 : false}
+              disabled={parcel ? senderDuePsw <= 0 : false}
             />
           </div>
 
@@ -91,7 +98,7 @@ export function CollectSenderPaymentDialog({
             <Select value={paymentMethod} onValueChange={onPaymentMethodChange}>
               <SelectTrigger
                 id="sender-payment-method"
-                disabled={parcel ? getSenderDuePsw(parcel) <= 0 : false}
+                disabled={parcel ? senderDuePsw <= 0 : false}
               >
                 <SelectValue placeholder="Select payment method" />
               </SelectTrigger>
@@ -113,7 +120,7 @@ export function CollectSenderPaymentDialog({
           <Button type="button" onClick={() => void onSubmit()} disabled={isSubmitting}>
             {isSubmitting
               ? 'Processing...'
-              : parcel && getSenderDuePsw(parcel) > 0
+              : parcel && senderDuePsw > 0
                 ? 'Collect Payment'
                 : 'Print Receipts'}
           </Button>

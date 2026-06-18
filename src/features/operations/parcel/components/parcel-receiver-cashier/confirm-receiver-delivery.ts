@@ -1,5 +1,6 @@
 import type { CustomerCardRecord } from '@/features/customers/api';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import { buildReceiverReceiptData } from './build-receiver-receipt-data';
 import { resolveCustomerCard } from './resolve-customer-card';
 import type { CardMode, HandoverTarget } from './receiver-cashier-types';
@@ -123,9 +124,12 @@ export async function confirmReceiverDelivery({
   if (handoverTarget === 'second') {
     if (!secondReceiverId) {
       const fullname = secondNewName.trim();
-      const telephone = secondNewPhone.trim();
+      const telephone = normalizePhoneDigits(secondNewPhone);
       if (!fullname || !telephone)
         throw new Error('Second receiver name and telephone are required');
+      if (!isTenDigitPhone(telephone)) {
+        throw new Error(phoneLengthMessage('Second receiver telephone'));
+      }
       const created = await createCustomer({ fullname, telephone });
       secondReceiverId = created.id;
     }

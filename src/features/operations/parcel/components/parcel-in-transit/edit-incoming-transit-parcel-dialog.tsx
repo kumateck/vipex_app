@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PHONE_DIGITS, limitPhoneDigits } from '@/lib/phone';
 
 type EditIncomingTransitParcelDialogProps = {
   open: boolean;
@@ -65,8 +66,11 @@ export function EditIncomingTransitParcelDialog({
             <Input
               id="edit-receiver-phone"
               value={editReceiverPhone}
-              onChange={(event) => onEditReceiverPhoneChange(event.target.value)}
+              onChange={(event) => onEditReceiverPhoneChange(limitPhoneDigits(event.target.value))}
               placeholder="Receiver telephone"
+              inputMode="numeric"
+              autoComplete="tel"
+              maxLength={PHONE_DIGITS}
             />
           </div>
         </div>

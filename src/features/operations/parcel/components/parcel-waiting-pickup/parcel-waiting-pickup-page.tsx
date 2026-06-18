@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
+import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { EllipsisVertical } from 'lucide-react';
@@ -372,9 +373,13 @@ export function ParcelWaitingPickupPage() {
     if (handoverTarget === 'second') {
       if (!secondReceiverId) {
         const fullname = secondNewName.trim();
-        const telephone = secondNewPhone.trim();
+        const telephone = normalizePhoneDigits(secondNewPhone);
         if (!fullname || !telephone) {
           toast.error('Second receiver name and telephone are required');
+          return;
+        }
+        if (!isTenDigitPhone(telephone)) {
+          toast.error(phoneLengthMessage('Second receiver telephone'));
           return;
         }
         const created = await createCustomer({ fullname, telephone }).unwrap();

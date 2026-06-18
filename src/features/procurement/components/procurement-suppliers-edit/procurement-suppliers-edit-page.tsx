@@ -6,6 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  PHONE_DIGITS,
+  isOptionalTenDigitPhone,
+  limitPhoneDigits,
+  normalizePhoneDigits,
+  phoneLengthMessage,
+} from '@/lib/phone';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useGetProcurementSupplierByIdQuery,
@@ -42,6 +49,10 @@ export function ProcurementSuppliersEditPage() {
       toast.error('Supplier name is required');
       return;
     }
+    if (!isOptionalTenDigitPhone(telephone)) {
+      toast.error(phoneLengthMessage());
+      return;
+    }
 
     try {
       await updateSupplier({
@@ -50,7 +61,7 @@ export function ProcurementSuppliersEditPage() {
           name: name.trim(),
           contactPerson: contactPerson.trim() || null,
           email: email.trim() || null,
-          telephone: telephone.trim() || null,
+          telephone: normalizePhoneDigits(telephone) || null,
           address: address.trim() || null,
         },
       }).unwrap();
@@ -99,7 +110,14 @@ export function ProcurementSuppliersEditPage() {
                   </Field>
                   <Field>
                     <FieldLabel>Telephone</FieldLabel>
-                    <Input value={telephone} onChange={(e) => setTelephone(e.target.value)} />
+                    <Input
+                      value={telephone}
+                      onChange={(e) => setTelephone(limitPhoneDigits(e.target.value))}
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      maxLength={PHONE_DIGITS}
+                      placeholder="0240000000"
+                    />
                   </Field>
                   <Field className="md:col-span-2">
                     <FieldLabel>Address</FieldLabel>

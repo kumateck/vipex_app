@@ -1,5 +1,6 @@
 import { QRCode } from 'react-qrcode-logo';
 import logoPng from '@/assets/logo.png';
+import { InvoiceTaxSummary } from './invoice-tax-summary';
 
 type InvoiceA5TemplateProps = {
   bookingCode: string;
@@ -38,6 +39,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     parcelValueCedis,
     receivedByName,
     destinationBranchName,
+    destinationLocationName,
     senderName,
     senderTelephone,
     receiverName,
@@ -58,6 +60,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     parcelValueCedis !== null && parcelValueCedis !== undefined
       ? formatMoney(parcelValueCedis)
       : '-';
+  const destinationLabel = formatDestinationLabel(destinationBranchName, destinationLocationName);
   const taxRows = [
     { label: 'GETFUND', value: tax.getfund },
     { label: 'NHIL', value: tax.nhil },
@@ -128,8 +131,10 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
             lineHeight: 1.2,
           }}
         >
-          Kumasi (Accra): 024353512 / 054021502 | Accra (Kumasi): 024353512 / 054021503 | Sunyani
-          (Accra): 05074243966 | Kumasi (Sunyani): 054021503
+          Kumasi (Accra): 0204353512 / 0540121502 | Accra (Kumasi): 0204353513 / 0507243966 |
+          Sunyani (Accra): 0540121503 / 0204252090 | Accra (Sunyani): 0540305280
+          <br />
+          Kumasi (Sunyani): 0204353512 | Sunyani (Kumasi): 0540121503
         </div>
       </div>
 
@@ -210,7 +215,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
                 </div>
                 <div style={{ paddingBottom: '0.5mm', paddingLeft: '1.6mm' }}>
                   <div style={{ fontWeight: 700 }}>Destination:</div>
-                  <div style={{ marginTop: '0.3mm' }}>{destinationBranchName || '-'}</div>
+                  <div style={{ marginTop: '0.3mm' }}>{destinationLabel}</div>
                 </div>
               </div>
 
@@ -270,46 +275,23 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
               Being: cost of courier service
             </div>
 
-            <div
-              style={{
-                border: '0.28mm solid #111',
-                padding: '1.2mm 1.6mm',
-                fontSize: '5.2mm',
-                width: '100%',
-                alignSelf: 'stretch',
-              }}
-            >
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', columnGap: '8.5mm' }}>
-                <span>Price:</span>
-                <span style={{ whiteSpace: 'nowrap' }}>{formatMoney(priceBeforeTax)}</span>
-              </div>
-              {taxRows.map((row) => (
-                <div
-                  key={row.label}
-                  style={{ display: 'grid', gridTemplateColumns: '1fr auto', columnGap: '8.5mm' }}
-                >
-                  <span>{row.label}:</span>
-                  <span style={{ whiteSpace: 'nowrap' }}>{formatMoney(row.value)}</span>
-                </div>
-              ))}
-              <div
-                style={{
-                  borderTop: '0.2mm solid #333',
-                  marginTop: '0.55mm',
-                  paddingTop: '0.55mm',
-                  fontWeight: 700,
-                  display: 'grid',
-                  gridTemplateColumns: '1fr auto',
-                  columnGap: '8.5mm',
-                }}
-              >
-                <span>{isToBePaidReceipt ? 'To Be Paid:' : 'Total:'}</span>
-                <span style={{ whiteSpace: 'nowrap' }}>{formatMoney(totalPaid)}</span>
-              </div>
-            </div>
+            <InvoiceTaxSummary
+              formatMoney={formatMoney}
+              isToBePaidReceipt={isToBePaidReceipt}
+              priceBeforeTax={priceBeforeTax}
+              taxRows={taxRows}
+              totalPaid={totalPaid}
+            />
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+function formatDestinationLabel(branchName: string, locationName: string) {
+  const branch = branchName.trim() || '-';
+  const location = locationName.trim();
+  if (!location || location === '-') return branch;
+  return `${branch} (${location})`;
 }

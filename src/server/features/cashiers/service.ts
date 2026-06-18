@@ -17,6 +17,7 @@ import {
   getSessionDeliveryFeeCollectedPswRepo,
   getSessionDeliveryPrincipalCollectedPswRepo,
   getSessionFullCashierExpectedPswRepo,
+  getSessionToBePaidCreatedPswRepo,
   getSessionCreditCreatedPswRepo,
   type SessionRow,
   type ListSessionsParams,
@@ -192,6 +193,7 @@ export async function getCurrentActiveSessionSummarySvc(input: {
     totalDeliveryFeeCollectedPsw,
     totalDeliveryPrincipalCollectedPsw,
     totalFullCashierExpectedPsw,
+    totalToBePaidCreatedPsw,
     totalCreditCreatedPsw,
   ] = await Promise.all([
     getSessionAmountPaidPswRepo({ sessionId: session.id, cashierId: input.cashierId }),
@@ -202,6 +204,7 @@ export async function getCurrentActiveSessionSummarySvc(input: {
       cashierId: input.cashierId,
     }),
     getSessionFullCashierExpectedPswRepo({ sessionId: session.id, cashierId: input.cashierId }),
+    getSessionToBePaidCreatedPswRepo({ sessionId: session.id, cashierId: input.cashierId }),
     getSessionCreditCreatedPswRepo({ sessionId: session.id, cashierId: input.cashierId }),
   ]);
 
@@ -214,9 +217,7 @@ export async function getCurrentActiveSessionSummarySvc(input: {
       ? totalToBePaidCollectedPsw
       : mode === 'delivery'
         ? totalDeliveryFeeCollectedPsw + totalToBePaidCollectedPsw
-        : mode === 'full'
-          ? totalFullCashierExpectedPsw
-          : totalSenderSalesPsw;
+        : totalSenderSalesPsw;
 
   const totalSalesPsw =
     mode === 'receiver'
@@ -224,15 +225,13 @@ export async function getCurrentActiveSessionSummarySvc(input: {
       : mode === 'delivery'
         ? totalDeliveryFeeCollectedPsw + totalToBePaidCollectedPsw
         : mode === 'full'
-          ? totalFullCashierExpectedPsw
+          ? totalSenderSalesPsw + totalToBePaidCollectedPsw
           : totalSenderSalesPsw;
 
   const toBePaidPsw =
-    mode === 'sender'
-      ? totalCreditCreatedPsw
-      : mode === 'full'
-        ? totalFullCashierExpectedPsw
-        : totalToBePaidCollectedPsw;
+    mode === 'sender' || mode === 'full' ? totalToBePaidCreatedPsw : totalToBePaidCollectedPsw;
+  const fullCashierExpectedPsw =
+    mode === 'full' ? totalSenderSalesPsw + totalToBePaidCollectedPsw : totalFullCashierExpectedPsw;
 
   return {
     sessionId: session.id,
@@ -242,7 +241,7 @@ export async function getCurrentActiveSessionSummarySvc(input: {
     totalCreditCreatedPsw,
     totalToBePaidCollectedPsw,
     totalDeliveryFeeCollectedPsw,
-    totalFullCashierExpectedPsw,
+    totalFullCashierExpectedPsw: fullCashierExpectedPsw,
     mode,
   };
 }
