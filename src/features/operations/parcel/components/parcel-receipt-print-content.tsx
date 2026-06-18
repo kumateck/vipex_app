@@ -10,11 +10,13 @@ import {
 
 type ParcelReceiptPrintContentProps = {
   data: ReceiptPrintData;
+  desktopStickerRef: RefObject<HTMLDivElement | null>;
   stickerRef: RefObject<HTMLDivElement | null>;
   invoiceRef: RefObject<HTMLDivElement | null>;
   isSenderPaid: boolean;
   qrUrl: string;
   amountPaidCedis: number;
+  stickerCopies?: number;
   tax: {
     vat: number;
     getfund: number;
@@ -25,17 +27,41 @@ type ParcelReceiptPrintContentProps = {
 
 export function ParcelReceiptPrintContent({
   data,
+  desktopStickerRef,
   stickerRef,
   invoiceRef,
   isSenderPaid,
   qrUrl,
   amountPaidCedis,
+  stickerCopies = 1,
   tax,
 }: ParcelReceiptPrintContentProps) {
+  const copies = Math.max(Math.trunc(stickerCopies), 1);
+
   return (
     <>
       <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '80mm' }}>
         <div ref={stickerRef}>
+          {Array.from({ length: copies }, (_, index) => (
+            <ThermalStickerTemplate
+              key={`${data.trackingCode}-${index}`}
+              bookingCode={data.bookingCode}
+              receiverName={data.receiverName}
+              receiverTelephone={data.receiverTelephone}
+              receiverTelephone2={data.receiverTelephone2}
+              destinationBranchName={data.destinationBranchName}
+              destinationLocationName={data.destinationLocationName}
+              isPaid={isSenderPaid}
+              toBePaidCedis={isSenderPaid ? undefined : data.receiverToPayCedis}
+              qrValue={qrUrl}
+              formatMoney={formatMoney}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '80mm' }}>
+        <div ref={desktopStickerRef}>
           <ThermalStickerTemplate
             bookingCode={data.bookingCode}
             receiverName={data.receiverName}
@@ -47,6 +73,7 @@ export function ParcelReceiptPrintContent({
             toBePaidCedis={isSenderPaid ? undefined : data.receiverToPayCedis}
             qrValue={qrUrl}
             formatMoney={formatMoney}
+            orientation="portrait"
           />
         </div>
       </div>
