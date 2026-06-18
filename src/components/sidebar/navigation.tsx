@@ -1,9 +1,5 @@
 import { type LucideIconProps } from '@/components/ui';
-import {
-  PermissionKeys,
-  type PermissionKey,
-  RoutePermissionOverrides,
-} from '@/shared/permissions/constants';
+import { PermissionKeys, type PermissionKey } from '@/shared/permissions/constants';
 
 // Define the sub-item structure for nested menu items.
 interface SubItem {
@@ -90,24 +86,6 @@ function filterSubItems(items?: SubItem[]): SubItem[] | undefined {
     filtered.push({ ...item, children: nextChildren });
   }
   return filtered.length ? filtered : undefined;
-}
-
-function applyPermissionOverridesToSubItem(item: SubItem): SubItem {
-  const override = item.url ? RoutePermissionOverrides[item.url] : undefined;
-  return {
-    ...item,
-    permissionKey: override ?? item.permissionKey,
-    children: item.children?.map(applyPermissionOverridesToSubItem),
-  };
-}
-
-function applyPermissionOverridesToMenuItem(menuItem: MenuItem): MenuItem {
-  const override = menuItem.url ? RoutePermissionOverrides[menuItem.url] : undefined;
-  return {
-    ...menuItem,
-    permissionKey: override ?? menuItem.permissionKey,
-    items: menuItem.items?.map(applyPermissionOverridesToSubItem),
-  };
 }
 
 const BASE_ROUTES: Route[] = [
@@ -1165,44 +1143,69 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadStockLevels,
           },
           {
-            title: 'Stock Movements',
-            url: '/inventory/stock-movements',
-            permissionKey: PermissionKeys.CanReadStockMovements,
+            title: 'Operate Daily Inventory',
+            children: [
+              {
+                title: 'Stock Movements',
+                url: '/inventory/stock-movements',
+                permissionKey: PermissionKeys.CanReadStockMovements,
+              },
+              {
+                title: 'Stock Adjustments',
+                url: '/inventory/stock-adjustments',
+                permissionKey: PermissionKeys.CanReadStockAdjustments,
+              },
+              {
+                title: 'Consumption',
+                url: '/inventory/stock-consumption',
+                permissionKey: PermissionKeys.CanReadStockMovements,
+              },
+              {
+                title: 'Stock Count Sessions',
+                url: '/inventory/stock-count-sessions',
+                permissionKey: PermissionKeys.CanReadStockLevels,
+              },
+              {
+                title: 'Transfer Shipments',
+                url: '/inventory/stock-transfers',
+                permissionKey: PermissionKeys.CanReadStockTransfers,
+              },
+              {
+                title: 'Inventory Monitoring',
+                url: '/inventory/monitoring',
+                permissionKey: PermissionKeys.CanReadInventoryOverview,
+              },
+              {
+                title: 'Reorder Suggestions',
+                url: '/inventory/reorder-suggestions',
+                permissionKey: PermissionKeys.CanReadInventoryOverview,
+              },
+            ],
           },
           {
-            title: 'Stock Adjustments',
-            url: '/inventory/stock-adjustments',
-            permissionKey: PermissionKeys.CanReadStockAdjustments,
-          },
-          {
-            title: 'Stock Transfers',
-            url: '/inventory/stock-transfers',
-            permissionKey: PermissionKeys.CanReadStockTransfers,
-          },
-          {
-            title: 'Stock Requests',
-            url: '/inventory/stock-requests',
-            permissionKey: PermissionKeys.CanReadStockRequests,
-          },
-          {
-            title: 'Stock Count Sessions',
-            url: '/inventory/stock-count-sessions',
-            permissionKey: PermissionKeys.CanReadStockLevels,
+            title: 'Stock Requests (Primary)',
+            children: [
+              {
+                title: 'My Requests',
+                url: '/inventory/stock-requests',
+                permissionKey: PermissionKeys.CanReadStockRequests,
+              },
+              {
+                title: 'Issue Queue',
+                url: '/inventory/stock-requests/issue',
+                permissionKey: PermissionKeys.CanReadStockRequests,
+              },
+              {
+                title: 'Acknowledge Queue',
+                url: '/inventory/stock-requests/receive',
+                permissionKey: PermissionKeys.CanReadStockRequests,
+              },
+            ],
           },
           {
             title: 'Stock Reservations',
             url: '/inventory/stock-reservations',
             permissionKey: PermissionKeys.CanReadStockRequests,
-          },
-          {
-            title: 'Inventory Monitoring',
-            url: '/inventory/monitoring',
-            permissionKey: PermissionKeys.CanReadInventoryOverview,
-          },
-          {
-            title: 'Reorder Suggestions',
-            url: '/inventory/reorder-suggestions',
-            permissionKey: PermissionKeys.CanReadInventoryOverview,
           },
           {
             title: 'Reservation Exceptions',
@@ -1860,7 +1863,7 @@ const FILTERED_BASE_ROUTES: Route[] = BASE_ROUTES.map((route) => {
     const keepByUrl = isImplementedReportUrl(menuItem.url);
     const hasItems = Boolean(nextItems?.length);
     if (!keepByUrl && !hasItems) continue;
-    filteredMenu.push(applyPermissionOverridesToMenuItem({ ...menuItem, items: nextItems }));
+    filteredMenu.push({ ...menuItem, items: nextItems });
   }
   return { ...route, menu: filteredMenu };
 }).filter((route) => route.menu.length > 0);

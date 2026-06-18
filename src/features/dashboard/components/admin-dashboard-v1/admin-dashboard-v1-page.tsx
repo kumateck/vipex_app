@@ -25,11 +25,11 @@ export function AdminDashboardV1Page() {
   const permissions = new Set(user?.permissions ?? []);
   const [scope, setScope] = useState<DashboardScope | null>(null);
 
-  const canViewParcel = permissions.has(PermissionKeys.CanGetParcelStatusSummaryReport);
-  const canViewShiftRevenue = permissions.has(PermissionKeys.CanGetShiftRevenueReport);
-  const canViewProfitability = permissions.has(PermissionKeys.CanGetBranchProfitabilityReport);
-  const canViewCredit = permissions.has(PermissionKeys.CanGetCreditExposureReport);
-  const canViewOutstanding = permissions.has(PermissionKeys.CanGetOutstandingToBePaidReport);
+  const canViewParcel = permissions.has(PermissionKeys.CanViewReportParcelsStatusSummary);
+  const canViewShiftRevenue = permissions.has(PermissionKeys.CanViewReportCashierRevenue);
+  const canViewProfitability = permissions.has(PermissionKeys.CanViewReportBranchProfitSummary);
+  const canViewCredit = permissions.has(PermissionKeys.CanViewReportCustomersCreditSummary);
+  const canViewOutstanding = permissions.has(PermissionKeys.CanViewReportCashToBePaidOutstanding);
   const canViewCashConfirmations = permissions.has(PermissionKeys.CanReadAccounting);
 
   const scopeFrom = scope?.dateRange?.from;

@@ -70,11 +70,11 @@ Dashboards to implement:
   - Branch profitability ranking
   - Exception list (high variance, delayed delivery, pending confirmations)
 - Required permissions:
-  - `CanGetParcelStatusSummaryReport`
-  - `CanGetShiftRevenueReport`
-  - `CanGetBranchProfitabilityReport`
-  - `CanGetCreditExposureReport`
-  - `CanGetOutstandingToBePaidReport`
+  - `CanViewReportParcelsStatusSummary`
+  - `CanViewReportCashierRevenue`
+  - `CanViewReportBranchProfitSummary`
+  - `CanViewReportCustomersCreditSummary`
+  - `CanViewReportCashToBePaidOutstanding`
   - `CanReadAccounting`
 - Primary endpoints:
   - `/reports/parcel-status-summary`
@@ -97,9 +97,9 @@ Dashboards to implement:
   - Session performance trend
   - Recent reconciliation lines
 - Required permissions:
-  - `CanGetShiftRevenueReport`
-  - `CanGetOutstandingToBePaidReport`
-  - `CanGetParcelStatusSummaryReport`
+  - `CanViewReportCashierRevenue`
+  - `CanViewReportCashToBePaidOutstanding`
+  - `CanViewReportParcelsStatusSummary`
   - `CanReadCashierSessions`
 - Primary endpoints:
   - `/reports/daily-cashier-sales`
@@ -123,7 +123,7 @@ Dashboards to implement:
   - `CanGetAuditLog`
   - `CanGetEntityAuditHistory`
   - `CanReadAccounting`
-  - `CanGetOutstandingToBePaidReport`
+  - `CanViewReportCashToBePaidOutstanding`
 - Primary endpoints:
   - Audit report routes under `/reports/audit/*`
   - `/audit/entities/:entityType/:entityId`
@@ -165,10 +165,10 @@ Dashboards to implement:
   - Revenue/profit trend
 - Required permissions:
   - `CanReadAccounting`
-  - `CanGetBranchProfitabilityReport`
-  - `CanGetCreditExposureReport`
-  - `CanGetParcelStatusSummaryReport`
-  - `CanGetShiftRevenueReport`
+  - `CanViewReportBranchProfitSummary`
+  - `CanViewReportCustomersCreditSummary`
+  - `CanViewReportParcelsStatusSummary`
+  - `CanViewReportCashierRevenue`
 - Primary endpoints:
   - `/accounting/reports/income-statement`
   - `/accounting/reports/profit-loss`
@@ -216,7 +216,7 @@ Dashboards to implement:
   - Parcel service board
   - Customer statement quick-view links
 - Required permissions:
-  - `CanGetParcelStatusSummaryReport`
+  - `CanViewReportParcelsStatusSummary`
   - `CanReadParcels`
   - `CanReadCustomers`
 - Primary endpoints:

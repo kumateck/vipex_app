@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -147,7 +148,7 @@ export function ReconciliationSessionsListPage() {
                 ) : rows.length ? (
                   rows.map((row) => (
                     <TableRow key={row.id}>
-                      <TableCell>{new Date(row.confirmationDate).toLocaleString()}</TableCell>
+                      <TableCell>{formatDateTimeShared(row.confirmationDate)}</TableCell>
                       <TableCell>{row.branchName ?? '-'}</TableCell>
                       <TableCell>{row.cashierName ?? '-'}</TableCell>
                       <TableCell>{formatMoneyPsw(row.expectedCashPsw)}</TableCell>

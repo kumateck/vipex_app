@@ -12,7 +12,10 @@ import {
 import { formatDateTime } from '@/lib/date';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import type { StockRequest } from '../types/inventory-stock.types';
-import { stockRequestStatusLabelByValue } from '../constants/stock-options';
+import {
+  stockRequestStatusLabelByValue,
+  stockRequestTypeLabelByValue,
+} from '../constants/stock-options';
 
 export function createStockRequestColumns(
   locationNameById?: ReadonlyMap<string, string>,
@@ -32,6 +35,42 @@ export function createStockRequestColumns(
       id: 'requestedToLocation',
       header: 'Requested To',
     },
+    {
+      accessorFn: (row) =>
+        stockRequestTypeLabelByValue.get(row.requestType) ?? String(row.requestType),
+      id: 'requestType',
+      header: 'Request Type',
+    },
+    {
+      accessorFn: (row) => Number(row.lineCount ?? 0),
+      id: 'lineCount',
+      header: 'Lines',
+    },
+    // {
+    //   accessorFn: (row) => Number(row.totalRequestedQuantity ?? 0),
+    //   id: 'totalRequestedQuantity',
+    //   header: 'Requested (base)',
+    // },
+    // {
+    //   accessorFn: (row) => Number(row.totalFulfilledQuantity ?? 0),
+    //   id: 'totalFulfilledQuantity',
+    //   header: 'Issued (base)',
+    // },
+    // {
+    //   accessorFn: (row) => Number(row.totalAcknowledgedQuantity ?? 0),
+    //   id: 'totalAcknowledgedQuantity',
+    //   header: 'Acknowledged (base)',
+    // },
+    // {
+    //   accessorFn: (row) => Number(row.totalPendingIssueQuantity ?? 0),
+    //   id: 'totalPendingIssueQuantity',
+    //   header: 'Outstanding to issue',
+    // },
+    // {
+    //   accessorFn: (row) => Number(row.totalPendingAcknowledgementQuantity ?? 0),
+    //   id: 'totalPendingAcknowledgementQuantity',
+    //   header: 'Outstanding to acknowledge',
+    // },
     {
       accessorFn: (row) => stockRequestStatusLabelByValue.get(row.status) ?? String(row.status),
       id: 'status',

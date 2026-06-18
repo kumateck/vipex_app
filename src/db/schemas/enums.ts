@@ -191,6 +191,11 @@ export enum StockRequestStatus {
   CANCELLED = 6,
 }
 
+export enum StockRequestType {
+  INTER_BRANCH = 0,
+  INTRA_BRANCH = 1,
+}
+
 export enum InventoryMaintenanceIssueType {
   MAINTENANCE = 0,
   DAMAGE = 1,

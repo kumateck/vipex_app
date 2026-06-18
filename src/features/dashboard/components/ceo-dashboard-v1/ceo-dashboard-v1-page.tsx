@@ -27,9 +27,9 @@ export function CEODashboardV1Page() {
   const [scope, setScope] = useState<DashboardScope | null>(null);
 
   const canReadAccounting = permissions.has(PermissionKeys.CanReadAccounting);
-  const canViewProfitability = permissions.has(PermissionKeys.CanGetBranchProfitabilityReport);
-  const canViewCredit = permissions.has(PermissionKeys.CanGetCreditExposureReport);
-  const canViewParcel = permissions.has(PermissionKeys.CanGetParcelStatusSummaryReport);
+  const canViewProfitability = permissions.has(PermissionKeys.CanViewReportBranchProfitSummary);
+  const canViewCredit = permissions.has(PermissionKeys.CanViewReportCustomersCreditSummary);
+  const canViewParcel = permissions.has(PermissionKeys.CanViewReportParcelsStatusSummary);
 
   const scopeFrom = scope?.dateRange?.from;
   const scopeTo = scope?.dateRange?.to ?? scope?.dateRange?.from;

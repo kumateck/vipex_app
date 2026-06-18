@@ -1,6 +1,7 @@
 import {
   InventoryMaintenanceIssueType,
   InventoryMaintenanceStatus,
+  StockRequestType,
   StockAdjustmentReason,
   StockMovementType,
   StockRequestStatus,
@@ -57,6 +58,15 @@ export const STOCK_REQUEST_STATUS_OPTIONS = [
 
 export const stockRequestStatusLabelByValue: ReadonlyMap<number, string> = new Map<number, string>(
   STOCK_REQUEST_STATUS_OPTIONS.map((item) => [item.value, item.label]),
+);
+
+export const STOCK_REQUEST_TYPE_OPTIONS = [
+  { value: StockRequestType.INTER_BRANCH, label: 'Inter branch' },
+  { value: StockRequestType.INTRA_BRANCH, label: 'Intra branch' },
+] as const;
+
+export const stockRequestTypeLabelByValue: ReadonlyMap<number, string> = new Map<number, string>(
+  STOCK_REQUEST_TYPE_OPTIONS.map((item) => [item.value, item.label]),
 );
 
 export const STOCK_MAINTENANCE_ISSUE_TYPE_OPTIONS = [

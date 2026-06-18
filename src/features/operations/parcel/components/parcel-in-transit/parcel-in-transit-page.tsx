@@ -13,7 +13,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { formatDateTime } from '@/lib/date';
+import { formatDateTime } from '@/lib/dates';
+import { isOptionalTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
@@ -329,7 +330,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
 
     const nextParcelDetails = editParcelDetails.trim();
     const nextReceiverName = editReceiverName.trim();
-    const nextReceiverPhone = editReceiverPhone.trim();
+    const nextReceiverPhone = normalizePhoneDigits(editReceiverPhone);
 
     if (nextParcelDetails.length === 0) {
       toast.error('Parcel details is required');
@@ -337,6 +338,10 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
     }
     if (nextReceiverName.length === 0) {
       toast.error('Receiver name is required');
+      return;
+    }
+    if (!isOptionalTenDigitPhone(nextReceiverPhone)) {
+      toast.error(phoneLengthMessage('Receiver telephone'));
       return;
     }
 

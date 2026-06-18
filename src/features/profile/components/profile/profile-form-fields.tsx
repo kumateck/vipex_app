@@ -1,5 +1,6 @@
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { PHONE_DIGITS, limitPhoneDigits } from '@/lib/phone';
 import {
   Select,
   SelectContent,
@@ -66,9 +67,12 @@ export function ProfileFormFields({
         <Input
           id="profile-telephone"
           value={telephone}
-          onChange={(event) => onTelephoneChange(event.target.value)}
+          onChange={(event) => onTelephoneChange(limitPhoneDigits(event.target.value))}
           disabled={!isEditing || isUpdating}
-          placeholder="Telephone"
+          placeholder="0240000000"
+          inputMode="numeric"
+          autoComplete="tel"
+          maxLength={PHONE_DIGITS}
         />
       </Field>
 

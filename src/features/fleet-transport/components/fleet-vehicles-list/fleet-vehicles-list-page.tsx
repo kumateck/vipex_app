@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -49,7 +50,7 @@ function lifecycleStatusLabel(value: number) {
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
-  return new Date(value).toLocaleString();
+  return sharedFormatDateTime(value);
 }
 
 export function FleetVehiclesListPage() {

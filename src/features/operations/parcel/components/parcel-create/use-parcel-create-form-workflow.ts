@@ -2,18 +2,21 @@ import { useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
-import { useCreateCustomerMutation } from '@/features/customers/api';
 import { useAuthStore } from '@/stores/auth-store';
-import { BranchType, PaymentMethod, PaymentResponsibility } from '@/db/schemas/enums';
+import { BranchType, PaymentMethod, PaymentResponsibility, UserType } from '@/db/schemas/enums';
 import { useCreateBookingWithParcelsMutation } from '../../api/parcel.api';
 import type { ParcelBookingFormValues, ReceiptSummary } from './parcel-form.types';
+import { buildParcelCreateReceipt } from './build-parcel-create-receipt';
 import {
   createEmptyParcel,
   createInitialFormValues,
   isApiRejectionError,
   parseAmount,
 } from './parcel-create-form.utils';
-import { sanitizeNumber, sanitizeString } from '@/lib/utils';
+import { useParcelCreateCustomerResolver } from './use-parcel-create-customer-resolver';
+import { useParcelCreatePrintPreference } from './use-parcel-create-print-preference';
+import { useParcelCreateSenderPayment } from './use-parcel-create-sender-payment';
+import { sanitizeNumber } from '@/lib/utils';
 
 export function useParcelCreateFormWorkflow() {
   const user = useAuthStore((state) => state.user);
@@ -21,8 +24,12 @@ export function useParcelCreateFormWorkflow() {
   const userBranchId = user?.branch?.id ?? '';
   const userBranchType = user?.branch?.type ?? null;
   const userId = user?.id ?? '';
+  const isCashierUser =
+    user?.userType === UserType.CASHIER ||
+    (user?.cashierType !== null && user?.cashierType !== undefined);
 
   const [latestReceipt, setLatestReceipt] = useState<ReceiptSummary | null>(null);
+  const [shouldPrintOnSubmit, setShouldPrintOnSubmit] = useState(false);
   const [openParcels, setOpenParcels] = useState<Record<string, boolean>>({});
 
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
@@ -33,13 +40,26 @@ export function useParcelCreateFormWorkflow() {
     (branch) => branch.id !== userBranchId && branch.type !== BranchType.HEADOFFICE,
   );
 
-  const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
+  const { isCreatingCustomer, resolveCustomerId } = useParcelCreateCustomerResolver();
   const [createBookingWithParcels, { isLoading: isSubmitting }] =
     useCreateBookingWithParcelsMutation();
 
   const form = useForm<ParcelBookingFormValues>({
     defaultValues: createInitialFormValues(),
     mode: 'onSubmit',
+  });
+
+  const senderPayment = useParcelCreateSenderPayment({
+    onPaidReceiptsReady: (receipt) => {
+      setLatestReceipt(receipt);
+      setShouldPrintOnSubmit(true);
+    },
+  });
+
+  const printPreference = useParcelCreatePrintPreference({
+    form,
+    shouldPrintOnSubmit,
+    setShouldPrintOnSubmit,
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -56,35 +76,16 @@ export function useParcelCreateFormWorkflow() {
     form.formState.isSubmitting;
   const isSaving = isSubmitting || isCreatingCustomer || form.formState.isSubmitting;
 
-  const resolveCustomerId = async (
-    params: {
-      customerId: string;
-      fullname: string;
-      telephone: string;
-      telephone2?: string;
-      label: string;
-    },
-    cache: Map<string, string>,
-  ) => {
-    if (params.customerId) return params.customerId;
-    const phone = params.telephone.trim();
-    const name = params.fullname.trim();
-
-    if (!phone || !name) {
-      throw new Error(`${params.label} telephone and fullname are required`);
+  const resetCreateForm = ({
+    closePaymentDialog = true,
+  }: { closePaymentDialog?: boolean } = {}) => {
+    form.reset(createInitialFormValues());
+    setOpenParcels({});
+    setLatestReceipt(null);
+    setShouldPrintOnSubmit(false);
+    if (closePaymentDialog) {
+      senderPayment.closePaymentDialog();
     }
-
-    const cachedId = cache.get(phone);
-    if (cachedId) return cachedId;
-
-    const secondaryPhone = sanitizeString(params.telephone2).trim();
-    const created = await createCustomer({
-      fullname: name,
-      telephone: phone,
-      telephone2: secondaryPhone || null,
-    }).unwrap();
-    cache.set(phone, created.id);
-    return created.id;
   };
 
   const onSubmit = async (values: ParcelBookingFormValues) => {
@@ -213,39 +214,27 @@ export function useParcelCreateFormWorkflow() {
         }),
       }).unwrap();
 
-      setLatestReceipt({
-        bookingId: response.bookingId,
-        parcels: response.parcels.map((parcel, index) => ({
-          bookingCode: parcel.bookingCode ?? response.bookingId,
-          trackingCode: parcel.trackingCode ?? '-',
-          parcelDetails: values.parcels[index]?.parcelDetails ?? '-',
-          senderName: values.sender.fullname,
-          senderTelephone: values.sender.telephone,
-          receiverName: values.parcels[index]?.receiver.fullname ?? '-',
-          receiverTelephone: values.parcels[index]?.receiver.telephone ?? '-',
-          destinationBranchName:
-            branchOptions.find((branch) => branch.id === values.parcels[index]?.destinationBranchId)
-              ?.name ?? '-',
-          destinationLocationName: values.parcels[index]?.destinationLocationId ?? '-',
-          totalChargeCedis: amounts[index]?.charge ?? 0,
-          senderPaidCedis:
-            values.parcels[index]?.paymentResponsibility === 'SENDER'
-              ? (amounts[index]?.charge ?? 0)
-              : values.parcels[index]?.paymentResponsibility === 'SPLIT'
-                ? (amounts[index]?.partial ?? 0)
-                : 0,
-          receiverToPayCedis:
-            values.parcels[index]?.paymentResponsibility === 'RECEIVER'
-              ? (amounts[index]?.charge ?? 0)
-              : values.parcels[index]?.paymentResponsibility === 'SPLIT'
-                ? Math.max((amounts[index]?.charge ?? 0) - (amounts[index]?.partial ?? 0), 0)
-                : 0,
-          issuedAt: new Date().toISOString(),
-        })),
+      const receipt = buildParcelCreateReceipt({
+        response,
+        values,
+        amounts,
+        branchOptions,
       });
+      const openedPaymentDialog =
+        shouldPrintOnSubmit && printPreference.canPrintAfterSubmit
+          ? await senderPayment.openPaymentDialog(receipt)
+          : false;
 
-      form.reset(createInitialFormValues());
-      toast.success('Parcel transaction created successfully');
+      if (!openedPaymentDialog) {
+        setLatestReceipt(receipt);
+      }
+
+      resetCreateForm({ closePaymentDialog: !openedPaymentDialog });
+      toast.success(
+        isCashierUser
+          ? 'Parcel transaction created successfully'
+          : 'Booking saved and sent to Sender Cashier Payments',
+      );
     } catch (error) {
       if (isApiRejectionError(error)) return;
       toast.error(error instanceof Error ? error.message : 'Failed to create parcel transaction');
@@ -253,8 +242,7 @@ export function useParcelCreateFormWorkflow() {
   };
 
   const handleCancel = () => {
-    form.reset(createInitialFormValues());
-    setLatestReceipt(null);
+    resetCreateForm();
   };
 
   return {
@@ -265,6 +253,10 @@ export function useParcelCreateFormWorkflow() {
     openParcels,
     setOpenParcels,
     latestReceipt,
+    shouldPrintOnSubmit,
+    setShouldPrintOnSubmit,
+    canPrintAfterSubmit: printPreference.canPrintAfterSubmit,
+    senderPayment,
     destinationBranchOptions,
     userBranchType,
     companyId,

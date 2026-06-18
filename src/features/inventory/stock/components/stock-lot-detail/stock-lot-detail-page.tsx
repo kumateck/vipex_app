@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link, useParams } from 'react-router-dom';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,11 +11,32 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useGetStockLotQuery } from '@/features/inventory/api';
+import { useAuthStore } from '@/stores/auth-store';
+import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useMemo } from 'react';
 
 export function StockLotDetailPage() {
   const { id = '' } = useParams();
+  const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
   const queryArg = useMemo(() => id, [id]);
   const { data, isLoading } = useGetStockLotQuery(queryArg, { skip: !id });
+  const { data: locations = [] } = useListInventoryLocationOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
+  const { data: products = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
+  const locationNameById = useMemo(
+    () => new Map(locations.map((location) => [location.id, location.name] as const)),
+    [locations],
+  );
+  const productNameById = useMemo(
+    () => new Map(products.map((product) => [product.id, product.name] as const)),
+    [products],
+  );
 
   return (
     <ScrollableWrapper>
@@ -42,10 +63,12 @@ export function StockLotDetailPage() {
                     <strong>Batch:</strong> {data.batchNumber}
                   </p>
                   <p>
-                    <strong>Product:</strong> {data.productId}
+                    <strong>Product:</strong>{' '}
+                    {productNameById.get(data.productId) ?? data.productId}
                   </p>
                   <p>
-                    <strong>Location:</strong> {data.locationId}
+                    <strong>Location:</strong>{' '}
+                    {locationNameById.get(data.locationId) ?? data.locationId}
                   </p>
                   <p>
                     <strong>On hand:</strong> {data.quantityOnHand}
@@ -58,7 +81,7 @@ export function StockLotDetailPage() {
                   </p>
                   <p>
                     <strong>Received:</strong>{' '}
-                    {data.receivedAt ? new Date(data.receivedAt).toLocaleString() : 'N/A'}
+                    {data.receivedAt ? formatDateTimeShared(data.receivedAt) : 'N/A'}
                   </p>
                   <p>
                     <strong>Expiry:</strong>{' '}
@@ -80,9 +103,7 @@ export function StockLotDetailPage() {
                       data.movements.map((movement) => (
                         <TableRow key={movement.id}>
                           <TableCell>
-                            {movement.createdAt
-                              ? new Date(movement.createdAt).toLocaleString()
-                              : 'N/A'}
+                            {movement.createdAt ? formatDateTimeShared(movement.createdAt) : 'N/A'}
                           </TableCell>
                           <TableCell>{movement.movementType}</TableCell>
                           <TableCell>{movement.quantity}</TableCell>

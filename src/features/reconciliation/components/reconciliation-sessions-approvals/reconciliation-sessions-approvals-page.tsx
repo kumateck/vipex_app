@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,7 +103,7 @@ export function ReconciliationSessionsApprovalsPage() {
                 ) : rows.length ? (
                   rows.map((row) => (
                     <TableRow key={row.id}>
-                      <TableCell>{new Date(row.confirmationDate).toLocaleString()}</TableCell>
+                      <TableCell>{formatDateTimeShared(row.confirmationDate)}</TableCell>
                       <TableCell>{row.branchName ?? '-'}</TableCell>
                       <TableCell>{formatMoneyPsw(row.expectedCashPsw)}</TableCell>
                       <TableCell>{formatMoneyPsw(row.countedCashPsw)}</TableCell>

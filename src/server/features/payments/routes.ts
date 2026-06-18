@@ -134,13 +134,7 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
         tags: ['Payments'],
         summary: 'Atomically collect receiver payment (optional) and deliver parcel',
       },
-      beforeHandle: [
-        requireAuth(),
-        requirePermissions(
-          PermissionKeys.CanCreateReceiverPayments,
-          PermissionKeys.CanUpdateParcels,
-        ),
-      ],
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateReceiverPayments)],
     },
   )
   .get('/by-parcel/:parcelId', async ({ params }) => listPaymentsForParcelCtrl(params.parcelId), {

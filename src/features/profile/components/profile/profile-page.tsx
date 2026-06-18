@@ -15,6 +15,7 @@ import {
   useGetCurrentUserProfileQuery,
   useUpdateCurrentUserProfileMutation,
 } from '@/features/auth/api';
+import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import ThrowErrorMessage from '@/lib/throw-error';
 import { useAuthStore } from '@/stores/auth-store';
 import { useSecurityPreferencesStore } from '@/stores/security-preferences-store';
@@ -48,15 +49,20 @@ export function ProfilePage() {
     isEditing &&
     !isUpdating &&
     !!fullname.trim() &&
-    !!telephone.trim() &&
+    isTenDigitPhone(telephone) &&
     !!data &&
     (fullname.trim() !== data.fullname || telephone.trim() !== data.telephone);
 
   async function onSave() {
     if (!canSave) return;
+    const phone = normalizePhoneDigits(telephone);
+    if (!isTenDigitPhone(phone)) {
+      toast.error(phoneLengthMessage());
+      return;
+    }
 
     try {
-      await updateProfile({ fullname: fullname.trim(), telephone: telephone.trim() }).unwrap();
+      await updateProfile({ fullname: fullname.trim(), telephone: phone }).unwrap();
       toast.success('Profile updated');
       setIsEditing(false);
     } catch (error) {

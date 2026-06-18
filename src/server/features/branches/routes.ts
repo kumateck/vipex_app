@@ -3,7 +3,7 @@ import { HttpStatus } from '../../utils/http-status';
 import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { BRANCH_TYPES } from '@/shared/access/constants';
-import { BadRequest } from '@/server/utils/http-error';
+import { BadRequest, Forbidden } from '@/server/utils/http-error';
 
 import { createBranchSvc, deleteBranchSvc, getBranchSvc, updateBranchSvc } from './service';
 import { listBranchOptionsCtrl, listBranchesCtrl } from './controller';
@@ -54,6 +54,32 @@ export const branchesRoutes = new Elysia({ name: 'branches' })
       query: t.Object({ ...PaginationRequestQueryProps, companyId: t.Optional(UUID) }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadBranches)],
       detail: { tags: ['Branches'], summary: 'List branches', operationId: 'listBranches' },
+    },
+  )
+  .get(
+    '/:id/operations-settings',
+    async ({ params, user }) => {
+      const authUser = user as AuthUser;
+      const branch = await getBranchSvc(params.id);
+      const canReadBranches = (authUser.permissions ?? []).includes(PermissionKeys.CanReadBranches);
+      const isOwnBranch = authUser.branchId === params.id;
+      if (branch.companyId !== authUser.companyId || (!isOwnBranch && !canReadBranches)) {
+        throw Forbidden('Cannot read branch operations settings');
+      }
+
+      return {
+        id: branch.id,
+        usePickupQueue: branch.usePickupQueue,
+      };
+    },
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth()],
+      detail: {
+        tags: ['Branches'],
+        summary: 'Get branch operational settings',
+        operationId: 'getBranchOperationsSettings',
+      },
     },
   )
   .get('/:id', async ({ params }) => getBranchSvc(params.id), {

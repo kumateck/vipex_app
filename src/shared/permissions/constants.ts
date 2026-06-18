@@ -80,7 +80,6 @@ const catalog = [
   ['CanOpenShiftSession', 'Open shift session', 'Shifts'],
   ['CanCloseShiftSession', 'Close shift session', 'Shifts'],
   ['CanApproveShiftSession', 'Approve shift session', 'Shifts'],
-  ['CanGetShiftReport', 'View shift report', 'Shifts'],
   ['CanGetActiveShiftByBranch', 'View active shift by branch', 'Shifts'],
 
   // Deliveries
@@ -234,8 +233,6 @@ const catalog = [
   ['CanGetStockMaintenanceRecord', 'Get stock maintenance record', 'Inventory'],
   ['CanCreateStockMaintenanceRecord', 'Create stock maintenance record', 'Inventory'],
   ['CanResolveStockMaintenanceRecord', 'Resolve stock maintenance record', 'Inventory'],
-  ['CanGetLowStockReport', 'View low stock report', 'Inventory'],
-  ['CanGetMovementHistory', 'View movement history report', 'Inventory'],
   ['CanReadInventoryApprovalPolicies', 'View inventory approval policy pages', 'Inventory'],
   ['CanReadInventoryApprovalRequests', 'View inventory approval request pages', 'Inventory'],
   ['CanReadInventoryValuation', 'View inventory valuation pages', 'Inventory'],
@@ -246,12 +243,6 @@ const catalog = [
   ['CanReadInventoryEnterpriseKpis', 'View inventory enterprise KPI pages', 'Inventory'],
 
   // Reports / Audit / HR / Payroll / Geo
-  ['CanGetCashierPerformanceReport', 'View cashier performance report', 'Reports'],
-  ['CanGetShiftRevenueReport', 'View shift revenue report', 'Reports'],
-  ['CanGetBranchProfitabilityReport', 'View branch profitability report', 'Reports'],
-  ['CanGetCreditExposureReport', 'View credit exposure report', 'Reports'],
-  ['CanGetOutstandingToBePaidReport', 'View outstanding to-be-paid report', 'Reports'],
-  ['CanGetParcelStatusSummaryReport', 'View parcel status summary report', 'Reports'],
   ['CanViewReportFinancialTrialBalance', 'View report: Trial Balance', 'Reports'],
   ['CanViewReportFinancialAccountStatement', 'View report: Account Statement', 'Reports'],
   ['CanViewReportFinancialIncomeStatement', 'View report: Income Statement', 'Reports'],
@@ -313,6 +304,12 @@ const catalog = [
   ['CanViewReportCashVariance', 'View report: Cash Variance', 'Reports'],
   ['CanViewReportCashOverage', 'View report: Cash Overage', 'Reports'],
   ['CanViewReportCashShortage', 'View report: Cash Shortage', 'Reports'],
+  ['CanViewReportCashToBePaidOutstanding', 'View report: To-Be-Paid Outstanding', 'Reports'],
+  [
+    'CanViewReportCashToBePaidCollectionsReconciliation',
+    'View report: To-Be-Paid Collections Reconciliation',
+    'Reports',
+  ],
   ['CanViewReportCustomersMasterList', 'View report: Customer Master List', 'Reports'],
   ['CanViewReportCustomersStatement', 'View report: Customer Statement', 'Reports'],
   ['CanViewReportCustomersTransactions', 'View report: Customer Transactions', 'Reports'],
@@ -330,6 +327,8 @@ const catalog = [
   ['CanViewReportParcelsFailed', 'View report: Undelivered Parcels', 'Reports'],
   ['CanViewReportParcelsAging', 'View report: Parcel Aging', 'Reports'],
   ['CanViewReportParcelsUncollected', 'View report: Uncollected Parcels', 'Reports'],
+  ['CanViewReportParcelsStatusSummary', 'View report: Parcel Status Summary', 'Reports'],
+  ['CanViewReportParcelsDeliveryPerformance', 'View report: Delivery Performance', 'Reports'],
   ['CanViewReportConsignmentsManifest', 'View report: Consignment Manifest', 'Reports'],
   ['CanViewReportConsignmentsSummary', 'View report: Consignment Summary', 'Reports'],
   ['CanViewReportConsignmentsDispatch', 'View report: Branch Dispatch Manifest', 'Reports'],
@@ -536,13 +535,58 @@ export const PermissionCatalogUi = PermissionCatalog.filter(
   (permission) => !HiddenPermissionKeysInUi.has(permission.key),
 );
 
+export const ReportPermissionKeys = PermissionCatalog.filter(
+  (permission) =>
+    permission.group === 'Reports' &&
+    (permission.key === PermissionKeys.CanReadReportsHub ||
+      permission.key.startsWith('CanViewReport')),
+).map((permission) => permission.key);
+
+export const PermissionKeySet = new Set<string>(PermissionCatalog.map((p) => p.key));
+
+const LegacyPermissionKeyAliases: Readonly<Record<string, readonly PermissionKey[]>> = {
+  CanGetCashierPerformanceReport: [PermissionKeys.CanViewReportCashierShifts],
+  CanGetShiftRevenueReport: [PermissionKeys.CanViewReportCashierRevenue],
+  CanGetBranchProfitabilityReport: [PermissionKeys.CanViewReportBranchProfitSummary],
+  CanGetCreditExposureReport: [
+    PermissionKeys.CanViewReportCustomersCreditSummary,
+    PermissionKeys.CanViewReportCustomersAging,
+  ],
+  CanGetOutstandingToBePaidReport: [
+    PermissionKeys.CanViewReportCashToBePaidOutstanding,
+    PermissionKeys.CanViewReportCashToBePaidCollectionsReconciliation,
+  ],
+  CanGetParcelStatusSummaryReport: [
+    PermissionKeys.CanViewReportParcelsStatusSummary,
+    PermissionKeys.CanViewReportParcelsDeliveryPerformance,
+  ],
+  CanGetLowStockReport: [PermissionKeys.CanViewReportInventoryLowStock],
+  CanGetMovementHistory: [PermissionKeys.CanViewReportInventoryMovement],
+  CanGetShiftReport: [PermissionKeys.CanViewReportCashierShifts],
+};
+
+export function normalizePermissionKeys(permissionKeys: readonly string[]): PermissionKey[] {
+  const normalized = new Set<PermissionKey>();
+
+  for (const permissionKey of permissionKeys) {
+    if (PermissionKeySet.has(permissionKey)) {
+      normalized.add(permissionKey as PermissionKey);
+      continue;
+    }
+
+    for (const replacementKey of LegacyPermissionKeyAliases[permissionKey] ?? []) {
+      normalized.add(replacementKey);
+    }
+  }
+
+  return [...normalized];
+}
+
 const SIDEBAR_READ_PERMISSION_PATTERN = /^Can(Read|List|Get|View)/;
 
 export function isSidebarReadablePermission(permissionKey: string): boolean {
   return SIDEBAR_READ_PERMISSION_PATTERN.test(permissionKey);
 }
-
-export const PermissionKeySet = new Set<string>(PermissionCatalog.map((p) => p.key));
 
 export const AccountingSetupPermissionKeys = Object.freeze({
   accounts: {
@@ -750,11 +794,14 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/inventory/stock-lots/expiry-alerts': PermissionKeys.CanReadStockLevels,
   '/inventory/stock-movements': PermissionKeys.CanReadStockMovements,
   '/inventory/stock-movements/edit/:id': PermissionKeys.CanCreateStockMovement,
+  '/inventory/stock-consumption': PermissionKeys.CanReadStockMovements,
   '/inventory/stock-adjustments': PermissionKeys.CanReadStockAdjustments,
   '/inventory/stock-adjustments/edit/:id': PermissionKeys.CanCreateStockAdjustment,
   '/inventory/stock-transfers': PermissionKeys.CanReadStockTransfers,
   '/inventory/stock-transfers/receive/:id': PermissionKeys.CanUpdateStockTransfer,
   '/inventory/stock-requests': PermissionKeys.CanReadStockRequests,
+  '/inventory/stock-requests/issue': PermissionKeys.CanReadStockRequests,
+  '/inventory/stock-requests/receive': PermissionKeys.CanReadStockRequests,
   '/inventory/stock-requests/new': PermissionKeys.CanCreateStockRequest,
   '/inventory/stock-requests/view/:id': PermissionKeys.CanGetStockRequest,
   '/inventory/stock-requests/fulfill/:requestId/:lineId': PermissionKeys.CanFulfillStockRequest,

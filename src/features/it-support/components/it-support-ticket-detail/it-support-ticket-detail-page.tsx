@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -167,13 +168,13 @@ export function ItSupportTicketDetailPage() {
               <div>
                 <p className="text-xs text-muted-foreground">Created</p>
                 <p className="font-medium">
-                  {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : '-'}
+                  {ticket.createdAt ? formatDateTimeShared(ticket.createdAt) : '-'}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Updated</p>
                 <p className="font-medium">
-                  {ticket.updatedAt ? new Date(ticket.updatedAt).toLocaleString() : '-'}
+                  {ticket.updatedAt ? formatDateTimeShared(ticket.updatedAt) : '-'}
                 </p>
               </div>
               <div className="md:col-span-2">
@@ -236,7 +237,7 @@ export function ItSupportTicketDetailPage() {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="font-medium">{eventTitle(event)}</p>
                         <p className="text-xs text-muted-foreground">
-                          {event.createdAt ? new Date(event.createdAt).toLocaleString() : '-'}
+                          {event.createdAt ? formatDateTimeShared(event.createdAt) : '-'}
                         </p>
                       </div>
 

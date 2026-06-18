@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { ParcelStatus } from '@/db/schemas/enums';
-import { formatDateTime } from '@/lib/date';
+import { formatDateTime } from '@/lib/dates';
 import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { EMPTY_META } from './constants';

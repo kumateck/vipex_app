@@ -4,6 +4,7 @@ import {
   productCategories,
   products,
   productUnitConversions,
+  branches,
   inventoryLocations,
   stockLevels,
   stockMovements,
@@ -11,8 +12,10 @@ import {
   stockTransfers,
   stockRequests,
   stockRequestLines,
+  stockRequestAcknowledgements,
   stockMaintenanceRecords,
   stockAllocationPolicies,
+  inventoryReorderPolicies,
   stockReservations,
   stockReservationAllocations,
   stockLots,
@@ -478,6 +481,8 @@ export type ListStockLevelsParams = {
   companyId?: string | null;
   productId?: string | null;
   locationId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
   sort?: SortField[] | null;
 };
 
@@ -486,6 +491,22 @@ export async function listStockLevelsRepo(p: ListStockLevelsParams) {
   if (p.companyId) where.push(eq(stockLevels.companyId, p.companyId));
   if (p.productId) where.push(eq(stockLevels.productId, p.productId));
   if (p.locationId) where.push(eq(stockLevels.locationId, p.locationId));
+  const locationScopeConditions = [
+    sql`${inventoryLocations.id} = ${stockLevels.locationId}`,
+    sql`${inventoryLocations.isDeleted} = false`,
+  ];
+  if (p.branchId) {
+    locationScopeConditions.push(sql`${inventoryLocations.branchId} = ${p.branchId}`);
+  }
+  if (p.locationType !== undefined && p.locationType !== null) {
+    locationScopeConditions.push(sql`${inventoryLocations.locationType} = ${p.locationType}`);
+  }
+  where.push(
+    sql`exists (
+      select 1 from ${inventoryLocations}
+      where ${and(...locationScopeConditions)}
+    )`,
+  );
   const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
@@ -507,8 +528,19 @@ export async function listStockLevelsRepo(p: ListStockLevelsParams) {
     .where(where.length ? and(...where) : undefined);
   const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
   const rows = await db
-    .select()
+    .select({
+      id: stockLevels.id,
+      companyId: stockLevels.companyId,
+      productId: stockLevels.productId,
+      locationId: stockLevels.locationId,
+      quantity: stockLevels.quantity,
+      updatedAt: stockLevels.updatedAt,
+      productName: products.name,
+      locationName: inventoryLocations.name,
+    })
     .from(stockLevels)
+    .leftJoin(products, eq(stockLevels.productId, products.id))
+    .leftJoin(inventoryLocations, eq(stockLevels.locationId, inventoryLocations.id))
     .where(where.length ? and(...where) : undefined)
     .orderBy(...orderBy)
     .limit(p.limit)
@@ -545,6 +577,8 @@ export type ListStockLotsParams = {
   companyId: string;
   productId?: string | null;
   locationId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
   status?: number | null;
   batchNumber?: string | null;
   sort?: SortField[] | null;
@@ -554,6 +588,22 @@ export async function listStockLotsRepo(p: ListStockLotsParams) {
   const where = [eq(stockLots.companyId, p.companyId)];
   if (p.productId) where.push(eq(stockLots.productId, p.productId));
   if (p.locationId) where.push(eq(stockLots.locationId, p.locationId));
+  if (p.branchId) {
+    where.push(sql`exists (
+      select 1 from ${inventoryLocations}
+      where ${inventoryLocations.id} = ${stockLots.locationId}
+        and ${inventoryLocations.branchId} = ${p.branchId}
+        and ${inventoryLocations.isDeleted} = false
+    )`);
+  }
+  if (p.locationType !== undefined && p.locationType !== null) {
+    where.push(sql`exists (
+      select 1 from ${inventoryLocations}
+      where ${inventoryLocations.id} = ${stockLots.locationId}
+        and ${inventoryLocations.locationType} = ${p.locationType}
+        and ${inventoryLocations.isDeleted} = false
+    )`);
+  }
   if (p.status !== undefined && p.status !== null) where.push(eq(stockLots.status, p.status));
   if (p.batchNumber) where.push(sql`${stockLots.batchNumber} ILIKE ${`%${p.batchNumber}%`}`);
   const sort = p.sort ?? [];
@@ -656,6 +706,8 @@ export type ListStockMovementsParams = {
   companyId?: string | null;
   productId?: string | null;
   locationId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
   movementType?: number | null;
   sort?: SortField[] | null;
 };
@@ -665,6 +717,22 @@ export async function listStockMovementsRepo(p: ListStockMovementsParams) {
   if (p.companyId) where.push(eq(stockMovements.companyId, p.companyId));
   if (p.productId) where.push(eq(stockMovements.productId, p.productId));
   if (p.locationId) where.push(eq(stockMovements.locationId, p.locationId));
+  if (p.branchId) {
+    where.push(sql`exists (
+      select 1 from ${inventoryLocations}
+      where ${inventoryLocations.id} = ${stockMovements.locationId}
+        and ${inventoryLocations.branchId} = ${p.branchId}
+        and ${inventoryLocations.isDeleted} = false
+    )`);
+  }
+  if (p.locationType !== undefined && p.locationType !== null) {
+    where.push(sql`exists (
+      select 1 from ${inventoryLocations}
+      where ${inventoryLocations.id} = ${stockMovements.locationId}
+        and ${inventoryLocations.locationType} = ${p.locationType}
+        and ${inventoryLocations.isDeleted} = false
+    )`);
+  }
   if (p.movementType !== undefined && p.movementType !== null)
     where.push(eq(stockMovements.movementType, p.movementType));
   const sort = p.sort ?? [];
@@ -710,6 +778,8 @@ export type ListStockAdjustmentsParams = {
   companyId?: string | null;
   productId?: string | null;
   locationId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
   sort?: SortField[] | null;
 };
 
@@ -718,6 +788,22 @@ export async function listStockAdjustmentsRepo(p: ListStockAdjustmentsParams) {
   if (p.companyId) where.push(eq(stockAdjustments.companyId, p.companyId));
   if (p.productId) where.push(eq(stockAdjustments.productId, p.productId));
   if (p.locationId) where.push(eq(stockAdjustments.locationId, p.locationId));
+  if (p.branchId) {
+    where.push(sql`exists (
+      select 1 from ${inventoryLocations}
+      where ${inventoryLocations.id} = ${stockAdjustments.locationId}
+        and ${inventoryLocations.branchId} = ${p.branchId}
+        and ${inventoryLocations.isDeleted} = false
+    )`);
+  }
+  if (p.locationType !== undefined && p.locationType !== null) {
+    where.push(sql`exists (
+      select 1 from ${inventoryLocations}
+      where ${inventoryLocations.id} = ${stockAdjustments.locationId}
+        and ${inventoryLocations.locationType} = ${p.locationType}
+        and ${inventoryLocations.isDeleted} = false
+    )`);
+  }
   const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
@@ -764,6 +850,8 @@ export type ListStockTransfersParams = {
   companyId?: string | null;
   productId?: string | null;
   status?: number | null;
+  branchId?: string | null;
+  locationType?: number | null;
   sort?: SortField[] | null;
 };
 
@@ -772,6 +860,36 @@ export async function listStockTransfersRepo(p: ListStockTransfersParams) {
   if (p.companyId) where.push(eq(stockTransfers.companyId, p.companyId));
   if (p.productId) where.push(eq(stockTransfers.productId, p.productId));
   if (p.status !== undefined && p.status !== null) where.push(eq(stockTransfers.status, p.status));
+  if (p.branchId) {
+    where.push(sql`(
+      exists (
+        select 1 from ${inventoryLocations}
+        where ${inventoryLocations.id} = ${stockTransfers.fromLocationId}
+          and ${inventoryLocations.branchId} = ${p.branchId}
+          and ${inventoryLocations.isDeleted} = false
+      ) or exists (
+        select 1 from ${inventoryLocations}
+        where ${inventoryLocations.id} = ${stockTransfers.toLocationId}
+          and ${inventoryLocations.branchId} = ${p.branchId}
+          and ${inventoryLocations.isDeleted} = false
+      )
+    )`);
+  }
+  if (p.locationType !== undefined && p.locationType !== null) {
+    where.push(sql`(
+      exists (
+        select 1 from ${inventoryLocations}
+        where ${inventoryLocations.id} = ${stockTransfers.fromLocationId}
+          and ${inventoryLocations.locationType} = ${p.locationType}
+          and ${inventoryLocations.isDeleted} = false
+      ) or exists (
+        select 1 from ${inventoryLocations}
+        where ${inventoryLocations.id} = ${stockTransfers.toLocationId}
+          and ${inventoryLocations.locationType} = ${p.locationType}
+          and ${inventoryLocations.isDeleted} = false
+      )
+    )`);
+  }
   const sort = p.sort ?? [];
   const orderBy = sort.length
     ? sort
@@ -910,6 +1028,8 @@ export type ListStockRequestsParams = {
   offset: number;
   companyId?: string | null;
   requesterLocationId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
   status?: number | null;
   sort?: SortField[] | null;
 };
@@ -930,6 +1050,22 @@ export async function listStockRequestsRepo(p: ListStockRequestsParams) {
   if (p.companyId) where.push(eq(stockRequests.companyId, p.companyId));
   if (p.requesterLocationId)
     where.push(eq(stockRequests.requesterLocationId, p.requesterLocationId));
+  if (p.branchId) {
+    where.push(sql`exists (
+      select 1 from ${inventoryLocations}
+      where ${inventoryLocations.id} = ${stockRequests.requesterLocationId}
+        and ${inventoryLocations.branchId} = ${p.branchId}
+        and ${inventoryLocations.isDeleted} = false
+    )`);
+  }
+  if (p.locationType !== undefined && p.locationType !== null) {
+    where.push(sql`exists (
+      select 1 from ${inventoryLocations}
+      where ${inventoryLocations.id} = ${stockRequests.requesterLocationId}
+        and ${inventoryLocations.locationType} = ${p.locationType}
+        and ${inventoryLocations.isDeleted} = false
+    )`);
+  }
   if (p.status !== undefined && p.status !== null) where.push(eq(stockRequests.status, p.status));
 
   const sort = p.sort ?? [];
@@ -962,6 +1098,53 @@ export async function listStockRequestsRepo(p: ListStockRequestsParams) {
     .offset(p.offset);
 
   return { data: rows, totalRecords };
+}
+
+export type StockRequestLineTotalsRow = {
+  requestId: string;
+  totalRequestedQuantity: number;
+  totalFulfilledQuantity: number;
+  lineCount: number;
+};
+
+export async function listStockRequestLineTotalsByRequestIdsRepo(
+  requestIds: string[],
+): Promise<StockRequestLineTotalsRow[]> {
+  if (requestIds.length === 0) return [];
+  return db
+    .select({
+      requestId: stockRequestLines.requestId,
+      totalRequestedQuantity:
+        sql<number>`coalesce(sum(${stockRequestLines.requestedQuantity}), 0)`.mapWith(Number),
+      totalFulfilledQuantity:
+        sql<number>`coalesce(sum(${stockRequestLines.fulfilledQuantity}), 0)`.mapWith(Number),
+      lineCount: sql<number>`count(*)`.mapWith(Number),
+    })
+    .from(stockRequestLines)
+    .where(inArray(stockRequestLines.requestId, requestIds))
+    .groupBy(stockRequestLines.requestId);
+}
+
+export type StockRequestAcknowledgementTotalsRow = {
+  requestId: string;
+  totalAcknowledgedQuantity: number;
+};
+
+export async function listStockRequestAcknowledgementTotalsByRequestIdsRepo(
+  requestIds: string[],
+): Promise<StockRequestAcknowledgementTotalsRow[]> {
+  if (requestIds.length === 0) return [];
+  return db
+    .select({
+      requestId: stockRequestAcknowledgements.requestId,
+      totalAcknowledgedQuantity:
+        sql<number>`coalesce(sum(${stockRequestAcknowledgements.acknowledgedQuantity}), 0)`.mapWith(
+          Number,
+        ),
+    })
+    .from(stockRequestAcknowledgements)
+    .where(inArray(stockRequestAcknowledgements.requestId, requestIds))
+    .groupBy(stockRequestAcknowledgements.requestId);
 }
 
 export async function getStockRequestRepo(id: string) {
@@ -1287,6 +1470,107 @@ export async function getReservationExceptionsSummaryRepo(companyId: string) {
   };
 }
 
+export type ListInventoryReorderPoliciesParams = {
+  companyId: string;
+  productId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
+  locationId?: string | null;
+  active?: boolean | null;
+};
+
+export async function listInventoryReorderPoliciesRepo(p: ListInventoryReorderPoliciesParams) {
+  const where = [eq(inventoryReorderPolicies.companyId, p.companyId)];
+  if (p.productId) where.push(eq(inventoryReorderPolicies.productId, p.productId));
+  if (p.branchId) where.push(eq(inventoryReorderPolicies.branchId, p.branchId));
+  if (p.locationType !== undefined && p.locationType !== null) {
+    where.push(eq(inventoryReorderPolicies.locationType, p.locationType));
+  }
+  if (p.locationId) where.push(eq(inventoryReorderPolicies.locationId, p.locationId));
+  if (p.active !== undefined && p.active !== null)
+    where.push(eq(inventoryReorderPolicies.active, p.active));
+
+  return db
+    .select({
+      id: inventoryReorderPolicies.id,
+      companyId: inventoryReorderPolicies.companyId,
+      productId: inventoryReorderPolicies.productId,
+      branchId: inventoryReorderPolicies.branchId,
+      locationType: inventoryReorderPolicies.locationType,
+      locationId: inventoryReorderPolicies.locationId,
+      reorderPoint: inventoryReorderPolicies.reorderPoint,
+      targetLevel: inventoryReorderPolicies.targetLevel,
+      safetyStock: inventoryReorderPolicies.safetyStock,
+      active: inventoryReorderPolicies.active,
+      notes: inventoryReorderPolicies.notes,
+      createdBy: inventoryReorderPolicies.createdBy,
+      createdAt: inventoryReorderPolicies.createdAt,
+      updatedAt: inventoryReorderPolicies.updatedAt,
+      productName: products.name,
+      productSku: products.sku,
+      branchName: branches.name,
+      locationName: inventoryLocations.name,
+    })
+    .from(inventoryReorderPolicies)
+    .leftJoin(products, eq(products.id, inventoryReorderPolicies.productId))
+    .leftJoin(branches, eq(branches.id, inventoryReorderPolicies.branchId))
+    .leftJoin(inventoryLocations, eq(inventoryLocations.id, inventoryReorderPolicies.locationId))
+    .where(and(...where))
+    .orderBy(
+      asc(inventoryReorderPolicies.branchId),
+      asc(inventoryReorderPolicies.locationType),
+      asc(inventoryReorderPolicies.locationId),
+      asc(inventoryReorderPolicies.productId),
+    );
+}
+
+export async function findInventoryReorderPolicyByScopeRepo(input: {
+  companyId: string;
+  productId: string;
+  branchId: string;
+  locationType: number;
+  locationId?: string | null;
+}) {
+  const [row] = await db
+    .select({ id: inventoryReorderPolicies.id })
+    .from(inventoryReorderPolicies)
+    .where(
+      and(
+        eq(inventoryReorderPolicies.companyId, input.companyId),
+        eq(inventoryReorderPolicies.productId, input.productId),
+        eq(inventoryReorderPolicies.branchId, input.branchId),
+        eq(inventoryReorderPolicies.locationType, input.locationType),
+        input.locationId
+          ? eq(inventoryReorderPolicies.locationId, input.locationId)
+          : sql`${inventoryReorderPolicies.locationId} is null`,
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+export async function createInventoryReorderPolicyRepo(
+  values: typeof inventoryReorderPolicies.$inferInsert,
+) {
+  const [row] = await db
+    .insert(inventoryReorderPolicies)
+    .values(values)
+    .returning({ id: inventoryReorderPolicies.id });
+  return row ?? null;
+}
+
+export async function updateInventoryReorderPolicyRepo(
+  id: string,
+  patch: Partial<typeof inventoryReorderPolicies.$inferInsert>,
+) {
+  const [row] = await db
+    .update(inventoryReorderPolicies)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(eq(inventoryReorderPolicies.id, id))
+    .returning({ id: inventoryReorderPolicies.id });
+  return row ?? null;
+}
+
 // Inventory Dashboard / Scope
 export async function listLocationScopeIdsRepo(companyId: string, rootLocationId?: string | null) {
   if (!rootLocationId) {
@@ -1438,6 +1722,8 @@ export type ListStockMaintenanceRecordsParams = {
   offset: number;
   companyId?: string | null;
   locationId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
   issueType?: number | null;
   status?: number | null;
   sort?: SortField[] | null;
@@ -1447,6 +1733,22 @@ export async function listStockMaintenanceRecordsRepo(p: ListStockMaintenanceRec
   const where = [];
   if (p.companyId) where.push(eq(stockMaintenanceRecords.companyId, p.companyId));
   if (p.locationId) where.push(eq(stockMaintenanceRecords.locationId, p.locationId));
+  if (p.branchId) {
+    where.push(sql`exists (
+      select 1 from ${inventoryLocations}
+      where ${inventoryLocations.id} = ${stockMaintenanceRecords.locationId}
+        and ${inventoryLocations.branchId} = ${p.branchId}
+        and ${inventoryLocations.isDeleted} = false
+    )`);
+  }
+  if (p.locationType !== undefined && p.locationType !== null) {
+    where.push(sql`exists (
+      select 1 from ${inventoryLocations}
+      where ${inventoryLocations.id} = ${stockMaintenanceRecords.locationId}
+        and ${inventoryLocations.locationType} = ${p.locationType}
+        and ${inventoryLocations.isDeleted} = false
+    )`);
+  }
   if (p.issueType !== undefined && p.issueType !== null)
     where.push(eq(stockMaintenanceRecords.issueType, p.issueType));
   if (p.status !== undefined && p.status !== null)

@@ -1,4 +1,4 @@
-import { formatDateTime as formatDateTimeStandard } from '@/lib/date';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 
 export function formatCurrency(amountPsw: number) {
@@ -9,7 +9,7 @@ export function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return formatDateTimeStandard(date);
+  return sharedFormatDateTime(value);
 }
 
 export function formatStorageCharge(parcel: ParcelSearchRow) {

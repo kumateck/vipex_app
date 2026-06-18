@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Button } from '@/components/ui/button';
@@ -51,7 +52,7 @@ export function ProcurementGoodsReceiptsListPage() {
                       <TableCell>{row.receiptNo}</TableCell>
                       <TableCell>{row.purchaseOrderId}</TableCell>
                       <TableCell>{row.receivedBy}</TableCell>
-                      <TableCell>{new Date(row.createdAt).toLocaleString()}</TableCell>
+                      <TableCell>{formatDateTimeShared(row.createdAt)}</TableCell>
                     </TableRow>
                   ))
                 ) : (

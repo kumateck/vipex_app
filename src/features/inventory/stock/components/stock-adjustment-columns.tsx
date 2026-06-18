@@ -1,5 +1,5 @@
 import type { ColumnDef } from '@tanstack/react-table';
-import { formatDateTime } from '@/lib/date';
+import { formatDateTime } from '@/lib/dates';
 import type { StockAdjustment } from '../types/inventory-stock.types';
 import { stockAdjustmentReasonLabelByValue } from '../constants/stock-options';
 

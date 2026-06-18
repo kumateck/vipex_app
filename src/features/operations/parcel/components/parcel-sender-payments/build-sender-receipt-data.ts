@@ -1,6 +1,5 @@
 import type { SenderCashierParcel } from '../../api/parcel.api';
-import type { ReceiptPrintData } from '../parcel-receipt-actions';
-import { formatPhones } from './utils';
+import type { ReceiptPrintData } from '../parcel-receipt.types';
 
 type SenderPaymentTaxBreakdown = {
   vatCedis: number;
@@ -38,9 +37,11 @@ export function buildSenderReceiptData({
     parcelContent: parcel.parcelContent,
     parcelValueCedis: Number(parcel.parcelValuePsw ?? 0) / 100,
     senderName: parcel.senderName ?? '-',
-    senderTelephone: formatPhones(parcel.senderPhone, parcel.senderPhone2),
+    senderTelephone: parcel.senderPhone ?? '-',
+    senderTelephone2: parcel.senderPhone2 ?? null,
     receiverName: parcel.receiverName ?? '-',
-    receiverTelephone: formatPhones(parcel.receiverPhone, parcel.receiverPhone2),
+    receiverTelephone: parcel.receiverPhone ?? '-',
+    receiverTelephone2: parcel.receiverPhone2 ?? null,
     destinationBranchName,
     destinationLocationName,
     totalChargeCedis,

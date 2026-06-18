@@ -1,3 +1,4 @@
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Bell } from 'lucide-react';
 import type { CommunicationMessage } from '../../../api/communication.api';
 import { asRecord, firstString } from './communication-chat-thread-detail-media';
@@ -188,9 +189,7 @@ export function renderCallOrMeetingBubble(
       <div className="mt-2 rounded-lg border bg-background/40 p-3 text-sm">
         <p className="font-semibold">{title}</p>
         {startsAt ? (
-          <p className="text-xs text-muted-foreground">
-            Starts: {new Date(startsAt).toLocaleString()}
-          </p>
+          <p className="text-xs text-muted-foreground">Starts: {formatDateTimeShared(startsAt)}</p>
         ) : null}
         {link ? (
           <a

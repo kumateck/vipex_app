@@ -1,4 +1,5 @@
 import type { CustomerStatement } from '@/features/customers/api';
+import { formatDateTime } from '@/lib/dates';
 
 export function formatMoney(psw: number) {
   return `GHS ${(psw / 100).toFixed(2)}`;
@@ -29,7 +30,7 @@ export function formatDate(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTime(date);
 }
 
 export function buildStatementRowsWithRunningBalance(statement: CustomerStatement | undefined) {

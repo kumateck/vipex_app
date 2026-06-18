@@ -446,6 +446,12 @@ export async function collectSenderPaymentAndProcessSvc(input: {
       Number(input.amountCedis) > 0;
 
     const result = await db.transaction(async (tx) => {
+      const activeSession = await assertActiveSessionSvc({
+        cashierId: input.cashierUserId,
+        branchId: input.branchId,
+        executor: tx,
+      });
+
       let payment: PaymentCreateResponse | null = null;
       if (hasAmount) {
         const created = await createPaymentCore(
@@ -467,13 +473,17 @@ export async function collectSenderPaymentAndProcessSvc(input: {
 
       const parcel = await getParcelSvc(input.parcelId, tx);
       let statusChanged = false;
+      const patch: Partial<Parameters<typeof updateParcelRepo>[1]> = {};
       if (parcel.status === ParcelStatus.CREATED) {
-        const updated = await updateParcelRepo(
-          input.parcelId,
-          { status: ParcelStatus.PROCESSED },
-          tx,
-        );
-        statusChanged = Boolean(updated);
+        patch.status = ParcelStatus.PROCESSED;
+      }
+      if (!parcel.cashierSessionId) {
+        patch.cashierSessionId = activeSession.id;
+      }
+
+      if (Object.keys(patch).length > 0) {
+        const updated = await updateParcelRepo(input.parcelId, patch, tx);
+        statusChanged = patch.status === ParcelStatus.PROCESSED && Boolean(updated);
       }
 
       return { payment, statusChanged };

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { useCreateCustomerMutation } from '@/features/customers/api';
 import { useAuthStore } from '@/stores/auth-store';
@@ -106,9 +107,13 @@ export function ParcelStatusPage() {
 
     if (useSecondReceiver) {
       const name = secondReceiverName.trim();
-      const phone = secondReceiverPhone.trim();
+      const phone = normalizePhoneDigits(secondReceiverPhone);
       if (name.length === 0 || phone.length === 0) {
         toast.error('Second receiver name and telephone are required');
+        return;
+      }
+      if (!isTenDigitPhone(phone)) {
+        toast.error(phoneLengthMessage('Second receiver telephone'));
         return;
       }
       const created = await createCustomer({

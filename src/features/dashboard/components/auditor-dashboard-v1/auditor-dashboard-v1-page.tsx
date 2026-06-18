@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -31,7 +32,7 @@ export function AuditorDashboardV1Page() {
 
   const canListAudit = permissions.has(PermissionKeys.CanListAuditLogs);
   const canReadAccounting = permissions.has(PermissionKeys.CanReadAccounting);
-  const canViewOutstanding = permissions.has(PermissionKeys.CanGetOutstandingToBePaidReport);
+  const canViewOutstanding = permissions.has(PermissionKeys.CanViewReportCashToBePaidOutstanding);
 
   const scopeFrom = scope?.dateRange?.from;
   const scopeTo = scope?.dateRange?.to ?? scope?.dateRange?.from;
@@ -290,7 +291,7 @@ export function AuditorDashboardV1Page() {
                               <div className="font-medium">{row.action}</div>
                               <div className="text-muted-foreground">{row.message ?? '-'}</div>
                               <div className="text-xs text-muted-foreground">
-                                {new Date(row.createdAt).toLocaleString()}
+                                {formatDateTimeShared(row.createdAt)}
                               </div>
                             </div>
                           ))

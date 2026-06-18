@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +18,7 @@ import {
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
-  return new Date(value).toLocaleString();
+  return sharedFormatDateTime(value);
 }
 
 export function FleetMaintenanceStockMovementsPage() {

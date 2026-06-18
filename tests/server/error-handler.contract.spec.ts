@@ -25,15 +25,16 @@ const app = new Elysia()
   .get('/test/unexpected', () => {
     throw new Error('sensitive internal detail');
   })
-  .post(
-    '/test/validation',
-    ({ body }) => body,
-    {
-      body: t.Object({
-        amount: t.Number({ minimum: 1 }),
-      }),
-    },
-  );
+  .get('/test/upstream-timeout', () => {
+    const error = new Error('Failed query: select 1');
+    (error as Error & { code?: string }).code = 'CONNECT_TIMEOUT';
+    throw error;
+  })
+  .post('/test/validation', ({ body }) => body, {
+    body: t.Object({
+      amount: t.Number({ minimum: 1 }),
+    }),
+  });
 
 async function request(method: string, path: string, body?: unknown): Promise<Response> {
   return app.handle(
@@ -83,5 +84,16 @@ describe('Error handler contract', () => {
     expect(json.error.message).toContain('validation');
     expect(json.error.path).toBe('/test/validation');
     expect(Array.isArray(json.error.details?.fields)).toBe(true);
+  });
+
+  test('maps infra connect timeout to service unavailable', async () => {
+    const res = await request('GET', '/test/upstream-timeout');
+    expect(res.status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
+
+    const json = (await res.json()) as ErrorEnvelope;
+    expect(json.error.code).toBe('UPSTREAM_UNAVAILABLE');
+    expect(json.error.message).toBe('A dependent service is temporarily unavailable.');
+    expect(json.error.path).toBe('/test/upstream-timeout');
+    expect(json.error.requestId).toBe('req-test-001');
   });
 });
