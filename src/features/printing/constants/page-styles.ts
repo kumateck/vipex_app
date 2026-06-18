@@ -17,9 +17,11 @@ export const PAGE_STYLES: Record<PrintLayout, string> = {
     @media print {
       @page {
         size: 80mm auto;
-        margin: 0;
+        margin: 1mm;
       }
+      html,
       body {
+        width: 80mm;
         margin: 0;
       }
     }

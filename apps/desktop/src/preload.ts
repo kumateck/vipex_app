@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('api', {
     title?: string;
     silent?: boolean;
     deviceName?: string;
+    copies?: number;
   }) => ipcRenderer.invoke('print:html', request),
   printParallel: async (request: {
     jobs: Array<{
@@ -53,6 +54,7 @@ contextBridge.exposeInMainWorld('api', {
       title?: string;
       silent?: boolean;
       deviceName?: string;
+      copies?: number;
     }>;
   }) => ipcRenderer.invoke('print:parallel', request),
   listPrinters: async () => ipcRenderer.invoke('print:list-printers'),
