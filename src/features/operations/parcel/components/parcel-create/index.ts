@@ -11,6 +11,7 @@ export * from './parcel-create-sender-payment-dialog';
 export * from './parcel-form.types';
 export * from './parcel-receipts';
 export * from './parcel-status-options';
+export * from './use-parcel-create-customer-resolver';
 export * from './use-parcel-create-form-workflow';
 export * from './use-parcel-create-print-preference';
 export * from './use-parcel-create-sender-payment';

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
-import { useCreateCustomerMutation } from '@/features/customers/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { BranchType, PaymentMethod, PaymentResponsibility, UserType } from '@/db/schemas/enums';
 import { useCreateBookingWithParcelsMutation } from '../../api/parcel.api';
@@ -14,9 +13,10 @@ import {
   isApiRejectionError,
   parseAmount,
 } from './parcel-create-form.utils';
+import { useParcelCreateCustomerResolver } from './use-parcel-create-customer-resolver';
 import { useParcelCreatePrintPreference } from './use-parcel-create-print-preference';
 import { useParcelCreateSenderPayment } from './use-parcel-create-sender-payment';
-import { sanitizeNumber, sanitizeString } from '@/lib/utils';
+import { sanitizeNumber } from '@/lib/utils';
 
 export function useParcelCreateFormWorkflow() {
   const user = useAuthStore((state) => state.user);
@@ -40,7 +40,7 @@ export function useParcelCreateFormWorkflow() {
     (branch) => branch.id !== userBranchId && branch.type !== BranchType.HEADOFFICE,
   );
 
-  const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
+  const { isCreatingCustomer, resolveCustomerId } = useParcelCreateCustomerResolver();
   const [createBookingWithParcels, { isLoading: isSubmitting }] =
     useCreateBookingWithParcelsMutation();
 
@@ -86,37 +86,6 @@ export function useParcelCreateFormWorkflow() {
     if (closePaymentDialog) {
       senderPayment.closePaymentDialog();
     }
-  };
-
-  const resolveCustomerId = async (
-    params: {
-      customerId: string;
-      fullname: string;
-      telephone: string;
-      telephone2?: string;
-      label: string;
-    },
-    cache: Map<string, string>,
-  ) => {
-    if (params.customerId) return params.customerId;
-    const phone = params.telephone.trim();
-    const name = params.fullname.trim();
-
-    if (!phone || !name) {
-      throw new Error(`${params.label} telephone and fullname are required`);
-    }
-
-    const cachedId = cache.get(phone);
-    if (cachedId) return cachedId;
-
-    const secondaryPhone = sanitizeString(params.telephone2).trim();
-    const created = await createCustomer({
-      fullname: name,
-      telephone: phone,
-      telephone2: secondaryPhone || null,
-    }).unwrap();
-    cache.set(phone, created.id);
-    return created.id;
   };
 
   const onSubmit = async (values: ParcelBookingFormValues) => {
