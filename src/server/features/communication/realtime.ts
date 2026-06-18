@@ -301,12 +301,16 @@ export const communicationSocketHandlers = {
           userId: data.userId,
         });
         if (!canAccessThread) return;
-        emitCommunicationTypingUpdated(data.companyId, {
-          threadId,
-          userId: data.userId,
-          isTyping: parsed.payload.isTyping === true,
-          at: new Date().toISOString(),
-        });
+        emitCommunicationTypingUpdated(
+          data.companyId,
+          {
+            threadId,
+            userId: data.userId,
+            isTyping: parsed.payload.isTyping === true,
+            at: new Date().toISOString(),
+          },
+          { excludeUserId: data.userId },
+        );
         return;
       }
 
@@ -607,12 +611,20 @@ export function emitCommunicationPresenceUpdated(
 export function emitCommunicationTypingUpdated(
   companyId: string,
   payload: { threadId: string; userId: string; isTyping: boolean; at: string },
+  options?: { excludeUserId?: string | null },
 ) {
   void (async () => {
     const audience = await listThreadParticipantUserIdsAccessRepo({
       companyId,
       threadId: payload.threadId,
     });
-    broadcastToUserIds(companyId, audience, { type: 'communication.typing.updated', payload });
+    const excludeUserId = options?.excludeUserId?.trim();
+    const filteredAudience = excludeUserId
+      ? audience.filter((userId) => userId !== excludeUserId)
+      : audience;
+    broadcastToUserIds(companyId, filteredAudience, {
+      type: 'communication.typing.updated',
+      payload,
+    });
   })();
 }

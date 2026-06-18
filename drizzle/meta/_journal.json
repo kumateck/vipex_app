@@ -246,6 +246,27 @@
       "when": 1775731800000,
       "tag": "0042_refresh_tokens_permissions_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1776175200000,
+      "tag": "0043_stock_request_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1776252000000,
+      "tag": "0044_inventory_reorder_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1776255600000,
+      "tag": "0045_sticker_print_module",
+      "breakpoints": true
     }
   ]
 }

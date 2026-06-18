@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PHONE_DIGITS, limitPhoneDigits } from '@/lib/phone';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import type { ContactOutcome } from './types';
 
@@ -120,8 +121,13 @@ export function ParcelCallOutcomeDialog({
                     <Input
                       id="second-receiver-phone"
                       value={secondReceiverPhone}
-                      onChange={(event) => onSecondReceiverPhoneChange(event.target.value)}
+                      onChange={(event) =>
+                        onSecondReceiverPhoneChange(limitPhoneDigits(event.target.value))
+                      }
                       placeholder="Telephone number"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      maxLength={PHONE_DIGITS}
                     />
                   </div>
                 </div>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { useListBranchOptionsQuery } from '@/features/branches';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -210,7 +211,7 @@ export function FleetDispatchBoardPage() {
                 </p>
                 <p className="text-muted-foreground">
                   Route: {trip.routePlanName ?? 'Unassigned'} | Started:{' '}
-                  {trip.startedAt ? new Date(trip.startedAt).toLocaleString() : '-'}
+                  {trip.startedAt ? formatDateTimeShared(trip.startedAt) : '-'}
                 </p>
                 <div className="mt-2 flex gap-2">
                   <Button asChild size="sm" variant="outline">

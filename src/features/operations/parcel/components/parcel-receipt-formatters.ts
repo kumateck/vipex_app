@@ -1,3 +1,5 @@
+import { formatDateTime } from '@/lib/dates';
+
 export function formatMoney(amount: number) {
   return `GH₵ ${amount.toFixed(2)}`;
 }
@@ -5,7 +7,7 @@ export function formatMoney(amount: number) {
 export function formatDate(isoDate: string) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTime(date);
 }
 
 function toWordsUnderThousand(n: number): string {

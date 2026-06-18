@@ -16,16 +16,18 @@ import {
   extractMentionsFromText,
   getActiveMentionQuery,
   getUserMentionHandles,
-  normalizeMentionHandle,
 } from '../utils/communication-chat-thread-detail-mentions';
 import { asRecord } from '../utils/communication-chat-thread-detail-media';
+import { getDisplayNameForUser } from '../utils/communication-chat-thread-detail-message';
 import {
-  getDisplayNameForUser,
-  looksLikeInternalId,
-} from '../utils/communication-chat-thread-detail-message';
+  handleComposerKeyDown,
+  resolveMentionLabel,
+  resolveReplySenderLabel,
+} from './use-chat-thread-composer-helpers';
 
 type UseChatThreadComposerParams = {
   normalizedThreadId: string;
+  currentUserId: string;
   userOptions: UserOption[];
   usersById: Map<string, { fullname?: string | null; email?: string | null }>;
   setTyping: (threadId: string, isTyping: boolean) => void;
@@ -34,6 +36,7 @@ type UseChatThreadComposerParams = {
 
 export function useChatThreadComposer({
   normalizedThreadId,
+  currentUserId,
   userOptions,
   usersById,
   setTyping,
@@ -168,18 +171,29 @@ export function useChatThreadComposer({
         }).unwrap();
         setEditingMessage(null);
       } else {
+        const isReplyFromCurrentUser =
+          Boolean(currentUserId) && replyToMessage?.senderUserId === currentUserId;
+        const replySenderName = isReplyFromCurrentUser
+          ? 'You'
+          : replyToMessage?.senderUserId
+            ? getDisplayNameForUser(
+                usersById,
+                replyToMessage.senderUserId,
+                replyToMessage.senderName?.trim() || 'Unknown user',
+              )
+            : replyToMessage?.senderName?.trim() || 'Unknown user';
         const replyMetadata = replyToMessage
           ? {
               replyTo: {
                 id: replyToMessage.id,
                 body: replyToMessage.body ?? '',
-                sender: getDisplayNameForUser(usersById, replyToMessage.senderUserId),
-                senderName: getDisplayNameForUser(usersById, replyToMessage.senderUserId),
+                sender: replySenderName,
+                senderName: replySenderName,
                 senderUserId: replyToMessage.senderUserId ?? null,
               },
               replyToBody: replyToMessage.body ?? '',
-              replyToSender: getDisplayNameForUser(usersById, replyToMessage.senderUserId),
-              replyToSenderName: getDisplayNameForUser(usersById, replyToMessage.senderUserId),
+              replyToSender: replySenderName,
+              replyToSenderName: replySenderName,
               replyToSenderUserId: replyToMessage.senderUserId ?? null,
             }
           : {};
@@ -208,61 +222,17 @@ export function useChatThreadComposer({
     }
   };
 
-  const resolveMentionLabel = (handle: string) => {
-    const normalized = normalizeMentionHandle(handle);
-    if (!normalized) return 'unknown';
-    if (normalized === 'everyone') return 'everyone';
-
-    const userId = userIdByMentionHandle.get(normalized);
-    if (userId) return getDisplayNameForUser(usersById, userId, 'unknown');
-
-    if (looksLikeInternalId(normalized)) return 'unknown';
-    return normalized;
-  };
-
-  const resolveReplySenderLabel = (replyPreview: {
-    sender?: string;
-    senderUserId?: string | null;
-  }) => {
-    if (replyPreview.senderUserId) {
-      return getDisplayNameForUser(
-        usersById,
-        replyPreview.senderUserId,
-        replyPreview.sender?.trim() || 'Unknown user',
-      );
-    }
-    return replyPreview.sender?.trim() || 'Unknown user';
-  };
-
   const onInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (isMentionMenuOpen) {
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        setActiveMentionIndex((prev) => (prev + 1) % mentionSuggestions.length);
-        return;
-      }
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        setActiveMentionIndex((prev) => (prev <= 0 ? mentionSuggestions.length - 1 : prev - 1));
-        return;
-      }
-      if (event.key === 'Enter' || event.key === 'Tab') {
-        event.preventDefault();
-        const suggestion = mentionSuggestions[activeMentionIndex] ?? mentionSuggestions[0];
-        if (suggestion) insertMentionSuggestion(suggestion);
-        return;
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        setComposerCaret(-1);
-        return;
-      }
-    }
-
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      void onSendMessage();
-    }
+    handleComposerKeyDown({
+      event,
+      isMentionMenuOpen,
+      mentionSuggestions,
+      activeMentionIndex,
+      setActiveMentionIndex,
+      insertMentionSuggestion,
+      setComposerCaret,
+      onSendMessage,
+    });
   };
 
   return {
@@ -291,8 +261,15 @@ export function useChatThreadComposer({
     onMessageInputChange,
     insertMentionSuggestion,
     onSendMessage,
-    resolveMentionLabel,
-    resolveReplySenderLabel,
+    resolveMentionLabel: (handle: string) =>
+      resolveMentionLabel(handle, userIdByMentionHandle, usersById),
+    resolveReplySenderLabel: (replyPreview: { sender?: string; senderUserId?: string | null }) =>
+      resolveReplySenderLabel({
+        sender: replyPreview.sender,
+        senderUserId: replyPreview.senderUserId,
+        currentUserId,
+        usersById,
+      }),
     onInputKeyDown,
     isSendingMessage,
   };

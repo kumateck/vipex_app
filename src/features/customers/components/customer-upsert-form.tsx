@@ -6,6 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  PHONE_DIGITS,
+  isOptionalTenDigitPhone,
+  limitPhoneDigits,
+  normalizePhoneDigits,
+} from '@/lib/phone';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -51,9 +57,6 @@ function toNumber(value: string, fallback = 0) {
   return n;
 }
 
-const PHONE_DIGITS = 10;
-const toPhoneDigits = (value: string) => value.replace(/\D/g, '');
-
 interface CustomerUpsertFormProps {
   mode: Mode;
   customerId?: string;
@@ -92,15 +95,15 @@ export function CustomerUpsertForm({ mode, customerId, initialData }: CustomerUp
       return;
     }
 
-    const primaryPhone = toPhoneDigits(form.telephone);
-    const secondaryPhone = toPhoneDigits(form.telephone2);
+    const primaryPhone = normalizePhoneDigits(form.telephone);
+    const secondaryPhone = normalizePhoneDigits(form.telephone2);
 
-    if (primaryPhone.length > 0 && primaryPhone.length !== PHONE_DIGITS) {
+    if (!isOptionalTenDigitPhone(form.telephone)) {
       toast.error(`Telephone must be exactly ${PHONE_DIGITS} digits`);
       return;
     }
 
-    if (secondaryPhone.length > 0 && secondaryPhone.length !== PHONE_DIGITS) {
+    if (!isOptionalTenDigitPhone(form.telephone2)) {
       toast.error(`Telephone 2 must be exactly ${PHONE_DIGITS} digits`);
       return;
     }
@@ -162,9 +165,10 @@ export function CustomerUpsertForm({ mode, customerId, initialData }: CustomerUp
               <Input
                 value={form.telephone}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, telephone: event.target.value }))
+                  setForm((prev) => ({ ...prev, telephone: limitPhoneDigits(event.target.value) }))
                 }
                 inputMode="numeric"
+                maxLength={PHONE_DIGITS}
                 placeholder="0240000000"
               />
             </div>
@@ -173,9 +177,10 @@ export function CustomerUpsertForm({ mode, customerId, initialData }: CustomerUp
               <Input
                 value={form.telephone2}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, telephone2: event.target.value }))
+                  setForm((prev) => ({ ...prev, telephone2: limitPhoneDigits(event.target.value) }))
                 }
                 inputMode="numeric"
+                maxLength={PHONE_DIGITS}
                 placeholder="0240000001"
               />
             </div>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useListBranchOptionsQuery } from '@/features/branches';
@@ -17,6 +17,7 @@ import {
   useGetFleetDispatchRouteAssignmentQueueQuery,
   useListFleetRoutePlansQuery,
 } from '../../api/fleet-transport.api';
+import { useMemo, useState } from 'react';
 
 export function FleetDispatchRouteAssignmentPage() {
   const [branchId, setBranchId] = useState('__all__');
@@ -170,7 +171,7 @@ export function FleetDispatchRouteAssignmentPage() {
                 </p>
                 <p className="text-muted-foreground">
                   Route: {trip.routePlanName ?? 'Unassigned'} | Planned Start:{' '}
-                  {trip.plannedStartAt ? new Date(trip.plannedStartAt).toLocaleString() : '-'}
+                  {trip.plannedStartAt ? formatDateTimeShared(trip.plannedStartAt) : '-'}
                 </p>
                 <p className="text-muted-foreground">
                   Schedule complete: {trip.scheduleComplete ? 'Yes' : 'No'} | Vehicle conflict:{' '}

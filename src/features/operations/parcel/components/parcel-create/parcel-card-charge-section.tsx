@@ -8,7 +8,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -17,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { sanitizeNumber, sanitizeString } from '@/lib/utils';
+import { BufferedParcelField } from './buffered-parcel-field';
 import type { ParcelBookingFormValues } from './parcel-form.types';
 
 type ParcelCardChargeSectionProps = {
@@ -55,9 +55,13 @@ export function ParcelCardChargeSection({
         <CardDescription className="text-xs">Set how much is paid and by whom.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <FormField
+        <BufferedParcelField
           control={control}
           name={parcelChargeName}
+          label="Charge (GHS)"
+          placeholder="0.00"
+          description="Charge amount for this parcel."
+          inputMode="decimal"
           rules={{
             required: 'Charge is required',
             validate: (value) => {
@@ -66,24 +70,6 @@ export function ParcelCardChargeSection({
               return Number.isNaN(sanitizeNumber(normalized)) ? 'Enter a valid charge' : true;
             },
           }}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Charge (GHS)</FormLabel>
-              <FormControl>
-                <Input
-                  name={field.name}
-                  ref={field.ref}
-                  onBlur={field.onBlur}
-                  onChange={field.onChange}
-                  value={sanitizeString(field.value)}
-                  inputMode="decimal"
-                  placeholder="0.00"
-                />
-              </FormControl>
-              <FormDescription>Charge amount for this parcel.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
         />
 
         <FormField
@@ -113,9 +99,13 @@ export function ParcelCardChargeSection({
         />
 
         {paymentResponsibility === 'SPLIT' ? (
-          <FormField
+          <BufferedParcelField
             control={control}
             name={senderPartialPaymentName}
+            label="Sender Partial Payment (GHS)"
+            placeholder="0.00"
+            description="Sender pays this amount now; receiver pays the remainder at pickup."
+            inputMode="decimal"
             rules={{
               required: 'Sender partial payment is required',
               validate: (value) => {
@@ -126,26 +116,6 @@ export function ParcelCardChargeSection({
                 return true;
               },
             }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Sender Partial Payment (GHS)</FormLabel>
-                <FormControl>
-                  <Input
-                    name={field.name}
-                    ref={field.ref}
-                    onBlur={field.onBlur}
-                    onChange={field.onChange}
-                    value={sanitizeString(field.value)}
-                    inputMode="decimal"
-                    placeholder="0.00"
-                  />
-                </FormControl>
-                <FormDescription>
-                  Sender pays this amount now; receiver pays the remainder at pickup.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
           />
         ) : null}
 

@@ -83,6 +83,10 @@ export function StockTransferStatusForm({
         </CardHeader>
         <CardContent>
           <div className="space-y-2 text-sm">
+            <p className="text-xs text-muted-foreground">
+              This step records what the source has dispatched. Receipt acknowledgement happens on
+              the receiving screen.
+            </p>
             <p>
               <span className="font-medium">Product:</span> {productName}
             </p>

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { toast } from 'sonner';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Button } from '@/components/ui/button';
@@ -7,10 +7,11 @@ import {
   useListFleetShiftRostersQuery,
   useUpdateFleetShiftRosterMutation,
 } from '../../api/fleet-transport.api';
+import { Link } from 'react-router-dom';
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
-  return new Date(value).toLocaleString();
+  return sharedFormatDateTime(value);
 }
 
 export function FleetShiftRostersPage() {

@@ -12,6 +12,14 @@ export function StockRequestsListPage() {
         <div className="flex justify-end gap-2">
           <PermissionGuard permissionKey={PermissionKeys.CanReadStockRequests}>
             <Button asChild variant="outline">
+              <Link to="/inventory/stock-requests/issue">Issue queue</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/inventory/stock-requests/receive">Acknowledge queue</Link>
+            </Button>
+          </PermissionGuard>
+          <PermissionGuard permissionKey={PermissionKeys.CanReadStockRequests}>
+            <Button asChild variant="outline">
               <Link to="/inventory/stock-lots">Stock Lots</Link>
             </Button>
             <Button asChild variant="outline">

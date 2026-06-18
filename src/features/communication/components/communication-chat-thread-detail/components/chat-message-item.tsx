@@ -20,14 +20,22 @@ type ChatMessageItemProps = {
   message: CommunicationMessage;
   dayLabel: string | null;
   isOwnMessage: boolean;
+  showSenderLabel: boolean;
   senderLabel: string;
-  replyPreview: { sender?: string; senderUserId?: string | null; body: string } | null;
+  senderLabelColor: string;
+  replyPreview: {
+    sender?: string;
+    senderUserId?: string | null;
+    body: string;
+    replyId?: string | null;
+  } | null;
   attachments: ReturnType<
     typeof import('../utils/communication-chat-thread-detail-media').extractMediaAttachments
   >;
   reactions: Array<{ emoji: string; count: number }>;
   recordingDuration: string | null;
   liveCallStatus: string | null;
+  isHighlighted: boolean;
   pinned: boolean;
   starred: boolean;
   canEditDelete: boolean;
@@ -50,18 +58,23 @@ type ChatMessageItemProps = {
   onReactionMenuOpenChange: (open: boolean) => void;
   onToggleActionsMenu: (open: boolean) => void;
   onOpenVideoAttachment: (url: string, label?: string) => void;
+  registerMessageElement: (messageId: string, element: HTMLDivElement | null) => void;
+  onJumpToReply: (replyMessageId: string) => void;
 };
 
 export function ChatMessageItem({
   message,
   dayLabel,
   isOwnMessage,
+  showSenderLabel,
   senderLabel,
+  senderLabelColor,
   replyPreview,
   attachments,
   reactions,
   recordingDuration,
   liveCallStatus,
+  isHighlighted,
   pinned,
   starred,
   canEditDelete,
@@ -81,9 +94,16 @@ export function ChatMessageItem({
   onReactionMenuOpenChange,
   onToggleActionsMenu,
   onOpenVideoAttachment,
+  registerMessageElement,
+  onJumpToReply,
 }: ChatMessageItemProps) {
+  const replyTargetId = replyPreview?.replyId?.trim() || null;
+
   return (
-    <div className="group/message mb-3 space-y-2 last:mb-0">
+    <div
+      ref={(element) => registerMessageElement(message.id, element)}
+      className="group/message mb-3 space-y-2 last:mb-0"
+    >
       {dayLabel ? (
         <div className="flex justify-center">
           <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
@@ -93,18 +113,18 @@ export function ChatMessageItem({
       ) : null}
 
       <div className={`flex items-end gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-        {!isOwnMessage ? (
+        {!isOwnMessage && showSenderLabel ? (
           <div className="mb-1 flex h-7 w-7 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
             {senderLabel.slice(0, 1).toUpperCase()}
           </div>
         ) : null}
 
         <div
-          className={`relative max-w-[88%] rounded-2xl px-3 py-2 sm:max-w-[72%] ${reactions.length ? 'pb-4' : ''} ${
+          className={`relative max-w-[88%] rounded-2xl px-2.5 py-1.5 sm:max-w-[72%] ${reactions.length ? 'pb-4' : ''} ${
             isOwnMessage
               ? 'rounded-br-sm bg-[#d9fdd3] text-[#111b21] dark:bg-[#005c4b] dark:text-[#e9edef]'
               : 'rounded-bl-sm border border-black/5 bg-white text-[#111b21] dark:border-white/10 dark:bg-[#202c33] dark:text-[#e9edef]'
-          }`}
+          } ${isHighlighted ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background' : ''}`}
         >
           <div className={`absolute top-1 z-20 ${isOwnMessage ? '-left-11' : '-right-11'}`}>
             <button
@@ -162,21 +182,33 @@ export function ChatMessageItem({
             </DropdownMenu>
           </div>
 
-          {!isOwnMessage ? (
-            <p className="mb-0.5 text-xs font-semibold text-muted-foreground">{senderLabel}</p>
+          {!isOwnMessage && showSenderLabel ? (
+            <p className="mb-0.5 text-xs font-semibold" style={{ color: senderLabelColor }}>
+              {senderLabel}
+            </p>
           ) : null}
 
           {replyPreview ? (
-            <div className="mb-1 rounded-lg border bg-muted/50 px-2 py-1 text-xs">
+            <button
+              type="button"
+              disabled={!replyTargetId}
+              onClick={() => {
+                if (!replyTargetId) return;
+                onJumpToReply(replyTargetId);
+              }}
+              className={`mb-1 w-full rounded-lg border bg-muted/50 px-2 py-1 text-left text-xs ${
+                replyTargetId ? 'cursor-pointer hover:bg-muted/70' : 'cursor-default'
+              }`}
+            >
               <p className="font-semibold text-muted-foreground">
                 {resolveReplySenderLabel(replyPreview)}
               </p>
-              <p className="truncate">{replyPreview.body}</p>
-            </div>
+              <p className="truncate">{replyPreview.body.trim() || '(attachment)'}</p>
+            </button>
           ) : null}
 
           {message.body ? (
-            <p className="text-sm whitespace-pre-wrap">
+            <p className="text-[12px] leading-5 whitespace-pre-wrap">
               {renderRichText(message.body, resolveMentionLabel)}
             </p>
           ) : null}

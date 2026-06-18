@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select-searchable';
+import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { Spinner } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListInventoryProductCategoryOptionsQuery } from '../api/inventory-products.api';
@@ -111,6 +112,16 @@ export function InventoryProductForm({
     () => UNIT_OF_MEASURE_OPTIONS.filter((option) => option.value !== selectedBaseUnit),
     [selectedBaseUnit],
   );
+  const categorySelectOptions = useMemo<SearchableSelectOption[]>(
+    () => [
+      { value: UNCATEGORIZED_VALUE, label: 'Uncategorized' },
+      ...(categoryOptions ?? []).map((category) => ({
+        value: category.id,
+        label: category.name,
+      })),
+    ],
+    [categoryOptions],
+  );
 
   useEffect(() => {
     if (mode === 'edit' && initialData) {
@@ -189,32 +200,21 @@ export function InventoryProductForm({
                   control={control}
                   name="categoryId"
                   render={({ field }) => (
-                    <Select
+                    <SearchableSelect
+                      options={categorySelectOptions}
                       value={field.value?.length ? field.value : UNCATEGORIZED_VALUE}
                       onValueChange={(value) =>
                         field.onChange(value === UNCATEGORIZED_VALUE ? '' : value)
                       }
-                    >
-                      <SelectTrigger
-                        id="categoryId"
-                        aria-invalid={!!errors.categoryId}
-                        disabled={isLoadingCategories}
-                      >
-                        <SelectValue
-                          placeholder={
-                            isLoadingCategories ? 'Loading categories...' : 'Select category'
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={UNCATEGORIZED_VALUE}>Uncategorized</SelectItem>
-                        {(categoryOptions ?? []).map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      isLoading={isLoadingCategories}
+                      disabled={isLoadingCategories}
+                      placeholder={
+                        isLoadingCategories ? 'Loading categories...' : 'Select category'
+                      }
+                      searchPlaceholder="Search category..."
+                      emptyMessage="No categories found."
+                      triggerClassName={errors.categoryId ? 'border-destructive' : undefined}
+                    />
                   )}
                 />
                 {errors.categoryId?.message ? (

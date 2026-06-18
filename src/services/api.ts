@@ -3,15 +3,17 @@ import type {
   BaseQueryFn,
   FetchArgs,
   FetchBaseQueryError,
+  FetchBaseQueryMeta,
   QueryReturnValue,
 } from '@reduxjs/toolkit/query';
 import { useAuthStore } from '@/stores/auth-store';
 import { TheAduseiErrorResponse } from '@/lib/TheAduseiErrorResponse';
 
-type QueryMeta = Record<string, never>;
+type QueryMeta = FetchBaseQueryMeta;
 type QueryResult = QueryReturnValue<unknown, FetchBaseQueryError, QueryMeta>;
 
 const inFlightRequests = new Map<string, Promise<QueryResult>>();
+let inFlightTokenRefresh: Promise<QueryResult> | null = null;
 
 export function clearApiInFlightRequests() {
   inFlightRequests.clear();
@@ -94,6 +96,28 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
   apiContext,
   extraOptions,
 ) => {
+  const runTokenRefresh = async (refreshToken: string): Promise<QueryResult> => {
+    if (inFlightTokenRefresh) return inFlightTokenRefresh;
+
+    const refreshRequest = Promise.resolve(
+      baseQuery(
+        {
+          url: '/auth/refresh',
+          method: 'POST',
+          body: { refreshToken },
+        },
+        apiContext,
+        extraOptions,
+      ),
+    );
+
+    inFlightTokenRefresh = refreshRequest.finally(() => {
+      inFlightTokenRefresh = null;
+    });
+
+    return refreshRequest;
+  };
+
   const requestArgs = sanitizeFetchArgs(args);
 
   const runRequest = async (): Promise<QueryResult> => {
@@ -104,16 +128,8 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
       const refreshToken = useAuthStore.getState().refreshToken;
 
       if (refreshToken) {
-        // Try to refresh the token
-        const refreshResult = await baseQuery(
-          {
-            url: '/auth/refresh',
-            method: 'POST',
-            body: { refreshToken },
-          },
-          apiContext,
-          extraOptions,
-        );
+        // Collapse concurrent 401 recoveries into one refresh call.
+        const refreshResult = await runTokenRefresh(refreshToken);
 
         if (refreshResult.data) {
           // Successfully refreshed - update auth state

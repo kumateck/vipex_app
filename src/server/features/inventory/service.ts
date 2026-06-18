@@ -14,6 +14,7 @@ import {
   StockReservationAllocationStatus,
   StockReservationStatus,
   StockRequestStatus,
+  StockRequestType,
   StockMovementType,
   StockAdjustmentReason,
   TransferStatus,
@@ -38,6 +39,7 @@ import {
   stockCountSessionLines,
   stockMovements,
   stockAdjustments,
+  stockTransfers,
   stockTransferAcceptances,
   stockRequestAcknowledgements,
   inventoryApprovalPolicies,
@@ -53,7 +55,7 @@ import {
   stockRequests,
   users,
 } from '@/db/schemas';
-import { and, asc, desc, eq, gt, gte, inArray, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, lt, lte, or, sql } from 'drizzle-orm';
 import {
   createProductCategoryRepo,
   listProductCategoryOptionsRepo,
@@ -93,7 +95,6 @@ import {
   createStockAdjustmentRepo,
   listStockAdjustmentsRepo,
   type ListStockAdjustmentsParams,
-  createStockTransferRepo,
   getStockTransferRepo,
   listStockTransfersRepo,
   updateStockTransferRepo,
@@ -112,9 +113,15 @@ import {
   listStockReservationsRepo,
   listReservedByProductLocationRepo,
   listStockRequestLinesRepo,
+  listStockRequestLineTotalsByRequestIdsRepo,
+  listStockRequestAcknowledgementTotalsByRequestIdsRepo,
   listStockRequestsRepo,
   type ListStockRequestsParams,
   getMovementHistoryRepo,
+  listInventoryReorderPoliciesRepo,
+  findInventoryReorderPolicyByScopeRepo,
+  createInventoryReorderPolicyRepo,
+  updateInventoryReorderPolicyRepo,
   type ListStockMaintenanceRecordsParams,
   updateStockRequestRepo,
   updateStockReservationAllocationRepo,
@@ -152,6 +159,47 @@ function isStockAllocationStrategy(value: number): value is StockAllocationStrat
 
 function isStockLotStatus(value: number): value is StockLotStatus {
   return value >= StockLotStatus.ACTIVE && value <= StockLotStatus.DEPLETED;
+}
+
+function isStockRequestType(value: number): value is StockRequestType {
+  return value >= StockRequestType.INTER_BRANCH && value <= StockRequestType.INTRA_BRANCH;
+}
+
+async function getOutstandingTransferCommitmentSvc(input: {
+  companyId: string;
+  productId: string;
+  fromLocationId: string;
+  excludeTransferId?: string;
+}) {
+  const [row] = await db
+    .select({
+      committedQty: sql<number>`
+        coalesce(
+          sum(
+            greatest(${stockTransfers.quantity} - ${stockTransfers.fulfilledQuantity}, 0)
+          ),
+          0
+        )
+      `,
+    })
+    .from(stockTransfers)
+    .where(
+      and(
+        eq(stockTransfers.companyId, input.companyId),
+        eq(stockTransfers.productId, input.productId),
+        eq(stockTransfers.fromLocationId, input.fromLocationId),
+        inArray(stockTransfers.status, [
+          TransferStatus.PENDING,
+          TransferStatus.IN_TRANSIT,
+          TransferStatus.PARTIALLY_FULFILLED,
+        ]),
+        input.excludeTransferId
+          ? sql`${stockTransfers.id} <> ${input.excludeTransferId}`
+          : sql`true`,
+      ),
+    );
+
+  return Math.max(0, Number(row?.committedQty ?? 0));
 }
 
 type ProductUnitConversionInput = {
@@ -317,7 +365,32 @@ export async function listProductOptionsSvc(p: {
   categoryId?: string | null;
   search?: string | null;
 }) {
-  return listProductOptionsRepo(p);
+  const options = await listProductOptionsRepo(p);
+  if (!options.length) return options;
+
+  const conversions = await listProductUnitConversionsByProductIdsRepo(
+    options.map((product) => product.id),
+  );
+  const conversionsByProductId = new Map<
+    string,
+    { unitOfMeasure: number; factorToBase: number; sortOrder: number }[]
+  >();
+  for (const row of conversions) {
+    const existing = conversionsByProductId.get(row.productId) ?? [];
+    existing.push({
+      unitOfMeasure: row.unitOfMeasure,
+      factorToBase: row.factorToBase,
+      sortOrder: row.sortOrder,
+    });
+    conversionsByProductId.set(row.productId, existing);
+  }
+
+  return options.map((product) => ({
+    ...product,
+    unitConversions: conversionsByProductId.get(product.id) ?? [
+      { unitOfMeasure: product.unitOfMeasure, factorToBase: 1, sortOrder: 0 },
+    ],
+  }));
 }
 
 export async function getProductSvc(id: string) {
@@ -545,7 +618,67 @@ export async function listStockLevelsSvc(p: ListStockLevelsParams) {
 export async function getStockLevelSvc(productId: string, locationId: string) {
   const level = await getStockLevelRepo(productId, locationId);
   if (!level) throw NotFound('Stock level not found');
-  return level;
+  const [requesterPendingAgg] = await db
+    .select({
+      pendingIncoming: sql<number>`coalesce(sum(greatest(${stockRequestLines.fulfilledQuantity} - coalesce((
+        select sum(${stockRequestAcknowledgements.acknowledgedQuantity})
+        from ${stockRequestAcknowledgements}
+        where ${stockRequestAcknowledgements.requestLineId} = ${stockRequestLines.id}
+      ), 0), 0)), 0)`,
+    })
+    .from(stockRequestLines)
+    .innerJoin(stockRequests, eq(stockRequests.id, stockRequestLines.requestId))
+    .where(
+      and(
+        eq(stockRequestLines.productId, productId),
+        eq(stockRequests.requesterLocationId, locationId),
+      ),
+    );
+
+  const [issuerPendingAgg] = await db
+    .select({
+      pendingReceiptByDestination: sql<number>`coalesce(sum(greatest(${stockRequestLines.fulfilledQuantity} - coalesce((
+        select sum(${stockRequestAcknowledgements.acknowledgedQuantity})
+        from ${stockRequestAcknowledgements}
+        where ${stockRequestAcknowledgements.requestLineId} = ${stockRequestLines.id}
+      ), 0), 0)), 0)`,
+    })
+    .from(stockRequestLines)
+    .innerJoin(stockRequests, eq(stockRequests.id, stockRequestLines.requestId))
+    .where(
+      and(
+        eq(stockRequestLines.productId, productId),
+        eq(stockRequests.requestedToLocationId, locationId),
+      ),
+    );
+
+  const [pendingIssueAgg] = await db
+    .select({
+      pendingToIssue: sql<number>`coalesce(sum(greatest(${stockRequestLines.requestedQuantity} - ${stockRequestLines.fulfilledQuantity}, 0)), 0)`,
+    })
+    .from(stockRequestLines)
+    .innerJoin(stockRequests, eq(stockRequests.id, stockRequestLines.requestId))
+    .where(
+      and(
+        eq(stockRequestLines.productId, productId),
+        eq(stockRequests.requestedToLocationId, locationId),
+        inArray(stockRequests.status, [
+          StockRequestStatus.SUBMITTED,
+          StockRequestStatus.APPROVED,
+          StockRequestStatus.PARTIALLY_FULFILLED,
+        ]),
+      ),
+    );
+
+  return {
+    ...level,
+    pendingIncomingQuantity: Math.max(0, Number(requesterPendingAgg?.pendingIncoming ?? 0)),
+    pendingReceiptByDestinationQuantity: Math.max(
+      0,
+      Number(issuerPendingAgg?.pendingReceiptByDestination ?? 0),
+    ),
+    pendingToIssueQuantity: Math.max(0, Number(pendingIssueAgg?.pendingToIssue ?? 0)),
+  };
 }
 
 async function recalcStockLevelFromLotsSvc(input: {
@@ -829,6 +962,21 @@ export async function createStockLotSvc(input: {
     referenceType: 'stock_lot_create',
     notes: input.notes ?? null,
   });
+
+  // Keep movement ledger in sync with lot-first receiving.
+  // Receipt entries are system-generated from lot creation to avoid duplicate inbound paths.
+  await createStockMovementRepo({
+    companyId: input.companyId,
+    productId: input.productId,
+    locationId: input.locationId,
+    movementType: StockMovementType.RECEIPT,
+    lotId,
+    quantity: input.quantityOnHand,
+    referenceId: lotId,
+    referenceType: 'stock_lot_create',
+    notes: input.notes ?? null,
+    createdBy: input.createdBy,
+  });
   return { id: lotId };
 }
 
@@ -859,7 +1007,7 @@ export async function runStockLotExpirySweepSvc(input: { companyId: string; acto
         eq(stockLots.companyId, input.companyId),
         eq(stockLots.status, StockLotStatus.ACTIVE),
         sql`${stockLots.expiryDate} is not null`,
-        sql`${stockLots.expiryDate} < ${now}`,
+        lt(stockLots.expiryDate, now),
       ),
     );
 
@@ -898,7 +1046,7 @@ export async function getStockLotExpiryAlertsSvc(input: {
         eq(stockLots.companyId, input.companyId),
         input.locationId ? eq(stockLots.locationId, input.locationId) : sql`true`,
         sql`${stockLots.expiryDate} is not null`,
-        sql`${stockLots.expiryDate} <= ${cutoff}`,
+        lte(stockLots.expiryDate, cutoff),
         gt(stockLots.quantityOnHand, 0),
       ),
     )
@@ -1583,6 +1731,10 @@ export async function createStockMovementSvc(input: {
   notes?: string | null;
   createdBy: string;
 }) {
+  if (input.movementType === StockMovementType.RECEIPT) {
+    throw BadRequest('Manual receipt movements are disabled. Use Stock Lots for inbound stock.');
+  }
+
   // Validate product and location exist
   const product = await getProductRepo(input.productId);
   if (!product) throw NotFound('Product not found');
@@ -1800,25 +1952,11 @@ export async function createStockTransferSvc(input: {
   quantity: number;
   notes?: string | null;
   createdBy: string;
-}) {
-  if (input.fromLocationId === input.toLocationId)
-    throw BadRequest('Source and destination locations must be different');
-
-  // Validate product and locations exist
-  const product = await getProductRepo(input.productId);
-  if (!product) throw NotFound('Product not found');
-  const fromLocation = await getInventoryLocationRepo(input.fromLocationId);
-  if (!fromLocation) throw NotFound('Source location not found');
-  const toLocation = await getInventoryLocationRepo(input.toLocationId);
-  if (!toLocation) throw NotFound('Destination location not found');
-
-  // Check if sufficient stock exists at source
-  const sourceLevel = await getStockLevelRepo(input.productId, input.fromLocationId);
-  if (!sourceLevel || sourceLevel.quantity < input.quantity)
-    throw BadRequest('Insufficient stock at source location');
-
-  const created = await createStockTransferRepo(input);
-  return { id: created?.id };
+}): Promise<{ id?: string }> {
+  void input;
+  throw BadRequest(
+    'Manual stock transfers are disabled. Create and fulfill stock requests instead.',
+  );
 }
 
 // Legacy contract behavior: allow creating transfer drafts before stock is fulfilled.
@@ -1830,22 +1968,11 @@ export async function createLegacyStockTransferSvc(input: {
   quantity: number;
   notes?: string | null;
   createdBy: string;
-}) {
-  if (input.fromLocationId === input.toLocationId)
-    throw BadRequest('Source and destination locations must be different');
-  if (!Number.isInteger(input.quantity) || input.quantity <= 0) {
-    throw BadRequest('Transfer quantity must be a positive integer');
-  }
-
-  const product = await getProductRepo(input.productId);
-  if (!product) throw NotFound('Product not found');
-  const fromLocation = await getInventoryLocationRepo(input.fromLocationId);
-  if (!fromLocation) throw NotFound('Source location not found');
-  const toLocation = await getInventoryLocationRepo(input.toLocationId);
-  if (!toLocation) throw NotFound('Destination location not found');
-
-  const created = await createStockTransferRepo(input);
-  return { id: created?.id };
+}): Promise<{ id?: string }> {
+  void input;
+  throw BadRequest(
+    'Manual stock transfers are disabled. Create and fulfill stock requests instead.',
+  );
 }
 
 export async function updateStockTransferSvc(
@@ -1896,8 +2023,18 @@ export async function updateStockTransferSvc(
   if (fulfillQuantity > 0) {
     const sourceLevel = await getStockLevelRepo(transfer.productId, transfer.fromLocationId);
     const sourceQuantity = Number(sourceLevel?.quantity ?? 0);
-    if (sourceQuantity < fulfillQuantity) {
-      throw BadRequest('Insufficient stock at source location for this fulfillment');
+    const committedByOtherTransfers = await getOutstandingTransferCommitmentSvc({
+      companyId: transfer.companyId,
+      productId: transfer.productId,
+      fromLocationId: transfer.fromLocationId,
+      excludeTransferId: transfer.id,
+    });
+    const availableForThisTransfer = Math.max(0, sourceQuantity - committedByOtherTransfers);
+
+    if (availableForThisTransfer < fulfillQuantity) {
+      throw BadRequest(
+        `Insufficient transferable stock for fulfillment. On hand: ${sourceQuantity}, committed by other transfers: ${committedByOtherTransfers}, available: ${availableForThisTransfer}`,
+      );
     }
 
     const actor = patch.completedBy || transfer.createdBy;
@@ -2802,7 +2939,38 @@ export async function getStockReservationExceptionsSummarySvc(companyId: string)
 
 // Stock Requests
 export async function listStockRequestsSvc(p: ListStockRequestsParams) {
-  return listStockRequestsRepo(p);
+  const result = await listStockRequestsRepo(p);
+  const requestIds = result.data.map((row) => row.id);
+  if (requestIds.length === 0) return result;
+
+  const [lineTotals, acknowledgementTotals] = await Promise.all([
+    listStockRequestLineTotalsByRequestIdsRepo(requestIds),
+    listStockRequestAcknowledgementTotalsByRequestIdsRepo(requestIds),
+  ]);
+
+  const lineTotalsByRequestId = new Map(lineTotals.map((row) => [row.requestId, row] as const));
+  const acknowledgementByRequestId = new Map(
+    acknowledgementTotals.map((row) => [row.requestId, row.totalAcknowledgedQuantity] as const),
+  );
+
+  return {
+    ...result,
+    data: result.data.map((row) => {
+      const line = lineTotalsByRequestId.get(row.id);
+      const requested = Number(line?.totalRequestedQuantity ?? 0);
+      const fulfilled = Number(line?.totalFulfilledQuantity ?? 0);
+      const acknowledged = Number(acknowledgementByRequestId.get(row.id) ?? 0);
+      return {
+        ...row,
+        lineCount: Number(line?.lineCount ?? 0),
+        totalRequestedQuantity: requested,
+        totalFulfilledQuantity: fulfilled,
+        totalAcknowledgedQuantity: acknowledged,
+        totalPendingIssueQuantity: Math.max(0, requested - fulfilled),
+        totalPendingAcknowledgementQuantity: Math.max(0, fulfilled - acknowledged),
+      };
+    }),
+  };
 }
 
 export async function getStockRequestSvc(id: string) {
@@ -2855,11 +3023,15 @@ export async function createStockRequestSvc(input: {
   companyId: string;
   requesterLocationId: string;
   requestedToLocationId?: string | null;
+  requestType: number;
   notes?: string | null;
   requestedBy: string;
   lines: { productId: string; requestedQuantity: number; notes?: string | null }[];
   submit?: boolean;
 }) {
+  if (!isStockRequestType(input.requestType)) {
+    throw BadRequest('Invalid stock request type');
+  }
   if (!input.lines.length) throw BadRequest('At least one request line is required');
 
   const requesterLocation = await getInventoryLocationRepo(input.requesterLocationId);
@@ -2896,6 +3068,7 @@ export async function createStockRequestSvc(input: {
         companyId: input.companyId,
         requesterLocationId: input.requesterLocationId,
         requestedToLocationId: input.requestedToLocationId ?? null,
+        requestType: input.requestType,
         status,
         notes: input.notes ?? null,
         requestedBy: input.requestedBy,
@@ -2988,10 +3161,11 @@ export async function fulfillStockRequestLineSvc(input: {
   const request = await getStockRequestRepo(input.requestId);
   if (!request) throw NotFound('Stock request not found');
   if (
+    request.status !== StockRequestStatus.SUBMITTED &&
     request.status !== StockRequestStatus.APPROVED &&
     request.status !== StockRequestStatus.PARTIALLY_FULFILLED
   ) {
-    throw BadRequest('Only approved or partially fulfilled requests can be fulfilled');
+    throw BadRequest('Only submitted, approved, or partially fulfilled requests can be fulfilled');
   }
 
   const line = await getStockRequestLineRepo(input.lineId);
@@ -3086,18 +3260,6 @@ export async function fulfillStockRequestLineSvc(input: {
       createdBy: input.fulfilledBy,
     });
 
-    await tx.insert(stockMovements).values({
-      companyId: request.companyId,
-      productId: line.productId,
-      locationId: request.requesterLocationId,
-      movementType: StockMovementType.TRANSFER_IN,
-      quantity: input.fulfillQuantity,
-      referenceId: request.id,
-      referenceType: 'stock_request',
-      notes: input.notes ?? request.notes,
-      createdBy: input.fulfilledBy,
-    });
-
     for (const move of lotMoves) {
       const [sourceLot] = await tx
         .select()
@@ -3131,69 +3293,7 @@ export async function fulfillStockRequestLineSvc(input: {
         notes: input.notes ?? request.notes,
         createdBy: input.fulfilledBy,
       });
-
-      const [destLot] = await tx
-        .select()
-        .from(stockLots)
-        .where(
-          and(
-            eq(stockLots.companyId, request.companyId),
-            eq(stockLots.productId, line.productId),
-            eq(stockLots.locationId, request.requesterLocationId),
-            sql`lower(${stockLots.batchNumber}) = lower(${move.batchNumber})`,
-          ),
-        )
-        .limit(1);
-      let destLotId = destLot?.id ?? null;
-      if (destLot) {
-        await tx
-          .update(stockLots)
-          .set({
-            quantityOnHand: Number(destLot.quantityOnHand) + move.consumeQty,
-            status: StockLotStatus.ACTIVE,
-            updatedAt: new Date(),
-          })
-          .where(eq(stockLots.id, destLot.id));
-      } else {
-        const [createdLot] = await tx
-          .insert(stockLots)
-          .values({
-            companyId: request.companyId,
-            productId: line.productId,
-            locationId: request.requesterLocationId,
-            batchNumber: move.batchNumber,
-            supplierBatchNumber: move.supplierBatchNumber ?? null,
-            receivedAt: new Date(),
-            manufacturedAt: move.manufacturedAt ?? null,
-            expiryDate: move.expiryDate ?? null,
-            quantityOnHand: move.consumeQty,
-            reservedQuantity: 0,
-            status: StockLotStatus.ACTIVE,
-            notes: input.notes ?? request.notes ?? null,
-            createdBy: input.fulfilledBy,
-          })
-          .returning({ id: stockLots.id });
-        destLotId = createdLot?.id ?? null;
-      }
-
-      if (destLotId) {
-        await tx.insert(stockLotMovements).values({
-          companyId: request.companyId,
-          lotId: destLotId,
-          productId: line.productId,
-          locationId: request.requesterLocationId,
-          movementType: StockMovementType.TRANSFER_IN,
-          quantity: move.consumeQty,
-          referenceId: request.id,
-          referenceType: 'stock_request',
-          notes: input.notes ?? request.notes,
-          createdBy: input.fulfilledBy,
-        });
-      }
     }
-
-    const destinationLevel = await getStockLevelRepo(line.productId, request.requesterLocationId);
-    const destinationQty = Number(destinationLevel?.quantity ?? 0);
 
     await tx
       .insert(stockLevels)
@@ -3209,25 +3309,29 @@ export async function fulfillStockRequestLineSvc(input: {
       });
 
     await tx
-      .insert(stockLevels)
-      .values({
-        companyId: request.companyId,
-        productId: line.productId,
-        locationId: request.requesterLocationId,
-        quantity: destinationQty + input.fulfillQuantity,
-      })
-      .onConflictDoUpdate({
-        target: [stockLevels.productId, stockLevels.locationId],
-        set: { quantity: destinationQty + input.fulfillQuantity, updatedAt: new Date() },
-      });
-
-    await tx
       .update(stockRequestLines)
       .set({
         fulfilledQuantity: Number(line.fulfilledQuantity) + input.fulfillQuantity,
         updatedAt: new Date(),
       })
       .where(eq(stockRequestLines.id, line.id));
+
+    // System-generated shipment record for transfer history; manual transfers are disabled.
+    await tx.insert(stockTransfers).values({
+      companyId: request.companyId,
+      productId: line.productId,
+      fromLocationId: input.fromLocationId,
+      toLocationId: request.requesterLocationId,
+      quantity: input.fulfillQuantity,
+      fulfilledQuantity: input.fulfillQuantity,
+      status: TransferStatus.COMPLETED,
+      notes:
+        input.notes ??
+        `System-generated from stock request ${request.id}, line ${line.id} fulfillment`,
+      createdBy: input.fulfilledBy,
+      completedBy: input.fulfilledBy,
+      completedAt: new Date(),
+    });
   });
 
   const allLines = await listStockRequestLinesRepo(request.id);
@@ -3240,7 +3344,7 @@ export async function fulfillStockRequestLineSvc(input: {
     ? StockRequestStatus.FULFILLED
     : someFulfilled
       ? StockRequestStatus.PARTIALLY_FULFILLED
-      : StockRequestStatus.APPROVED;
+      : StockRequestStatus.SUBMITTED;
 
   await updateStockRequestRepo(request.id, { status: nextStatus });
   await syncReservationIssueProgressSvc({
@@ -3317,10 +3421,13 @@ export async function autoFulfillStockRequestLineSvc(input: {
   const request = await getStockRequestRepo(input.requestId);
   if (!request) throw NotFound('Stock request not found');
   if (
+    request.status !== StockRequestStatus.SUBMITTED &&
     request.status !== StockRequestStatus.APPROVED &&
     request.status !== StockRequestStatus.PARTIALLY_FULFILLED
   ) {
-    throw BadRequest('Only approved or partially fulfilled requests can be auto-fulfilled');
+    throw BadRequest(
+      'Only submitted, approved, or partially fulfilled requests can be auto-fulfilled',
+    );
   }
 
   const line = await getStockRequestLineRepo(input.lineId);
@@ -3415,6 +3522,54 @@ export async function acknowledgeStockRequestLineSvc(input: {
     .where(eq(stockRequestAcknowledgements.requestLineId, input.lineId));
   const acknowledgedTotal = Number(ackAfterAgg[0]?.total ?? 0);
 
+  const [legacyTransferInAgg] = await db
+    .select({
+      total: sql<number>`coalesce(sum(${stockMovements.quantity}), 0)`,
+    })
+    .from(stockMovements)
+    .where(
+      and(
+        eq(stockMovements.companyId, request.companyId),
+        eq(stockMovements.productId, line.productId),
+        eq(stockMovements.locationId, request.requesterLocationId),
+        eq(stockMovements.movementType, StockMovementType.TRANSFER_IN),
+        eq(stockMovements.referenceId, request.id),
+        eq(stockMovements.referenceType, 'stock_request'),
+      ),
+    );
+  const hasLegacyDestinationPosting = Number(legacyTransferInAgg?.total ?? 0) > 0;
+
+  if (!hasLegacyDestinationPosting) {
+    const destinationLevel = await getStockLevelRepo(line.productId, request.requesterLocationId);
+    const destinationQty = Number(destinationLevel?.quantity ?? 0);
+    await db.transaction(async (tx) => {
+      await tx.insert(stockMovements).values({
+        companyId: request.companyId,
+        productId: line.productId,
+        locationId: request.requesterLocationId,
+        movementType: StockMovementType.TRANSFER_IN,
+        quantity: input.acknowledgedQuantity,
+        referenceId: request.id,
+        referenceType: 'stock_request_acknowledgement',
+        notes: input.notes ?? request.notes,
+        createdBy: input.acknowledgedBy,
+      });
+
+      await tx
+        .insert(stockLevels)
+        .values({
+          companyId: request.companyId,
+          productId: line.productId,
+          locationId: request.requesterLocationId,
+          quantity: destinationQty + input.acknowledgedQuantity,
+        })
+        .onConflictDoUpdate({
+          target: [stockLevels.productId, stockLevels.locationId],
+          set: { quantity: destinationQty + input.acknowledgedQuantity, updatedAt: new Date() },
+        });
+    });
+  }
+
   return {
     id: created?.id,
     requestId: request.id,
@@ -3449,6 +3604,87 @@ function locationPriorityForReorder(row: {
   return 2;
 }
 
+export async function listInventoryReorderPoliciesSvc(input: {
+  companyId: string;
+  productId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
+  locationId?: string | null;
+  active?: boolean | null;
+}) {
+  return listInventoryReorderPoliciesRepo(input);
+}
+
+export async function upsertInventoryReorderPolicySvc(input: {
+  companyId: string;
+  productId: string;
+  branchId: string;
+  locationType: number;
+  locationId?: string | null;
+  reorderPoint: number;
+  targetLevel?: number;
+  safetyStock?: number;
+  active?: boolean;
+  notes?: string | null;
+  createdBy: string;
+}) {
+  if (!Number.isInteger(input.locationType) || !isInventoryLocationType(input.locationType)) {
+    throw BadRequest('Invalid location type');
+  }
+  const reorderPointValue = Number(input.reorderPoint ?? 0);
+  if (!Number.isFinite(reorderPointValue) || reorderPointValue < 0) {
+    throw BadRequest('Reorder point must be a non-negative number');
+  }
+  const targetLevelValue = Number(input.targetLevel ?? reorderPointValue);
+  if (!Number.isFinite(targetLevelValue) || targetLevelValue < 0) {
+    throw BadRequest('Target level must be a non-negative number');
+  }
+  const safetyStockValue = Number(input.safetyStock ?? 0);
+  if (!Number.isFinite(safetyStockValue) || safetyStockValue < 0) {
+    throw BadRequest('Safety stock must be a non-negative number');
+  }
+
+  const reorderPoint = Math.floor(reorderPointValue);
+  const targetLevel = Math.max(reorderPoint, Math.floor(targetLevelValue));
+  const safetyStock = Math.floor(safetyStockValue);
+  const locationId = input.locationId?.trim() ? input.locationId.trim() : null;
+
+  const existing = await findInventoryReorderPolicyByScopeRepo({
+    companyId: input.companyId,
+    productId: input.productId,
+    branchId: input.branchId,
+    locationType: input.locationType,
+    locationId,
+  });
+  if (existing) {
+    const updated = await updateInventoryReorderPolicyRepo(existing.id, {
+      reorderPoint,
+      targetLevel,
+      safetyStock,
+      active: input.active ?? true,
+      notes: input.notes ?? null,
+    });
+    if (!updated) throw Conflict('Failed to update inventory reorder policy');
+    return updated;
+  }
+
+  const created = await createInventoryReorderPolicyRepo({
+    companyId: input.companyId,
+    productId: input.productId,
+    branchId: input.branchId,
+    locationType: input.locationType,
+    locationId,
+    reorderPoint,
+    targetLevel,
+    safetyStock,
+    active: input.active ?? true,
+    notes: input.notes ?? null,
+    createdBy: input.createdBy,
+  });
+  if (!created) throw Conflict('Failed to create inventory reorder policy');
+  return created;
+}
+
 export async function listReorderSuggestionsSvc(input: {
   companyId: string;
   locationId?: string | null;
@@ -3462,6 +3698,7 @@ export async function listReorderSuggestionsSvc(input: {
       minStockLevel: products.minStockLevel,
       locationId: inventoryLocations.id,
       locationName: inventoryLocations.name,
+      branchId: inventoryLocations.branchId,
       locationType: inventoryLocations.locationType,
       parentLocationId: inventoryLocations.parentLocationId,
       quantity: sql<number>`coalesce(${stockLevels.quantity}, 0)`,
@@ -3483,6 +3720,31 @@ export async function listReorderSuggestionsSvc(input: {
         input.locationId ? eq(inventoryLocations.id, input.locationId) : sql`true`,
       ),
     );
+
+  const policyRows = await listInventoryReorderPoliciesRepo({
+    companyId: input.companyId,
+    active: true,
+  });
+
+  const policyKey = (value: {
+    productId: string;
+    branchId: string;
+    locationType: number;
+    locationId?: string | null;
+  }) =>
+    `${value.productId}:${value.branchId}:${value.locationType}:${value.locationId ? value.locationId : '*'}`;
+  const policyByKey = new Map<string, (typeof policyRows)[number]>();
+  for (const row of policyRows) {
+    policyByKey.set(
+      policyKey({
+        productId: row.productId,
+        branchId: row.branchId,
+        locationType: row.locationType,
+        locationId: row.locationId,
+      }),
+      row,
+    );
+  }
 
   const supplyRows = await db
     .select({
@@ -3513,8 +3775,33 @@ export async function listReorderSuggestionsSvc(input: {
   const rows = levelRows
     .map((row) => {
       const current = Number(row.quantity ?? 0);
-      const minLevel = Number(row.minStockLevel ?? 0);
-      const reorderGap = Math.max(0, minLevel - current);
+      const productDefaultMin = Number(row.minStockLevel ?? 0);
+      const locationPolicy =
+        policyByKey.get(
+          policyKey({
+            productId: row.productId,
+            branchId: row.branchId,
+            locationType: row.locationType,
+            locationId: row.locationId,
+          }),
+        ) ??
+        policyByKey.get(
+          policyKey({
+            productId: row.productId,
+            branchId: row.branchId,
+            locationType: row.locationType,
+            locationId: null,
+          }),
+        ) ??
+        null;
+      const policyPoint = Number(locationPolicy?.reorderPoint ?? productDefaultMin);
+      const policySafety = Number(locationPolicy?.safetyStock ?? 0);
+      const reorderPoint = Math.max(policyPoint, policySafety);
+      const targetLevel = Math.max(
+        reorderPoint,
+        Number(locationPolicy?.targetLevel ?? reorderPoint),
+      );
+      const reorderGap = current < reorderPoint ? Math.max(0, targetLevel - current) : 0;
       const candidates = (supplyByProduct.get(row.productId) ?? [])
         .filter((candidate) => candidate.locationId !== row.locationId)
         .sort((a, b) => {
@@ -3549,7 +3836,13 @@ export async function listReorderSuggestionsSvc(input: {
         locationName: row.locationName,
         locationType: row.locationType,
         currentQuantity: current,
-        minStockLevel: minLevel,
+        minStockLevel: reorderPoint,
+        targetLevel,
+        thresholdSource: locationPolicy
+          ? locationPolicy.locationId
+            ? 'location_override'
+            : 'branch_location_type'
+          : 'product_default',
         reorderQuantity: reorderGap,
         suggestedSources: candidates,
       };

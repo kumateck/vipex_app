@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table';
 import { useListStockCountSessionsQuery } from '@/features/inventory/api';
 import { useAuthStore } from '@/stores/auth-store';
+import { useMemo, useState } from 'react';
 
 function statusLabel(status: number) {
   if (status === 0) return 'Draft';
@@ -78,7 +79,7 @@ export function StockCountSessionsListPage() {
                       <TableCell>{row.locationId}</TableCell>
                       <TableCell>{statusLabel(row.status)}</TableCell>
                       <TableCell>
-                        {row.createdAt ? new Date(row.createdAt).toLocaleString() : 'N/A'}
+                        {row.createdAt ? formatDateTimeShared(row.createdAt) : 'N/A'}
                       </TableCell>
                     </TableRow>
                   ))

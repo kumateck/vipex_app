@@ -96,7 +96,7 @@ Examples:
 - leave report requires `CanListLeaveRequests`
 - payroll register requires `CanReadPayrollRun`
 - payroll overtime and adjustments require `CanReadPayrollInputs`
-- parcel status summary requires `CanGetParcelStatusSummaryReport`
+- parcel status summary requires `CanViewReportParcelsStatusSummary`
 
 Where the report depends on a company-scoped module, module gating also applies:
 

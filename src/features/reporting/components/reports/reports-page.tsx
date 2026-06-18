@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { useReactToPrint } from 'react-to-print';
 import { Button } from '@/components/ui/button';
@@ -254,7 +255,7 @@ function formatDateTime(value?: string | null) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+  return sharedFormatDateTime(value);
 }
 
 function formatMinutes(minutes?: number | null) {
@@ -384,14 +385,27 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
     permissions.includes(PermissionKeys.CanReadPayrollRun) &&
     permissions.includes(PermissionKeys.CanReadAccounting);
   const canCustomers = permissions.includes(PermissionKeys.CanReadCustomers);
-  const canParcels = permissions.includes(PermissionKeys.CanGetParcelStatusSummaryReport);
-  const canShiftRevenue = permissions.includes(PermissionKeys.CanGetShiftRevenueReport);
-  const canBranchProfitability = permissions.includes(
-    PermissionKeys.CanGetBranchProfitabilityReport,
+  const canParcelStatusSummary = permissions.includes(
+    PermissionKeys.CanViewReportParcelsStatusSummary,
   );
-  const canCreditExposure = permissions.includes(PermissionKeys.CanGetCreditExposureReport);
+  const canDeliveryPerformance = permissions.includes(
+    PermissionKeys.CanViewReportParcelsDeliveryPerformance,
+  );
+  const canShiftRevenue = permissions.includes(PermissionKeys.CanViewReportCashierRevenue);
+  const canBranchProfitability = permissions.includes(
+    PermissionKeys.CanViewReportBranchProfitSummary,
+  );
+  const canCreditExposure = permissions.includes(
+    PermissionKeys.CanViewReportCustomersCreditSummary,
+  );
+  const canCustomerCreditAgingDetail = permissions.includes(
+    PermissionKeys.CanViewReportCustomersAging,
+  );
   const canToBePaidOutstanding = permissions.includes(
-    PermissionKeys.CanGetOutstandingToBePaidReport,
+    PermissionKeys.CanViewReportCashToBePaidOutstanding,
+  );
+  const canToBePaidCollectionsReconciliation = permissions.includes(
+    PermissionKeys.CanViewReportCashToBePaidCollectionsReconciliation,
   );
   const canAccountingReports = permissions.includes(PermissionKeys.CanReadAccounting);
 
@@ -406,14 +420,14 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
         canPayrollInputs ? 'payroll-adjustments' : null,
         canPayrollJournalReconciliation ? 'payroll-journal-reconciliation' : null,
         canCustomers ? 'customer-statement' : null,
-        canParcels ? 'parcel-status' : null,
-        canParcels ? 'delivery-performance' : null,
+        canParcelStatusSummary ? 'parcel-status' : null,
+        canDeliveryPerformance ? 'delivery-performance' : null,
         canShiftRevenue ? 'shift-revenue' : null,
         canBranchProfitability ? 'branch-profitability' : null,
         canCreditExposure ? 'credit-exposure' : null,
-        canCreditExposure ? 'customer-credit-aging-detail' : null,
+        canCustomerCreditAgingDetail ? 'customer-credit-aging-detail' : null,
         canToBePaidOutstanding ? 'tobepaid-outstanding' : null,
-        canToBePaidOutstanding ? 'tobepaid-collections-reconciliation' : null,
+        canToBePaidCollectionsReconciliation ? 'tobepaid-collections-reconciliation' : null,
         canAccountingReports ? 'storage-waivers' : null,
         canAccountingReports ? 'daily-cash-confirmations' : null,
         canAccountingReports ? 'expense-by-category' : null,
@@ -423,14 +437,17 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
       canAttendance,
       canBranchProfitability,
       canCreditExposure,
+      canCustomerCreditAgingDetail,
       canCustomers,
+      canDeliveryPerformance,
       canEmployees,
       canLeave,
-      canParcels,
+      canParcelStatusSummary,
       canPayrollJournalReconciliation,
       canPayrollInputs,
       canPayrollRegister,
       canShiftRevenue,
+      canToBePaidCollectionsReconciliation,
       canToBePaidOutstanding,
     ],
   );
@@ -477,7 +494,10 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
   const { data: employeeOptions = [] } = useListEmployeeOptionsQuery();
   const { data: payrollCyclesData } = useListPayrollCyclesQuery({ pageSize: 100 });
   const { data: customersData } = useListCustomersQuery({ pageSize: 100 });
-  const { data: riderOptions = [] } = useListUserOptionsQuery({ status: 1 }, { skip: !canParcels });
+  const { data: riderOptions = [] } = useListUserOptionsQuery(
+    { status: 1 },
+    { skip: !canDeliveryPerformance },
+  );
 
   const payrollCycleOptions = payrollCyclesData?.data ?? [];
   const customerOptions = customersData?.data ?? [];
@@ -621,7 +641,7 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
         from: appliedFilters?.from ?? from,
         to: appliedFilters?.to ?? to,
       },
-      { skip: activeReport !== 'parcel-status' || !canParcels || !appliedFilters },
+      { skip: activeReport !== 'parcel-status' || !canParcelStatusSummary || !appliedFilters },
     );
 
   const { data: deliveryPerformanceReport, isFetching: isDeliveryPerformanceFetching } =
@@ -632,7 +652,9 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
         from: appliedFilters?.from ?? from,
         to: appliedFilters?.to ?? to,
       },
-      { skip: activeReport !== 'delivery-performance' || !canParcels || !appliedFilters },
+      {
+        skip: activeReport !== 'delivery-performance' || !canDeliveryPerformance || !appliedFilters,
+      },
     );
 
   const { data: shiftRevenueReport, isFetching: isShiftRevenueFetching } =

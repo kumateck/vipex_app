@@ -1,4 +1,5 @@
 import {
+  createBrowserRouter,
   createHashRouter,
   RouterProvider,
   type IndexRouteObject,
@@ -50,7 +51,25 @@ function appendDomainDashboardRoutes(items: RouteObject[]): RouteObject[] {
   });
 }
 
-const router = createHashRouter(appendDomainDashboardRoutes(routes as RouteObject[]));
+function isElectronRuntime() {
+  if (typeof window === 'undefined') return false;
+
+  const globalWindow = window as Window & {
+    electronAPI?: unknown;
+    process?: { type?: string; versions?: { electron?: string } };
+  };
+
+  if (globalWindow.electronAPI) return true;
+  if (globalWindow.process?.type === 'renderer') return true;
+  if (globalWindow.process?.versions?.electron) return true;
+
+  return false;
+}
+
+const routeObjects = appendDomainDashboardRoutes(routes as RouteObject[]);
+const router = isElectronRuntime()
+  ? createHashRouter(routeObjects)
+  : createBrowserRouter(routeObjects);
 
 export function MainRoutes() {
   return <RouterProvider router={router} />;

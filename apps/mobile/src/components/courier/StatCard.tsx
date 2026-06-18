@@ -21,8 +21,8 @@ export function StatCard({ label, value, hint }: StatCardProps) {
         },
       ]}
     >
-      <Text style={[styles.label, { color: theme.colors.textSubtle }]}>{label}</Text>
-      <Text style={[styles.value, { color: theme.colors.text }]}>{value}</Text>
+      <Text style={[styles.value, { color: theme.colors.secondary }]}>{value}</Text>
+      <Text style={[styles.label, { color: theme.colors.textMuted }]}>{label}</Text>
       {hint ? <Text style={[styles.hint, { color: theme.colors.textMuted }]}>{hint}</Text> : null}
     </View>
   );
@@ -36,6 +36,8 @@ const styles = StyleSheet.create({
     gap: mobileSpacing.xs,
     flex: 1,
     minWidth: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
     fontSize: mobileTypography.caption,

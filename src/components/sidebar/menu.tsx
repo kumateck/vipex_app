@@ -66,28 +66,15 @@ export function NavMain({ items }: NavMainProps) {
     return null;
   };
 
-  const hasActiveDescendant = (children: NestedNavItem[]): boolean =>
-    children.some(
-      (child) =>
-        (child.url ? currentPath === child.url : false) ||
-        (child.children?.length ? hasActiveDescendant(child.children) : false),
-    );
-
   const renderNestedItems = (nestedItems: NestedNavItem[]) =>
     nestedItems.map((nestedItem) => {
       const isNestedActive = !!nestedItem.url && currentPath === nestedItem.url;
       const hasNestedChildren = !!nestedItem.children?.length;
-      const hasActiveNestedChild = hasNestedChildren && hasActiveDescendant(nestedItem.children!);
 
       if (hasNestedChildren) {
         const fallbackUrl = nestedItem.url ?? getFirstNavigableUrl(nestedItem.children);
         return (
-          <Collapsible
-            key={nestedItem.title}
-            asChild
-            defaultOpen={hasActiveNestedChild}
-            className="group/collapsible"
-          >
+          <Collapsible key={nestedItem.title} asChild defaultOpen className="group/collapsible">
             <SidebarMenuSubItem>
               <CollapsibleTrigger asChild>
                 <SidebarMenuSubButton
@@ -125,17 +112,11 @@ export function NavMain({ items }: NavMainProps) {
         {items.map((item) => {
           const hasChildren = !!item.items?.length;
           const isItemActive = !!item.url && currentPath === item.url;
-          const hasActiveChild = hasChildren && hasActiveDescendant(item.items!);
 
           if (hasChildren) {
             const fallbackUrl = item.url ?? getFirstNavigableUrl(item.items);
             return (
-              <Collapsible
-                key={item.title}
-                asChild
-                defaultOpen={hasActiveChild}
-                className="group/collapsible"
-              >
+              <Collapsible key={item.title} asChild defaultOpen className="group/collapsible">
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton

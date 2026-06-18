@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { toast } from 'sonner';
 import { Building2, Shield, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +32,7 @@ function formatDateTime(value: string | null) {
   if (!value) return 'Never';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Never';
-  return date.toLocaleString();
+  return sharedFormatDateTime(value);
 }
 
 export function CompanySettingsPage() {

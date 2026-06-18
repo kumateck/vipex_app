@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject, UIEvent } from 'react';
 import type {
   CommunicationCallSession,
@@ -6,6 +7,7 @@ import type {
 import { typingDotStyle } from '../types/communication-chat-thread-detail.types';
 import { extractMediaAttachments } from '../utils/communication-chat-thread-detail-media';
 import {
+  ensureDisplayNameOnly,
   extractRecordingDurationLabel,
   extractReactions,
   extractReplyPreview,
@@ -23,6 +25,7 @@ type ChatThreadMessagesProps = {
   isLoadingOlder: boolean;
   isLoadingMessages: boolean;
   messages: CommunicationMessage[];
+  selectedThreadType?: string;
   currentUserId: string;
   usersById: Map<string, { fullname?: string | null; email?: string | null }>;
   threadCalls: CommunicationCallSession[];
@@ -49,12 +52,32 @@ type ChatThreadMessagesProps = {
   typingUserLabels: string[];
 };
 
+const SENDER_NAME_COLORS = [
+  '#22c55e',
+  '#38bdf8',
+  '#f59e0b',
+  '#e879f9',
+  '#f97316',
+  '#a3e635',
+  '#2dd4bf',
+  '#f43f5e',
+];
+
+function colorForSender(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return SENDER_NAME_COLORS[hash % SENDER_NAME_COLORS.length] ?? '#38bdf8';
+}
+
 export function ChatThreadMessages({
   messagesViewportRef,
   onMessagesScroll,
   isLoadingOlder,
   isLoadingMessages,
   messages,
+  selectedThreadType,
   currentUserId,
   usersById,
   threadCalls,
@@ -74,6 +97,42 @@ export function ChatThreadMessages({
   onOpenVideoAttachment,
   typingUserLabels,
 }: ChatThreadMessagesProps) {
+  const showSenderLabel = selectedThreadType === 'channel';
+  const messageElementByIdRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+    },
+    [],
+  );
+  const registerMessageElement = useCallback(
+    (messageId: string, element: HTMLDivElement | null) => {
+      if (!element) {
+        messageElementByIdRef.current.delete(messageId);
+        return;
+      }
+      messageElementByIdRef.current.set(messageId, element);
+    },
+    [],
+  );
+  const onJumpToReply = useCallback((replyMessageId: string) => {
+    const target = messageElementByIdRef.current.get(replyMessageId);
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setHighlightedMessageId(replyMessageId);
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+    }
+    highlightTimerRef.current = setTimeout(() => {
+      setHighlightedMessageId((current) => (current === replyMessageId ? null : current));
+      highlightTimerRef.current = null;
+    }, 3000);
+  }, []);
+
   return (
     <div
       ref={messagesViewportRef}
@@ -99,9 +158,11 @@ export function ChatThreadMessages({
       {!isLoadingMessages && messages.length
         ? messages.map((message, index) => {
             const isOwnMessage = Boolean(currentUserId && message.senderUserId === currentUserId);
+            const senderFallback = ensureDisplayNameOnly(message.senderName, 'Unknown user');
             const senderLabel = message.senderUserId
-              ? getDisplayNameForUser(usersById, message.senderUserId)
+              ? getDisplayNameForUser(usersById, message.senderUserId, senderFallback)
               : 'System';
+            const senderLabelColor = colorForSender(message.senderUserId ?? senderLabel);
             const attachments = extractMediaAttachments(message);
             const replyPreview = extractReplyPreview(message);
             const reactions = extractReactions(message);
@@ -139,12 +200,15 @@ export function ChatThreadMessages({
                 message={message}
                 dayLabel={dayLabel}
                 isOwnMessage={isOwnMessage}
+                showSenderLabel={showSenderLabel}
                 senderLabel={senderLabel}
+                senderLabelColor={senderLabelColor}
                 replyPreview={replyPreview}
                 attachments={attachments}
                 reactions={reactions}
                 recordingDuration={recordingDuration}
                 liveCallStatus={liveCallStatus}
+                isHighlighted={highlightedMessageId === message.id}
                 pinned={pinned}
                 starred={starred}
                 canEditDelete={canEditDelete}
@@ -168,6 +232,8 @@ export function ChatThreadMessages({
                 }
                 onToggleActionsMenu={(open) => setActionsMenuMessageId(open ? message.id : null)}
                 onOpenVideoAttachment={onOpenVideoAttachment}
+                registerMessageElement={registerMessageElement}
+                onJumpToReply={onJumpToReply}
               />
             );
           })

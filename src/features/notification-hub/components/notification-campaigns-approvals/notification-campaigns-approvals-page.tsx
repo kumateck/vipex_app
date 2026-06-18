@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -101,7 +102,7 @@ export function NotificationCampaignsApprovalsPage() {
                       <TableCell>{row.name}</TableCell>
                       <TableCell className="uppercase">{row.channel}</TableCell>
                       <TableCell>{row.audienceType}</TableCell>
-                      <TableCell>{new Date(row.createdAt).toLocaleString()}</TableCell>
+                      <TableCell>{formatDateTimeShared(row.createdAt)}</TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button
                           size="sm"

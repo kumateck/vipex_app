@@ -14,7 +14,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { formatDateTime } from '@/lib/date';
+import { formatDateTime } from '@/lib/dates';
+import {
+  isOptionalTenDigitPhone,
+  isTenDigitPhone,
+  normalizePhoneDigits,
+  phoneLengthMessage,
+} from '@/lib/phone';
 import {
   Select,
   SelectContent,
@@ -37,8 +43,12 @@ import {
   useListProcessedParcelsForConsignmentQuery,
   useUpdateParcelMutation,
 } from '../../api/parcel.api';
-import { ParcelReceiptActions, type ReceiptPrintData } from '../parcel-receipt-actions';
-import { printConsignmentSlip } from '../../utils/consignment-print';
+import { ParcelReceiptActions } from '../parcel-receipt-actions';
+import type { ReceiptPrintData } from '../parcel-receipt.types';
+import {
+  ConsignmentPrintController,
+  type ConsignmentPrintPayload,
+} from './consignment-print-controller';
 import { EditParcelDetailsDialog } from './edit-parcel-details-dialog';
 
 const EMPTY_META: PaginationMeta = {
@@ -90,8 +100,10 @@ function toReceiptPrintData(
         : Number(parcel.parcelValuePsw) / 100,
     senderName: parcel.senderName ?? '-',
     senderTelephone: parcel.senderPhone ?? '-',
+    senderTelephone2: parcel.senderPhone2 ?? null,
     receiverName: parcel.receiverName ?? '-',
     receiverTelephone: parcel.receiverPhone ?? '-',
+    receiverTelephone2: parcel.receiverPhone2 ?? null,
     destinationBranchName,
     destinationLocationName: parcel.pickupLocationName ?? '-',
     totalChargeCedis,
@@ -156,6 +168,8 @@ export function ParcelProcessedConsignmentPage() {
   const [lockedDestinationId, setLockedDestinationId] = useState<string | null>(null);
   const [editingParcel, setEditingParcel] = useState<ProcessedParcel | null>(null);
   const [reprintData, setReprintData] = useState<ReceiptPrintData | null>(null);
+  const [consignmentPrintPayload, setConsignmentPrintPayload] =
+    useState<ConsignmentPrintPayload | null>(null);
   const [editDestinationId, setEditDestinationId] = useState<string>('');
   const [editSourceLocationId, setEditSourceLocationId] = useState<string>('');
   const [editPickupLocationId, setEditPickupLocationId] = useState<string>('');
@@ -459,15 +473,8 @@ export function ParcelProcessedConsignmentPage() {
         parcelIds,
       }).unwrap();
 
-      const sourceBranchName = (appliedSourceId && branchNameById.get(appliedSourceId)) ?? '-';
-      const destinationBranchName = branchNameById.get(lockedDestinationId) ?? '-';
-      const createdByLabel = user?.id ?? 'SYSTEM';
-      printConsignmentSlip({
+      setConsignmentPrintPayload({
         consignmentCode: created.code,
-        consignmentDate: `${getTodayDateOnlyLocal()}T00:00:00.000Z`,
-        sourceBranchName,
-        destinationBranchName,
-        createdByLabel,
         items: selectedParcels,
       });
 
@@ -517,17 +524,33 @@ export function ParcelProcessedConsignmentPage() {
 
   const handleSaveEdit = async () => {
     if (!editingParcel) return;
-    const senderPhone = editSenderPhone.trim();
-    const senderPhone2 = editSenderPhone2.trim();
-    const receiverPhone = editReceiverPhone.trim();
-    const receiverPhone2 = editReceiverPhone2.trim();
+    const senderPhone = normalizePhoneDigits(editSenderPhone);
+    const senderPhone2 = normalizePhoneDigits(editSenderPhone2);
+    const receiverPhone = normalizePhoneDigits(editReceiverPhone);
+    const receiverPhone2 = normalizePhoneDigits(editReceiverPhone2);
 
     if (!senderPhone) {
       toast.error('Sender telephone is required');
       return;
     }
+    if (!isTenDigitPhone(senderPhone)) {
+      toast.error(phoneLengthMessage('Sender telephone'));
+      return;
+    }
+    if (!isOptionalTenDigitPhone(senderPhone2)) {
+      toast.error(phoneLengthMessage('Sender telephone 2'));
+      return;
+    }
     if (!receiverPhone) {
       toast.error('Receiver telephone is required');
+      return;
+    }
+    if (!isTenDigitPhone(receiverPhone)) {
+      toast.error(phoneLengthMessage('Receiver telephone'));
+      return;
+    }
+    if (!isOptionalTenDigitPhone(receiverPhone2)) {
+      toast.error(phoneLengthMessage('Receiver telephone 2'));
       return;
     }
 
@@ -779,6 +802,10 @@ export function ParcelProcessedConsignmentPage() {
           onAutoPrintComplete={() => setReprintData(null)}
         />
       ) : null}
+      <ConsignmentPrintController
+        payload={consignmentPrintPayload}
+        onPrinted={() => setConsignmentPrintPayload(null)}
+      />
     </div>
   );
 }

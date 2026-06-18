@@ -1,13 +1,20 @@
 import { z } from 'zod';
 import { CASHIER_TYPES, USER_TYPES } from '@/shared/access/constants';
 import { UserType } from '@/db/schemas/enums';
+import { PHONE_DIGITS, normalizePhoneDigits } from '@/lib/phone';
 
 const nonEmpty255 = z.string().min(1, 'Required').max(255);
+const telephone = z
+  .string()
+  .transform(normalizePhoneDigits)
+  .refine((value) => value.length === PHONE_DIGITS, {
+    message: `Telephone must be exactly ${PHONE_DIGITS} digits`,
+  });
 
 export const userFormSchema = z
   .object({
     fullname: nonEmpty255,
-    telephone: nonEmpty255,
+    telephone,
     email: z.string().email('Invalid email'),
     status: z.number().int().min(0).max(20),
     roleId: nonEmpty255,

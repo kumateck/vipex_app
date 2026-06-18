@@ -1,14 +1,20 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { AppScreen } from '@mobile/components/screen';
 import { resetPassword } from '@mobile/lib/api';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { AppButton, AppCard, AppInput, AppLabel } from '@/components/ui/mobile';
+import { AppButton, AppCard, AppInput, AppLabel, PasswordInput } from '@/components/ui/mobile';
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 export default function ResetPasswordScreen() {
   const { theme } = useAppearance();
-  const [email, setEmail] = useState('');
+  const params = useLocalSearchParams<{ email?: string }>();
+  const initialEmail = useMemo(
+    () => (typeof params.email === 'string' ? params.email : ''),
+    [params.email],
+  );
+  const [email, setEmail] = useState(initialEmail);
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -52,16 +58,10 @@ export default function ResetPasswordScreen() {
             maxLength={6}
           />
         </View>
-        <AppInput
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          placeholder="New password"
-        />
-        <AppInput
+        <PasswordInput value={password} onChangeText={setPassword} placeholder="New password" />
+        <PasswordInput
           value={confirm}
           onChangeText={setConfirm}
-          secureTextEntry
           placeholder="Confirm new password"
         />
         {status ? (
@@ -69,6 +69,11 @@ export default function ResetPasswordScreen() {
         ) : null}
         {error ? <Text style={[styles.error, { color: theme.colors.danger }]}>{error}</Text> : null}
         <AppButton title="Reset Password" onPress={() => void handleReset()} />
+        {status ? (
+          <Link href="/(auth)/login" style={[styles.link, { color: theme.colors.primary }]}>
+            Back to login
+          </Link>
+        ) : null}
       </AppCard>
     </AppScreen>
   );
@@ -79,4 +84,5 @@ const styles = StyleSheet.create({
   formGroup: { gap: mobileSpacing.sm - 2 },
   success: { fontSize: mobileTypography.label, fontWeight: '600' },
   error: { fontSize: mobileTypography.label, fontWeight: '600' },
+  link: { fontWeight: '700' },
 });

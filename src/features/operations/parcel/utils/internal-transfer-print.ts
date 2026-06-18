@@ -1,4 +1,5 @@
 import type { ParcelInternalTransferDetails, ParcelInternalTransferRow } from '../api/parcel.api';
+import { formatDateTime } from '@/lib/dates';
 
 function holderTypeLabel(value: number) {
   if (value === 0) return 'Main Branch';
@@ -32,7 +33,7 @@ function formatDate(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return formatDateTime(date);
 }
 
 export function printParcelInternalTransferSlip(details: ParcelInternalTransferDetails) {

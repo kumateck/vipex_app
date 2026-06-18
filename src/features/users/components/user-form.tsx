@@ -20,6 +20,7 @@ import { useListBranchOptionsQuery } from '@/features/branches';
 import { useListRoleOptionsQuery } from '@/features/rbac';
 import { useListLocationOptionsQuery } from '@/features/locations';
 import { sanitizeNumber, sanitizeString } from '@/lib/utils';
+import { PHONE_DIGITS, limitPhoneDigits } from '@/lib/phone';
 import {
   CASHIER_TYPE_LABELS,
   CASHIER_TYPES,
@@ -358,9 +359,16 @@ export function UserForm({
                 <FieldLabel htmlFor="telephone">Telephone</FieldLabel>
                 <Input
                   id="telephone"
-                  placeholder="Telephone"
+                  placeholder="0240000000"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  maxLength={PHONE_DIGITS}
                   aria-invalid={!!errors.telephone}
-                  {...register('telephone')}
+                  {...register('telephone', {
+                    onChange: (event) => {
+                      event.target.value = limitPhoneDigits(event.target.value);
+                    },
+                  })}
                 />
               </Field>
               <Field>

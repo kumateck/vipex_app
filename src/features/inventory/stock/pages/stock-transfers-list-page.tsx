@@ -10,9 +10,9 @@ export function StockTransfersListPage() {
     <ScrollableWrapper>
       <div className="w-full p-4 space-y-4">
         <div className="flex justify-end">
-          <PermissionGuard permissionKey={PermissionKeys.CanCreateStockTransfer}>
+          <PermissionGuard permissionKey={PermissionKeys.CanCreateStockRequest}>
             <Button asChild>
-              <Link to="/inventory/stock-transfers/new">New stock transfer</Link>
+              <Link to="/inventory/stock-requests/new">New stock request</Link>
             </Button>
           </PermissionGuard>
         </div>

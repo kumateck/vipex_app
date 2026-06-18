@@ -43,6 +43,7 @@ function buildWalletWhereSql(input: {
       sql`(
         base.fullname ILIKE ${term}
         OR COALESCE(base.telephone, '') ILIKE ${term}
+        OR COALESCE(base.telephone2, '') ILIKE ${term}
         OR COALESCE(base.email, '') ILIKE ${term}
       )`,
     );
@@ -125,6 +126,7 @@ export async function listCustomerWalletAccountsRepo(
         c.id AS customer_id,
         c.fullname,
         c.telephone,
+        c.telephone2,
         c.email,
         c.customer_type,
         c.credit_eligible,
@@ -233,6 +235,7 @@ export async function listCustomerWalletAccountsRepo(
         c.id AS customer_id,
         c.fullname,
         c.telephone,
+        c.telephone2,
         c.email,
         c.customer_type,
         c.credit_eligible,

@@ -184,7 +184,7 @@ export default function GlobalSearchScreen() {
               if (!item.threadId) return;
               router.push({
                 pathname: '/communication/thread/[threadId]' as never,
-                params: { threadId: item.threadId, title: `#${item.name}` },
+                params: { threadId: item.threadId, title: `#${item.name}`, threadType: 'channel' },
               });
             }}
             style={[styles.resultRow, { borderColor: theme.colors.border }]}

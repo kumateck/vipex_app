@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import logoPng from '@/assets/logo.png';
 
 export interface PrintableReportSection {
@@ -19,7 +20,7 @@ export interface PrintableReportDocumentProps {
 function formatDateTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+  return sharedFormatDateTime(value);
 }
 
 export const PrintableReportDocument = forwardRef<HTMLDivElement, PrintableReportDocumentProps>(

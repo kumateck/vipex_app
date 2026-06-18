@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -163,7 +164,7 @@ export function StockLotAnalyticsPage() {
                           data.fefoCompliance.items.map((item) => (
                             <TableRow key={item.movementId}>
                               <TableCell>
-                                {item.issuedAt ? new Date(item.issuedAt).toLocaleString() : 'N/A'}
+                                {item.issuedAt ? formatDateTimeShared(item.issuedAt) : 'N/A'}
                               </TableCell>
                               <TableCell>{item.productId}</TableCell>
                               <TableCell>{item.locationId}</TableCell>

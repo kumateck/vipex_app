@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { AppScreen } from '@mobile/components/screen';
 import { forgotPassword } from '@mobile/lib/api';
 import { useAppearance } from '@mobile/providers/appearance-provider';
@@ -19,8 +19,13 @@ export default function ForgotPasswordScreen() {
     setError(null);
     setStatus(null);
     try {
-      await forgotPassword(email.trim());
+      const normalizedEmail = email.trim();
+      await forgotPassword(normalizedEmail);
       setStatus('If the account exists, a 6-digit OTP has been sent.');
+      router.push({
+        pathname: '/(auth)/reset-password',
+        params: { email: normalizedEmail },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit request');
     } finally {

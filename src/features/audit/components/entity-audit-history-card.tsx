@@ -1,3 +1,4 @@
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGetEntityAuditHistoryQuery } from '../api';
 
@@ -32,7 +33,7 @@ export function EntityAuditHistoryCard(props: {
               <div className="font-medium">{row.action}</div>
               <div className="text-muted-foreground">{row.message ?? '-'}</div>
               <div className="mt-1 text-xs text-muted-foreground">
-                {new Date(row.createdAt).toLocaleString()}
+                {formatDateTimeShared(row.createdAt)}
                 {row.actorUserId ? ` • ${row.actorUserId}` : ''}
               </div>
             </div>

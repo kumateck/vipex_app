@@ -89,7 +89,7 @@ export const GROUP_DEFAULTS: Record<string, GroupDefault> = {
   Reports: { domain: 'Insights', subdomain: 'Enterprise Reporting', module: 'Enterprise Reports' },
   Analytics: {
     domain: 'Insights',
-    subdomain: 'Performance Analytics',
+    subdomain: 'Business Analytics',
     module: 'Business Analytics',
   },
   Audit: { domain: 'Governance', subdomain: 'Audit & Compliance', module: 'Audit Trail' },

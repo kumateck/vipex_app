@@ -1,6 +1,7 @@
 import { skipToken } from '@reduxjs/toolkit/query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
+import { useAuthStore } from '@/stores/auth-store';
 import {
   useListCommunicationMessagesQuery,
   useListCommunicationCallsQuery,
@@ -8,6 +9,10 @@ import {
   useMarkCommunicationThreadReadMutation,
 } from '../../../api/communication.api';
 import { useCommunicationSocket } from '../../../hooks/use-communication-socket';
+
+function normalizeIdentity(value?: string | null) {
+  return (value ?? '').trim().toLowerCase();
+}
 
 export function useChatThreadData({
   normalizedThreadId,
@@ -28,6 +33,7 @@ export function useChatThreadData({
   const preserveScrollOnPrependRef = useRef<{ top: number; height: number } | null>(null);
   const firstLoadDoneRef = useRef(false);
   const stickToBottomRef = useRef(true);
+  const currentUser = useAuthStore((state) => state.user);
 
   const { data: userOptions = [] } = useListUserOptionsQuery();
   const { data: threads = [], refetch: refetchThreads } = useListCommunicationThreadsQuery();
@@ -42,6 +48,36 @@ export function useChatThreadData({
     normalizedThreadId ? { threadId: normalizedThreadId } : skipToken,
   );
   const [markThreadRead] = useMarkCommunicationThreadReadMutation();
+  const currentUserIdentitySet = useMemo(() => {
+    const set = new Set<string>();
+    const id = normalizeIdentity(currentUserId);
+    const email = normalizeIdentity(currentUser?.email);
+    const fullname = normalizeIdentity(currentUser?.fullname);
+    const employeeId = normalizeIdentity(currentUser?.employeeId ?? null);
+    if (id) set.add(id);
+    if (email) set.add(email);
+    if (fullname) set.add(fullname);
+    if (employeeId) set.add(employeeId);
+    userOptions.forEach((user) => {
+      const userId = normalizeIdentity(user.id);
+      const userEmail = normalizeIdentity(user.email);
+      const userFullname = normalizeIdentity(user.fullname);
+      if (
+        (email && userEmail === email) ||
+        (fullname && userFullname === fullname) ||
+        (employeeId && userId === employeeId)
+      ) {
+        if (userId) set.add(userId);
+      }
+    });
+    return set;
+  }, [
+    currentUser?.email,
+    currentUser?.employeeId,
+    currentUser?.fullname,
+    currentUserId,
+    userOptions,
+  ]);
 
   const { isConnected: isSocketConnected, setTyping } = useCommunicationSocket({
     onMessageCreated: (payload) => {
@@ -51,6 +87,8 @@ export function useChatThreadData({
       }
     },
     onTypingUpdated: ({ threadId: updatedThreadId, userId, isTyping }) => {
+      const normalizedUserId = normalizeIdentity(userId);
+      if (normalizedUserId && currentUserIdentitySet.has(normalizedUserId)) return;
       const timerKey = `${updatedThreadId}:${userId}`;
       if (typingPresenceTimerByUserRef.current[timerKey]) {
         clearTimeout(typingPresenceTimerByUserRef.current[timerKey]);
@@ -112,14 +150,17 @@ export function useChatThreadData({
 
   const typingUserLabels = useMemo(() => {
     const typingUserIds = typingUserIdsByThread[normalizedThreadId] ?? [];
-    return typingUserIds
-      .filter((userId) => userId !== currentUserId)
-      .map(
-        (userId) =>
-          usersById.get(userId)?.fullname ?? usersById.get(userId)?.email ?? 'Unknown user',
-      )
-      .slice(0, 3);
-  }, [currentUserId, normalizedThreadId, typingUserIdsByThread, usersById]);
+    return [
+      ...new Set(
+        typingUserIds
+          .filter((userId) => !currentUserIdentitySet.has(normalizeIdentity(userId)))
+          .map(
+            (userId) =>
+              usersById.get(userId)?.fullname ?? usersById.get(userId)?.email ?? 'Unknown user',
+          ),
+      ),
+    ].slice(0, 3);
+  }, [currentUserIdentitySet, normalizedThreadId, typingUserIdsByThread, usersById]);
 
   useEffect(() => {
     const viewport = messagesViewportRef.current;

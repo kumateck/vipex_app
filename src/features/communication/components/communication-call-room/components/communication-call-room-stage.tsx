@@ -1,7 +1,7 @@
 import type { RefObject } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CommunicationCallParticipantTile } from './communication-call-participant-tile';
 import type { RemoteMediaTrack } from '../types/communication-call-room.types';
 import { getParticipantLabel } from '../utils/communication-call-room-utils';
 import { TrackRenderer } from './track-renderer';
@@ -21,9 +21,15 @@ type CommunicationCallRoomStageProps = {
   isScreenShareLayout: boolean;
   primaryScreenShareTrack: RemoteMediaTrack | null;
   isVideoOff: boolean;
-  remoteCameraTracks: RemoteMediaTrack[];
   orderedRemoteVideoTracks: RemoteMediaTrack[];
   remoteAudioTracks: RemoteMediaTrack[];
+  participants: Array<{
+    userId: string;
+    displayName?: string;
+    joinedAt: string;
+    isMuted: boolean;
+    isVideoOff: boolean;
+  }>;
   activeSpeakerUserIds: string[];
   dominantSpeakerUserId: string | null;
   participantNameById: Map<string, string>;
@@ -46,15 +52,55 @@ export function CommunicationCallRoomStage({
   isScreenShareLayout,
   primaryScreenShareTrack,
   isVideoOff,
-  remoteCameraTracks,
   orderedRemoteVideoTracks,
   remoteAudioTracks,
+  participants,
   activeSpeakerUserIds,
   dominantSpeakerUserId,
   participantNameById,
   userLabelById,
   currentUserId,
 }: CommunicationCallRoomStageProps) {
+  const remoteVideoByUserId = new Map<string, RemoteMediaTrack>();
+  for (const track of orderedRemoteVideoTracks) {
+    if (!remoteVideoByUserId.has(track.userId)) {
+      remoteVideoByUserId.set(track.userId, track);
+    }
+  }
+
+  const participantByUserId = new Map<
+    string,
+    {
+      userId: string;
+      displayName?: string;
+      joinedAt: string;
+      isMuted: boolean;
+      isVideoOff: boolean;
+    }
+  >();
+  for (const participant of participants) {
+    if (!participantByUserId.has(participant.userId)) {
+      participantByUserId.set(participant.userId, participant);
+    }
+  }
+  if (!participantByUserId.has(currentUserId)) {
+    participantByUserId.set(currentUserId, {
+      userId: currentUserId,
+      displayName: userLabelById.get(currentUserId) ?? 'You',
+      joinedAt: new Date().toISOString(),
+      isMuted: false,
+      isVideoOff,
+    });
+  }
+  const participantTiles = [...participantByUserId.values()].sort((a, b) =>
+    a.userId === currentUserId
+      ? -1
+      : b.userId === currentUserId
+        ? 1
+        : a.joinedAt.localeCompare(b.joinedAt),
+  );
+  const currentSharerUserId = primaryScreenShareTrack?.userId ?? currentUserId;
+
   return (
     <div
       ref={stageRef}
@@ -139,111 +185,87 @@ export function CommunicationCallRoomStage({
             <div
               className={`grid min-h-0 gap-2 overflow-y-auto pr-1 ${isExpandedStage ? 'h-full' : 'max-h-[min(62vh,760px)]'}`}
             >
-              {remoteCameraTracks.map((item) => {
-                const label = getParticipantLabel({
-                  userId: item.userId,
-                  displayName: participantNameById.get(item.userId),
-                  userLabelById,
-                  currentUserId,
-                });
-                return (
-                  <div key={`cube-${item.id}`} className="rounded-lg border p-2">
-                    <p className="mb-1 truncate text-[11px] font-medium">{label}</p>
-                    <TrackRenderer
-                      track={item.track}
-                      className="h-28 w-full rounded-md bg-black object-cover"
+              {participantTiles
+                .filter((participant) => participant.userId !== currentSharerUserId)
+                .map((item) => {
+                  const label = getParticipantLabel({
+                    userId: item.userId,
+                    displayName: item.displayName ?? participantNameById.get(item.userId),
+                    userLabelById,
+                    currentUserId,
+                  });
+                  const remoteVideo = remoteVideoByUserId.get(item.userId);
+                  const tileTrack =
+                    item.userId === currentUserId ? localVideoTrack : (remoteVideo?.track ?? null);
+                  const isSpeaking = activeSpeakerUserIds.includes(item.userId);
+                  const onFocus =
+                    !item.isVideoOff && tileTrack
+                      ? () =>
+                          setFocusedTrackKey(
+                            item.userId === currentUserId
+                              ? 'local'
+                              : `remote:${remoteVideo?.id ?? ''}`,
+                          )
+                      : null;
+                  return (
+                    <CommunicationCallParticipantTile
+                      key={item.userId}
+                      label={label}
+                      isMuted={item.isMuted}
+                      isVideoOff={item.isVideoOff}
+                      isSpeaking={isSpeaking}
+                      isDominant={false}
+                      compact
+                      track={tileTrack}
+                      onFocus={onFocus}
                     />
-                  </div>
-                );
-              })}
-              {localVideoTrack ? (
-                <div className="rounded-lg border p-2">
-                  <p className="mb-1 truncate text-[11px] font-medium">You</p>
-                  <TrackRenderer
-                    track={localVideoTrack}
-                    muted
-                    className="h-28 w-full rounded-md bg-black object-cover"
-                  />
-                </div>
-              ) : null}
+                  );
+                })}
             </div>
           </div>
         ) : (
           <div
             className={`grid gap-3 ${isExpandedStage ? 'h-full min-h-0 auto-rows-min overflow-y-auto pr-1' : ''} md:grid-cols-2 2xl:grid-cols-3`}
           >
-            {orderedRemoteVideoTracks.map((item) => {
+            {participantTiles.map((item) => {
               const label = getParticipantLabel({
                 userId: item.userId,
-                displayName: participantNameById.get(item.userId),
+                displayName: item.displayName ?? participantNameById.get(item.userId),
                 userLabelById,
                 currentUserId,
               });
               const isSpeaking = activeSpeakerUserIds.includes(item.userId);
               const isDominant = item.userId === dominantSpeakerUserId;
+              const remoteVideo = remoteVideoByUserId.get(item.userId);
+              const tileTrack =
+                item.userId === currentUserId ? localVideoTrack : (remoteVideo?.track ?? null);
+              const onFocus =
+                !item.isVideoOff && tileTrack
+                  ? () =>
+                      setFocusedTrackKey(
+                        item.userId === currentUserId ? 'local' : `remote:${remoteVideo?.id ?? ''}`,
+                      )
+                  : null;
               return (
-                <div
-                  key={item.id}
-                  className={`rounded-xl border p-2 ${isSpeaking ? 'border-primary/70 ring-2 ring-primary/20' : 'border-border/70'} ${isDominant && orderedRemoteVideoTracks.length > 1 ? 'md:col-span-2' : ''}`}
-                >
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="truncate text-xs font-medium">{label}</p>
-                    <div className="flex items-center gap-2">
-                      {isSpeaking ? (
-                        <Badge variant="default" className="gap-1">
-                          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
-                          Speaking
-                        </Badge>
-                      ) : null}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setFocusedTrackKey(`remote:${item.id}`)}
-                      >
-                        Focus
-                      </Button>
-                    </div>
-                  </div>
-                  <TrackRenderer
-                    track={item.track}
-                    className={`${isDominant ? 'h-[320px]' : 'h-[240px]'} w-full rounded-lg bg-black object-cover`}
-                  />
-                </div>
+                <CommunicationCallParticipantTile
+                  key={item.userId}
+                  label={label}
+                  isMuted={item.isMuted}
+                  isVideoOff={item.isVideoOff}
+                  isSpeaking={isSpeaking}
+                  isDominant={isDominant && participantTiles.length > 1}
+                  track={tileTrack}
+                  onFocus={onFocus}
+                />
               );
             })}
-            {!orderedRemoteVideoTracks.length ? (
+            {!participantTiles.length ? (
               <div className="grid h-[min(58vh,680px)] place-content-center rounded-xl border border-dashed text-sm text-muted-foreground md:col-span-2 2xl:col-span-3">
-                Waiting for participants to turn on video
+                Waiting for participants to join
               </div>
             ) : null}
           </div>
         )}
-
-        {!isScreenShareLayout ? (
-          <div className="pointer-events-none absolute bottom-5 right-5 w-44 rounded-xl border bg-background/90 p-2 shadow-lg backdrop-blur">
-            <div className="mb-1 flex items-center justify-between text-[11px]">
-              <span className="font-medium">You</span>
-              <span className="text-muted-foreground">{isVideoOff ? 'Camera off' : 'Preview'}</span>
-            </div>
-            {localVideoTrack ? (
-              <button
-                type="button"
-                className="pointer-events-auto block w-full"
-                onClick={() => setFocusedTrackKey('local')}
-              >
-                <TrackRenderer
-                  track={localVideoTrack}
-                  muted
-                  className="h-24 w-full rounded-md bg-black object-cover"
-                />
-              </button>
-            ) : (
-              <div className="grid h-24 place-content-center rounded-md bg-muted text-[11px] text-muted-foreground">
-                Camera off
-              </div>
-            )}
-          </div>
-        ) : null}
       </div>
 
       {remoteAudioTracks.map((item) => (

@@ -5,7 +5,10 @@ import {
   useListStockReservationsQuery,
   useAllocateStockReservationMutation,
   useIssueStockReservationMutation,
+  useListStockRequestsQuery,
 } from '@/features/inventory/api';
+import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { useAuthStore } from '@/stores/auth-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +34,7 @@ function reservationStatusLabel(status: number) {
 
 export function StockReservationsListPage() {
   const user = useAuthStore((state) => state.user);
+  const companyId = user?.company?.id ?? null;
   const [page, setPage] = useState(1);
   const [allocateReservation, { isLoading: allocating }] = useAllocateStockReservationMutation();
   const [issueReservation, { isLoading: issuing }] = useIssueStockReservationMutation();
@@ -40,18 +44,54 @@ export function StockReservationsListPage() {
       page,
       pageSize: 20,
       filters: {
-        companyId: user?.company?.id ?? '',
+        companyId: companyId ?? '',
       },
     }),
-    [page, user?.company?.id],
+    [companyId, page],
   );
 
   const { data, isLoading } = useListStockReservationsQuery(query, {
-    skip: !user?.company?.id,
+    skip: !companyId,
   });
+  const { data: products = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
+  const { data: locations = [] } = useListInventoryLocationOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
+  const { data: requestsData } = useListStockRequestsQuery(
+    {
+      page: 1,
+      pageSize: 200,
+      filters: { companyId },
+    },
+    { skip: !companyId },
+  );
 
   const rows = data?.data ?? [];
   const meta = data?.meta;
+  const productNameById = useMemo(
+    () => new Map(products.map((product) => [product.id, product.name] as const)),
+    [products],
+  );
+  const locationNameById = useMemo(
+    () => new Map(locations.map((location) => [location.id, location.name] as const)),
+    [locations],
+  );
+  const requestLabelById = useMemo(() => {
+    return new Map(
+      (requestsData?.data ?? []).map((request) => {
+        const requester = locationNameById.get(request.requesterLocationId) ?? 'Unknown requester';
+        const requestedTo = request.requestedToLocationId
+          ? (locationNameById.get(request.requestedToLocationId) ?? 'Unknown destination')
+          : null;
+        const label = requestedTo ? `${requester} -> ${requestedTo}` : requester;
+        return [request.id, label] as const;
+      }),
+    );
+  }, [locationNameById, requestsData?.data]);
 
   const onAllocate = async (reservationId: string) => {
     try {
@@ -113,12 +153,24 @@ export function StockReservationsListPage() {
                         <Link
                           className="underline"
                           to={`/inventory/stock-reservations/view/${row.id}`}
+                          title={row.id}
                         >
-                          {row.id}
+                          View reservation
                         </Link>
                       </TableCell>
-                      <TableCell>{row.requestId}</TableCell>
-                      <TableCell>{row.productId}</TableCell>
+                      <TableCell title={row.requestId}>
+                        <Link
+                          className="underline"
+                          to={`/inventory/stock-requests/view/${row.requestId}`}
+                        >
+                          {requestLabelById.get(row.requestId) ??
+                            locationNameById.get(row.requesterLocationId) ??
+                            'View request'}
+                        </Link>
+                      </TableCell>
+                      <TableCell title={row.productId}>
+                        {productNameById.get(row.productId) ?? 'Unknown product'}
+                      </TableCell>
                       <TableCell>{row.requestedQuantity}</TableCell>
                       <TableCell>{row.reservedQuantity}</TableCell>
                       <TableCell>{row.issuedQuantity}</TableCell>

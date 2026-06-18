@@ -72,13 +72,6 @@ export function CommunicationCallRoom() {
       ),
     [media.remoteTracks],
   );
-  const remoteCameraTracks = useMemo(
-    () =>
-      media.remoteTracks.filter(
-        (row) => row.kind === 'video' && row.track.source !== Track.Source.ScreenShare,
-      ),
-    [media.remoteTracks],
-  );
   const primaryScreenShareTrack = remoteScreenShareTracks[0] ?? null;
   const isScreenShareLayout = Boolean(primaryScreenShareTrack) || media.isScreenSharing;
 
@@ -189,9 +182,9 @@ export function CommunicationCallRoom() {
             isScreenShareLayout={isScreenShareLayout}
             primaryScreenShareTrack={primaryScreenShareTrack}
             isVideoOff={media.isVideoOff}
-            remoteCameraTracks={remoteCameraTracks}
             orderedRemoteVideoTracks={orderedRemoteVideoTracks}
             remoteAudioTracks={media.remoteAudioTracks}
+            participants={data.participants}
             activeSpeakerUserIds={media.activeSpeakerUserIds}
             dominantSpeakerUserId={dominantSpeakerUserId}
             participantNameById={data.participantNameById}

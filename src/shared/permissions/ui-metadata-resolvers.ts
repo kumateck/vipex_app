@@ -3,21 +3,29 @@ import type { PermissionKey } from './constants';
 type PermissionLookup = { group: string; key: PermissionKey };
 
 function resolveReportModule(permissionKey: PermissionKey) {
+  if (permissionKey === 'CanReadReportsHub') return 'Business Analytics';
   if (permissionKey.includes('Financial')) return 'Financial Statements & Ledger Reports';
-  if (permissionKey.includes('Payroll')) return 'Payroll Reports';
-  if (permissionKey.includes('Hr')) return 'Workforce Reports';
-  if (permissionKey.includes('Attendance')) return 'Attendance Reports';
-  if (permissionKey.includes('Leave')) return 'Leave Management Reports';
-  if (permissionKey.includes('Expenses')) return 'Expense Reports';
+  if (permissionKey.includes('Branch')) return 'Branch & Performance';
+  if (permissionKey.includes('Payroll')) return 'Payroll & Payslips';
+  if (permissionKey.includes('Hr')) return 'Workforce Administration Reports';
+  if (permissionKey.includes('Attendance') || permissionKey.includes('Leave'))
+    return 'Attendance & Leave';
   if (permissionKey.includes('Cashier') || permissionKey.includes('Shift'))
-    return 'Cash Operations Reports';
-  if (permissionKey.includes('Customers')) return 'Customer Reports';
-  if (permissionKey.includes('Parcels')) return 'Parcel Operations Reports';
-  if (permissionKey.includes('Consignments')) return 'Consignment Reports';
-  if (permissionKey.includes('Transfers')) return 'Internal Transfer Reports';
-  if (permissionKey.includes('Inventory')) return 'Inventory Reports';
+    return 'Cashier & Shift';
+  if (
+    permissionKey.includes('Expenses') ||
+    permissionKey.includes('Cash') ||
+    permissionKey.includes('OutstandingToBePaid')
+  )
+    return 'Expenses & Cash';
+  if (permissionKey.includes('Customers') || permissionKey.includes('CreditExposure'))
+    return 'Customer Insights';
+  if (permissionKey.includes('Parcels')) return 'Parcels & Logistics';
+  if (permissionKey.includes('Consignments') || permissionKey.includes('Transfers'))
+    return 'Consignments & Transfers';
+  if (permissionKey.includes('Inventory')) return 'Inventory';
   if (permissionKey.includes('Audit')) return 'Audit & Compliance Reports';
-  return 'Enterprise Reports';
+  return 'Business Analytics';
 }
 
 function resolveInventoryModule(permissionKey: PermissionKey) {
@@ -67,27 +75,7 @@ function resolveShipmentsModule(permissionKey: PermissionKey) {
 }
 
 function resolveReportSubdomain(permissionKey: PermissionKey) {
-  if (permissionKey.includes('Financial') || permissionKey.includes('Tax'))
-    return 'Financial Insights';
-  if (
-    permissionKey.includes('Payroll') ||
-    permissionKey.includes('Hr') ||
-    permissionKey.includes('Attendance') ||
-    permissionKey.includes('Leave')
-  )
-    return 'Workforce Insights';
-  if (permissionKey.includes('Customers')) return 'Commercial Insights';
-  if (
-    permissionKey.includes('Parcels') ||
-    permissionKey.includes('Consignments') ||
-    permissionKey.includes('Transfers') ||
-    permissionKey.includes('Inventory') ||
-    permissionKey.includes('Cashier') ||
-    permissionKey.includes('Shift')
-  )
-    return 'Operational Insights';
-  if (permissionKey.includes('Audit')) return 'Governance Insights';
-  return 'Enterprise Reporting';
+  return resolveReportModule(permissionKey);
 }
 
 export function resolveSubdomain(permission: PermissionLookup, fallback: string) {

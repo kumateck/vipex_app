@@ -43,6 +43,16 @@ function formatDate(value?: string | null) {
   return d.toLocaleString();
 }
 
+function toLocalDateKey(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function buildQueueShareMessages(input: {
   queueCode: string;
   bookingCode?: string | null;
@@ -118,10 +128,13 @@ export default function QueueScreen() {
 
   const canIssueQueue = useMemo(() => {
     if (!selectedParcel) return false;
-    return (
-      selectedParcel.status === ParcelStatus.AWAITING_PICKUP && !selectedDetails?.pickupQueue?.id
-    );
-  }, [selectedDetails?.pickupQueue?.id, selectedParcel]);
+    const queuedAt =
+      selectedDetails?.pickupQueue?.queuedAt ?? selectedParcel.pickupQueuedAt ?? null;
+    const queueDateKey = toLocalDateKey(queuedAt);
+    const todayDateKey = toLocalDateKey(new Date().toISOString());
+    const hasQueueForToday = Boolean(queueDateKey && todayDateKey && queueDateKey === todayDateKey);
+    return selectedParcel.status === ParcelStatus.AWAITING_PICKUP && !hasQueueForToday;
+  }, [selectedDetails?.pickupQueue?.queuedAt, selectedParcel]);
 
   useEffect(() => {
     if (!branchId) return;
@@ -165,6 +178,9 @@ export default function QueueScreen() {
           search: search.trim(),
           companyId,
           destinationId: branchId ?? undefined,
+          status: ParcelStatus.AWAITING_PICKUP,
+          page: 1,
+          pageSize: 20,
         }),
       );
       setRows(data.data ?? []);
@@ -319,11 +335,6 @@ export default function QueueScreen() {
 
   return (
     <AppScreen refreshing={loadingBoards} onRefresh={() => void loadQueueBoards()}>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Queue Operations</Text>
-      <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-        Search parcels fast, issue queue tickets, and monitor active boards.
-      </Text>
-
       <View style={styles.kpiRow}>
         <StatCard label="Receiver Queue" value={receiverQueueCards.length} />
         <StatCard label="Waiting Pickup" value={waitingPickupQueueCards.length} />
@@ -351,64 +362,6 @@ export default function QueueScreen() {
           </Text>
         ) : null}
       </AppCard>
-
-      {canReadReceiverBoard ? (
-        <>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-            Receiver Queue (To-Pay)
-          </Text>
-          {loadingBoards ? (
-            <View style={styles.listWrap}>
-              <AppSkeletonCard lines={4} />
-              <AppSkeletonCard lines={4} />
-            </View>
-          ) : receiverQueueCards.length === 0 ? (
-            <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
-              No active receiver queue tickets right now.
-            </Text>
-          ) : (
-            <View style={styles.listWrap}>
-              {receiverQueueCards.map((card) => (
-                <QueueCard
-                  key={card.id}
-                  card={card}
-                  onCopy={() => void copyQueueCode(card.queueCode)}
-                  onShare={() => void shareQueueCard(card, 'short')}
-                />
-              ))}
-            </View>
-          )}
-        </>
-      ) : null}
-
-      {canReadSenderBoard ? (
-        <>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-            Waiting Pickup (Sender-Paid)
-          </Text>
-          {loadingBoards ? (
-            <View style={styles.listWrap}>
-              <AppSkeletonCard lines={4} />
-              <AppSkeletonCard lines={4} />
-            </View>
-          ) : waitingPickupQueueCards.length === 0 ? (
-            <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
-              No waiting pickup tickets at the moment.
-            </Text>
-          ) : (
-            <View style={styles.listWrap}>
-              {waitingPickupQueueCards.map((card) => (
-                <QueueCard
-                  key={card.id}
-                  card={card}
-                  onCopy={() => void copyQueueCode(card.queueCode)}
-                  onShare={() => void shareQueueCard(card, 'short')}
-                />
-              ))}
-            </View>
-          )}
-        </>
-      ) : null}
 
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Search Results</Text>
       {!canReadParcels ? (
@@ -520,7 +473,7 @@ export default function QueueScreen() {
           </View>
           {!canIssueQueue ? (
             <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
-              Ticket can be issued only for awaiting-pickup parcels without an active queue code.
+              Ticket can be issued only when queue code is not for today (or no queue exists).
             </Text>
           ) : null}
           {!canIssueTicket ? (
@@ -530,13 +483,69 @@ export default function QueueScreen() {
           ) : null}
         </AppCard>
       ) : null}
+
+      {canReadReceiverBoard ? (
+        <>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            Receiver Queue (To-Pay)
+          </Text>
+          {loadingBoards ? (
+            <View style={styles.listWrap}>
+              <AppSkeletonCard lines={4} />
+              <AppSkeletonCard lines={4} />
+            </View>
+          ) : receiverQueueCards.length === 0 ? (
+            <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
+              No active receiver queue tickets right now.
+            </Text>
+          ) : (
+            <View style={styles.listWrap}>
+              {receiverQueueCards.map((card) => (
+                <QueueCard
+                  key={card.id}
+                  card={card}
+                  onCopy={() => void copyQueueCode(card.queueCode)}
+                  onShare={() => void shareQueueCard(card, 'short')}
+                />
+              ))}
+            </View>
+          )}
+        </>
+      ) : null}
+
+      {canReadSenderBoard ? (
+        <>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            Waiting Pickup (Sender-Paid)
+          </Text>
+          {loadingBoards ? (
+            <View style={styles.listWrap}>
+              <AppSkeletonCard lines={4} />
+              <AppSkeletonCard lines={4} />
+            </View>
+          ) : waitingPickupQueueCards.length === 0 ? (
+            <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
+              No waiting pickup tickets at the moment.
+            </Text>
+          ) : (
+            <View style={styles.listWrap}>
+              {waitingPickupQueueCards.map((card) => (
+                <QueueCard
+                  key={card.id}
+                  card={card}
+                  onCopy={() => void copyQueueCode(card.queueCode)}
+                  onShare={() => void shareQueueCard(card, 'short')}
+                />
+              ))}
+            </View>
+          )}
+        </>
+      ) : null}
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: mobileTypography.title, fontWeight: '800' },
-  subtitle: { marginBottom: mobileSpacing.xs, lineHeight: 20 },
   kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },
   sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700', marginTop: 6 },
   buttonRow: {

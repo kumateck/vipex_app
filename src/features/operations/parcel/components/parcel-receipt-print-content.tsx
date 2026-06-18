@@ -1,6 +1,6 @@
 import type { RefObject } from 'react';
 import { InvoiceA5Template, ThermalStickerTemplate } from '@/features/printing';
-import type { ReceiptPrintData } from './parcel-receipt-actions';
+import type { ReceiptPrintData } from './parcel-receipt.types';
 import {
   formatDate,
   formatMoney,
@@ -37,12 +37,13 @@ export function ParcelReceiptPrintContent({
       <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '80mm' }}>
         <div ref={stickerRef}>
           <ThermalStickerTemplate
-            senderName={data.senderName}
-            senderTelephone={data.senderTelephone}
             bookingCode={data.bookingCode}
-            parcelDetails={data.parcelDetails}
+            receiverName={data.receiverName}
+            receiverTelephone={data.receiverTelephone}
+            receiverTelephone2={data.receiverTelephone2}
             destinationBranchName={data.destinationBranchName}
             destinationLocationName={data.destinationLocationName}
+            isPaid={isSenderPaid}
             toBePaidCedis={isSenderPaid ? undefined : data.receiverToPayCedis}
             qrValue={qrUrl}
             formatMoney={formatMoney}
@@ -62,9 +63,17 @@ export function ParcelReceiptPrintContent({
             destinationBranchName={data.destinationBranchName}
             destinationLocationName={data.destinationLocationName}
             senderName={data.senderName}
-            senderTelephone={data.senderTelephone}
+            senderTelephone={
+              data.senderTelephone2
+                ? `${data.senderTelephone}, ${data.senderTelephone2}`
+                : data.senderTelephone
+            }
             receiverName={data.receiverName}
-            receiverTelephone={data.receiverTelephone}
+            receiverTelephone={
+              data.receiverTelephone2
+                ? `${data.receiverTelephone}, ${data.receiverTelephone2}`
+                : data.receiverTelephone
+            }
             paymentModeLabel={getPaymentModeLabel(data.senderPaidCedis, data.receiverToPayCedis)}
             totalChargeCedis={data.totalChargeCedis}
             senderPaidCedis={data.senderPaidCedis}

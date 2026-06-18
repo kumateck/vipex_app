@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,7 @@ import { useGetFleetDispatchExceptionQueueQuery } from '../../api/fleet-transpor
 
 function fmtDate(value: string | null) {
   if (!value) return '-';
-  return new Date(value).toLocaleString();
+  return formatDateTimeShared(value);
 }
 
 export function FleetDispatchExceptionQueuePage() {

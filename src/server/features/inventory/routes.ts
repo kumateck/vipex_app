@@ -84,6 +84,8 @@ import {
   submitStockRequestCtrl,
   upsertStockAllocationPolicyCtrl,
   listReorderSuggestionsCtrl,
+  listInventoryReorderPoliciesCtrl,
+  upsertInventoryReorderPolicyCtrl,
   listInventoryApprovalPoliciesCtrl,
   createInventoryApprovalPolicyCtrl,
   submitInventoryApprovalRequestCtrl,
@@ -638,6 +640,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
           companyId: query.companyId ?? null,
           productId: query.productId ?? null,
           locationId: query.locationId ?? null,
+          branchId: query.branchId ?? null,
+          locationType: query.locationType ?? null,
         },
       }),
     {
@@ -648,6 +652,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         companyId: t.Optional(UUID),
         productId: t.Optional(UUID),
         locationId: t.Optional(UUID),
+        branchId: t.Optional(UUID),
+        locationType: t.Optional(SmallInt),
       }),
       detail: { tags: ['Inventory'], summary: 'List stock levels', operationId: 'listStockLevels' },
     },
@@ -707,6 +713,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
           companyId: query.companyId!,
           productId: query.productId ?? null,
           locationId: query.locationId ?? null,
+          branchId: query.branchId ?? null,
+          locationType: query.locationType ?? null,
           status: query.status ?? null,
           batchNumber: query.batchNumber ?? null,
         },
@@ -717,6 +725,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         companyId: UUID,
         productId: t.Optional(UUID),
         locationId: t.Optional(UUID),
+        branchId: t.Optional(UUID),
+        locationType: t.Optional(SmallInt),
         status: t.Optional(SmallInt),
         batchNumber: t.Optional(t.String({ maxLength: 100 })),
       }),
@@ -852,6 +862,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
           companyId: query.companyId ?? null,
           productId: query.productId ?? null,
           locationId: query.locationId ?? null,
+          branchId: query.branchId ?? null,
+          locationType: query.locationType ?? null,
           movementType: query.movementType ?? null,
         },
       }),
@@ -865,6 +877,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         companyId: t.Optional(UUID),
         productId: t.Optional(UUID),
         locationId: t.Optional(UUID),
+        branchId: t.Optional(UUID),
+        locationType: t.Optional(SmallInt),
         movementType: t.Optional(SmallInt),
       }),
       detail: {
@@ -922,6 +936,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
           companyId: query.companyId ?? null,
           productId: query.productId ?? null,
           locationId: query.locationId ?? null,
+          branchId: query.branchId ?? null,
+          locationType: query.locationType ?? null,
         },
       }),
     {
@@ -930,6 +946,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         companyId: t.Optional(UUID),
         productId: t.Optional(UUID),
         locationId: t.Optional(UUID),
+        branchId: t.Optional(UUID),
+        locationType: t.Optional(SmallInt),
       }),
       detail: {
         tags: ['Inventory'],
@@ -984,6 +1002,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
           companyId: query.companyId ?? null,
           productId: query.productId ?? null,
           status: query.status ?? null,
+          branchId: query.branchId ?? null,
+          locationType: query.locationType ?? null,
         },
       }),
     {
@@ -992,6 +1012,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         companyId: t.Optional(UUID),
         productId: t.Optional(UUID),
         status: t.Optional(SmallInt),
+        branchId: t.Optional(UUID),
+        locationType: t.Optional(SmallInt),
       }),
       detail: {
         tags: ['Inventory'],
@@ -1220,6 +1242,61 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     },
   )
   .get(
+    '/reorder-policies',
+    async ({ query }) =>
+      listInventoryReorderPoliciesCtrl({
+        companyId: query.companyId,
+        productId: query.productId ?? null,
+        branchId: query.branchId ?? null,
+        locationType: query.locationType ?? null,
+        locationId: query.locationId ?? null,
+        active: query.active ?? null,
+      }),
+    {
+      query: t.Object({
+        companyId: UUID,
+        productId: t.Optional(UUID),
+        branchId: t.Optional(UUID),
+        locationType: t.Optional(SmallInt),
+        locationId: t.Optional(UUID),
+        active: t.Optional(t.Boolean()),
+      }),
+      detail: {
+        tags: ['Inventory'],
+        summary: 'List inventory reorder policies',
+        operationId: 'listInventoryReorderPolicies',
+      },
+    },
+  )
+  .post(
+    '/reorder-policies',
+    async ({ body, set }) => {
+      const res = await upsertInventoryReorderPolicyCtrl(body);
+      set.status = HttpStatus.CREATED;
+      return res;
+    },
+    {
+      body: t.Object({
+        companyId: UUID,
+        productId: UUID,
+        branchId: UUID,
+        locationType: SmallInt,
+        locationId: t.Optional(t.Union([UUID, t.Null()])),
+        reorderPoint: t.String(),
+        targetLevel: t.Optional(t.Union([t.String(), t.Null()])),
+        safetyStock: t.Optional(t.Union([t.String(), t.Null()])),
+        active: t.Optional(t.Boolean()),
+        notes: t.Optional(t.Union([t.String(), t.Null()])),
+        createdBy: UUID,
+      }),
+      detail: {
+        tags: ['Inventory'],
+        summary: 'Create or update an inventory reorder policy',
+        operationId: 'upsertInventoryReorderPolicy',
+      },
+    },
+  )
+  .get(
     '/stock-requests',
     async ({ query }) =>
       listStockRequestsCtrl({
@@ -1232,6 +1309,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         filters: {
           companyId: query.companyId ?? null,
           requesterLocationId: query.requesterLocationId ?? null,
+          branchId: query.branchId ?? null,
+          locationType: query.locationType ?? null,
           status: query.status ?? null,
         },
       }),
@@ -1240,6 +1319,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         ...PaginationRequestQueryProps,
         companyId: t.Optional(UUID),
         requesterLocationId: t.Optional(UUID),
+        branchId: t.Optional(UUID),
+        locationType: t.Optional(SmallInt),
         status: t.Optional(SmallInt),
       }),
       detail: {
@@ -1269,6 +1350,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         companyId: UUID,
         requesterLocationId: UUID,
         requestedToLocationId: t.Optional(t.Union([UUID, t.Null()])),
+        requestType: SmallInt,
         notes: t.Optional(t.String()),
         requestedBy: UUID,
         submit: t.Optional(t.Boolean()),
@@ -1588,6 +1670,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         filters: {
           companyId: query.companyId ?? null,
           locationId: query.locationId ?? null,
+          branchId: query.branchId ?? null,
+          locationType: query.locationType ?? null,
           issueType: query.issueType ?? null,
           status: query.status ?? null,
         },
@@ -1597,6 +1681,8 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         ...PaginationRequestQueryProps,
         companyId: t.Optional(UUID),
         locationId: t.Optional(UUID),
+        branchId: t.Optional(UUID),
+        locationType: t.Optional(SmallInt),
         issueType: t.Optional(SmallInt),
         status: t.Optional(SmallInt),
       }),

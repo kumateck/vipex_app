@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
 import { setPassword as setPasswordApi } from '@mobile/lib/api';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { AppButton, AppCard, AppInput, AppLabel } from '@/components/ui/mobile';
+import { AppButton, AppCard, AppInput, AppLabel, PasswordInput } from '@/components/ui/mobile';
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
 export default function SetPasswordScreen() {
@@ -52,16 +52,10 @@ export default function SetPasswordScreen() {
             maxLength={6}
           />
         </View>
-        <AppInput
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          placeholder="New password"
-        />
-        <AppInput
+        <PasswordInput value={password} onChangeText={setPassword} placeholder="New password" />
+        <PasswordInput
           value={confirm}
           onChangeText={setConfirm}
-          secureTextEntry
           placeholder="Confirm new password"
         />
         {status ? (

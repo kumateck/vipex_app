@@ -1,11 +1,24 @@
 import 'dotenv/config';
+import { existsSync } from 'node:fs';
 import postgres from 'postgres';
 
 const CONFIRM_TOKEN = 'RESET_REMOTE_DB';
 
+function resolveBunExecutable() {
+  const candidates = [
+    process.env.BUN_INSTALL ? `${process.env.BUN_INSTALL}/bin/bun` : '',
+    process.env.HOME ? `${process.env.HOME}/.bun/bin/bun` : '',
+    process.execPath,
+    '/opt/homebrew/bin/bun',
+    '/usr/local/bin/bun',
+  ];
+
+  return candidates.find((candidate) => candidate && existsSync(candidate)) ?? 'bun';
+}
+
 async function runCommand(scriptName: string) {
   console.log(`\n▶ Running: bun run ${scriptName}`);
-  const proc = Bun.spawn(['bun', 'run', scriptName], {
+  const proc = Bun.spawn([resolveBunExecutable(), 'run', scriptName], {
     stdout: 'inherit',
     stderr: 'inherit',
     env: process.env,

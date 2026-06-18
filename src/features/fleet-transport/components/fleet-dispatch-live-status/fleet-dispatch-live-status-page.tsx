@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { useListBranchOptionsQuery } from '@/features/branches';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -180,9 +181,7 @@ export function FleetDispatchLiveStatusPage() {
             {nonTelemetryTimeline.map((item, index) => (
               <div key={`${item.kind}-${item.occurredAt}-${index}`} className="rounded border p-3">
                 <p className="font-medium">{inferTimelineLabel(item)}</p>
-                <p className="text-muted-foreground">
-                  {new Date(item.occurredAt).toLocaleString()}
-                </p>
+                <p className="text-muted-foreground">{formatDateTimeShared(item.occurredAt)}</p>
               </div>
             ))}
           </CardContent>

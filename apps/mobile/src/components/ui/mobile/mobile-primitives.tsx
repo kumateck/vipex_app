@@ -1,4 +1,4 @@
-import type { PropsWithChildren, ReactNode } from 'react';
+import { useState, type PropsWithChildren, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
@@ -9,6 +9,16 @@ type AppButtonProps = {
   disabled?: boolean;
   variant?: 'primary' | 'secondary';
 };
+
+type AppPageHeaderProps = {
+  title: string;
+  subtitle?: string;
+};
+
+type PasswordInputProps = Omit<
+  React.ComponentProps<typeof TextInput>,
+  'style' | 'placeholderTextColor' | 'secureTextEntry'
+>;
 
 export function AppCard({ children }: PropsWithChildren) {
   const { theme } = useAppearance();
@@ -52,9 +62,42 @@ export function AppInput(
   );
 }
 
+export function PasswordInput(props: PasswordInputProps) {
+  const { theme } = useAppearance();
+  const [hidden, setHidden] = useState(true);
+
+  return (
+    <View
+      style={[
+        styles.passwordWrap,
+        {
+          borderColor: theme.colors.border,
+          backgroundColor: theme.colors.inputBg,
+        },
+      ]}
+    >
+      <TextInput
+        {...props}
+        secureTextEntry={hidden}
+        style={[styles.passwordInput, { color: theme.colors.inputText }]}
+        placeholderTextColor={theme.colors.inputPlaceholder}
+      />
+      <Pressable
+        onPress={() => setHidden((prev) => !prev)}
+        style={({ pressed }) => [styles.passwordToggle, { opacity: pressed ? 0.7 : 1 }]}
+      >
+        <Text style={[styles.passwordToggleText, { color: theme.colors.textMuted }]}>
+          {hidden ? 'Show' : 'Hide'}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export function AppButton({ title, onPress, disabled, variant = 'primary' }: AppButtonProps) {
   const { theme } = useAppearance();
   const primary = variant === 'primary';
+
   return (
     <Pressable
       onPress={onPress}
@@ -80,34 +123,15 @@ export function AppButton({ title, onPress, disabled, variant = 'primary' }: App
   );
 }
 
-export function AppStatusChip({ label }: { label: string | number }) {
-  const normalizedLabel = String(label);
+export function AppPageHeader({ title, subtitle }: AppPageHeaderProps) {
   const { theme } = useAppearance();
-  const normalized = normalizedLabel.toLowerCase();
-  const isGood =
-    normalized.includes('arrived') ||
-    normalized.includes('delivered') ||
-    normalized.includes('paid');
-  const isWarn =
-    normalized.includes('pending') ||
-    normalized.includes('transit') ||
-    normalized.includes('awaiting');
-  const icon = isGood ? '✓' : isWarn ? '⏳' : '•';
-  const fg = isGood ? theme.colors.success : isWarn ? '#b37a00' : theme.colors.textMuted;
-  const bg = isGood
-    ? theme.scheme === 'dark'
-      ? '#0f2a1a'
-      : '#ecfdf3'
-    : isWarn
-      ? theme.scheme === 'dark'
-        ? '#2b1f08'
-        : '#fff7e6'
-      : theme.colors.cardMuted;
+
   return (
-    <View style={[styles.statusChip, { backgroundColor: bg, borderColor: theme.colors.border }]}>
-      <Text style={[styles.statusChipText, { color: fg }]}>
-        {icon} {normalizedLabel}
-      </Text>
+    <View style={styles.pageHeader}>
+      <Text style={[styles.pageTitle, { color: theme.colors.text }]}>{title}</Text>
+      {subtitle ? (
+        <Text style={[styles.pageSubtitle, { color: theme.colors.textSubtle }]}>{subtitle}</Text>
+      ) : null}
     </View>
   );
 }
@@ -115,6 +139,7 @@ export function AppStatusChip({ label }: { label: string | number }) {
 export function AppSkeletonCard({ lines = 3 }: { lines?: number }) {
   const { theme } = useAppearance();
   const items = new Array(lines).fill(0);
+
   return (
     <View
       style={[
@@ -138,30 +163,6 @@ export function AppSkeletonCard({ lines = 3 }: { lines?: number }) {
   );
 }
 
-export function MobileNoAccess({
-  title = 'Access Denied',
-  message = 'You do not have permission to view this section.',
-}: {
-  title?: string;
-  message?: string;
-}) {
-  const { theme } = useAppearance();
-  return (
-    <View style={styles.noAccessWrap}>
-      <View
-        style={[
-          styles.noAccessCard,
-          { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-        ]}
-      >
-        <Text style={[styles.noAccessIcon, { color: theme.colors.textSubtle }]}>🔒</Text>
-        <Text style={[styles.noAccessTitle, { color: theme.colors.text }]}>{title}</Text>
-        <Text style={[styles.noAccessMsg, { color: theme.colors.textSubtle }]}>{message}</Text>
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
@@ -180,6 +181,27 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     fontSize: 16,
   },
+  passwordWrap: {
+    borderWidth: 1,
+    borderRadius: mobileRadius.md,
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 11,
+    paddingLeft: mobileSpacing.md,
+    fontSize: 16,
+  },
+  passwordToggle: {
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.sm,
+  },
+  passwordToggleText: {
+    fontSize: mobileTypography.label,
+    fontWeight: '700',
+  },
   button: {
     borderWidth: 1,
     borderRadius: mobileRadius.md,
@@ -193,32 +215,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-  statusChip: {
-    borderWidth: 1,
-    borderRadius: mobileRadius.pill,
-    paddingHorizontal: mobileSpacing.sm + 2,
-    paddingVertical: 6,
-    alignSelf: 'flex-start',
+  pageHeader: {
+    gap: 4,
+    paddingTop: 2,
   },
-  statusChipText: {
-    fontSize: 12,
-    fontWeight: '700',
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  pageSubtitle: {
+    fontSize: mobileTypography.subtitle,
   },
   skeletonLine: {
     height: 14,
     borderRadius: 999,
   },
-  noAccessWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  noAccessCard: {
-    borderWidth: 1,
-    borderRadius: mobileRadius.lg,
-    padding: mobileSpacing.lg,
-    width: '100%',
-    maxWidth: 420,
-    alignItems: 'center',
-    gap: mobileSpacing.sm,
-  },
-  noAccessIcon: { fontSize: 34 },
-  noAccessTitle: { fontSize: 24, fontWeight: '800' },
-  noAccessMsg: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
 });

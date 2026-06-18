@@ -1,5 +1,5 @@
 import type { EntityAuditLog } from './api';
-import { formatDateTime } from '@/lib/date';
+import { formatDateTime } from '@/lib/dates';
 
 export function formatAuditDateTime(value: string) {
   const date = new Date(value);

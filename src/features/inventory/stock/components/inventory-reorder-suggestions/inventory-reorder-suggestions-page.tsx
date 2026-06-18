@@ -11,10 +11,15 @@ import {
   SelectValue,
 } from '@/components/ui/select-searchable';
 import { Spinner } from '@/components/ui/spinner';
-import { useListReorderSuggestionsQuery } from '@/features/inventory/api';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
+import {
+  useListInventoryReorderPoliciesQuery,
+  useListReorderSuggestionsQuery,
+} from '@/features/inventory/api';
 import { useAuthStore } from '@/stores/auth-store';
-import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
+import { ReorderPolicyForm } from './reorder-policy-form';
+import { ReorderSuggestionsTable } from './reorder-suggestions-table';
 
 function locationTypeLabel(type: number) {
   if (type === 0) return 'Main Store';
@@ -31,6 +36,7 @@ export function InventoryReorderSuggestionsPage() {
     { companyId },
     { skip: !companyId },
   );
+
   const queryArg = useMemo(
     () =>
       companyId
@@ -41,7 +47,29 @@ export function InventoryReorderSuggestionsPage() {
         : undefined,
     [companyId, locationId],
   );
-  const { data, isLoading } = useListReorderSuggestionsQuery(queryArg, { skip: !queryArg });
+
+  const {
+    data,
+    isLoading,
+    refetch: refetchSuggestions,
+  } = useListReorderSuggestionsQuery(queryArg, {
+    skip: !queryArg,
+    refetchOnMountOrArgChange: true,
+  });
+
+  const {
+    data: policies = [],
+    isLoading: isLoadingPolicies,
+    refetch: refetchPolicies,
+  } = useListInventoryReorderPoliciesQuery(companyId ? { companyId } : undefined, {
+    skip: !companyId,
+    refetchOnMountOrArgChange: true,
+  });
+
+  const handlePolicySaved = () => {
+    void refetchPolicies();
+    void refetchSuggestions();
+  };
 
   return (
     <ScrollableWrapper>
@@ -74,9 +102,53 @@ export function InventoryReorderSuggestionsPage() {
             ) : (
               <div className="text-sm text-muted-foreground">
                 {data?.totalRows ?? 0} suggestions generated
-                {data?.generatedAt ? ` at ${new Date(data.generatedAt).toLocaleString()}` : ''}
+                {data?.generatedAt ? ` at ${formatDateTimeShared(data.generatedAt)}` : ''}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Reorder Policy Rules</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ReorderPolicyForm onSaved={handlePolicySaved} />
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 pr-4">Product</th>
+                    <th className="text-left py-2 pr-4">Branch</th>
+                    <th className="text-left py-2 pr-4">Location type</th>
+                    <th className="text-left py-2 pr-4">Location override</th>
+                    <th className="text-left py-2 pr-4">Reorder point</th>
+                    <th className="text-left py-2 pr-4">Target</th>
+                    <th className="text-left py-2 pr-4">Active</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {policies.map((policy) => (
+                    <tr key={policy.id} className="border-b">
+                      <td className="py-2 pr-4">{policy.productName || policy.productId}</td>
+                      <td className="py-2 pr-4">{policy.branchName || policy.branchId}</td>
+                      <td className="py-2 pr-4">{locationTypeLabel(policy.locationType)}</td>
+                      <td className="py-2 pr-4">{policy.locationName || 'Branch+type default'}</td>
+                      <td className="py-2 pr-4">{policy.reorderPoint}</td>
+                      <td className="py-2 pr-4">{policy.targetLevel}</td>
+                      <td className="py-2 pr-4">{policy.active ? 'Yes' : 'No'}</td>
+                    </tr>
+                  ))}
+                  {!isLoadingPolicies && !policies.length ? (
+                    <tr>
+                      <td className="py-3 text-muted-foreground" colSpan={7}>
+                        No reorder policies yet.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
 
@@ -85,69 +157,7 @@ export function InventoryReorderSuggestionsPage() {
             <CardTitle>Suggested Replenishments</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 pr-4">Product</th>
-                    <th className="text-left py-2 pr-4">Location</th>
-                    <th className="text-left py-2 pr-4">Current</th>
-                    <th className="text-left py-2 pr-4">Min</th>
-                    <th className="text-left py-2 pr-4">Reorder Qty</th>
-                    <th className="text-left py-2 pr-4">Suggested Source</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data?.rows ?? []).map((row) => (
-                    <tr key={`${row.locationId}:${row.productId}`} className="border-b align-top">
-                      <td className="py-2 pr-4">
-                        <div>{row.productName}</div>
-                        <div className="text-xs text-muted-foreground">{row.productSku}</div>
-                      </td>
-                      <td className="py-2 pr-4">
-                        <div>{row.locationName}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {locationTypeLabel(row.locationType)}
-                        </div>
-                      </td>
-                      <td className="py-2 pr-4">
-                        {formatBaseQuantityWithBestUnits(row.currentQuantity, undefined)}
-                      </td>
-                      <td className="py-2 pr-4">
-                        {formatBaseQuantityWithBestUnits(row.minStockLevel, undefined)}
-                      </td>
-                      <td className="py-2 pr-4">
-                        {formatBaseQuantityWithBestUnits(row.reorderQuantity, undefined)}
-                      </td>
-                      <td className="py-2 pr-4">
-                        {row.suggestedSources.length ? (
-                          <div className="space-y-1">
-                            {row.suggestedSources.map((source) => (
-                              <div key={source.locationId} className="text-xs">
-                                {source.locationName} ({locationTypeLabel(source.locationType)}) -{' '}
-                                {formatBaseQuantityWithBestUnits(
-                                  source.availableQuantity,
-                                  undefined,
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">No source suggestion</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {!isLoading && !(data?.rows ?? []).length ? (
-                    <tr>
-                      <td className="py-3 text-muted-foreground" colSpan={6}>
-                        No reorder suggestions for the selected scope.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
+            <ReorderSuggestionsTable rows={data?.rows ?? []} isLoading={isLoading} />
           </CardContent>
         </Card>
       </div>

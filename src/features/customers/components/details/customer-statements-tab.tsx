@@ -1,3 +1,4 @@
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { CustomerStatement } from '@/features/customers/api';
 import { formatMoney } from './customer-details.utils';
@@ -60,7 +61,7 @@ export function CustomerStatementsTab({
                   {row.amountPsw != null ? formatMoney(row.amountPsw) : '-'}
                 </p>
               </div>
-              <p className="text-muted-foreground">{new Date(row.timestamp).toLocaleString()}</p>
+              <p className="text-muted-foreground">{formatDateTimeShared(row.timestamp)}</p>
               <p className="text-muted-foreground">
                 Running balance: {formatMoney(row.runningBalancePsw)}
               </p>

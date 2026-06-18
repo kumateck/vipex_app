@@ -2,6 +2,9 @@ export type ParcelSearchRow = {
   id: string;
   companyId?: string;
   sourceId?: string;
+  sourceName?: string | null;
+  sourceLocationId?: string | null;
+  sourceLocationName?: string | null;
   receiverId?: string;
   trackingCode: string;
   bookingCode: string;
@@ -13,6 +16,9 @@ export type ParcelSearchRow = {
   receiverPhone?: string | null;
   destinationId: string;
   destinationName?: string | null;
+  destinationLocationId?: string | null;
+  destinationLocationName?: string | null;
+  pickupLocationName?: string | null;
   status: number;
   chargePsw?: number;
   parcelValuePsw?: number;
@@ -72,10 +78,21 @@ export type ParcelFullDetails = {
   };
   payments: Array<{
     id: string;
+    companyId?: string;
+    branchId?: string;
+    parcelId?: string;
+    component?: number;
+    payer?: number;
+    cashierType?: number;
     grossAmountPsw: number;
     method: number;
     receivedAt: string;
     receiptNo: string | null;
+    notes?: string | null;
+    voidedAt?: string | null;
+    voidedBy?: string | null;
+    voidReason?: string | null;
+    createdAt?: string;
   }>;
   delivery: null | {
     id: string;
@@ -84,6 +101,51 @@ export type ParcelFullDetails = {
     deliveredAt: string | null;
     chargePsw: number;
     amountPaidPsw: number;
+    mode?: number;
+  };
+  consignments?: Array<{
+    consignmentId: string;
+    code: string;
+    consignmentDate: string;
+    serialForDay: number;
+    sourceId: string;
+    destinationId: string;
+    addedAt: string;
+    removedAt: string | null;
+  }>;
+  internalHolder?: null | {
+    parcelId: string;
+    holderType: number;
+    branchId: string | null;
+    branchName: string | null;
+    locationId: string | null;
+    locationName: string | null;
+    warehouseId: string | null;
+    warehouseName: string | null;
+    updatedAt: string;
+  };
+  dispositionActions?: Array<{
+    id: string;
+    actionType: number;
+    notes: string | null;
+    warehouseName: string | null;
+    performedByName: string | null;
+    performedAt: string | null;
+    recoveredAmountPsw: number;
+  }>;
+  storageWaivers?: Array<{
+    id: string;
+    waivedAmountPsw: number;
+    reason: string;
+    waivedByName: string | null;
+    waivedAt: string | null;
+  }>;
+  storageSettlement?: null | {
+    parcelId: string;
+    accruedPsw: number;
+    paidPsw: number;
+    waivedPsw: number;
+    outstandingPsw: number;
   };
 };
 

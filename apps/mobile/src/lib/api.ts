@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { reportMobileErrorToDiscord } from '@mobile/lib/mobile-error-reporter';
 import type { LoginResponse, SessionState, TokenPair } from '@mobile/types/auth';
 import type {
   CommunicationCallSession,
@@ -131,6 +132,48 @@ type RequestOptions = {
   timeoutMs?: number;
 };
 
+class ApiRequestError extends Error {
+  status: number | null;
+  url: string;
+  constructor(message: string, input: { status: number | null; url: string }) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = input.status;
+    this.url = input.url;
+  }
+}
+
+function logMobileApiError(input: {
+  method: string;
+  path: string;
+  url: string;
+  activeBaseUrl: string;
+  candidateBaseUrl: string;
+  status?: number | null;
+  message: string;
+  responseBody?: unknown;
+  attempt: number;
+}) {
+  const payload = {
+    method: input.method,
+    path: input.path,
+    endpoint: input.url,
+    status: input.status ?? null,
+    message: input.message,
+    responseBody: input.responseBody ?? null,
+    activeBaseUrl: input.activeBaseUrl,
+    candidateBaseUrl: input.candidateBaseUrl,
+    attempt: input.attempt,
+    at: new Date().toISOString(),
+  };
+  console.error('[mobile-api] request failed', payload);
+  reportMobileErrorToDiscord({
+    source: 'mobile-api',
+    message: input.message,
+    context: payload,
+  });
+}
+
 function toQueryString(query?: RequestOptions['query']): string {
   if (!query) return '';
   const params = new URLSearchParams();
@@ -145,11 +188,14 @@ function toQueryString(query?: RequestOptions['query']): string {
 async function request<T>(options: RequestOptions): Promise<T> {
   let lastError: Error | null = null;
   const attemptedUrls: string[] = [];
+  const method = options.method ?? 'GET';
 
+  let attempt = 0;
   for (const baseUrl of [
     activeApiBaseUrl,
     ...API_BASE_URL_CANDIDATES.filter((u) => u !== activeApiBaseUrl),
   ]) {
+    attempt += 1;
     const targetUrl = `${baseUrl}${options.path}${toQueryString(options.query)}`;
     attemptedUrls.push(targetUrl);
     try {
@@ -157,7 +203,7 @@ async function request<T>(options: RequestOptions): Promise<T> {
       const timeoutMs = options.timeoutMs ?? 15000;
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
       const response = await fetch(targetUrl, {
-        method: options.method ?? 'GET',
+        method,
         headers: {
           'content-type': 'application/json',
           ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
@@ -172,14 +218,34 @@ async function request<T>(options: RequestOptions): Promise<T> {
       } | null;
 
       if (!response.ok) {
-        throw new Error(
-          json?.error?.message ?? `Request failed (${response.status}) at ${targetUrl}`,
+        const serverMessage = json?.error?.message?.trim();
+        logMobileApiError({
+          method,
+          path: options.path,
+          url: targetUrl,
+          activeBaseUrl: activeApiBaseUrl,
+          candidateBaseUrl: baseUrl,
+          status: response.status,
+          message: serverMessage || 'Request failed',
+          responseBody: json,
+          attempt,
+        });
+        throw new ApiRequestError(
+          `${serverMessage || 'Request failed'} (${response.status}) at ${targetUrl}`,
+          {
+            status: response.status,
+            url: targetUrl,
+          },
         );
       }
 
       activeApiBaseUrl = baseUrl;
       return json as T;
     } catch (error) {
+      if (error instanceof ApiRequestError) {
+        lastError = error;
+        continue;
+      }
       const isAbort =
         typeof error === 'object' &&
         error !== null &&
@@ -190,6 +256,16 @@ async function request<T>(options: RequestOptions): Promise<T> {
         : error instanceof Error && error.message.trim().length > 0
           ? error.message
           : 'Network request failed';
+      logMobileApiError({
+        method,
+        path: options.path,
+        url: targetUrl,
+        activeBaseUrl: activeApiBaseUrl,
+        candidateBaseUrl: baseUrl,
+        status: null,
+        message,
+        attempt,
+      });
       lastError = new Error(`${message} (while calling ${targetUrl})`);
     }
   }
@@ -232,6 +308,29 @@ export async function refreshToken(
     refreshToken: data.tokens.refreshToken,
     user: data.user,
   };
+}
+
+const inFlightRefreshByToken = new Map<
+  string,
+  Promise<TokenPair & { user?: SessionState['user'] }>
+>();
+
+async function refreshTokenOnce(
+  refreshTokenValue: string,
+): Promise<TokenPair & { user?: SessionState['user'] }> {
+  const existing = inFlightRefreshByToken.get(refreshTokenValue);
+  if (existing) {
+    return existing;
+  }
+
+  const promise = refreshToken(refreshTokenValue).finally(() => {
+    if (inFlightRefreshByToken.get(refreshTokenValue) === promise) {
+      inFlightRefreshByToken.delete(refreshTokenValue);
+    }
+  });
+  inFlightRefreshByToken.set(refreshTokenValue, promise);
+
+  return promise;
 }
 
 export async function forgotPassword(email: string): Promise<void> {
@@ -307,10 +406,32 @@ export async function getParcelDetails(
   accessToken: string,
   parcelId: string,
 ): Promise<ParcelFullDetails> {
-  return request<ParcelFullDetails>({
-    path: `/shipments/parcels/${parcelId}`,
+  const payload = await request<unknown>({
+    path: `/shipments/parcels/${parcelId}/details`,
     token: accessToken,
   });
+  const candidate =
+    typeof payload === 'object' && payload !== null && 'data' in payload
+      ? (payload as { data?: unknown }).data
+      : payload;
+
+  const details = candidate as Partial<ParcelFullDetails> | null;
+  if (!details?.parcel) {
+    throw new Error('Parcel details response missing parcel object');
+  }
+
+  return {
+    ...(details as ParcelFullDetails),
+    parcel: details.parcel,
+    pickupQueue: details.pickupQueue ?? null,
+    delivery: details.delivery ?? null,
+    payments: Array.isArray(details.payments) ? details.payments : [],
+    consignments: Array.isArray(details.consignments) ? details.consignments : [],
+    internalHolder: details.internalHolder ?? null,
+    dispositionActions: Array.isArray(details.dispositionActions) ? details.dispositionActions : [],
+    storageWaivers: Array.isArray(details.storageWaivers) ? details.storageWaivers : [],
+    storageSettlement: details.storageSettlement ?? null,
+  };
 }
 
 export async function updateParcelStatus(
@@ -472,10 +593,12 @@ export async function listCommunicationChannels(
   return request<CommunicationChannel[]>({
     path: '/communication/channels',
     token: accessToken,
-    query: {
-      channelType: input?.channelType,
-      includeArchived: input?.includeArchived ?? false,
-    },
+    query: input
+      ? {
+          channelType: input.channelType,
+          includeArchived: input.includeArchived,
+        }
+      : undefined,
   });
 }
 
@@ -484,6 +607,8 @@ export async function createCommunicationChannel(
   input: {
     name: string;
     description?: string | null;
+    branchId?: string | null;
+    locationId?: string | null;
     channelType?: 'text' | 'voice';
     visibility?: 'public' | 'private';
     participantUserIds?: string[];
@@ -565,6 +690,7 @@ export async function createCommunicationMessage(
     body?: string | null;
     messageType?: string | null;
     metadataJson?: Record<string, unknown> | null;
+    replyToMessageId?: string | null;
   },
 ): Promise<CommunicationMessage> {
   return request<CommunicationMessage>({
@@ -707,6 +833,7 @@ export async function approveCommunicationEngagementRequest(
     path: `/communication/engagement-requests/${input.id}/approve`,
     method: 'POST',
     token: accessToken,
+    body: {},
   });
 }
 
@@ -718,6 +845,7 @@ export async function declineCommunicationEngagementRequest(
     path: `/communication/engagement-requests/${input.id}/decline`,
     method: 'POST',
     token: accessToken,
+    body: {},
   });
 }
 
@@ -756,9 +884,11 @@ export async function authorizedRequestWithRefresh<T>(
     return await run(session.accessToken);
   } catch (error) {
     const err = error as Error;
-    if (!err.message.includes('401') || !session.refreshToken) throw error;
+    const isUnauthorized =
+      err.message.includes('401') || err.message.toLowerCase().includes('unauthorized');
+    if (!isUnauthorized || !session.refreshToken) throw error;
 
-    const refreshed = await refreshToken(session.refreshToken);
+    const refreshed = await refreshTokenOnce(session.refreshToken);
     const next: SessionState = {
       user: refreshed.user ?? session.user,
       accessToken: refreshed.accessToken,

@@ -54,6 +54,7 @@ export async function listCustomersRepo(
       or(
         ilike(customers.fullname, `%${p.search}%`),
         ilike(customers.telephone, `%${p.search}%`),
+        ilike(customers.telephone2, `%${p.search}%`),
         ilike(customers.email, `%${p.search}%`),
       ),
     );
@@ -243,6 +244,7 @@ export async function findCustomersByTelephoneRepo(input: {
           eq(customers.telephone, term),
           eq(customers.telephone2, term),
           ilike(customers.telephone, `%${term}%`),
+          ilike(customers.telephone2, `%${term}%`),
         ),
       ),
     )

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,7 +72,7 @@ export function FleetDispatchLoadAuditPage() {
               <div key={row.id} className="rounded border p-3">
                 <p className="font-medium">{row.action}</p>
                 <p className="text-muted-foreground">
-                  {new Date(row.createdAt).toLocaleString()} |{' '}
+                  {formatDateTimeShared(row.createdAt)} |{' '}
                   {row.actorUserName ?? row.actorUserId ?? 'system'}
                 </p>
                 <p className="text-muted-foreground">{row.message ?? '-'}</p>

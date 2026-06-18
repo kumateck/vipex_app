@@ -1,108 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Constants from 'expo-constants';
-import type { CommunicationCallSession, CommunicationMessage } from '@mobile/types/communication';
-
-type CommunicationSocketEvent =
-  | {
-      type: 'communication.thread.created';
-      payload: { id: string; threadType: string; userId: string };
-    }
-  | { type: 'communication.message.created'; payload: CommunicationMessage }
-  | { type: 'communication.call.created'; payload: CommunicationCallSession }
-  | { type: 'communication.call.updated'; payload: CommunicationCallSession }
-  | {
-      type: 'communication.call.participants.updated';
-      payload: {
-        callId: string;
-        participants: Array<{
-          userId: string;
-          displayName?: string;
-          joinedAt: string;
-          isMuted: boolean;
-          isVideoOff: boolean;
-        }>;
-      };
-    }
-  | {
-      type: 'communication.typing.updated';
-      payload: { threadId: string; userId: string; isTyping: boolean; at: string };
-    }
-  | { type: 'communication.pong'; payload: { at: string } };
-
-type UseCommunicationSocketOptions = {
-  onThreadCreated?: (payload: { id: string; threadType: string; userId: string }) => void;
-  onMessageCreated?: (payload: CommunicationMessage) => void;
-  onCallCreated?: (payload: CommunicationCallSession) => void;
-  onCallUpdated?: (payload: CommunicationCallSession) => void;
-  onCallParticipantsUpdated?: (payload: {
-    callId: string;
-    participants: Array<{
-      userId: string;
-      displayName?: string;
-      joinedAt: string;
-      isMuted: boolean;
-      isVideoOff: boolean;
-    }>;
-  }) => void;
-  onTypingUpdated?: (payload: {
-    threadId: string;
-    userId: string;
-    isTyping: boolean;
-    at: string;
-  }) => void;
-};
-
-const SOCKET_ENDPOINT_PATH = '/v1/communication/ws';
-
-function toSocketBaseUrl(raw?: string | null) {
-  if (!raw?.trim()) return null;
-  try {
-    const parsed = new URL(raw.trim());
-    parsed.protocol = parsed.protocol === 'https:' || parsed.protocol === 'wss:' ? 'wss:' : 'ws:';
-    parsed.pathname = parsed.pathname.includes(SOCKET_ENDPOINT_PATH)
-      ? parsed.pathname
-      : SOCKET_ENDPOINT_PATH;
-    parsed.search = '';
-    return parsed.toString();
-  } catch {
-    return null;
-  }
-}
-
-function resolveSocketCandidates() {
-  const expoExtra = (Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string };
-  const mobileExtra = (Constants.expoConfig?.extra ?? {}) as {
-    communicationWsUrl?: string;
-    wsBaseUrl?: string;
-  };
-  const manifestExtra = ((
-    Constants as unknown as {
-      manifest2?: { extra?: { expoClient?: { extra?: { apiBaseUrl?: string } } } };
-    }
-  ).manifest2?.extra?.expoClient?.extra ?? {}) as { apiBaseUrl?: string };
-  const baseCandidates = [
-    process.env.EXPO_PUBLIC_COMMUNICATION_WS_URL,
-    process.env.EXPO_PUBLIC_WS_BASE_URL,
-    process.env.EXPO_PUBLIC_API_BASE_URL,
-    mobileExtra.communicationWsUrl,
-    mobileExtra.wsBaseUrl,
-    expoExtra.apiBaseUrl,
-    manifestExtra.apiBaseUrl,
-    'https://testing.app.vipexparcel.com',
-  ];
-  const normalized = new Set<string>();
-
-  for (const candidate of baseCandidates) {
-    if (!candidate) continue;
-    for (const segment of candidate.split(',')) {
-      const parsed = toSocketBaseUrl(segment);
-      if (!parsed) continue;
-      normalized.add(parsed);
-    }
-  }
-
-  return [...normalized];
-}
+import {
+  handleSocketMessage,
+  logMobileSocketError,
+  resolveSocketCandidates,
+  sanitizeSocketUrl,
+  type UseCommunicationSocketOptions,
+} from './use-communication-socket.helpers';
 
 export function useCommunicationSocket(
   accessToken: string | null | undefined,
@@ -120,6 +23,8 @@ export function useCommunicationSocket(
     if (!accessToken?.trim()) return [];
     return resolveSocketCandidates().map((base) => {
       const url = new URL(base);
+      url.searchParams.delete('token');
+      url.searchParams.delete('access_token');
       url.searchParams.set('token', accessToken.trim());
       return url.toString();
     });
@@ -137,6 +42,7 @@ export function useCommunicationSocket(
     const connect = () => {
       const targetUrl = socketUrls[index] ?? socketUrls[0];
       if (!targetUrl) return;
+      const endpointUrl = sanitizeSocketUrl(targetUrl);
 
       const socket = new WebSocket(targetUrl);
       socketRef.current = socket;
@@ -154,45 +60,27 @@ export function useCommunicationSocket(
       };
 
       socket.onmessage = (event) => {
-        try {
-          const parsed = JSON.parse(String(event.data)) as CommunicationSocketEvent;
-          if (parsed.type === 'communication.thread.created') {
-            optionsRef.current.onThreadCreated?.(parsed.payload);
-            return;
-          }
-          if (parsed.type === 'communication.message.created') {
-            optionsRef.current.onMessageCreated?.(parsed.payload);
-            return;
-          }
-          if (parsed.type === 'communication.call.created') {
-            optionsRef.current.onCallCreated?.(parsed.payload);
-            return;
-          }
-          if (parsed.type === 'communication.call.updated') {
-            optionsRef.current.onCallUpdated?.(parsed.payload);
-            return;
-          }
-          if (parsed.type === 'communication.call.participants.updated') {
-            optionsRef.current.onCallParticipantsUpdated?.(parsed.payload);
-            return;
-          }
-          if (parsed.type === 'communication.typing.updated') {
-            optionsRef.current.onTypingUpdated?.(parsed.payload);
-          }
-        } catch {
-          // Ignore malformed payloads.
-        }
+        handleSocketMessage(optionsRef.current, endpointUrl, event.data);
       };
 
-      socket.onerror = () => {
+      socket.onerror = (errorEvent) => {
+        logMobileSocketError('Socket error event', { endpointUrl }, errorEvent);
         // close handles reconnect
       };
 
-      socket.onclose = () => {
+      socket.onclose = (closeEvent) => {
         setIsConnected(false);
         socketRef.current = null;
         if (pingTimer) clearInterval(pingTimer);
         pingTimer = null;
+        if (closeEvent.code !== 1000) {
+          logMobileSocketError('Socket closed unexpectedly', {
+            endpointUrl,
+            code: closeEvent.code,
+            reason: closeEvent.reason,
+            wasClean: closeEvent.wasClean,
+          });
+        }
         if (stopped) return;
         if (!opened && socketUrls.length > 1) {
           index = (index + 1) % socketUrls.length;

@@ -1,15 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
 import { searchParcels } from '@mobile/lib/api';
 import { notifyError } from '@mobile/lib/notify';
-import { loadGlobalSearchHistory, pushGlobalSearchHistory } from '@mobile/lib/communication-local';
 import type { ParcelSearchRow } from '@mobile/types/parcels';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { hapticError, hapticTap } from '@mobile/lib/haptics';
-import { ParcelCard, StatCard } from '@mobile/components/courier';
+import { ParcelCard } from '@mobile/components/courier';
 import { AppButton, AppCard, AppInput, AppSkeletonCard } from '@/components/ui/mobile';
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
 
@@ -22,15 +21,6 @@ export default function SuperSearchScreen() {
   const [searchBusy, setSearchBusy] = useState(false);
   const [rows, setRows] = useState<ParcelSearchRow[]>([]);
   const [searched, setSearched] = useState(false);
-  const [history, setHistory] = useState<string[]>([]);
-
-  const totalDeleted = useMemo(() => rows.filter((row) => Boolean(row.isDeleted)).length, [rows]);
-
-  useEffect(() => {
-    void (async () => {
-      setHistory(await loadGlobalSearchHistory());
-    })();
-  }, []);
 
   async function runSearch(value?: string) {
     const trimmed = (value ?? query).trim();
@@ -44,12 +34,10 @@ export default function SuperSearchScreen() {
           companyId,
           includeDeleted: true,
           page: 1,
-          pageSize: 50,
+          pageSize: 20,
         }),
       );
       setRows(response.data ?? []);
-      await pushGlobalSearchHistory(trimmed);
-      setHistory(await loadGlobalSearchHistory());
       void hapticTap();
     } catch (err) {
       notifyError(
@@ -64,59 +52,22 @@ export default function SuperSearchScreen() {
 
   return (
     <AppScreen refreshing={searchBusy} onRefresh={() => void runSearch()}>
-      <Text style={[styles.title, { color: theme.colors.text }]}>All Records Super Search</Text>
-      <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-        Search by booking code, sender or receiver name, or phone.
-      </Text>
-
       <AppCard>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Search</Text>
-        <AppInput value={query} onChangeText={setQuery} placeholder="Search..." />
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Search Parcels</Text>
+        <AppInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Enter booking code, name, or phone"
+        />
+        <Text style={[styles.helperText, { color: theme.colors.textSubtle }]}>
+          Includes active, void, and deleted records.
+        </Text>
         <View style={styles.buttonRow}>
           <AppButton
             title={searchBusy ? 'Searching...' : 'Search Records'}
             onPress={() => void runSearch()}
             disabled={searchBusy || query.trim().length === 0 || !companyId}
           />
-          <AppButton
-            title="Clear"
-            onPress={() => {
-              setQuery('');
-              setRows([]);
-              setSearched(false);
-            }}
-            variant="secondary"
-          />
-        </View>
-      </AppCard>
-
-      {history.length ? (
-        <AppCard>
-          <Text style={[styles.historyTitle, { color: theme.colors.textMuted }]}>
-            Recent Searches
-          </Text>
-          <View style={styles.historyWrap}>
-            {history.map((item) => (
-              <Pressable
-                key={item}
-                onPress={() => {
-                  setQuery(item);
-                  void runSearch(item);
-                }}
-                style={[styles.historyPill, { borderColor: theme.colors.border }]}
-              >
-                <Text style={{ color: theme.colors.text }}>{item}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </AppCard>
-      ) : null}
-
-      <AppCard>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Overview</Text>
-        <View style={styles.kpiRow}>
-          <StatCard label="Matched Records" value={rows.length} />
-          <StatCard label="Deleted Included" value={totalDeleted} />
         </View>
       </AppCard>
 
@@ -138,11 +89,11 @@ export default function SuperSearchScreen() {
               onPress={() => {
                 router.push({
                   pathname: '/super-search/[parcelId]' as never,
-                  params: { parcelId: row.id },
+                  params: { parcelId: row.id, bookingCode: row.bookingCode },
                 });
                 void hapticTap();
               }}
-              actionLabel="Open Record"
+              actionLabel="View Details"
             />
           ))}
         </View>
@@ -152,19 +103,9 @@ export default function SuperSearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: mobileTypography.title, fontWeight: '800' },
-  subtitle: { marginTop: -2, lineHeight: 20, marginBottom: mobileSpacing.xs },
   sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
+  helperText: { fontSize: mobileTypography.caption },
   buttonRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
-  kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },
   listWrap: { gap: mobileSpacing.sm + 2 },
   empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
-  historyTitle: { fontSize: mobileTypography.caption, fontWeight: '700' },
-  historyWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  historyPill: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
 });

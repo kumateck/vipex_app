@@ -7,7 +7,7 @@ import { useGetCurrentUserProfileQuery } from '@/features/auth/api';
 import { useListCompanyModulesQuery } from '@/features/company-modules/api';
 import { useAuthStore } from '@/stores/auth-store';
 import NoAccess from '@/components/permissions/no-access';
-import { inferRequiredPermissionByPath } from '@/shared/permissions/path-access';
+import { hasRequiredPermissionForPath } from '@/shared/permissions/path-access';
 import { inferRequiredModuleByPath } from '@/shared/company-modules/route-modules';
 
 type ModuleState = { code: string; isEnabled: boolean };
@@ -46,9 +46,8 @@ const MainLayout = () => {
     const rows = normalizeModuleRows(companyModules);
     return new Set(rows.filter((module) => module.isEnabled).map((module) => module.code));
   }, [companyModules]);
-  const requiredPermission = inferRequiredPermissionByPath(location.pathname);
   const requiredModule = inferRequiredModuleByPath(location.pathname);
-  const hasPermissionAccess = !requiredPermission || grantedPermissions.has(requiredPermission);
+  const hasPermissionAccess = hasRequiredPermissionForPath(location.pathname, grantedPermissions);
   const hasModuleAccess = !requiredModule || enabledModules.has(requiredModule);
 
   useEffect(() => {

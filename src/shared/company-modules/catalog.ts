@@ -50,6 +50,13 @@ export const DEFAULT_MODULE_CATALOG: ModuleCatalogDefinition[] = [
     description: 'Parcel Packaging Styles module',
   },
   {
+    code: 'sticker_print',
+    name: 'Sticker Print',
+    isCore: true,
+    isActive: true,
+    description: 'Controls parcel sticker printing for each company',
+  },
+  {
     code: 'inventory',
     name: 'Inventory',
     isCore: true,
