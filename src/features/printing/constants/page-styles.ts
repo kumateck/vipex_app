@@ -24,6 +24,11 @@ export const PAGE_STYLES: Record<PrintLayout, string> = {
         width: 100mm;
         height: 150mm;
         margin: 0;
+        overflow: hidden;
+      }
+      body {
+        display: grid;
+        place-items: center;
       }
     }
   `,
