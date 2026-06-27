@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import { useAuthStore } from '@/stores/auth-store';
 
 type DesktopUpdateStatus = NonNullable<Window['api']>['updates'] extends {
   getStatus: () => Promise<infer T>;
@@ -48,6 +49,7 @@ function isDesktopUpdaterAvailable() {
 
 export function AppUpdatesPage() {
   const isDesktop = useMemo(() => isDesktopUpdaterAvailable(), []);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const [status, setStatus] = useState<DesktopUpdateStatus>({
     state: 'idle',
     message: isDesktop
@@ -89,9 +91,14 @@ export function AppUpdatesPage() {
 
   async function handleCheck() {
     if (!isDesktop) return;
+    if (!accessToken) {
+      toast.error('Please sign in before checking for desktop updates.');
+      return;
+    }
+
     setIsBusy(true);
     try {
-      const result = await window.api!.updates.check();
+      const result = await window.api!.updates.check({ accessToken });
       setStatus(result.status);
       if (!result.ok && result.reason) {
         toast.error(result.reason);
@@ -105,9 +112,14 @@ export function AppUpdatesPage() {
 
   async function handleDownload() {
     if (!isDesktop) return;
+    if (!accessToken) {
+      toast.error('Please sign in before downloading desktop updates.');
+      return;
+    }
+
     setIsBusy(true);
     try {
-      const result = await window.api!.updates.download();
+      const result = await window.api!.updates.download({ accessToken });
       setStatus(result.status);
       if (!result.ok && result.reason) {
         toast.error(result.reason);

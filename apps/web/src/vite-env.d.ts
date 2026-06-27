@@ -42,6 +42,10 @@ type DesktopNetworkDiagnostics = {
   lastLoadError: string | null;
 };
 
+type DesktopUpdateAuthRequest = {
+  accessToken?: string | null;
+};
+
 declare global {
   const __APP_BUILD_ID__: string;
 
@@ -80,12 +84,12 @@ declare global {
       listPrinters: () => Promise<DesktopPrinterInfo[]>;
       updates: {
         getStatus: () => Promise<DesktopUpdateStatus>;
-        check: () => Promise<{
+        check: (request?: DesktopUpdateAuthRequest) => Promise<{
           ok: boolean;
           reason?: string;
           status: DesktopUpdateStatus;
         }>;
-        download: () => Promise<{
+        download: (request?: DesktopUpdateAuthRequest) => Promise<{
           ok: boolean;
           reason?: string;
           status: DesktopUpdateStatus;

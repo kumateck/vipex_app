@@ -83,6 +83,10 @@ type DesktopNetworkDiagnostics = {
   lastLoadError: string | null;
 };
 
+type UpdateAuthRequest = {
+  accessToken?: string | null;
+};
+
 if (!app.isPackaged) {
   // Avoid stale CSS/asset cache during desktop dev.
   app.commandLine.appendSwitch('disable-http-cache');
@@ -325,6 +329,39 @@ function setUpdateStatus(
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('updates:status', updateStatus);
   }
+}
+
+function getUpdateAccessToken(request?: UpdateAuthRequest) {
+  const accessToken = request?.accessToken?.trim();
+  return accessToken && accessToken.length > 0 ? accessToken : null;
+}
+
+function requireUpdaterAccessToken(request?: UpdateAuthRequest) {
+  const accessToken = getUpdateAccessToken(request);
+  if (!accessToken) {
+    return {
+      ok: false as const,
+      reason: 'Please sign in before checking for desktop updates.',
+      status: {
+        ...updateStatus,
+        state: 'error' as const,
+        message: 'Authentication is required to access private desktop updates.',
+      },
+    };
+  }
+
+  return { ok: true as const, accessToken };
+}
+
+function applyUpdaterAuthHeader(accessToken: string) {
+  autoUpdater.requestHeaders = {
+    ...(autoUpdater.requestHeaders ?? {}),
+    authorization: `Bearer ${accessToken}`,
+  };
+}
+
+function shouldRunUnauthenticatedStartupUpdateCheck() {
+  return process.env.DESKTOP_ALLOW_UNAUTHENTICATED_UPDATE_CHECK?.trim() === 'true';
 }
 
 function configureAutoUpdater() {
@@ -738,7 +775,7 @@ function registerIpcHandlers() {
 
   ipcMain.handle('updates:get-status', async () => updateStatus);
 
-  ipcMain.handle('updates:check', async () => {
+  ipcMain.handle('updates:check', async (_event, request?: UpdateAuthRequest) => {
     if (!app.isPackaged) {
       return {
         ok: false,
@@ -747,7 +784,14 @@ function registerIpcHandlers() {
       };
     }
 
+    const auth = requireUpdaterAccessToken(request);
+    if (!auth.ok) {
+      setUpdateStatus(auth.status);
+      return auth;
+    }
+
     try {
+      applyUpdaterAuthHeader(auth.accessToken);
       setUpdateStatus({ state: 'checking', message: undefined, progress: undefined });
       await autoUpdater.checkForUpdates();
       return { ok: true, status: updateStatus };
@@ -758,7 +802,7 @@ function registerIpcHandlers() {
     }
   });
 
-  ipcMain.handle('updates:download', async () => {
+  ipcMain.handle('updates:download', async (_event, request?: UpdateAuthRequest) => {
     if (!app.isPackaged) {
       return {
         ok: false,
@@ -767,7 +811,14 @@ function registerIpcHandlers() {
       };
     }
 
+    const auth = requireUpdaterAccessToken(request);
+    if (!auth.ok) {
+      setUpdateStatus(auth.status);
+      return auth;
+    }
+
     try {
+      applyUpdaterAuthHeader(auth.accessToken);
       await autoUpdater.downloadUpdate();
       return { ok: true, status: updateStatus };
     } catch (error) {
@@ -953,7 +1004,7 @@ app.whenReady().then(() => {
   registerIpcHandlers();
   createWindow();
 
-  if (app.isPackaged) {
+  if (app.isPackaged && shouldRunUnauthenticatedStartupUpdateCheck()) {
     setTimeout(() => {
       void autoUpdater.checkForUpdates().catch(() => {
         // keep current status state handling via updater events/error callback
