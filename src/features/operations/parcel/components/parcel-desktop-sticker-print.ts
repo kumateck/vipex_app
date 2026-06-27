@@ -3,14 +3,14 @@ import { createPrintableHtmlDocument } from '@/features/printing';
 const DESKTOP_THERMAL_STICKER_PAGE_STYLE = `
   @media print {
     @page {
-      size: 80mm 82mm;
-      margin: 1mm;
+      size: 100mm 150mm;
+      margin: 0;
     }
 
     html,
     body {
-      width: 80mm;
-      height: 82mm;
+      width: 100mm;
+      height: 150mm;
       margin: 0;
       padding: 0;
       overflow: hidden;
@@ -20,8 +20,8 @@ const DESKTOP_THERMAL_STICKER_PAGE_STYLE = `
 
     .desktop-sticker-page {
       position: relative;
-      width: 80mm;
-      height: 82mm;
+      width: 100mm;
+      height: 150mm;
       overflow: hidden;
     }
 
@@ -31,15 +31,15 @@ const DESKTOP_THERMAL_STICKER_PAGE_STYLE = `
     }
 
     .desktop-sticker-page--portrait .desktop-sticker-content {
-      top: 3.5mm;
-      left: 2mm;
+      top: 0;
+      left: 0;
       transform: none;
     }
 
     .desktop-sticker-page--landscape .desktop-sticker-content {
-      top: 1.25mm;
+      top: 0;
       left: 0;
-      transform: translateX(80mm) rotate(90deg);
+      transform: none;
     }
   }
 `;

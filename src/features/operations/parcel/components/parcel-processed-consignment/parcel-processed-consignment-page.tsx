@@ -44,6 +44,8 @@ import {
 } from './consignment-print-controller';
 import { EditParcelDetailsDialog } from './edit-parcel-details-dialog';
 import { ParcelReprintActions } from './parcel-reprint-actions';
+import { PaymentStatusBookingCell } from './payment-status-booking-cell';
+import { PaymentStatusLegend } from './payment-status-legend';
 
 const EMPTY_META: PaginationMeta = {
   totalRecords: 0,
@@ -357,7 +359,11 @@ export function ParcelProcessedConsignmentPage() {
         },
       },
 
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        accessorKey: 'bookingCode',
+        header: 'Booking',
+        cell: ({ row }) => <PaymentStatusBookingCell parcel={row.original} />,
+      },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       { accessorKey: 'parcelContent', header: 'Parcel Content' },
       {
@@ -606,12 +612,17 @@ export function ParcelProcessedConsignmentPage() {
       <ScrollableWrapper>
         <Card>
           <CardHeader>
-            <CardTitle>Processed Parcels for Consignment</CardTitle>
-            <CardDescription>
-              {isHeadOffice
-                ? 'Filter by agency branch, destination branch, and optionally destination location.'
-                : 'Use destination filters and create one consignment per destination branch.'}
-            </CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>Processed Parcels for Consignment</CardTitle>
+                <CardDescription>
+                  {isHeadOffice
+                    ? 'Filter by agency branch, destination branch, and optionally destination location.'
+                    : 'Use destination filters and create one consignment per destination branch.'}
+                </CardDescription>
+              </div>
+              <PaymentStatusLegend />
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div

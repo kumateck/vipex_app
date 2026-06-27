@@ -8,7 +8,9 @@
   "scripts": {
     "start": "electron-forge start",
     "make": "electron-forge make",
-    "package": "electron-forge package"
+    "make:windows:test": "electron-forge make --config forge.windows-test.config.js --platform win32 --arch x64 --targets @electron-forge/maker-squirrel",
+    "package": "electron-forge package",
+    "package:windows:test": "electron-forge package --config forge.windows-test.config.js --platform win32 --arch x64"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.10.2",

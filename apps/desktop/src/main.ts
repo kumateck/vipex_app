@@ -14,6 +14,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { autoUpdater } from 'electron-updater';
 
+declare const __DESKTOP_WEB_BASE_URL__: string;
+declare const __DESKTOP_UPDATE_FEED_URL__: string;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 let mainWindow: BrowserWindow | null = null;
@@ -21,6 +24,8 @@ const PACKAGED_WEB_BASE_URL = 'https://testing.app.vipexparcel.com/';
 const DEV_WEB_BASE_URL = 'http://localhost:5173/';
 const DEFAULT_DESKTOP_UPDATE_FEED_URL =
   'http://164.90.142.68:9000/vipex-uploads/desktop/windows/latest/';
+const BUILD_DESKTOP_WEB_BASE_URL = __DESKTOP_WEB_BASE_URL__.trim();
+const BUILD_DESKTOP_UPDATE_FEED_URL = __DESKTOP_UPDATE_FEED_URL__.trim();
 let pendingDeepLink: string | null = null;
 let activeDesktopBaseUrl: string | null = null;
 let lastDesktopLoadError: string | null = null;
@@ -51,6 +56,11 @@ type PrintHtmlRequest = {
 
 type ParallelPrintRequest = {
   jobs: [PrintHtmlRequest, PrintHtmlRequest];
+};
+
+type PrintDiagnosticEvent = {
+  event: string;
+  details?: unknown;
 };
 
 type DesktopNetworkProbe = {
@@ -106,6 +116,7 @@ function getPackagedWebBaseUrlCandidates() {
   const urls = [
     ...(overrideMany ? overrideMany.split(',') : []),
     override,
+    BUILD_DESKTOP_WEB_BASE_URL,
     apiBase,
     viteApiBase,
     PACKAGED_WEB_BASE_URL,
@@ -324,7 +335,9 @@ function configureAutoUpdater() {
   autoUpdater.logger = null;
 
   const genericFeedUrl =
-    process.env.DESKTOP_UPDATE_FEED_URL?.trim() || DEFAULT_DESKTOP_UPDATE_FEED_URL;
+    process.env.DESKTOP_UPDATE_FEED_URL?.trim() ||
+    BUILD_DESKTOP_UPDATE_FEED_URL ||
+    DEFAULT_DESKTOP_UPDATE_FEED_URL;
   if (genericFeedUrl) {
     autoUpdater.setFeedURL({
       provider: 'generic',
@@ -449,18 +462,10 @@ function getPrintOptions(request: PrintHtmlRequest): WebContentsPrintOptions {
   }
 
   if (request.layout === 'thermal-sticker') {
-    baseOptions.pageSize = {
-      width: 80000,
-      height: 82000,
-    };
     baseOptions.landscape = false;
     baseOptions.scaleFactor = 100;
     baseOptions.margins = {
-      marginType: 'custom',
-      top: 2,
-      bottom: 2,
-      left: 2,
-      right: 2,
+      marginType: 'none',
     };
   }
 
@@ -476,34 +481,187 @@ function getPrintOptions(request: PrintHtmlRequest): WebContentsPrintOptions {
   return baseOptions;
 }
 
-async function printHtmlWithNativeDialog(request: PrintHtmlRequest) {
-  const printWindow = new BrowserWindow({
-    show: false,
+function createPrintWindow(request: PrintHtmlRequest) {
+  const isSilent = Boolean(request.silent);
+
+  return new BrowserWindow({
+    show: !isSilent,
+    title: request.title ?? 'Print Document',
+    width: 520,
+    height: 720,
+    autoHideMenuBar: true,
     webPreferences: {
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
+}
+
+async function printHtmlWithNativeDialog(request: PrintHtmlRequest) {
+  const diagnostics: PrintDiagnosticEvent[] = [];
+  const printerError = await validateRequestedPrinter(request);
+  if (printerError) {
+    console.error('[desktop-print] printer-validation-failed', {
+      layout: request.layout,
+      title: request.title,
+      deviceName: request.deviceName,
+      reason: printerError,
+    });
+    return { ok: false, reason: printerError };
+  }
+
+  const printWindow = createPrintWindow(request);
+  attachPrintWindowDiagnostics(printWindow, diagnostics);
 
   try {
     const title = request.title ?? 'Print Document';
     const html = request.html.replace('<head>', `<head><title>${title}</title>`);
     const encoded = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
-    await printWindow.loadURL(encoded);
-
-    const ok = await new Promise<boolean>((resolve) => {
-      printWindow.webContents.print(getPrintOptions(request), (success) => {
-        resolve(success);
-      });
+    console.info('[desktop-print] load-start', {
+      layout: request.layout,
+      title,
+      silent: Boolean(request.silent),
+      deviceName: request.deviceName ?? null,
+      copies: request.copies ?? 1,
+      htmlLength: request.html.length,
     });
+    await printWindow.loadURL(encoded);
+    if (!request.silent) {
+      printWindow.show();
+      printWindow.focus();
+      await waitForPrintDialogWindow();
+    }
 
-    return { ok, reason: ok ? undefined : 'Print was cancelled or failed.' };
-  } finally {
+    const result = await printLoadedWindow(request, printWindow, diagnostics);
+    if (!result.ok && !request.silent) {
+      console.error('[desktop-print] keeping-window-open-after-failure', {
+        title,
+        diagnostics,
+      });
+      return result;
+    }
+
     if (!printWindow.isDestroyed()) {
       printWindow.close();
     }
+    return result;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'Unknown print load error.';
+    console.error('[desktop-print] load-failed', {
+      layout: request.layout,
+      title: request.title,
+      deviceName: request.deviceName,
+      reason,
+      diagnostics,
+    });
+    return { ok: false, reason };
+  } finally {
+    if (request.silent && !printWindow.isDestroyed()) {
+      printWindow.close();
+    }
   }
+}
+
+async function printLoadedWindow(
+  request: PrintHtmlRequest,
+  printWindow: BrowserWindow,
+  diagnostics: PrintDiagnosticEvent[],
+) {
+  const options = getPrintOptions(request);
+  const printers = await printWindow.webContents.getPrintersAsync();
+  const printerSummary = printers.map((printer) => ({
+    name: printer.name,
+    displayName: printer.displayName,
+    description: printer.description,
+    options: printer.options,
+  }));
+
+  console.info('[desktop-print] print-start', {
+    layout: request.layout,
+    title: request.title,
+    options,
+    printers: printerSummary,
+    diagnostics,
+  });
+
+  return new Promise<{ ok: boolean; reason?: string }>((resolve) => {
+    printWindow.webContents.print(options, (success, failureReason) => {
+      const result = {
+        success,
+        failureReason: failureReason || null,
+        diagnostics,
+      };
+      if (success) {
+        console.info('[desktop-print] print-success', {
+          layout: request.layout,
+          title: request.title,
+        });
+      } else {
+        console.error('[desktop-print] print-failed', {
+          layout: request.layout,
+          title: request.title,
+          failureReason: failureReason || null,
+          options,
+          printers: printerSummary,
+          diagnostics,
+        });
+      }
+      resolve({
+        ok: success,
+        reason: success
+          ? undefined
+          : `${failureReason || 'Print was cancelled or failed.'} ${JSON.stringify(result)}`,
+      });
+    });
+  });
+}
+
+function attachPrintWindowDiagnostics(
+  printWindow: BrowserWindow,
+  diagnostics: PrintDiagnosticEvent[],
+) {
+  const record = (event: string, details?: unknown) => {
+    const entry = { event, details };
+    diagnostics.push(entry);
+    console.info('[desktop-print] diagnostic', entry);
+  };
+
+  printWindow.once('ready-to-show', () => record('ready-to-show'));
+  printWindow.once('closed', () => record('closed'));
+  printWindow.once('unresponsive', () => record('unresponsive'));
+  printWindow.once('responsive', () => record('responsive'));
+
+  printWindow.webContents.once('did-finish-load', () => record('did-finish-load'));
+  printWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) =>
+    record('did-fail-load', { errorCode, errorDescription, validatedURL }),
+  );
+  printWindow.webContents.on(
+    'did-fail-provisional-load',
+    (_event, errorCode, errorDescription, validatedURL) =>
+      record('did-fail-provisional-load', { errorCode, errorDescription, validatedURL }),
+  );
+  printWindow.webContents.on('render-process-gone', (_event, details) =>
+    record('render-process-gone', details),
+  );
+  printWindow.webContents.on('console-message', (_event, level, message, line, sourceId) =>
+    record('console-message', { level, message, line, sourceId }),
+  );
+}
+
+async function waitForPrintDialogWindow() {
+  await new Promise((resolve) => setTimeout(resolve, 300));
+}
+
+async function validateRequestedPrinter(request: PrintHtmlRequest) {
+  const requestedPrinter = request.deviceName?.trim();
+  if (!requestedPrinter || !mainWindow || mainWindow.isDestroyed()) return null;
+
+  const printers = await mainWindow.webContents.getPrintersAsync();
+  const printerExists = printers.some((printer) => printer.name === requestedPrinter);
+  if (printerExists) return null;
+
+  return `Printer "${requestedPrinter}" is not available. Refresh printer routing and select the installed printer again.`;
 }
 
 function registerIpcHandlers() {
