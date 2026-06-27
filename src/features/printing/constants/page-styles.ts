@@ -28,7 +28,7 @@ export const PAGE_STYLES: Record<PrintLayout, string> = {
       }
       body {
         display: grid;
-        align-items: start;
+        align-items: center;
         justify-items: center;
       }
     }

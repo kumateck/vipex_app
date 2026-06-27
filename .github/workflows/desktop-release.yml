@@ -207,6 +207,47 @@ jobs:
           echo "release_dir=$RELEASE_DIR" >> "$GITHUB_OUTPUT"
           ls -lah "$RELEASE_DIR"
 
+      - name: Generate electron-updater metadata
+        env:
+          RELEASE_DIR: ${{ steps.find_output.outputs.release_dir }}
+          VERSION: ${{ steps.desktop_version.outputs.version }}
+        run: |
+          node <<'NODE'
+          const crypto = require('node:crypto');
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const releaseDir = process.env.RELEASE_DIR;
+          const version = process.env.VERSION;
+          const files = fs.readdirSync(releaseDir);
+          const setupFile = files.find((file) => file.toLowerCase().endsWith('.exe'));
+
+          if (!setupFile) {
+            console.error(`No Windows installer .exe found in ${releaseDir}`);
+            process.exit(1);
+          }
+
+          const setupPath = path.join(releaseDir, setupFile);
+          const setupBuffer = fs.readFileSync(setupPath);
+          const sha512 = crypto.createHash('sha512').update(setupBuffer).digest('base64');
+          const size = setupBuffer.length;
+          const releaseDate = new Date().toISOString();
+          const yaml = [
+            `version: ${version}`,
+            'files:',
+            `  - url: ${setupFile}`,
+            `    sha512: ${sha512}`,
+            `    size: ${size}`,
+            `path: ${setupFile}`,
+            `sha512: ${sha512}`,
+            `releaseDate: '${releaseDate}'`,
+            '',
+          ].join('\n');
+
+          fs.writeFileSync(path.join(releaseDir, 'latest.yml'), yaml);
+          console.log(`Generated latest.yml for ${setupFile}`);
+          NODE
+
       - name: Configure AWS CLI for MinIO
         run: |
           mkdir -p ~/.aws
@@ -259,7 +300,5 @@ jobs:
 
       - name: Feed URL hint
         run: |
-          UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
-          PREFIX="${DESKTOP_MINIO_PREFIX:-desktop/windows}"
           echo "Set DESKTOP_UPDATE_FEED_URL in desktop runtime to:"
-          echo "${UPLOAD_MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/latest/"
+          echo "https://testing.app.vipexparcel.com/v1/desktop-updates/windows/latest/"

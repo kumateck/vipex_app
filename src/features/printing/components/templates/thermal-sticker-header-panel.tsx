@@ -1,24 +1,7 @@
-import logoPng from '@/assets/logo.png';
 import { VIPEX_BRANCH_CONTACTS } from './thermal-sticker-contacts';
+import logoPng from '@/assets/logo.png';
 
-type ThermalStickerHeaderPanelProps = {
-  issuedAtLabel: string;
-  printedByName?: string | null;
-  printedByBranchName?: string | null;
-  printedByLocationName?: string | null;
-};
-
-export function ThermalStickerHeaderPanel({
-  issuedAtLabel,
-  printedByName,
-  printedByBranchName,
-  printedByLocationName,
-}: ThermalStickerHeaderPanelProps) {
-  const printerLocation = [printedByBranchName, printedByLocationName]
-    .map((value) => value?.trim())
-    .filter((value): value is string => Boolean(value))
-    .join(' / ');
-
+export function ThermalStickerHeaderPanel() {
   return (
     <section
       style={{
@@ -39,19 +22,23 @@ export function ThermalStickerHeaderPanel({
           <div style={{ fontSize: '3.2mm', fontWeight: 800, lineHeight: 1 }}>Parcel Co. LTD</div>
         </div>
       </div>
-      <div style={{ borderTop: '0.25mm solid #111', paddingTop: '1mm' }}>
-        <div style={{ fontSize: '2.4mm', fontWeight: 700, textTransform: 'uppercase' }}>
-          Printed
-        </div>
-        <div style={{ fontSize: '3mm', fontWeight: 700, lineHeight: 1.15 }}>{issuedAtLabel}</div>
-        <div style={{ marginTop: '1mm', fontSize: '2.35mm', lineHeight: 1.15 }}>
-          <span style={{ fontWeight: 700 }}>By:</span> {printedByName?.trim() || '-'}
-        </div>
-        <div style={{ marginTop: '0.3mm', fontSize: '2.25mm', lineHeight: 1.15 }}>
-          {printerLocation || '-'}
-        </div>
-        <div style={{ marginTop: '1mm', fontSize: '2.25mm', lineHeight: 1.16 }}>
-          {VIPEX_BRANCH_CONTACTS}
+      <div style={{ borderTop: '0.25mm solid #111', paddingTop: '0.8mm' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            columnGap: '1mm',
+            rowGap: '0.8mm',
+            fontWeight: 700,
+            lineHeight: 1.05,
+          }}
+        >
+          {VIPEX_BRANCH_CONTACTS.map((contact) => (
+            <div key={contact.route} style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '1.6mm', whiteSpace: 'nowrap' }}>{contact.route}:</div>
+              <div style={{ fontSize: '1.42mm', whiteSpace: 'nowrap' }}>{contact.phones}</div>
+            </div>
+          ))}
         </div>
       </div>
     </section>

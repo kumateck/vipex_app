@@ -10,7 +10,7 @@ on:
       desktop_update_feed_url:
         description: Windows test update feed URL.
         required: true
-        default: http://164.90.142.68:9000/vipex-uploads/desktop/windows/latest/
+        default: https://testing.app.vipexparcel.com/v1/desktop-updates/windows/latest/
 
 permissions:
   contents: read

@@ -50,6 +50,7 @@ import { fleetTransportRoutes } from './features/fleet-transport/routes';
 import { customerWalletCreditRoutes } from './features/customer-wallet-credit/routes';
 import { reconciliationRoutes } from './features/reconciliation/routes';
 import { notificationHubRoutes } from './features/notification-hub/routes';
+import { desktopUpdatesRoutes } from './features/desktop-updates/routes';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -100,6 +101,7 @@ export const app = new Elysia()
       .group('/customer-wallet-credit', (r) => r.use(customerWalletCreditRoutes))
       .group('/reconciliation', (r) => r.use(reconciliationRoutes))
       .group('/notification-hub', (r) => r.use(notificationHubRoutes))
+      .group('/desktop-updates', (r) => r.use(desktopUpdatesRoutes))
       .group('/communication', (r) => r.use(communicationRoutes))
       .group('/customer-service', (r) => r.use(customerServiceRoutes))
       .group('/it-support', (r) => r.use(itSupportRoutes))

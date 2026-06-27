@@ -1,2 +1,8 @@
-export const VIPEX_BRANCH_CONTACTS =
-  'Kumasi (Accra): 0204353512 / 0540121502 | Accra (Kumasi): 0204353513 / 0507243966 | Sunyani (Accra): 0540121503 / 0204252090 | Accra (Sunyani): 0540305280 | Kumasi (Sunyani): 0204353512 | Sunyani (Kumasi): 0540121503';
+export const VIPEX_BRANCH_CONTACTS = [
+  { route: 'Kumasi (Accra)', phones: '0204353512 / 0540121502' },
+  { route: 'Accra (Kumasi)', phones: '0204353513 / 0507243966' },
+  { route: 'Sunyani (Accra)', phones: '0540121503 / 0204252090' },
+  { route: 'Accra (Sunyani)', phones: '0540305280' },
+  { route: 'Kumasi (Sunyani)', phones: '0204353512' },
+  { route: 'Sunyani (Kumasi)', phones: '0540121503' },
+];
