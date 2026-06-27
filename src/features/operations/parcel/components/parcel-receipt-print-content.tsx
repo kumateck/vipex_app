@@ -41,6 +41,26 @@ export function ParcelReceiptPrintContent({
   tax,
 }: ParcelReceiptPrintContentProps) {
   const copies = Math.max(Math.trunc(stickerCopies), 1);
+  const stickerTemplateProps = {
+    bookingCode: data.bookingCode,
+    issuedAtLabel: formatDate(data.issuedAt),
+    printedByName,
+    printedByBranchName,
+    printedByLocationName,
+    parcelDetails: data.parcelDetails,
+    parcelContent: data.parcelContent,
+    senderName: data.senderName,
+    senderTelephone: data.senderTelephone,
+    senderTelephone2: data.senderTelephone2,
+    receiverName: data.receiverName,
+    receiverTelephone: data.receiverTelephone,
+    receiverTelephone2: data.receiverTelephone2,
+    destinationBranchName: data.destinationBranchName,
+    destinationLocationName: data.destinationLocationName,
+    toBePaidCedis: data.receiverToPayCedis > 0 ? data.receiverToPayCedis : undefined,
+    qrValue: qrUrl,
+    formatMoney,
+  };
 
   return (
     <>
@@ -51,26 +71,7 @@ export function ParcelReceiptPrintContent({
               key={`${data.trackingCode}-${index}`}
               style={{ breakAfter: index === copies - 1 ? 'auto' : 'page' }}
             >
-              <ThermalStickerTemplate
-                bookingCode={data.bookingCode}
-                issuedAtLabel={formatDate(data.issuedAt)}
-                printedByName={printedByName}
-                printedByBranchName={printedByBranchName}
-                printedByLocationName={printedByLocationName}
-                parcelDetails={data.parcelDetails}
-                parcelContent={data.parcelContent}
-                senderName={data.senderName}
-                senderTelephone={data.senderTelephone}
-                senderTelephone2={data.senderTelephone2}
-                receiverName={data.receiverName}
-                receiverTelephone={data.receiverTelephone}
-                receiverTelephone2={data.receiverTelephone2}
-                destinationBranchName={data.destinationBranchName}
-                destinationLocationName={data.destinationLocationName}
-                toBePaidCedis={data.receiverToPayCedis > 0 ? data.receiverToPayCedis : undefined}
-                qrValue={qrUrl}
-                formatMoney={formatMoney}
-              />
+              <ThermalStickerTemplate {...stickerTemplateProps} />
             </div>
           ))}
         </div>
@@ -78,26 +79,7 @@ export function ParcelReceiptPrintContent({
 
       <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '100mm' }}>
         <div ref={desktopStickerRef}>
-          <ThermalStickerTemplate
-            bookingCode={data.bookingCode}
-            issuedAtLabel={formatDate(data.issuedAt)}
-            printedByName={printedByName}
-            printedByBranchName={printedByBranchName}
-            printedByLocationName={printedByLocationName}
-            parcelDetails={data.parcelDetails}
-            parcelContent={data.parcelContent}
-            senderName={data.senderName}
-            senderTelephone={data.senderTelephone}
-            senderTelephone2={data.senderTelephone2}
-            receiverName={data.receiverName}
-            receiverTelephone={data.receiverTelephone}
-            receiverTelephone2={data.receiverTelephone2}
-            destinationBranchName={data.destinationBranchName}
-            destinationLocationName={data.destinationLocationName}
-            toBePaidCedis={data.receiverToPayCedis > 0 ? data.receiverToPayCedis : undefined}
-            qrValue={qrUrl}
-            formatMoney={formatMoney}
-          />
+          <ThermalStickerTemplate {...stickerTemplateProps} />
         </div>
       </div>
 

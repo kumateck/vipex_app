@@ -247,7 +247,10 @@ export async function uploadImageDataUrl(input: {
   };
 }
 
-export async function getStoredObjectResponse(key: string) {
+export async function getStoredObjectResponse(
+  key: string,
+  options?: { cacheControl?: string; contentType?: string },
+) {
   await ensureBucketReady();
   const client = getClient();
 
@@ -261,8 +264,9 @@ export async function getStoredObjectResponse(key: string) {
 
     return new Response(response.Body?.transformToWebStream() ?? null, {
       headers: {
-        'content-type': response.ContentType ?? 'application/octet-stream',
-        'cache-control': response.CacheControl ?? 'public, max-age=31536000, immutable',
+        'content-type': options?.contentType ?? response.ContentType ?? 'application/octet-stream',
+        'cache-control':
+          options?.cacheControl ?? response.CacheControl ?? 'public, max-age=31536000, immutable',
       },
     });
   } catch (error) {

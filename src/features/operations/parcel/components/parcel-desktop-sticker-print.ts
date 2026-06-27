@@ -28,7 +28,7 @@ const DESKTOP_THERMAL_STICKER_PAGE_STYLE = `
 
     .desktop-sticker-content {
       position: absolute;
-      top: 5mm;
+      top: 4.5mm;
       left: 5mm;
       transform-origin: top left;
     }

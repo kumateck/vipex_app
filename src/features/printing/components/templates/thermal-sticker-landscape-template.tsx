@@ -33,16 +33,11 @@ export function ThermalStickerLandscapeTemplate({
         padding: '2.4mm 3mm',
         fontFamily: 'Arial, sans-serif',
         display: 'grid',
-        gridTemplateColumns: '41mm 1fr 33mm',
+        gridTemplateColumns: '62mm 1fr 47mm',
         gap: '2.5mm',
       }}
     >
-      <ThermalStickerHeaderPanel
-        issuedAtLabel={issuedAtLabel}
-        printedByName={printedByName}
-        printedByBranchName={printedByBranchName}
-        printedByLocationName={printedByLocationName}
-      />
+      <ThermalStickerHeaderPanel />
 
       <main
         style={{
@@ -110,11 +105,63 @@ export function ThermalStickerLandscapeTemplate({
           </div>
         </div>
         <div
-          aria-label="Parcel tracking QR code"
-          style={{ width: '24mm', height: '24mm', alignSelf: 'center' }}
-          dangerouslySetInnerHTML={{ __html: qrSvg }}
-        />
+          style={{
+            alignSelf: 'center',
+            display: 'grid',
+            gridTemplateColumns: '1fr 24mm',
+            alignItems: 'center',
+            gap: '3mm',
+            minWidth: 0,
+            width: '100%',
+          }}
+        >
+          <PrintMetaBlock
+            issuedAtLabel={issuedAtLabel}
+            printedByName={printedByName}
+            printedByBranchName={printedByBranchName}
+            printedByLocationName={printedByLocationName}
+          />
+          <div
+            aria-label="Parcel tracking QR code"
+            style={{ width: '24mm', height: '24mm', justifySelf: 'end' }}
+            dangerouslySetInnerHTML={{ __html: qrSvg }}
+          />
+        </div>
       </aside>
+    </div>
+  );
+}
+
+function PrintMetaBlock({
+  issuedAtLabel,
+  printedByName,
+  printedByBranchName,
+  printedByLocationName,
+}: {
+  issuedAtLabel: string;
+  printedByName?: string | null;
+  printedByBranchName?: string | null;
+  printedByLocationName?: string | null;
+}) {
+  const printerLocation = [printedByBranchName, printedByLocationName]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .join(' / ');
+
+  return (
+    <div
+      style={{
+        minWidth: 0,
+        fontSize: '1.8mm',
+        fontWeight: 800,
+        lineHeight: 1.15,
+        textAlign: 'left',
+        overflowWrap: 'anywhere',
+      }}
+    >
+      <div>Printed: {issuedAtLabel}</div>
+      <div style={{ marginTop: '0.45mm' }}>Printed by: {printedByName?.trim() || '-'}</div>
+      <div style={{ marginTop: '0.35mm' }}>Source: {printerLocation || '-'}</div>
     </div>
   );
 }
