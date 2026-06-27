@@ -3,14 +3,14 @@ import { createPrintableHtmlDocument } from '@/features/printing';
 const DESKTOP_THERMAL_STICKER_PAGE_STYLE = `
   @media print {
     @page {
-      size: 100mm 150mm;
+      size: 100mm 100mm;
       margin: 0;
     }
 
     html,
     body {
       width: 100mm;
-      height: 150mm;
+      height: 100mm;
       margin: 0;
       padding: 0;
       overflow: hidden;
@@ -21,24 +21,23 @@ const DESKTOP_THERMAL_STICKER_PAGE_STYLE = `
     .desktop-sticker-page {
       position: relative;
       width: 100mm;
-      height: 150mm;
+      height: 100mm;
       overflow: hidden;
+      display: block;
     }
 
     .desktop-sticker-content {
       position: absolute;
+      top: 5mm;
+      left: 5mm;
       transform-origin: top left;
     }
 
     .desktop-sticker-page--portrait .desktop-sticker-content {
-      top: 0;
-      left: 0;
       transform: none;
     }
 
     .desktop-sticker-page--landscape .desktop-sticker-content {
-      top: 0;
-      left: 0;
       transform: none;
     }
   }
