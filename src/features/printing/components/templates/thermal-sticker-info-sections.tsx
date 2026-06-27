@@ -69,16 +69,14 @@ export function ContactStack({
 }
 
 export function ParcelStack({
-  parcelContent,
   parcelDetails,
 }: {
   parcelContent?: string | null;
   parcelDetails: string;
 }) {
   return (
-    <section style={{ minWidth: 0, display: 'grid', gridTemplateRows: '1fr 1fr' }}>
-      <ParcelBlock label="Parcel Content" value={parcelContent || '-'} />
-      <ParcelBlock label="Parcel Details" value={parcelDetails} hasDivider />
+    <section style={{ minWidth: 0, display: 'grid' }}>
+      <ParcelBlock label="Parcel Details" value={parcelDetails} />
     </section>
   );
 }

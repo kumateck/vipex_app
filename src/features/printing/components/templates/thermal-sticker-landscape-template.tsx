@@ -82,11 +82,11 @@ export function ThermalStickerLandscapeTemplate({
       <aside
         style={{
           display: 'grid',
-          gridTemplateRows: hasToBePaid ? '16mm 23mm 1fr' : '11mm 23mm 1fr',
+          gridTemplateRows: hasToBePaid ? '16mm 1fr' : '11mm 1fr',
           alignItems: 'start',
           justifyItems: 'center',
           minWidth: 0,
-          gap: '1.5mm',
+          gap: '2mm',
         }}
       >
         <div
@@ -111,22 +111,9 @@ export function ThermalStickerLandscapeTemplate({
         </div>
         <div
           aria-label="Parcel tracking QR code"
-          style={{ width: '24mm', height: '24mm' }}
+          style={{ width: '24mm', height: '24mm', alignSelf: 'center' }}
           dangerouslySetInnerHTML={{ __html: qrSvg }}
         />
-        <div
-          style={{
-            alignSelf: 'end',
-            width: '100%',
-            border: '0.25mm solid #111',
-            fontSize: '2.6mm',
-            fontWeight: 700,
-            textAlign: 'center',
-            padding: '1mm 0.6mm',
-          }}
-        >
-          COPY 1/1
-        </div>
       </aside>
     </div>
   );

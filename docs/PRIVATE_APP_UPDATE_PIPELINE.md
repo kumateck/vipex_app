@@ -73,6 +73,11 @@ Set runtime env for packaged desktop app:
 
 - `DESKTOP_UPDATE_FEED_URL=<MINIO_ENDPOINT>/<MINIO_BUCKET>/<DESKTOP_MINIO_PREFIX>/latest/`
 
+Private desktop feeds are checked and downloaded from the in-app **App Updates** page with
+the logged-in user's bearer token. Unauthenticated startup update checks are disabled by
+default to avoid `401`/`403` responses from private feeds. Only set
+`DESKTOP_ALLOW_UNAUTHENTICATED_UPDATE_CHECK=true` when the feed is intentionally public.
+
 For pre-deploy Windows testing, run the manual **Desktop Windows Test Build** workflow or build locally on Windows:
 
 - `bun run --cwd apps/desktop make:windows:test`

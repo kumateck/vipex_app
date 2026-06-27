@@ -14,7 +14,6 @@ export function ThermalStickerPortraitTemplate({
   receiverTelephones,
   destinationBranchName,
   destinationLocationName,
-  parcelContent,
   parcelDetails,
   statusLabel,
   statusAmountLabel,
@@ -30,42 +29,52 @@ export function ThermalStickerPortraitTemplate({
     <div
       className="bg-white text-black"
       style={{
-        width: '100mm',
-        height: '150mm',
+        width: '90mm',
+        height: '146mm',
         boxSizing: 'border-box',
         border: '0.35mm solid #111',
-        padding: '3mm',
+        padding: '1.8mm',
         fontFamily: 'Arial, sans-serif',
         display: 'grid',
-        gridTemplateRows: '18mm 18mm 30mm 1fr 13mm',
-        gap: '2mm',
+        gridTemplateRows: '22mm 16mm 28mm 1fr',
+        gap: '1.4mm',
+        overflow: 'hidden',
       }}
     >
       <header
         style={{
+          minWidth: 0,
           display: 'grid',
-          gridTemplateColumns: '17mm 1fr 26mm',
-          alignItems: 'center',
-          gap: '2mm',
+          gridTemplateColumns: '14mm 1fr 19mm',
+          alignItems: 'start',
+          columnGap: '1.5mm',
         }}
       >
         <img
           src={logoPng}
           alt="Vipex logo"
-          style={{ width: '16mm', height: '16mm', objectFit: 'contain' }}
+          style={{ width: '13mm', height: '13mm', objectFit: 'contain' }}
         />
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: '6.2mm', fontWeight: 900, lineHeight: 0.9 }}>VIPEX</div>
-          <div style={{ fontSize: '2.8mm', fontWeight: 800, lineHeight: 1 }}>
-            4x6 Shipping Label
-          </div>
-          <div style={{ fontSize: '2.2mm', fontWeight: 700, lineHeight: 1.2 }}>
+          <div style={{ fontSize: '5.5mm', fontWeight: 900, lineHeight: 0.85 }}>VIPEX</div>
+          <div style={{ fontSize: '2.4mm', fontWeight: 800, lineHeight: 1 }}>Parcel Co. LTD</div>
+          <div style={{ fontSize: '2mm', fontWeight: 700, lineHeight: 1.15 }}>
             Printed: {issuedAtLabel}
+          </div>
+          <div style={{ marginTop: '0.8mm', fontSize: '1.9mm', fontWeight: 700, lineHeight: 1.15 }}>
+            <div>Printed by: {printedByName?.trim() || '-'}</div>
+            <div>Source: {printedLocation || '-'}</div>
           </div>
         </div>
         <div
           aria-label="Parcel tracking QR code"
-          style={{ width: '25mm', height: '25mm', justifySelf: 'end' }}
+          style={{
+            width: '18.5mm',
+            height: '18.5mm',
+            justifySelf: 'end',
+            alignSelf: 'start',
+            overflow: 'hidden',
+          }}
           dangerouslySetInnerHTML={{ __html: qrSvg }}
         />
       </header>
@@ -76,15 +85,18 @@ export function ThermalStickerPortraitTemplate({
           display: 'grid',
           placeItems: 'center',
           textAlign: 'center',
-          padding: '1mm',
+          padding: '0.8mm',
+          overflow: 'hidden',
         }}
       >
         <div>
-          <div style={{ fontSize: hasToBePaid ? '7mm' : '8.5mm', fontWeight: 900, lineHeight: 1 }}>
+          <div
+            style={{ fontSize: hasToBePaid ? '6.2mm' : '7.5mm', fontWeight: 900, lineHeight: 1 }}
+          >
             {statusLabel}
           </div>
           {statusAmountLabel ? (
-            <div style={{ marginTop: '0.8mm', fontSize: '6mm', fontWeight: 900, lineHeight: 1 }}>
+            <div style={{ marginTop: '0.5mm', fontSize: '5.2mm', fontWeight: 900, lineHeight: 1 }}>
               {statusAmountLabel}
             </div>
           ) : null}
@@ -95,7 +107,9 @@ export function ThermalStickerPortraitTemplate({
         style={{
           border: '0.35mm solid #111',
           display: 'grid',
-          gridTemplateRows: '8mm 1fr',
+          gridTemplateRows: '6mm 1fr',
+          minWidth: 0,
+          overflow: 'hidden',
         }}
       >
         <div
@@ -103,7 +117,7 @@ export function ThermalStickerPortraitTemplate({
             borderBottom: '0.25mm solid #111',
             display: 'grid',
             placeItems: 'center',
-            fontSize: '3mm',
+            fontSize: '2.6mm',
             fontWeight: 800,
             textTransform: 'uppercase',
           }}
@@ -114,7 +128,7 @@ export function ThermalStickerPortraitTemplate({
           style={{
             display: 'grid',
             placeItems: 'center',
-            fontSize: bookingCode.length > 14 ? '11mm' : '14mm',
+            fontSize: bookingCode.length > 14 ? '9.8mm' : '12mm',
             fontWeight: 900,
             lineHeight: 0.9,
             letterSpacing: '0',
@@ -129,49 +143,87 @@ export function ThermalStickerPortraitTemplate({
         style={{
           minHeight: 0,
           display: 'grid',
-          gridTemplateRows: 'repeat(8, minmax(0, auto))',
-          gap: '1mm',
+          gridTemplateRows: 'repeat(6, minmax(0, auto))',
+          gap: '0.8mm',
+          overflow: 'hidden',
         }}
       >
         <StickerRow label="Receiver" value={receiverName} emphasis />
         <StickerRow label="Receiver Tel" value={receiverTelephones} />
-        <StickerRow label="Destination Branch" value={destinationBranchName} emphasis />
-        <StickerRow label="Destination Location" value={destinationLocationName} emphasis />
+        <DestinationRow branch={destinationBranchName} location={destinationLocationName} />
         <StickerRow label="Sender" value={senderName} />
         <StickerRow label="Sender Tel" value={senderTelephones} />
-        <StickerRow label="Parcel Content" value={parcelContent || '-'} />
         <StickerRow label="Parcel Details" value={parcelDetails} />
       </main>
+    </div>
+  );
+}
 
-      <footer
+function DestinationRow({
+  branch,
+  location,
+}: {
+  branch?: string | null;
+  location?: string | null;
+}) {
+  return (
+    <div style={{ minWidth: 0, borderTop: '0.35mm solid #111', paddingTop: '0.45mm' }}>
+      <div
         style={{
-          borderTop: '0.35mm solid #111',
           display: 'grid',
-          gridTemplateColumns: '1fr 24mm',
-          gap: '2mm',
-          alignItems: 'center',
-          paddingTop: '1.5mm',
+          gridTemplateColumns: '1.18fr 0.82fr',
+          gap: '1mm',
+          minWidth: 0,
         }}
       >
-        <div style={{ minWidth: 0, fontSize: '2.4mm', lineHeight: 1.18 }}>
-          <div>
-            <strong>Printed by:</strong> {printedByName?.trim() || '-'}
-          </div>
-          <div>{printedLocation || '-'}</div>
-          <div style={{ marginTop: '0.7mm', fontWeight: 700 }}>Default paper: 100 x 150 mm</div>
-        </div>
-        <div
-          style={{
-            border: '0.25mm solid #111',
-            fontSize: '2.7mm',
-            fontWeight: 800,
-            textAlign: 'center',
-            padding: '1.2mm 0.8mm',
-          }}
-        >
-          COPY 1/1
-        </div>
-      </footer>
+        <StickerRowContent label="Destination Branch" value={branch} scale="large" />
+        <StickerRowContent label="Destination Location" value={location} />
+      </div>
+    </div>
+  );
+}
+
+function StickerRowContent({
+  label,
+  value,
+  scale = 'normal',
+}: {
+  label: string;
+  value?: string | null;
+  scale?: 'normal' | 'large';
+}) {
+  const displayValue = value?.trim() || '-';
+  const fontSize =
+    scale === 'large'
+      ? displayValue.length > 18
+        ? '6.6mm'
+        : '8.4mm'
+      : displayValue.length > 18
+        ? '3.3mm'
+        : '4.2mm';
+
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div
+        style={{
+          fontSize: '2.2mm',
+          fontWeight: 700,
+          lineHeight: 1,
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize,
+          fontWeight: 800,
+          lineHeight: scale === 'large' ? 0.92 : 1.04,
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {displayValue}
+      </div>
     </div>
   );
 }

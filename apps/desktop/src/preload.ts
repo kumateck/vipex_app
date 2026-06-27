@@ -14,6 +14,10 @@ type UpdateStatus = {
   message?: string;
 };
 
+type UpdateAuthRequest = {
+  accessToken?: string | null;
+};
+
 type DesktopNetworkDiagnostics = {
   timestamp: string;
   appVersion: string;
@@ -60,14 +64,14 @@ contextBridge.exposeInMainWorld('api', {
   listPrinters: async () => ipcRenderer.invoke('print:list-printers'),
   updates: {
     getStatus: async () => ipcRenderer.invoke('updates:get-status') as Promise<UpdateStatus>,
-    check: async () =>
-      ipcRenderer.invoke('updates:check') as Promise<{
+    check: async (request?: UpdateAuthRequest) =>
+      ipcRenderer.invoke('updates:check', request) as Promise<{
         ok: boolean;
         reason?: string;
         status: UpdateStatus;
       }>,
-    download: async () =>
-      ipcRenderer.invoke('updates:download') as Promise<{
+    download: async (request?: UpdateAuthRequest) =>
+      ipcRenderer.invoke('updates:download', request) as Promise<{
         ok: boolean;
         reason?: string;
         status: UpdateStatus;
