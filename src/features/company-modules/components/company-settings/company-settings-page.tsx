@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState } from 'react';
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { toast } from 'sonner';
 import { Building2, Shield, ToggleLeft, ToggleRight } from 'lucide-react';
@@ -6,27 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useAuthStore } from '@/stores/auth-store';
-import {
-  getPrintRuntime,
-  getPrinterPreferenceMapping,
-  listDesktopPrinters,
-  setPrinterPreferenceMapping,
-} from '@/features/printing';
 import { useListCompanyModulesQuery, useSetCompanyModuleStateMutation } from '../../api';
-import {
-  getParcelAgeingPolicyFromModuleSettings,
-  parcelAgeingPolicyToCedisPerDay,
-} from '@/shared/shipments/parcel-ageing-policy';
 
 function formatDateTime(value: string | null) {
   if (!value) return 'Never';
@@ -40,62 +20,6 @@ export function CompanySettingsPage() {
   const updateUser = useAuthStore((state) => state.updateUser);
   const { data: modules = [], isFetching, refetch } = useListCompanyModulesQuery();
   const [setCompanyModuleState, { isLoading: isSaving }] = useSetCompanyModuleStateMutation();
-  const [stickerPrinter, setStickerPrinter] = useState<string>('');
-  const [invoicePrinter, setInvoicePrinter] = useState<string>('');
-  const [isLoadingPrinters, setIsLoadingPrinters] = useState(false);
-  const [printerNames, setPrinterNames] = useState<string[]>([]);
-  const [storageFeePerDayCedis, setStorageFeePerDayCedis] = useState('5');
-  const [storageGracePeriodDays, setStorageGracePeriodDays] = useState('14');
-  const [agedThresholdMonths, setAgedThresholdMonths] = useState('6');
-  const [isSavingParcelPolicy, setIsSavingParcelPolicy] = useState(false);
-  const isDesktopRuntime = useMemo(() => getPrintRuntime() === 'desktop', []);
-  const shipmentsModule = useMemo(
-    () => modules.find((module) => module.code === 'shipments') ?? null,
-    [modules],
-  );
-
-  useEffect(() => {
-    const saved = getPrinterPreferenceMapping();
-    setStickerPrinter(saved.stickerPrinter ?? '');
-    setInvoicePrinter(saved.invoicePrinter ?? '');
-  }, []);
-
-  useEffect(() => {
-    if (!isDesktopRuntime) return;
-    let active = true;
-
-    const run = async () => {
-      try {
-        setIsLoadingPrinters(true);
-        const printers = await listDesktopPrinters();
-        if (!active) return;
-        const names = printers
-          .map((printer) => printer.name?.trim())
-          .filter((name): name is string => Boolean(name))
-          .sort((a, b) => a.localeCompare(b));
-        setPrinterNames(names);
-      } catch {
-        if (!active) return;
-        toast.error('Failed to load desktop printers');
-      } finally {
-        if (active) setIsLoadingPrinters(false);
-      }
-    };
-
-    void run();
-
-    return () => {
-      active = false;
-    };
-  }, [isDesktopRuntime]);
-
-  useEffect(() => {
-    if (!shipmentsModule) return;
-    const policy = getParcelAgeingPolicyFromModuleSettings(shipmentsModule.settings);
-    setStorageFeePerDayCedis(String(parcelAgeingPolicyToCedisPerDay(policy)));
-    setStorageGracePeriodDays(String(policy.gracePeriodDays));
-    setAgedThresholdMonths(String(policy.agedThresholdMonths));
-  }, [shipmentsModule]);
 
   async function handleToggle(moduleCode: string, isEnabled: boolean) {
     try {
@@ -112,73 +36,6 @@ export function CompanySettingsPage() {
       await refetch();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update company module');
-    }
-  }
-
-  function handleSavePrinterMapping() {
-    setPrinterPreferenceMapping({
-      stickerPrinter: stickerPrinter || undefined,
-      invoicePrinter: invoicePrinter || undefined,
-    });
-    toast.success('Printer routing saved');
-  }
-
-  function handleClearPrinterMapping() {
-    setStickerPrinter('');
-    setInvoicePrinter('');
-    setPrinterPreferenceMapping({});
-    toast.success('Printer routing cleared');
-  }
-
-  async function handleSaveParcelAgeingPolicy() {
-    if (!shipmentsModule) {
-      toast.error('Shipments module was not found');
-      return;
-    }
-
-    const storageFee = Number(storageFeePerDayCedis);
-    const graceDays = Number(storageGracePeriodDays);
-    const ageMonths = Number(agedThresholdMonths);
-
-    if (!Number.isFinite(storageFee) || storageFee <= 0) {
-      toast.error('Storage fee per day must be greater than 0');
-      return;
-    }
-    if (!Number.isFinite(graceDays) || graceDays <= 0) {
-      toast.error('Grace period days must be greater than 0');
-      return;
-    }
-    if (!Number.isFinite(ageMonths) || ageMonths <= 0) {
-      toast.error('Aging threshold months must be greater than 0');
-      return;
-    }
-
-    const storageFeePerDayPsw = Math.round(storageFee * 100);
-    const existingSettings =
-      shipmentsModule.settings && typeof shipmentsModule.settings === 'object'
-        ? (shipmentsModule.settings as Record<string, unknown>)
-        : {};
-
-    try {
-      setIsSavingParcelPolicy(true);
-      await setCompanyModuleState({
-        moduleCode: shipmentsModule.code,
-        isEnabled: shipmentsModule.isEnabled,
-        settings: {
-          ...existingSettings,
-          parcelAgeing: {
-            storageFeePerDayPsw,
-            gracePeriodDays: Math.floor(graceDays),
-            agedThresholdMonths: Math.floor(ageMonths),
-          },
-        },
-      }).unwrap();
-      toast.success('Parcel ageing policy updated');
-      await refetch();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save parcel ageing policy');
-    } finally {
-      setIsSavingParcelPolicy(false);
     }
   }
 
@@ -199,7 +56,7 @@ export function CompanySettingsPage() {
       </div>
 
       <ScrollableWrapper>
-        <div className="space-y-6">
+        <div>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -260,158 +117,6 @@ export function CompanySettingsPage() {
                     </div>
                   );
                 })
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Parcel Ageing & Storage Charges</CardTitle>
-              <CardDescription>
-                Company policy for uncollected parcels. Storage charges begin after the grace period
-                and aged parcels are identified from the received date.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="storage-fee-day">Storage Fee / Day (GHS)</Label>
-                  <Input
-                    id="storage-fee-day"
-                    value={storageFeePerDayCedis}
-                    onChange={(event) => setStorageFeePerDayCedis(event.target.value)}
-                    placeholder="5"
-                    inputMode="decimal"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="storage-grace-days">Grace Period (Days)</Label>
-                  <Input
-                    id="storage-grace-days"
-                    value={storageGracePeriodDays}
-                    onChange={(event) => setStorageGracePeriodDays(event.target.value)}
-                    placeholder="14"
-                    inputMode="numeric"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="aged-threshold-months">Aged Threshold (Months)</Label>
-                  <Input
-                    id="aged-threshold-months"
-                    value={agedThresholdMonths}
-                    onChange={(event) => setAgedThresholdMonths(event.target.value)}
-                    placeholder="6"
-                    inputMode="numeric"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  onClick={() => void handleSaveParcelAgeingPolicy()}
-                  disabled={isSaving || isSavingParcelPolicy || !shipmentsModule}
-                >
-                  {isSavingParcelPolicy ? 'Saving...' : 'Save Parcel Policy'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Desktop Printer Routing</CardTitle>
-              <CardDescription>
-                Sender payment uses these mappings for parallel print dispatch. Sticker and invoice
-                are sent to different printers at the same time when running in Electron.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!isDesktopRuntime ? (
-                <p className="text-sm text-muted-foreground">
-                  Desktop runtime not detected. Open this app in Electron to configure printer
-                  routing.
-                </p>
-              ) : (
-                <>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="sticker-printer">Sticker Printer</Label>
-                      <Select
-                        value={stickerPrinter || '__none__'}
-                        onValueChange={(value) =>
-                          setStickerPrinter(value === '__none__' ? '' : value)
-                        }
-                      >
-                        <SelectTrigger id="sticker-printer" disabled={isLoadingPrinters}>
-                          <SelectValue placeholder="Select sticker printer" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Not configured</SelectItem>
-                          {printerNames.map((name) => (
-                            <SelectItem key={name} value={name}>
-                              {name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="invoice-printer">Invoice Printer (A5)</Label>
-                      <Select
-                        value={invoicePrinter || '__none__'}
-                        onValueChange={(value) =>
-                          setInvoicePrinter(value === '__none__' ? '' : value)
-                        }
-                      >
-                        <SelectTrigger id="invoice-printer" disabled={isLoadingPrinters}>
-                          <SelectValue placeholder="Select invoice printer" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Not configured</SelectItem>
-                          {printerNames.map((name) => (
-                            <SelectItem key={name} value={name}>
-                              {name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" onClick={handleSavePrinterMapping}>
-                      Save Routing
-                    </Button>
-                    <Button type="button" variant="outline" onClick={handleClearPrinterMapping}>
-                      Clear
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsLoadingPrinters(true);
-                        void listDesktopPrinters()
-                          .then((printers) => {
-                            const names = printers
-                              .map((printer) => printer.name?.trim())
-                              .filter((name): name is string => Boolean(name))
-                              .sort((a, b) => a.localeCompare(b));
-                            setPrinterNames(names);
-                          })
-                          .catch(() => {
-                            toast.error('Failed to refresh printer list');
-                          })
-                          .finally(() => {
-                            setIsLoadingPrinters(false);
-                          });
-                      }}
-                      disabled={isLoadingPrinters}
-                    >
-                      {isLoadingPrinters ? 'Refreshing...' : 'Refresh Printers'}
-                    </Button>
-                  </div>
-                </>
               )}
             </CardContent>
           </Card>

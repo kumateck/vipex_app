@@ -16,12 +16,13 @@ export const PAGE_STYLES: Record<PrintLayout, string> = {
     ${BASE_STYLE}
     @media print {
       @page {
-        size: 80mm auto;
-        margin: 1mm;
+        size: 100mm 150mm;
+        margin: 0;
       }
       html,
       body {
-        width: 80mm;
+        width: 100mm;
+        height: 150mm;
         margin: 0;
       }
     }

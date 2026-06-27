@@ -18,11 +18,15 @@ Date: 2026-03-29
 
 ## Workflows
 
-- `.github/workflows/desktop-windows-release.yml`
+- `.github/workflows/desktop-release.yml`
   - Builds Windows desktop app
   - Publishes release files to MinIO:
     - `.../latest/`
     - `.../v<version>/`
+- `.github/workflows/desktop-windows-test.yml`
+  - Manually builds a Windows-only test installer
+  - Bakes the selected test web URL and update feed URL into the packaged shell
+  - Uploads the installer as a short-lived GitHub Actions artifact
 
 - `.github/workflows/mobile-android-apk.yml`
   - Publishes OTA update to EAS channel `preview`
@@ -68,6 +72,15 @@ Date: 2026-03-29
 Set runtime env for packaged desktop app:
 
 - `DESKTOP_UPDATE_FEED_URL=<MINIO_ENDPOINT>/<MINIO_BUCKET>/<DESKTOP_MINIO_PREFIX>/latest/`
+
+For pre-deploy Windows testing, run the manual **Desktop Windows Test Build** workflow or build locally on Windows:
+
+- `bun run --cwd apps/desktop make:windows:test`
+
+Optional build-time defaults:
+
+- `DESKTOP_WEB_BASE_URL=https://testing.app.vipexparcel.com/`
+- `DESKTOP_UPDATE_FEED_URL=<MINIO_ENDPOINT>/<MINIO_BUCKET>/desktop/windows/latest/`
 
 ### Mobile
 
