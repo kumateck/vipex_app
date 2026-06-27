@@ -30,14 +30,14 @@ export function ThermalStickerPortraitTemplate({
       className="bg-white text-black"
       style={{
         width: '90mm',
-        height: '146mm',
+        height: '90mm',
         boxSizing: 'border-box',
         border: '0.35mm solid #111',
-        padding: '1.8mm',
+        padding: '1.2mm',
         fontFamily: 'Arial, sans-serif',
         display: 'grid',
-        gridTemplateRows: '22mm 16mm 28mm 1fr',
-        gap: '1.4mm',
+        gridTemplateRows: '16mm 13mm 22mm 1fr',
+        gap: '0.8mm',
         overflow: 'hidden',
       }}
     >
@@ -45,7 +45,7 @@ export function ThermalStickerPortraitTemplate({
         style={{
           minWidth: 0,
           display: 'grid',
-          gridTemplateColumns: '14mm 1fr 19mm',
+          gridTemplateColumns: '11mm 1fr 16mm',
           alignItems: 'start',
           columnGap: '1.5mm',
         }}
@@ -53,15 +53,15 @@ export function ThermalStickerPortraitTemplate({
         <img
           src={logoPng}
           alt="Vipex logo"
-          style={{ width: '13mm', height: '13mm', objectFit: 'contain' }}
+          style={{ width: '10mm', height: '10mm', objectFit: 'contain' }}
         />
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: '5.5mm', fontWeight: 900, lineHeight: 0.85 }}>VIPEX</div>
+          <div style={{ fontSize: '4.4mm', fontWeight: 900, lineHeight: 0.85 }}>VIPEX</div>
           <div style={{ fontSize: '2.4mm', fontWeight: 800, lineHeight: 1 }}>Parcel Co. LTD</div>
-          <div style={{ fontSize: '2mm', fontWeight: 700, lineHeight: 1.15 }}>
+          <div style={{ fontSize: '1.8mm', fontWeight: 700, lineHeight: 1.1 }}>
             Printed: {issuedAtLabel}
           </div>
-          <div style={{ marginTop: '0.8mm', fontSize: '1.9mm', fontWeight: 700, lineHeight: 1.15 }}>
+          <div style={{ marginTop: '0.4mm', fontSize: '1.7mm', fontWeight: 700, lineHeight: 1.1 }}>
             <div>Printed by: {printedByName?.trim() || '-'}</div>
             <div>Source: {printedLocation || '-'}</div>
           </div>
@@ -69,8 +69,8 @@ export function ThermalStickerPortraitTemplate({
         <div
           aria-label="Parcel tracking QR code"
           style={{
-            width: '18.5mm',
-            height: '18.5mm',
+            width: '16mm',
+            height: '16mm',
             justifySelf: 'end',
             alignSelf: 'start',
             overflow: 'hidden',
@@ -91,12 +91,12 @@ export function ThermalStickerPortraitTemplate({
       >
         <div>
           <div
-            style={{ fontSize: hasToBePaid ? '6.2mm' : '7.5mm', fontWeight: 900, lineHeight: 1 }}
+            style={{ fontSize: hasToBePaid ? '5.4mm' : '6.4mm', fontWeight: 900, lineHeight: 1 }}
           >
             {statusLabel}
           </div>
           {statusAmountLabel ? (
-            <div style={{ marginTop: '0.5mm', fontSize: '5.2mm', fontWeight: 900, lineHeight: 1 }}>
+            <div style={{ marginTop: '0.3mm', fontSize: '4.6mm', fontWeight: 900, lineHeight: 1 }}>
               {statusAmountLabel}
             </div>
           ) : null}
@@ -107,7 +107,7 @@ export function ThermalStickerPortraitTemplate({
         style={{
           border: '0.35mm solid #111',
           display: 'grid',
-          gridTemplateRows: '6mm 1fr',
+          gridTemplateRows: '5mm 1fr',
           minWidth: 0,
           overflow: 'hidden',
         }}
@@ -117,7 +117,7 @@ export function ThermalStickerPortraitTemplate({
             borderBottom: '0.25mm solid #111',
             display: 'grid',
             placeItems: 'center',
-            fontSize: '2.6mm',
+            fontSize: '2.3mm',
             fontWeight: 800,
             textTransform: 'uppercase',
           }}
@@ -128,7 +128,7 @@ export function ThermalStickerPortraitTemplate({
           style={{
             display: 'grid',
             placeItems: 'center',
-            fontSize: bookingCode.length > 14 ? '9.8mm' : '12mm',
+            fontSize: bookingCode.length > 14 ? '8.6mm' : '10.5mm',
             fontWeight: 900,
             lineHeight: 0.9,
             letterSpacing: '0',
@@ -144,7 +144,7 @@ export function ThermalStickerPortraitTemplate({
           minHeight: 0,
           display: 'grid',
           gridTemplateRows: 'repeat(6, minmax(0, auto))',
-          gap: '0.8mm',
+          gap: '0.35mm',
           overflow: 'hidden',
         }}
       >

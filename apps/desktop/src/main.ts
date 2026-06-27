@@ -499,8 +499,16 @@ function getPrintOptions(request: PrintHtmlRequest): WebContentsPrintOptions {
   }
 
   if (request.layout === 'thermal-sticker') {
+    baseOptions.pageSize = {
+      width: 100000,
+      height: 100000,
+    };
     baseOptions.landscape = false;
     baseOptions.scaleFactor = 100;
+    baseOptions.pagesPerSheet = 1;
+    baseOptions.collate = false;
+    baseOptions.duplexMode = 'simplex';
+    baseOptions.pageRanges = [{ from: 0, to: 0 }];
     baseOptions.margins = {
       marginType: 'none',
     };

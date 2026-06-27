@@ -1,6 +1,6 @@
 import { useCallback, type RefObject } from 'react';
 import { toast } from 'sonner';
-import { printViaDesktop } from '@/features/printing';
+import { getPrinterPreferenceMapping, printViaDesktop } from '@/features/printing';
 import { createDesktopStickerHtml } from './parcel-desktop-sticker-print';
 
 type UseParcelDesktopStickerPrintParams = {
@@ -26,11 +26,13 @@ export function useParcelDesktopStickerPrint({
         title: `sticker-${bookingCode}`,
         stickerNode,
       });
+      const { stickerPrinter } = getPrinterPreferenceMapping();
       const request = {
         html: stickerHtml,
         layout: 'thermal-sticker',
         title: `sticker-${bookingCode}`,
-        silent: false,
+        silent: Boolean(stickerPrinter),
+        deviceName: stickerPrinter,
         copies: Math.max(Math.trunc(copies), 1),
       } as const;
 
@@ -38,6 +40,7 @@ export function useParcelDesktopStickerPrint({
         title: request.title,
         layout: request.layout,
         silent: request.silent,
+        deviceName: request.deviceName ?? null,
         copies: request.copies,
         htmlLength: request.html.length,
       });
