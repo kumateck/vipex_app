@@ -34,11 +34,11 @@ export function StickerRow({
   const displayValue = value?.trim() || '-';
 
   return (
-    <div style={{ minWidth: 0, borderTop: '0.35mm solid #111', paddingTop: '0.45mm' }}>
+    <div style={{ minWidth: 0, borderTop: '0.35mm solid #111', paddingTop: '0.25mm' }}>
       <div style={{ minWidth: 0 }}>
         <div
           style={{
-            fontSize: '2.2mm',
+            fontSize: '1.9mm',
             fontWeight: 700,
             lineHeight: 1,
             textTransform: 'uppercase',
@@ -52,7 +52,7 @@ export function StickerRow({
           style={{
             fontWeight: 700,
             fontSize: getValueFontSize(displayValue, emphasis),
-            lineHeight: 1.04,
+            lineHeight: 0.96,
             whiteSpace: noWrap ? 'nowrap' : 'normal',
             overflow: 'visible',
             textOverflow: 'clip',
