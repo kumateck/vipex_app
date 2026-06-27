@@ -22,8 +22,10 @@ const __dirname = path.dirname(__filename);
 let mainWindow: BrowserWindow | null = null;
 const PACKAGED_WEB_BASE_URL = 'https://testing.app.vipexparcel.com/';
 const DEV_WEB_BASE_URL = 'http://localhost:5173/';
-const DEFAULT_DESKTOP_UPDATE_FEED_URL =
-  'http://164.90.142.68:9000/vipex-uploads/desktop/windows/latest/';
+const DEFAULT_DESKTOP_UPDATE_FEED_URL = `${PACKAGED_WEB_BASE_URL.replace(
+  /\/$/,
+  '',
+)}/v1/desktop-updates/windows/latest/`;
 const BUILD_DESKTOP_WEB_BASE_URL = __DESKTOP_WEB_BASE_URL__.trim();
 const BUILD_DESKTOP_UPDATE_FEED_URL = __DESKTOP_UPDATE_FEED_URL__.trim();
 let pendingDeepLink: string | null = null;

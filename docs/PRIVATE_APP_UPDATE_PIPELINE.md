@@ -51,9 +51,10 @@ Date: 2026-03-29
 
 - No extra secret required.
 - Workflow default prefix: `desktop/windows`
-- Feed path produced:
+- Internal object path produced:
   - `<MINIO_ENDPOINT>/<MINIO_BUCKET>/desktop/windows/latest/`
-- Use this value for desktop app feed config (`DESKTOP_UPDATE_FEED_URL`).
+- Do not use the MinIO URL directly in the desktop app. Use the authenticated app proxy:
+  - `<APP_BASE_URL>/v1/desktop-updates/windows/latest/`
 
 ### Mobile publish path (optional mirror)
 
@@ -71,11 +72,12 @@ Date: 2026-03-29
 
 Set runtime env for packaged desktop app:
 
-- `DESKTOP_UPDATE_FEED_URL=<MINIO_ENDPOINT>/<MINIO_BUCKET>/<DESKTOP_MINIO_PREFIX>/latest/`
+- `DESKTOP_UPDATE_FEED_URL=<APP_BASE_URL>/v1/desktop-updates/windows/latest/`
 
 Private desktop feeds are checked and downloaded from the in-app **App Updates** page with
-the logged-in user's bearer token. Unauthenticated startup update checks are disabled by
-default to avoid `401`/`403` responses from private feeds. Only set
+the logged-in user's bearer token. The API validates that token, then streams the update
+metadata and artifacts from private MinIO storage. Unauthenticated startup update checks
+are disabled by default to avoid `401`/`403` responses from private feeds. Only set
 `DESKTOP_ALLOW_UNAUTHENTICATED_UPDATE_CHECK=true` when the feed is intentionally public.
 
 For pre-deploy Windows testing, run the manual **Desktop Windows Test Build** workflow or build locally on Windows:
@@ -85,7 +87,7 @@ For pre-deploy Windows testing, run the manual **Desktop Windows Test Build** wo
 Optional build-time defaults:
 
 - `DESKTOP_WEB_BASE_URL=https://testing.app.vipexparcel.com/`
-- `DESKTOP_UPDATE_FEED_URL=<MINIO_ENDPOINT>/<MINIO_BUCKET>/desktop/windows/latest/`
+- `DESKTOP_UPDATE_FEED_URL=https://testing.app.vipexparcel.com/v1/desktop-updates/windows/latest/`
 
 ### Mobile
 
