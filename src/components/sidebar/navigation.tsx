@@ -1067,6 +1067,16 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanManageCompanyModules,
           },
           {
+            title: 'Parcel Ageing',
+            url: '/settings/parcel-ageing',
+            permissionKey: PermissionKeys.CanManageParcelAgeingPolicy,
+          },
+          {
+            title: 'Printer Routing',
+            url: '/settings/printer-routing',
+            permissionKey: PermissionKeys.CanManagePrinterRouting,
+          },
+          {
             title: 'Branch Management',
             url: '/branches',
             permissionKey: PermissionKeys.CanReadBranches,

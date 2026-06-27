@@ -30,7 +30,8 @@ export function ParcelReceiptActions({
   stickerCopies = 1,
   onAutoPrintComplete,
 }: ParcelReceiptActionsProps) {
-  const cashierType = useAuthStore((state) => state.user?.cashierType ?? null);
+  const user = useAuthStore((state) => state.user);
+  const cashierType = user?.cashierType ?? null;
   const isCashier = cashierType !== null && cashierType !== undefined;
   const { data: activeSession, isLoading: isLoadingActiveSession } =
     useGetCurrentActiveSessionQuery(undefined, { skip: !isCashier });
@@ -228,8 +229,10 @@ export function ParcelReceiptActions({
         desktopStickerRef={desktopStickerRef}
         stickerRef={stickerRef}
         invoiceRef={invoiceRef}
-        isSenderPaid={isSenderPaid}
         qrUrl={qrUrl}
+        printedByName={user?.fullname ?? null}
+        printedByBranchName={user?.branch?.name ?? null}
+        printedByLocationName={user?.location?.name ?? user?.locationName ?? null}
         amountPaidCedis={amountPaidCedis}
         stickerCopies={canPrintStickerViaDesktop ? 1 : stickerCopies}
         tax={{

@@ -23,6 +23,8 @@
     "dev:legacy": "bun run routes:generate && bun --hot src/index.tsx",
     "dev:watch": "bun run routes:watch & bun --hot src/index.tsx",
     "build": "bun run routes:generate && bun run build.ts",
+    "desktop:make:windows:test": "bun run --cwd apps/desktop make:windows:test",
+    "desktop:package:windows:test": "bun run --cwd apps/desktop package:windows:test",
     "routes:generate": "bun run scripts/generate-routes.ts",
     "routes:watch": "bun run scripts/generate-routes.ts --watch",
     "db:push": "echo \"db:push is disabled for this project. Use 'bun run migrate' (or 'pnpm migrate') to apply vetted SQL migrations.\" && exit 1",

@@ -13,8 +13,10 @@ type ParcelReceiptPrintContentProps = {
   desktopStickerRef: RefObject<HTMLDivElement | null>;
   stickerRef: RefObject<HTMLDivElement | null>;
   invoiceRef: RefObject<HTMLDivElement | null>;
-  isSenderPaid: boolean;
   qrUrl: string;
+  printedByName?: string | null;
+  printedByBranchName?: string | null;
+  printedByLocationName?: string | null;
   amountPaidCedis: number;
   stickerCopies?: number;
   tax: {
@@ -30,8 +32,10 @@ export function ParcelReceiptPrintContent({
   desktopStickerRef,
   stickerRef,
   invoiceRef,
-  isSenderPaid,
   qrUrl,
+  printedByName,
+  printedByBranchName,
+  printedByLocationName,
   amountPaidCedis,
   stickerCopies = 1,
   tax,
@@ -40,40 +44,59 @@ export function ParcelReceiptPrintContent({
 
   return (
     <>
-      <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '80mm' }}>
+      <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '100mm' }}>
         <div ref={stickerRef}>
           {Array.from({ length: copies }, (_, index) => (
-            <ThermalStickerTemplate
+            <div
               key={`${data.trackingCode}-${index}`}
-              bookingCode={data.bookingCode}
-              receiverName={data.receiverName}
-              receiverTelephone={data.receiverTelephone}
-              receiverTelephone2={data.receiverTelephone2}
-              destinationBranchName={data.destinationBranchName}
-              destinationLocationName={data.destinationLocationName}
-              isPaid={isSenderPaid}
-              toBePaidCedis={isSenderPaid ? undefined : data.receiverToPayCedis}
-              qrValue={qrUrl}
-              formatMoney={formatMoney}
-            />
+              style={{ breakAfter: index === copies - 1 ? 'auto' : 'page' }}
+            >
+              <ThermalStickerTemplate
+                bookingCode={data.bookingCode}
+                issuedAtLabel={formatDate(data.issuedAt)}
+                printedByName={printedByName}
+                printedByBranchName={printedByBranchName}
+                printedByLocationName={printedByLocationName}
+                parcelDetails={data.parcelDetails}
+                parcelContent={data.parcelContent}
+                senderName={data.senderName}
+                senderTelephone={data.senderTelephone}
+                senderTelephone2={data.senderTelephone2}
+                receiverName={data.receiverName}
+                receiverTelephone={data.receiverTelephone}
+                receiverTelephone2={data.receiverTelephone2}
+                destinationBranchName={data.destinationBranchName}
+                destinationLocationName={data.destinationLocationName}
+                toBePaidCedis={data.receiverToPayCedis > 0 ? data.receiverToPayCedis : undefined}
+                qrValue={qrUrl}
+                formatMoney={formatMoney}
+              />
+            </div>
           ))}
         </div>
       </div>
 
-      <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '80mm' }}>
+      <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '100mm' }}>
         <div ref={desktopStickerRef}>
           <ThermalStickerTemplate
             bookingCode={data.bookingCode}
+            issuedAtLabel={formatDate(data.issuedAt)}
+            printedByName={printedByName}
+            printedByBranchName={printedByBranchName}
+            printedByLocationName={printedByLocationName}
+            parcelDetails={data.parcelDetails}
+            parcelContent={data.parcelContent}
+            senderName={data.senderName}
+            senderTelephone={data.senderTelephone}
+            senderTelephone2={data.senderTelephone2}
             receiverName={data.receiverName}
             receiverTelephone={data.receiverTelephone}
             receiverTelephone2={data.receiverTelephone2}
             destinationBranchName={data.destinationBranchName}
             destinationLocationName={data.destinationLocationName}
-            isPaid={isSenderPaid}
-            toBePaidCedis={isSenderPaid ? undefined : data.receiverToPayCedis}
+            toBePaidCedis={data.receiverToPayCedis > 0 ? data.receiverToPayCedis : undefined}
             qrValue={qrUrl}
             formatMoney={formatMoney}
-            orientation="portrait"
           />
         </div>
       </div>
