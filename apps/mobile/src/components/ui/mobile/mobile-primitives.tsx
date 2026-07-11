@@ -1,13 +1,17 @@
 import { useState, type PropsWithChildren, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
+
+type AppButtonVariant = 'primary' | 'secondary' | 'tinted' | 'plain';
 
 type AppButtonProps = {
   title: string;
   onPress: () => void;
   disabled?: boolean;
-  variant?: 'primary' | 'secondary';
+  loading?: boolean;
+  variant?: AppButtonVariant;
 };
 
 type AppPageHeaderProps = {
@@ -26,9 +30,11 @@ export function AppCard({ children }: PropsWithChildren) {
     <View
       style={[
         styles.card,
+        mobileShadow.card,
         {
           backgroundColor: theme.colors.card,
-          borderColor: theme.colors.border,
+          borderColor: theme.scheme === 'dark' ? theme.colors.border : 'transparent',
+          borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
         },
       ]}
     >
@@ -39,7 +45,7 @@ export function AppCard({ children }: PropsWithChildren) {
 
 export function AppLabel({ children }: { children: ReactNode }) {
   const { theme } = useAppearance();
-  return <Text style={[styles.label, { color: theme.colors.textMuted }]}>{children}</Text>;
+  return <Text style={[styles.label, { color: theme.colors.textSubtle }]}>{children}</Text>;
 }
 
 export function AppInput(
@@ -84,41 +90,79 @@ export function PasswordInput(props: PasswordInputProps) {
       />
       <Pressable
         onPress={() => setHidden((prev) => !prev)}
-        style={({ pressed }) => [styles.passwordToggle, { opacity: pressed ? 0.7 : 1 }]}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={hidden ? 'Show password' : 'Hide password'}
+        style={({ pressed }) => [styles.passwordToggle, { opacity: pressed ? 0.6 : 1 }]}
       >
-        <Text style={[styles.passwordToggleText, { color: theme.colors.textMuted }]}>
-          {hidden ? 'Show' : 'Hide'}
-        </Text>
+        <Ionicons
+          name={hidden ? 'eye-outline' : 'eye-off-outline'}
+          size={19}
+          color={theme.colors.textSubtle}
+        />
       </Pressable>
     </View>
   );
 }
 
-export function AppButton({ title, onPress, disabled, variant = 'primary' }: AppButtonProps) {
+export function AppButton({
+  title,
+  onPress,
+  disabled,
+  loading,
+  variant = 'primary',
+}: AppButtonProps) {
   const { theme } = useAppearance();
-  const primary = variant === 'primary';
+  const isDisabled = disabled || loading;
+
+  const variantStyle = {
+    primary: {
+      backgroundColor: theme.colors.primary,
+      borderColor: 'transparent',
+      textColor: theme.colors.primaryText,
+      shadow: true,
+    },
+    secondary: {
+      backgroundColor: theme.colors.cardMuted,
+      borderColor: theme.scheme === 'dark' ? theme.colors.border : 'transparent',
+      textColor: theme.colors.text,
+      shadow: false,
+    },
+    tinted: {
+      backgroundColor: `${theme.colors.secondary}26`,
+      borderColor: 'transparent',
+      textColor: theme.colors.secondary,
+      shadow: false,
+    },
+    plain: {
+      backgroundColor: 'transparent',
+      borderColor: 'transparent',
+      textColor: theme.colors.secondary,
+      shadow: false,
+    },
+  }[variant];
 
   return (
     <Pressable
       onPress={onPress}
-      disabled={disabled}
+      disabled={isDisabled}
       style={({ pressed }) => [
         styles.button,
+        variant === 'plain' && styles.buttonPlain,
+        variantStyle.shadow ? mobileShadow.card : null,
         {
-          opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
-          backgroundColor: primary ? theme.colors.primary : theme.colors.cardMuted,
-          borderColor: primary ? theme.colors.primary : theme.colors.border,
+          opacity: isDisabled ? 0.5 : pressed ? 0.85 : 1,
+          backgroundColor: variantStyle.backgroundColor,
+          borderColor: variantStyle.borderColor,
+          borderWidth: variantStyle.borderColor === 'transparent' ? 0 : StyleSheet.hairlineWidth,
         },
       ]}
     >
-      <Text
-        style={[
-          styles.buttonText,
-          { color: primary ? theme.colors.primaryText : theme.colors.text },
-        ]}
-      >
-        {title}
-      </Text>
+      {loading ? (
+        <ActivityIndicator color={variantStyle.textColor} />
+      ) : (
+        <Text style={[styles.buttonText, { color: variantStyle.textColor }]}>{title}</Text>
+      )}
     </Pressable>
   );
 }
@@ -144,7 +188,12 @@ export function AppSkeletonCard({ lines = 3 }: { lines?: number }) {
     <View
       style={[
         styles.card,
-        { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
+        mobileShadow.card,
+        {
+          backgroundColor: theme.colors.card,
+          borderColor: theme.scheme === 'dark' ? theme.colors.border : 'transparent',
+          borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
+        },
       ]}
     >
       {items.map((_, index) => (
@@ -165,32 +214,31 @@ export function AppSkeletonCard({ lines = 3 }: { lines?: number }) {
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 1,
     borderRadius: mobileRadius.lg,
-    padding: mobileSpacing.md,
+    padding: mobileSpacing.lg,
     gap: mobileSpacing.sm,
   },
   label: {
-    fontSize: mobileTypography.label,
-    fontWeight: '600',
+    ...mobileTextStyles.eyebrow,
+    textTransform: 'uppercase',
   },
   input: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: mobileRadius.md,
     paddingHorizontal: mobileSpacing.md,
-    paddingVertical: 11,
+    paddingVertical: 13,
     fontSize: 16,
   },
   passwordWrap: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: mobileRadius.md,
-    minHeight: 44,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
   },
   passwordInput: {
     flex: 1,
-    paddingVertical: 11,
+    paddingVertical: 13,
     paddingLeft: mobileSpacing.md,
     fontSize: 16,
   },
@@ -198,33 +246,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: mobileSpacing.md,
     paddingVertical: mobileSpacing.sm,
   },
-  passwordToggleText: {
-    fontSize: mobileTypography.label,
-    fontWeight: '700',
-  },
   button: {
-    borderWidth: 1,
     borderRadius: mobileRadius.md,
-    paddingVertical: 11,
+    paddingVertical: 13,
     paddingHorizontal: mobileSpacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: 48,
+  },
+  buttonPlain: {
+    minHeight: 36,
+    paddingVertical: 6,
   },
   buttonText: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
   },
   pageHeader: {
     gap: 4,
     paddingTop: 2,
   },
   pageTitle: {
-    fontSize: 24,
-    fontWeight: '800',
+    ...mobileTextStyles.largeTitle,
   },
   pageSubtitle: {
-    fontSize: mobileTypography.subtitle,
+    ...mobileTextStyles.subhead,
   },
   skeletonLine: {
     height: 14,

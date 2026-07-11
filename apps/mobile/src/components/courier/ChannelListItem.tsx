@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 type ChannelListItemProps = {
   name: string;
@@ -21,10 +21,12 @@ export function ChannelListItem({
       onPress={onPress}
       style={({ pressed }) => [
         styles.item,
+        mobileShadow.card,
         {
           opacity: pressed ? 0.85 : 1,
           backgroundColor: theme.colors.card,
-          borderColor: theme.colors.border,
+          borderColor: theme.scheme === 'dark' ? theme.colors.border : 'transparent',
+          borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
         },
       ]}
     >
@@ -47,8 +49,7 @@ export function ChannelListItem({
 
 const styles = StyleSheet.create({
   item: {
-    borderWidth: 1,
-    borderRadius: mobileRadius.xl,
+    borderRadius: mobileRadius.lg,
     padding: mobileSpacing.md,
     flexDirection: 'row',
     alignItems: 'center',
@@ -56,15 +57,15 @@ const styles = StyleSheet.create({
     gap: mobileSpacing.sm,
   },
   main: { flex: 1, gap: 2 },
-  name: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
-  description: { fontSize: mobileTypography.body, fontWeight: '500' },
+  name: { ...mobileTextStyles.headline },
+  description: { ...mobileTextStyles.subhead },
   badge: {
-    minWidth: 24,
-    height: 24,
+    minWidth: 22,
+    height: 22,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 6,
   },
-  badgeText: { fontSize: mobileTypography.caption, fontWeight: '800' },
+  badgeText: { ...mobileTextStyles.caption2, fontWeight: '700' },
 });

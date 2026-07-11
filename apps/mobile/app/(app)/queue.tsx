@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Alert, Share, StyleSheet, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { AppScreen } from '@mobile/components/screen';
@@ -30,7 +30,7 @@ import {
   AppStatusChip,
   MobileNoAccess,
 } from '@/components/ui/mobile';
-import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 function formatCedis(psw: number | null | undefined) {
   return `GH₵ ${((psw ?? 0) / 100).toFixed(2)}`;
@@ -93,6 +93,32 @@ function buildQueueShareMessages(input: {
   fullLines.push('Please present this queue code at pickup.');
 
   return { short: shortLines.join('\n'), full: fullLines.join('\n') };
+}
+
+function DetailRow({ label, value, first }: { label: string; value: ReactNode; first?: boolean }) {
+  const { theme } = useAppearance();
+  const isPrimitive = typeof value === 'string' || typeof value === 'number';
+
+  return (
+    <View
+      style={[
+        styles.detailRow,
+        !first && {
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: theme.colors.separator,
+        },
+      ]}
+    >
+      <Text style={[styles.detailLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
+      {isPrimitive ? (
+        <Text style={[styles.detailValue, { color: theme.colors.text }]} numberOfLines={2}>
+          {value}
+        </Text>
+      ) : (
+        <View style={styles.detailValueWrap}>{value}</View>
+      )}
+    </View>
+  );
 }
 
 export default function QueueScreen() {
@@ -324,6 +350,7 @@ export default function QueueScreen() {
   }
 
   const showSearchResults = search.trim().length > 0;
+  const recentPayments = (selectedDetails?.payments ?? []).slice(0, 3);
 
   if (!canView) {
     return (
@@ -341,7 +368,7 @@ export default function QueueScreen() {
       </View>
 
       <AppCard>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Parcel Lookup</Text>
+        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Parcel Lookup</Text>
         <AppInput value={search} onChangeText={setSearch} placeholder="Search..." />
         <View style={styles.buttonRow}>
           <AppButton
@@ -396,67 +423,66 @@ export default function QueueScreen() {
 
       {selectedParcel && canReadParcels ? (
         <AppCard>
-          <Text style={[styles.detailsTitle, { color: theme.colors.text }]}>Parcel Details</Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Booking: {selectedParcel.bookingCode}
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Sender: {selectedParcel.senderName ?? '-'} ({selectedParcel.senderPhone ?? '-'})
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Receiver: {selectedParcel.receiverName ?? '-'} ({selectedParcel.receiverPhone ?? '-'})
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Details: {selectedParcel.parcelDetails}
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Content: {selectedParcel.parcelContent ?? '-'}
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Charge: {formatCedis(selectedParcel.chargePsw)}
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            To Be Paid: {formatCedis(selectedParcel.plannedToBePaidPsw)}
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Status: {selectedParcel.status}
-          </Text>
-          <AppStatusChip label={selectedParcel.status} />
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Queue:{' '}
-            {selectedDetails?.pickupQueue?.queueCode ??
-              selectedParcel.pickupQueueCode ??
-              'Not queued'}
-          </Text>
-          {selectedDetails?.pickupQueue?.queuedAt ? (
-            <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-              Queued At: {formatDate(selectedDetails.pickupQueue.queuedAt)}
-            </Text>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Parcel Details</Text>
+          <View style={styles.detailsList}>
+            <DetailRow label="Booking" value={selectedParcel.bookingCode} first />
+            <DetailRow
+              label="Sender"
+              value={`${selectedParcel.senderName ?? '-'} (${selectedParcel.senderPhone ?? '-'})`}
+            />
+            <DetailRow
+              label="Receiver"
+              value={`${selectedParcel.receiverName ?? '-'} (${selectedParcel.receiverPhone ?? '-'})`}
+            />
+            <DetailRow label="Details" value={selectedParcel.parcelDetails} />
+            <DetailRow label="Content" value={selectedParcel.parcelContent ?? '-'} />
+            <DetailRow label="Charge" value={formatCedis(selectedParcel.chargePsw)} />
+            <DetailRow label="To Be Paid" value={formatCedis(selectedParcel.plannedToBePaidPsw)} />
+            <DetailRow label="Status" value={<AppStatusChip label={selectedParcel.status} />} />
+            <DetailRow
+              label="Queue"
+              value={
+                selectedDetails?.pickupQueue?.queueCode ??
+                selectedParcel.pickupQueueCode ??
+                'Not queued'
+              }
+            />
+            {selectedDetails?.pickupQueue?.queuedAt ? (
+              <DetailRow
+                label="Queued At"
+                value={formatDate(selectedDetails.pickupQueue.queuedAt)}
+              />
+            ) : null}
+            {selectedDetails?.delivery ? (
+              <>
+                <DetailRow label="Delivery Status" value={selectedDetails.delivery.status} />
+                <DetailRow label="Dropoff" value={selectedDetails.delivery.dropoffAddress ?? '-'} />
+                <DetailRow
+                  label="Delivery Fee"
+                  value={formatCedis(selectedDetails.delivery.chargePsw)}
+                />
+                <DetailRow
+                  label="Delivery Paid"
+                  value={formatCedis(selectedDetails.delivery.amountPaidPsw)}
+                />
+              </>
+            ) : null}
+            <DetailRow label="Payments" value={selectedDetails?.payments?.length ?? 0} />
+          </View>
+
+          {recentPayments.length > 0 ? (
+            <View style={styles.paymentsList}>
+              {recentPayments.map((payment) => (
+                <Text
+                  key={payment.id}
+                  style={[styles.paymentLine, { color: theme.colors.textSubtle }]}
+                >
+                  {formatDate(payment.receivedAt)} · {formatCedis(payment.grossAmountPsw)}
+                </Text>
+              ))}
+            </View>
           ) : null}
-          {selectedDetails?.delivery ? (
-            <>
-              <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-                Delivery Status: {selectedDetails.delivery.status}
-              </Text>
-              <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-                Dropoff: {selectedDetails.delivery.dropoffAddress ?? '-'}
-              </Text>
-              <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-                Delivery Fee: {formatCedis(selectedDetails.delivery.chargePsw)}
-              </Text>
-              <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-                Delivery Paid: {formatCedis(selectedDetails.delivery.amountPaidPsw)}
-              </Text>
-            </>
-          ) : null}
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Payments: {selectedDetails?.payments?.length ?? 0}
-          </Text>
-          {(selectedDetails?.payments ?? []).slice(0, 3).map((payment) => (
-            <Text key={payment.id} style={[styles.detailsLine, { color: theme.colors.textSubtle }]}>
-              - {formatDate(payment.receivedAt)} | {formatCedis(payment.grossAmountPsw)}
-            </Text>
-          ))}
+
           <View style={styles.buttonRow}>
             <AppButton
               title={
@@ -547,15 +573,27 @@ export default function QueueScreen() {
 
 const styles = StyleSheet.create({
   kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },
-  sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700', marginTop: 6 },
+  sectionTitle: { ...mobileTextStyles.title3, marginTop: mobileSpacing.xs },
+  cardTitle: { ...mobileTextStyles.headline },
   buttonRow: {
     flexDirection: 'row',
     gap: mobileSpacing.sm,
     marginTop: mobileSpacing.xs,
     flexWrap: 'wrap',
   },
-  listWrap: { gap: mobileSpacing.sm + 2, paddingTop: mobileSpacing.sm },
-  detailsTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
-  detailsLine: {},
-  empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
+  listWrap: { gap: mobileSpacing.sm + 2, paddingTop: mobileSpacing.xs },
+  detailsList: { marginTop: -mobileSpacing.xs },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: mobileSpacing.sm,
+    paddingVertical: mobileSpacing.sm,
+  },
+  detailLabel: { ...mobileTextStyles.subhead, flexShrink: 0 },
+  detailValue: { ...mobileTextStyles.subhead, fontWeight: '600', flex: 1, textAlign: 'right' },
+  detailValueWrap: { alignItems: 'flex-end' },
+  paymentsList: { gap: 2 },
+  paymentLine: { ...mobileTextStyles.footnote },
+  empty: { ...mobileTextStyles.subhead, textAlign: 'center', marginTop: mobileSpacing.sm },
 });

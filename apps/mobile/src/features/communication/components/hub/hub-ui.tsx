@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { mobileSpacing } from '@mobile/theme/layout';
+import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import type { CommunicationTabKey } from '@mobile/features/communication/types/hub';
 import { getMobileScale } from '@mobile/features/communication/utils';
 
@@ -34,7 +34,11 @@ export function HubHeader({ onMenuPress }: { onMenuPress: () => void }) {
         <Text
           style={[
             styles.title,
-            { color: theme.colors.text, fontSize: 34 * scale, lineHeight: 38 * scale },
+            {
+              color: theme.colors.text,
+              fontSize: mobileTextStyles.largeTitle.fontSize * scale,
+              lineHeight: mobileTextStyles.largeTitle.lineHeight * scale,
+            },
           ]}
         >
           Chats
@@ -43,7 +47,11 @@ export function HubHeader({ onMenuPress }: { onMenuPress: () => void }) {
       <Text
         style={[
           styles.subtitle,
-          { color: theme.colors.textSubtle, fontSize: 16 * scale, lineHeight: 20 * scale },
+          {
+            color: theme.colors.textSubtle,
+            fontSize: mobileTextStyles.body.fontSize * scale,
+            lineHeight: mobileTextStyles.body.lineHeight * scale,
+          },
         ]}
       >
         Conversations
@@ -66,7 +74,12 @@ export function HubTabBar({
     <View
       style={[
         styles.tabsWrap,
-        { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+        mobileShadow.card,
+        {
+          backgroundColor: theme.colors.card,
+          borderColor: theme.scheme === 'dark' ? theme.colors.border : 'transparent',
+          borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
+        },
       ]}
     >
       {TAB_OPTIONS.map((tab) => {
@@ -79,6 +92,7 @@ export function HubTabBar({
             accessibilityRole="button"
             style={[
               styles.tabButton,
+              active ? mobileShadow.card : null,
               {
                 backgroundColor: active ? theme.colors.primary : 'transparent',
                 minHeight: 39 * scale,
@@ -96,8 +110,8 @@ export function HubTabBar({
                   styles.tabLabel,
                   {
                     color: active ? theme.colors.primaryText : theme.colors.textMuted,
-                    fontSize: 10 * scale,
-                    lineHeight: 11 * scale,
+                    fontSize: mobileTextStyles.caption2.fontSize * scale,
+                    lineHeight: mobileTextStyles.caption2.lineHeight * scale,
                   },
                 ]}
               >
@@ -116,7 +130,15 @@ export function SectionTitle({ title }: { title: string }) {
   const { width } = useWindowDimensions();
   const scale = getMobileScale(width);
   return (
-    <Text style={[styles.sectionTitle, { color: theme.colors.textMuted, fontSize: 13 * scale }]}>
+    <Text
+      style={[
+        styles.sectionTitle,
+        {
+          color: theme.colors.textMuted,
+          fontSize: mobileTextStyles.eyebrow.fontSize * scale,
+        },
+      ]}
+    >
       {title}
     </Text>
   );
@@ -124,7 +146,7 @@ export function SectionTitle({ title }: { title: string }) {
 
 export function EmptyText({ value }: { value: string }) {
   const { theme } = useAppearance();
-  return <Text style={{ color: theme.colors.textSubtle }}>{value}</Text>;
+  return <Text style={[mobileTextStyles.body, { color: theme.colors.textSubtle }]}>{value}</Text>;
 }
 
 export function BadgeText({ value, tone }: { value: string; tone: 'primary' | 'danger' }) {
@@ -139,7 +161,7 @@ export function BadgeText({ value, tone }: { value: string; tone: 'primary' | 'd
         },
       ]}
     >
-      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{value}</Text>
+      <Text style={[styles.badgeText, { color: theme.colors.primaryText }]}>{value}</Text>
     </View>
   );
 }
@@ -171,45 +193,34 @@ export const hubStyles = StyleSheet.create({
   contentScroll: { flex: 1 },
   contentContainer: { gap: mobileSpacing.md, paddingBottom: mobileSpacing.xl },
   row: {
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: mobileSpacing.md,
+    borderRadius: mobileRadius.lg,
+    padding: mobileSpacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: mobileSpacing.sm,
+    ...mobileShadow.card,
   },
   rowMain: { flex: 1, gap: 2 },
   rowMeta: { alignItems: 'flex-end', gap: 6 },
-  rowTitle: { fontSize: 15, fontWeight: '700' },
-  rowSub: { fontSize: 12 },
-  rowTime: { fontSize: 11 },
-  badges: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  rowTitle: { ...mobileTextStyles.headline },
+  rowSub: { ...mobileTextStyles.footnote },
+  rowTime: { ...mobileTextStyles.caption2 },
+  badges: { flexDirection: 'row', gap: mobileSpacing.xs + 2, alignItems: 'center' },
   voiceHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: mobileSpacing.sm },
   controlsRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
-  voiceButton: {
+  voiceButtonWrap: {
     marginTop: mobileSpacing.sm,
-    borderRadius: 12,
-    minHeight: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   userRow: { flexDirection: 'row', alignItems: 'center', gap: mobileSpacing.sm },
-  requestTargetPill: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  manageWrap: { marginTop: mobileSpacing.sm, gap: 8 },
   waRow: {
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: mobileRadius.lg,
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.sm + 2,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: mobileSpacing.sm + 2,
+    ...mobileShadow.card,
   },
   avatarWrap: { width: 50, height: 50, position: 'relative' },
   avatarCircle: {
@@ -230,40 +241,43 @@ export const hubStyles = StyleSheet.create({
     borderWidth: 2,
   },
   waCenter: { flex: 1, minWidth: 0, gap: 1 },
-  waName: { fontSize: 18, fontWeight: '700', lineHeight: 22 },
-  waMeta: { fontSize: 13, lineHeight: 17 },
-  waPreview: { fontSize: 14, marginTop: 1, lineHeight: 18 },
+  waName: { ...mobileTextStyles.title3 },
+  waMeta: { ...mobileTextStyles.footnote },
+  waPreview: { ...mobileTextStyles.subhead, marginTop: 1 },
   waRight: { alignItems: 'flex-end', justifyContent: 'space-between', minHeight: 44, width: 64 },
-  waTime: { fontSize: 13, fontWeight: '600' },
+  waTime: { ...mobileTextStyles.footnote, fontWeight: '600' },
   unreadPill: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
+    minWidth: 22,
+    height: 22,
+    borderRadius: mobileRadius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: mobileSpacing.xs + 2,
   },
-  unreadText: { fontSize: 12, fontWeight: '700' },
+  unreadText: { ...mobileTextStyles.caption2, fontWeight: '700' },
 });
 
 const styles = StyleSheet.create({
   headerBlock: { gap: mobileSpacing.xs },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: mobileSpacing.sm + 2 },
   menuButton: { paddingHorizontal: 2, paddingVertical: 2 },
-  title: { fontSize: 34, fontWeight: '800', lineHeight: 38 },
-  subtitle: { marginTop: -2, fontSize: 16, lineHeight: 20, marginBottom: mobileSpacing.xs },
+  title: { ...mobileTextStyles.largeTitle, fontWeight: '800' },
+  subtitle: {
+    marginTop: -2,
+    ...mobileTextStyles.body,
+    marginBottom: mobileSpacing.xs,
+  },
   tabsWrap: {
-    borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: mobileRadius.lg,
     padding: 4,
     flexDirection: 'row',
     gap: 4,
   },
   tabButton: {
     flex: 1,
-    borderRadius: 11,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    borderRadius: mobileRadius.md,
+    paddingVertical: mobileSpacing.sm,
+    paddingHorizontal: mobileSpacing.sm,
     minHeight: 39,
     alignItems: 'center',
     justifyContent: 'center',
@@ -271,17 +285,16 @@ const styles = StyleSheet.create({
   tabContent: { flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 },
   tabLabel: { fontWeight: '700', textAlign: 'center' },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
+    ...mobileTextStyles.eyebrow,
     marginTop: mobileSpacing.sm,
     textTransform: 'uppercase',
-    letterSpacing: 0.3,
   },
   badge: {
-    borderRadius: 999,
+    borderRadius: mobileRadius.pill,
     paddingVertical: 2,
-    paddingHorizontal: 8,
+    paddingHorizontal: mobileSpacing.sm,
     minWidth: 22,
     alignItems: 'center',
   },
+  badgeText: { ...mobileTextStyles.caption2, fontWeight: '700' },
 });

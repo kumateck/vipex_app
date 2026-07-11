@@ -31,14 +31,17 @@ export default function AppLayout() {
     <Drawer
       drawerContent={(props) => <MobileDrawerContent {...props} />}
       screenOptions={{
-        headerStyle: { backgroundColor: theme.colors.bgElevated },
+        headerStyle: { backgroundColor: theme.colors.bgElevated, elevation: 0, shadowOpacity: 0 },
         headerTintColor: theme.colors.text,
-        headerTitleStyle: { color: theme.colors.text, fontWeight: '700' },
+        headerTitleStyle: { color: theme.colors.text, fontWeight: '600', fontSize: 17 },
+        headerShadowVisible: false,
         sceneStyle: { backgroundColor: theme.colors.bg },
-        drawerStyle: { backgroundColor: theme.colors.bgElevated },
+        drawerStyle: { backgroundColor: theme.colors.bgElevated, width: 300 },
         drawerActiveTintColor: theme.colors.primary,
         drawerInactiveTintColor: theme.colors.textSubtle,
-        drawerLabelStyle: { fontWeight: '600' },
+        drawerActiveBackgroundColor: `${theme.colors.primary}1F`,
+        drawerItemStyle: { borderRadius: 12 },
+        drawerLabelStyle: { fontWeight: '600', fontSize: 15 },
       }}
     >
       <Drawer.Screen

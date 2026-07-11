@@ -4,8 +4,8 @@ import { Link, router } from 'expo-router';
 import { AppScreen } from '@mobile/components/screen';
 import { forgotPassword } from '@mobile/lib/api';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { AppButton, AppCard, AppInput, AppLabel } from '@/components/ui/mobile';
-import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { AppButton, AppCard, AppInput, AppLabel, AppPageHeader } from '@/components/ui/mobile';
+import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 export default function ForgotPasswordScreen() {
   const { theme } = useAppearance();
@@ -35,10 +35,10 @@ export default function ForgotPasswordScreen() {
 
   return (
     <AppScreen>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Forgot Password</Text>
-      <Text style={[styles.meta, { color: theme.colors.textSubtle }]}>
-        Enter your email and we will send a 6-digit OTP.
-      </Text>
+      <AppPageHeader
+        title="Forgot Password"
+        subtitle="Enter your email and we will send a 6-digit OTP."
+      />
       <AppCard>
         <View style={styles.formGroup}>
           <AppLabel>Email</AppLabel>
@@ -54,14 +54,11 @@ export default function ForgotPasswordScreen() {
           <Text style={[styles.success, { color: theme.colors.success }]}>{status}</Text>
         ) : null}
         {error ? <Text style={[styles.error, { color: theme.colors.danger }]}>{error}</Text> : null}
-        <AppButton
-          title={loading ? 'Submitting...' : 'Send OTP'}
-          onPress={() => void handleSubmit()}
-        />
+        <AppButton title="Send OTP" onPress={() => void handleSubmit()} loading={loading} />
       </AppCard>
       <Link href="/(auth)/login" asChild>
-        <Pressable style={{ marginTop: 12 }}>
-          <Text style={[styles.back, { color: theme.colors.primary }]}>Back to login</Text>
+        <Pressable style={{ marginTop: 4 }} hitSlop={8}>
+          <Text style={[styles.back, { color: theme.colors.secondary }]}>Back to login</Text>
         </Pressable>
       </Link>
     </AppScreen>
@@ -69,10 +66,8 @@ export default function ForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 28, fontWeight: '800', marginBottom: 2 },
-  meta: { marginBottom: mobileSpacing.sm },
   formGroup: { gap: mobileSpacing.sm - 2 },
-  success: { fontSize: mobileTypography.label, fontWeight: '600' },
-  error: { fontSize: mobileTypography.label, fontWeight: '600' },
-  back: { fontWeight: '700' },
+  success: { ...mobileTextStyles.footnote, fontWeight: '600' },
+  error: { ...mobileTextStyles.footnote, fontWeight: '600' },
+  back: { ...mobileTextStyles.footnote, fontWeight: '700' },
 });

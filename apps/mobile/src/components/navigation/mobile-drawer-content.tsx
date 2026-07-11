@@ -9,7 +9,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 export function MobileDrawerContent(props: DrawerContentComponentProps) {
   const { theme } = useAppearance();
@@ -40,9 +40,11 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
         <View
           style={[
             styles.profileCard,
+            mobileShadow.card,
             {
-              borderColor: theme.colors.border,
               backgroundColor: theme.colors.card,
+              borderColor: theme.scheme === 'dark' ? theme.colors.border : 'transparent',
+              borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
             },
           ]}
         >
@@ -128,7 +130,6 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   scrollContent: { paddingTop: mobileSpacing.sm },
   profileCard: {
-    borderWidth: 1,
     borderRadius: mobileRadius.lg,
     padding: mobileSpacing.md,
     marginHorizontal: mobileSpacing.md,
@@ -137,27 +138,27 @@ const styles = StyleSheet.create({
   },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: mobileSpacing.sm + 2 },
   avatar: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontWeight: '800', fontSize: 14 },
+  avatarText: { fontWeight: '700', fontSize: 15 },
   identityCol: { flex: 1, gap: 1 },
-  name: { fontSize: mobileTypography.body, fontWeight: '700' },
-  email: { fontSize: mobileTypography.caption },
+  name: { ...mobileTextStyles.headline },
+  email: { ...mobileTextStyles.caption1 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statusDot: { width: 8, height: 8, borderRadius: 999 },
-  metaText: { fontSize: mobileTypography.caption, fontWeight: '500' },
+  metaText: { ...mobileTextStyles.caption1, fontWeight: '500' },
   section: { marginTop: 2 },
   sectionTitle: {
-    fontSize: mobileTypography.caption,
+    ...mobileTextStyles.caption1,
     fontWeight: '700',
     letterSpacing: 0.3,
     textTransform: 'uppercase',
     paddingHorizontal: mobileSpacing.md + 4,
     marginBottom: 4,
   },
-  footer: { borderTopWidth: 1, paddingVertical: mobileSpacing.xs },
+  footer: { borderTopWidth: StyleSheet.hairlineWidth, paddingVertical: mobileSpacing.xs },
 });

@@ -2,16 +2,26 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppCard } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import type { ParcelFullDetails, ParcelSearchRow } from '@mobile/types/parcels';
-import { detailLine, formatCedis, formatDate } from '../utils';
+import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
+import { formatCedis, formatDate } from '../utils';
 
-const sectionStyles = StyleSheet.create({
-  recordItem: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 8,
-    gap: 2,
-  },
-  title: { fontSize: 18, fontWeight: '700' },
-});
+function DetailRow({ label, value, first }: { label: string; value: string; first?: boolean }) {
+  const { theme } = useAppearance();
+  return (
+    <View
+      style={[
+        styles.detailRow,
+        !first && {
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: theme.colors.separator,
+        },
+      ]}
+    >
+      <Text style={[styles.detailLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: theme.colors.text }]}>{value}</Text>
+    </View>
+  );
+}
 
 export function ParcelHistorySections({
   details,
@@ -28,35 +38,29 @@ export function ParcelHistorySections({
     <>
       {details.consignments?.length ? (
         <AppCard>
-          <Text style={[sectionStyles.title, { color: theme.colors.text }]}>Consignments</Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Count', String(details.consignments.length))}
-          </Text>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Consignments</Text>
+          <View style={styles.detailList}>
+            <DetailRow first label="Count" value={String(details.consignments.length)} />
+          </View>
           {details.consignments.map((entry) => (
             <View
               key={`${entry.consignmentId}-${entry.addedAt}`}
-              style={[sectionStyles.recordItem, { borderTopColor: theme.colors.border }]}
+              style={[styles.recordItem, { backgroundColor: theme.colors.cardMuted }]}
             >
-              <Text style={{ color: theme.colors.text }}>{detailLine('Code', entry.code)}</Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Date', formatDate(entry.consignmentDate))}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine(
-                  'Route',
-                  `${branchNameById.get(entry.sourceId) ?? 'Unknown'} -> ${
+              <View style={styles.detailList}>
+                <DetailRow first label="Code" value={entry.code} />
+                <DetailRow label="Date" value={formatDate(entry.consignmentDate)} />
+                <DetailRow
+                  label="Route"
+                  value={`${branchNameById.get(entry.sourceId) ?? 'Unknown'} -> ${
                     branchNameById.get(entry.destinationId) ?? 'Unknown'
-                  }`,
-                )}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Added', formatDate(entry.addedAt))}
-              </Text>
-              {entry.removedAt ? (
-                <Text style={{ color: theme.colors.textMuted }}>
-                  {detailLine('Removed', formatDate(entry.removedAt))}
-                </Text>
-              ) : null}
+                  }`}
+                />
+                <DetailRow label="Added" value={formatDate(entry.addedAt)} />
+                {entry.removedAt ? (
+                  <DetailRow label="Removed" value={formatDate(entry.removedAt)} />
+                ) : null}
+              </View>
             </View>
           ))}
         </AppCard>
@@ -64,37 +68,23 @@ export function ParcelHistorySections({
 
       {details.dispositionActions?.length ? (
         <AppCard>
-          <Text style={[sectionStyles.title, { color: theme.colors.text }]}>
-            Disposition Actions
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Count', String(details.dispositionActions.length))}
-          </Text>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Disposition Actions</Text>
+          <View style={styles.detailList}>
+            <DetailRow first label="Count" value={String(details.dispositionActions.length)} />
+          </View>
           {details.dispositionActions.map((entry) => (
             <View
               key={entry.id}
-              style={[sectionStyles.recordItem, { borderTopColor: theme.colors.border }]}
+              style={[styles.recordItem, { backgroundColor: theme.colors.cardMuted }]}
             >
-              <Text style={{ color: theme.colors.text }}>
-                {detailLine('Action Type', String(entry.actionType))}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Performed By', entry.performedByName ?? '-')}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Performed At', formatDate(entry.performedAt))}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Warehouse', entry.warehouseName ?? '-')}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Recovered', formatCedis(entry.recoveredAmountPsw))}
-              </Text>
-              {entry.notes ? (
-                <Text style={{ color: theme.colors.textMuted }}>
-                  {detailLine('Notes', entry.notes)}
-                </Text>
-              ) : null}
+              <View style={styles.detailList}>
+                <DetailRow first label="Action Type" value={String(entry.actionType)} />
+                <DetailRow label="Performed By" value={entry.performedByName ?? '-'} />
+                <DetailRow label="Performed At" value={formatDate(entry.performedAt)} />
+                <DetailRow label="Warehouse" value={entry.warehouseName ?? '-'} />
+                <DetailRow label="Recovered" value={formatCedis(entry.recoveredAmountPsw)} />
+                {entry.notes ? <DetailRow label="Notes" value={entry.notes} /> : null}
+              </View>
             </View>
           ))}
         </AppCard>
@@ -102,24 +92,24 @@ export function ParcelHistorySections({
 
       {relatedRows.length ? (
         <AppCard>
-          <Text style={[sectionStyles.title, { color: theme.colors.text }]}>Related Records</Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Found', `booking / tracking references: ${relatedRows.length}`)}
-          </Text>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Related Records</Text>
+          <View style={styles.detailList}>
+            <DetailRow
+              first
+              label="Found"
+              value={`booking / tracking references: ${relatedRows.length}`}
+            />
+          </View>
           {relatedRows.map((entry) => (
             <View
               key={entry.id}
-              style={[sectionStyles.recordItem, { borderTopColor: theme.colors.border }]}
+              style={[styles.recordItem, { backgroundColor: theme.colors.cardMuted }]}
             >
-              <Text style={{ color: theme.colors.text }}>
-                {detailLine('Booking', entry.bookingCode)}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Tracking', entry.trackingCode)}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Status', String(entry.status))}
-              </Text>
+              <View style={styles.detailList}>
+                <DetailRow first label="Booking" value={entry.bookingCode} />
+                <DetailRow label="Tracking" value={entry.trackingCode} />
+                <DetailRow label="Status" value={String(entry.status)} />
+              </View>
             </View>
           ))}
         </AppCard>
@@ -127,3 +117,22 @@ export function ParcelHistorySections({
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  title: { ...mobileTextStyles.title3 },
+  detailList: { marginTop: -mobileSpacing.xs },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: mobileSpacing.sm,
+    paddingVertical: mobileSpacing.sm,
+  },
+  detailLabel: { ...mobileTextStyles.subhead, flexShrink: 0 },
+  detailValue: { ...mobileTextStyles.subhead, fontWeight: '600', flex: 1, textAlign: 'right' },
+  recordItem: {
+    borderRadius: mobileRadius.md,
+    paddingHorizontal: mobileSpacing.md,
+    marginTop: mobileSpacing.xs,
+  },
+});

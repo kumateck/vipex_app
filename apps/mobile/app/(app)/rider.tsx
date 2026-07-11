@@ -10,7 +10,7 @@ import {
   useRiderBoardData,
 } from '@mobile/features/rider/hooks/use-rider-board-data';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 export default function RiderScreen() {
   const { theme } = useAppearance();
@@ -90,8 +90,8 @@ export default function RiderScreen() {
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
-  summaryText: { fontSize: mobileTypography.body, fontWeight: '600' },
+  sectionTitle: { ...mobileTextStyles.headline },
+  summaryText: { ...mobileTextStyles.subhead, fontWeight: '600' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: mobileSpacing.sm },
   grid: { gap: mobileSpacing.sm },
   kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
+import { useAppearance } from '@mobile/providers/appearance-provider';
 
 export function VoiceControlIconButton({
   icon,
@@ -27,6 +28,8 @@ export function VoiceControlIconButton({
   iconButtonStyle: StyleProp<ViewStyle>;
   iconButtonLabelStyle: StyleProp<TextStyle>;
 }) {
+  const { theme } = useAppearance();
+
   return (
     <Pressable
       onPress={onPress}
@@ -36,7 +39,7 @@ export function VoiceControlIconButton({
       accessibilityLabel={label}
     >
       <View style={[iconButtonStyle, { backgroundColor: active ? primaryColor : mutedBg }]}>
-        <Ionicons name={icon} size={20} color={active ? '#fff' : textColor} />
+        <Ionicons name={icon} size={20} color={active ? theme.colors.primaryText : textColor} />
       </View>
       <Text style={[iconButtonLabelStyle, { color: textColor }]} numberOfLines={1}>
         {label}

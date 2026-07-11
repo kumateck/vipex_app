@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppButton, AppCard, AppInput } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
+import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import type { CommunicationEngagementRequest } from '@mobile/types/communication';
 import type { UserChatEntry } from '@mobile/features/communication/types/hub';
 import { EmptyText, SectionTitle, formatTime, hubStyles } from '../hub-ui';
@@ -57,35 +58,32 @@ export function RequestsTabPane({
         <Text style={[hubStyles.rowSub, { color: theme.colors.textSubtle }]}>
           Bottom-up chat needs approval. Select one user and send request.
         </Text>
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: mobileSpacing.sm }}>
           <Pressable
             onPress={() => setIsTargetDropdownOpen((prev) => !prev)}
             style={[
-              hubStyles.requestTargetPill,
+              styles.dropdownPill,
               {
-                borderColor: theme.colors.border,
                 backgroundColor: theme.colors.cardMuted,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                borderColor: theme.scheme === 'dark' ? theme.colors.border : 'transparent',
+                borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
               },
             ]}
           >
-            <View style={{ flex: 1, paddingRight: 10 }}>
+            <View style={{ flex: 1, paddingRight: mobileSpacing.sm + 2 }}>
               <Text
                 numberOfLines={1}
-                style={{
-                  color: selectedRequestTarget ? theme.colors.text : theme.colors.textSubtle,
-                  fontWeight: '700',
-                  fontSize: 12,
-                }}
+                style={[
+                  styles.dropdownPillLabel,
+                  { color: selectedRequestTarget ? theme.colors.text : theme.colors.textSubtle },
+                ]}
               >
                 {selectedRequestTarget ? selectedRequestTarget.fullname : 'Select one user'}
               </Text>
               {selectedTargetMeta ? (
                 <Text
                   numberOfLines={1}
-                  style={{ marginTop: 2, color: theme.colors.textSubtle, fontSize: 11 }}
+                  style={[styles.dropdownPillMeta, { color: theme.colors.textSubtle }]}
                 >
                   {selectedTargetMeta}
                 </Text>
@@ -100,13 +98,15 @@ export function RequestsTabPane({
 
           {isTargetDropdownOpen ? (
             <View
-              style={{
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                borderRadius: 12,
-                backgroundColor: theme.colors.card,
-                maxHeight: 220,
-              }}
+              style={[
+                styles.dropdownList,
+                mobileShadow.floating,
+                {
+                  backgroundColor: theme.colors.card,
+                  borderColor: theme.scheme === 'dark' ? theme.colors.border : 'transparent',
+                  borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
+                },
+              ]}
             >
               <ScrollView>
                 {requestableUsers.length ? (
@@ -122,20 +122,20 @@ export function RequestsTabPane({
                           onSelectRequestTarget(entry.id);
                           setIsTargetDropdownOpen(false);
                         }}
-                        style={{
-                          paddingHorizontal: 12,
-                          paddingVertical: 10,
-                          borderBottomWidth: 1,
-                          borderBottomColor: theme.colors.border,
-                          backgroundColor: selected ? theme.colors.cardMuted : 'transparent',
-                        }}
+                        style={[
+                          styles.dropdownItem,
+                          {
+                            borderBottomColor: theme.colors.separator,
+                            backgroundColor: selected ? theme.colors.cardMuted : 'transparent',
+                          },
+                        ]}
                       >
-                        <Text style={{ color: theme.colors.text, fontWeight: '700', fontSize: 12 }}>
+                        <Text style={[styles.dropdownPillLabel, { color: theme.colors.text }]}>
                           {entry.fullname}
                         </Text>
                         {meta ? (
                           <Text
-                            style={{ marginTop: 2, color: theme.colors.textSubtle, fontSize: 11 }}
+                            style={[styles.dropdownPillMeta, { color: theme.colors.textSubtle }]}
                           >
                             {meta}
                           </Text>
@@ -144,13 +144,7 @@ export function RequestsTabPane({
                     );
                   })
                 ) : (
-                  <Text
-                    style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 10,
-                      color: theme.colors.textSubtle,
-                    }}
-                  >
+                  <Text style={[styles.dropdownEmpty, { color: theme.colors.textSubtle }]}>
                     No users available.
                   </Text>
                 )}
@@ -235,3 +229,31 @@ export function RequestsTabPane({
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  dropdownPill: {
+    borderRadius: mobileRadius.md,
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.sm + 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownPillLabel: { ...mobileTextStyles.footnote, fontWeight: '700' },
+  dropdownPillMeta: { ...mobileTextStyles.caption2, marginTop: 2 },
+  dropdownList: {
+    borderRadius: mobileRadius.md,
+    maxHeight: 220,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.sm + 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  dropdownEmpty: {
+    ...mobileTextStyles.subhead,
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.sm + 2,
+  },
+});

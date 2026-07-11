@@ -20,7 +20,7 @@ import {
   AppSkeletonCard,
   MobileNoAccess,
 } from '@/components/ui/mobile';
-import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 export default function ReceiveScanScreen() {
   const { theme } = useAppearance();
@@ -148,13 +148,15 @@ export default function ReceiveScanScreen() {
           <ScannerView onCodeScanned={(code) => void receiveByCode(code)} />
 
           {scanBusy ? (
-            <Text style={{ color: theme.colors.textSubtle }}>Processing scanned parcel...</Text>
+            <Text style={[styles.helperText, { color: theme.colors.textSubtle }]}>
+              Processing scanned parcel...
+            </Text>
           ) : null}
-          <Text style={{ color: theme.colors.textSubtle }}>
+          <Text style={[styles.helperText, { color: theme.colors.textSubtle }]}>
             Most recent scan: {lastCode || '-'}
           </Text>
           {!canMarkArrived ? (
-            <Text style={{ color: theme.colors.textSubtle }}>
+            <Text style={[styles.helperText, { color: theme.colors.textSubtle }]}>
               You can scan and view parcels, but cannot mark arrival.
             </Text>
           ) : null}
@@ -212,8 +214,9 @@ export default function ReceiveScanScreen() {
 
 const styles = StyleSheet.create({
   kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },
-  sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
+  sectionTitle: { ...mobileTextStyles.headline },
+  helperText: { ...mobileTextStyles.subhead },
   buttonRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
   listWrap: { gap: mobileSpacing.sm + 2, paddingTop: mobileSpacing.sm },
-  empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
+  empty: { ...mobileTextStyles.subhead, textAlign: 'center', marginTop: mobileSpacing.sm },
 });

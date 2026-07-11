@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppearance } from '@mobile/providers/appearance-provider';
+import { mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 export function ThreadHeader({
   title,
@@ -38,8 +39,8 @@ export function ThreadHeader({
           onPress={onBackPress}
           style={[
             styles.backButton,
+            mobileShadow.card,
             {
-              borderColor: theme.colors.border,
               backgroundColor: theme.colors.card,
               width: 34 * scale,
               height: 34 * scale,
@@ -53,12 +54,12 @@ export function ThreadHeader({
         <View
           style={[
             styles.avatar,
+            mobileShadow.card,
             {
               width: avatarSize,
               height: avatarSize,
               borderRadius: avatarSize / 2,
-              borderColor: theme.colors.border,
-              backgroundColor: theme.colors.bgElevated,
+              backgroundColor: theme.colors.cardMuted,
             },
           ]}
         >
@@ -116,8 +117,8 @@ export function ThreadHeader({
         onPress={onCallPress}
         style={[
           styles.callButton,
+          mobileShadow.card,
           {
-            borderColor: theme.colors.border,
             backgroundColor: theme.colors.card,
             width: avatarSize,
             height: avatarSize,
@@ -139,22 +140,36 @@ function getInitials(name: string) {
 }
 
 const styles = StyleSheet.create({
-  header: { gap: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  left: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 },
+  header: {
+    gap: mobileSpacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  left: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: mobileSpacing.sm + 2,
+    flex: 1,
+    minWidth: 0,
+  },
   textWrap: { gap: 2, flex: 1, minWidth: 0 },
-  avatar: { borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  avatar: { alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontWeight: '700' },
-  title: { fontWeight: '800' },
+  title: { ...mobileTextStyles.headline },
   subtitle: { marginBottom: 2 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: mobileSpacing.xs + 2,
+    marginBottom: 2,
+  },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   callButton: {
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backButton: {
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
