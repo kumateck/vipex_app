@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Link, router } from 'expo-router';
+import { Link, router } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { forgotPassword } from '@mobile/lib/api';
 import { useAppearance } from '@mobile/providers/appearance-provider';

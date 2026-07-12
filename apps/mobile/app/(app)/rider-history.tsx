@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from '@mobile/navigation/router-compat';
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';

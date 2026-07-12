@@ -1,6 +1,6 @@
-import { Redirect } from 'expo-router';
-import { Drawer } from 'expo-router/drawer';
-import { Ionicons } from '@expo/vector-icons';
+import { Redirect } from '@mobile/navigation/router-compat';
+import { Drawer } from '@mobile/navigation/drawer-compat';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { DrawerActions } from '@react-navigation/native';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { useAuth } from '@mobile/providers/auth-provider';
@@ -90,6 +90,16 @@ export default function AppLayout() {
         }}
       />
       <Drawer.Screen
+        name="parcel-create"
+        options={{
+          title: 'Create TobePaid',
+          headerShown: false,
+          drawerIcon: ({ size, color }) => (
+            <Ionicons name="cash-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
         name="rider"
         options={{
           title: 'Rider Operations',
@@ -143,7 +153,7 @@ export default function AppLayout() {
       <Drawer.Screen
         name="super-search/[parcelId]"
         options={({ navigation, route }) => ({
-          // Expo Drawer route params are loosely typed; read booking code defensively.
+          // Drawer route params are loosely typed; read booking code defensively.
           ...(function resolveTitle() {
             const params =
               route.params && typeof route.params === 'object'

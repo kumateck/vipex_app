@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { router } from 'expo-router';
+import { router } from '@mobile/navigation/router-compat';
 import {
   addCommunicationChannelParticipants,
   approveCommunicationEngagementRequest,

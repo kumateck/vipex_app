@@ -1,12 +1,20 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*", "../../src/*"],
       "@mobile/*": ["./src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["app/**/_layout.tsx", "app/index.tsx", "app/(app)/index.tsx"]
 }

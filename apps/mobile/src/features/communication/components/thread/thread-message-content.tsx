@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import {
@@ -77,7 +77,7 @@ export function ThreadMessageContent({
           : normalizedStatus === 'answered'
             ? 'Call completed'
             : 'Call activity';
-    const iconName: keyof typeof Ionicons.glyphMap = isVideo
+    const iconName: string = isVideo
       ? normalizedStatus === 'missed'
         ? 'videocam'
         : 'videocam-outline'

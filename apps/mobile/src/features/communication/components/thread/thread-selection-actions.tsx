@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
@@ -81,7 +81,7 @@ function IconAction({
   color,
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: string;
   size: number;
   color: string;
   onPress: () => void;

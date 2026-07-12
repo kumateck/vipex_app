@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { router } from 'expo-router';
+import { router } from '@mobile/navigation/router-compat';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
 import { searchParcels } from '@mobile/lib/api';

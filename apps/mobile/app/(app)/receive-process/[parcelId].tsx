@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 import {

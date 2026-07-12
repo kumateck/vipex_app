@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { VideoTrack } from '@livekit/react-native';
 import type { TrackReference } from '@livekit/components-react';
 import { StyleSheet, Text, View } from 'react-native';

@@ -1,4 +1,4 @@
-import Constants from 'expo-constants';
+import { ENV } from '@mobile/lib/env';
 import { getApiDebugInfo } from '@mobile/lib/api';
 import { reportMobileErrorToDiscord } from '@mobile/lib/mobile-error-reporter';
 import type { CommunicationCallSession, CommunicationMessage } from '@mobile/types/communication';
@@ -78,7 +78,7 @@ export function logMobileSocketError(
     ...context,
     ...(cause ? { cause } : {}),
   };
-  console.error('[mobile-socket] request failed', payload);
+  console.warn('[mobile-socket] request failed', payload);
   reportMobileErrorToDiscord({
     source: 'mobile-socket',
     message,
@@ -104,29 +104,11 @@ function toSocketBaseUrl(raw?: string | null) {
 
 export function resolveSocketCandidates() {
   const apiDebug = getApiDebugInfo();
-  const expoExtra = (Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string };
-  const mobileExtra = (Constants.expoConfig?.extra ?? {}) as {
-    communicationWsUrl?: string;
-    wsBaseUrl?: string;
-  };
-  const manifestExtra = ((
-    Constants as unknown as {
-      manifest2?: { extra?: { expoClient?: { extra?: { apiBaseUrl?: string } } } };
-    }
-  ).manifest2?.extra?.expoClient?.extra ?? {}) as {
-    apiBaseUrl?: string;
-  };
   const baseCandidates = [
-    process.env.EXPO_PUBLIC_COMMUNICATION_WS_URL,
-    process.env.EXPO_PUBLIC_WS_BASE_URL,
-    process.env.EXPO_PUBLIC_API_BASE_URL,
+    ENV.communicationWsUrl,
     apiDebug.activeApiBaseUrl,
     ...apiDebug.candidates,
-    mobileExtra.communicationWsUrl,
-    mobileExtra.wsBaseUrl,
-    expoExtra.apiBaseUrl,
-    manifestExtra.apiBaseUrl,
-    'https://testing.app.vipexparcel.com',
+    ENV.apiBaseUrl,
   ];
   const normalized = new Set<string>();
 

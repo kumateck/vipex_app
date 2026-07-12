@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack } from '@mobile/navigation/router-compat';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 
 export default function AuthLayout() {

@@ -1,5 +1,4 @@
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import {
   DrawerContentScrollView,
   DrawerItem,
@@ -9,6 +8,12 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
+import {
+  canCreateParcelBooking,
+  canViewQueueScreen,
+  canViewReceiveScreen,
+  canViewRiderScreen,
+} from '@mobile/lib/permissions';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 export function MobileDrawerContent(props: DrawerContentComponentProps) {
@@ -19,6 +24,11 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
   const companyName = user?.company?.name || '-';
   const branchName = user?.branch?.name || 'No branch';
   const locationName = user?.location?.name || user?.branch?.location || 'No location';
+  const permissions = user?.permissions ?? [];
+  const canUseQueue = canViewQueueScreen(permissions);
+  const canUseReceive = canViewReceiveScreen(permissions);
+  const canUseRider = canViewRiderScreen(permissions);
+  const canCreateBooking = canCreateParcelBooking(permissions);
   const initials =
     (user?.fullname || user?.email || 'U')
       .split(/\s+/)
@@ -72,35 +82,85 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textSubtle }]}>Menu</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSubtle }]}>Operations</Text>
           <DrawerItem
-            label="Profile"
+            label="Operations Hub"
             labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
-            icon={({ size, color }) => <Ionicons name="person-outline" size={size} color={color} />}
-            onPress={() => router.push('/profile')}
+            icon={({ size, color }) => <Ionicons name="apps-outline" size={size} color={color} />}
+            onPress={() => props.navigation.navigate('Operations')}
             inactiveTintColor={theme.colors.text}
           />
+          {canCreateBooking ? (
+            <DrawerItem
+              label="Create TobePaid"
+              labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+              icon={({ size, color }) => <Ionicons name="cash-outline" size={size} color={color} />}
+              onPress={() => props.navigation.navigate('ParcelCreate')}
+              inactiveTintColor={theme.colors.text}
+            />
+          ) : null}
+          {canUseQueue ? (
+            <DrawerItem
+              label="Queue Management"
+              labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+              icon={({ size, color }) => (
+                <Ionicons name="ticket-outline" size={size} color={color} />
+              )}
+              onPress={() => props.navigation.navigate('Queue')}
+              inactiveTintColor={theme.colors.text}
+            />
+          ) : null}
+          {canUseReceive ? (
+            <DrawerItem
+              label="Scan To Receive"
+              labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+              icon={({ size, color }) => (
+                <Ionicons name="qr-code-outline" size={size} color={color} />
+              )}
+              onPress={() => props.navigation.navigate('Receive')}
+              inactiveTintColor={theme.colors.text}
+            />
+          ) : null}
+          {canUseRider ? (
+            <>
+              <DrawerItem
+                label="Rider Operations"
+                labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+                icon={({ size, color }) => (
+                  <Ionicons name="bicycle-outline" size={size} color={color} />
+                )}
+                onPress={() => props.navigation.navigate('Rider')}
+                inactiveTintColor={theme.colors.text}
+              />
+              <DrawerItem
+                label="Assigned Deliveries"
+                labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+                icon={({ size, color }) => (
+                  <Ionicons name="navigate-outline" size={size} color={color} />
+                )}
+                onPress={() => props.navigation.navigate('RiderAssigned')}
+                inactiveTintColor={theme.colors.text}
+              />
+              <DrawerItem
+                label="Delivery History"
+                labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+                icon={({ size, color }) => (
+                  <Ionicons name="time-outline" size={size} color={color} />
+                )}
+                onPress={() => props.navigation.navigate('RiderHistory')}
+                inactiveTintColor={theme.colors.text}
+              />
+            </>
+          ) : null}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textSubtle }]}>Account</Text>
           <DrawerItem
             label="Change Password"
             labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
             icon={({ size, color }) => <Ionicons name="key-outline" size={size} color={color} />}
-            onPress={() => router.push('/(app)/change-password' as never)}
-            inactiveTintColor={theme.colors.text}
-          />
-          <DrawerItem
-            label="Super Search"
-            labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
-            icon={({ size, color }) => <Ionicons name="search-outline" size={size} color={color} />}
-            onPress={() => router.push('/(app)/super-search' as never)}
-            inactiveTintColor={theme.colors.text}
-          />
-          <DrawerItem
-            label="Channels"
-            labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
-            icon={({ size, color }) => (
-              <Ionicons name="chatbubbles-outline" size={size} color={color} />
-            )}
-            onPress={() => router.push('/(app)/(tabs)/chat' as never)}
+            onPress={() => props.navigation.navigate('ChangePassword')}
             inactiveTintColor={theme.colors.text}
           />
         </View>

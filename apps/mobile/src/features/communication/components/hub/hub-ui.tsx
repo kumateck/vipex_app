@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import type { CommunicationTabKey } from '@mobile/features/communication/types/hub';
@@ -8,7 +8,7 @@ import { getMobileScale } from '@mobile/features/communication/utils';
 const TAB_OPTIONS: Array<{
   key: CommunicationTabKey;
   label: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: string;
 }> = [
   { key: 'chats', label: 'Chats', icon: 'chatbubbles-outline' },
   { key: 'channels', label: 'Channels', icon: 'grid-outline' },

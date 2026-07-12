@@ -1,6 +1,6 @@
 import { useState, type PropsWithChildren, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
@@ -17,6 +17,7 @@ type AppButtonProps = {
 type AppPageHeaderProps = {
   title: string;
   subtitle?: string;
+  rightSlot?: ReactNode;
 };
 
 type PasswordInputProps = Omit<
@@ -167,15 +168,22 @@ export function AppButton({
   );
 }
 
-export function AppPageHeader({ title, subtitle }: AppPageHeaderProps) {
+export function AppPageHeader({ title, subtitle, rightSlot }: AppPageHeaderProps) {
   const { theme } = useAppearance();
 
   return (
     <View style={styles.pageHeader}>
-      <Text style={[styles.pageTitle, { color: theme.colors.text }]}>{title}</Text>
-      {subtitle ? (
-        <Text style={[styles.pageSubtitle, { color: theme.colors.textSubtle }]}>{subtitle}</Text>
-      ) : null}
+      <View style={styles.pageHeaderRow}>
+        <View style={styles.pageHeaderBody}>
+          <Text style={[styles.pageTitle, { color: theme.colors.text }]}>{title}</Text>
+          {subtitle ? (
+            <Text style={[styles.pageSubtitle, { color: theme.colors.textSubtle }]}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+        {rightSlot}
+      </View>
     </View>
   );
 }
@@ -266,6 +274,8 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingTop: 2,
   },
+  pageHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: mobileSpacing.sm },
+  pageHeaderBody: { flex: 1, gap: 4 },
   pageTitle: {
     ...mobileTextStyles.largeTitle,
   },

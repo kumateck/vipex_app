@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { Link, useLocalSearchParams } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { resetPassword } from '@mobile/lib/api';
 import { useAppearance } from '@mobile/providers/appearance-provider';

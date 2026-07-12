@@ -1,6 +1,7 @@
-import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { router } from '@mobile/navigation/router-compat';
+import { DrawerActions, useNavigation } from '@react-navigation/native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { AppScreen } from '@mobile/components/screen';
 import { AppButton, AppCard, AppPageHeader } from '@mobile/components/ui';
@@ -23,6 +24,23 @@ function CardIcon({
     <View style={[styles.cardIcon, { backgroundColor: `${color}1F` }]}>
       <Ionicons name={name} size={18} color={color} />
     </View>
+  );
+}
+
+function DashboardMenuButton() {
+  const { theme } = useAppearance();
+  const navigation = useNavigation();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Open menu"
+      hitSlop={8}
+      onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+      style={({ pressed }) => [styles.menuButton, { opacity: pressed ? 0.6 : 1 }]}
+    >
+      <Ionicons name="menu-outline" size={24} color={theme.colors.text} />
+    </Pressable>
   );
 }
 
@@ -49,6 +67,7 @@ export default function MobileHomeTabScreen() {
       <AppScreen>
         <AppPageHeader
           title="Dashboard"
+          rightSlot={<DashboardMenuButton />}
           subtitle={`Today · ${new Date().toLocaleDateString(undefined, {
             weekday: 'short',
             month: 'short',
@@ -94,6 +113,7 @@ export default function MobileHomeTabScreen() {
     <AppScreen>
       <AppPageHeader
         title="Dashboard"
+        rightSlot={<DashboardMenuButton />}
         subtitle={`Welcome back, ${user?.fullname ?? user?.email ?? 'User'}`}
       />
 
@@ -135,6 +155,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: { ...mobileTextStyles.headline },
   cardBody: { ...mobileTextStyles.subhead },
+  menuButton: { padding: mobileSpacing.xs },
   metaList: { marginTop: -mobileSpacing.xs },
   metaRow: {
     flexDirection: 'row',

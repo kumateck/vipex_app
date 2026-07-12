@@ -1,9 +1,11 @@
-import { Link } from 'expo-router';
+import { Link } from '@mobile/navigation/router-compat';
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { AppScreen } from '@mobile/components/screen';
+import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
+import { canCreateParcelBooking } from '@mobile/lib/permissions';
 import { AppCard, AppPageHeader } from '@/components/ui/mobile';
 import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
@@ -34,17 +36,22 @@ function ModuleCard({ icon, title, description, href, linkLabel }: ModuleCardPro
 }
 
 export default function OperationsTabScreen() {
+  const { session } = useAuth();
+  const canCreateBooking = canCreateParcelBooking(session.user?.permissions ?? []);
+
   return (
     <AppScreen>
       <AppPageHeader title="Operations" subtitle="Quick access to core workflow modules." />
 
-      <ModuleCard
-        icon="search-circle-outline"
-        title="Global Search"
-        description="Search parcels, communication threads, channels, and users in one view."
-        href="/(app)/global-search"
-        linkLabel="Open Global Search"
-      />
+      {canCreateBooking ? (
+        <ModuleCard
+          icon="cash-outline"
+          title="Create TobePaid"
+          description="Create a to-be-paid parcel booking. The receiver pays the full charge on pickup."
+          href="/(app)/parcel-create"
+          linkLabel="Open Create TobePaid"
+        />
+      ) : null}
       <ModuleCard
         icon="search-outline"
         title="Super Search"

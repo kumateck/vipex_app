@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { router } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 import { searchParcels, updateParcelStatus } from '@mobile/lib/api';

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import type { AppTheme } from '@mobile/theme/tokens';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
@@ -23,7 +23,7 @@ const variantLabel: Record<NotifyVariant, string> = {
   error: 'Error',
 };
 
-const variantIcon: Record<NotifyVariant, keyof typeof Ionicons.glyphMap> = {
+const variantIcon: Record<NotifyVariant, string> = {
   success: 'checkmark-circle',
   warning: 'warning',
   error: 'close-circle',

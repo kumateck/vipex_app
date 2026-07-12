@@ -1,5 +1,5 @@
-import { Tabs, router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Tabs, router } from '@mobile/navigation/router-compat';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ComponentProps } from 'react';
 import { DrawerActions, useNavigation } from '@react-navigation/native';

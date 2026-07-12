@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { router } from 'expo-router';
+import { router } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { AppSkeletonCard } from '@/components/ui/mobile';

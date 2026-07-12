@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { normalizeMentionHandle } from '@mobile/features/communication/utils/thread-mentions';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';

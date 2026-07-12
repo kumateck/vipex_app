@@ -1,5 +1,5 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { AppCard } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';

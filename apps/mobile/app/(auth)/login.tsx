@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { Link, router } from 'expo-router';
+import { Link, router } from '@mobile/navigation/router-compat';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Constants from 'expo-constants';
 import { AppScreen } from '@mobile/components/screen';
 import { useAuth } from '@mobile/providers/auth-provider';
-import { getApiDebugInfo } from '@mobile/lib/api';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { AppButton, AppCard, AppInput, AppLabel, PasswordInput } from '@/components/ui/mobile';
-import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
+import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 export default function LoginScreen() {
   const { theme } = useAppearance();
@@ -16,10 +14,6 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const apiDebug = getApiDebugInfo();
-  const appVersion = Constants.expoConfig?.version ?? 'unknown';
-  const configuredApiBase =
-    ((Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string }).apiBaseUrl ?? 'not-set';
 
   async function handleLogin() {
     setError(null);
@@ -85,16 +79,6 @@ export default function LoginScreen() {
           </Pressable>
         </Link>
       </View>
-
-      <View style={[styles.debugBox, { backgroundColor: theme.colors.cardMuted }]}>
-        <Text style={[styles.debugTitle, { color: theme.colors.textSubtle }]}>Diagnostics</Text>
-        <Text style={[styles.debugText, { color: theme.colors.textSubtle }]}>
-          App {appVersion} · {configuredApiBase}
-        </Text>
-        <Text style={[styles.debugText, { color: theme.colors.textSubtle }]}>
-          Active: {apiDebug.activeApiBaseUrl}
-        </Text>
-      </View>
     </AppScreen>
   );
 }
@@ -117,12 +101,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   linkText: { ...mobileTextStyles.footnote, fontWeight: '700' },
-  debugBox: {
-    marginTop: mobileSpacing.md + 2,
-    borderRadius: mobileRadius.md,
-    padding: mobileSpacing.sm + 2,
-    gap: 2,
-  },
-  debugTitle: { ...mobileTextStyles.caption2, fontWeight: '700', textTransform: 'uppercase' },
-  debugText: { ...mobileTextStyles.caption2 },
 });
