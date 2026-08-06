@@ -5,6 +5,8 @@ import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mo
 import type { CommunicationTabKey } from '@mobile/features/communication/types/hub';
 import { getMobileScale } from '@mobile/features/communication/utils';
 
+export { hubStyles } from './hub-styles';
+
 const TAB_OPTIONS: Array<{
   key: CommunicationTabKey;
   label: string;
@@ -188,74 +190,6 @@ export function initialsFromName(name: string) {
   if (!second) return first.slice(0, 2).toUpperCase();
   return `${first.charAt(0)}${second.charAt(0)}`.toUpperCase();
 }
-
-export const hubStyles = StyleSheet.create({
-  contentScroll: { flex: 1 },
-  contentContainer: { gap: mobileSpacing.md, paddingBottom: mobileSpacing.xl },
-  row: {
-    borderRadius: mobileRadius.lg,
-    padding: mobileSpacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: mobileSpacing.sm,
-    ...mobileShadow.card,
-  },
-  rowMain: { flex: 1, gap: 2 },
-  rowMeta: { alignItems: 'flex-end', gap: 6 },
-  rowTitle: { ...mobileTextStyles.headline },
-  rowSub: { ...mobileTextStyles.footnote },
-  rowTime: { ...mobileTextStyles.caption2 },
-  badges: { flexDirection: 'row', gap: mobileSpacing.xs + 2, alignItems: 'center' },
-  voiceHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: mobileSpacing.sm },
-  controlsRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
-  voiceButtonWrap: {
-    marginTop: mobileSpacing.sm,
-  },
-  userRow: { flexDirection: 'row', alignItems: 'center', gap: mobileSpacing.sm },
-  waRow: {
-    borderRadius: mobileRadius.lg,
-    paddingHorizontal: mobileSpacing.md,
-    paddingVertical: mobileSpacing.sm + 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: mobileSpacing.sm + 2,
-    ...mobileShadow.card,
-  },
-  avatarWrap: { width: 50, height: 50, position: 'relative' },
-  avatarCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontWeight: '700', fontSize: 17 },
-  presenceDot: {
-    position: 'absolute',
-    right: -1,
-    top: -1,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
-  },
-  waCenter: { flex: 1, minWidth: 0, gap: 1 },
-  waName: { ...mobileTextStyles.title3 },
-  waMeta: { ...mobileTextStyles.footnote },
-  waPreview: { ...mobileTextStyles.subhead, marginTop: 1 },
-  waRight: { alignItems: 'flex-end', justifyContent: 'space-between', minHeight: 44, width: 64 },
-  waTime: { ...mobileTextStyles.footnote, fontWeight: '600' },
-  unreadPill: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: mobileRadius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: mobileSpacing.xs + 2,
-  },
-  unreadText: { ...mobileTextStyles.caption2, fontWeight: '700' },
-});
 
 const styles = StyleSheet.create({
   headerBlock: { gap: mobileSpacing.xs },

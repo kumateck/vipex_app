@@ -1,42 +1,26 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  useGetBranchOperationsSettingsQuery,
-  useListBranchOptionsQuery,
-} from '@/features/branches/api/branches.api';
-import {
-  useAddCustomerCardMutation,
-  useCreateCustomerMutation,
-  useListCardOptionsQuery,
-  useListCustomerCardsQuery,
-} from '@/features/customers/api';
-import { useGetLocationQuery } from '@/features/locations/api/locations.api';
-import { useListUserOptionsQuery } from '@/features/users/api/users.api';
-import { CashierType, ParcelStatus } from '@/db/schemas/enums';
-import type { ServerListQuery } from '@/services/rtk-query';
+import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
+import { useAddCustomerCardMutation, useCreateCustomerMutation } from '@/features/customers/api';
+import { ParcelStatus } from '@/db/schemas/enums';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   type ParcelSearchRow,
   useCollectReceiverAndDeliverMutation,
-  useGetParcelDetailsQuery,
   useRequestReceiverOtpMutation,
-  useSearchParcelsQuery,
   useUpdateParcelMutation,
   useVerifyReceiverOtpMutation,
   useWaiveParcelStorageAccrualMutation,
 } from '../../api/parcel.api';
 import { confirmReceiverDelivery } from './confirm-receiver-delivery';
 import { useReceiverCashierDialogState } from './use-receiver-cashier-dialog-state';
+import {
+  type ParcelReceiverQuery,
+  useReceiverCashierResources,
+} from './use-receiver-cashier-resources';
+import { useReceiverOtpActions } from './use-receiver-otp-actions';
 import { getQueueFilterBySearch } from './receiver-cashier-utils';
-
-type ParcelReceiverQuery = ServerListQuery<{
-  companyId?: string | null;
-  destinationId?: string | null;
-  status?: number | null;
-  senderPaid?: boolean | null;
-  hasPickupQueue?: boolean | null;
-}>;
 
 export function useParcelReceiverCashierWorkflow() {
   const user = useAuthStore((state) => state.user);
@@ -76,25 +60,33 @@ export function useParcelReceiverCashierWorkflow() {
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [requestReceiverOtp] = useRequestReceiverOtpMutation();
   const [verifyReceiverOtp] = useVerifyReceiverOtpMutation();
-
-  const { data: cardOptions = [] } = useListCardOptionsQuery();
-  const { data: staffOptions = [] } = useListUserOptionsQuery(
-    companyId && branchId
-      ? { companyId, branchId, locationId: selectedParcel?.pickupLocationId ?? undefined }
-      : undefined,
-    { skip: !companyId || !branchId || !selectedParcel },
-  );
-  const { data: branchOptions = [] } = useListBranchOptionsQuery(
-    { companyId },
-    { skip: !companyId },
-  );
-
-  const shouldSearchOnly = !isPickupQueueEnabled;
-  const hasSearchTerm = Boolean(query.search?.trim());
-  const listQuery = useSearchParcelsQuery(query, {
-    skip: !companyId || !branchId || (shouldSearchOnly && !hasSearchTerm),
+  const { handleRequestOtp, handleVerifyOtp } = useReceiverOtpActions({
+    dialog,
+    requestReceiverOtp,
+    verifyReceiverOtp,
   });
-  const rows = listQuery.data?.data ?? [];
+
+  const resources = useReceiverCashierResources({
+    companyId,
+    branchId,
+    selectedParcel,
+    query,
+    isPickupQueueEnabled,
+  });
+  const {
+    cardOptions,
+    staffOptions,
+    branchOptions,
+    listQuery,
+    rows,
+    parcelDetails,
+    pickupLocation,
+    mainReceiverCards,
+    secondReceiverCards,
+    receiverDuePsw,
+    storageOutstandingPsw,
+    hasPickupQueue,
+  } = resources;
 
   useEffect(() => {
     setQuery((prev) => ({
@@ -110,32 +102,6 @@ export function useParcelReceiverCashierWorkflow() {
       },
     }));
   }, [branchId, companyId, isPickupQueueEnabled]);
-
-  const { data: parcelDetails } = useGetParcelDetailsQuery(selectedParcel?.id ?? '', {
-    skip: !selectedParcel?.id,
-  });
-  const { data: pickupLocation } = useGetLocationQuery(selectedParcel?.pickupLocationId ?? '', {
-    skip: !selectedParcel?.pickupLocationId,
-  });
-  const { data: mainReceiverCards = [] } = useListCustomerCardsQuery(
-    { customerId: selectedParcel?.receiverId ?? '' },
-    { skip: !selectedParcel?.receiverId },
-  );
-  const { data: secondReceiverCards = [] } = useListCustomerCardsQuery(
-    { customerId: selectedParcel?.secondReceiverId ?? '' },
-    { skip: !selectedParcel?.secondReceiverId },
-  );
-
-  const receiverPaidPsw = useMemo(
-    () =>
-      (parcelDetails?.payments ?? [])
-        .filter((payment) => payment.cashierType === CashierType.TOBEPAID)
-        .reduce((sum, payment) => sum + payment.grossAmountPsw, 0),
-    [parcelDetails?.payments],
-  );
-  const receiverDuePsw = Math.max((selectedParcel?.plannedToBePaidPsw ?? 0) - receiverPaidPsw, 0);
-  const storageOutstandingPsw = parcelDetails?.storageSettlement?.outstandingPsw ?? 0;
-  const hasPickupQueue = Boolean(parcelDetails?.pickupQueue);
 
   useEffect(() => {
     if (!selectedParcel) return;
@@ -206,41 +172,6 @@ export function useParcelReceiverCashierWorkflow() {
     dialog.setWaiveStorageReason('');
     dialog.setStoragePaymentAmount('0.00');
     dialog.setWaiveStorageAmount('0.00');
-  };
-
-  const handleRequestOtp = async (force = false) => {
-    if (!selectedParcel) return;
-    dialog.setOtpRequestPending(true);
-    try {
-      const result = await requestReceiverOtp({
-        parcelId: selectedParcel.id,
-        targetReceiver: dialog.handoverTarget,
-        force,
-      }).unwrap();
-      dialog.setOtpSentAt(new Date().toISOString());
-      dialog.setOtpExpiresAt(result.expiresAt);
-      dialog.setOtpVerified(false);
-      dialog.setOtpVerificationToken('');
-      dialog.setOtpCode('');
-    } finally {
-      dialog.setOtpRequestPending(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!selectedParcel) return;
-    dialog.setOtpVerifyPending(true);
-    try {
-      const result = await verifyReceiverOtp({
-        parcelId: selectedParcel.id,
-        targetReceiver: dialog.handoverTarget,
-        otp: dialog.otpCode,
-      }).unwrap();
-      dialog.setOtpVerified(true);
-      dialog.setOtpVerificationToken(result.verificationToken);
-    } finally {
-      dialog.setOtpVerifyPending(false);
-    }
   };
 
   const handleConfirmDelivered = async () => {

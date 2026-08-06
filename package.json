@@ -56,7 +56,7 @@
     "lint:date-inputs": "bun run scripts/enforce-date-picker-policy.ts",
     "lint:file-size": "bun run scripts/enforce-file-size-limit.ts",
     "format": "prettier --write .",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && bun run --cwd apps/mobile typecheck",
     "check": "bun run lint && bun run typecheck && bun test",
     "test": "bun test",
     "test:server": "bun test tests/server",
