@@ -1,38 +1,9 @@
-import { VIPEX_BRANCH_CONTACTS } from './thermal-sticker-contacts';
-
 export function receiverNameFontSize(name: string) {
   const length = name.length;
   if (length > 26) return '3.2mm';
   if (length > 18) return '4mm';
   if (length > 12) return '5mm';
   return '6mm';
-}
-
-export function PortraitBranchContacts() {
-  return (
-    <div
-      style={{
-        gridColumn: '2 / 4',
-        gridRow: 2,
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-        columnGap: '0.8mm',
-        rowGap: '0.15mm',
-        minWidth: 0,
-        fontSize: '1.5mm',
-        fontWeight: 800,
-        lineHeight: 0.92,
-        overflow: 'hidden',
-      }}
-    >
-      {VIPEX_BRANCH_CONTACTS.map((contact) => (
-        <div key={contact.route} style={{ minWidth: 0 }}>
-          <div style={{ whiteSpace: 'nowrap' }}>{contact.route}:</div>
-          <div style={{ whiteSpace: 'nowrap' }}>{contact.phones}</div>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 export function DestinationRow({
