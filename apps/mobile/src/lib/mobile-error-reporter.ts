@@ -1,4 +1,4 @@
-import Constants from 'expo-constants';
+import { ENV } from '@mobile/lib/env';
 
 type MobileErrorReportInput = {
   source: string;
@@ -9,7 +9,6 @@ type MobileErrorReportInput = {
 
 type GlobalErrorHandler = (error: unknown, isFatal?: boolean) => void;
 
-const ERROR_WEBHOOK_ENV = 'EXPO_PUBLIC_DISCORD_ERROR_WEBHOOK_URL';
 const ERROR_DEDUPE_WINDOW_MS = 5_000;
 const MAX_CONTENT_LENGTH = 1900;
 
@@ -40,20 +39,7 @@ function toErrorSummary(error: unknown) {
 }
 
 function getDiscordWebhookUrl() {
-  const extra = (Constants.expoConfig?.extra ?? {}) as { discordErrorWebhookUrl?: string };
-  const manifestExtra = ((
-    Constants as unknown as {
-      manifest2?: {
-        extra?: { expoClient?: { extra?: { discordErrorWebhookUrl?: string } } };
-      };
-    }
-  ).manifest2?.extra?.expoClient?.extra ?? {}) as { discordErrorWebhookUrl?: string };
-
-  const candidate =
-    process.env[ERROR_WEBHOOK_ENV] ??
-    extra.discordErrorWebhookUrl ??
-    manifestExtra.discordErrorWebhookUrl;
-  const normalized = candidate?.trim();
+  const normalized = ENV.discordErrorWebhookUrl?.trim();
   return normalized && normalized.length > 0 ? normalized : null;
 }
 

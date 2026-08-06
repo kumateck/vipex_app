@@ -29,6 +29,10 @@ import { updateParcelRepo } from '../shipments/parcels.repository';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
 import { recordPaymentTaxJournalItemSvc } from '../accounting/service';
 import { getActiveTaxProfileWithComponentsRepo } from '../accounting/repository';
+import {
+  assertReceiverOtpVerifiedSvc,
+  consumeReceiverOtpTokenSvc,
+} from '../parcel-receiver-otp/service';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 const STORAGE_PAYMENT_NOTE_PREFIX = 'STORAGE_CHARGE';
@@ -45,6 +49,7 @@ export type PaymentCreateInput = {
   receivedAt?: string;
   notes?: string | null;
   receiptNo?: string | null;
+  momoTransactionId?: string | null;
 };
 
 type PaymentAmounts = {
@@ -345,6 +350,7 @@ async function createPaymentCore(input: PaymentCreateInput, executor: DbExecutor
       receivedAt,
       notes: input.notes ?? null,
       receiptNo: input.receiptNo ?? null,
+      momoTransactionId: input.momoTransactionId ?? null,
     },
     executor,
   );
@@ -438,6 +444,7 @@ export async function collectSenderPaymentAndProcessSvc(input: {
   method: PaymentMethod;
   cashierUserId: string;
   amountCedis?: number | string | null;
+  momoTransactionId?: string | null;
 }) {
   try {
     const hasAmount =
@@ -465,6 +472,7 @@ export async function collectSenderPaymentAndProcessSvc(input: {
             method: input.method,
             cashierUserId: input.cashierUserId,
             amountCedis: input.amountCedis as number | string,
+            momoTransactionId: input.momoTransactionId ?? null,
           },
           tx,
         );
@@ -537,8 +545,17 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
   secondCardNumber?: string | null;
   amountCedis?: number | string | null;
   storageAmountCedis?: number | string | null;
+  receiverOtpVerificationToken: string;
+  receiverOtpTarget: 'main' | 'second';
+  momoTransactionId?: string | null;
 }) {
   try {
+    const verifiedOtp = await assertReceiverOtpVerifiedSvc({
+      parcelId: input.parcelId,
+      targetReceiver: input.receiverOtpTarget,
+      verificationToken: input.receiverOtpVerificationToken,
+    });
+
     const hasAmount =
       input.amountCedis !== undefined &&
       input.amountCedis !== null &&
@@ -563,6 +580,7 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
             method: input.method,
             cashierUserId: input.cashierUserId,
             amountCedis: input.amountCedis as number | string,
+            momoTransactionId: input.momoTransactionId ?? null,
           },
           tx,
         );
@@ -623,6 +641,8 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
 
       return { payment, storagePayment, storageBefore, storageAfter };
     });
+
+    await consumeReceiverOtpTokenSvc(verifiedOtp.id);
 
     if (result.payment && !result.payment.id.startsWith('auto-processed:')) {
       await auditPaymentCreated(

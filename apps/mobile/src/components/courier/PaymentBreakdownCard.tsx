@@ -25,13 +25,13 @@ export function PaymentBreakdownCard({
   return (
     <AppCard>
       <Text style={[styles.title, { color: theme.colors.text }]}>Payment Breakdown</Text>
-      <View style={[styles.row, { borderBottomColor: theme.colors.border }]}>
+      <View style={[styles.row, { borderBottomColor: theme.colors.separator }]}>
         <Text style={[styles.label, { color: theme.colors.textMuted }]}>Delivery Fee</Text>
         <Text style={[styles.value, { color: theme.colors.text }]}>
           {formatPsw(deliveryFeePsw)}
         </Text>
       </View>
-      <View style={[styles.row, { borderBottomColor: theme.colors.border }]}>
+      <View style={[styles.row, { borderBottomColor: theme.colors.separator }]}>
         <Text style={[styles.label, { color: theme.colors.textMuted }]}>Transit Fee</Text>
         <Text style={[styles.value, { color: theme.colors.text }]}>
           {formatPsw(collectTransit)}

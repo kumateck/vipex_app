@@ -4,6 +4,7 @@ import { Conflict, NotFound } from '@/server/utils/http-error';
 import { getBranchSvc } from '../branches/service';
 import { getLocationSvc } from '../locations/service';
 import { getParcelSvc } from '../shipments/parcels.service';
+import { sendPickupQueueNotificationSvc } from '../notification-hub/service';
 import {
   createPickupQueueRepo,
   getNextPickupQueueNumberRepo,
@@ -101,6 +102,7 @@ export async function createPickupQueueSvc(input: {
   pickerStaffId?: string | null;
   idCardTypeId?: string | null;
   idCardNumber?: string | null;
+  sendSms?: boolean;
 }) {
   const parcel = await getParcelSvc(input.parcelId);
   if (parcel.status !== ParcelStatus.AWAITING_PICKUP) {
@@ -118,7 +120,7 @@ export async function createPickupQueueSvc(input: {
     parcelId: input.parcelId,
     queueDate,
   });
-  if (existing) return mapPickupQueue(existing);
+  if (existing) return { ...mapPickupQueue(existing), smsSent: false };
 
   const paymentBucket = Number(parcel.plannedToBePaidPsw ?? 0) > 0 ? 'TP' : 'SP';
   const queueLocationId = parcel.pickupLocationId ?? null;
@@ -156,7 +158,18 @@ export async function createPickupQueueSvc(input: {
     });
 
     if (created) {
-      return mapPickupQueue(created);
+      let smsSent = false;
+      if (input.sendSms !== false) {
+        const result = await sendPickupQueueNotificationSvc({
+          companyId: parcel.companyId,
+          parcelId: parcel.id,
+          queueCode,
+          queueNumber,
+          branchName: branch.name,
+        });
+        smsSent = result.sent;
+      }
+      return { ...mapPickupQueue(created), smsSent };
     }
 
     const existingByParcel = await getPickupQueueByParcelAndDateRepo({
@@ -164,7 +177,7 @@ export async function createPickupQueueSvc(input: {
       queueDate,
     });
     if (existingByParcel) {
-      return mapPickupQueue(existingByParcel);
+      return { ...mapPickupQueue(existingByParcel), smsSent: false };
     }
   }
 

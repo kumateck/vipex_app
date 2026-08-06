@@ -1,0 +1,113 @@
+import { VIPEX_BRANCH_CONTACTS } from './thermal-sticker-contacts';
+
+export function receiverNameFontSize(name: string) {
+  const length = name.length;
+  if (length > 26) return '3.2mm';
+  if (length > 18) return '4mm';
+  if (length > 12) return '5mm';
+  return '6mm';
+}
+
+export function PortraitBranchContacts() {
+  return (
+    <div
+      style={{
+        gridColumn: '2 / 4',
+        gridRow: 2,
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+        columnGap: '0.8mm',
+        rowGap: '0.15mm',
+        minWidth: 0,
+        fontSize: '1.5mm',
+        fontWeight: 800,
+        lineHeight: 0.92,
+        overflow: 'hidden',
+      }}
+    >
+      {VIPEX_BRANCH_CONTACTS.map((contact) => (
+        <div key={contact.route} style={{ minWidth: 0 }}>
+          <div style={{ whiteSpace: 'nowrap' }}>{contact.route}:</div>
+          <div style={{ whiteSpace: 'nowrap' }}>{contact.phones}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function DestinationRow({
+  branch,
+  location,
+}: {
+  branch?: string | null;
+  location?: string | null;
+}) {
+  return (
+    <div
+      style={{
+        minWidth: 0,
+        borderTop: '0.35mm solid #111',
+        padding: '0.35mm 0',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1.25fr 0.75fr',
+          gap: '1.2mm',
+          minWidth: 0,
+        }}
+      >
+        <StickerRowContent label="Destination" value={branch} scale="large" />
+        <StickerRowContent label="Location" value={location} />
+      </div>
+    </div>
+  );
+}
+
+function StickerRowContent({
+  label,
+  value,
+  scale = 'normal',
+}: {
+  label: string;
+  value?: string | null;
+  scale?: 'normal' | 'large';
+}) {
+  const displayValue = value?.trim() || '-';
+  const fontSize =
+    scale === 'large'
+      ? displayValue.length > 18
+        ? '6.6mm'
+        : '8.4mm'
+      : displayValue.length > 18
+        ? '3.3mm'
+        : '4.2mm';
+
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div
+        style={{
+          fontSize: '2mm',
+          fontWeight: 700,
+          lineHeight: 1,
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize,
+          fontWeight: 800,
+          lineHeight: scale === 'large' ? 0.86 : 0.96,
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {displayValue}
+      </div>
+    </div>
+  );
+}

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { router } from 'expo-router';
+import { useEffect, useState, type ComponentProps } from 'react';
+import { router } from '@mobile/navigation/router-compat';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { AppScreen } from '@mobile/components/screen';
 import {
   listCommunicationChannels,
@@ -11,9 +12,9 @@ import {
 import { notifyError } from '@mobile/lib/notify';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { useAuth } from '@mobile/providers/auth-provider';
-import { AppButton, AppCard, AppInput } from '@/components/ui/mobile';
+import { AppButton, AppCard, AppInput, AppLabel, AppPageHeader } from '@/components/ui/mobile';
 import { loadGlobalSearchHistory, pushGlobalSearchHistory } from '@mobile/lib/communication-local';
-import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 type SearchResults = {
   parcels: Array<{ id: string; bookingCode: string; parcelDetails: string }>;
@@ -21,6 +22,60 @@ type SearchResults = {
   channels: Array<{ id: string; name: string; channelType: string; threadId: string | null }>;
   users: Array<{ id: string; fullname: string; email: string }>;
 };
+
+type IoniconName = ComponentProps<typeof Ionicons>['name'];
+
+type ResultRowData = {
+  id: string;
+  icon: IoniconName;
+  title: string;
+  subtitle?: string;
+  onPress?: () => void;
+};
+
+function ResultRow({ icon, title, subtitle, onPress, first }: ResultRowData & { first?: boolean }) {
+  const { theme } = useAppearance();
+
+  const inner = (
+    <View
+      style={[
+        styles.resultRow,
+        !first && {
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: theme.colors.separator,
+        },
+      ]}
+    >
+      <View style={[styles.resultIcon, { backgroundColor: `${theme.colors.secondary}1F` }]}>
+        <Ionicons name={icon} size={16} color={theme.colors.secondary} />
+      </View>
+      <View style={styles.resultMain}>
+        <Text style={[styles.resultTitle, { color: theme.colors.text }]} numberOfLines={1}>
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text
+            style={[styles.resultSubtitle, { color: theme.colors.textMuted }]}
+            numberOfLines={1}
+          >
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+      {onPress ? (
+        <Ionicons name="chevron-forward" size={16} color={theme.colors.textSubtle} />
+      ) : null}
+    </View>
+  );
+
+  if (!onPress) return inner;
+
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+      {inner}
+    </Pressable>
+  );
+}
 
 export default function GlobalSearchScreen() {
   const { theme } = useAppearance();
@@ -98,12 +153,62 @@ export default function GlobalSearchScreen() {
     }
   };
 
+  const resultRows: ResultRowData[] = [
+    ...results.parcels.map((item) => ({
+      id: `parcel-${item.id}`,
+      icon: 'cube-outline' as IoniconName,
+      title: `Parcel • ${item.bookingCode}`,
+      subtitle: item.parcelDetails,
+      onPress: () =>
+        router.push({
+          pathname: '/super-search/[parcelId]' as never,
+          params: { parcelId: item.id },
+        }),
+    })),
+    ...results.channels.map((item) => ({
+      id: `channel-${item.id}`,
+      icon: (item.channelType === 'voice' ? 'call-outline' : 'chatbubbles-outline') as IoniconName,
+      title: `Channel • ${item.name}`,
+      subtitle: item.channelType,
+      onPress: () => {
+        if (item.channelType === 'voice') {
+          router.push({
+            pathname: '/communication/voice/[channelId]' as never,
+            params: { channelId: item.id, name: item.name },
+          });
+          return;
+        }
+        if (!item.threadId) return;
+        router.push({
+          pathname: '/communication/thread/[threadId]' as never,
+          params: { threadId: item.threadId, title: `#${item.name}`, threadType: 'channel' },
+        });
+      },
+    })),
+    ...results.threads.map((item) => ({
+      id: `thread-${item.id}`,
+      icon: 'chatbox-outline' as IoniconName,
+      title: `Thread • ${item.title ?? 'Untitled'}`,
+      onPress: () =>
+        router.push({
+          pathname: '/communication/thread/[threadId]' as never,
+          params: { threadId: item.id, title: item.title ?? 'Thread' },
+        }),
+    })),
+    ...results.users.map((item) => ({
+      id: `user-${item.id}`,
+      icon: 'person-outline' as IoniconName,
+      title: `User • ${item.fullname}`,
+      subtitle: item.email,
+    })),
+  ];
+
   return (
     <AppScreen refreshing={loading} onRefresh={() => void runSearch()}>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Global Search</Text>
-      <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-        Parcels, channels, threads, and users in one place.
-      </Text>
+      <AppPageHeader
+        title="Global Search"
+        subtitle="Parcels, channels, threads, and users in one place."
+      />
 
       <AppCard>
         <AppInput
@@ -131,7 +236,7 @@ export default function GlobalSearchScreen() {
 
       {history.length ? (
         <AppCard>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>Recent</Text>
+          <AppLabel>Recent</AppLabel>
           <View style={styles.historyWrap}>
             {history.map((item) => (
               <Pressable
@@ -140,9 +245,9 @@ export default function GlobalSearchScreen() {
                   setQuery(item);
                   void runSearch(item);
                 }}
-                style={[styles.historyPill, { borderColor: theme.colors.border }]}
+                style={[styles.historyPill, { backgroundColor: theme.colors.cardMuted }]}
               >
-                <Text style={{ color: theme.colors.text }}>{item}</Text>
+                <Text style={[styles.historyPillText, { color: theme.colors.text }]}>{item}</Text>
               </Pressable>
             ))}
           </View>
@@ -150,80 +255,12 @@ export default function GlobalSearchScreen() {
       ) : null}
 
       <AppCard>
-        <Text style={[styles.sectionTitle, { color: theme.colors.textMuted }]}>
-          Results ({totalCount})
-        </Text>
-        {results.parcels.map((item) => (
-          <Pressable
-            key={`parcel-${item.id}`}
-            onPress={() =>
-              router.push({
-                pathname: '/super-search/[parcelId]' as never,
-                params: { parcelId: item.id },
-              })
-            }
-            style={[styles.resultRow, { borderColor: theme.colors.border }]}
-          >
-            <Text style={{ color: theme.colors.text, fontWeight: '700' }}>
-              Parcel • {item.bookingCode}
-            </Text>
-            <Text style={{ color: theme.colors.textMuted }}>{item.parcelDetails}</Text>
-          </Pressable>
-        ))}
-        {results.channels.map((item) => (
-          <Pressable
-            key={`channel-${item.id}`}
-            onPress={() => {
-              if (item.channelType === 'voice') {
-                router.push({
-                  pathname: '/communication/voice/[channelId]' as never,
-                  params: { channelId: item.id, name: item.name },
-                });
-                return;
-              }
-              if (!item.threadId) return;
-              router.push({
-                pathname: '/communication/thread/[threadId]' as never,
-                params: { threadId: item.threadId, title: `#${item.name}`, threadType: 'channel' },
-              });
-            }}
-            style={[styles.resultRow, { borderColor: theme.colors.border }]}
-          >
-            <Text style={{ color: theme.colors.text, fontWeight: '700' }}>
-              Channel • {item.name}
-            </Text>
-            <Text style={{ color: theme.colors.textMuted }}>{item.channelType}</Text>
-          </Pressable>
-        ))}
-        {results.threads.map((item) => (
-          <Pressable
-            key={`thread-${item.id}`}
-            onPress={() =>
-              router.push({
-                pathname: '/communication/thread/[threadId]' as never,
-                params: { threadId: item.id, title: item.title ?? 'Thread' },
-              })
-            }
-            style={[styles.resultRow, { borderColor: theme.colors.border }]}
-          >
-            <Text style={{ color: theme.colors.text, fontWeight: '700' }}>
-              Thread • {item.title ?? 'Untitled'}
-            </Text>
-          </Pressable>
-        ))}
-        {results.users.map((item) => (
-          <View
-            key={`user-${item.id}`}
-            style={[styles.resultRow, { borderColor: theme.colors.border }]}
-          >
-            <Text style={{ color: theme.colors.text, fontWeight: '700' }}>
-              User • {item.fullname}
-            </Text>
-            <Text style={{ color: theme.colors.textMuted }}>{item.email}</Text>
-          </View>
+        <AppLabel>Results ({totalCount})</AppLabel>
+        {resultRows.map((row, index) => (
+          <ResultRow key={row.id} {...row} first={index === 0} />
         ))}
         {!totalCount ? (
-          <Text style={{ color: theme.colors.textSubtle }}>No results yet.</Text>
+          <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>No results yet.</Text>
         ) : null}
       </AppCard>
     </AppScreen>
@@ -231,21 +268,29 @@ export default function GlobalSearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: mobileTypography.title, fontWeight: '800' },
-  subtitle: { marginTop: -2, lineHeight: 20, marginBottom: mobileSpacing.xs },
-  sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
   row: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
-  historyWrap: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  historyWrap: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
   historyPill: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderRadius: mobileRadius.pill,
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.xs + 2,
   },
+  historyPillText: { ...mobileTextStyles.footnote, fontWeight: '600' },
   resultRow: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: mobileSpacing.sm,
-    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: mobileSpacing.sm,
+    paddingVertical: mobileSpacing.sm,
   },
+  resultIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: mobileRadius.sm + 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resultMain: { flex: 1, gap: 1 },
+  resultTitle: { ...mobileTextStyles.subhead, fontWeight: '700' },
+  resultSubtitle: { ...mobileTextStyles.footnote },
+  empty: { ...mobileTextStyles.subhead, textAlign: 'center', paddingVertical: mobileSpacing.sm },
 });

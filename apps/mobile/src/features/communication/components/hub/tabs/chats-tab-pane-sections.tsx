@@ -1,7 +1,10 @@
 import { Pressable, Text, View } from 'react-native';
 import type { CommunicationThread } from '@mobile/types/communication';
 import type { UserChatEntry } from '@mobile/features/communication/types/hub';
+import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import { formatTime, hubStyles, initialsFromName } from '../hub-ui';
+
+export { GroupChatRow } from './group-chat-row';
 
 export type ChatFilterKey = 'all' | 'unread' | 'favourites' | 'groups';
 
@@ -23,7 +26,7 @@ export function ChatFilterBar({
   onChange: (next: ChatFilterKey) => void;
 }) {
   return (
-    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+    <View style={{ flexDirection: 'row', gap: mobileSpacing.sm, marginBottom: mobileSpacing.xs }}>
       {[
         { key: 'all', label: 'All' },
         { key: 'unread', label: 'Unread' },
@@ -35,20 +38,21 @@ export function ChatFilterBar({
           <Pressable
             key={item.key}
             onPress={() => onChange(item.key as ChatFilterKey)}
-            style={{
-              paddingVertical: 6,
-              paddingHorizontal: 12,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: active ? colors.primary : colors.border,
-              backgroundColor: active ? colors.primary : colors.cardMuted,
-            }}
+            style={[
+              {
+                paddingVertical: mobileSpacing.xs + 2,
+                paddingHorizontal: mobileSpacing.md,
+                borderRadius: mobileRadius.pill,
+                backgroundColor: active ? colors.primary : colors.cardMuted,
+              },
+              active ? mobileShadow.card : null,
+            ]}
           >
             <Text
               style={{
                 color: active ? colors.primaryText : colors.textMuted,
                 fontWeight: '700',
-                fontSize: 12 * scale,
+                fontSize: mobileTextStyles.caption1.fontSize * scale,
               }}
             >
               {item.label}
@@ -81,6 +85,7 @@ export function DirectChatRow({
   scale: number;
   colors: {
     border: string;
+    borderWidth: number;
     card: string;
     bgElevated: string;
     textMuted: string;
@@ -97,7 +102,15 @@ export function DirectChatRow({
   const hasPresence = unreadCount > 0 || isTyping;
   return (
     <Pressable
-      style={[hubStyles.waRow, { borderColor: colors.border, backgroundColor: colors.card }]}
+      style={({ pressed }) => [
+        hubStyles.waRow,
+        {
+          opacity: pressed ? 0.85 : 1,
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          borderWidth: colors.borderWidth,
+        },
+      ]}
       onPress={() => onOpenThread(thread)}
       onLongPress={() => onToggleFavourite(entry.id)}
     >
@@ -137,7 +150,11 @@ export function DirectChatRow({
           numberOfLines={1}
           style={[
             hubStyles.waName,
-            { color: colors.text, fontSize: 14 * scale, lineHeight: 18 * scale },
+            {
+              color: colors.text,
+              fontSize: mobileTextStyles.subhead.fontSize * scale,
+              lineHeight: mobileTextStyles.subhead.lineHeight * scale,
+            },
           ]}
         >
           {entry.fullname}
@@ -146,7 +163,11 @@ export function DirectChatRow({
           numberOfLines={1}
           style={[
             hubStyles.waMeta,
-            { color: colors.textSubtle, fontSize: 13 * scale, lineHeight: 17 * scale },
+            {
+              color: colors.textSubtle,
+              fontSize: mobileTextStyles.footnote.fontSize * scale,
+              lineHeight: mobileTextStyles.footnote.lineHeight * scale,
+            },
           ]}
         >
           {[entry.roleName, entry.branchName, entry.locationName].filter(Boolean).join(' • ') ||
@@ -156,7 +177,11 @@ export function DirectChatRow({
           numberOfLines={1}
           style={[
             hubStyles.waPreview,
-            { color: colors.textMuted, fontSize: 14 * scale, lineHeight: 18 * scale },
+            {
+              color: colors.textMuted,
+              fontSize: mobileTextStyles.subhead.fontSize * scale,
+              lineHeight: mobileTextStyles.subhead.lineHeight * scale,
+            },
           ]}
         >
           {isTyping
@@ -166,7 +191,12 @@ export function DirectChatRow({
         </Text>
       </View>
       <View style={hubStyles.waRight}>
-        <Text style={[hubStyles.waTime, { color: colors.textSubtle, fontSize: 13 * scale }]}>
+        <Text
+          style={[
+            hubStyles.waTime,
+            { color: colors.textSubtle, fontSize: mobileTextStyles.footnote.fontSize * scale },
+          ]}
+        >
           {formatTime(thread.lastMessageAt)}
         </Text>
         {unreadCount ? (
@@ -177,117 +207,18 @@ export function DirectChatRow({
                 backgroundColor: colors.primary,
                 minWidth: 20 * scale,
                 height: 20 * scale,
-                borderRadius: 10 * scale,
+                borderRadius: mobileRadius.pill,
               },
             ]}
           >
             <Text
-              style={[hubStyles.unreadText, { color: colors.primaryText, fontSize: 12 * scale }]}
-            >
-              {unreadCount}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-    </Pressable>
-  );
-}
-
-export function GroupChatRow({
-  thread,
-  unreadCount,
-  avatarSize,
-  scale,
-  colors,
-  onOpenThread,
-}: {
-  thread: CommunicationThread;
-  unreadCount: number;
-  avatarSize: number;
-  scale: number;
-  colors: {
-    border: string;
-    card: string;
-    bgElevated: string;
-    textMuted: string;
-    text: string;
-    textSubtle: string;
-    primary: string;
-    primaryText: string;
-  };
-  onOpenThread: (thread: CommunicationThread) => void;
-}) {
-  const title = thread.title ?? 'Group chat';
-  return (
-    <Pressable
-      style={[hubStyles.waRow, { borderColor: colors.border, backgroundColor: colors.card }]}
-      onPress={() => onOpenThread(thread)}
-    >
-      <View style={[hubStyles.avatarWrap, { width: avatarSize, height: avatarSize }]}>
-        <View
-          style={[
-            hubStyles.avatarCircle,
-            {
-              backgroundColor: colors.bgElevated,
-              borderColor: colors.border,
-              borderWidth: 1,
-              width: avatarSize,
-              height: avatarSize,
-              borderRadius: avatarSize / 2,
-            },
-          ]}
-        >
-          <Text style={[hubStyles.avatarText, { color: colors.textMuted, fontSize: 17 * scale }]}>
-            {initialsFromName(title)}
-          </Text>
-        </View>
-      </View>
-      <View style={hubStyles.waCenter}>
-        <Text
-          numberOfLines={1}
-          style={[
-            hubStyles.waName,
-            { color: colors.text, fontSize: 14 * scale, lineHeight: 18 * scale },
-          ]}
-        >
-          {title}
-        </Text>
-        <Text
-          style={[
-            hubStyles.waMeta,
-            { color: colors.textSubtle, fontSize: 13 * scale, lineHeight: 17 * scale },
-          ]}
-        >
-          {thread.participantCount ?? 0} participants
-        </Text>
-        <Text
-          numberOfLines={1}
-          style={[
-            hubStyles.waPreview,
-            { color: colors.textMuted, fontSize: 14 * scale, lineHeight: 18 * scale },
-          ]}
-        >
-          {thread.lastMessageAt ? 'Latest activity in group' : 'No messages yet'}
-        </Text>
-      </View>
-      <View style={hubStyles.waRight}>
-        <Text style={[hubStyles.waTime, { color: colors.textSubtle, fontSize: 13 * scale }]}>
-          {formatTime(thread.lastMessageAt)}
-        </Text>
-        {unreadCount ? (
-          <View
-            style={[
-              hubStyles.unreadPill,
-              {
-                backgroundColor: colors.primary,
-                minWidth: 20 * scale,
-                height: 20 * scale,
-                borderRadius: 10 * scale,
-              },
-            ]}
-          >
-            <Text
-              style={[hubStyles.unreadText, { color: colors.primaryText, fontSize: 12 * scale }]}
+              style={[
+                hubStyles.unreadText,
+                {
+                  color: colors.primaryText,
+                  fontSize: mobileTextStyles.caption1.fontSize * scale,
+                },
+              ]}
             >
               {unreadCount}
             </Text>

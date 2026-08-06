@@ -774,6 +774,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/it-support/tickets': PermissionKeys.CanReadItSupportTickets,
   '/it-support/tickets/new': PermissionKeys.CanCreateItSupportTickets,
   '/settings/company': PermissionKeys.CanReadCompanyProfile,
+  '/settings/sms': PermissionKeys.CanReadCompanyProfile,
   '/settings/modules': PermissionKeys.CanManageCompanyModules,
   '/settings/parcel-ageing': PermissionKeys.CanManageParcelAgeingPolicy,
   '/settings/printer-routing': PermissionKeys.CanManagePrinterRouting,

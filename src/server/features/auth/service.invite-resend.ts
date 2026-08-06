@@ -3,15 +3,7 @@ import { getUserInviteStateRepo, setUserResetTokenRepo } from './repository.toke
 
 import { BadRequest, Conflict, NotFound, ServiceUnavailable } from '../../utils/http-error';
 import { UserStatus } from '@/db/schemas/enums';
-
-function sha256Hex(input: string) {
-  const enc = new TextEncoder().encode(input);
-  return crypto.subtle.digest('SHA-256', enc).then((buf) =>
-    Array.from(new Uint8Array(buf))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join(''),
-  );
-}
+import { generateOtpCode, hashOtp } from '@/server/utils/otp';
 
 export async function resendSetupInviteSvc(userId: string, opts?: { force?: boolean }) {
   const force = !!opts?.force;
@@ -32,8 +24,8 @@ export async function resendSetupInviteSvc(userId: string, opts?: { force?: bool
     );
   }
 
-  const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
-  const tokenHash = await sha256Hex(`${user.email.trim().toLowerCase()}:${otp}`);
+  const otp = generateOtpCode();
+  const tokenHash = await hashOtp(user.email.trim().toLowerCase(), otp);
 
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
   await setUserResetTokenRepo({ userId: user.id, tokenHash, expiresAt });

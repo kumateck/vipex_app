@@ -1,5 +1,5 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { AppCard } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
@@ -10,7 +10,7 @@ import {
   ParcelSummarySections,
   useParcelRecordDetails,
 } from '@mobile/features/super-search/parcel-details';
-import { mobileSpacing } from '@mobile/theme/layout';
+import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 export default function SuperSearchRecordDetailsScreen() {
   const { theme } = useAppearance();
@@ -69,5 +69,5 @@ export default function SuperSearchRecordDetailsScreen() {
 
 const styles = StyleSheet.create({
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: mobileSpacing.sm },
-  empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
+  empty: { ...mobileTextStyles.subhead, textAlign: 'center', marginTop: mobileSpacing.sm },
 });

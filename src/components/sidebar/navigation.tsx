@@ -1062,6 +1062,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadCompanyProfile,
           },
           {
+            title: 'SMS Configuration',
+            url: '/settings/sms',
+            permissionKey: PermissionKeys.CanReadCompanyProfile,
+          },
+          {
             title: 'Module Management',
             url: '/settings/modules',
             permissionKey: PermissionKeys.CanManageCompanyModules,

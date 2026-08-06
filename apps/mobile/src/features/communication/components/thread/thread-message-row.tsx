@@ -3,6 +3,7 @@ import { useAppearance } from '@mobile/providers/appearance-provider';
 import { getSenderNameColor } from '@mobile/features/communication/utils/thread-sender-color';
 import type { CommunicationMessage } from '@mobile/types/communication';
 import { formatMessageTime } from '@mobile/features/communication/utils/thread-time';
+import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import {
   ThreadMessageContent,
   extractThreadMessageReactions,
@@ -63,11 +64,6 @@ export function ThreadMessageRow({
   usersById: Map<string, { fullname?: string | null; email?: string | null }>;
 }) {
   const { theme } = useAppearance();
-  const colors = {
-    bubbleMine: isDark ? '#1B4332' : '#D9FDD3',
-    bubbleTheirs: isDark ? '#111827' : '#FFFFFF',
-    bubbleMeta: isDark ? '#93A4B8' : '#6B7280',
-  };
   const senderColor = getSenderNameColor(message.senderUserId ?? sender, isDark);
   const reactions = extractThreadMessageReactions(message);
   const replyPreview = extractThreadReplyPreview(message);
@@ -81,6 +77,10 @@ export function ThreadMessageRow({
       'Unknown user'
     : replyPreview?.sender?.trim() || 'Original message';
   const replyBodyLabel = replyPreview?.body?.trim() || '(attachment)';
+
+  const bubbleBg = isMine ? theme.colors.primary : theme.colors.cardMuted;
+  const bubbleTextColor = isMine ? theme.colors.primaryText : theme.colors.text;
+  const bubbleMetaColor = isMine ? theme.colors.primaryText : theme.colors.textSubtle;
 
   return (
     <Pressable
@@ -100,14 +100,15 @@ export function ThreadMessageRow({
       <View
         style={[
           styles.bubble,
+          isMine ? styles.bubbleMine : styles.bubbleTheirs,
           {
-            backgroundColor: isMine ? colors.bubbleMine : colors.bubbleTheirs,
-            borderColor: selected || highlighted ? theme.colors.primary : theme.colors.border,
+            backgroundColor: bubbleBg,
+            borderColor: selected ? theme.colors.primary : 'transparent',
+            borderWidth: selected ? 1.5 : 0,
             shadowColor: highlighted ? theme.colors.primary : 'transparent',
             shadowOpacity: highlighted ? 0.35 : 0,
             shadowRadius: highlighted ? 8 : 0,
             shadowOffset: { width: 0, height: 0 },
-            borderRadius: 14 * scale,
           },
         ]}
       >
@@ -121,17 +122,16 @@ export function ThreadMessageRow({
             style={[
               styles.replyPreview,
               {
-                borderColor: theme.colors.border,
-                borderLeftColor: theme.colors.primary,
-                backgroundColor: theme.colors.bgElevated,
+                borderLeftColor: bubbleTextColor,
+                backgroundColor: isMine ? 'rgba(255,255,255,0.16)' : theme.colors.bgElevated,
                 opacity: canJumpToReply ? 1 : 0.9,
               },
             ]}
           >
-            <Text style={[styles.replySender, { color: theme.colors.primary }]} numberOfLines={1}>
+            <Text style={[styles.replySender, { color: bubbleTextColor }]} numberOfLines={1}>
               {replySenderLabel}
             </Text>
-            <Text style={[styles.replyBody, { color: theme.colors.textSubtle }]} numberOfLines={2}>
+            <Text style={[styles.replyBody, { color: bubbleMetaColor }]} numberOfLines={2}>
               {replyBodyLabel}
             </Text>
           </Pressable>
@@ -142,13 +142,13 @@ export function ThreadMessageRow({
             <Text
               style={[
                 styles.meta,
-                { color: message._failed ? theme.colors.danger : theme.colors.textSubtle },
+                { color: message._failed ? theme.colors.danger : bubbleMetaColor },
               ]}
             >
               {message._failed ? 'failed' : 'sending'}
             </Text>
           ) : null}
-          <Text style={[styles.meta, { color: colors.bubbleMeta, fontSize: 11 * scale }]}>
+          <Text style={[styles.meta, { color: bubbleMetaColor, fontSize: 11 * scale }]}>
             {formatMessageTime(message.createdAt)}
           </Text>
         </View>
@@ -164,13 +164,7 @@ export function ThreadMessageRow({
           {reactions.map((reaction) => (
             <View
               key={`${message.id}-reaction-${reaction.emoji}`}
-              style={[
-                styles.reactionTipPill,
-                {
-                  borderColor: theme.colors.border,
-                  backgroundColor: theme.colors.bgElevated,
-                },
-              ]}
+              style={[styles.reactionTipPill, { backgroundColor: theme.colors.cardMuted }]}
             >
               <Text style={{ color: theme.colors.text, fontSize: 12 * scale }}>
                 {reaction.emoji}
@@ -189,38 +183,42 @@ const styles = StyleSheet.create({
   mineWrap: { alignSelf: 'flex-end' },
   theirWrap: { alignSelf: 'flex-start' },
   sender: { fontSize: 13, marginBottom: 2, fontWeight: '700', marginLeft: 4 },
-  bubble: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 11, paddingVertical: 8 },
-  replyPreview: {
-    borderWidth: 1,
-    borderLeftWidth: 3,
-    borderRadius: 9,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    marginBottom: 6,
+  bubble: {
+    borderRadius: mobileRadius.lg,
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.sm,
   },
-  replySender: { fontSize: 11, fontWeight: '700' },
-  replyBody: { marginTop: 2, fontSize: 11, lineHeight: 14 },
+  bubbleMine: { borderBottomRightRadius: mobileRadius.sm },
+  bubbleTheirs: { borderBottomLeftRadius: mobileRadius.sm },
+  replyPreview: {
+    borderLeftWidth: 3,
+    borderRadius: mobileRadius.sm,
+    paddingHorizontal: mobileSpacing.sm,
+    paddingVertical: mobileSpacing.xs + 2,
+    marginBottom: mobileSpacing.xs + 2,
+  },
+  replySender: { ...mobileTextStyles.caption2, fontWeight: '700' },
+  replyBody: { ...mobileTextStyles.caption2, marginTop: 2 },
   metaRow: {
-    marginTop: 4,
+    marginTop: mobileSpacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 6,
+    gap: mobileSpacing.xs + 2,
   },
   meta: { fontSize: 11, textTransform: 'lowercase', lineHeight: 13 },
   reactionTipRow: {
     marginTop: -8,
     flexDirection: 'row',
-    gap: 6,
+    gap: mobileSpacing.xs + 2,
     maxWidth: '95%',
     flexWrap: 'wrap',
   },
-  reactionTipMine: { alignSelf: 'flex-end', marginRight: 8 },
-  reactionTipTheirs: { alignSelf: 'flex-start', marginLeft: 8 },
+  reactionTipMine: { alignSelf: 'flex-end', marginRight: mobileSpacing.sm },
+  reactionTipTheirs: { alignSelf: 'flex-start', marginLeft: mobileSpacing.sm },
   reactionTipPill: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 8,
+    borderRadius: mobileRadius.pill,
+    paddingHorizontal: mobileSpacing.sm,
     paddingVertical: 2,
   },
 });

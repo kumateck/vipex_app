@@ -1,5 +1,5 @@
 import { ThermalStickerHeaderPanel } from './thermal-sticker-header-panel';
-import { ContactStack, InfoBlock, ParcelStack } from './thermal-sticker-info-sections';
+import { InfoBlock, ParcelStack, SenderBlock } from './thermal-sticker-info-sections';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
 
 export function ThermalStickerLandscapeTemplate({
@@ -43,12 +43,12 @@ export function ThermalStickerLandscapeTemplate({
         style={{
           minWidth: 0,
           display: 'grid',
-          gridTemplateRows: '13.5mm 1fr',
+          gridTemplateRows: '16mm 1fr 5mm',
           borderLeft: '0.25mm solid #111',
           borderRight: '0.25mm solid #111',
         }}
       >
-        <BookingHeader bookingCode={bookingCode} />
+        <ReceiverHeader receiverName={receiverName} receiverTelephones={receiverTelephones} />
 
         <div
           style={{
@@ -64,20 +64,21 @@ export function ThermalStickerLandscapeTemplate({
             primary={destinationBranchName}
             secondary={destinationLocationName}
           />
-          <ContactStack
-            senderName={senderName}
-            senderTelephones={senderTelephones}
-            receiverName={receiverName}
-            receiverTelephones={receiverTelephones}
-          />
+          <SenderBlock senderName={senderName} senderTelephones={senderTelephones} />
           <ParcelStack parcelContent={parcelContent} parcelDetails={parcelDetails} />
+        </div>
+
+        <div style={{ display: 'grid', placeItems: 'center' }}>
+          <div style={{ fontSize: '2.2mm', fontWeight: 700, letterSpacing: '0.03em' }}>
+            {bookingCode}
+          </div>
         </div>
       </main>
 
       <aside
         style={{
           display: 'grid',
-          gridTemplateRows: hasToBePaid ? '16mm 1fr' : '11mm 1fr',
+          gridTemplateRows: hasToBePaid ? '19mm 1fr' : '11mm 1fr',
           alignItems: 'start',
           justifyItems: 'center',
           minWidth: 0,
@@ -101,6 +102,11 @@ export function ThermalStickerLandscapeTemplate({
             <div>{statusLabel}</div>
             {statusAmountLabel ? (
               <div style={{ marginTop: '0.8mm', fontSize: '4.7mm' }}>{statusAmountLabel}</div>
+            ) : null}
+            {hasToBePaid ? (
+              <div style={{ marginTop: '0.6mm', fontSize: '1.7mm', fontWeight: 700 }}>
+                Sender did not pay at the point of sending
+              </div>
             ) : null}
           </div>
         </div>
@@ -166,7 +172,13 @@ function PrintMetaBlock({
   );
 }
 
-function BookingHeader({ bookingCode }: { bookingCode: string }) {
+function ReceiverHeader({
+  receiverName,
+  receiverTelephones,
+}: {
+  receiverName: string;
+  receiverTelephones: string;
+}) {
   return (
     <header
       style={{
@@ -175,14 +187,34 @@ function BookingHeader({ bookingCode }: { bookingCode: string }) {
         alignItems: 'center',
         padding: '1mm 2mm',
         textAlign: 'center',
+        overflow: 'hidden',
       }}
     >
       <div style={{ fontSize: '3mm', fontWeight: 700, textTransform: 'uppercase', lineHeight: 1 }}>
-        Booking Code
+        Receiver
       </div>
-      <div style={{ fontSize: '9mm', fontWeight: 800, lineHeight: 0.95, whiteSpace: 'nowrap' }}>
-        {bookingCode}
+      <div
+        style={{
+          fontSize: receiverNameFontSize(receiverName),
+          fontWeight: 800,
+          lineHeight: 0.95,
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {receiverName}
+      </div>
+      <div style={{ marginTop: '0.5mm', fontSize: '3.6mm', fontWeight: 700, lineHeight: 1 }}>
+        {receiverTelephones}
       </div>
     </header>
   );
+}
+
+function receiverNameFontSize(name: string) {
+  const length = name.length;
+  if (length > 36) return '3.3mm';
+  if (length > 28) return '3.9mm';
+  if (length > 20) return '4.8mm';
+  if (length > 14) return '6mm';
+  return '7mm';
 }

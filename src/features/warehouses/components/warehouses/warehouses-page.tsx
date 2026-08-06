@@ -11,16 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select-searchable';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
@@ -33,7 +24,7 @@ import {
   useUpdateWarehouseMutation,
 } from '../../api/warehouses.api';
 import { WarehousesDeleteDialog } from './warehouses-delete-dialog';
-// import { WarehousesDeleteDialog } from './warehouses-delete-dialog';
+import { WarehouseFormCard } from './warehouse-form-card';
 
 function emptyForm(branchId: string): WarehouseMutationInput {
   return {
@@ -194,19 +185,21 @@ export function WarehousesPage() {
 
   if (!canRead) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Warehouse Management Restricted</CardTitle>
-          <CardDescription>
-            Your role does not include permission to view warehouses.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <div className="px-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Warehouse Management Restricted</CardTitle>
+            <CardDescription>
+              Your role does not include permission to view warehouses.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Warehouse Management</h1>
         <p className="text-sm text-muted-foreground">
@@ -218,92 +211,23 @@ export function WarehousesPage() {
       <ScrollableWrapper>
         <div className="space-y-6">
           <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-            <Card>
-              <CardHeader>
-                <CardTitle>{editing ? 'Edit Warehouse' : 'New Warehouse'}</CardTitle>
-                <CardDescription>
-                  Warehouses are owned by a branch and can be used as parcel holding points.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Branch</Label>
-                  <Select
-                    value={form.branchId || undefined}
-                    onValueChange={(value) =>
-                      setForm((current) => ({ ...current, branchId: value }))
-                    }
-                    disabled={editing ? !canUpdate : !canCreate}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branchOptions.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="warehouse-name">Name</Label>
-                  <Input
-                    id="warehouse-name"
-                    value={form.name}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, name: event.target.value }))
-                    }
-                    placeholder="Main Receiving Store"
-                    disabled={editing ? !canUpdate : !canCreate}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="warehouse-description">Description</Label>
-                  <Input
-                    id="warehouse-description"
-                    value={form.description ?? ''}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, description: event.target.value }))
-                    }
-                    placeholder="Optional note"
-                    disabled={editing ? !canUpdate : !canCreate}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select
-                    value={String(form.active ?? true)}
-                    onValueChange={(value) =>
-                      setForm((current) => ({ ...current, active: value === 'true' }))
-                    }
-                    disabled={editing ? !canUpdate : !canCreate}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="true">Active</SelectItem>
-                      <SelectItem value="false">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {canCreate || canUpdate ? (
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => void handleSave()}
-                      disabled={isCreating || isUpdating || (editing ? !canUpdate : !canCreate)}
-                    >
-                      {editing ? 'Update Warehouse' : 'Create Warehouse'}
-                    </Button>
-                    <Button variant="outline" onClick={resetForm}>
-                      Clear
-                    </Button>
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
+            <WarehouseFormCard
+              branchOptions={branchOptions}
+              canCreate={canCreate}
+              canUpdate={canUpdate}
+              editing={editing}
+              form={form}
+              isCreating={isCreating}
+              isUpdating={isUpdating}
+              onActiveChange={(active) => setForm((current) => ({ ...current, active }))}
+              onBranchChange={(branchId) => setForm((current) => ({ ...current, branchId }))}
+              onClear={resetForm}
+              onDescriptionChange={(description) =>
+                setForm((current) => ({ ...current, description }))
+              }
+              onNameChange={(name) => setForm((current) => ({ ...current, name }))}
+              onSave={() => void handleSave()}
+            />
 
             <Card>
               <CardHeader>

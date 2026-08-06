@@ -389,6 +389,7 @@ export type PickupQueueRecord = {
   queuedAt: string;
   endedAt: string | null;
   endedBy: string | null;
+  smsSent?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -669,7 +670,12 @@ export const parcelApi = api.injectEndpoints({
           message?: string;
         };
       },
-      { parcelId: string; amountCedis?: number | null; method: number }
+      {
+        parcelId: string;
+        amountCedis?: number | null;
+        method: number;
+        momoTransactionId?: string | null;
+      }
     >({
       query: (body) => ({
         url: '/payments/collect-sender-and-process',
@@ -720,6 +726,9 @@ export const parcelApi = api.injectEndpoints({
         cardNumber?: string | null;
         secondCardId?: string | null;
         secondCardNumber?: string | null;
+        receiverOtpVerificationToken: string;
+        receiverOtpTarget: 'main' | 'second';
+        momoTransactionId?: string | null;
       }
     >({
       query: (body) => ({
@@ -732,6 +741,26 @@ export const parcelApi = api.injectEndpoints({
         { type: 'Cashiers', id: 'ACTIVE_SESSION' },
         { type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' },
       ],
+    }),
+    requestReceiverOtp: builder.mutation<
+      { expiresAt: string },
+      { parcelId: string; targetReceiver: 'main' | 'second'; force?: boolean }
+    >({
+      query: (body) => ({
+        url: '/payments/receiver-otp/request',
+        method: 'POST',
+        body,
+      }),
+    }),
+    verifyReceiverOtp: builder.mutation<
+      { verificationToken: string; expiresAt: string },
+      { parcelId: string; targetReceiver: 'main' | 'second'; otp: string }
+    >({
+      query: (body) => ({
+        url: '/payments/receiver-otp/verify',
+        method: 'POST',
+        body,
+      }),
     }),
     createConsignment: builder.mutation<
       { id: string; code: string; serialForDay: number },
@@ -1037,6 +1066,7 @@ export const parcelApi = api.injectEndpoints({
         pickerStaffId?: string | null;
         idCardTypeId?: string | null;
         idCardNumber?: string | null;
+        sendSms?: boolean;
       }
     >({
       query: (body) => ({
@@ -1139,6 +1169,8 @@ export const {
   useCollectSenderPaymentMutation,
   useCollectSenderAndProcessMutation,
   useCollectReceiverAndDeliverMutation,
+  useRequestReceiverOtpMutation,
+  useVerifyReceiverOtpMutation,
   useCreateConsignmentMutation,
   useAddConsignmentItemsMutation,
   useUpdateParcelStatusMutation,

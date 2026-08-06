@@ -1,11 +1,18 @@
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { Link, useLocalSearchParams } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { resetPassword } from '@mobile/lib/api';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { AppButton, AppCard, AppInput, AppLabel, PasswordInput } from '@/components/ui/mobile';
-import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  AppLabel,
+  AppPageHeader,
+  PasswordInput,
+} from '@/components/ui/mobile';
+import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 export default function ResetPasswordScreen() {
   const { theme } = useAppearance();
@@ -36,7 +43,7 @@ export default function ResetPasswordScreen() {
 
   return (
     <AppScreen>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Reset Password</Text>
+      <AppPageHeader title="Reset Password" />
       <AppCard>
         <View style={styles.formGroup}>
           <AppLabel>Email</AppLabel>
@@ -70,7 +77,7 @@ export default function ResetPasswordScreen() {
         {error ? <Text style={[styles.error, { color: theme.colors.danger }]}>{error}</Text> : null}
         <AppButton title="Reset Password" onPress={() => void handleReset()} />
         {status ? (
-          <Link href="/(auth)/login" style={[styles.link, { color: theme.colors.primary }]}>
+          <Link href="/(auth)/login" style={[styles.link, { color: theme.colors.secondary }]}>
             Back to login
           </Link>
         ) : null}
@@ -80,9 +87,8 @@ export default function ResetPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 28, fontWeight: '800' },
   formGroup: { gap: mobileSpacing.sm - 2 },
-  success: { fontSize: mobileTypography.label, fontWeight: '600' },
-  error: { fontSize: mobileTypography.label, fontWeight: '600' },
-  link: { fontWeight: '700' },
+  success: { ...mobileTextStyles.footnote, fontWeight: '600' },
+  error: { ...mobileTextStyles.footnote, fontWeight: '600' },
+  link: { ...mobileTextStyles.footnote, fontWeight: '700' },
 });

@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAppearance } from '@mobile/providers/appearance-provider';
+import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import {
   asRecord,
   capitalize,
@@ -76,36 +77,25 @@ export function ThreadMessageContent({
           : normalizedStatus === 'answered'
             ? 'Call completed'
             : 'Call activity';
-    const iconName: keyof typeof Ionicons.glyphMap = isVideo
+    const iconName: string = isVideo
       ? normalizedStatus === 'missed'
         ? 'videocam'
         : 'videocam-outline'
       : normalizedStatus === 'missed'
         ? 'call'
         : 'call-outline';
-    const iconColor =
-      normalizedStatus === 'missed' ? '#EF4444' : theme.scheme === 'dark' ? '#CBD5E1' : '#64748B';
+    const iconColor = normalizedStatus === 'missed' ? theme.colors.danger : theme.colors.textMuted;
 
     return (
-      <View
-        style={[
-          styles.callWrap,
-          { borderColor: theme.colors.border, backgroundColor: theme.colors.bgElevated },
-        ]}
-      >
+      <View style={[styles.callWrap, { backgroundColor: theme.colors.cardMuted }]}>
         <View style={[styles.callIconBadge, { backgroundColor: theme.colors.card }]}>
           <Ionicons name={iconName} size={17 * scale} color={iconColor} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text
-            style={[styles.callTitle, { color: theme.colors.text, fontSize: 12 }]}
-            numberOfLines={1}
-          >
+          <Text style={[styles.callTitle, { color: theme.colors.text }]} numberOfLines={1}>
             {title}
           </Text>
-          <Text style={[styles.callSubtitle, { color: theme.colors.textSubtle, fontSize: 12 }]}>
-            {subtitle}
-          </Text>
+          <Text style={[styles.callSubtitle, { color: theme.colors.textSubtle }]}>{subtitle}</Text>
         </View>
       </View>
     );
@@ -113,30 +103,18 @@ export function ThreadMessageContent({
 
   if (isVoice) {
     return (
-      <View
-        style={[
-          styles.card,
-          { borderColor: theme.colors.border, backgroundColor: theme.colors.bgElevated },
-        ]}
-      >
+      <View style={[styles.card, { backgroundColor: theme.colors.cardMuted }]}>
         <Ionicons name="mic-outline" size={16 * scale} color={theme.colors.textMuted} />
-        <Text style={[styles.cardText, { color: theme.colors.text, fontSize: 12 }]}>
-          Voice message
-        </Text>
+        <Text style={[styles.cardText, { color: theme.colors.text }]}>Voice message</Text>
       </View>
     );
   }
 
   if (isContact) {
     return (
-      <View
-        style={[
-          styles.card,
-          { borderColor: theme.colors.border, backgroundColor: theme.colors.bgElevated },
-        ]}
-      >
+      <View style={[styles.card, { backgroundColor: theme.colors.cardMuted }]}>
         <Ionicons name="person-outline" size={16 * scale} color={theme.colors.textMuted} />
-        <Text style={[styles.cardText, { color: theme.colors.text, fontSize: 12 }]}>
+        <Text style={[styles.cardText, { color: theme.colors.text }]}>
           {String(metadata.contactName ?? body ?? 'Shared contact')}
         </Text>
       </View>
@@ -145,74 +123,53 @@ export function ThreadMessageContent({
 
   if (isLocation) {
     return (
-      <View
-        style={[
-          styles.card,
-          { borderColor: theme.colors.border, backgroundColor: theme.colors.bgElevated },
-        ]}
-      >
+      <View style={[styles.card, { backgroundColor: theme.colors.cardMuted }]}>
         <Ionicons name="location-outline" size={16 * scale} color={theme.colors.textMuted} />
-        <Text style={[styles.cardText, { color: theme.colors.text, fontSize: 12 }]}>
-          Shared location
-        </Text>
+        <Text style={[styles.cardText, { color: theme.colors.text }]}>Shared location</Text>
       </View>
     );
   }
 
   if (url) {
     return (
-      <View
-        style={[
-          styles.linkCard,
-          { borderColor: theme.colors.border, backgroundColor: theme.colors.bgElevated },
-        ]}
-      >
-        <Text
-          style={[styles.linkUrl, { color: theme.colors.primary, fontSize: 12 }]}
-          numberOfLines={1}
-        >
+      <View style={[styles.linkCard, { backgroundColor: theme.colors.cardMuted }]}>
+        <Text style={[styles.linkUrl, { color: theme.colors.primary }]} numberOfLines={1}>
           {url}
         </Text>
-        <Text style={[styles.linkBody, { color: theme.colors.text, fontSize: 12 }]}>{body}</Text>
+        <Text style={[styles.linkBody, { color: theme.colors.text }]}>{body}</Text>
       </View>
     );
   }
 
   if (!body.trim()) {
     return (
-      <Text style={[styles.bodyText, { color: theme.colors.textSubtle, fontSize: 12 }]}>
+      <Text style={[styles.bodyText, { color: theme.colors.textSubtle }]}>
         {messageType.replace(/[_-]/g, ' ') || 'Message'}
       </Text>
     );
   }
 
-  return (
-    <Text style={[styles.bodyText, { color: theme.colors.text, fontSize: 12, lineHeight: 16 }]}>
-      {body}
-    </Text>
-  );
+  return <Text style={[styles.bodyText, { color: theme.colors.text }]}>{body}</Text>;
 }
 
 const styles = StyleSheet.create({
-  bodyText: { fontSize: 12, lineHeight: 16 },
+  bodyText: { ...mobileTextStyles.footnote },
   card: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    borderRadius: mobileRadius.md,
+    paddingVertical: mobileSpacing.sm,
+    paddingHorizontal: mobileSpacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: mobileSpacing.sm,
   },
-  cardText: { fontSize: 12, fontWeight: '600' },
+  cardText: { ...mobileTextStyles.footnote, fontWeight: '600' },
   callWrap: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    borderRadius: mobileRadius.md,
+    paddingVertical: mobileSpacing.sm,
+    paddingHorizontal: mobileSpacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: mobileSpacing.md,
     minWidth: 210,
   },
   callIconBadge: {
@@ -222,15 +179,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  callTitle: { fontSize: 12, fontWeight: '700' },
-  callSubtitle: { marginTop: 1, fontSize: 12 },
+  callTitle: { ...mobileTextStyles.footnote, fontWeight: '700' },
+  callSubtitle: { ...mobileTextStyles.caption1, marginTop: 1 },
   linkCard: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    gap: 6,
+    borderRadius: mobileRadius.md,
+    paddingVertical: mobileSpacing.sm,
+    paddingHorizontal: mobileSpacing.md,
+    gap: mobileSpacing.xs + 2,
   },
-  linkUrl: { fontSize: 12, fontWeight: '700' },
-  linkBody: { fontSize: 12, lineHeight: 16 },
+  linkUrl: { ...mobileTextStyles.footnote, fontWeight: '700' },
+  linkBody: { ...mobileTextStyles.footnote },
 });

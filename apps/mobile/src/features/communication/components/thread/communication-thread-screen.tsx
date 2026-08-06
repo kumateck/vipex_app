@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { router } from 'expo-router';
+import { router } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { AppSkeletonCard } from '@/components/ui/mobile';
-import { mobileSpacing } from '@mobile/theme/layout';
+import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import { useCommunicationThread } from '@mobile/features/communication/hooks/use-communication-thread';
 import { formatDayLabel, toDayKey } from '@mobile/features/communication/utils/thread-time';
 import { getMobileScale } from '@mobile/features/communication/utils';
@@ -32,9 +32,9 @@ export function CommunicationThreadScreen() {
 
   const isDark = theme.scheme === 'dark';
   const colors = {
-    timelineBg: isDark ? '#0B1220' : '#F2EFE8',
-    dayChipBg: isDark ? '#1F2937' : '#E5E7EB',
-    dayChipText: isDark ? '#CBD5E1' : '#475569',
+    timelineBg: theme.colors.bg,
+    dayChipBg: theme.colors.cardMuted,
+    dayChipText: theme.colors.textMuted,
   };
 
   const uniqueMessages = useMemo(() => {
@@ -154,8 +154,6 @@ export function CommunicationThreadScreen() {
           styles.timeline,
           {
             backgroundColor: colors.timelineBg,
-            borderColor: theme.colors.border,
-            borderRadius: 14 * scale,
           },
         ]}
         contentContainerStyle={styles.timelineContent}
@@ -212,7 +210,9 @@ export function CommunicationThreadScreen() {
             );
           })
         ) : (
-          <Text style={{ color: theme.colors.textSubtle }}>No messages yet.</Text>
+          <Text style={[mobileTextStyles.subhead, { color: theme.colors.textSubtle }]}>
+            No messages yet.
+          </Text>
         )}
       </ScrollView>
 
@@ -237,8 +237,22 @@ export function CommunicationThreadScreen() {
 }
 
 const styles = StyleSheet.create({
-  timeline: { flex: 1, borderRadius: 14, borderWidth: 1 },
-  timelineContent: { gap: 7, paddingBottom: mobileSpacing.sm, padding: 10 },
-  dayWrap: { alignItems: 'center', marginTop: 6, marginBottom: 4 },
-  dayText: { fontSize: 12, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  timeline: { flex: 1 },
+  timelineContent: {
+    gap: mobileSpacing.sm - 1,
+    paddingBottom: mobileSpacing.sm,
+    padding: mobileSpacing.md - 2,
+  },
+  dayWrap: {
+    alignItems: 'center',
+    marginTop: mobileSpacing.xs + 2,
+    marginBottom: mobileSpacing.xs,
+  },
+  dayText: {
+    ...mobileTextStyles.caption1,
+    fontWeight: '600',
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.xs,
+    borderRadius: mobileRadius.pill,
+  },
 });

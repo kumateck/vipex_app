@@ -2,16 +2,26 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AppCard } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import type { ParcelFullDetails } from '@mobile/types/parcels';
-import { detailLine, formatCedis, formatDate, paymentMethodLabel } from '../utils';
+import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
+import { formatCedis, formatDate, paymentMethodLabel } from '../utils';
 
-const sectionStyles = StyleSheet.create({
-  recordItem: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 8,
-    gap: 2,
-  },
-  title: { fontSize: 18, fontWeight: '700' },
-});
+function DetailRow({ label, value, first }: { label: string; value: string; first?: boolean }) {
+  const { theme } = useAppearance();
+  return (
+    <View
+      style={[
+        styles.detailRow,
+        !first && {
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: theme.colors.separator,
+        },
+      ]}
+    >
+      <Text style={[styles.detailLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: theme.colors.text }]}>{value}</Text>
+    </View>
+  );
+}
 
 export function ParcelFinancialSections({ details }: { details: ParcelFullDetails }) {
   const { theme } = useAppearance();
@@ -20,48 +30,46 @@ export function ParcelFinancialSections({ details }: { details: ParcelFullDetail
     <>
       {details.payments.length ? (
         <AppCard>
-          <Text style={[sectionStyles.title, { color: theme.colors.text }]}>Payments</Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Count', String(details.payments.length))}
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine(
-              'Total Paid',
-              formatCedis(
+          <Text style={[styles.title, { color: theme.colors.text }]}>Payments</Text>
+          <View style={styles.detailList}>
+            <DetailRow first label="Count" value={String(details.payments.length)} />
+            <DetailRow
+              label="Total Paid"
+              value={formatCedis(
                 details.payments.reduce((sum, payment) => sum + (payment.grossAmountPsw ?? 0), 0),
-              ),
-            )}
-          </Text>
+              )}
+            />
+          </View>
           {details.payments.map((payment) => (
             <View
               key={payment.id}
-              style={[sectionStyles.recordItem, { borderTopColor: theme.colors.border }]}
+              style={[styles.recordItem, { backgroundColor: theme.colors.cardMuted }]}
             >
-              <Text style={{ color: theme.colors.text }}>
-                {detailLine('Amount', formatCedis(payment.grossAmountPsw))}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Method', paymentMethodLabel(payment.method))}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Received', formatDate(payment.receivedAt))}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Receipt', payment.receiptNo ?? '-')}
-              </Text>
-              {payment.notes ? (
-                <Text style={{ color: theme.colors.textMuted }}>
-                  {detailLine('Notes', payment.notes)}
-                </Text>
-              ) : null}
-              {payment.voidedAt ? (
-                <Text style={{ color: theme.colors.danger }}>
-                  {detailLine(
-                    'Voided',
-                    `${formatDate(payment.voidedAt)} (${payment.voidReason ?? 'No reason'})`,
-                  )}
-                </Text>
-              ) : null}
+              <View style={styles.detailList}>
+                <DetailRow first label="Amount" value={formatCedis(payment.grossAmountPsw)} />
+                <DetailRow label="Method" value={paymentMethodLabel(payment.method)} />
+                <DetailRow label="Received" value={formatDate(payment.receivedAt)} />
+                <DetailRow label="Receipt" value={payment.receiptNo ?? '-'} />
+                {payment.notes ? <DetailRow label="Notes" value={payment.notes} /> : null}
+                {payment.voidedAt ? (
+                  <View
+                    style={[
+                      styles.detailRow,
+                      {
+                        borderTopWidth: StyleSheet.hairlineWidth,
+                        borderTopColor: theme.colors.separator,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.detailLabel, { color: theme.colors.textSubtle }]}>
+                      Voided
+                    </Text>
+                    <Text style={[styles.detailValue, { color: theme.colors.danger }]}>
+                      {`${formatDate(payment.voidedAt)} (${payment.voidReason ?? 'No reason'})`}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
           ))}
         </AppCard>
@@ -69,27 +77,21 @@ export function ParcelFinancialSections({ details }: { details: ParcelFullDetail
 
       {details.storageWaivers?.length ? (
         <AppCard>
-          <Text style={[sectionStyles.title, { color: theme.colors.text }]}>Storage Waivers</Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Count', String(details.storageWaivers.length))}
-          </Text>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Storage Waivers</Text>
+          <View style={styles.detailList}>
+            <DetailRow first label="Count" value={String(details.storageWaivers.length)} />
+          </View>
           {details.storageWaivers.map((entry) => (
             <View
               key={entry.id}
-              style={[sectionStyles.recordItem, { borderTopColor: theme.colors.border }]}
+              style={[styles.recordItem, { backgroundColor: theme.colors.cardMuted }]}
             >
-              <Text style={{ color: theme.colors.text }}>
-                {detailLine('Waived Amount', formatCedis(entry.waivedAmountPsw))}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Reason', entry.reason)}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Waived By', entry.waivedByName ?? '-')}
-              </Text>
-              <Text style={{ color: theme.colors.textMuted }}>
-                {detailLine('Waived At', formatDate(entry.waivedAt))}
-              </Text>
+              <View style={styles.detailList}>
+                <DetailRow first label="Waived Amount" value={formatCedis(entry.waivedAmountPsw)} />
+                <DetailRow label="Reason" value={entry.reason} />
+                <DetailRow label="Waived By" value={entry.waivedByName ?? '-'} />
+                <DetailRow label="Waived At" value={formatDate(entry.waivedAt)} />
+              </View>
             </View>
           ))}
         </AppCard>
@@ -97,23 +99,41 @@ export function ParcelFinancialSections({ details }: { details: ParcelFullDetail
 
       {details.storageSettlement ? (
         <AppCard>
-          <Text style={[sectionStyles.title, { color: theme.colors.text }]}>
-            Storage Settlement
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Accrued', formatCedis(details.storageSettlement.accruedPsw))}
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Paid', formatCedis(details.storageSettlement.paidPsw))}
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Waived', formatCedis(details.storageSettlement.waivedPsw))}
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Outstanding', formatCedis(details.storageSettlement.outstandingPsw))}
-          </Text>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Storage Settlement</Text>
+          <View style={styles.detailList}>
+            <DetailRow
+              first
+              label="Accrued"
+              value={formatCedis(details.storageSettlement.accruedPsw)}
+            />
+            <DetailRow label="Paid" value={formatCedis(details.storageSettlement.paidPsw)} />
+            <DetailRow label="Waived" value={formatCedis(details.storageSettlement.waivedPsw)} />
+            <DetailRow
+              label="Outstanding"
+              value={formatCedis(details.storageSettlement.outstandingPsw)}
+            />
+          </View>
         </AppCard>
       ) : null}
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  title: { ...mobileTextStyles.title3 },
+  detailList: { marginTop: -mobileSpacing.xs },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: mobileSpacing.sm,
+    paddingVertical: mobileSpacing.sm,
+  },
+  detailLabel: { ...mobileTextStyles.subhead, flexShrink: 0 },
+  detailValue: { ...mobileTextStyles.subhead, fontWeight: '600', flex: 1, textAlign: 'right' },
+  recordItem: {
+    borderRadius: mobileRadius.md,
+    paddingHorizontal: mobileSpacing.md,
+    marginTop: mobileSpacing.xs,
+  },
+});

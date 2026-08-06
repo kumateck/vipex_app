@@ -9,6 +9,7 @@ const PermissionKeys = {
   CanReadParcelScan: 'CanReadParcelScan',
   CanReadParcelIncoming: 'CanReadParcelIncoming',
   CanUpdateParcels: 'CanUpdateParcels',
+  CanCreateBookingWithParcels: 'CanCreateBookingWithParcels',
 } as const;
 
 export function hasPermission(permissions: string[] | undefined, key: string): boolean {
@@ -76,4 +77,8 @@ export function canUseTransitReceiveScan(permissions: string[] | undefined): boo
     hasPermission(permissions, PermissionKeys.CanReadParcelScan) ||
     hasPermission(permissions, PermissionKeys.CanReadParcelIncoming)
   );
+}
+
+export function canCreateParcelBooking(permissions: string[] | undefined): boolean {
+  return hasPermission(permissions, PermissionKeys.CanCreateBookingWithParcels);
 }

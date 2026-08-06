@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { router } from 'expo-router';
+import { router } from '@mobile/navigation/router-compat';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
 import { searchParcels } from '@mobile/lib/api';
@@ -10,7 +10,7 @@ import { useAppearance } from '@mobile/providers/appearance-provider';
 import { hapticError, hapticTap } from '@mobile/lib/haptics';
 import { ParcelCard } from '@mobile/components/courier';
 import { AppButton, AppCard, AppInput, AppSkeletonCard } from '@/components/ui/mobile';
-import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 export default function SuperSearchScreen() {
   const { theme } = useAppearance();
@@ -103,9 +103,9 @@ export default function SuperSearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
-  helperText: { fontSize: mobileTypography.caption },
+  sectionTitle: { ...mobileTextStyles.headline },
+  helperText: { ...mobileTextStyles.caption1 },
   buttonRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
   listWrap: { gap: mobileSpacing.sm + 2 },
-  empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
+  empty: { ...mobileTextStyles.subhead, textAlign: 'center', marginTop: mobileSpacing.sm },
 });

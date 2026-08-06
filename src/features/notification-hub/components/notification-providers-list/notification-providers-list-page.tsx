@@ -117,6 +117,7 @@ export function NotificationProvidersListPage() {
                   <SelectItem value="all">All channels</SelectItem>
                   <SelectItem value="sms">SMS</SelectItem>
                   <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="momo">MoMo (Payments)</SelectItem>
                 </SelectContent>
               </Select>
               <Select

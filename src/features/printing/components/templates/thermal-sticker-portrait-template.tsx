@@ -1,5 +1,9 @@
 import logoPng from '@/assets/logo.png';
-import { VIPEX_BRANCH_CONTACTS } from './thermal-sticker-contacts';
+import {
+  DestinationRow,
+  PortraitBranchContacts,
+  receiverNameFontSize,
+} from './thermal-sticker-portrait-sections';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
 import { StickerRow } from './thermal-sticker-template-utils';
 
@@ -25,6 +29,7 @@ export function ThermalStickerPortraitTemplate({
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value))
     .join(' / ');
+  const statusRowHeight = hasToBePaid ? '13mm' : '11mm';
 
   return (
     <div
@@ -37,7 +42,7 @@ export function ThermalStickerPortraitTemplate({
         padding: '1.2mm',
         fontFamily: 'Arial, sans-serif',
         display: 'grid',
-        gridTemplateRows: '16mm 11mm 11mm 1fr',
+        gridTemplateRows: `16mm ${statusRowHeight} 13mm 1fr`,
         gap: '0.6mm',
         overflow: 'hidden',
       }}
@@ -65,7 +70,7 @@ export function ThermalStickerPortraitTemplate({
         />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: '4.4mm', fontWeight: 900, lineHeight: 0.85 }}>VIPEX</div>
-          <div style={{ fontSize: '2.4mm', fontWeight: 800, lineHeight: 1 }}>Parcel Co. LTD</div>
+          <div style={{ fontSize: '2.4mm', fontWeight: 800, lineHeight: 1 }}>Parcels</div>
         </div>
         <PortraitBranchContacts />
         <div
@@ -118,6 +123,13 @@ export function ThermalStickerPortraitTemplate({
               {statusAmountLabel}
             </div>
           ) : null}
+          {hasToBePaid ? (
+            <div
+              style={{ marginTop: '0.3mm', fontSize: '1.5mm', fontWeight: 700, lineHeight: 1.05 }}
+            >
+              Sender did not pay at the point of sending
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -127,21 +139,36 @@ export function ThermalStickerPortraitTemplate({
           display: 'grid',
           minWidth: 0,
           overflow: 'hidden',
+          placeItems: 'center',
+          textAlign: 'center',
+          padding: '0.3mm 1mm',
         }}
       >
-        <div
-          style={{
-            display: 'grid',
-            placeItems: 'center',
-            paddingBlock: '0.15mm',
-            fontSize: bookingCode.length > 14 ? '7.8mm' : '9.2mm',
-            fontWeight: 900,
-            lineHeight: 0.86,
-            letterSpacing: '0',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {bookingCode}
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: '1.8mm',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              lineHeight: 1,
+            }}
+          >
+            Receiver
+          </div>
+          <div
+            style={{
+              marginTop: '0.25mm',
+              fontSize: receiverNameFontSize(receiverName),
+              fontWeight: 900,
+              lineHeight: 0.95,
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {receiverName}
+          </div>
+          <div style={{ marginTop: '0.3mm', fontSize: '3.2mm', fontWeight: 800, lineHeight: 1 }}>
+            {receiverTelephones}
+          </div>
         </div>
       </section>
 
@@ -149,122 +176,30 @@ export function ThermalStickerPortraitTemplate({
         style={{
           minHeight: 0,
           display: 'grid',
-          gridTemplateRows: '8mm 7mm 12mm 7mm 7mm 6mm',
+          gridTemplateRows: '12mm 7mm 7mm 1fr 5mm',
           gap: 0,
           overflow: 'hidden',
         }}
       >
-        <StickerRow label="Receiver" value={receiverName} emphasis />
-        <StickerRow label="Receiver Tel" value={receiverTelephones} />
         <DestinationRow branch={destinationBranchName} location={destinationLocationName} />
         <StickerRow label="Sender" value={senderName} />
         <StickerRow label="Sender Tel" value={senderTelephones} />
         <StickerRow label="Parcel Details" value={parcelDetails} />
-      </main>
-    </div>
-  );
-}
-
-function PortraitBranchContacts() {
-  return (
-    <div
-      style={{
-        gridColumn: '2 / 4',
-        gridRow: 2,
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-        columnGap: '0.8mm',
-        rowGap: '0.15mm',
-        minWidth: 0,
-        fontSize: '1.5mm',
-        fontWeight: 800,
-        lineHeight: 0.92,
-        overflow: 'hidden',
-      }}
-    >
-      {VIPEX_BRANCH_CONTACTS.map((contact) => (
-        <div key={contact.route} style={{ minWidth: 0 }}>
-          <div style={{ whiteSpace: 'nowrap' }}>{contact.route}:</div>
-          <div style={{ whiteSpace: 'nowrap' }}>{contact.phones}</div>
+        <div
+          style={{
+            minWidth: 0,
+            borderTop: '0.35mm solid #111',
+            boxSizing: 'border-box',
+            display: 'grid',
+            placeItems: 'center',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ fontSize: '2.4mm', fontWeight: 700, letterSpacing: '0.02em' }}>
+            {bookingCode}
+          </div>
         </div>
-      ))}
-    </div>
-  );
-}
-
-function DestinationRow({
-  branch,
-  location,
-}: {
-  branch?: string | null;
-  location?: string | null;
-}) {
-  return (
-    <div
-      style={{
-        minWidth: 0,
-        borderTop: '0.35mm solid #111',
-        padding: '0.35mm 0',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-      }}
-    >
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1.25fr 0.75fr',
-          gap: '1.2mm',
-          minWidth: 0,
-        }}
-      >
-        <StickerRowContent label="Destination" value={branch} scale="large" />
-        <StickerRowContent label="Location" value={location} />
-      </div>
-    </div>
-  );
-}
-
-function StickerRowContent({
-  label,
-  value,
-  scale = 'normal',
-}: {
-  label: string;
-  value?: string | null;
-  scale?: 'normal' | 'large';
-}) {
-  const displayValue = value?.trim() || '-';
-  const fontSize =
-    scale === 'large'
-      ? displayValue.length > 18
-        ? '6.6mm'
-        : '8.4mm'
-      : displayValue.length > 18
-        ? '3.3mm'
-        : '4.2mm';
-
-  return (
-    <div style={{ minWidth: 0 }}>
-      <div
-        style={{
-          fontSize: '2mm',
-          fontWeight: 700,
-          lineHeight: 1,
-          textTransform: 'uppercase',
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontSize,
-          fontWeight: 800,
-          lineHeight: scale === 'large' ? 0.86 : 0.96,
-          overflowWrap: 'anywhere',
-        }}
-      >
-        {displayValue}
-      </div>
+      </main>
     </div>
   );
 }

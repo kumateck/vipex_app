@@ -19,7 +19,7 @@ export function ThermalStickerHeaderPanel() {
         />
         <div>
           <div style={{ fontSize: '5mm', fontWeight: 800, lineHeight: 0.95 }}>VIPEX</div>
-          <div style={{ fontSize: '3.2mm', fontWeight: 800, lineHeight: 1 }}>Parcel Co. LTD</div>
+          <div style={{ fontSize: '3.2mm', fontWeight: 800, lineHeight: 1 }}>Parcels</div>
         </div>
       </div>
       <div style={{ borderTop: '0.25mm solid #111', paddingTop: '0.8mm' }}>

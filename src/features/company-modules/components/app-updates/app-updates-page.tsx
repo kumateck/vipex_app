@@ -150,7 +150,7 @@ export function AppUpdatesPage() {
   const canInstall = isDesktop && status.state === 'downloaded';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">App Updates</h1>

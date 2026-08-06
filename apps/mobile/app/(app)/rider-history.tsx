@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from '@mobile/navigation/router-compat';
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
@@ -20,7 +20,25 @@ import {
   toDateKey,
   useRiderBoardData,
 } from '@mobile/features/rider/hooks/use-rider-board-data';
-import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
+
+function DetailRow({ label, value, first }: { label: string; value: string; first?: boolean }) {
+  const { theme } = useAppearance();
+  return (
+    <View
+      style={[
+        styles.detailRow,
+        !first && {
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: theme.colors.separator,
+        },
+      ]}
+    >
+      <Text style={[styles.detailLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: theme.colors.text }]}>{value}</Text>
+    </View>
+  );
+}
 
 export default function RiderHistoryScreen() {
   const params = useLocalSearchParams<{ date?: string }>();
@@ -105,26 +123,17 @@ export default function RiderHistoryScreen() {
 
       {selectedRow ? (
         <AppCard>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Parcel Details</Text>
-          <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
-            Booking: {selectedRow.bookingCode}
-          </Text>
-          <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
-            Receiver: {selectedRow.receiverName ?? '-'}
-          </Text>
-          <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
-            Phone: {selectedRow.receiverPhone ?? '-'}
-          </Text>
-          <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
-            Address: {selectedRow.dropoffAddress ?? '-'}
-          </Text>
-          <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
-            Status: {selectedRow.deliveryStatus}
-          </Text>
-          <AppStatusChip label={selectedRow.deliveryStatus} />
-          <Text style={[styles.meta, { color: theme.colors.textMuted }]}>
-            Amount Paid: {formatCedisFromPsw(selectedRow.amountPaidPsw)}
-          </Text>
+          <View style={styles.sectionHead}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Parcel Details</Text>
+            <AppStatusChip label={selectedRow.deliveryStatus} />
+          </View>
+          <View style={styles.detailList}>
+            <DetailRow first label="Booking" value={selectedRow.bookingCode} />
+            <DetailRow label="Receiver" value={selectedRow.receiverName ?? '-'} />
+            <DetailRow label="Phone" value={selectedRow.receiverPhone ?? '-'} />
+            <DetailRow label="Address" value={selectedRow.dropoffAddress ?? '-'} />
+            <DetailRow label="Amount Paid" value={formatCedisFromPsw(selectedRow.amountPaidPsw)} />
+          </View>
           <PaymentBreakdownCard
             deliveryFeePsw={selectedRow.deliveryFeePsw ?? 0}
             transitFeePsw={selectedRow.plannedToBePaidPsw ?? 0}
@@ -137,8 +146,23 @@ export default function RiderHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: mobileSpacing.sm,
+  },
+  sectionTitle: { ...mobileTextStyles.headline },
   listWrap: { gap: mobileSpacing.sm + 2 },
-  empty: { textAlign: 'center', marginTop: mobileSpacing.sm },
-  meta: { lineHeight: 19 },
+  empty: { ...mobileTextStyles.subhead, textAlign: 'center', marginTop: mobileSpacing.sm },
+  detailList: { marginTop: -mobileSpacing.xs },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: mobileSpacing.sm,
+    paddingVertical: mobileSpacing.sm,
+  },
+  detailLabel: { ...mobileTextStyles.subhead, flexShrink: 0 },
+  detailValue: { ...mobileTextStyles.subhead, fontWeight: '600', flex: 1, textAlign: 'right' },
 });

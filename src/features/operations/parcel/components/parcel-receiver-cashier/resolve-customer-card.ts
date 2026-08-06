@@ -22,16 +22,15 @@ export async function resolveCustomerCard({
   newCardTypeId,
   newCardNumber,
   addCustomerCard,
-}: ResolveCustomerCardInput): Promise<{ cardId: string; cardNumber: string }> {
+}: ResolveCustomerCardInput): Promise<{ cardId: string; cardNumber: string } | null> {
   if (mode === 'existing') {
     const found = existingCards.find((card) => card.id === existingRecordId);
-    if (!found) throw new Error('Select an existing card');
-    return { cardId: found.cardId, cardNumber: found.cardNumber };
+    return found ? { cardId: found.cardId, cardNumber: found.cardNumber } : null;
   }
 
   const cardId = newCardTypeId.trim();
   const cardNumber = newCardNumber.trim();
-  if (!cardId || !cardNumber) throw new Error('Select card type and enter card number');
+  if (!cardId || !cardNumber) return null;
 
   await addCustomerCard({
     customerId,

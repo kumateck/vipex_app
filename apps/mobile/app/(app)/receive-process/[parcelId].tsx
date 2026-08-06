@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 import {
@@ -24,7 +24,25 @@ import {
   AppStatusChip,
   MobileNoAccess,
 } from '@/components/ui/mobile';
-import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
+
+function DetailRow({ label, value, first }: { label: string; value: string; first?: boolean }) {
+  const { theme } = useAppearance();
+  return (
+    <View
+      style={[
+        styles.detailRow,
+        !first && {
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: theme.colors.separator,
+        },
+      ]}
+    >
+      <Text style={[styles.detailLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: theme.colors.text }]}>{value}</Text>
+    </View>
+  );
+}
 
 function formatCedis(psw: number | null | undefined) {
   return `GH₵ ${((psw ?? 0) / 100).toFixed(2)}`;
@@ -235,34 +253,33 @@ export default function ReceiveProcessParcelScreen() {
       ) : null}
       {parcel ? (
         <AppCard>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Parcel Overview</Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Booking: {parcel.bookingCode}
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Sender: {parcel.senderName ?? '-'} ({parcel.senderPhone ?? '-'})
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Receiver: {parcel.receiverName ?? '-'} ({parcel.receiverPhone ?? '-'})
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Charge: {formatCedis(parcel.chargePsw)} | To Be Paid:{' '}
-            {formatCedis(parcel.plannedToBePaidPsw)}
-          </Text>
-          <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-            Pickup Queue: {parcel.pickupQueueCode ?? '-'}
-          </Text>
-          <AppStatusChip label={parcel.status} />
-          {details?.pickupQueue?.queuedAt ? (
-            <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-              Queued At: {formatDate(details.pickupQueue.queuedAt)}
-            </Text>
-          ) : null}
-          {details?.delivery ? (
-            <Text style={[styles.detailsLine, { color: theme.colors.textMuted }]}>
-              Delivery: {details.delivery.status} | {details.delivery.dropoffAddress ?? '-'}
-            </Text>
-          ) : null}
+          <View style={styles.sectionHead}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Parcel Overview</Text>
+            <AppStatusChip label={parcel.status} />
+          </View>
+          <View style={styles.detailList}>
+            <DetailRow first label="Booking" value={parcel.bookingCode} />
+            <DetailRow
+              label="Sender"
+              value={`${parcel.senderName ?? '-'} (${parcel.senderPhone ?? '-'})`}
+            />
+            <DetailRow
+              label="Receiver"
+              value={`${parcel.receiverName ?? '-'} (${parcel.receiverPhone ?? '-'})`}
+            />
+            <DetailRow label="Charge" value={formatCedis(parcel.chargePsw)} />
+            <DetailRow label="To Be Paid" value={formatCedis(parcel.plannedToBePaidPsw)} />
+            <DetailRow label="Pickup Queue" value={parcel.pickupQueueCode ?? '-'} />
+            {details?.pickupQueue?.queuedAt ? (
+              <DetailRow label="Queued At" value={formatDate(details.pickupQueue.queuedAt)} />
+            ) : null}
+            {details?.delivery ? (
+              <DetailRow
+                label="Delivery"
+                value={`${details.delivery.status} | ${details.delivery.dropoffAddress ?? '-'}`}
+              />
+            ) : null}
+          </View>
 
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
             Edit Incoming Fields
@@ -305,7 +322,12 @@ export default function ReceiveProcessParcelScreen() {
         <View
           style={[
             styles.stickyFooter,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.bgElevated },
+            mobileShadow.floating,
+            {
+              backgroundColor: theme.colors.bgElevated,
+              borderColor: theme.scheme === 'dark' ? theme.colors.border : 'transparent',
+              borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
+            },
           ]}
         >
           <AppButton
@@ -334,11 +356,26 @@ export default function ReceiveProcessParcelScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: mobileTypography.title, fontWeight: '800' },
-  subtitle: { marginTop: -2, lineHeight: 20, marginBottom: mobileSpacing.xs },
-  sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
-  detailsLine: {},
-  empty: { textAlign: 'center', marginTop: mobileSpacing.lg + 2 },
+  title: { ...mobileTextStyles.title1 },
+  subtitle: { ...mobileTextStyles.subhead, marginTop: -2, marginBottom: mobileSpacing.xs },
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: mobileSpacing.sm,
+  },
+  sectionTitle: { ...mobileTextStyles.headline },
+  detailList: { marginTop: -mobileSpacing.xs },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: mobileSpacing.sm,
+    paddingVertical: mobileSpacing.sm,
+  },
+  detailLabel: { ...mobileTextStyles.subhead, flexShrink: 0 },
+  detailValue: { ...mobileTextStyles.subhead, fontWeight: '600', flex: 1, textAlign: 'right' },
+  empty: { ...mobileTextStyles.subhead, textAlign: 'center', marginTop: mobileSpacing.lg + 2 },
   loadingRow: {
     marginTop: mobileSpacing.sm - 2,
     flexDirection: 'row',
@@ -346,21 +383,20 @@ const styles = StyleSheet.create({
     gap: mobileSpacing.sm,
   },
   loadingText: {
-    fontSize: 13,
+    ...mobileTextStyles.footnote,
   },
   skeletonLineLong: {
     height: 14,
-    borderRadius: 8,
+    borderRadius: mobileRadius.sm,
     width: '100%',
   },
   skeletonLineMedium: {
     height: 14,
-    borderRadius: 8,
+    borderRadius: mobileRadius.sm,
     width: '70%',
   },
   stickyFooter: {
-    borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: mobileRadius.lg,
     padding: mobileSpacing.sm + 2,
     gap: mobileSpacing.sm,
   },

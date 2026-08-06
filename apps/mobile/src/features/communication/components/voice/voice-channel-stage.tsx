@@ -1,7 +1,8 @@
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { createTheme } from '@mobile/theme/tokens';
+import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import { VoiceCallTiles } from './voice-call-tiles';
 import { VoiceControlIconButton } from './voice-control-icon-button';
 import type { VoiceSocketParticipant } from '@mobile/features/communication/hooks/use-voice-channel';
@@ -56,32 +57,19 @@ export function VoiceChannelStage({
   onRunPrejoinCheck,
 }: VoiceChannelStageProps) {
   const { theme } = useAppearance();
-  const stageColors = connected
-    ? {
-        bg: '#0f1116',
-        card: '#1a1d24',
-        cardMuted: '#20242d',
-        border: '#313745',
-        text: '#f2f4f8',
-        textMuted: '#b9c0cc',
-        textSubtle: '#98a2b3',
-      }
-    : {
-        bg: theme.colors.bg,
-        card: theme.colors.card,
-        cardMuted: theme.colors.cardMuted,
-        border: theme.colors.border,
-        text: theme.colors.text,
-        textMuted: theme.colors.textMuted,
-        textSubtle: theme.colors.textSubtle,
-      };
+  // The in-call stage always renders in a dark "theatre" look (matching
+  // platform call UIs like FaceTime) regardless of the user's light/dark
+  // preference — sourced from the design system's own dark palette instead
+  // of hand-rolled hex values.
+  const stageColors = connected ? createTheme(theme.mode, 'dark').colors : theme.colors;
+  const isStageDark = connected || theme.scheme === 'dark';
   const qualityColor =
     connectionQuality === 'good'
       ? theme.colors.indicatorOnline
       : connectionQuality === 'poor'
         ? theme.colors.danger
         : connectionQuality === 'degraded'
-          ? '#F59E0B'
+          ? theme.colors.warning
           : theme.colors.textSubtle;
 
   return (
@@ -100,7 +88,12 @@ export function VoiceChannelStage({
         <View
           style={[
             styles.heroCard,
-            { borderColor: stageColors.border, backgroundColor: stageColors.card },
+            mobileShadow.card,
+            {
+              backgroundColor: stageColors.card,
+              borderColor: isStageDark ? stageColors.border : 'transparent',
+              borderWidth: isStageDark ? StyleSheet.hairlineWidth : 0,
+            },
           ]}
         >
           <View style={styles.titleRow}>
@@ -112,11 +105,11 @@ export function VoiceChannelStage({
                   {
                     backgroundColor: isSocketConnected
                       ? theme.colors.indicatorOnline
-                      : stageColors.textSubtle,
+                      : theme.colors.indicatorMuted,
                   },
                 ]}
               />
-              <Text style={{ color: stageColors.textMuted, fontSize: 11, fontWeight: '700' }}>
+              <Text style={[styles.liveIndicatorLabel, { color: stageColors.textMuted }]}>
                 {isSocketConnected ? 'LIVE' : 'OFFLINE'}
               </Text>
             </View>
@@ -124,7 +117,7 @@ export function VoiceChannelStage({
           <View style={styles.heroMetaRow}>
             <View style={[styles.metaChip, { backgroundColor: stageColors.cardMuted }]}>
               <View style={[styles.qualityDot, { backgroundColor: qualityColor }]} />
-              <Text style={{ color: stageColors.textMuted, fontSize: 12 }}>
+              <Text style={[styles.metaChipText, { color: stageColors.textMuted }]}>
                 Quality {connectionQuality}
               </Text>
             </View>
@@ -134,16 +127,21 @@ export function VoiceChannelStage({
         <View
           style={[
             styles.sectionCard,
-            { borderColor: stageColors.border, backgroundColor: stageColors.card },
+            mobileShadow.card,
+            {
+              backgroundColor: stageColors.card,
+              borderColor: isStageDark ? stageColors.border : 'transparent',
+              borderWidth: isStageDark ? StyleSheet.hairlineWidth : 0,
+            },
           ]}
         >
           <Text style={[styles.sectionTitle, { color: stageColors.text }]}>Pre-Join</Text>
-          <Text style={{ color: stageColors.textSubtle }}>
+          <Text style={[styles.sectionBody, { color: stageColors.textSubtle }]}>
             {connected
               ? `Call started. Mic: ${isMuted ? 'Muted' : 'On'} • Camera: ${isVideoOff ? 'Off' : 'On'} • Speaker: ${speakerOn ? 'On' : 'Off'}`
               : 'Mic, camera and speaker controls become active after Join.'}
           </Text>
-          <Text style={{ color: stageColors.textSubtle }}>
+          <Text style={[styles.sectionBody, { color: stageColors.textSubtle }]}>
             Audio Route: {audioRouteLabel} • Device Check: {prejoinChecked ? 'Done' : 'Pending'}
           </Text>
         </View>
@@ -152,7 +150,12 @@ export function VoiceChannelStage({
           <View
             style={[
               styles.sectionCard,
-              { borderColor: stageColors.border, backgroundColor: stageColors.card },
+              mobileShadow.card,
+              {
+                backgroundColor: stageColors.card,
+                borderColor: isStageDark ? stageColors.border : 'transparent',
+                borderWidth: isStageDark ? StyleSheet.hairlineWidth : 0,
+              },
             ]}
           >
             <Text style={[styles.sectionTitle, { color: stageColors.text }]}>
@@ -172,7 +175,12 @@ export function VoiceChannelStage({
       <View
         style={[
           styles.controlDock,
-          { borderColor: stageColors.border, backgroundColor: stageColors.card },
+          mobileShadow.floating,
+          {
+            backgroundColor: stageColors.card,
+            borderColor: isStageDark ? stageColors.border : 'transparent',
+            borderWidth: isStageDark ? StyleSheet.hairlineWidth : 0,
+          },
         ]}
       >
         <View style={styles.iconDockRow}>
@@ -237,40 +245,46 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   contentScroll: { flex: 1 },
   contentContainer: { gap: mobileSpacing.sm, paddingBottom: mobileSpacing.lg },
-  heroCard: { borderWidth: 1, borderRadius: 14, padding: mobileSpacing.md, gap: 8 },
-  sectionCard: { borderWidth: 1, borderRadius: 14, padding: mobileSpacing.md, gap: 8 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  liveIndicatorWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  liveIndicatorDot: { width: 8, height: 8, borderRadius: 4 },
-  title: { fontSize: mobileTypography.title, fontWeight: '800' },
-  heroMetaRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  metaChip: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  heroCard: { borderRadius: mobileRadius.lg, padding: mobileSpacing.lg, gap: mobileSpacing.sm },
+  sectionCard: { borderRadius: mobileRadius.lg, padding: mobileSpacing.lg, gap: mobileSpacing.sm },
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
+    gap: mobileSpacing.sm,
   },
+  liveIndicatorWrap: { flexDirection: 'row', alignItems: 'center', gap: mobileSpacing.xs + 2 },
+  liveIndicatorDot: { width: 8, height: 8, borderRadius: 4 },
+  liveIndicatorLabel: { ...mobileTextStyles.caption2, fontWeight: '700' },
+  title: { ...mobileTextStyles.title3 },
+  heroMetaRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
+  metaChip: {
+    borderRadius: mobileRadius.pill,
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.xs + 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: mobileSpacing.xs + 2,
+  },
+  metaChipText: { ...mobileTextStyles.footnote },
   qualityDot: { width: 8, height: 8, borderRadius: 4 },
-  list: { gap: 8 },
-  sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
+  list: { gap: mobileSpacing.sm },
+  sectionTitle: { ...mobileTextStyles.headline },
+  sectionBody: { ...mobileTextStyles.subhead },
   activityRow: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderRadius: mobileRadius.md,
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.sm,
     gap: 2,
   },
   controlDock: {
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 8,
-    gap: 8,
+    borderRadius: mobileRadius.lg,
+    padding: mobileSpacing.sm,
+    gap: mobileSpacing.sm,
     marginTop: mobileSpacing.xs,
   },
-  iconDockRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  iconButtonWrap: { alignItems: 'center', gap: 6, flex: 1 },
+  iconDockRow: { flexDirection: 'row', justifyContent: 'space-between', gap: mobileSpacing.md },
+  iconButtonWrap: { alignItems: 'center', gap: mobileSpacing.xs + 2, flex: 1 },
   iconButton: {
     width: 50,
     height: 50,
@@ -278,5 +292,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconButtonLabel: { fontSize: 11, fontWeight: '600' },
+  iconButtonLabel: { ...mobileTextStyles.caption2, fontWeight: '600' },
 });

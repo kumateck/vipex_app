@@ -20,7 +20,8 @@ import {
   useUpdateUserStatusMutation,
 } from '../api/users.api';
 import { createUserColumns } from './user-columns';
-import type { UserListQuery } from '../types/user.types';
+import { UserEmployeeLinkDialog } from '../dialogs/user-employee-link-dialog';
+import type { User, UserListQuery } from '../types/user.types';
 import { getUserErrorMessage } from '../utils/user-error';
 
 const EMPTY_META: PaginationMeta = {
@@ -46,6 +47,7 @@ export function UsersTable({ status = null, statuses = null }: UsersTableProps) 
   const branchType = authUser?.branch?.type ?? null;
   const [selectedRoleId, setSelectedRoleId] = useState<string>(ALL_ROLES);
   const [selectedUserType, setSelectedUserType] = useState<string>(ALL_USER_TYPES);
+  const [employeeLinkUser, setEmployeeLinkUser] = useState<User | null>(null);
   const { data: roleOptions = [] } = useListRoleOptionsQuery({ companyId }, { skip: !companyId });
   const serverFilters = useMemo(
     () => ({
@@ -129,6 +131,7 @@ export function UsersTable({ status = null, statuses = null }: UsersTableProps) 
         onToggleStatus: (user) => {
           void handleToggleUserStatus(user.id, user.status);
         },
+        onLinkEmployee: setEmployeeLinkUser,
       }),
     [handleResendInvite, handleToggleUserStatus, isResendingInvite, isUpdatingStatus],
   );
@@ -180,6 +183,13 @@ export function UsersTable({ status = null, statuses = null }: UsersTableProps) 
         searchPlaceholder="Search users..."
         enableVirtualization={false}
       />
+      {employeeLinkUser ? (
+        <UserEmployeeLinkDialog
+          key={employeeLinkUser.id}
+          user={employeeLinkUser}
+          onClose={() => setEmployeeLinkUser(null)}
+        />
+      ) : null}
     </div>
   );
 }

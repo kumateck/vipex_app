@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAppearance } from '@mobile/providers/appearance-provider';
+import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 type ThreadSelectionActionsProps = {
   count: number;
@@ -27,12 +28,7 @@ export function ThreadSelectionActions({
   const iconSize = 20 * scale;
 
   return (
-    <View
-      style={[
-        styles.wrap,
-        { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-      ]}
-    >
+    <View style={[styles.wrap, mobileShadow.card, { backgroundColor: theme.colors.card }]}>
       <View style={styles.left}>
         <Pressable
           onPress={onClear}
@@ -71,7 +67,7 @@ export function ThreadSelectionActions({
         <IconAction
           icon="trash-outline"
           size={iconSize}
-          color={theme.colors.text}
+          color={theme.colors.danger}
           onPress={onDelete}
         />
       </View>
@@ -85,7 +81,7 @@ function IconAction({
   color,
   onPress,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: string;
   size: number;
   color: string;
   onPress: () => void;
@@ -99,10 +95,9 @@ function IconAction({
 
 const styles = StyleSheet.create({
   wrap: {
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    borderRadius: mobileRadius.lg,
+    paddingHorizontal: mobileSpacing.xs + 2,
+    paddingVertical: mobileSpacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -110,9 +105,9 @@ const styles = StyleSheet.create({
   left: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: mobileSpacing.xs + 2,
   },
-  count: { fontWeight: '800' },
+  count: { ...mobileTextStyles.title2 },
   actions: { flexDirection: 'row', alignItems: 'center' },
   iconButton: {
     width: 36,
