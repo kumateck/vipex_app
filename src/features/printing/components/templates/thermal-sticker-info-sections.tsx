@@ -42,16 +42,12 @@ export function InfoBlock({
   );
 }
 
-export function ContactStack({
+export function SenderBlock({
   senderName,
   senderTelephones,
-  receiverName,
-  receiverTelephones,
 }: {
   senderName: string;
   senderTelephones: string;
-  receiverName: string;
-  receiverTelephones: string;
 }) {
   return (
     <section
@@ -59,11 +55,9 @@ export function ContactStack({
         minWidth: 0,
         borderRight: '0.25mm solid #111',
         display: 'grid',
-        gridTemplateRows: '1fr 1fr',
       }}
     >
       <PartyBlock label="Sender" name={senderName} telephones={senderTelephones} />
-      <PartyBlock label="Receiver" name={receiverName} telephones={receiverTelephones} hasDivider />
     </section>
   );
 }

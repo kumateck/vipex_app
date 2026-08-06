@@ -1,6 +1,6 @@
-import { Redirect } from 'expo-router';
-import { Drawer } from 'expo-router/drawer';
-import { Ionicons } from '@expo/vector-icons';
+import { Redirect } from '@mobile/navigation/router-compat';
+import { Drawer } from '@mobile/navigation/drawer-compat';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { DrawerActions } from '@react-navigation/native';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { useAuth } from '@mobile/providers/auth-provider';
@@ -31,14 +31,17 @@ export default function AppLayout() {
     <Drawer
       drawerContent={(props) => <MobileDrawerContent {...props} />}
       screenOptions={{
-        headerStyle: { backgroundColor: theme.colors.bgElevated },
+        headerStyle: { backgroundColor: theme.colors.bgElevated, elevation: 0, shadowOpacity: 0 },
         headerTintColor: theme.colors.text,
-        headerTitleStyle: { color: theme.colors.text, fontWeight: '700' },
+        headerTitleStyle: { color: theme.colors.text, fontWeight: '600', fontSize: 17 },
+        headerShadowVisible: false,
         sceneStyle: { backgroundColor: theme.colors.bg },
-        drawerStyle: { backgroundColor: theme.colors.bgElevated },
+        drawerStyle: { backgroundColor: theme.colors.bgElevated, width: 300 },
         drawerActiveTintColor: theme.colors.primary,
         drawerInactiveTintColor: theme.colors.textSubtle,
-        drawerLabelStyle: { fontWeight: '600' },
+        drawerActiveBackgroundColor: `${theme.colors.primary}1F`,
+        drawerItemStyle: { borderRadius: 12 },
+        drawerLabelStyle: { fontWeight: '600', fontSize: 15 },
       }}
     >
       <Drawer.Screen
@@ -83,6 +86,16 @@ export default function AppLayout() {
           title: 'Queue Creation',
           drawerIcon: ({ size, color }) => (
             <Ionicons name="ticket-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="parcel-create"
+        options={{
+          title: 'Create TobePaid',
+          headerShown: false,
+          drawerIcon: ({ size, color }) => (
+            <Ionicons name="cash-outline" size={size} color={color} />
           ),
         }}
       />
@@ -140,7 +153,7 @@ export default function AppLayout() {
       <Drawer.Screen
         name="super-search/[parcelId]"
         options={({ navigation, route }) => ({
-          // Expo Drawer route params are loosely typed; read booking code defensively.
+          // Drawer route params are loosely typed; read booking code defensively.
           ...(function resolveTitle() {
             const params =
               route.params && typeof route.params === 'object'

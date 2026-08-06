@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { getParcelStatusLabel } from '@mobile/constants/parcel-status';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { mobileRadius, mobileSpacing } from '@mobile/theme/layout';
+import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 export function AppStatusChip({ label }: { label: string | number }) {
   const rawLabel = String(label).trim();
@@ -30,33 +31,26 @@ export function AppStatusChip({ label }: { label: string | number }) {
     normalized.includes('cancel') ||
     normalized.includes('error');
 
-  const icon = isGood ? '✓' : isWarn ? '⏳' : isError ? '!' : '•';
-  const fg = isGood
+  const tone = isGood
     ? theme.colors.success
     : isWarn
-      ? '#b37a00'
+      ? theme.colors.warning
       : isError
         ? theme.colors.danger
         : theme.colors.textMuted;
-  const bg = isGood
-    ? theme.scheme === 'dark'
-      ? '#0f2a1a'
-      : '#ecfdf3'
+  const icon = isGood
+    ? ('checkmark-circle' as const)
     : isWarn
-      ? theme.scheme === 'dark'
-        ? '#2b1f08'
-        : '#fff7e6'
+      ? ('time' as const)
       : isError
-        ? theme.scheme === 'dark'
-          ? '#2f1212'
-          : '#fdecec'
-        : theme.colors.cardMuted;
+        ? ('close-circle' as const)
+        : ('ellipse' as const);
+  const bg = isGood || isWarn || isError ? `${tone}1F` : theme.colors.cardMuted;
 
   return (
-    <View style={[styles.statusChip, { backgroundColor: bg, borderColor: theme.colors.border }]}>
-      <Text style={[styles.statusChipText, { color: fg }]}>
-        {icon} {normalizedLabel}
-      </Text>
+    <View style={[styles.statusChip, { backgroundColor: bg }]}>
+      <Ionicons name={icon} size={13} color={tone} />
+      <Text style={[styles.statusChipText, { color: tone }]}>{normalizedLabel}</Text>
     </View>
   );
 }
@@ -75,10 +69,17 @@ export function MobileNoAccess({
       <View
         style={[
           styles.noAccessCard,
-          { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+          mobileShadow.card,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.scheme === 'dark' ? theme.colors.border : 'transparent',
+            borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
+          },
         ]}
       >
-        <Text style={[styles.noAccessIcon, { color: theme.colors.textSubtle }]}>🔒</Text>
+        <View style={[styles.noAccessIconWrap, { backgroundColor: theme.colors.cardMuted }]}>
+          <Ionicons name="lock-closed-outline" size={26} color={theme.colors.textSubtle} />
+        </View>
         <Text style={[styles.noAccessTitle, { color: theme.colors.text }]}>{title}</Text>
         <Text style={[styles.noAccessMsg, { color: theme.colors.textSubtle }]}>{message}</Text>
       </View>
@@ -88,27 +89,40 @@ export function MobileNoAccess({
 
 const styles = StyleSheet.create({
   statusChip: {
-    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     borderRadius: mobileRadius.pill,
     paddingHorizontal: mobileSpacing.sm + 2,
     paddingVertical: 6,
     alignSelf: 'flex-start',
   },
   statusChipText: {
-    fontSize: 12,
+    ...mobileTextStyles.footnote,
     fontWeight: '700',
   },
-  noAccessWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
+  noAccessWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: mobileSpacing.xl,
+  },
   noAccessCard: {
-    borderWidth: 1,
     borderRadius: mobileRadius.lg,
-    padding: mobileSpacing.lg,
+    padding: mobileSpacing.xl,
     width: '100%',
     maxWidth: 420,
     alignItems: 'center',
     gap: mobileSpacing.sm,
   },
-  noAccessIcon: { fontSize: 34 },
-  noAccessTitle: { fontSize: 24, fontWeight: '800' },
-  noAccessMsg: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  noAccessIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: mobileRadius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: mobileSpacing.xs,
+  },
+  noAccessTitle: { ...mobileTextStyles.title2 },
+  noAccessMsg: { ...mobileTextStyles.body, textAlign: 'center' },
 });

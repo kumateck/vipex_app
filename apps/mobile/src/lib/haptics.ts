@@ -1,35 +1,30 @@
-export async function hapticSuccess() {
+import ReactNativeHapticFeedback, { HapticFeedbackTypes } from 'react-native-haptic-feedback';
+
+const options = {
+  enableVibrateFallback: true,
+  ignoreAndroidSystemSettings: false,
+};
+
+function trigger(type: HapticFeedbackTypes) {
   try {
-    const Haptics = await import('expo-haptics');
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    ReactNativeHapticFeedback.trigger(type, options);
   } catch (error) {
     void error;
   }
+}
+
+export async function hapticSuccess() {
+  trigger(HapticFeedbackTypes.notificationSuccess);
 }
 
 export async function hapticWarning() {
-  try {
-    const Haptics = await import('expo-haptics');
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-  } catch (error) {
-    void error;
-  }
+  trigger(HapticFeedbackTypes.notificationWarning);
 }
 
 export async function hapticError() {
-  try {
-    const Haptics = await import('expo-haptics');
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-  } catch (error) {
-    void error;
-  }
+  trigger(HapticFeedbackTypes.notificationError);
 }
 
 export async function hapticTap() {
-  try {
-    const Haptics = await import('expo-haptics');
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  } catch (error) {
-    void error;
-  }
+  trigger(HapticFeedbackTypes.impactLight);
 }

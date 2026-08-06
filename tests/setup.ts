@@ -5,8 +5,14 @@
 // - Forces NODE_ENV=test to ensure test-only branches
 import { config as loadEnv } from 'dotenv';
 
+const testDatabaseUrlOverride = process.env.TEST_DATABASE_URL?.trim();
+
 loadEnv({ path: '.env' });
 loadEnv({ path: '.env.test', override: true });
+
+if (testDatabaseUrlOverride) {
+  process.env.TEST_DATABASE_URL = testDatabaseUrlOverride;
+}
 
 if (process.env.TEST_DATABASE_URL?.trim()) {
   process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;

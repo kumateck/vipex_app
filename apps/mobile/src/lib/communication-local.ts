@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import { getItemAsync, setItemAsync } from '@mobile/lib/secure-store-compat';
 import { reportMobileErrorToDiscord } from '@mobile/lib/mobile-error-reporter';
 import type { CommunicationMessage } from '@mobile/types/communication';
 
@@ -58,9 +58,9 @@ function logStorageError(message: string, context: Record<string, unknown>) {
 async function safeGetItem(key: string): Promise<string | null> {
   if (!isValidSecureStoreKey(key)) return null;
   try {
-    return await SecureStore.getItemAsync(key);
+    return await getItemAsync(key);
   } catch (error) {
-    logStorageError('SecureStore getItemAsync failed', {
+    logStorageError('secure storage getItem failed', {
       key,
       error: error instanceof Error ? error.message : String(error),
     });
@@ -71,9 +71,9 @@ async function safeGetItem(key: string): Promise<string | null> {
 async function safeSetItem(key: string, value: string): Promise<void> {
   if (!isValidSecureStoreKey(key)) return;
   try {
-    await SecureStore.setItemAsync(key, value);
+    await setItemAsync(key, value);
   } catch (error) {
-    logStorageError('SecureStore setItemAsync failed', {
+    logStorageError('secure storage setItem failed', {
       key,
       error: error instanceof Error ? error.message : String(error),
     });

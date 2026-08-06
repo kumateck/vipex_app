@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';

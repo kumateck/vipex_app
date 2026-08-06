@@ -5,6 +5,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import type { AppTheme } from '@mobile/theme/tokens';
+import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 const AUTO_HIDE_MS = 3600;
 
@@ -20,11 +23,17 @@ const variantLabel: Record<NotifyVariant, string> = {
   error: 'Error',
 };
 
-const variantPalette = {
-  success: { icon: '✓', background: '#DCFCE7', accent: '#15803D', border: '#86EFAC' },
-  warning: { icon: '!', background: '#FEF3C7', accent: '#B45309', border: '#FCD34D' },
-  error: { icon: '⨯', background: '#FEE2E2', accent: '#B91C1C', border: '#FCA5A5' },
-} as const;
+const variantIcon: Record<NotifyVariant, string> = {
+  success: 'checkmark-circle',
+  warning: 'warning',
+  error: 'close-circle',
+};
+
+function variantAccent(theme: AppTheme, variant: NotifyVariant) {
+  if (variant === 'success') return theme.colors.success;
+  if (variant === 'warning') return theme.colors.warning;
+  return theme.colors.danger;
+}
 
 export function SnackbarProvider({ children }: PropsWithChildren) {
   const { theme } = useAppearance();
@@ -91,12 +100,12 @@ export function SnackbarProvider({ children }: PropsWithChildren) {
     };
   }, [clearHideTimer, showSnackbar]);
 
-  const colors = useMemo(() => {
-    if (!snackbar) return null;
-    return variantPalette[snackbar.variant];
-  }, [snackbar]);
+  const accent = useMemo(
+    () => (snackbar ? variantAccent(theme, snackbar.variant) : null),
+    [snackbar, theme],
+  );
 
-  const showSnackbarView = visible && snackbar && colors;
+  const showSnackbarView = visible && snackbar && accent;
 
   return (
     <>
@@ -115,21 +124,22 @@ export function SnackbarProvider({ children }: PropsWithChildren) {
             <Animated.View
               style={[
                 styles.container,
+                mobileShadow.floating,
                 {
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  shadowColor: colors.accent,
+                  backgroundColor: theme.colors.bgElevated,
+                  borderColor: theme.scheme === 'dark' ? theme.colors.border : 'transparent',
+                  borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
                   transform: [{ translateY }],
                   opacity,
                 },
               ]}
             >
               <View style={styles.contentRow}>
-                <View style={[styles.iconWrap, { backgroundColor: colors.accent }]}>
-                  <Text style={styles.iconText}>{colors.icon}</Text>
+                <View style={[styles.iconWrap, { backgroundColor: `${accent}1F` }]}>
+                  <Ionicons name={variantIcon[snackbar.variant]} size={18} color={accent} />
                 </View>
                 <View style={styles.textWrap}>
-                  <Text style={[styles.title, { color: colors.accent }]} numberOfLines={1}>
+                  <Text style={[styles.title, { color: accent }]} numberOfLines={1}>
                     {snackbar.title}
                   </Text>
                   <Text style={[styles.message, { color: theme.colors.text }]} numberOfLines={3}>
@@ -143,7 +153,7 @@ export function SnackbarProvider({ children }: PropsWithChildren) {
                   accessibilityRole="button"
                   accessibilityLabel="Dismiss notification"
                 >
-                  <Text style={[styles.closeText, { color: colors.accent }]}>×</Text>
+                  <Ionicons name="close" size={18} color={theme.colors.textSubtle} />
                 </Pressable>
               </View>
             </Animated.View>
@@ -163,29 +173,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   container: {
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    borderRadius: mobileRadius.lg,
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.sm + 2,
   },
   contentRow: { flexDirection: 'row', alignItems: 'flex-start' },
   iconWrap: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 28,
+    height: 28,
+    borderRadius: mobileRadius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
-    marginRight: 10,
+    marginTop: 1,
+    marginRight: mobileSpacing.sm + 2,
   },
-  iconText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
   textWrap: { flex: 1, gap: 2 },
-  title: { fontSize: 13, fontWeight: '800' },
-  message: { fontSize: 13, fontWeight: '600', lineHeight: 18 },
-  closeButton: { paddingLeft: 10, paddingVertical: 2 },
-  closeText: { fontSize: 20, fontWeight: '700', lineHeight: 20 },
+  title: { ...mobileTextStyles.footnote, fontWeight: '700' },
+  message: { ...mobileTextStyles.footnote },
+  closeButton: { paddingLeft: mobileSpacing.sm, paddingVertical: 2 },
 });

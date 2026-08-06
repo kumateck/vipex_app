@@ -21,6 +21,7 @@ export function useDesktopPrinterRouting() {
   const isDesktopRuntime = useMemo(() => getPrintRuntime() === 'desktop', []);
   const stickerPrinter = printerMapping.stickerPrinter ?? '';
   const invoicePrinter = printerMapping.invoicePrinter ?? '';
+  const a4Printer = printerMapping.a4Printer ?? '';
 
   const refreshPrinters = useCallback(async () => {
     try {
@@ -43,6 +44,7 @@ export function useDesktopPrinterRouting() {
     setPrinterPreferenceMapping({
       stickerPrinter: stickerPrinter || undefined,
       invoicePrinter: invoicePrinter || undefined,
+      a4Printer: a4Printer || undefined,
     });
     toast.success('Printer routing saved');
   }
@@ -54,6 +56,7 @@ export function useDesktopPrinterRouting() {
   }
 
   return {
+    a4Printer,
     clearPrinterMapping,
     invoicePrinter,
     isDesktopRuntime,
@@ -61,6 +64,8 @@ export function useDesktopPrinterRouting() {
     printerNames,
     refreshPrinters,
     savePrinterMapping,
+    setA4Printer: (a4Printer: string) =>
+      setPrinterMapping((current) => ({ ...current, a4Printer })),
     setInvoicePrinter: (invoicePrinter: string) =>
       setPrinterMapping((current) => ({ ...current, invoicePrinter })),
     setStickerPrinter: (stickerPrinter: string) =>

@@ -32,9 +32,66 @@ import {
   updateNotificationProviderCtrl,
   updateNotificationTemplateCtrl,
 } from './controller';
+import {
+  getCompanySmsSettingsCtrl,
+  setCompanyDefaultSmsProviderCtrl,
+  updateCompanySmsEventCtrl,
+} from './sms-settings.controller';
+import { smsSettingsManagementRoutes } from './sms-settings-management.routes';
 
 export const notificationHubRoutes = new Elysia({ name: 'notification-hub' })
   .use(authPlugin)
+  .use(smsSettingsManagementRoutes)
+  .get(
+    '/sms-settings',
+    async ({ user }) => getCompanySmsSettingsCtrl((user as AuthUser).companyId!),
+    {
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCompanyProfile)],
+      detail: { tags: ['Notification Hub'], summary: 'Get company SMS settings' },
+    },
+  )
+  .put(
+    '/sms-settings/default-provider',
+    async ({ body, user }) =>
+      setCompanyDefaultSmsProviderCtrl({
+        companyId: (user as AuthUser).companyId!,
+        actorUserId: (user as AuthUser).sub,
+        providerKey: body.providerKey,
+      }),
+    {
+      body: t.Object({ providerKey: t.String({ minLength: 2, maxLength: 64 }) }),
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanManageNotificationProviders,
+          PermissionKeys.CanManageCompanyModules,
+        ),
+      ],
+      detail: { tags: ['Notification Hub'], summary: 'Set company default SMS provider' },
+    },
+  )
+  .put(
+    '/sms-settings/events/:eventCode',
+    async ({ params, body, user }) =>
+      updateCompanySmsEventCtrl({
+        companyId: (user as AuthUser).companyId!,
+        actorUserId: (user as AuthUser).sub,
+        eventCode: params.eventCode,
+        body: body.body,
+      }),
+    {
+      params: t.Object({ eventCode: t.String({ minLength: 2, maxLength: 80 }) }),
+      body: t.Object({ body: t.String({ minLength: 1, maxLength: 2000 }) }),
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanManageNotificationTemplates,
+          PermissionKeys.CanManageCompanyModules,
+        ),
+      ],
+      detail: { tags: ['Notification Hub'], summary: 'Update an application SMS definition' },
+    },
+  )
   .get(
     '/providers',
     async ({ query, user }) =>

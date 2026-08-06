@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { useAuthStore } from '@/stores/auth-store';
 import type { User } from '../types/user.types';
 import { CASHIER_TYPE_LABELS, USER_TYPE_LABELS } from '@/shared/access/constants';
 import { UserType } from '@/db/schemas/enums';
@@ -40,17 +41,27 @@ export function createUserColumns(options?: {
   onToggleStatus?: (user: User) => void;
   isResendingInvite?: boolean;
   isUpdatingStatus?: boolean;
+  onLinkEmployee?: (user: User) => void;
 }): ColumnDef<User>[] {
   const onResendInvite = options?.onResendInvite;
   const onToggleStatus = options?.onToggleStatus;
   const isResendingInvite = options?.isResendingInvite ?? false;
   const isUpdatingStatus = options?.isUpdatingStatus ?? false;
+  const onLinkEmployee = options?.onLinkEmployee;
 
   return [
     { accessorKey: 'fullname', header: 'Full name' },
     { accessorKey: 'email', header: 'Email' },
     { accessorKey: 'telephone', header: 'Telephone' },
     { accessorFn: (row) => row.roleName ?? 'Unassigned role', id: 'roleName', header: 'Role' },
+    {
+      accessorFn: (row) =>
+        row.employeeId
+          ? `${row.employeeName ?? 'Employee'}${row.employeeNumber ? ` (${row.employeeNumber})` : ''}`
+          : 'Not linked',
+      id: 'employee',
+      header: 'Employee',
+    },
     {
       accessorFn: (row) => USER_TYPE_LABELS[row.userType] ?? row.userType,
       id: 'userType',
@@ -86,6 +97,7 @@ export function createUserColumns(options?: {
             onToggleStatus={onToggleStatus}
             isResendingInvite={isResendingInvite}
             isUpdatingStatus={isUpdatingStatus}
+            onLinkEmployee={onLinkEmployee}
           />
         );
       },
@@ -99,13 +111,16 @@ function UserActionsCell({
   onToggleStatus,
   isResendingInvite,
   isUpdatingStatus,
+  onLinkEmployee,
 }: {
   user: User;
   onResendInvite?: (user: User) => void;
   onToggleStatus?: (user: User) => void;
   isResendingInvite: boolean;
   isUpdatingStatus: boolean;
+  onLinkEmployee?: (user: User) => void;
 }) {
+  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const canResendInvite = user.status === 1;
   const isActive = user.status === 0;
@@ -114,6 +129,14 @@ function UserActionsCell({
   const statusDialogDescription = isActive
     ? `This will set ${user.fullname} to inactive and limit account access until reactivated.`
     : `This will reactivate ${user.fullname}'s account.`;
+  const canLinkExistingEmployee =
+    permissions.includes(PermissionKeys.CanListEmployees) &&
+    permissions.includes(PermissionKeys.CanCreateEmployeeUserAccount);
+  const canLinkEmployee =
+    Boolean(onLinkEmployee) &&
+    !user.employeeId &&
+    permissions.includes(PermissionKeys.CanUpdateUsers) &&
+    (permissions.includes(PermissionKeys.CanCreateEmployee) || canLinkExistingEmployee);
 
   return (
     <>
@@ -143,6 +166,11 @@ function UserActionsCell({
                 Resend invite
               </DropdownMenuItem>
             </PermissionGuard>
+          ) : null}
+          {canLinkEmployee ? (
+            <DropdownMenuItem onClick={() => onLinkEmployee?.(user)}>
+              Link employee
+            </DropdownMenuItem>
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>

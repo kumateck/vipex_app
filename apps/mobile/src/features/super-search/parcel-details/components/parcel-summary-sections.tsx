@@ -1,8 +1,37 @@
-import { Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { AppCard, AppStatusChip } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import type { ParcelFullDetails, ParcelSearchRow } from '@mobile/types/parcels';
-import { branchLocationLabel, detailLine, formatCedis, formatDate, prettyRoute } from '../utils';
+import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
+import { branchLocationLabel, formatCedis, formatDate, prettyRoute } from '../utils';
+
+function DetailRow({ label, value, first }: { label: string; value: string; first?: boolean }) {
+  const { theme } = useAppearance();
+  return (
+    <View
+      style={[
+        styles.detailRow,
+        !first && {
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: theme.colors.separator,
+        },
+      ]}
+    >
+      <Text style={[styles.detailLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: theme.colors.text }]}>{value}</Text>
+    </View>
+  );
+}
+
+function SectionHead({ title, statusLabel }: { title: string; statusLabel?: string | number }) {
+  const { theme } = useAppearance();
+  return (
+    <View style={styles.sectionHead}>
+      <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
+      {statusLabel !== undefined ? <AppStatusChip label={statusLabel} /> : null}
+    </View>
+  );
+}
 
 export function ParcelSummarySections({
   details,
@@ -11,7 +40,6 @@ export function ParcelSummarySections({
   details: ParcelFullDetails;
   row: ParcelSearchRow | null;
 }) {
-  const { theme } = useAppearance();
   const sourceBranchName = row?.sourceName ?? '-';
   const sourceLocationName = row?.sourceLocationName ?? '-';
   const destinationBranchName = row?.destinationName ?? '-';
@@ -20,115 +48,96 @@ export function ParcelSummarySections({
   return (
     <>
       <AppCard>
-        <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: '700' }}>Parcel</Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          {detailLine('Booking', details.parcel.bookingCode)}
-        </Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          {detailLine('Tracking', details.parcel.trackingCode)}
-        </Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          {detailLine('Source', branchLocationLabel(sourceBranchName, sourceLocationName))}
-        </Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          {detailLine(
-            'Destination',
-            branchLocationLabel(destinationBranchName, destinationLocationName),
-          )}
-        </Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          {detailLine(
-            'Route',
-            prettyRoute(
+        <SectionHead title="Parcel" statusLabel={details.parcel.status} />
+        <View style={styles.detailList}>
+          <DetailRow first label="Booking" value={details.parcel.bookingCode} />
+          <DetailRow label="Tracking" value={details.parcel.trackingCode} />
+          <DetailRow
+            label="Source"
+            value={branchLocationLabel(sourceBranchName, sourceLocationName)}
+          />
+          <DetailRow
+            label="Destination"
+            value={branchLocationLabel(destinationBranchName, destinationLocationName)}
+          />
+          <DetailRow
+            label="Route"
+            value={prettyRoute(
               sourceBranchName,
               sourceLocationName,
               destinationBranchName,
               destinationLocationName,
-            ),
-          )}
-        </Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          {detailLine('Sender', `${row?.senderName ?? '-'} (${row?.senderPhone ?? '-'})`)}
-        </Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          {detailLine('Receiver', `${row?.receiverName ?? '-'} (${row?.receiverPhone ?? '-'})`)}
-        </Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          {detailLine('Details', details.parcel.parcelDetails)}
-        </Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          {detailLine('Content', details.parcel.parcelContent)}
-        </Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          {detailLine(
-            'Charge',
-            `${formatCedis(details.parcel.chargePsw)} | To Be Paid: ${formatCedis(
-              details.parcel.plannedToBePaidPsw,
-            )}`,
-          )}
-        </Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          {detailLine('Created', formatDate(details.parcel.createdAt))}
-        </Text>
-        <AppStatusChip label={details.parcel.status} />
+            )}
+          />
+          <DetailRow
+            label="Sender"
+            value={`${row?.senderName ?? '-'} (${row?.senderPhone ?? '-'})`}
+          />
+          <DetailRow
+            label="Receiver"
+            value={`${row?.receiverName ?? '-'} (${row?.receiverPhone ?? '-'})`}
+          />
+          <DetailRow label="Details" value={details.parcel.parcelDetails ?? '-'} />
+          <DetailRow label="Content" value={details.parcel.parcelContent ?? '-'} />
+          <DetailRow label="Charge" value={formatCedis(details.parcel.chargePsw)} />
+          <DetailRow label="To Be Paid" value={formatCedis(details.parcel.plannedToBePaidPsw)} />
+          <DetailRow label="Created" value={formatDate(details.parcel.createdAt)} />
+        </View>
       </AppCard>
 
       {details.internalHolder ? (
         <AppCard>
-          <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: '700' }}>
-            Current Holder
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Branch', details.internalHolder.branchName ?? '-')}
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Location', details.internalHolder.locationName ?? '-')}
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Warehouse', details.internalHolder.warehouseName ?? '-')}
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Updated', formatDate(details.internalHolder.updatedAt))}
-          </Text>
+          <SectionHead title="Current Holder" />
+          <View style={styles.detailList}>
+            <DetailRow first label="Branch" value={details.internalHolder.branchName ?? '-'} />
+            <DetailRow label="Location" value={details.internalHolder.locationName ?? '-'} />
+            <DetailRow label="Warehouse" value={details.internalHolder.warehouseName ?? '-'} />
+            <DetailRow label="Updated" value={formatDate(details.internalHolder.updatedAt)} />
+          </View>
         </AppCard>
       ) : null}
 
       {details.pickupQueue ? (
         <AppCard>
-          <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: '700' }}>
-            Pickup Queue
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Queue Code', details.pickupQueue.queueCode)}
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Queue Number', String(details.pickupQueue.queueNumber))}
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Queued At', formatDate(details.pickupQueue.queuedAt))}
-          </Text>
+          <SectionHead title="Pickup Queue" />
+          <View style={styles.detailList}>
+            <DetailRow first label="Queue Code" value={details.pickupQueue.queueCode} />
+            <DetailRow label="Queue Number" value={String(details.pickupQueue.queueNumber)} />
+            <DetailRow label="Queued At" value={formatDate(details.pickupQueue.queuedAt)} />
+          </View>
         </AppCard>
       ) : null}
 
       {details.delivery ? (
         <AppCard>
-          <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: '700' }}>
-            Delivery
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Status', details.delivery.status)}
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Address', details.delivery.dropoffAddress ?? '-')}
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Amount Paid', formatCedis(details.delivery.amountPaidPsw))}
-          </Text>
-          <Text style={{ color: theme.colors.textMuted }}>
-            {detailLine('Delivered At', formatDate(details.delivery.deliveredAt))}
-          </Text>
+          <SectionHead title="Delivery" statusLabel={details.delivery.status} />
+          <View style={styles.detailList}>
+            <DetailRow first label="Address" value={details.delivery.dropoffAddress ?? '-'} />
+            <DetailRow label="Amount Paid" value={formatCedis(details.delivery.amountPaidPsw)} />
+            <DetailRow label="Delivered At" value={formatDate(details.delivery.deliveredAt)} />
+          </View>
         </AppCard>
       ) : null}
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: mobileSpacing.sm,
+  },
+  title: { ...mobileTextStyles.title3 },
+  detailList: { marginTop: -mobileSpacing.xs },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: mobileSpacing.sm,
+    paddingVertical: mobileSpacing.sm,
+  },
+  detailLabel: { ...mobileTextStyles.subhead, flexShrink: 0 },
+  detailValue: { ...mobileTextStyles.subhead, fontWeight: '600', flex: 1, textAlign: 'right' },
+});

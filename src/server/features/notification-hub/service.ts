@@ -1,4 +1,5 @@
 import { Conflict, NotFound } from '@/server/utils/http-error';
+import { env } from '@/server/utils/env';
 import { recordAuditLog } from '../audit/logger';
 import { sendMail } from '@/server/services/mail/mailer';
 import {
@@ -17,6 +18,7 @@ import {
   getNotificationCampaignByIdRepo,
   getNotificationDispatchByIdRepo,
   getNotificationProviderByIdRepo,
+  getNotificationTemplateByCodeRepo,
   getNotificationTemplateByIdRepo,
   getParcelRecipientsRepo,
   listCampaignRecipientsDispatchesRepo,
@@ -35,6 +37,11 @@ import {
   type ListNotificationProvidersParams,
   type ListNotificationTemplatesParams,
 } from './repository';
+import {
+  getParcelStatusSmsEventCode,
+  getSmsEventDefinition,
+  type SmsEventCode,
+} from './sms-event-definitions';
 
 type ProviderRow = Awaited<ReturnType<typeof getDefaultProviderByChannelRepo>>;
 
@@ -123,10 +130,212 @@ async function sendSmsWithProvider(provider: NonNullable<ProviderRow>, to: strin
     } satisfies DeliveryResult;
   }
 
+  if (key === 'mtn') {
+    const subscriptionKey =
+      (typeof cfg.subscriptionKey === 'string' && cfg.subscriptionKey) ||
+      env.MTN_SMS_DEFAULT_SUBSCRIPTION_KEY ||
+      '';
+    const senderId = typeof cfg.senderId === 'string' ? cfg.senderId : '';
+    const apiUrl = (typeof cfg.apiUrl === 'string' && cfg.apiUrl) || env.MTN_SMS_API_BASE_URL || '';
+
+    if (!subscriptionKey || !senderId || !apiUrl) {
+      return {
+        status: 'failed',
+        errorMessage: 'MTN SMS provider is missing configuration (subscriptionKey/senderId/apiUrl)',
+      } satisfies DeliveryResult;
+    }
+
+    try {
+      const response = await fetch(`${apiUrl}/sms/messages/sms/outbound`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'Ocp-Apim-Subscription-Key': subscriptionKey,
+        },
+        body: JSON.stringify({
+          senderAddress: senderId,
+          receiverAddress: [to],
+          message: body,
+          clientCorrelatorId: `${Date.now()}`,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return {
+          status: 'failed',
+          errorMessage: `MTN SMS API returned ${response.status}: ${errorText.slice(0, 500)}`,
+        } satisfies DeliveryResult;
+      }
+
+      let providerMessageId: string | null = null;
+      try {
+        const payload = (await response.json()) as {
+          requestId?: string;
+          resourceReference?: { resourceURL?: string };
+        };
+        providerMessageId = payload.requestId ?? payload.resourceReference?.resourceURL ?? null;
+      } catch {
+        providerMessageId = null;
+      }
+
+      return {
+        status: 'sent',
+        providerMessageId,
+      } satisfies DeliveryResult;
+    } catch (error) {
+      return {
+        status: 'failed',
+        errorMessage: error instanceof Error ? error.message : 'MTN SMS request failed',
+      } satisfies DeliveryResult;
+    }
+  }
+
+  if (key === 'mnotify') {
+    const apiKey = (typeof cfg.apiKey === 'string' && cfg.apiKey) || env.MNOTIFY_API_KEY || '';
+    const senderId =
+      (typeof cfg.senderId === 'string' && cfg.senderId) || env.MNOTIFY_SENDER_ID || '';
+    const apiUrl = (typeof cfg.apiUrl === 'string' && cfg.apiUrl) || env.MNOTIFY_API_URL || '';
+
+    if (!apiKey || !senderId || !apiUrl) {
+      return {
+        status: 'failed',
+        errorMessage: 'mNotify provider is missing configuration (apiKey/senderId/apiUrl)',
+      } satisfies DeliveryResult;
+    }
+
+    try {
+      const response = await fetch(`${apiUrl}/sms/quick?key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipient: [to],
+          sender: senderId,
+          message: body,
+          is_schedule: 'false',
+          schedule_date: '',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return {
+          status: 'failed',
+          errorMessage: `mNotify API returned ${response.status}: ${errorText.slice(0, 500)}`,
+        } satisfies DeliveryResult;
+      }
+
+      let providerMessageId: string | null = null;
+      let code: string | null = null;
+      try {
+        const payload = (await response.json()) as {
+          code?: string;
+          summary?: { _id?: string };
+        };
+        code = payload.code ?? null;
+        providerMessageId = payload.summary?._id ?? null;
+      } catch {
+        providerMessageId = null;
+      }
+
+      // mNotify returns 200 with a body `code` for both success (2000) and
+      // failure (e.g. 1000s = invalid key, insufficient balance, etc.).
+      if (code && code !== '2000') {
+        return {
+          status: 'failed',
+          errorMessage: `mNotify rejected the message (code ${code})`,
+        } satisfies DeliveryResult;
+      }
+
+      return {
+        status: 'sent',
+        providerMessageId,
+      } satisfies DeliveryResult;
+    } catch (error) {
+      return {
+        status: 'failed',
+        errorMessage: error instanceof Error ? error.message : 'mNotify request failed',
+      } satisfies DeliveryResult;
+    }
+  }
+
   return {
     status: 'failed',
     errorMessage: `Unsupported SMS provider key: ${provider.providerKey}`,
   } satisfies DeliveryResult;
+}
+
+export async function sendSmsSvc(input: {
+  companyId: string;
+  phone: string;
+  body: string;
+  recipientType: string;
+  recipientId?: string | null;
+  recipientName?: string | null;
+  metadataJson?: Record<string, unknown> | null;
+}): Promise<DeliveryResult> {
+  const provider = await getDefaultProviderByChannelRepo(input.companyId, 'sms');
+  const createdDispatch = await createNotificationDispatchRepo({
+    companyId: input.companyId,
+    campaignId: null,
+    channel: 'sms',
+    providerId: provider?.id ?? null,
+    providerKey: provider?.providerKey ?? null,
+    recipientType: input.recipientType,
+    recipientId: input.recipientId ?? null,
+    recipientName: input.recipientName ?? null,
+    recipientAddress: input.phone,
+    subject: null,
+    body: input.body,
+    status: 'pending',
+    attemptCount: 0,
+    metadataJson: input.metadataJson ?? null,
+  });
+
+  if (!createdDispatch) {
+    return { status: 'failed', errorMessage: 'Failed to create notification dispatch record' };
+  }
+
+  return dispatchSingleMessage({
+    companyId: input.companyId,
+    provider,
+    dispatchId: createdDispatch.id,
+    channel: 'sms',
+    recipientAddress: input.phone,
+    subject: null,
+    body: input.body,
+  });
+}
+
+export async function dispatchSmsEventSvc(input: {
+  companyId: string;
+  eventCode: SmsEventCode;
+  phone: string;
+  recipientType: string;
+  recipientId?: string | null;
+  recipientName?: string | null;
+  variables: Record<string, string | number | null | undefined>;
+  metadataJson?: Record<string, unknown> | null;
+}): Promise<DeliveryResult> {
+  const definition = getSmsEventDefinition(input.eventCode);
+  if (!definition) return { status: 'failed', errorMessage: 'Unknown application SMS event' };
+  const template = await getNotificationTemplateByCodeRepo(input.companyId, 'sms', definition.code);
+  const body = renderTemplate(template?.body ?? definition.defaultBody, input.variables);
+
+  return sendSmsSvc({
+    companyId: input.companyId,
+    phone: input.phone,
+    body,
+    recipientType: input.recipientType,
+    recipientId: input.recipientId,
+    recipientName: input.recipientName,
+    metadataJson: {
+      ...input.metadataJson,
+      eventCode: definition.code,
+    },
+  });
 }
 
 async function sendEmailWithProvider(input: {
@@ -750,6 +959,46 @@ function buildCallCenterMessage(input: {
   return `${label}, your parcel ${tracking} (booking ${booking}) has been updated after our call.`;
 }
 
+export async function sendPickupQueueNotificationSvc(input: {
+  companyId: string;
+  parcelId: string;
+  queueCode: string;
+  queueNumber: number;
+  branchName: string;
+}): Promise<{ sent: boolean }> {
+  try {
+    const parcel = await getParcelRecipientsRepo(input.companyId, input.parcelId);
+    if (!parcel?.primary.phone) return { sent: false };
+
+    const receiverName = parcel.primary.name?.trim() || 'Customer';
+    const result = await dispatchSmsEventSvc({
+      companyId: input.companyId,
+      eventCode: 'pickup_queue_ticket',
+      phone: parcel.primary.phone,
+      recipientType: 'receiver',
+      recipientId: parcel.primary.id,
+      recipientName: parcel.primary.name,
+      variables: {
+        queueCode: input.queueCode,
+        queueNumber: input.queueNumber,
+        receiverName,
+        branchName: input.branchName,
+        trackingCode: parcel.trackingCode,
+        bookingCode: parcel.bookingCode,
+      },
+      metadataJson: {
+        parcelId: input.parcelId,
+        queueCode: input.queueCode,
+      },
+    });
+
+    return { sent: result.status === 'sent' };
+  } catch (error) {
+    console.error('Failed to send pickup queue SMS notification:', error);
+    return { sent: false };
+  }
+}
+
 export async function sendParcelStatusNotificationSvc(input: {
   companyId: string;
   actorUserId: string;
@@ -773,49 +1022,27 @@ export async function sendParcelStatusNotificationSvc(input: {
   let failedCount = 0;
 
   if (input.sendSms) {
-    const smsProvider = await getDefaultProviderByChannelRepo(input.companyId, 'sms');
+    const eventCode = getParcelStatusSmsEventCode(input.outcome);
     for (const recipient of recipients) {
       if (!recipient.phone) continue;
-      const body = buildCallCenterMessage({
-        outcome: input.outcome,
-        trackingCode: parcel.trackingCode,
-        bookingCode: parcel.bookingCode,
-        recipientName: recipient.name ?? 'Customer',
-      });
-      const createdDispatch = await createNotificationDispatchRepo({
+      const result = await dispatchSmsEventSvc({
         companyId: input.companyId,
-        campaignId: null,
-        channel: 'sms',
-        providerId: smsProvider?.id ?? null,
-        providerKey: smsProvider?.providerKey ?? null,
+        eventCode,
+        phone: recipient.phone,
         recipientType: recipient.role,
         recipientId: recipient.id,
         recipientName: recipient.name ?? null,
-        recipientAddress: recipient.phone,
-        subject: null,
-        body,
-        status: 'pending',
-        attemptCount: 0,
+        variables: {
+          receiverName: recipient.name?.trim() || 'Customer',
+          trackingCode: parcel.trackingCode,
+          bookingCode: parcel.bookingCode,
+          outcome: input.outcome,
+        },
         metadataJson: {
-          eventCode: 'parcel_status_call',
           parcelId: parcel.parcelId,
           trackingCode: parcel.trackingCode,
           outcome: input.outcome,
         },
-      });
-      if (!createdDispatch) {
-        failedCount += 1;
-        continue;
-      }
-
-      const result = await dispatchSingleMessage({
-        companyId: input.companyId,
-        provider: smsProvider,
-        dispatchId: createdDispatch.id,
-        channel: 'sms',
-        recipientAddress: recipient.phone,
-        subject: null,
-        body,
       });
       if (result.status === 'sent') sentCount += 1;
       else failedCount += 1;

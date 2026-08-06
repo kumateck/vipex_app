@@ -1,72 +1,92 @@
-import { Link } from 'expo-router';
-import { StyleSheet, Text } from 'react-native';
+import { Link } from '@mobile/navigation/router-compat';
+import { StyleSheet, Text, View } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import type { ComponentProps } from 'react';
 import { AppScreen } from '@mobile/components/screen';
+import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { AppCard } from '@/components/ui/mobile';
-import { mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { canCreateParcelBooking } from '@mobile/lib/permissions';
+import { AppCard, AppPageHeader } from '@/components/ui/mobile';
+import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
+
+type ModuleCardProps = {
+  icon: ComponentProps<typeof Ionicons>['name'];
+  title: string;
+  description: string;
+  href: string;
+  linkLabel: string;
+};
+
+function ModuleCard({ icon, title, description, href, linkLabel }: ModuleCardProps) {
+  const { theme } = useAppearance();
+  return (
+    <AppCard>
+      <View style={styles.cardHead}>
+        <View style={[styles.cardIcon, { backgroundColor: `${theme.colors.primary}1F` }]}>
+          <Ionicons name={icon} size={18} color={theme.colors.primary} />
+        </View>
+        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{title}</Text>
+      </View>
+      <Text style={[styles.cardBody, { color: theme.colors.textMuted }]}>{description}</Text>
+      <Link href={href as never} style={[styles.link, { color: theme.colors.secondary }]}>
+        {linkLabel} ›
+      </Link>
+    </AppCard>
+  );
+}
 
 export default function OperationsTabScreen() {
-  const { theme } = useAppearance();
+  const { session } = useAuth();
+  const canCreateBooking = canCreateParcelBooking(session.user?.permissions ?? []);
 
   return (
     <AppScreen>
-      <Text style={[styles.title, { color: theme.colors.text }]}>Operations</Text>
-      <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-        Quick access to core workflow modules.
-      </Text>
+      <AppPageHeader title="Operations" subtitle="Quick access to core workflow modules." />
 
-      <AppCard>
-        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Global Search</Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          Search parcels, communication threads, channels, and users in one view.
-        </Text>
-        <Link
-          href={'/(app)/global-search' as never}
-          style={[styles.link, { color: theme.colors.primary }]}
-        >
-          Open Global Search
-        </Link>
-      </AppCard>
-
-      <AppCard>
-        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Super Search</Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          Find any parcel record across your company with one search.
-        </Text>
-        <Link
-          href={'/(app)/super-search' as never}
-          style={[styles.link, { color: theme.colors.primary }]}
-        >
-          Open Super Search
-        </Link>
-      </AppCard>
-
-      <AppCard>
-        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Queue Management</Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          Search parcels, issue queue tickets, and track queue boards.
-        </Text>
-        <Link href="/(app)/queue" style={[styles.link, { color: theme.colors.primary }]}>
-          Open Queue
-        </Link>
-      </AppCard>
-
-      <AppCard>
-        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Scan To Receive</Text>
-        <Text style={{ color: theme.colors.textMuted }}>
-          Scan incoming parcels and mark them at destination.
-        </Text>
-        <Link href="/(app)/receive" style={[styles.link, { color: theme.colors.primary }]}>
-          Open Receive
-        </Link>
-      </AppCard>
+      {canCreateBooking ? (
+        <ModuleCard
+          icon="cash-outline"
+          title="Create TobePaid"
+          description="Create a to-be-paid parcel booking. The receiver pays the full charge on pickup."
+          href="/(app)/parcel-create"
+          linkLabel="Open Create TobePaid"
+        />
+      ) : null}
+      <ModuleCard
+        icon="search-outline"
+        title="Super Search"
+        description="Find any parcel record across your company with one search."
+        href="/(app)/super-search"
+        linkLabel="Open Super Search"
+      />
+      <ModuleCard
+        icon="ticket-outline"
+        title="Queue Management"
+        description="Search parcels, issue queue tickets, and track queue boards."
+        href="/(app)/queue"
+        linkLabel="Open Queue"
+      />
+      <ModuleCard
+        icon="qr-code-outline"
+        title="Scan To Receive"
+        description="Scan incoming parcels and mark them at destination."
+        href="/(app)/receive"
+        linkLabel="Open Receive"
+      />
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: mobileTypography.title, fontWeight: '800' },
-  subtitle: { marginTop: -2, lineHeight: 20, marginBottom: mobileSpacing.xs },
-  cardTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
-  link: { marginTop: mobileSpacing.xs, fontWeight: '700' },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: mobileSpacing.sm },
+  cardIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: mobileRadius.sm + 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTitle: { ...mobileTextStyles.headline },
+  cardBody: { ...mobileTextStyles.subhead },
+  link: { ...mobileTextStyles.footnote, fontWeight: '700', marginTop: mobileSpacing.xs },
 });

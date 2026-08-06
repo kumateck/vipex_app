@@ -13,6 +13,7 @@ import { useDesktopPrinterRouting } from '../../hooks/use-desktop-printer-routin
 
 export function DesktopPrinterRoutingPage() {
   const {
+    a4Printer,
     clearPrinterMapping,
     invoicePrinter,
     isDesktopRuntime,
@@ -20,17 +21,18 @@ export function DesktopPrinterRoutingPage() {
     printerNames,
     refreshPrinters,
     savePrinterMapping,
+    setA4Printer,
     setInvoicePrinter,
     setStickerPrinter,
     stickerPrinter,
   } = useDesktopPrinterRouting();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Printer Routing</h1>
         <p className="text-sm text-muted-foreground">
-          Route parcel stickers and A5 invoices to the correct desktop printers.
+          Route parcel stickers, A5 documents, and A4 reports to the correct desktop printers.
         </p>
       </div>
 
@@ -39,8 +41,8 @@ export function DesktopPrinterRoutingPage() {
           <CardHeader>
             <CardTitle>Desktop Printer Routing</CardTitle>
             <CardDescription>
-              Sender payment uses these mappings for parallel print dispatch. Sticker and invoice
-              are sent to different printers at the same time when running in Electron.
+              Desktop print jobs are routed by paper format. Sender payment can dispatch sticker and
+              invoice jobs in parallel, while reports use the configured A4 printer.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -51,7 +53,7 @@ export function DesktopPrinterRoutingPage() {
               </p>
             ) : (
               <>
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   <div className="space-y-2">
                     <Label htmlFor="sticker-printer">Sticker Printer</Label>
                     <PrinterSelect
@@ -72,6 +74,17 @@ export function DesktopPrinterRoutingPage() {
                       printerNames={printerNames}
                       isLoading={isLoadingPrinters}
                       onChange={setInvoicePrinter}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="a4-printer">Report Printer (A4)</Label>
+                    <PrinterSelect
+                      id="a4-printer"
+                      value={a4Printer}
+                      placeholder="Select A4 printer"
+                      printerNames={printerNames}
+                      isLoading={isLoadingPrinters}
+                      onChange={setA4Printer}
                     />
                   </div>
                 </div>

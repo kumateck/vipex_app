@@ -17,9 +17,15 @@ export function useParcelCreateSenderPayment({
 }: UseParcelCreateSenderPaymentArgs) {
   const [pendingReceipt, setPendingReceipt] = useState<ReceiptSummary | null>(null);
   const [pendingParcels, setPendingParcels] = useState<PendingSenderPaymentParcel[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState(String(PaymentMethod.CASH));
+  const [paymentMethod, setPaymentMethodRaw] = useState(String(PaymentMethod.CASH));
+  const [momoTransactionId, setMomoTransactionId] = useState('');
   const [collectSenderAndProcess, { isLoading }] = useCollectSenderAndProcessMutation();
   const [loadParcelDetails, { isFetching: isLoadingParcels }] = useLazyGetParcelDetailsQuery();
+
+  const setPaymentMethod = (method: string) => {
+    setPaymentMethodRaw(method);
+    setMomoTransactionId('');
+  };
 
   const openPaymentDialog = async (receipt: ReceiptSummary) => {
     const senderPayParcels = receipt.parcels.filter((parcel) =>
@@ -39,7 +45,8 @@ export function useParcelCreateSenderPayment({
       if (loadedParcels.length === 0) return false;
       setPendingReceipt({ bookingId: receipt.bookingId, parcels: loadedParcels });
       setPendingParcels(loadedParcels);
-      setPaymentMethod(String(PaymentMethod.CASH));
+      setPaymentMethodRaw(String(PaymentMethod.CASH));
+      setMomoTransactionId('');
       return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load parcel for payment');
@@ -63,6 +70,7 @@ export function useParcelCreateSenderPayment({
             parcelId: parcel.parcelId,
             amountCedis: parcel.senderDueCedis,
             method: Number(paymentMethod),
+            momoTransactionId: momoTransactionId || null,
           }).unwrap();
 
           return {
@@ -88,6 +96,8 @@ export function useParcelCreateSenderPayment({
     pendingParcels,
     paymentMethod,
     setPaymentMethod,
+    momoTransactionId,
+    setMomoTransactionId,
     isSubmittingPayment: isLoading || isLoadingParcels,
     closePaymentDialog,
     handlePayAndPrint,

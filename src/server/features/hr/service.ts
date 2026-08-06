@@ -3,6 +3,7 @@ import {
   ApprovalStatus,
   AttendanceStatus,
   EmploymentStatus,
+  EmploymentType,
   LeaveSelectionMode,
   LeaveSwapStatus,
   LeaveRequestStatus,
@@ -16,6 +17,7 @@ import {
   createDepartmentRepo,
   createAttendanceRepo,
   createEmployeeAssignmentRepo,
+  createEmployeeForUserRepo,
   createEmployeeRepo,
   createJobTitleRepo,
   createLeaveRequestRepo,
@@ -25,6 +27,7 @@ import {
   findDepartmentByNameRepo,
   findAttendanceByEmployeeDateRepo,
   findEmployeeByNumberRepo,
+  findEmployeeByCompanyEmailRepo,
   findLeaveTypeByNameRepo,
   findJobTitleByNameRepo,
   findUserByEmployeeIdRepo,
@@ -63,6 +66,8 @@ import {
   type ListLeaveSwapParams,
   type ListLeaveTypeParams,
   type ListLeaveCalendarParams,
+  EmployeeUserLinkConflictError,
+  linkEmployeeUserRepo,
 } from './repository';
 
 export async function listDepartmentsSvc(p: ListDepartmentParams) {
@@ -224,8 +229,138 @@ export async function listEmployeeOptionsSvc(input: {
   officerEmployeeId?: string | null;
   status?: number | null;
   search?: string | null;
+  unlinkedOnly?: boolean;
 }) {
   return listEmployeeOptionsRepo(input);
+}
+
+export async function linkEmployeeUserSvc(input: {
+  companyId: string;
+  employeeId: string;
+  userId: string;
+  actorUserId: string;
+}) {
+  const [user, employee, existingEmployeeUser] = await Promise.all([
+    getUserByIdRepo(input.userId),
+    getEmployeeRepo(input.employeeId),
+    findUserByEmployeeIdRepo(input.employeeId),
+  ]);
+
+  if (!user || user.companyId !== input.companyId) throw NotFound('User not found');
+  if (!employee || employee.companyId !== input.companyId || employee.isDeleted) {
+    throw NotFound('Employee not found');
+  }
+  if (user.employeeId) throw Conflict('User is already linked to an employee');
+  if (employee.hasUserAccount || existingEmployeeUser) {
+    throw Conflict('Employee is already linked to a user');
+  }
+
+  try {
+    const linked = await linkEmployeeUserRepo(input);
+    await recordAuditLog({
+      companyId: input.companyId,
+      actorUserId: input.actorUserId,
+      entityType: 'employee',
+      entityId: input.employeeId,
+      action: 'EMPLOYEE_USER_LINKED',
+      message: 'Existing user linked to employee',
+      metadata: { userId: input.userId },
+    });
+    return linked;
+  } catch (error) {
+    if (error instanceof EmployeeUserLinkConflictError) {
+      throw Conflict(error.message);
+    }
+    throw error;
+  }
+}
+
+export async function createEmployeeFromUserSvc(input: {
+  companyId: string;
+  userId: string;
+  employeeNumber: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  departmentId?: string | null;
+  jobTitleId?: string | null;
+  supervisorEmployeeId?: string | null;
+  hireDate: Date;
+  employmentStatus?: number;
+  employmentType?: number;
+  createdBy: string;
+}) {
+  const user = await getUserByIdRepo(input.userId);
+  if (!user || user.companyId !== input.companyId) throw NotFound('User not found');
+  if (user.employeeId) throw Conflict('User is already linked to an employee');
+
+  const [duplicateNumber, duplicateEmail] = await Promise.all([
+    findEmployeeByNumberRepo(input.companyId, input.employeeNumber),
+    findEmployeeByCompanyEmailRepo(input.companyId, user.email),
+  ]);
+  if (duplicateNumber && !duplicateNumber.isDeleted) {
+    throw Conflict('Employee number already exists');
+  }
+  if (duplicateEmail) {
+    throw Conflict("An employee with this user's email already exists; link that employee instead");
+  }
+
+  const displayName = [input.firstName, input.middleName ?? null, input.lastName]
+    .filter(Boolean)
+    .join(' ');
+
+  try {
+    const created = await createEmployeeForUserRepo({
+      companyId: input.companyId,
+      userId: input.userId,
+      employee: {
+        companyId: input.companyId,
+        employeeNumber: input.employeeNumber,
+        firstName: input.firstName,
+        middleName: input.middleName ?? null,
+        lastName: input.lastName,
+        displayName,
+        email: user.email,
+        telephone: user.telephone,
+        branchId: user.branchId,
+        locationId: user.locationId ?? null,
+        departmentId: input.departmentId ?? null,
+        jobTitleId: input.jobTitleId ?? null,
+        managerEmployeeId: input.supervisorEmployeeId ?? null,
+        employmentStatus: input.employmentStatus ?? EmploymentStatus.ACTIVE,
+        employmentType: input.employmentType ?? EmploymentType.FULL_TIME,
+        hireDate: input.hireDate,
+        createdBy: input.createdBy,
+      },
+      assignment: {
+        companyId: input.companyId,
+        branchId: user.branchId,
+        locationId: user.locationId ?? null,
+        departmentId: input.departmentId ?? null,
+        jobTitleId: input.jobTitleId ?? null,
+        managerEmployeeId: input.supervisorEmployeeId ?? null,
+        effectiveFrom: input.hireDate,
+        reason: 'Created from existing user',
+        createdBy: input.createdBy,
+      },
+    });
+
+    await recordAuditLog({
+      companyId: input.companyId,
+      actorUserId: input.createdBy,
+      entityType: 'employee',
+      entityId: created.employeeId,
+      action: 'EMPLOYEE_CREATED_FROM_USER',
+      message: 'Employee created and linked from existing user',
+      metadata: { userId: input.userId, employeeNumber: input.employeeNumber },
+    });
+    return { id: created.employeeId, userId: created.userId };
+  } catch (error) {
+    if (error instanceof EmployeeUserLinkConflictError) {
+      throw Conflict(error.message);
+    }
+    throw error;
+  }
 }
 
 export async function getEmployeeSvc(id: string) {

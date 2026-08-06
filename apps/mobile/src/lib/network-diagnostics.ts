@@ -1,4 +1,4 @@
-import Constants from 'expo-constants';
+import { ENV } from '@mobile/lib/env';
 import { getApiDebugInfo, runApiDiagnostics, type ApiProbeResult } from '@mobile/lib/api';
 
 type HttpProbeResult = {
@@ -38,7 +38,6 @@ type NetworkDiagnosticsOptions = {
 };
 
 const COMMUNICATION_SOCKET_PATH = '/v1/communication/ws';
-const REMOTE_FALLBACK_ROOT = 'https://testing.app.vipexparcel.com';
 const LIVEKIT_REMOTE_HOST = 'wss://rtc.vipexparcel.com/rtc/v1';
 const MINIO_REMOTE_HEALTH = 'https://api.storage.kumateck.com/minio/health/live';
 
@@ -220,40 +219,23 @@ export async function runNetworkDiagnostics(
   const api = await runApiDiagnostics();
   const apiDebug = getApiDebugInfo();
 
-  const extra = (Constants.expoConfig?.extra ?? {}) as {
-    communicationWsUrl?: string;
-    livekitUrl?: string;
-    livekitWsUrl?: string;
-    minioUrl?: string;
-    s3Endpoint?: string;
-  };
-
-  const apiRoots = apiDebug.candidates
-    .map((entry) => toRootUrl(entry))
-    .filter((entry) => isRemoteUrl(entry));
+  const apiRoots = apiDebug.candidates.map((entry) => toRootUrl(entry));
   const activeRoot = toRootUrl(api.activeApiBaseUrl);
-  const remoteRoot = isRemoteUrl(activeRoot) ? activeRoot : REMOTE_FALLBACK_ROOT;
 
-  const derivedWs = [remoteRoot, ...apiRoots]
+  const derivedWs = [activeRoot, ...apiRoots]
     .map((root) => toWsBaseFromHttp(root))
     .filter((entry): entry is string => Boolean(entry))
     .map((base) => `${base}${COMMUNICATION_SOCKET_PATH}`);
 
   const livekitCandidates = unique([
-    process.env.EXPO_PUBLIC_COMMUNICATION_WS_URL,
-    extra.communicationWsUrl,
+    ENV.communicationWsUrl,
     LIVEKIT_REMOTE_HOST,
-    process.env.EXPO_PUBLIC_LIVEKIT_URL,
-    process.env.EXPO_PUBLIC_LIVEKIT_WS_URL,
-    process.env.EXPO_PUBLIC_WS_BASE_URL,
-    extra.livekitUrl,
-    extra.livekitWsUrl,
+    ENV.livekitUrl,
+    ENV.livekitWsUrl,
     ...derivedWs,
-    'wss://testing.app.vipexparcel.com/v1/communication/ws',
   ])
     .map((entry) => normalizeWs(entry))
     .filter((entry): entry is string => Boolean(entry))
-    .filter((entry) => isRemoteUrl(entry))
     .map((entry) =>
       withWsToken(entry, {
         communicationToken: options.communicationToken,
@@ -261,13 +243,9 @@ export async function runNetworkDiagnostics(
       }),
     );
 
-  const minioCandidates = unique([
-    MINIO_REMOTE_HEALTH,
-    process.env.EXPO_PUBLIC_MINIO_URL,
-    process.env.EXPO_PUBLIC_S3_ENDPOINT,
-    extra.minioUrl,
-    extra.s3Endpoint,
-  ]).filter((entry) => isRemoteUrl(entry));
+  const minioCandidates = unique([MINIO_REMOTE_HEALTH, ENV.minioUrl, ENV.s3Endpoint]).filter(
+    (entry) => isRemoteUrl(entry),
+  );
 
   const livekitProbes = await Promise.all(livekitCandidates.map((entry) => probeWsUrl(entry)));
   const minioProbes = await Promise.all(minioCandidates.map((entry) => probeHttpUrl(entry)));

@@ -16,6 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select-searchable';
+import { PaymentMethod } from '@/db/schemas/enums';
+import { MomoRequestToPayPanel } from '@/features/operations/momo/components/momo-request-to-pay-panel';
 import type { SenderCashierParcel } from '../../api/parcel.api';
 import { ParcelSenderPaymentSummary } from '../parcel-sender-payment-summary';
 import { PAYMENT_METHOD_OPTIONS } from './constants';
@@ -28,6 +30,8 @@ type CollectSenderPaymentDialogProps = {
   onAmountChange: (value: string) => void;
   paymentMethod: string;
   onPaymentMethodChange: (value: string) => void;
+  momoTransactionId: string;
+  onMomoConfirmed: (momoTransactionId: string) => void;
   isSubmitting: boolean;
   onClose: () => void;
   onSubmit: () => Promise<void>;
@@ -40,6 +44,8 @@ export function CollectSenderPaymentDialog({
   onAmountChange,
   paymentMethod,
   onPaymentMethodChange,
+  momoTransactionId,
+  onMomoConfirmed,
   isSubmitting,
   onClose,
   onSubmit,
@@ -111,13 +117,32 @@ export function CollectSenderPaymentDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {parcel && senderDuePsw > 0 && paymentMethod === String(PaymentMethod.MTN) ? (
+            <MomoRequestToPayPanel
+              parcelId={parcel.id}
+              flow="sender"
+              amountCedis={senderDuePsw / 100}
+              onConfirmed={onMomoConfirmed}
+              disabled={isSubmitting}
+            />
+          ) : null}
         </div>
 
         <DialogFooter>
           <Button variant="outline" type="button" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="button" onClick={() => void onSubmit()} disabled={isSubmitting}>
+          <Button
+            type="button"
+            onClick={() => void onSubmit()}
+            disabled={
+              isSubmitting ||
+              (senderDuePsw > 0 &&
+                paymentMethod === String(PaymentMethod.MTN) &&
+                !momoTransactionId)
+            }
+          >
             {isSubmitting
               ? 'Processing...'
               : parcel && senderDuePsw > 0

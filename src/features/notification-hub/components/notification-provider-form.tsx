@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -37,6 +37,16 @@ const DEFAULT_VALUES: NotificationProviderFormValues = {
   configJson: null,
   isActive: true,
   isDefault: false,
+};
+
+const CONFIG_HINTS: Record<string, string> = {
+  mtn: 'MTN SMS expects: { "subscriptionKey": "...", "senderId": "...", "apiUrl": "https://..." (optional) }',
+  mnotify:
+    'mNotify expects: { "apiKey": "...", "senderId": "...", "apiUrl": "https://api.mnotify.com/api" (optional) }',
+  custom_webhook:
+    'Custom webhook expects: { "url": "https://...", "headers": { "x-api-key": "..." } }',
+  log_only: 'log_only ignores config — sends are simulated and logged only. Useful for testing.',
+  momo: 'MTN MoMo expects: { "subscriptionKey": "...", "apiUser": "...", "apiKey": "...", "targetEnvironment": "sandbox" (optional), "baseUrl": "https://..." (optional) }',
 };
 
 function toPrettyJson(value: unknown) {
@@ -121,6 +131,7 @@ export function NotificationProviderForm({
             <SelectContent>
               <SelectItem value="sms">SMS</SelectItem>
               <SelectItem value="email">Email</SelectItem>
+              <SelectItem value="momo">MoMo (Payments)</SelectItem>
             </SelectContent>
           </Select>
         </Field>
@@ -130,7 +141,7 @@ export function NotificationProviderForm({
           <Input
             value={providerKey}
             onChange={(event) => setProviderKey(event.target.value)}
-            placeholder="log_only, custom_webhook, smtp"
+            placeholder="log_only, custom_webhook, mtn, mnotify"
             disabled={mode === 'edit'}
           />
         </Field>
@@ -152,6 +163,9 @@ export function NotificationProviderForm({
             onChange={(event) => setConfigText(event.target.value)}
             placeholder='{"url":"https://api.example.com/send","headers":{"x-api-key":"..."}}'
           />
+          {CONFIG_HINTS[providerKey.trim().toLowerCase()] ? (
+            <FieldDescription>{CONFIG_HINTS[providerKey.trim().toLowerCase()]}</FieldDescription>
+          ) : null}
         </Field>
 
         <Field className="flex items-center justify-between rounded-md border p-3">

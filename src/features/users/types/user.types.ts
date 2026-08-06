@@ -9,6 +9,9 @@ export interface User {
   status: number;
   roleId: string;
   companyId: string;
+  employeeId?: string | null;
+  employeeName?: string | null;
+  employeeNumber?: string | null;
   branchId: string;
   locationId?: string | null;
   locationName?: string | null;

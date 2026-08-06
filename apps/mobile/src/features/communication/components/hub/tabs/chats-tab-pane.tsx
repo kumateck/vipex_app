@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Text, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
+import { mobileTextStyles } from '@mobile/theme/layout';
 import type { CommunicationThread } from '@mobile/types/communication';
 import type { UserChatEntry } from '@mobile/features/communication/types/hub';
 import { EmptyText, SectionTitle } from '../hub-ui';
@@ -80,7 +81,12 @@ export function ChatsTabPane({
       />
 
       {archivedChats.length ? (
-        <Text style={{ color: theme.colors.textSubtle, fontSize: 12 * scale }}>
+        <Text
+          style={{
+            color: theme.colors.textSubtle,
+            fontSize: mobileTextStyles.caption1.fontSize * scale,
+          }}
+        >
           Archived: {archivedChats.length}
         </Text>
       ) : null}
@@ -108,6 +114,7 @@ export function ChatsTabPane({
               }
               colors={{
                 border: theme.colors.border,
+                borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
                 card: theme.colors.card,
                 bgElevated: theme.colors.bgElevated,
                 textMuted: theme.colors.textMuted,
@@ -140,6 +147,7 @@ export function ChatsTabPane({
               onOpenThread={onOpenThread}
               colors={{
                 border: theme.colors.border,
+                borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
                 card: theme.colors.card,
                 bgElevated: theme.colors.bgElevated,
                 textMuted: theme.colors.textMuted,

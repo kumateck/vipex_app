@@ -1,4 +1,4 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppButton, AppCard } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import type { CommunicationCallSession, CommunicationChannel } from '@mobile/types/communication';
@@ -41,9 +41,14 @@ export function ChannelsTabPane({
           return (
             <Pressable
               key={channel.id}
-              style={[
+              style={({ pressed }) => [
                 hubStyles.row,
-                { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+                {
+                  opacity: pressed ? 0.85 : 1,
+                  backgroundColor: theme.colors.card,
+                  borderColor: theme.scheme === 'dark' ? theme.colors.border : 'transparent',
+                  borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
+                },
               ]}
               onPress={() => onOpenTextChannel(channel)}
               onLongPress={() => onCycleNotificationMode(channel.id)}
@@ -95,15 +100,14 @@ export function ChannelsTabPane({
                 </View>
               </View>
 
-              <Pressable
-                style={[hubStyles.voiceButton, { backgroundColor: theme.colors.primary }]}
-                disabled={joiningChannelId === channel.id}
-                onPress={() => onJoinVoice(channel)}
-              >
-                <Text style={{ color: theme.colors.primaryText, fontWeight: '700' }}>
-                  {joiningChannelId === channel.id ? 'Joining...' : 'Join Voice'}
-                </Text>
-              </Pressable>
+              <View style={hubStyles.voiceButtonWrap}>
+                <AppButton
+                  title="Join Voice"
+                  onPress={() => onJoinVoice(channel)}
+                  disabled={joiningChannelId === channel.id}
+                  loading={joiningChannelId === channel.id}
+                />
+              </View>
 
               <View style={hubStyles.controlsRow}>
                 <AppButton

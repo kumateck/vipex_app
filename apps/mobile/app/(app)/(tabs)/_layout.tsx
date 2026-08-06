@@ -1,5 +1,5 @@
-import { Tabs, router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Tabs, router } from '@mobile/navigation/router-compat';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ComponentProps } from 'react';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import {
   canViewRiderScreen,
 } from '@mobile/lib/permissions';
 import { UserType } from '@mobile/constants/user-types';
+import { mobileRadius, mobileShadow } from '@mobile/theme/layout';
 
 function DrawerMenuButton() {
   const { theme } = useAppearance();
@@ -41,15 +42,15 @@ function TabIcon({
   return (
     <View
       style={{
-        width: 40,
-        height: 34,
-        borderRadius: 11,
+        width: 42,
+        height: 32,
+        borderRadius: mobileRadius.pill,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: focused ? theme.colors.primary : theme.colors.cardMuted,
+        backgroundColor: focused ? theme.colors.primary : 'transparent',
       }}
     >
-      <Ionicons name={name} size={18} color={focused ? theme.colors.primaryText : color} />
+      <Ionicons name={name} size={19} color={focused ? theme.colors.primaryText : color} />
     </View>
   );
 }
@@ -118,18 +119,22 @@ export default function AppTabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: theme.colors.bgElevated },
-        headerTitleStyle: { color: theme.colors.text, fontWeight: '700' },
+        headerStyle: { backgroundColor: theme.colors.bgElevated, elevation: 0, shadowOpacity: 0 },
+        headerTitleStyle: { color: theme.colors.text, fontWeight: '600', fontSize: 17 },
         headerTintColor: theme.colors.text,
+        headerShadowVisible: false,
         sceneStyle: { backgroundColor: theme.colors.bg },
         headerLeft: () => <DrawerMenuButton />,
         tabBarStyle: {
           backgroundColor: theme.colors.bgElevated,
-          borderTopColor: theme.colors.border,
-          height: 70 + insets.bottom,
-          paddingBottom: Math.max(insets.bottom, 6),
-          paddingTop: 8,
-          paddingHorizontal: 10,
+          borderTopWidth: 0,
+          borderTopLeftRadius: mobileRadius.xl,
+          borderTopRightRadius: mobileRadius.xl,
+          height: 68 + insets.bottom,
+          paddingBottom: Math.max(insets.bottom, 10),
+          paddingTop: 10,
+          paddingHorizontal: 12,
+          ...mobileShadow.floating,
         },
         tabBarItemStyle: {
           paddingHorizontal: 2,
@@ -137,7 +142,7 @@ export default function AppTabsLayout() {
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '700',
-          marginTop: 2,
+          marginTop: 3,
         },
         tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: theme.colors.primary,

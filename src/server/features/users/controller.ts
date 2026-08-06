@@ -18,6 +18,9 @@ function toUserDto(u: {
   status: number;
   roleId: string;
   companyId: string;
+  employeeId?: string | null;
+  employeeName?: string | null;
+  employeeNumber?: string | null;
   branchId: string;
   locationId?: string | null;
   locationName?: string | null;
@@ -38,6 +41,9 @@ function toUserDto(u: {
     status: u.status,
     roleId: u.roleId,
     companyId: u.companyId,
+    employeeId: u.employeeId ?? null,
+    employeeName: u.employeeName ?? null,
+    employeeNumber: u.employeeNumber ?? null,
     branchId: u.branchId,
     locationId: u.locationId ?? null,
     locationName: u.locationName ?? null,

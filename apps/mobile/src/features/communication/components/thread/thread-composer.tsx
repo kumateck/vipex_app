@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { normalizeMentionHandle } from '@mobile/features/communication/utils/thread-mentions';
+import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import type { CommunicationMessage, MobileUserOption } from '@mobile/types/communication';
 
 type ThreadDisplayMessage = CommunicationMessage & { _optimistic?: boolean; _failed?: boolean };
@@ -45,14 +46,11 @@ export function ThreadComposer({
     <>
       {showActions ? (
         <View
-          style={[
-            styles.actionsTray,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
+          style={[styles.actionsTray, mobileShadow.card, { backgroundColor: theme.colors.card }]}
         >
           {QUICK_ACTIONS.map((label) => (
             <View key={label} style={styles.actionItem}>
-              <View style={[styles.actionIcon, { backgroundColor: theme.colors.bgElevated }]}>
+              <View style={[styles.actionIcon, { backgroundColor: theme.colors.cardMuted }]}>
                 <Ionicons
                   name={
                     label === 'Photo'
@@ -81,12 +79,13 @@ export function ThreadComposer({
         <View
           style={[
             styles.suggestionsWrap,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
+            mobileShadow.card,
+            { backgroundColor: theme.colors.card },
           ]}
         >
           <Pressable
             onPress={() => insertMention('everyone')}
-            style={[styles.suggestionItem, { borderColor: theme.colors.border }]}
+            style={[styles.suggestionItem, { backgroundColor: theme.colors.cardMuted }]}
           >
             <Text style={{ color: theme.colors.text }}>@everyone</Text>
           </Pressable>
@@ -94,7 +93,7 @@ export function ThreadComposer({
             <Pressable
               key={user.id}
               onPress={() => insertMention(user)}
-              style={[styles.suggestionItem, { borderColor: theme.colors.border }]}
+              style={[styles.suggestionItem, { backgroundColor: theme.colors.cardMuted }]}
             >
               <Text style={{ color: theme.colors.text }}>
                 @{normalizeMentionHandle(user.email.split('@')[0] ?? user.fullname)}
@@ -112,7 +111,6 @@ export function ThreadComposer({
           style={[
             styles.replyBar,
             {
-              borderColor: theme.colors.border,
               borderLeftColor: theme.colors.primary,
               backgroundColor: theme.colors.card,
             },
@@ -132,13 +130,12 @@ export function ThreadComposer({
         </View>
       ) : null}
 
-      <View style={styles.composerRow}>
+      <View style={[styles.composerRow, mobileShadow.floating]}>
         <Pressable
           onPress={() => setShowActions((prev) => !prev)}
           style={[
             styles.iconButton,
             {
-              borderColor: theme.colors.border,
               backgroundColor: theme.colors.card,
               width: 42 * scale,
               height: 42 * scale,
@@ -149,12 +146,7 @@ export function ThreadComposer({
           <Ionicons name="add" size={22 * scale} color={theme.colors.textMuted} />
         </Pressable>
 
-        <View
-          style={[
-            styles.inputWrap,
-            { borderColor: theme.colors.border, backgroundColor: theme.colors.card },
-          ]}
-        >
+        <View style={[styles.inputWrap, { backgroundColor: theme.colors.card }]}>
           <TextInput
             value={text}
             onChangeText={setText}
@@ -197,13 +189,12 @@ export function ThreadComposer({
 
 const styles = StyleSheet.create({
   actionsTray: {
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 10,
+    borderRadius: mobileRadius.lg,
+    padding: mobileSpacing.md - 2,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  actionItem: { alignItems: 'center', gap: 6 },
+  actionItem: { alignItems: 'center', gap: mobileSpacing.xs + 2 },
   actionIcon: {
     width: 42,
     height: 42,
@@ -211,29 +202,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionText: { fontSize: 12, fontWeight: '600' },
-  suggestionsWrap: { borderWidth: 1, borderRadius: 12, padding: 8, gap: 6 },
+  actionText: { ...mobileTextStyles.caption1, fontWeight: '600' },
+  suggestionsWrap: {
+    borderRadius: mobileRadius.md,
+    padding: mobileSpacing.sm,
+    gap: mobileSpacing.xs + 2,
+  },
   suggestionItem: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderRadius: mobileRadius.sm + 2,
+    paddingHorizontal: mobileSpacing.sm + 2,
+    paddingVertical: mobileSpacing.sm,
     gap: 2,
   },
   replyBar: {
-    borderWidth: 1,
     borderLeftWidth: 3,
-    borderRadius: 12,
-    paddingLeft: 10,
-    paddingRight: 8,
-    paddingVertical: 7,
+    borderRadius: mobileRadius.md,
+    paddingLeft: mobileSpacing.sm + 2,
+    paddingRight: mobileSpacing.sm,
+    paddingVertical: mobileSpacing.sm - 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: mobileSpacing.sm,
   },
   replyMeta: { flex: 1 },
-  replyTitle: { fontSize: 11, fontWeight: '700' },
-  replyText: { marginTop: 1, fontSize: 11, lineHeight: 14 },
+  replyTitle: { ...mobileTextStyles.caption2, fontWeight: '700' },
+  replyText: { ...mobileTextStyles.caption2, marginTop: 1 },
   replyCloseButton: {
     width: 28,
     height: 28,
@@ -241,25 +234,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  composerRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  composerRow: { flexDirection: 'row', alignItems: 'flex-end', gap: mobileSpacing.sm },
   iconButton: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   inputWrap: {
     flex: 1,
     minHeight: 42,
-    borderWidth: 1,
-    borderRadius: 22,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: mobileRadius.xl,
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: mobileSpacing.sm,
   },
   input: { flex: 1, fontSize: 16, maxHeight: 92, lineHeight: 20 },
   sendButton: {

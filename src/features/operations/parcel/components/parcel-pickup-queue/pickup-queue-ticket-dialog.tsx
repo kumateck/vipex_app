@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -6,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import type { ParcelFullDetails, ParcelSearchRow } from '../../api/parcel.api';
 import { formatCurrency, formatDateTime, getPaymentBucketLabel } from './parcel-pickup-queue-utils';
 
@@ -15,6 +17,8 @@ type PickupQueueTicketDialogProps = {
   parcelDetails: ParcelFullDetails | undefined;
   isPickupQueueEnabled: boolean;
   isCreatingQueue: boolean;
+  sendSms: boolean;
+  onSendSmsChange: (checked: boolean) => void;
   onClose: () => void;
   onGenerateQueueTicket: () => void;
 };
@@ -35,6 +39,8 @@ export function PickupQueueTicketDialog({
   parcelDetails,
   isPickupQueueEnabled,
   isCreatingQueue,
+  sendSms,
+  onSendSmsChange,
   onClose,
   onGenerateQueueTicket,
 }: PickupQueueTicketDialogProps) {
@@ -92,6 +98,17 @@ export function PickupQueueTicketDialog({
                 Review the parcel details, then generate the queue ticket.
               </div>
             )}
+
+            {!hasQueueForToday ? (
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <Label htmlFor="queue-send-sms">Send SMS to receiver</Label>
+                <Checkbox
+                  id="queue-send-sms"
+                  checked={sendSms}
+                  onCheckedChange={(checked) => onSendSmsChange(checked === true)}
+                />
+              </div>
+            ) : null}
           </div>
         )}
         <DialogFooter>

@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { hashPassword, verifyPassword } from '../../utils/password';
 import { signAccessToken } from '../../utils/jwt';
 import {
@@ -20,6 +19,7 @@ import { UserStatus } from '@/db/schemas/enums';
 import { HttpError } from '@/server/utils/http-error';
 import { HttpStatus } from '@/server/utils/http-status';
 import { logger } from '@/server/utils/logger';
+import { generateOpaqueToken, generateOtpCode, hashOtp, sha256HexAsync } from '@/server/utils/otp';
 import {
   clearUserResetTokenRepo,
   findUserByEmailAndResetTokenRepo,
@@ -27,28 +27,12 @@ import {
   setUserResetTokenRepo,
 } from './repository.tokens';
 
-async function sha256HexAsync(input: string): Promise<string> {
-  const enc = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-function generateOpaqueToken(bytes = 32): string {
-  return randomBytes(bytes).toString('hex'); // 64 hex chars
-}
-
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-function generateOtpCode() {
-  return `${Math.floor(100000 + Math.random() * 900000)}`;
-}
-
 async function hashEmailOtp(email: string, otp: string) {
-  return sha256HexAsync(`${normalizeEmail(email)}:${otp.trim()}`);
+  return hashOtp(normalizeEmail(email), otp);
 }
 
 export async function loginSvc(email: string, password: string, ua?: string, ip?: string) {
