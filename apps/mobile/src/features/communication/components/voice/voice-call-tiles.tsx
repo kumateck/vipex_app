@@ -1,8 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { VideoTrack } from '@livekit/react-native';
 import type { TrackReference } from '@livekit/components-react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
+import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import type { VoiceSocketParticipant } from '@mobile/features/communication/hooks/use-voice-channel';
 
 type StagePalette = {
@@ -90,7 +91,7 @@ export function VoiceCallTiles({
                   objectFit="cover"
                 />
                 <View style={styles.videoFooter}>
-                  <Text style={[styles.videoFooterText, { color: '#fff' }]} numberOfLines={1}>
+                  <Text style={styles.videoFooterText} numberOfLines={1}>
                     {name}
                     {participant.isSelf ? ' (You)' : ''}
                   </Text>
@@ -104,7 +105,7 @@ export function VoiceCallTiles({
                     { borderColor: stageColors.border, backgroundColor: stageColors.bg },
                   ]}
                 >
-                  <Text style={{ color: stageColors.textMuted, fontWeight: '700', fontSize: 18 }}>
+                  <Text style={[styles.avatarInitials, { color: stageColors.textMuted }]}>
                     {toInitials(name)}
                   </Text>
                 </View>
@@ -118,14 +119,12 @@ export function VoiceCallTiles({
             <View
               style={[
                 styles.mutedBadge,
-                { backgroundColor: participant.isMuted ? '#8b1f1f' : '#1f6b3a' },
+                {
+                  backgroundColor: participant.isMuted ? theme.colors.danger : theme.colors.success,
+                },
               ]}
             >
-              <Ionicons
-                name={participant.isMuted ? 'mic-off' : 'mic'}
-                size={11}
-                color={participant.isMuted ? '#ffd6d6' : theme.colors.primaryText}
-              />
+              <Ionicons name={participant.isMuted ? 'mic-off' : 'mic'} size={11} color="white" />
               <Text style={styles.mutedText}>{participant.isMuted ? 'Muted' : 'Live'}</Text>
             </View>
           </View>
@@ -136,11 +135,11 @@ export function VoiceCallTiles({
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: mobileSpacing.sm },
   tile: {
     width: '48.5%',
     minHeight: 172,
-    borderRadius: 12,
+    borderRadius: mobileRadius.lg,
     borderWidth: 1,
     overflow: 'hidden',
     position: 'relative',
@@ -148,22 +147,24 @@ const styles = StyleSheet.create({
   video: { width: '100%', height: 172 },
   videoFooter: {
     position: 'absolute',
-    left: 8,
-    right: 8,
-    bottom: 8,
-    borderRadius: 8,
+    left: mobileSpacing.sm,
+    right: mobileSpacing.sm,
+    bottom: mobileSpacing.sm,
+    borderRadius: mobileRadius.sm,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    paddingHorizontal: mobileSpacing.sm,
+    paddingVertical: mobileSpacing.xs + 1,
   },
-  videoFooterText: { fontSize: 11, fontWeight: '700' },
+  // Overlay caption sits on a dark video scrim regardless of app theme, so it
+  // intentionally stays white rather than following theme text tokens.
+  videoFooterText: { ...mobileTextStyles.caption1, fontWeight: '700', color: 'white' },
   avatarWrap: {
     flex: 1,
     minHeight: 172,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 8,
+    gap: mobileSpacing.sm,
+    paddingHorizontal: mobileSpacing.sm,
   },
   avatar: {
     width: 72,
@@ -173,17 +174,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarName: { textAlign: 'center', fontSize: 12, fontWeight: '700' },
+  avatarInitials: { ...mobileTextStyles.headline },
+  avatarName: { ...mobileTextStyles.footnote, textAlign: 'center', fontWeight: '700' },
   mutedBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    borderRadius: 999,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
+    top: mobileSpacing.sm,
+    right: mobileSpacing.sm,
+    borderRadius: mobileRadius.pill,
+    paddingHorizontal: mobileSpacing.xs + 3,
+    paddingVertical: mobileSpacing.xs,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  mutedText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  // Same reasoning as videoFooterText: white foreground on a solid status pill.
+  mutedText: { ...mobileTextStyles.caption2, color: 'white', fontWeight: '700' },
 });

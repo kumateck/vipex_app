@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useListBranchOptionsQuery } from '@/features/branches';
@@ -19,6 +19,7 @@ import {
   useListFleetTripEventsQuery,
   useListFleetTripsQuery,
 } from '../../api/fleet-transport.api';
+import { useMemo, useState } from 'react';
 
 export function FleetDispatchCheckInPage() {
   const [branchId, setBranchId] = useState('__all__');
@@ -175,7 +176,7 @@ export function FleetDispatchCheckInPage() {
             ) : null}
             {checkInEvents.map((event) => (
               <div key={event.id} className="rounded border p-3">
-                <p className="font-medium">{new Date(event.occurredAt).toLocaleString()}</p>
+                <p className="font-medium">{formatDateTimeShared(event.occurredAt)}</p>
                 <p className="text-muted-foreground">
                   Odometer: {event.odometerKm ?? '-'} | Location: {event.locationLabel ?? '-'}
                 </p>

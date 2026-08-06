@@ -30,11 +30,66 @@ import {
   getPayrollRegisterReportSvc,
   getShiftRevenueReportSvc,
   getStorageWaiverFinancialReportSvc,
+  listDailyCashierSalesCashiersSvc,
   getToBePaidCollectionsReconciliationReportSvc,
 } from './service';
 
 export const reportingRoutes = new Elysia({ name: 'reporting' })
   .use(authPlugin)
+  .get(
+    '/daily-cashier-sales/cashiers',
+    async ({ user, query }) => {
+      const authUser = user!;
+      if (!authUser.companyId) {
+        throw Forbidden('Authenticated user company context is missing');
+      }
+
+      const isHeadOffice = authUser.branchType === BranchType.HEADOFFICE;
+      const effectiveBranchId = isHeadOffice ? (query.branchId ?? null) : authUser.branchId;
+      if (!isHeadOffice && !effectiveBranchId) {
+        throw Forbidden('Authenticated user branch/company context is missing');
+      }
+
+      const canSelectCashier = (authUser.permissions ?? []).includes(
+        PermissionKeys.CanReadAccounting,
+      );
+
+      return listDailyCashierSalesCashiersSvc({
+        companyId: authUser.companyId,
+        branchId: effectiveBranchId,
+        canSelectCashier,
+        date: query.date,
+        locationId: query.locationId ?? null,
+        cashierType: query.cashierType ?? null,
+      });
+    },
+    {
+      query: t.Object({
+        date: t.String({ format: 'date' }),
+        branchId: t.Optional(UUID),
+        locationId: t.Optional(UUID),
+        cashierType: t.Optional(t.Number()),
+      }),
+      response: t.Array(
+        t.Object({
+          id: UUID,
+          name: t.String(),
+        }),
+      ),
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanViewReportCashierShifts,
+          PermissionKeys.CanReadAccounting,
+        ),
+      ],
+      detail: {
+        tags: ['Reporting'],
+        summary: 'List daily cashier sales cashier options',
+        operationId: 'listDailyCashierSalesCashiers',
+      },
+    },
+  )
   .get(
     '/daily-cashier-sales',
     async ({ user, query }) => {
@@ -76,7 +131,7 @@ export const reportingRoutes = new Elysia({ name: 'reporting' })
       beforeHandle: [
         requireAuth(),
         requireAnyPermissions(
-          PermissionKeys.CanGetCashierPerformanceReport,
+          PermissionKeys.CanViewReportCashierShifts,
           PermissionKeys.CanReadAccounting,
         ),
       ],
@@ -215,7 +270,7 @@ export const reportingRoutes = new Elysia({ name: 'reporting' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanGetParcelStatusSummaryReport),
+        requirePermissions(PermissionKeys.CanViewReportParcelsDeliveryPerformance),
       ],
       detail: {
         tags: ['Reporting'],
@@ -398,10 +453,7 @@ export const reportingRoutes = new Elysia({ name: 'reporting' })
         date: t.String({ format: 'date' }),
         includeTransactions: t.Optional(t.Boolean()),
       }),
-      beforeHandle: [
-        requireAuth(),
-        requirePermissions(PermissionKeys.CanGetCashierPerformanceReport),
-      ],
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanViewReportCashierShifts)],
       detail: {
         tags: ['Reporting'],
         summary: 'Cashier day sessions with transaction details',
@@ -428,7 +480,7 @@ export const reportingRoutes = new Elysia({ name: 'reporting' })
         from: t.String({ format: 'date' }),
         to: t.String({ format: 'date' }),
       }),
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanGetShiftRevenueReport)],
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanViewReportCashierRevenue)],
       detail: {
         tags: ['Reporting'],
         summary: 'Shift revenue report',
@@ -454,7 +506,7 @@ export const reportingRoutes = new Elysia({ name: 'reporting' })
       beforeHandle: [
         requireAuth(),
         requireModuleEnabled('accounting'),
-        requirePermissions(PermissionKeys.CanGetBranchProfitabilityReport),
+        requirePermissions(PermissionKeys.CanViewReportBranchProfitSummary),
       ],
       detail: {
         tags: ['Reporting'],
@@ -476,7 +528,10 @@ export const reportingRoutes = new Elysia({ name: 'reporting' })
         branchId: t.Optional(UUID),
         agingBucket: t.Optional(t.String()),
       }),
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanGetCreditExposureReport)],
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanViewReportCustomersCreditSummary),
+      ],
       detail: {
         tags: ['Reporting'],
         summary: 'Credit exposure report',
@@ -501,7 +556,7 @@ export const reportingRoutes = new Elysia({ name: 'reporting' })
         from: t.Optional(t.String({ format: 'date' })),
         to: t.Optional(t.String({ format: 'date' })),
       }),
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanGetCreditExposureReport)],
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanViewReportCustomersAging)],
       detail: {
         tags: ['Reporting'],
         summary: 'Customer credit aging detail report',
@@ -528,7 +583,7 @@ export const reportingRoutes = new Elysia({ name: 'reporting' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanGetOutstandingToBePaidReport),
+        requirePermissions(PermissionKeys.CanViewReportCashToBePaidCollectionsReconciliation),
       ],
       detail: {
         tags: ['Reporting'],
@@ -556,7 +611,7 @@ export const reportingRoutes = new Elysia({ name: 'reporting' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanGetOutstandingToBePaidReport),
+        requirePermissions(PermissionKeys.CanViewReportCashToBePaidOutstanding),
       ],
       detail: {
         tags: ['Reporting'],
@@ -582,7 +637,7 @@ export const reportingRoutes = new Elysia({ name: 'reporting' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanGetParcelStatusSummaryReport),
+        requirePermissions(PermissionKeys.CanViewReportParcelsStatusSummary),
       ],
       detail: {
         tags: ['Reporting'],

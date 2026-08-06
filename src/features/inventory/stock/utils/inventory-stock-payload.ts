@@ -141,6 +141,7 @@ export function toCreateStockRequestPayload(
     ...(toOptional(input.requestedToLocationId)
       ? { requestedToLocationId: toOptional(input.requestedToLocationId) }
       : {}),
+    requestType: input.requestType,
     ...(toOptional(input.notes) ? { notes: toOptional(input.notes) } : {}),
     ...(input.submit !== undefined ? { submit: input.submit } : {}),
     lines: input.lines.map((line) => ({

@@ -9,6 +9,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ReactSignature } from '@/components/ui/react-signature';
+import { PHONE_DIGITS, limitPhoneDigits } from '@/lib/phone';
 import {
   Select,
   SelectContent,
@@ -192,8 +193,13 @@ export function DeliveryHandoverDialog({
                       />
                       <Input
                         value={secondNewPhone}
-                        onChange={(event) => onSecondNewPhoneChange(event.target.value)}
+                        onChange={(event) =>
+                          onSecondNewPhoneChange(limitPhoneDigits(event.target.value))
+                        }
                         placeholder="Second receiver telephone"
+                        inputMode="numeric"
+                        autoComplete="tel"
+                        maxLength={PHONE_DIGITS}
                       />
                     </div>
                   ) : null}

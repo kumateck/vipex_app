@@ -2,18 +2,33 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   useGetInventoryValuationSummaryQuery,
   useRecomputeInventoryValuationSnapshotsMutation,
   useSyncInventoryFinancialPostingsMutation,
 } from '@/features/inventory/api';
+import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
 import { useAuthStore } from '@/stores/auth-store';
 
 export function InventoryValuationPage() {
   const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
-  const [locationId, setLocationId] = useState('');
-  const [appliedLocationId, setAppliedLocationId] = useState('');
+  const [locationId, setLocationId] = useState('all');
+  const [appliedLocationId, setAppliedLocationId] = useState('all');
+  const { data: locations = [] } = useListInventoryLocationOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
   const queryArgs = useMemo(
-    () => ({ companyId: companyId ?? '', locationId: appliedLocationId || null }),
+    () => ({
+      companyId: companyId ?? '',
+      locationId: appliedLocationId === 'all' ? null : appliedLocationId,
+    }),
     [companyId, appliedLocationId],
   );
   const { data } = useGetInventoryValuationSummaryQuery(queryArgs, { skip: !companyId });
@@ -26,12 +41,19 @@ export function InventoryValuationPage() {
       <div className="w-full p-4 space-y-4">
         <div className="grid gap-2 max-w-sm">
           <p className="text-sm font-medium">Location (optional)</p>
-          <input
-            className="h-9 rounded border px-3"
-            value={locationId}
-            onChange={(e) => setLocationId(e.target.value)}
-            placeholder="Location ID"
-          />
+          <Select value={locationId} onValueChange={setLocationId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select location scope" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All locations</SelectItem>
+              {locations.map((location) => (
+                <SelectItem key={location.id} value={location.id}>
+                  {location.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex gap-2">
           <Button

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ReceiptSummary } from './parcel-form.types';
@@ -5,9 +6,20 @@ import { ParcelReceiptActions } from '../parcel-receipt-actions';
 
 type ParcelReceiptsProps = {
   receipt: ReceiptSummary | null;
+  autoPrint?: boolean;
 };
 
-export function ParcelReceipts({ receipt }: ParcelReceiptsProps) {
+export function ParcelReceipts({ receipt, autoPrint = false }: ParcelReceiptsProps) {
+  const [activeAutoPrintIndex, setActiveAutoPrintIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!receipt || !autoPrint || receipt.parcels.length === 0) {
+      setActiveAutoPrintIndex(null);
+      return;
+    }
+    setActiveAutoPrintIndex(0);
+  }, [autoPrint, receipt?.bookingId, receipt?.parcels.length]);
+
   if (!receipt) return null;
 
   return (
@@ -34,6 +46,15 @@ export function ParcelReceipts({ receipt }: ParcelReceiptsProps) {
             <ParcelReceiptActions
               data={parcel}
               triggerLabel="Print Sticker + Invoice"
+              autoPrint={activeAutoPrintIndex === index}
+              onAutoPrintComplete={() => {
+                if (activeAutoPrintIndex !== index) return;
+                setActiveAutoPrintIndex((current) => {
+                  if (current == null) return current;
+                  const next = current + 1;
+                  return next < receipt.parcels.length ? next : null;
+                });
+              }}
             />
           </div>
         ))}

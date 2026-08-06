@@ -4,6 +4,7 @@ import {
   AccountClass,
   CashierType,
   CustomerCreditSourceType,
+  Payer,
   PaymentMethod,
 } from '@/db/schemas/enums';
 import type { CreditExposureReportRow } from './repository';
@@ -19,6 +20,7 @@ import {
   listCashierSessionsForDayRepo,
   listCreditExposureReportRowsRepo,
   listDailyCashierSalesSessionsRepo,
+  listDailyCashierSalesToBePaidRowsRepo,
   listDailyCashierSalesTransactionsRepo,
   listDailyCashConfirmationReportRowsRepo,
   listEmployeeMasterReportRowsRepo,
@@ -160,6 +162,23 @@ export async function getDailyCashierSalesReportSvc(input: {
     sessionIds,
     cashierType: input.cashierType ?? null,
   });
+  const shouldIncludeToBePaid =
+    input.cashierType === null ||
+    input.cashierType === undefined ||
+    input.cashierType === CashierType.SENDING ||
+    input.cashierType === CashierType.FULL;
+  const toBePaidRows = shouldIncludeToBePaid
+    ? await listDailyCashierSalesToBePaidRowsRepo({
+        companyId: input.companyId,
+        date: reportDate,
+        branchId: input.branchId ?? null,
+        locationId: input.locationId ?? null,
+        cashierUserId: effectiveCashierUserId,
+      })
+    : [];
+  const toBePaidSessionIds = new Set(
+    toBePaidRows.flatMap((row) => (row.sessionId ? [row.sessionId] : [])),
+  );
 
   const sessionById = new Map(scopedSessions.map((session) => [session.id, session]));
   const transactionsBySessionId = new Map<string, typeof transactions>();
@@ -222,7 +241,7 @@ export async function getDailyCashierSalesReportSvc(input: {
         totals,
       };
     })
-    .filter((session) => session.totals.transactionCount > 0);
+    .filter((session) => session.totals.transactionCount > 0 || toBePaidSessionIds.has(session.id));
 
   const transactionRows = transactions
     .map((transaction) => {
@@ -233,6 +252,11 @@ export async function getDailyCashierSalesReportSvc(input: {
         parcelId: transaction.parcelId,
         bookingCode: transaction.bookingCode,
         trackingCode: transaction.trackingCode,
+        payerName:
+          transaction.payer === Payer.SENDER
+            ? (transaction.senderName ?? '-')
+            : (transaction.receiverName ?? '-'),
+        whoPaid: getDailyCashierSalesWhoPaid(transaction.cashierType, transaction.payer),
         cashierId: session?.cashierId ?? null,
         cashierName: session?.cashierName ?? '-',
         branchId: session?.branchId ?? null,
@@ -255,6 +279,7 @@ export async function getDailyCashierSalesReportSvc(input: {
   const totals = {
     sessions: sessionRows.length,
     transactions: transactionRows.length,
+    toBePaidPsw: toBePaidRows.reduce((sum, row) => sum + Number(row.plannedToBePaidPsw ?? 0), 0),
     grossPsw: 0,
     netPsw: 0,
     taxPsw: 0,
@@ -285,8 +310,15 @@ export async function getDailyCashierSalesReportSvc(input: {
     if (row.method === PaymentMethod.AIRTEL) paymentModeTotals.airtelPsw += row.grossAmountPsw;
     if (row.method === PaymentMethod.CREDIT) paymentModeTotals.creditPsw += row.grossAmountPsw;
 
-    if (row.cashierType === CashierType.SENDING) cashierTypeTotals.senderPsw += row.grossAmountPsw;
-    if (row.cashierType === CashierType.TOBEPAID)
+    if (
+      row.cashierType === CashierType.SENDING ||
+      (row.cashierType === CashierType.FULL && row.payer === Payer.SENDER)
+    )
+      cashierTypeTotals.senderPsw += row.grossAmountPsw;
+    if (
+      row.cashierType === CashierType.TOBEPAID ||
+      (row.cashierType === CashierType.FULL && row.payer === Payer.RECIPIENT)
+    )
       cashierTypeTotals.receiverPsw += row.grossAmountPsw;
     if (row.cashierType === CashierType.DELIVERY)
       cashierTypeTotals.deliveryPsw += row.grossAmountPsw;
@@ -307,7 +339,83 @@ export async function getDailyCashierSalesReportSvc(input: {
     cashierTypeTotals,
     sessions: sessionRows,
     transactions: transactionRows,
+    toBePaidRows: toBePaidRows.map((row) => ({
+      parcelId: row.parcelId,
+      sessionId: row.sessionId,
+      bookingCode: row.bookingCode,
+      senderName: row.senderName,
+      receiverName: row.receiverName,
+      plannedToBePaidPsw: Number(row.plannedToBePaidPsw ?? 0),
+      createdAt: row.createdAt.toISOString(),
+    })),
   };
+}
+
+function getDailyCashierSalesWhoPaid(cashierType: number, payer: number) {
+  if (cashierType === CashierType.DELIVERY) return 'Delivery';
+  if (cashierType === CashierType.SENDING) return 'Sender';
+  if (cashierType === CashierType.TOBEPAID) return 'Receiver';
+  return payer === Payer.SENDER ? 'Sender' : 'Receiver';
+}
+
+export async function listDailyCashierSalesCashiersSvc(input: {
+  companyId: string;
+  branchId?: string | null;
+  canSelectCashier: boolean;
+  date: string;
+  locationId?: string | null;
+  cashierType?: number | null;
+}) {
+  if (!input.canSelectCashier) {
+    return [];
+  }
+
+  const reportDate = parseDateInput(input.date);
+  const sessions = await listDailyCashierSalesSessionsRepo({
+    companyId: input.companyId,
+    date: reportDate,
+    branchId: input.branchId ?? null,
+    locationId: input.locationId ?? null,
+  });
+
+  if (input.cashierType === null || input.cashierType === undefined) {
+    return uniqueCashiersFromSessions(sessions);
+  }
+
+  const transactions = await listDailyCashierSalesTransactionsRepo({
+    sessionIds: sessions.map((session) => session.id),
+    cashierType: input.cashierType,
+  });
+  const matchingSessionIds = new Set(
+    transactions.flatMap((transaction) => (transaction.sessionId ? [transaction.sessionId] : [])),
+  );
+  if (input.cashierType === CashierType.SENDING || input.cashierType === CashierType.FULL) {
+    const toBePaidRows = await listDailyCashierSalesToBePaidRowsRepo({
+      companyId: input.companyId,
+      date: reportDate,
+      branchId: input.branchId ?? null,
+      locationId: input.locationId ?? null,
+    });
+    for (const row of toBePaidRows) {
+      if (row.sessionId) matchingSessionIds.add(row.sessionId);
+    }
+  }
+
+  return uniqueCashiersFromSessions(
+    sessions.filter((session) => matchingSessionIds.has(session.id)),
+  );
+}
+
+function uniqueCashiersFromSessions(sessions: Array<{ cashierId: string; cashierName: string }>) {
+  const byCashier = new Map<string, { id: string; name: string }>();
+  for (const session of sessions) {
+    byCashier.set(session.cashierId, {
+      id: session.cashierId,
+      name: session.cashierName,
+    });
+  }
+
+  return Array.from(byCashier.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function getEmployeeMasterReportSvc(input: {

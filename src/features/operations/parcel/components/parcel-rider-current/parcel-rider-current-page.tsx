@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import {
   useAddCustomerCardMutation,
   useCreateCustomerMutation,
@@ -147,9 +148,13 @@ export function ParcelRiderCurrentPage() {
       if (handoverTarget === 'second') {
         if (!secondReceiverId) {
           const fullname = secondNewName.trim();
-          const telephone = secondNewPhone.trim();
+          const telephone = normalizePhoneDigits(secondNewPhone);
           if (!fullname || !telephone) {
             toast.error('Second receiver name and telephone are required');
+            return;
+          }
+          if (!isTenDigitPhone(telephone)) {
+            toast.error(phoneLengthMessage('Second receiver telephone'));
             return;
           }
           const created = await createCustomer({ fullname, telephone }).unwrap();

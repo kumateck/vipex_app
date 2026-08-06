@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,13 +15,14 @@ import {
   useGetFleetFuelAnalyticsQuery,
   useListFleetVehicleOptionsQuery,
 } from '../../api/fleet-transport.api';
+import { useMemo, useState } from 'react';
 
 function formatNumber(value: number, digits = 2) {
   return value.toLocaleString(undefined, { maximumFractionDigits: digits });
 }
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString();
+  return sharedFormatDateTime(value);
 }
 
 export function FleetFuelAnalyticsPage() {

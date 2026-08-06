@@ -45,6 +45,8 @@ import type {
   StockCountSessionCreateInput,
   InventoryMonitoringSummary,
   ReorderSuggestionsResponse,
+  InventoryReorderPolicy,
+  InventoryReorderPolicyUpsertInput,
   InventoryApprovalPolicy,
   InventoryApprovalPolicyCreateInput,
   InventoryApprovalRequest,
@@ -500,10 +502,19 @@ export const inventoryApi = api.injectEndpoints({
       ServerListResponse<StockRequest>,
       StockRequestListQuery | void
     >({
-      query: (query) => ({
-        url: '/inventory/stock-requests',
-        params: buildServerPaginationParams(query),
-      }),
+      query: (query) => {
+        const normalizedQuery = query
+          ? {
+              ...query,
+              pageSize: Math.min(Math.max(query.pageSize ?? 20, 1), 100),
+            }
+          : undefined;
+
+        return {
+          url: '/inventory/stock-requests',
+          params: buildServerPaginationParams(normalizedQuery),
+        };
+      },
       providesTags: (result) => provideEntityListTags('Inventory', result),
     }),
     getStockRequest: builder.query<StockRequest, string>({
@@ -792,6 +803,54 @@ export const inventoryApi = api.injectEndpoints({
         },
       }),
       providesTags: [{ type: 'Inventory', id: 'REORDER_SUGGESTIONS' }],
+    }),
+    listInventoryReorderPolicies: builder.query<
+      InventoryReorderPolicy[],
+      {
+        companyId: string;
+        productId?: string | null;
+        branchId?: string | null;
+        locationType?: number | null;
+        locationId?: string | null;
+        active?: boolean | null;
+      } | void
+    >({
+      query: (params) => ({
+        url: '/inventory/reorder-policies',
+        params: {
+          companyId: params?.companyId,
+          productId: params?.productId ?? undefined,
+          branchId: params?.branchId ?? undefined,
+          locationType: params?.locationType ?? undefined,
+          locationId: params?.locationId ?? undefined,
+          active: params?.active ?? undefined,
+        },
+      }),
+      providesTags: [{ type: 'Inventory', id: 'INVENTORY_REORDER_POLICIES' }],
+    }),
+    upsertInventoryReorderPolicy: builder.mutation<
+      { id: string },
+      InventoryReorderPolicyUpsertInput
+    >({
+      query: (body) => {
+        const user = useAuthStore.getState().user;
+        if (!user?.company?.id || !user?.id) throw new Error('Not authenticated');
+        return {
+          url: '/inventory/reorder-policies',
+          method: 'POST',
+          body: {
+            companyId: user.company.id,
+            createdBy: user.id,
+            ...body,
+          },
+        };
+      },
+      invalidatesTags: [
+        { type: 'Inventory', id: 'INVENTORY_REORDER_POLICIES' },
+        { type: 'Inventory', id: 'REORDER_SUGGESTIONS' },
+        { type: 'Inventory', id: 'DASHBOARD_SUMMARY' },
+        ...invalidateEntityListTag('Inventory'),
+      ],
     }),
     listInventoryApprovalPolicies: builder.query<
       InventoryApprovalPolicy[],
@@ -1255,6 +1314,8 @@ export const {
   useUpsertStockAllocationPolicyMutation,
   useGetInventoryDashboardSummaryQuery,
   useListReorderSuggestionsQuery,
+  useListInventoryReorderPoliciesQuery,
+  useUpsertInventoryReorderPolicyMutation,
   useListInventoryApprovalPoliciesQuery,
   useCreateInventoryApprovalPolicyMutation,
   useSubmitInventoryApprovalRequestMutation,

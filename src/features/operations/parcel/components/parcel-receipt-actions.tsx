@@ -1,46 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  createPrintableHtmlDocument,
-  PAGE_STYLES,
-  getPrinterPreferenceMapping,
-  printParallelViaDesktop,
-  useManagedReactPrint,
-} from '@/features/printing';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { PAGE_STYLES, useManagedReactPrint } from '@/features/printing';
+import { useGetCurrentActiveSessionQuery } from '@/features/cashiers/api/cashiers.api';
+import { useAuthStore } from '@/stores/auth-store';
+import { useStickerPrintModule } from '../hooks';
+import { ParcelReceiptPrintControls } from './parcel-receipt-print-controls';
 import { ParcelReceiptPrintContent } from './parcel-receipt-print-content';
-
-export type ReceiptPrintData = {
-  bookingCode: string;
-  trackingCode: string;
-  parcelDetails: string;
-  parcelContent?: string | null;
-  parcelValueCedis?: number | null;
-  receivedByName?: string | null;
-  senderName: string;
-  senderTelephone: string;
-  receiverName: string;
-  receiverTelephone: string;
-  destinationBranchName: string;
-  destinationLocationName: string;
-  totalChargeCedis: number;
-  senderPaidCedis: number;
-  receiverToPayCedis: number;
-  amountPaidCedis?: number;
-  issuedAt: string;
-  taxBreakdown?: {
-    vatCedis: number;
-    getfundCedis: number;
-    nhilCedis: number;
-    covidCedis?: number;
-    taxTotalCedis: number;
-  };
-};
+import type { ReceiptPrintData } from './parcel-receipt.types';
+import { useParcelDesktopParallelPrint } from './use-parcel-desktop-parallel-print';
+import { useParcelDesktopStickerPrint } from './use-parcel-desktop-sticker-print';
 
 type ParcelReceiptActionsProps = {
   data: ReceiptPrintData;
@@ -49,9 +17,9 @@ type ParcelReceiptActionsProps = {
   autoPrintSelection?: 'sticker' | 'invoice' | 'both';
   mode?: 'sender-payment' | 'receiver-payment' | 'reprint' | 'default';
   showSelectionMenu?: boolean;
+  stickerCopies?: number;
   onAutoPrintComplete?: () => void;
 };
-
 export function ParcelReceiptActions({
   data,
   triggerLabel = 'Print Sticker + Invoice',
@@ -59,19 +27,28 @@ export function ParcelReceiptActions({
   autoPrintSelection = 'both',
   mode = 'default',
   showSelectionMenu = false,
+  stickerCopies = 1,
   onAutoPrintComplete,
 }: ParcelReceiptActionsProps) {
+  const user = useAuthStore((state) => state.user);
+  const cashierType = user?.cashierType ?? null;
+  const isCashier = cashierType !== null && cashierType !== undefined;
+  const { data: activeSession, isLoading: isLoadingActiveSession } =
+    useGetCurrentActiveSessionQuery(undefined, { skip: !isCashier });
+  const canPrintForSession = !isCashier || !!activeSession;
+  const { isStickerPrintEnabled, isLoadingStickerPrintModule } = useStickerPrintModule();
   const stickerRef = useRef<HTMLDivElement>(null);
+  const desktopStickerRef = useRef<HTMLDivElement>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const hasAutoPrinted = useRef(false);
   const [queueInvoiceAfterSticker, setQueueInvoiceAfterSticker] = useState(false);
-
+  const canPrintStickerViaDesktop =
+    typeof window !== 'undefined' && typeof window.api?.printHtml === 'function';
   const qrUrl = useMemo(
     () => `https://vipexparcel.com/tracking/${encodeURIComponent(data.trackingCode)}`,
     [data.trackingCode],
   );
   const isSenderPaid = (data.amountPaidCedis ?? data.senderPaidCedis) > 0;
-
   const tax = useMemo(() => {
     const amountPaid = data.amountPaidCedis ?? data.senderPaidCedis;
     if (data.taxBreakdown) {
@@ -95,7 +72,6 @@ export function ParcelReceiptActions({
       residual: 0,
     };
   }, [data.amountPaidCedis, data.senderPaidCedis, data.taxBreakdown]);
-
   const printInvoice = useManagedReactPrint({
     contentRef: invoiceRef,
     documentTitle: `invoice-${data.bookingCode}`,
@@ -104,7 +80,6 @@ export function ParcelReceiptActions({
       onAutoPrintComplete?.();
     },
   });
-
   const printSticker = useManagedReactPrint({
     contentRef: stickerRef,
     documentTitle: `sticker-${data.bookingCode}`,
@@ -120,86 +95,106 @@ export function ParcelReceiptActions({
       }, 120);
     },
   });
+  const printStickerViaDesktop = useParcelDesktopStickerPrint({
+    bookingCode: data.bookingCode,
+    canPrintStickerViaDesktop,
+    stickerRef: desktopStickerRef,
+  });
 
-  const handlePrintBoth = () => {
+  const handlePrintStickerOnly = useCallback(() => {
+    if (!canPrintForSession) {
+      toast.error('Open a cashier session before printing parcel stickers');
+      return;
+    }
+    if (!isStickerPrintEnabled) {
+      toast.error('Sticker print is disabled for this company');
+      onAutoPrintComplete?.();
+      return;
+    }
+    if (canPrintStickerViaDesktop) {
+      void printStickerViaDesktop(stickerCopies).then(() => {
+        onAutoPrintComplete?.();
+      });
+      return;
+    }
+    void printSticker();
+  }, [
+    canPrintForSession,
+    canPrintStickerViaDesktop,
+    isStickerPrintEnabled,
+    onAutoPrintComplete,
+    printSticker,
+    printStickerViaDesktop,
+    stickerCopies,
+  ]);
+  const handlePrintBoth = useCallback(() => {
+    if (!canPrintForSession) {
+      toast.error('Open a cashier session before printing receipts');
+      return;
+    }
+    if (!isStickerPrintEnabled) {
+      if (isSenderPaid) {
+        void printInvoice();
+        return;
+      }
+      toast.error('Sticker print is disabled for this company');
+      onAutoPrintComplete?.();
+      return;
+    }
     if (!isSenderPaid) {
-      void printSticker();
+      handlePrintStickerOnly();
+      return;
+    }
+    if (canPrintStickerViaDesktop) {
+      void printStickerViaDesktop(1).then((printed) => {
+        if (printed) {
+          void printInvoice();
+          return;
+        }
+        onAutoPrintComplete?.();
+      });
       return;
     }
     setQueueInvoiceAfterSticker(true);
     void printSticker();
-  };
-
-  const handlePrintBothParallelDesktop = async () => {
-    if (
-      mode !== 'sender-payment' ||
-      !isSenderPaid ||
-      typeof window === 'undefined' ||
-      typeof window.api?.printParallel !== 'function'
-    ) {
-      return false;
+  }, [
+    canPrintForSession,
+    canPrintStickerViaDesktop,
+    handlePrintStickerOnly,
+    isSenderPaid,
+    isStickerPrintEnabled,
+    onAutoPrintComplete,
+    printInvoice,
+    printSticker,
+    printStickerViaDesktop,
+  ]);
+  const handlePrintBothParallelDesktop = useParcelDesktopParallelPrint({
+    bookingCode: data.bookingCode,
+    canPrintForSession,
+    invoiceRef,
+    isSenderPaid,
+    isStickerPrintEnabled,
+    mode,
+    onAutoPrintComplete,
+    stickerRef: desktopStickerRef,
+  });
+  const handlePrintInvoiceOnly = useCallback(() => {
+    if (!canPrintForSession) {
+      toast.error('Open a cashier session before printing receipts');
+      return;
     }
-
-    const stickerNode = stickerRef.current;
-    const invoiceNode = invoiceRef.current;
-    if (!stickerNode || !invoiceNode) return false;
-
-    const { stickerPrinter, invoicePrinter } = getPrinterPreferenceMapping();
-    if (!stickerPrinter || !invoicePrinter) {
-      return false;
-    }
-
-    const stickerHtml = createPrintableHtmlDocument({
-      title: `sticker-${data.bookingCode}`,
-      pageStyle: PAGE_STYLES['thermal-sticker'],
-      bodyHtml: stickerNode.outerHTML,
-    });
-    const invoiceHtml = createPrintableHtmlDocument({
-      title: `invoice-${data.bookingCode}`,
-      pageStyle: PAGE_STYLES['invoice-a5-receipt'],
-      bodyHtml: invoiceNode.outerHTML,
-    });
-
-    const result = await printParallelViaDesktop({
-      jobs: [
-        {
-          html: stickerHtml,
-          layout: 'thermal-sticker',
-          title: `sticker-${data.bookingCode}`,
-          silent: true,
-          deviceName: stickerPrinter,
-        },
-        {
-          html: invoiceHtml,
-          layout: 'invoice-a5-receipt',
-          title: `invoice-${data.bookingCode}`,
-          silent: true,
-          deviceName: invoicePrinter,
-        },
-      ],
-    });
-
-    if (!result.ok) {
-      const failed = result.jobs.filter((job) => !job.ok);
-      const reason = failed.map((job) => `${job.layout}: ${job.reason ?? 'failed'}`).join(' | ');
-      console.warn('[PRINT_PARALLEL_FAILED]', reason);
-      return false;
-    }
-
-    onAutoPrintComplete?.();
-    return true;
-  };
-
-  const handlePrintInvoiceOnly = () => {
     void printInvoice();
-  };
-
-  const handlePrintStickerOnly = () => {
-    void printSticker();
-  };
-
+  }, [canPrintForSession, printInvoice]);
   useEffect(() => {
-    if (!autoPrint || hasAutoPrinted.current) return;
+    if (
+      !autoPrint ||
+      hasAutoPrinted.current ||
+      isLoadingActiveSession ||
+      isLoadingStickerPrintModule ||
+      !canPrintForSession
+    ) {
+      return;
+    }
     hasAutoPrinted.current = true;
     if (autoPrintSelection === 'sticker') {
       handlePrintStickerOnly();
@@ -215,19 +210,31 @@ export function ParcelReceiptActions({
         handlePrintBoth();
       }
     })();
-  }, [autoPrint, autoPrintSelection, mode]);
-
+  }, [
+    autoPrint,
+    autoPrintSelection,
+    canPrintForSession,
+    handlePrintBoth,
+    handlePrintBothParallelDesktop,
+    handlePrintInvoiceOnly,
+    handlePrintStickerOnly,
+    isLoadingActiveSession,
+    isLoadingStickerPrintModule,
+  ]);
   const amountPaidCedis = data.amountPaidCedis ?? data.senderPaidCedis;
-
   return (
     <>
       <ParcelReceiptPrintContent
         data={data}
+        desktopStickerRef={desktopStickerRef}
         stickerRef={stickerRef}
         invoiceRef={invoiceRef}
-        isSenderPaid={isSenderPaid}
         qrUrl={qrUrl}
+        printedByName={user?.fullname ?? null}
+        printedByBranchName={user?.branch?.name ?? null}
+        printedByLocationName={user?.location?.name ?? user?.locationName ?? null}
         amountPaidCedis={amountPaidCedis}
+        stickerCopies={canPrintStickerViaDesktop ? 1 : stickerCopies}
         tax={{
           vat: tax.vat,
           getfund: tax.getfund,
@@ -236,34 +243,18 @@ export function ParcelReceiptActions({
         }}
       />
 
-      {!autoPrint ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {showSelectionMenu ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline">
-                  {triggerLabel}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem onClick={handlePrintStickerOnly}>
-                  Reprint Sticker
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handlePrintInvoiceOnly}>
-                  Reprint Invoice
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handlePrintBoth}>
-                  Reprint Sticker + Invoice
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button type="button" onClick={handlePrintBoth}>
-              {isSenderPaid ? triggerLabel : 'Print Sticker'}
-            </Button>
-          )}
-        </div>
-      ) : null}
+      <ParcelReceiptPrintControls
+        autoPrint={autoPrint}
+        canPrintForSession={canPrintForSession}
+        isLoading={isLoadingActiveSession || isLoadingStickerPrintModule}
+        isSenderPaid={isSenderPaid}
+        isStickerPrintEnabled={isStickerPrintEnabled}
+        showSelectionMenu={showSelectionMenu}
+        triggerLabel={triggerLabel}
+        onPrintBoth={handlePrintBoth}
+        onPrintInvoice={handlePrintInvoiceOnly}
+        onPrintSticker={handlePrintStickerOnly}
+      />
     </>
   );
 }

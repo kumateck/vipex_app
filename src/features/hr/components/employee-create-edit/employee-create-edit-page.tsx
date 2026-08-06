@@ -20,6 +20,13 @@ import { useListLocationOptionsQuery } from '@/features/locations';
 import { ImageUploadField } from '@/features/uploads/components/image-upload-field';
 import { useUploadImageMutation } from '@/features/uploads/api/uploads.api';
 import {
+  PHONE_DIGITS,
+  isTenDigitPhone,
+  limitPhoneDigits,
+  normalizePhoneDigits,
+  phoneLengthMessage,
+} from '@/lib/phone';
+import {
   useCreateEmployeeMutation,
   useGetEmployeeQuery,
   useListDepartmentOptionsQuery,
@@ -201,7 +208,7 @@ export function EmployeeCreateEditPage() {
     (!isEditing && !form.employeeNumber.trim()) ||
     !form.firstName.trim() ||
     !form.lastName.trim() ||
-    !form.telephone.trim() ||
+    !isTenDigitPhone(form.telephone) ||
     hasBankValidationError ||
     hasMobileMoneyValidationError ||
     isBusy;
@@ -293,8 +300,15 @@ export function EmployeeCreateEditPage() {
                       <Input
                         value={form.telephone}
                         onChange={(event) =>
-                          setForm((current) => ({ ...current, telephone: event.target.value }))
+                          setForm((current) => ({
+                            ...current,
+                            telephone: limitPhoneDigits(event.target.value),
+                          }))
                         }
+                        inputMode="numeric"
+                        autoComplete="tel"
+                        maxLength={PHONE_DIGITS}
+                        placeholder="0240000000"
                       />
                     </Field>
                   </FieldGroup>
@@ -576,6 +590,12 @@ export function EmployeeCreateEditPage() {
                     disabled={cannotSubmit}
                     onClick={async () => {
                       try {
+                        const telephone = normalizePhoneDigits(form.telephone);
+                        if (!isTenDigitPhone(telephone)) {
+                          toast.error(phoneLengthMessage());
+                          return;
+                        }
+
                         if (isEditing && id) {
                           const uploadedProfileImageUrl = await resolveEmployeeProfileImage(
                             id,
@@ -590,7 +610,7 @@ export function EmployeeCreateEditPage() {
                               lastName: form.lastName.trim(),
                               email: form.email.trim() || null,
                               profileImageUrl: uploadedProfileImageUrl,
-                              telephone: form.telephone.trim(),
+                              telephone,
                               paymentMethod: form.paymentMethod.trim() || null,
                               bankName: form.bankName.trim() || null,
                               bankAccountName: form.bankAccountName.trim() || null,
@@ -620,7 +640,7 @@ export function EmployeeCreateEditPage() {
                           middleName: form.middleName.trim() || null,
                           lastName: form.lastName.trim(),
                           email: form.email.trim() || null,
-                          telephone: form.telephone.trim(),
+                          telephone,
                           paymentMethod: form.paymentMethod.trim() || null,
                           bankName: form.bankName.trim() || null,
                           bankAccountName: form.bankAccountName.trim() || null,

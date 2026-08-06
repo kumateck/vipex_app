@@ -1,8 +1,9 @@
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
-import { useGetBranchQuery } from '@/features/branches/api/branches.api';
+import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListPickupQueueCardsQuery } from '../../api/parcel.api';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -11,7 +12,7 @@ function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString();
+  return sharedFormatDateTime(value);
 }
 
 function formatCurrency(amountPsw: number) {
@@ -30,10 +31,8 @@ export function ParcelPickupQueueBoardPage({
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const branchId = user?.branch?.id ?? null;
-  const { data: currentBranch } = useGetBranchQuery(branchId ?? '', {
+  const { data: currentBranch } = useGetBranchOperationsSettingsQuery(branchId ?? '', {
     skip: !branchId,
-    refetchOnMountOrArgChange: true,
-    pollingInterval: 5000,
   });
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
   const {

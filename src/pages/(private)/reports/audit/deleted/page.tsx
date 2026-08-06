@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { format } from 'date-fns';
 import { DataTable } from '@/components/datatable';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -9,7 +10,6 @@ import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useListAuditLogsQuery, type EntityAuditLog } from '@/features/audit/api';
-import { formatDateTime as formatDateTimeStandard } from '@/lib/date';
 
 type DeletedParcelAuditRow = {
   id: string;
@@ -34,7 +34,7 @@ const EMPTY_META: PaginationMeta = {
 function formatDateTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return formatDateTimeStandard(date);
+  return sharedFormatDateTime(value);
 }
 
 function getStringValue(record: Record<string, unknown>, key: string) {

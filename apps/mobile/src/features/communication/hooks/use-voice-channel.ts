@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from '@mobile/navigation/router-compat';
 import { joinCommunicationVoiceChannel, markCommunicationChannelRead } from '@mobile/lib/api';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -15,7 +16,7 @@ import {
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
-  return new Date(value).toLocaleString();
+  return sharedFormatDateTime(value);
 }
 
 export function FleetDriverIncidentHistoryPage() {

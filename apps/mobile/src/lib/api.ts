@@ -1,4 +1,5 @@
-import Constants from 'expo-constants';
+import { ENV } from '@mobile/lib/env';
+import { reportMobileErrorToDiscord } from '@mobile/lib/mobile-error-reporter';
 import type { LoginResponse, SessionState, TokenPair } from '@mobile/types/auth';
 import type {
   CommunicationCallSession,
@@ -19,26 +20,21 @@ import type {
   PickupQueueCard,
   RiderDoorstepResponse,
 } from '@mobile/types/parcels';
-
-const extra = (Constants.expoConfig?.extra ?? {}) as { apiBaseUrl?: string };
-const manifestExtra = ((
-  Constants as unknown as {
-    manifest2?: { extra?: { expoClient?: { extra?: { apiBaseUrl?: string } } } };
-  }
-).manifest2?.extra?.expoClient?.extra ?? {}) as { apiBaseUrl?: string };
+import type {
+  BranchOption,
+  CreateBookingWithParcelsInput,
+  CreateBookingWithParcelsResponse,
+  CustomerLookupResult,
+  LocationOption,
+} from '@mobile/types/booking';
 
 function normalizeBaseUrl(raw?: string): string {
-  const fallback = 'https://testing.app.vipexparcel.com';
+  const fallback = 'http://127.0.0.1:3000';
   const base = (raw && raw.trim().length > 0 ? raw : fallback).replace(/\/+$/, '');
-  return `${base}/v1`;
+  return base.endsWith('/v1') ? base : `${base}/v1`;
 }
 
-const API_BASE_URL_CANDIDATES = [
-  extra.apiBaseUrl,
-  manifestExtra.apiBaseUrl,
-  process.env.EXPO_PUBLIC_API_BASE_URL,
-  'https://testing.app.vipexparcel.com',
-]
+const API_BASE_URL_CANDIDATES = [ENV.apiBaseUrl]
   .map((entry) => normalizeBaseUrl(entry))
   .filter((entry, index, all) => all.indexOf(entry) === index);
 
@@ -153,7 +149,7 @@ function logMobileApiError(input: {
   responseBody?: unknown;
   attempt: number;
 }) {
-  console.error('[mobile-api] request failed', {
+  const payload = {
     method: input.method,
     path: input.path,
     endpoint: input.url,
@@ -164,6 +160,12 @@ function logMobileApiError(input: {
     candidateBaseUrl: input.candidateBaseUrl,
     attempt: input.attempt,
     at: new Date().toISOString(),
+  };
+  console.error('[mobile-api] request failed', payload);
+  reportMobileErrorToDiscord({
+    source: 'mobile-api',
+    message: input.message,
+    context: payload,
   });
 }
 
@@ -180,7 +182,6 @@ function toQueryString(query?: RequestOptions['query']): string {
 
 async function request<T>(options: RequestOptions): Promise<T> {
   let lastError: Error | null = null;
-  const attemptedUrls: string[] = [];
   const method = options.method ?? 'GET';
 
   let attempt = 0;
@@ -190,7 +191,6 @@ async function request<T>(options: RequestOptions): Promise<T> {
   ]) {
     attempt += 1;
     const targetUrl = `${baseUrl}${options.path}${toQueryString(options.query)}`;
-    attemptedUrls.push(targetUrl);
     try {
       const controller = new AbortController();
       const timeoutMs = options.timeoutMs ?? 15000;
@@ -223,13 +223,10 @@ async function request<T>(options: RequestOptions): Promise<T> {
           responseBody: json,
           attempt,
         });
-        throw new ApiRequestError(
-          `${serverMessage || 'Request failed'} (${response.status}) at ${targetUrl}`,
-          {
-            status: response.status,
-            url: targetUrl,
-          },
-        );
+        throw new ApiRequestError(`${serverMessage || 'Request failed'} (${response.status})`, {
+          status: response.status,
+          url: targetUrl,
+        });
       }
 
       activeApiBaseUrl = baseUrl;
@@ -259,11 +256,11 @@ async function request<T>(options: RequestOptions): Promise<T> {
         message,
         attempt,
       });
-      lastError = new Error(`${message} (while calling ${targetUrl})`);
+      lastError = new Error(message);
     }
   }
 
-  throw lastError ?? new Error(`Network request failed. Attempted: ${attemptedUrls.join(' | ')}`);
+  throw lastError ?? new Error('Network request failed');
 }
 
 export async function login(email: string, password: string): Promise<SessionState> {
@@ -399,10 +396,32 @@ export async function getParcelDetails(
   accessToken: string,
   parcelId: string,
 ): Promise<ParcelFullDetails> {
-  return request<ParcelFullDetails>({
-    path: `/shipments/parcels/${parcelId}`,
+  const payload = await request<unknown>({
+    path: `/shipments/parcels/${parcelId}/details`,
     token: accessToken,
   });
+  const candidate =
+    typeof payload === 'object' && payload !== null && 'data' in payload
+      ? (payload as { data?: unknown }).data
+      : payload;
+
+  const details = candidate as Partial<ParcelFullDetails> | null;
+  if (!details?.parcel) {
+    throw new Error('Parcel details response missing parcel object');
+  }
+
+  return {
+    ...(details as ParcelFullDetails),
+    parcel: details.parcel,
+    pickupQueue: details.pickupQueue ?? null,
+    delivery: details.delivery ?? null,
+    payments: Array.isArray(details.payments) ? details.payments : [],
+    consignments: Array.isArray(details.consignments) ? details.consignments : [],
+    internalHolder: details.internalHolder ?? null,
+    dispositionActions: Array.isArray(details.dispositionActions) ? details.dispositionActions : [],
+    storageWaivers: Array.isArray(details.storageWaivers) ? details.storageWaivers : [],
+    storageSettlement: details.storageSettlement ?? null,
+  };
 }
 
 export async function updateParcelStatus(
@@ -450,6 +469,70 @@ export async function updateCustomer(
     method: 'PATCH',
     token: accessToken,
     body,
+  });
+}
+
+export async function findCustomersByTelephone(
+  accessToken: string,
+  input: { telephone: string; limit?: number },
+): Promise<CustomerLookupResult[]> {
+  const payload = await request<unknown>({
+    path: `/customers/lookup/by-telephone/${encodeURIComponent(input.telephone)}`,
+    token: accessToken,
+    query: { limit: input.limit ?? 10 },
+  });
+  const candidate =
+    typeof payload === 'object' && payload !== null && 'data' in payload
+      ? (payload as { data?: unknown }).data
+      : payload;
+  return Array.isArray(candidate) ? (candidate as CustomerLookupResult[]) : [];
+}
+
+export async function createCustomer(
+  accessToken: string,
+  input: { fullname: string; telephone: string; telephone2?: string | null },
+): Promise<{ id: string }> {
+  return request<{ id: string }>({
+    path: '/customers',
+    method: 'POST',
+    token: accessToken,
+    body: input,
+  });
+}
+
+export async function listBranchOptions(
+  accessToken: string,
+  input: { companyId: string },
+): Promise<BranchOption[]> {
+  const payload = await request<unknown>({
+    path: '/branches/options',
+    token: accessToken,
+    query: { companyId: input.companyId },
+  });
+  return Array.isArray(payload) ? (payload as BranchOption[]) : [];
+}
+
+export async function listLocationOptions(
+  accessToken: string,
+  input: { companyId: string; branchId: string },
+): Promise<LocationOption[]> {
+  const payload = await request<unknown>({
+    path: '/locations/options',
+    token: accessToken,
+    query: { companyId: input.companyId, branchId: input.branchId },
+  });
+  return Array.isArray(payload) ? (payload as LocationOption[]) : [];
+}
+
+export async function createBookingWithParcels(
+  accessToken: string,
+  input: CreateBookingWithParcelsInput,
+): Promise<CreateBookingWithParcelsResponse> {
+  return request<CreateBookingWithParcelsResponse>({
+    path: '/shipments/bookings/create-with-parcels',
+    method: 'POST',
+    token: accessToken,
+    body: input,
   });
 }
 
@@ -564,10 +647,12 @@ export async function listCommunicationChannels(
   return request<CommunicationChannel[]>({
     path: '/communication/channels',
     token: accessToken,
-    query: {
-      channelType: input?.channelType,
-      includeArchived: input?.includeArchived ?? false,
-    },
+    query: input
+      ? {
+          channelType: input.channelType,
+          includeArchived: input.includeArchived,
+        }
+      : undefined,
   });
 }
 
@@ -576,6 +661,8 @@ export async function createCommunicationChannel(
   input: {
     name: string;
     description?: string | null;
+    branchId?: string | null;
+    locationId?: string | null;
     channelType?: 'text' | 'voice';
     visibility?: 'public' | 'private';
     participantUserIds?: string[];
@@ -800,6 +887,7 @@ export async function approveCommunicationEngagementRequest(
     path: `/communication/engagement-requests/${input.id}/approve`,
     method: 'POST',
     token: accessToken,
+    body: {},
   });
 }
 
@@ -811,6 +899,7 @@ export async function declineCommunicationEngagementRequest(
     path: `/communication/engagement-requests/${input.id}/decline`,
     method: 'POST',
     token: accessToken,
+    body: {},
   });
 }
 

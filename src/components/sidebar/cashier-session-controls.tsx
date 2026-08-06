@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select-searchable';
+import { CashierSessionSummaryBadges } from './cashier-session-summary-badges';
 import {
   useCloseSessionMutation,
   useGetCurrentActiveSessionQuery,
@@ -30,15 +30,6 @@ import {
 import { useAuthStore } from '@/stores/auth-store';
 import { CashierType, UserType } from '@/db/schemas/enums';
 import { PermissionKeys } from '@/shared/permissions/constants';
-
-function formatCedisFromPsw(valuePsw: number): string {
-  return new Intl.NumberFormat('en-GH', {
-    style: 'currency',
-    currency: 'GHS',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(valuePsw / 100);
-}
 
 export function CashierSessionControls() {
   const authUser = useAuthStore((state) => state.user);
@@ -81,23 +72,21 @@ export function CashierSessionControls() {
               : permissions.has(PermissionKeys.CanCompleteOfficePickup)
                 ? 'receiver'
                 : routeMode;
+  const isFullCashier = cashierType === CashierType.FULL;
 
   const { data: activeSession, isLoading: isLoadingActiveSession } =
     useGetCurrentActiveSessionQuery(undefined, {
       skip: !isCashierUser || !canAccessSessionControls,
     });
-  const summaryMode: 'sender' | 'receiver' | 'delivery' | 'full' = cashierMode;
-  const closeMode: 'sender' | 'receiver' | 'delivery' | 'full' =
-    cashierType === CashierType.FULL ? 'full' : cashierMode;
+  const summaryMode: 'sender' | 'receiver' | 'delivery' | 'full' = isFullCashier
+    ? 'full'
+    : cashierMode;
+  const closeMode: 'sender' | 'receiver' | 'delivery' | 'full' = isFullCashier
+    ? 'full'
+    : cashierMode;
 
   const { data: summary } = useGetCurrentActiveSessionSummaryQuery(
     { mode: summaryMode },
-    {
-      skip: !isCashierUser || !canReadSessions,
-    },
-  );
-  const { data: closeSummary } = useGetCurrentActiveSessionSummaryQuery(
-    { mode: closeMode },
     {
       skip: !isCashierUser || !canReadSessions,
     },
@@ -107,20 +96,19 @@ export function CashierSessionControls() {
     if (!isCloseDialogOpen) return;
     const expectedPsw =
       closeMode === 'receiver'
-        ? (closeSummary?.totalToBePaidCollectedPsw ?? 0)
+        ? (summary?.totalToBePaidCollectedPsw ?? 0)
         : closeMode === 'delivery'
-          ? (closeSummary?.totalDeliveryFeeCollectedPsw ?? 0) +
-            (closeSummary?.totalToBePaidCollectedPsw ?? 0)
+          ? (summary?.totalDeliveryFeeCollectedPsw ?? 0) + (summary?.totalToBePaidCollectedPsw ?? 0)
           : closeMode === 'full'
-            ? (closeSummary?.totalFullCashierExpectedPsw ?? 0)
-            : (closeSummary?.amountPaidPsw ?? 0);
+            ? (summary?.totalFullCashierExpectedPsw ?? 0)
+            : (summary?.amountPaidPsw ?? 0);
     setClosingBalance((expectedPsw / 100).toFixed(2));
-  }, [closeMode, closeSummary, isCloseDialogOpen]);
+  }, [closeMode, summary, isCloseDialogOpen]);
 
   const { data: sessionTypes, isLoading: isLoadingSessionTypes } = useListSessionTypesQuery(
     undefined,
     {
-      skip: !isCashierUser || !canOpenSessions || !!activeSession,
+      skip: !isCashierUser || !canOpenSessions || isLoadingActiveSession || !!activeSession,
     },
   );
 
@@ -240,29 +228,7 @@ export function CashierSessionControls() {
 
   return (
     <div className="flex items-center gap-2">
-      {cashierMode === 'receiver' ? (
-        <Badge variant="secondary">
-          Receiver Payments: {formatCedisFromPsw(summary?.totalToBePaidCollectedPsw ?? 0)}
-        </Badge>
-      ) : cashierMode === 'delivery' ? (
-        <>
-          <Badge variant="secondary">
-            Delivery Fee: {formatCedisFromPsw(summary?.totalDeliveryFeeCollectedPsw ?? 0)}
-          </Badge>
-          <Badge variant="outline">
-            Receiver Payments: {formatCedisFromPsw(summary?.totalToBePaidCollectedPsw ?? 0)}
-          </Badge>
-        </>
-      ) : (
-        <>
-          <Badge variant="secondary">
-            Amount Paid: {formatCedisFromPsw(summary?.amountPaidPsw ?? 0)}
-          </Badge>
-          <Badge variant="outline">
-            To Be Paid: {formatCedisFromPsw(summary?.toBePaidPsw ?? 0)}
-          </Badge>
-        </>
-      )}
+      <CashierSessionSummaryBadges mode={summaryMode} summary={summary} />
       {canCloseSessions ? (
         <>
           <Button

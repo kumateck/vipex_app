@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 type StatCardProps = {
   label: string;
@@ -15,24 +15,25 @@ export function StatCard({ label, value, hint }: StatCardProps) {
     <View
       style={[
         styles.card,
+        mobileShadow.card,
         {
           backgroundColor: theme.colors.card,
-          borderColor: theme.colors.border,
+          borderColor: theme.scheme === 'dark' ? theme.colors.border : 'transparent',
+          borderWidth: theme.scheme === 'dark' ? StyleSheet.hairlineWidth : 0,
         },
       ]}
     >
       <Text style={[styles.value, { color: theme.colors.secondary }]}>{value}</Text>
       <Text style={[styles.label, { color: theme.colors.textMuted }]}>{label}</Text>
-      {hint ? <Text style={[styles.hint, { color: theme.colors.textMuted }]}>{hint}</Text> : null}
+      {hint ? <Text style={[styles.hint, { color: theme.colors.textSubtle }]}>{hint}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 1,
-    borderRadius: mobileRadius.xl,
-    padding: mobileSpacing.md,
+    borderRadius: mobileRadius.lg,
+    padding: mobileSpacing.lg,
     gap: mobileSpacing.xs,
     flex: 1,
     minWidth: 150,
@@ -40,15 +41,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontSize: mobileTypography.caption,
+    ...mobileTextStyles.caption1,
     fontWeight: '700',
   },
   value: {
-    fontSize: mobileTypography.kpi,
-    fontWeight: '800',
+    ...mobileTextStyles.title1,
+    fontWeight: '700',
   },
   hint: {
-    fontSize: mobileTypography.caption,
-    fontWeight: '600',
+    ...mobileTextStyles.caption1,
   },
 });

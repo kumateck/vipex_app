@@ -1,5 +1,6 @@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { PHONE_DIGITS, limitPhoneDigits } from '@/lib/phone';
 import {
   Select,
   SelectContent,
@@ -107,8 +108,13 @@ export function ReceiverPaymentSecondarySections({
                 />
                 <Input
                   value={dialog.secondNewPhone}
-                  onChange={(event) => dialog.setSecondNewPhone(event.target.value)}
+                  onChange={(event) =>
+                    dialog.setSecondNewPhone(limitPhoneDigits(event.target.value))
+                  }
                   placeholder="Second receiver telephone"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  maxLength={PHONE_DIGITS}
                 />
               </div>
             ) : (

@@ -1,16 +1,7 @@
 import type { Control, FieldPathByValue } from 'react-hook-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { sanitizeNumber, sanitizeString } from '@/lib/utils';
+import { BufferedParcelField } from './buffered-parcel-field';
 import type { ParcelBookingFormValues } from './parcel-form.types';
 
 type ParcelCardInfoSectionProps = {
@@ -35,62 +26,40 @@ export function ParcelCardInfoSection({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <FormField
+        <BufferedParcelField
           control={control}
           name={parcelDetailsName}
+          label="Parcel Details"
+          placeholder="Type parcel details (you can include multiple items)"
+          description="Enter full parcel details as free text."
+          multiline
           rules={{
             required: 'Parcel details are required',
             validate: (value) =>
               sanitizeString(value).trim().length ? true : 'Parcel details are required',
           }}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Parcel Details</FormLabel>
-              <FormControl>
-                <Textarea
-                  name={field.name}
-                  ref={field.ref}
-                  onBlur={field.onBlur}
-                  onChange={field.onChange}
-                  value={field.value ?? ''}
-                  placeholder="Type parcel details (you can include multiple items)"
-                />
-              </FormControl>
-              <FormDescription>Enter full parcel details as free text.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
         />
 
-        <FormField
+        <BufferedParcelField
           control={control}
           name={parcelContentName}
+          label="Parcel Content"
+          placeholder="e.g. phones, chargers, documents"
+          multiline
           rules={{
             required: 'Parcel content is required',
             validate: (value) =>
               sanitizeString(value).trim().length ? true : 'Parcel content is required',
           }}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Parcel Content</FormLabel>
-              <FormControl>
-                <Textarea
-                  name={field.name}
-                  ref={field.ref}
-                  onBlur={field.onBlur}
-                  onChange={field.onChange}
-                  value={field.value ?? ''}
-                  placeholder="e.g. phones, chargers, documents"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
         />
 
-        <FormField
+        <BufferedParcelField
           control={control}
           name={parcelValueName}
+          label="Parcel Value (GHS)"
+          placeholder="0.00"
+          description="Declared value for insurance and reporting."
+          inputMode="decimal"
           rules={{
             required: 'Parcel value is required',
             validate: (value) => {
@@ -99,24 +68,6 @@ export function ParcelCardInfoSection({
               return Number.isNaN(sanitizeNumber(normalized)) ? 'Enter a valid parcel value' : true;
             },
           }}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Parcel Value (GHS)</FormLabel>
-              <FormControl>
-                <Input
-                  name={field.name}
-                  ref={field.ref}
-                  onBlur={field.onBlur}
-                  onChange={field.onChange}
-                  value={sanitizeString(field.value)}
-                  inputMode="decimal"
-                  placeholder="0.00"
-                />
-              </FormControl>
-              <FormDescription>Declared value for insurance and reporting.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
         />
       </CardContent>
     </Card>

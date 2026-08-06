@@ -1,5 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { CameraView, type BarcodeScanningResult, useCameraPermissions } from 'expo-camera';
+import {
+  Camera,
+  useCameraDevice,
+  useCameraPermission,
+  type Code,
+} from 'react-native-vision-camera';
 import { AppButton } from '@mobile/components/ui';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileSpacing } from '@mobile/theme/layout';
@@ -10,25 +15,26 @@ type ScannerViewProps = {
 
 export function ScannerView({ onCodeScanned }: ScannerViewProps) {
   const { theme } = useAppearance();
-  const [permission, requestPermission] = useCameraPermissions();
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const device = useCameraDevice('back');
 
-  const onScan = (result: BarcodeScanningResult) => {
-    const value = result.data?.trim();
+  const onScan = (codes: Code[]) => {
+    const value = codes[0]?.value?.trim();
     if (!value) return;
     onCodeScanned(value);
   };
 
   return (
     <View>
-      {!permission?.granted ? (
+      {!hasPermission ? (
         <AppButton title="Enable Camera Access" onPress={() => void requestPermission()} />
-      ) : (
+      ) : device ? (
         <View style={[styles.cameraWrap, { borderColor: theme.colors.border }]}>
-          <CameraView
+          <Camera
             style={styles.camera}
-            facing="back"
-            onBarcodeScanned={onScan}
-            barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+            device={device}
+            isActive
+            codeScanner={{ codeTypes: ['qr'], onCodeScanned: onScan }}
           />
           <View
             pointerEvents="none"
@@ -38,7 +44,7 @@ export function ScannerView({ onCodeScanned }: ScannerViewProps) {
             ]}
           />
         </View>
-      )}
+      ) : null}
       <Text style={{ color: theme.colors.textSubtle }}>Align QR code inside frame to scan.</Text>
     </View>
   );

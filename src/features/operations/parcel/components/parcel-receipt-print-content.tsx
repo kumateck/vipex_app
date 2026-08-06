@@ -1,6 +1,6 @@
 import type { RefObject } from 'react';
 import { InvoiceA5Template, ThermalStickerTemplate } from '@/features/printing';
-import type { ReceiptPrintData } from './parcel-receipt-actions';
+import type { ReceiptPrintData } from './parcel-receipt.types';
 import {
   formatDate,
   formatMoney,
@@ -10,11 +10,15 @@ import {
 
 type ParcelReceiptPrintContentProps = {
   data: ReceiptPrintData;
+  desktopStickerRef: RefObject<HTMLDivElement | null>;
   stickerRef: RefObject<HTMLDivElement | null>;
   invoiceRef: RefObject<HTMLDivElement | null>;
-  isSenderPaid: boolean;
   qrUrl: string;
+  printedByName?: string | null;
+  printedByBranchName?: string | null;
+  printedByLocationName?: string | null;
   amountPaidCedis: number;
+  stickerCopies?: number;
   tax: {
     vat: number;
     getfund: number;
@@ -25,28 +29,57 @@ type ParcelReceiptPrintContentProps = {
 
 export function ParcelReceiptPrintContent({
   data,
+  desktopStickerRef,
   stickerRef,
   invoiceRef,
-  isSenderPaid,
   qrUrl,
+  printedByName,
+  printedByBranchName,
+  printedByLocationName,
   amountPaidCedis,
+  stickerCopies = 1,
   tax,
 }: ParcelReceiptPrintContentProps) {
+  const copies = Math.max(Math.trunc(stickerCopies), 1);
+  const stickerTemplateProps = {
+    bookingCode: data.bookingCode,
+    issuedAtLabel: formatDate(data.issuedAt),
+    printedByName,
+    printedByBranchName,
+    printedByLocationName,
+    parcelDetails: data.parcelDetails,
+    parcelContent: data.parcelContent,
+    senderName: data.senderName,
+    senderTelephone: data.senderTelephone,
+    senderTelephone2: data.senderTelephone2,
+    receiverName: data.receiverName,
+    receiverTelephone: data.receiverTelephone,
+    receiverTelephone2: data.receiverTelephone2,
+    destinationBranchName: data.destinationBranchName,
+    destinationLocationName: data.destinationLocationName,
+    toBePaidCedis: data.receiverToPayCedis > 0 ? data.receiverToPayCedis : undefined,
+    qrValue: qrUrl,
+    formatMoney,
+  };
+
   return (
     <>
-      <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '80mm' }}>
+      <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '100mm' }}>
         <div ref={stickerRef}>
-          <ThermalStickerTemplate
-            senderName={data.senderName}
-            senderTelephone={data.senderTelephone}
-            bookingCode={data.bookingCode}
-            parcelDetails={data.parcelDetails}
-            destinationBranchName={data.destinationBranchName}
-            destinationLocationName={data.destinationLocationName}
-            toBePaidCedis={isSenderPaid ? undefined : data.receiverToPayCedis}
-            qrValue={qrUrl}
-            formatMoney={formatMoney}
-          />
+          {Array.from({ length: copies }, (_, index) => (
+            <div
+              key={`${data.trackingCode}-${index}`}
+              style={{ breakAfter: index === copies - 1 ? 'auto' : 'page' }}
+            >
+              <ThermalStickerTemplate {...stickerTemplateProps} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '100mm' }}>
+        <div ref={desktopStickerRef}>
+          <ThermalStickerTemplate {...stickerTemplateProps} />
         </div>
       </div>
 
@@ -62,9 +95,17 @@ export function ParcelReceiptPrintContent({
             destinationBranchName={data.destinationBranchName}
             destinationLocationName={data.destinationLocationName}
             senderName={data.senderName}
-            senderTelephone={data.senderTelephone}
+            senderTelephone={
+              data.senderTelephone2
+                ? `${data.senderTelephone}, ${data.senderTelephone2}`
+                : data.senderTelephone
+            }
             receiverName={data.receiverName}
-            receiverTelephone={data.receiverTelephone}
+            receiverTelephone={
+              data.receiverTelephone2
+                ? `${data.receiverTelephone}, ${data.receiverTelephone2}`
+                : data.receiverTelephone
+            }
             paymentModeLabel={getPaymentModeLabel(data.senderPaidCedis, data.receiverToPayCedis)}
             totalChargeCedis={data.totalChargeCedis}
             senderPaidCedis={data.senderPaidCedis}

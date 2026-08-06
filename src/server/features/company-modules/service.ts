@@ -1,4 +1,5 @@
 import { BadRequest, Conflict, Forbidden } from '@/server/utils/http-error';
+import { withDbRetry } from '@/server/utils/db-retry';
 import { DEFAULT_MODULE_CATALOG } from '@/shared/company-modules/catalog';
 import { recordAuditLog } from '../audit/logger';
 import {
@@ -38,11 +39,13 @@ async function ensureModuleExists(moduleCode: string) {
 }
 
 export async function listCompanyModulesSvc(companyId: string) {
-  await ensureModuleCatalogEntriesRepo(DEFAULT_MODULE_CATALOG);
-  const [catalog, enabled] = await Promise.all([
-    listModuleCatalogRepo(),
-    listCompanyModulesRepo(companyId),
-  ]);
+  const [catalog, enabled] = await withDbRetry(
+    async () => {
+      await ensureModuleCatalogEntriesRepo(DEFAULT_MODULE_CATALOG);
+      return Promise.all([listModuleCatalogRepo(), listCompanyModulesRepo(companyId)]);
+    },
+    { operationName: 'Company modules lookup' },
+  );
 
   const enabledByCode = new Map(enabled.map((row) => [row.moduleCode, row]));
   return catalog.map((module) => {
@@ -59,7 +62,9 @@ export async function listCompanyModulesSvc(companyId: string) {
 }
 
 export async function ensureCompanyModuleEnabledSvc(companyId: string, moduleCode: string) {
-  const existing = await findCompanyModuleRepo(companyId, moduleCode);
+  const existing = await withDbRetry(() => findCompanyModuleRepo(companyId, moduleCode), {
+    operationName: 'Module access check',
+  });
   if (!existing?.isEnabled) {
     throw Forbidden(`Module "${moduleCode}" is not enabled for this company`);
   }

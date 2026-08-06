@@ -1,13 +1,18 @@
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Pressable, View } from 'react-native';
+import { Tabs, router } from '@mobile/navigation/router-compat';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ComponentProps } from 'react';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { useAuth } from '@mobile/providers/auth-provider';
-import { canViewQueueScreen, canViewReceiveScreen } from '@mobile/lib/permissions';
+import {
+  canViewQueueScreen,
+  canViewReceiveScreen,
+  canViewRiderScreen,
+} from '@mobile/lib/permissions';
 import { UserType } from '@mobile/constants/user-types';
+import { mobileRadius, mobileShadow } from '@mobile/theme/layout';
 
 function DrawerMenuButton() {
   const { theme } = useAppearance();
@@ -37,15 +42,51 @@ function TabIcon({
   return (
     <View
       style={{
-        width: 40,
-        height: 34,
-        borderRadius: 11,
+        width: 42,
+        height: 32,
+        borderRadius: mobileRadius.pill,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: focused ? theme.colors.primary : theme.colors.cardMuted,
+        backgroundColor: focused ? theme.colors.primary : 'transparent',
       }}
     >
-      <Ionicons name={name} size={18} color={focused ? theme.colors.primaryText : color} />
+      <Ionicons name={name} size={19} color={focused ? theme.colors.primaryText : color} />
+    </View>
+  );
+}
+
+function RiderHeaderActions() {
+  const { theme } = useAppearance();
+
+  function HeaderAction({
+    icon,
+    label,
+    onPress,
+  }: {
+    icon: ComponentProps<typeof Ionicons>['name'];
+    label: string;
+    onPress: () => void;
+  }) {
+    return (
+      <Pressable onPress={onPress} style={styles.headerAction}>
+        <Ionicons name={icon} size={16} color={theme.colors.text} />
+        <Text style={[styles.headerActionLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={styles.headerActionsWrap}>
+      <HeaderAction
+        icon="list-outline"
+        label="Assigned"
+        onPress={() => router.push('/(app)/rider-assigned' as never)}
+      />
+      <HeaderAction
+        icon="time-outline"
+        label="History"
+        onPress={() => router.push('/(app)/rider-history' as never)}
+      />
     </View>
   );
 }
@@ -54,27 +95,46 @@ export default function AppTabsLayout() {
   const { theme } = useAppearance();
   const { session } = useAuth();
   const insets = useSafeAreaInsets();
+  const userTypeRaw = session.user?.userType;
+  const normalizedUserType =
+    typeof userTypeRaw === 'number'
+      ? userTypeRaw
+      : typeof userTypeRaw === 'string'
+        ? Number.parseInt(userTypeRaw, 10)
+        : null;
+  const roleName = session.user?.role?.name?.toLowerCase() ?? '';
   const permissions = session.user?.permissions ?? [];
-  const isRider = session.user?.userType === UserType.RIDER;
+  const isStaff = normalizedUserType === UserType.STAFF || roleName.includes('staff');
+  const isCashier = normalizedUserType === UserType.CASHIER || roleName.includes('cashier');
+  const isRider =
+    !isStaff &&
+    !isCashier &&
+    (normalizedUserType === UserType.RIDER ||
+      roleName.includes('rider') ||
+      canViewRiderScreen(permissions));
 
-  const canUseQueue = canViewQueueScreen(permissions) && !isRider;
-  const canUseScan = canViewReceiveScreen(permissions) && !isRider;
+  const canUseQueue = canViewQueueScreen(permissions);
+  const canUseScan = canViewReceiveScreen(permissions);
 
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: theme.colors.bgElevated },
-        headerTitleStyle: { color: theme.colors.text, fontWeight: '700' },
+        headerStyle: { backgroundColor: theme.colors.bgElevated, elevation: 0, shadowOpacity: 0 },
+        headerTitleStyle: { color: theme.colors.text, fontWeight: '600', fontSize: 17 },
         headerTintColor: theme.colors.text,
+        headerShadowVisible: false,
         sceneStyle: { backgroundColor: theme.colors.bg },
         headerLeft: () => <DrawerMenuButton />,
         tabBarStyle: {
           backgroundColor: theme.colors.bgElevated,
-          borderTopColor: theme.colors.border,
-          height: 70 + insets.bottom,
-          paddingBottom: Math.max(insets.bottom, 6),
-          paddingTop: 8,
-          paddingHorizontal: 10,
+          borderTopWidth: 0,
+          borderTopLeftRadius: mobileRadius.xl,
+          borderTopRightRadius: mobileRadius.xl,
+          height: 68 + insets.bottom,
+          paddingBottom: Math.max(insets.bottom, 10),
+          paddingTop: 10,
+          paddingHorizontal: 12,
+          ...mobileShadow.floating,
         },
         tabBarItemStyle: {
           paddingHorizontal: 2,
@@ -82,7 +142,7 @@ export default function AppTabsLayout() {
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '700',
-          marginTop: 2,
+          marginTop: 3,
         },
         tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: theme.colors.primary,
@@ -99,26 +159,6 @@ export default function AppTabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="parcels"
-        options={{
-          title: 'Parcels',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="cube-outline" color={color} focused={focused} />
-          ),
-        }}
-      />
-      {canUseQueue ? (
-        <Tabs.Screen
-          name="queue"
-          options={{
-            title: 'Queue',
-            tabBarIcon: ({ color, focused }) => (
-              <TabIcon name="ticket-outline" color={color} focused={focused} />
-            ),
-          }}
-        />
-      ) : null}
-      <Tabs.Screen
         name="chat"
         options={{
           title: 'Chat',
@@ -128,17 +168,48 @@ export default function AppTabsLayout() {
           ),
         }}
       />
-      {canUseScan ? (
-        <Tabs.Screen
-          name="scan"
-          options={{
-            title: 'Scan',
-            tabBarIcon: ({ color, focused }) => (
-              <TabIcon name="qr-code-outline" color={color} focused={focused} />
-            ),
-          }}
-        />
-      ) : null}
+      <Tabs.Screen
+        name="queue"
+        options={
+          canUseQueue
+            ? {
+                title: 'Queue',
+                tabBarIcon: ({ color, focused }) => (
+                  <TabIcon name="ticket-outline" color={color} focused={focused} />
+                ),
+              }
+            : { href: null }
+        }
+      />
+      <Tabs.Screen
+        name="scan"
+        options={
+          canUseScan
+            ? {
+                title: 'Scan',
+                headerShown: false,
+                tabBarIcon: ({ color, focused }) => (
+                  <TabIcon name="qr-code-outline" color={color} focused={focused} />
+                ),
+              }
+            : { href: null }
+        }
+      />
+      <Tabs.Screen
+        name="parcels"
+        options={
+          isRider
+            ? {
+                title: 'Rider',
+                headerLeft: () => <DrawerMenuButton />,
+                headerRight: () => <RiderHeaderActions />,
+                tabBarIcon: ({ color, focused }) => (
+                  <TabIcon name="bicycle-outline" color={color} focused={focused} />
+                ),
+              }
+            : { href: null }
+        }
+      />
       <Tabs.Screen
         name="profile"
         options={{
@@ -153,3 +224,22 @@ export default function AppTabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  headerActionsWrap: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    paddingRight: 8,
+  },
+  headerAction: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 48,
+  },
+  headerActionLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+});

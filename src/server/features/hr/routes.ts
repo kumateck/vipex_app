@@ -17,6 +17,7 @@ import {
   checkInAttendanceCtrl,
   checkOutAttendanceCtrl,
   createDepartmentCtrl,
+  createEmployeeFromUserCtrl,
   createEmployeeCtrl,
   createEmployeeUserAccountCtrl,
   createJobTitleCtrl,
@@ -37,6 +38,7 @@ import {
   listLeaveSwapsCtrl,
   listLeaveTypeOptionsCtrl,
   listLeaveTypesCtrl,
+  linkEmployeeUserCtrl,
   rejectLeaveRequestCtrl,
   rejectLeaveRequestByManagerCtrl,
   rejectLeaveSwapCtrl,
@@ -340,6 +342,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         officerEmployeeId: query.officerEmployeeId ?? null,
         status: query.status ?? null,
         search: query.search ?? null,
+        unlinkedOnly: query.unlinkedOnly ?? false,
       });
     },
     {
@@ -350,6 +353,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         officerEmployeeId: t.Optional(UUID),
         status: t.Optional(t.Number()),
         search: t.Optional(t.String()),
+        unlinkedOnly: t.Optional(t.Boolean()),
       }),
       beforeHandle: [
         requireAuth(),
@@ -469,6 +473,54 @@ export const hrRoutes = new Elysia({ name: 'hr' })
       detail: { tags: ['HR'], summary: 'Create employee', operationId: 'createEmployee' },
     },
   )
+  .post(
+    '/employees/from-user/:userId',
+    async ({ params, body, set, user }) => {
+      const authUser = user as AuthUser;
+      const result = await createEmployeeFromUserCtrl({
+        companyId: authUser.companyId!,
+        userId: params.userId,
+        employeeNumber: body.employeeNumber,
+        firstName: body.firstName,
+        middleName: body.middleName ?? null,
+        lastName: body.lastName,
+        departmentId: body.departmentId ?? null,
+        jobTitleId: body.jobTitleId ?? null,
+        supervisorEmployeeId: body.supervisorEmployeeId ?? null,
+        hireDate: new Date(body.hireDate),
+        employmentStatus: body.employmentStatus ?? undefined,
+        employmentType: body.employmentType ?? undefined,
+        createdBy: authUser.sub,
+      });
+      set.status = HttpStatus.CREATED;
+      return result;
+    },
+    {
+      params: t.Object({ userId: UUID }),
+      body: t.Object({
+        employeeNumber: NonEmpty255,
+        firstName: NonEmpty255,
+        middleName: t.Optional(t.Union([t.String({ maxLength: 100 }), t.Null()])),
+        lastName: NonEmpty255,
+        departmentId: t.Optional(t.Union([UUID, t.Null()])),
+        jobTitleId: t.Optional(t.Union([UUID, t.Null()])),
+        supervisorEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        hireDate: t.String({ format: 'date' }),
+        employmentStatus: t.Optional(t.Number()),
+        employmentType: t.Optional(t.Number()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCreateEmployee, PermissionKeys.CanUpdateUsers),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Create and link an employee from an existing user',
+        operationId: 'createEmployeeFromUser',
+      },
+    },
+  )
   .get('/employees/:id', async ({ params }) => getEmployeeCtrl(params.id), {
     params: t.Object({ id: UUID }),
     beforeHandle: [
@@ -544,6 +596,35 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         requireModuleEnabled('hr'),
       ],
       detail: { tags: ['HR'], summary: 'Update employee', operationId: 'updateEmployee' },
+    },
+  )
+  .post(
+    '/employees/:id/link-user',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return linkEmployeeUserCtrl({
+        companyId: authUser.companyId!,
+        employeeId: params.id,
+        userId: body.userId,
+        actorUserId: authUser.sub,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({ userId: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(
+          PermissionKeys.CanCreateEmployeeUserAccount,
+          PermissionKeys.CanUpdateUsers,
+        ),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Link an existing user to an existing employee',
+        operationId: 'linkEmployeeUser',
+      },
     },
   )
   .post(

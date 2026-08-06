@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
-import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 type ChatBubbleProps = {
   body: string;
@@ -24,13 +24,23 @@ export function ChatBubble({ body, sentAt, isMine = false, seen = false }: ChatB
       <View
         style={[
           styles.bubble,
+          isMine ? styles.bubbleMine : styles.bubbleTheirs,
           {
-            backgroundColor: isMine ? theme.colors.primary : theme.colors.card,
-            borderColor: isMine ? theme.colors.primary : theme.colors.border,
+            backgroundColor: isMine ? theme.colors.primary : theme.colors.cardMuted,
+            borderColor: theme.scheme === 'dark' && !isMine ? theme.colors.border : 'transparent',
+            borderWidth: theme.scheme === 'dark' && !isMine ? StyleSheet.hairlineWidth : 0,
           },
         ]}
       >
-        <Text style={{ color: isMine ? theme.colors.primaryText : theme.colors.text }}>{body}</Text>
+        <Text
+          style={{
+            color: isMine ? theme.colors.primaryText : theme.colors.text,
+            fontSize: 15,
+            lineHeight: 20,
+          }}
+        >
+          {body}
+        </Text>
         <View style={styles.metaRow}>
           <Text
             style={[
@@ -62,12 +72,13 @@ const styles = StyleSheet.create({
   right: { alignItems: 'flex-end' },
   bubble: {
     maxWidth: '85%',
-    borderWidth: 1,
     borderRadius: mobileRadius.lg,
     paddingHorizontal: mobileSpacing.md,
-    paddingVertical: mobileSpacing.sm,
+    paddingVertical: mobileSpacing.sm + 2,
     gap: 4,
   },
+  bubbleMine: { borderBottomRightRadius: mobileRadius.sm },
+  bubbleTheirs: { borderBottomLeftRadius: mobileRadius.sm },
   metaRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
-  meta: { fontSize: mobileTypography.caption, fontWeight: '600' },
+  meta: { ...mobileTextStyles.caption2, fontWeight: '600' },
 });

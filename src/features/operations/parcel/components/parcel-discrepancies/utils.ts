@@ -1,4 +1,4 @@
-import { formatDateTime } from '@/lib/date';
+import { formatDateTime } from '@/lib/dates';
 
 export function formatDiscrepancyDate(value: string | null | undefined) {
   if (!value) return '-';

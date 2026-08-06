@@ -1,5 +1,5 @@
 import { PaymentMethod } from '@/db/schemas/enums';
-import { formatDateTime } from '@/lib/date';
+import { formatDateTime } from '@/lib/dates';
 
 export const formatCurrency = (amountPsw: number) => `GHS ${(amountPsw / 100).toFixed(2)}`;
 

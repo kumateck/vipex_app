@@ -15,7 +15,7 @@ Use this matrix for role assignment. Each listed route is guarded by its exact p
 | `/parcels/receiver-cashier`                  | `CanCreatePayments`                       |
 | `/parcels/home-delivery/dispatch`            | `CanMarkOutForDelivery`                   |
 | `/parcels/delivery-cashier`                  | `CanCompleteDoorstepDelivery`             |
-| `/parcels/status`                            | `CanGetParcelStatusSummaryReport`         |
+| `/parcels/status`                            | `CanReadCallCenterParcelStatus`           |
 | `/parcels/home-delivery/address`             | `CanMarkDoorstepCalled`                   |
 | `/parcels/rider/current`                     | `CanCompleteDoorstepDelivery`             |
 | `/parcels/rider/history`                     | `CanReadParcels`                          |

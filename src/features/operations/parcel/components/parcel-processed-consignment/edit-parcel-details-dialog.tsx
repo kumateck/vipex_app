@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PHONE_DIGITS, limitPhoneDigits } from '@/lib/phone';
 import {
   Select,
   SelectContent,
@@ -134,8 +135,11 @@ export function EditParcelDetailsDialog({
               <Input
                 id="edit-sender-phone"
                 value={editSenderPhone}
-                onChange={(event) => onEditSenderPhoneChange(event.target.value)}
+                onChange={(event) => onEditSenderPhoneChange(limitPhoneDigits(event.target.value))}
                 placeholder="0240000000"
+                inputMode="numeric"
+                autoComplete="tel"
+                maxLength={PHONE_DIGITS}
               />
             </div>
             <div className="space-y-2">
@@ -143,8 +147,11 @@ export function EditParcelDetailsDialog({
               <Input
                 id="edit-sender-phone2"
                 value={editSenderPhone2}
-                onChange={(event) => onEditSenderPhone2Change(event.target.value)}
+                onChange={(event) => onEditSenderPhone2Change(limitPhoneDigits(event.target.value))}
                 placeholder="Optional"
+                inputMode="numeric"
+                autoComplete="tel"
+                maxLength={PHONE_DIGITS}
               />
             </div>
           </div>
@@ -155,8 +162,13 @@ export function EditParcelDetailsDialog({
               <Input
                 id="edit-receiver-phone"
                 value={editReceiverPhone}
-                onChange={(event) => onEditReceiverPhoneChange(event.target.value)}
+                onChange={(event) =>
+                  onEditReceiverPhoneChange(limitPhoneDigits(event.target.value))
+                }
                 placeholder="0240000000"
+                inputMode="numeric"
+                autoComplete="tel"
+                maxLength={PHONE_DIGITS}
               />
             </div>
             <div className="space-y-2">
@@ -164,8 +176,13 @@ export function EditParcelDetailsDialog({
               <Input
                 id="edit-receiver-phone2"
                 value={editReceiverPhone2}
-                onChange={(event) => onEditReceiverPhone2Change(event.target.value)}
+                onChange={(event) =>
+                  onEditReceiverPhone2Change(limitPhoneDigits(event.target.value))
+                }
                 placeholder="Optional"
+                inputMode="numeric"
+                autoComplete="tel"
+                maxLength={PHONE_DIGITS}
               />
             </div>
           </div>

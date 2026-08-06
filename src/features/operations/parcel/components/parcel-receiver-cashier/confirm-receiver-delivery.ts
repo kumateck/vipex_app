@@ -1,5 +1,6 @@
 import type { CustomerCardRecord } from '@/features/customers/api';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import { buildReceiverReceiptData } from './build-receiver-receipt-data';
 import { resolveCustomerCard } from './resolve-customer-card';
 import type { CardMode, HandoverTarget } from './receiver-cashier-types';
@@ -29,6 +30,8 @@ type ConfirmReceiverDeliveryArgs = {
   paymentMethod: string;
   destinationBranchName: string;
   destinationLocationName: string;
+  receiverOtpVerificationToken: string;
+  momoTransactionId?: string | null;
   addCustomerCard: (args: {
     customerId: string;
     cardId: string;
@@ -41,11 +44,14 @@ type ConfirmReceiverDeliveryArgs = {
     storageAmountCedis: number | null;
     method: number;
     confirmedBy: string;
-    cardId: string;
-    cardNumber: string;
+    cardId: string | null;
+    cardNumber: string | null;
     secondReceiverId: string | null;
     secondCardId: string | null;
     secondCardNumber: string | null;
+    receiverOtpVerificationToken: string;
+    receiverOtpTarget: HandoverTarget;
+    momoTransactionId?: string | null;
   }) => Promise<{
     payment: {
       amounts: {
@@ -83,11 +89,16 @@ export async function confirmReceiverDelivery({
   paymentMethod,
   destinationBranchName,
   destinationLocationName,
+  receiverOtpVerificationToken,
+  momoTransactionId,
   addCustomerCard,
   createCustomer,
   collectReceiverAndDeliver,
 }: ConfirmReceiverDeliveryArgs) {
   if (!pickerStaffId) throw new Error('Select shelf picker staff');
+  if (!receiverOtpVerificationToken) {
+    throw new Error('Verify the receiver OTP before completing handover');
+  }
 
   const receiverAmount = Number(paymentAmount);
   if (receiverDuePsw > 0 && (Number.isNaN(receiverAmount) || receiverAmount <= 0)) {
@@ -123,9 +134,12 @@ export async function confirmReceiverDelivery({
   if (handoverTarget === 'second') {
     if (!secondReceiverId) {
       const fullname = secondNewName.trim();
-      const telephone = secondNewPhone.trim();
+      const telephone = normalizePhoneDigits(secondNewPhone);
       if (!fullname || !telephone)
         throw new Error('Second receiver name and telephone are required');
+      if (!isTenDigitPhone(telephone)) {
+        throw new Error(phoneLengthMessage('Second receiver telephone'));
+      }
       const created = await createCustomer({ fullname, telephone });
       secondReceiverId = created.id;
     }
@@ -147,11 +161,14 @@ export async function confirmReceiverDelivery({
     storageAmountCedis: storageOutstandingPsw > 0 ? storageAmount : null,
     method: Number(paymentMethod),
     confirmedBy: pickerStaffId,
-    cardId: mainCard.cardId,
-    cardNumber: mainCard.cardNumber,
+    cardId: mainCard?.cardId ?? null,
+    cardNumber: mainCard?.cardNumber ?? null,
     secondReceiverId: secondReceiverId ?? null,
     secondCardId: secondCard?.cardId ?? null,
     secondCardNumber: secondCard?.cardNumber ?? null,
+    receiverOtpVerificationToken,
+    receiverOtpTarget: handoverTarget,
+    momoTransactionId: momoTransactionId ?? null,
   });
 
   const linkedSecondReceiverName =

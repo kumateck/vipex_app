@@ -34,6 +34,8 @@ type StockRequestLinesTableProps = {
   request: StockRequestDetails;
   productById: Map<string, ProductLookup>;
   canFulfill: boolean;
+  canAcknowledge?: boolean;
+  showActions?: boolean;
   isAutoFulfilling: boolean;
   onAutoFulfillLine: (lineId: string) => void;
 };
@@ -42,6 +44,8 @@ export function StockRequestLinesTable({
   request,
   productById,
   canFulfill,
+  canAcknowledge = false,
+  showActions = true,
   isAutoFulfilling,
   onAutoFulfillLine,
 }: StockRequestLinesTableProps) {
@@ -61,7 +65,7 @@ export function StockRequestLinesTable({
                 <th className="text-left py-2 pr-4">Remaining</th>
                 <th className="text-left py-2 pr-4">Acknowledged</th>
                 <th className="text-left py-2 pr-4">Notes</th>
-                <th className="text-left py-2 pr-4">Action</th>
+                {showActions ? <th className="text-left py-2 pr-4">Action</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -97,44 +101,48 @@ export function StockRequestLinesTable({
                       )}
                     </td>
                     <td className="py-2 pr-4">{line.notes ?? '-'}</td>
-                    <td className="py-2 pr-4">
-                      {canFulfill && remaining > 0 ? (
-                        <div className="flex gap-2">
-                          <PermissionGuard permissionKey={PermissionKeys.CanFulfillStockRequest}>
-                            <Button asChild size="sm" variant="outline">
-                              <Link
-                                to={`/inventory/stock-requests/fulfill/${request.id}/${line.id}`}
+                    {showActions ? (
+                      <td className="py-2 pr-4">
+                        {canFulfill && remaining > 0 ? (
+                          <div className="flex gap-2">
+                            <PermissionGuard permissionKey={PermissionKeys.CanFulfillStockRequest}>
+                              <Button asChild size="sm" variant="outline">
+                                <Link
+                                  to={`/inventory/stock-requests/fulfill/${request.id}/${line.id}`}
+                                >
+                                  Fulfill
+                                </Link>
+                              </Button>
+                            </PermissionGuard>
+                            <PermissionGuard permissionKey={PermissionKeys.CanFulfillStockRequest}>
+                              <Button
+                                size="sm"
+                                onClick={() => onAutoFulfillLine(line.id)}
+                                disabled={isAutoFulfilling}
                               >
-                                Fulfill
-                              </Link>
-                            </Button>
-                          </PermissionGuard>
-                          <PermissionGuard permissionKey={PermissionKeys.CanFulfillStockRequest}>
-                            <Button
-                              size="sm"
-                              onClick={() => onAutoFulfillLine(line.id)}
-                              disabled={isAutoFulfilling}
-                            >
-                              Auto Fulfill
-                            </Button>
-                          </PermissionGuard>
-                        </div>
-                      ) : null}
-                      {pendingAck > 0 ? (
-                        <div className="mt-2">
-                          <PermissionGuard permissionKey={PermissionKeys.CanFulfillStockRequest}>
-                            <Button asChild size="sm" variant="secondary">
-                              <Link
-                                to={`/inventory/stock-requests/acknowledge/${request.id}/${line.id}`}
-                              >
-                                Acknowledge Receipt
-                              </Link>
-                            </Button>
-                          </PermissionGuard>
-                        </div>
-                      ) : null}
-                      {!((canFulfill && remaining > 0) || pendingAck > 0) ? '-' : null}
-                    </td>
+                                Auto Fulfill
+                              </Button>
+                            </PermissionGuard>
+                          </div>
+                        ) : null}
+                        {canAcknowledge && pendingAck > 0 ? (
+                          <div className="mt-2">
+                            <PermissionGuard permissionKey={PermissionKeys.CanFulfillStockRequest}>
+                              <Button asChild size="sm" variant="secondary">
+                                <Link
+                                  to={`/inventory/stock-requests/acknowledge/${request.id}/${line.id}`}
+                                >
+                                  Acknowledge Receipt
+                                </Link>
+                              </Button>
+                            </PermissionGuard>
+                          </div>
+                        ) : null}
+                        {!((canFulfill && remaining > 0) || (canAcknowledge && pendingAck > 0))
+                          ? '-'
+                          : null}
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })}

@@ -21,9 +21,9 @@ export function SecretaryDashboardV1Page() {
   const permissions = new Set(user?.permissions ?? []);
   const [scope, setScope] = useState<DashboardScope | null>(null);
 
-  const canViewParcels = permissions.has(PermissionKeys.CanGetParcelStatusSummaryReport);
+  const canViewParcels = permissions.has(PermissionKeys.CanViewReportParcelsStatusSummary);
   const canReadParcels = permissions.has(PermissionKeys.CanReadParcels);
-  const canViewOutstanding = permissions.has(PermissionKeys.CanGetOutstandingToBePaidReport);
+  const canViewOutstanding = permissions.has(PermissionKeys.CanViewReportCashToBePaidOutstanding);
 
   const scopeFrom = scope?.dateRange?.from;
   const scopeTo = scope?.dateRange?.to ?? scope?.dateRange?.from;

@@ -11,6 +11,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { sanitizeString } from '@/lib/utils';
+import { PHONE_DIGITS, limitPhoneDigits, normalizePhoneDigits } from '@/lib/phone';
 import { useFindCustomersByTelephoneQuery } from '@/features/customers/api';
 import { useDebouncedValue } from '../../hooks/use-debounced-value';
 import type { ParcelBookingFormValues } from './parcel-form.types';
@@ -26,9 +27,6 @@ type CustomerLookupSectionProps = {
 };
 
 const PHONE_LOOKUP_DELAY_MS = 1000;
-const PHONE_DIGITS = 10;
-
-const normalizePhoneDigits = (value: string) => value.replace(/\D/g, '');
 
 export function CustomerLookupSection({
   label,
@@ -47,10 +45,11 @@ export function CustomerLookupSection({
   const debouncedPhone = useDebouncedValue(normalizedPhone, PHONE_LOOKUP_DELAY_MS);
   const canLookup = debouncedPhone.length === PHONE_DIGITS;
 
-  const { data: customers = [], isFetching } = useFindCustomersByTelephoneQuery(
+  const { data: lookupCustomers = [], isFetching } = useFindCustomersByTelephoneQuery(
     { telephone: debouncedPhone, limit: 10 },
     { skip: !canLookup },
   );
+  const customers = canLookup ? lookupCustomers : [];
 
   const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId);
   const shouldEnableName = canLookup && !isFetching && customers.length === 0;
@@ -82,6 +81,10 @@ export function CustomerLookupSection({
     if (nextCustomer?.fullname) {
       setValue(fullnameName, nextCustomer.fullname, { shouldDirty: true, shouldValidate: true });
     }
+    setValue(phoneName, nextCustomer?.telephone ?? '', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
     setValue(secondaryPhoneName, nextCustomer?.telephone2 ?? '', {
       shouldDirty: true,
       shouldValidate: true,
@@ -91,6 +94,7 @@ export function CustomerLookupSection({
     customerIdName,
     customers,
     fullnameName,
+    phoneName,
     secondaryPhoneName,
     selectedCustomer,
     selectedCustomerId,
@@ -125,11 +129,12 @@ export function CustomerLookupSection({
                   name={field.name}
                   ref={field.ref}
                   onBlur={field.onBlur}
-                  onChange={field.onChange}
+                  onChange={(event) => field.onChange(limitPhoneDigits(event.target.value))}
                   value={sanitizeString(field.value)}
                   placeholder="0240000000"
                   inputMode="numeric"
                   autoComplete="tel"
+                  maxLength={PHONE_DIGITS}
                 />
               </FormControl>
               <FormDescription>
@@ -166,12 +171,13 @@ export function CustomerLookupSection({
                   name={field.name}
                   ref={field.ref}
                   onBlur={field.onBlur}
-                  onChange={field.onChange}
+                  onChange={(event) => field.onChange(limitPhoneDigits(event.target.value))}
                   value={sanitizeString(field.value)}
                   disabled={isExistingCustomer}
                   placeholder="0240000001"
                   inputMode="numeric"
                   autoComplete="tel"
+                  maxLength={PHONE_DIGITS}
                 />
               </FormControl>
               <FormDescription>
@@ -239,6 +245,10 @@ export function CustomerLookupSection({
                         shouldValidate: true,
                       });
                     }
+                    setValue(phoneName, matched?.telephone ?? '', {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
                     setValue(secondaryPhoneName, matched?.telephone2 ?? '', {
                       shouldDirty: true,
                       shouldValidate: true,
@@ -248,7 +258,9 @@ export function CustomerLookupSection({
                   searchPlaceholder={`Search ${label.toLowerCase()}...`}
                   options={customers.map((customer) => ({
                     value: customer.id,
-                    label: `${customer.fullname}${customer.telephone ? ` (${customer.telephone})` : ''}`,
+                    label: `${customer.fullname}${customer.telephone ? ` (${customer.telephone})` : ''}${
+                      customer.telephone2 ? ` / ${customer.telephone2}` : ''
+                    }`,
                   }))}
                 />
               </FormControl>

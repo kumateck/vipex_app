@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { toast } from 'sonner';
 import { useListBranchOptionsQuery } from '@/features/branches';
 import { downloadCsv } from '@/features/dashboard/utils/export-csv';
@@ -247,8 +248,7 @@ export function FleetComplianceDashboardPage() {
                   Severity: {alert.severity}
                 </p>
                 <p className="text-muted-foreground">
-                  Due: {new Date(alert.dueAt).toLocaleString()} | Days until due:{' '}
-                  {alert.daysUntilDue}
+                  Due: {formatDateTimeShared(alert.dueAt)} | Days until due: {alert.daysUntilDue}
                 </p>
               </div>
             ))}

@@ -1,7 +1,8 @@
-import { Redirect } from 'expo-router';
-import { Drawer } from 'expo-router/drawer';
-import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, View } from 'react-native';
+import { Redirect } from '@mobile/navigation/router-compat';
+import { Drawer } from '@mobile/navigation/drawer-compat';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { DrawerActions } from '@react-navigation/native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { MobileDrawerContent } from '@mobile/components/navigation/mobile-drawer-content';
@@ -30,14 +31,17 @@ export default function AppLayout() {
     <Drawer
       drawerContent={(props) => <MobileDrawerContent {...props} />}
       screenOptions={{
-        headerStyle: { backgroundColor: theme.colors.bgElevated },
+        headerStyle: { backgroundColor: theme.colors.bgElevated, elevation: 0, shadowOpacity: 0 },
         headerTintColor: theme.colors.text,
-        headerTitleStyle: { color: theme.colors.text, fontWeight: '700' },
+        headerTitleStyle: { color: theme.colors.text, fontWeight: '600', fontSize: 17 },
+        headerShadowVisible: false,
         sceneStyle: { backgroundColor: theme.colors.bg },
-        drawerStyle: { backgroundColor: theme.colors.bgElevated },
+        drawerStyle: { backgroundColor: theme.colors.bgElevated, width: 300 },
         drawerActiveTintColor: theme.colors.primary,
         drawerInactiveTintColor: theme.colors.textSubtle,
-        drawerLabelStyle: { fontWeight: '600' },
+        drawerActiveBackgroundColor: `${theme.colors.primary}1F`,
+        drawerItemStyle: { borderRadius: 12 },
+        drawerLabelStyle: { fontWeight: '600', fontSize: 15 },
       }}
     >
       <Drawer.Screen
@@ -52,12 +56,20 @@ export default function AppLayout() {
       />
       <Drawer.Screen
         name="super-search"
-        options={{
+        options={({ navigation }) => ({
           title: 'Super Search',
-          drawerIcon: ({ size, color }) => (
-            <Ionicons name="search-outline" size={size} color={color} />
+          headerLeft: () => (
+            <Pressable
+              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+              style={{ paddingHorizontal: 12, paddingVertical: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="Open side menu"
+            >
+              <Ionicons name="menu-outline" size={22} color={theme.colors.text} />
+            </Pressable>
           ),
-        }}
+          drawerItemStyle: { display: 'none' },
+        })}
       />
       <Drawer.Screen
         name="global-search"
@@ -78,12 +90,36 @@ export default function AppLayout() {
         }}
       />
       <Drawer.Screen
+        name="parcel-create"
+        options={{
+          title: 'Create TobePaid',
+          headerShown: false,
+          drawerIcon: ({ size, color }) => (
+            <Ionicons name="cash-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
         name="rider"
         options={{
           title: 'Rider Operations',
           drawerIcon: ({ size, color }) => (
             <Ionicons name="bicycle-outline" size={size} color={color} />
           ),
+        }}
+      />
+      <Drawer.Screen
+        name="rider-assigned"
+        options={{
+          title: 'Assigned Deliveries',
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+      <Drawer.Screen
+        name="rider-history"
+        options={{
+          title: 'Delivery History',
+          drawerItemStyle: { display: 'none' },
         }}
       />
       <Drawer.Screen
@@ -97,19 +133,52 @@ export default function AppLayout() {
       />
       <Drawer.Screen
         name="change-password"
-        options={{
+        options={({ navigation }) => ({
           title: 'Change Password',
+          headerLeft: () => (
+            <Pressable
+              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+              style={{ paddingHorizontal: 12, paddingVertical: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="Open side menu"
+            >
+              <Ionicons name="menu-outline" size={22} color={theme.colors.text} />
+            </Pressable>
+          ),
           drawerIcon: ({ size, color }) => (
             <Ionicons name="key-outline" size={size} color={color} />
           ),
-        }}
+        })}
       />
       <Drawer.Screen
         name="super-search/[parcelId]"
-        options={{
-          title: 'Record Details',
+        options={({ navigation, route }) => ({
+          // Drawer route params are loosely typed; read booking code defensively.
+          ...(function resolveTitle() {
+            const params =
+              route.params && typeof route.params === 'object'
+                ? (route.params as Record<string, unknown>)
+                : null;
+            const bookingCode = typeof params?.bookingCode === 'string' ? params.bookingCode : '';
+            return {
+              title:
+                bookingCode.trim().length > 0
+                  ? `Parcel Details for ${bookingCode}`
+                  : 'Parcel Details',
+            };
+          })(),
+          headerLeft: () => (
+            <Pressable
+              onPress={() => navigation.goBack()}
+              style={{ paddingHorizontal: 12, paddingVertical: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
+            </Pressable>
+          ),
           drawerItemStyle: { display: 'none' },
-        }}
+        })}
       />
       <Drawer.Screen
         name="receive-process/[parcelId]"

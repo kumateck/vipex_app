@@ -1,6 +1,7 @@
 import { Text, View, useWindowDimensions } from 'react-native';
 import { AppButton, AppCard } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
+import { mobileTextStyles } from '@mobile/theme/layout';
 import type { UserChatEntry } from '@mobile/features/communication/types/hub';
 import { EmptyText, SectionTitle, hubStyles, initialsFromName } from '../hub-ui';
 import { getMobileScale } from '@mobile/features/communication/utils';
@@ -49,7 +50,10 @@ export function UsersTabPane({
                   <Text
                     style={[
                       hubStyles.avatarText,
-                      { color: theme.colors.textMuted, fontSize: 17 * scale },
+                      {
+                        color: theme.colors.textMuted,
+                        fontSize: mobileTextStyles.headline.fontSize * scale,
+                      },
                     ]}
                   >
                     {initialsFromName(entry.fullname)}
@@ -61,7 +65,11 @@ export function UsersTabPane({
                   numberOfLines={1}
                   style={[
                     hubStyles.waName,
-                    { color: theme.colors.text, fontSize: 18 * scale, lineHeight: 22 * scale },
+                    {
+                      color: theme.colors.text,
+                      fontSize: mobileTextStyles.title3.fontSize * scale,
+                      lineHeight: mobileTextStyles.title3.lineHeight * scale,
+                    },
                   ]}
                 >
                   {entry.fullname}
@@ -72,8 +80,8 @@ export function UsersTabPane({
                     hubStyles.waMeta,
                     {
                       color: theme.colors.textSubtle,
-                      fontSize: 13 * scale,
-                      lineHeight: 17 * scale,
+                      fontSize: mobileTextStyles.footnote.fontSize * scale,
+                      lineHeight: mobileTextStyles.footnote.lineHeight * scale,
                     },
                   ]}
                 >
@@ -85,7 +93,11 @@ export function UsersTabPane({
                   numberOfLines={1}
                   style={[
                     hubStyles.waPreview,
-                    { color: theme.colors.textMuted, fontSize: 14 * scale, lineHeight: 18 * scale },
+                    {
+                      color: theme.colors.textMuted,
+                      fontSize: mobileTextStyles.subhead.fontSize * scale,
+                      lineHeight: mobileTextStyles.subhead.lineHeight * scale,
+                    },
                   ]}
                 >
                   {entry.thread ? 'Existing conversation' : 'No conversation yet'}

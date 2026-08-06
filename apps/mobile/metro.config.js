@@ -1,16 +1,39 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const path = require('path');
-const { getDefaultConfig } = require('expo/metro-config');
+const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '../..');
+const mobileSrcRoot = path.resolve(projectRoot, 'src');
 
-const config = getDefaultConfig(projectRoot);
+const config = {
+  watchFolders: [workspaceRoot],
+  resolver: {
+    disableHierarchicalLookup: false,
+    extraNodeModules: {
+      '@mobile': mobileSrcRoot,
+      '@': mobileSrcRoot,
+    },
+    resolveRequest(context, moduleName, platform) {
+      if (moduleName.startsWith('@mobile/')) {
+        return context.resolveRequest(
+          context,
+          path.join(mobileSrcRoot, moduleName.slice('@mobile/'.length)),
+          platform,
+        );
+      }
 
-config.watchFolders = [workspaceRoot];
-config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, 'node_modules'),
-  path.resolve(workspaceRoot, 'node_modules'),
-];
+      if (moduleName.startsWith('@/')) {
+        return context.resolveRequest(
+          context,
+          path.join(mobileSrcRoot, moduleName.slice(2)),
+          platform,
+        );
+      }
 
-module.exports = config;
+      return context.resolveRequest(context, moduleName, platform);
+    },
+  },
+};
+
+module.exports = mergeConfig(getDefaultConfig(projectRoot), config);

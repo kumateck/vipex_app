@@ -1,20 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
-import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { formatDateTime } from '@/lib/date';
+import { formatDateTime } from '@/lib/dates';
+import {
+  isOptionalTenDigitPhone,
+  isTenDigitPhone,
+  normalizePhoneDigits,
+  phoneLengthMessage,
+} from '@/lib/phone';
 import {
   Select,
   SelectContent,
@@ -37,9 +36,16 @@ import {
   useListProcessedParcelsForConsignmentQuery,
   useUpdateParcelMutation,
 } from '../../api/parcel.api';
-import { ParcelReceiptActions, type ReceiptPrintData } from '../parcel-receipt-actions';
-import { printConsignmentSlip } from '../../utils/consignment-print';
+import { ParcelReceiptActions } from '../parcel-receipt-actions';
+import type { ReceiptPrintData } from '../parcel-receipt.types';
+import {
+  ConsignmentPrintController,
+  type ConsignmentPrintPayload,
+} from './consignment-print-controller';
 import { EditParcelDetailsDialog } from './edit-parcel-details-dialog';
+import { ParcelReprintActions } from './parcel-reprint-actions';
+import { PaymentStatusBookingCell } from './payment-status-booking-cell';
+import { PaymentStatusLegend } from './payment-status-legend';
 
 const EMPTY_META: PaginationMeta = {
   totalRecords: 0,
@@ -50,6 +56,7 @@ const EMPTY_META: PaginationMeta = {
   hasPreviousPage: false,
 };
 const ALL_VALUE = '__all__';
+const EMPTY_ROWS: ProcessedParcel[] = [];
 
 function formatDate(isoDate: string) {
   const date = new Date(isoDate);
@@ -90,8 +97,10 @@ function toReceiptPrintData(
         : Number(parcel.parcelValuePsw) / 100,
     senderName: parcel.senderName ?? '-',
     senderTelephone: parcel.senderPhone ?? '-',
+    senderTelephone2: parcel.senderPhone2 ?? null,
     receiverName: parcel.receiverName ?? '-',
     receiverTelephone: parcel.receiverPhone ?? '-',
+    receiverTelephone2: parcel.receiverPhone2 ?? null,
     destinationBranchName,
     destinationLocationName: parcel.pickupLocationName ?? '-',
     totalChargeCedis,
@@ -156,6 +165,10 @@ export function ParcelProcessedConsignmentPage() {
   const [lockedDestinationId, setLockedDestinationId] = useState<string | null>(null);
   const [editingParcel, setEditingParcel] = useState<ProcessedParcel | null>(null);
   const [reprintData, setReprintData] = useState<ReceiptPrintData | null>(null);
+  const [reprintSelection, setReprintSelection] = useState<'sticker' | 'invoice'>('sticker');
+  const [reprintStickerCopies, setReprintStickerCopies] = useState(1);
+  const [consignmentPrintPayload, setConsignmentPrintPayload] =
+    useState<ConsignmentPrintPayload | null>(null);
   const [editDestinationId, setEditDestinationId] = useState<string>('');
   const [editSourceLocationId, setEditSourceLocationId] = useState<string>('');
   const [editPickupLocationId, setEditPickupLocationId] = useState<string>('');
@@ -210,7 +223,32 @@ export function ParcelProcessedConsignmentPage() {
     setLockedDestinationId(null);
   };
 
-  const rows = data?.data ?? [];
+  const rows = useMemo(() => data?.data ?? EMPTY_ROWS, [data?.data]);
+  const queueReprint = useCallback(
+    (parcel: ProcessedParcel, selection: 'sticker' | 'invoice', stickerCopies = 1) => {
+      const destinationName =
+        parcel.destinationName ?? branchNameById.get(parcel.destinationId) ?? '-';
+      setReprintSelection(selection);
+      setReprintStickerCopies(stickerCopies);
+      setReprintData(toReceiptPrintData(parcel, destinationName));
+    },
+    [branchNameById],
+  );
+
+  const startEditingParcel = useCallback(
+    (parcel: ProcessedParcel) => {
+      setEditingParcel(parcel);
+      setEditDestinationId(parcel.destinationId);
+      setEditSourceLocationId(parcel.sourceLocationId ?? userLocationId ?? '');
+      setEditPickupLocationId(parcel.pickupLocationId ?? '');
+      setEditSenderPhone(parcel.senderPhone ?? '');
+      setEditSenderPhone2(parcel.senderPhone2 ?? '');
+      setEditReceiverPhone(parcel.receiverPhone ?? '');
+      setEditReceiverPhone2(parcel.receiverPhone2 ?? '');
+    },
+    [userLocationId],
+  );
+
   const loadData = () => {
     setQuery((prev) => ({
       ...prev,
@@ -221,60 +259,66 @@ export function ParcelProcessedConsignmentPage() {
     resetSelection();
   };
 
-  const toggleRowSelection = (parcel: ProcessedParcel, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
+  const toggleRowSelection = useCallback(
+    (parcel: ProcessedParcel, checked: boolean) => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
 
-      if (!checked) {
-        next.delete(parcel.id);
-        if (next.size === 0) {
-          setLockedDestinationId(null);
+        if (!checked) {
+          next.delete(parcel.id);
+          if (next.size === 0) {
+            setLockedDestinationId(null);
+          }
+          return next;
         }
+
+        if (lockedDestinationId && lockedDestinationId !== parcel.destinationId) {
+          toast.error('You cannot mix destination branches in a single consignment');
+          return prev;
+        }
+
+        next.add(parcel.id);
+        if (!lockedDestinationId) {
+          setLockedDestinationId(parcel.destinationId);
+        }
+
         return next;
-      }
+      });
+    },
+    [lockedDestinationId],
+  );
 
-      if (lockedDestinationId && lockedDestinationId !== parcel.destinationId) {
-        toast.error('You cannot mix destination branches in a single consignment');
-        return prev;
-      }
+  const toggleSelectAllEligible = useCallback(
+    (checked: boolean) => {
+      if (rows.length === 0) return;
 
-      next.add(parcel.id);
-      if (!lockedDestinationId) {
-        setLockedDestinationId(parcel.destinationId);
-      }
+      const effectiveDestinationId = lockedDestinationId ?? rows[0]?.destinationId ?? null;
+      if (!effectiveDestinationId) return;
 
-      return next;
-    });
-  };
+      const eligibleRows = rows.filter((row) => row.destinationId === effectiveDestinationId);
+      if (eligibleRows.length === 0) return;
 
-  const toggleSelectAllEligible = (checked: boolean) => {
-    if (rows.length === 0) return;
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (!checked) {
+          for (const row of eligibleRows) {
+            next.delete(row.id);
+          }
+          if (next.size === 0) {
+            setLockedDestinationId(null);
+          }
+          return next;
+        }
 
-    const effectiveDestinationId = lockedDestinationId ?? rows[0]?.destinationId ?? null;
-    if (!effectiveDestinationId) return;
-
-    const eligibleRows = rows.filter((row) => row.destinationId === effectiveDestinationId);
-    if (eligibleRows.length === 0) return;
-
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (!checked) {
         for (const row of eligibleRows) {
-          next.delete(row.id);
+          next.add(row.id);
         }
-        if (next.size === 0) {
-          setLockedDestinationId(null);
-        }
+        setLockedDestinationId(effectiveDestinationId);
         return next;
-      }
-
-      for (const row of eligibleRows) {
-        next.add(row.id);
-      }
-      setLockedDestinationId(effectiveDestinationId);
-      return next;
-    });
-  };
+      });
+    },
+    [lockedDestinationId, rows],
+  );
 
   const eligibleDestinationId = lockedDestinationId ?? rows[0]?.destinationId ?? null;
   const eligibleRows = eligibleDestinationId
@@ -315,7 +359,11 @@ export function ParcelProcessedConsignmentPage() {
         },
       },
 
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        accessorKey: 'bookingCode',
+        header: 'Booking',
+        cell: ({ row }) => <PaymentStatusBookingCell parcel={row.original} />,
+      },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       { accessorKey: 'parcelContent', header: 'Parcel Content' },
       {
@@ -366,40 +414,12 @@ export function ParcelProcessedConsignmentPage() {
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="outline" className="h-8 w-8">
-                <EllipsisVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => {
-                  const parcel = row.original;
-                  const destinationName =
-                    parcel.destinationName ?? branchNameById.get(parcel.destinationId) ?? '-';
-                  setReprintData(toReceiptPrintData(parcel, destinationName));
-                }}
-              >
-                Reprint
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  const parcel = row.original;
-                  setEditingParcel(parcel);
-                  setEditDestinationId(parcel.destinationId);
-                  setEditSourceLocationId(parcel.sourceLocationId ?? userLocationId ?? '');
-                  setEditPickupLocationId(parcel.pickupLocationId ?? '');
-                  setEditSenderPhone(parcel.senderPhone ?? '');
-                  setEditSenderPhone2(parcel.senderPhone2 ?? '');
-                  setEditReceiverPhone(parcel.receiverPhone ?? '');
-                  setEditReceiverPhone2(parcel.receiverPhone2 ?? '');
-                }}
-              >
-                Edit
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ParcelReprintActions
+            parcel={row.original}
+            onEdit={startEditingParcel}
+            onReprintReceipt={(parcel) => queueReprint(parcel, 'invoice')}
+            onReprintSticker={(parcel, copies) => queueReprint(parcel, 'sticker', copies)}
+          />
         ),
       },
     ],
@@ -410,6 +430,9 @@ export function ParcelProcessedConsignmentPage() {
       selectedIds,
       lockedDestinationId,
       branchNameById,
+      queueReprint,
+      startEditingParcel,
+      toggleRowSelection,
       toggleSelectAllEligible,
     ],
   );
@@ -459,15 +482,8 @@ export function ParcelProcessedConsignmentPage() {
         parcelIds,
       }).unwrap();
 
-      const sourceBranchName = (appliedSourceId && branchNameById.get(appliedSourceId)) ?? '-';
-      const destinationBranchName = branchNameById.get(lockedDestinationId) ?? '-';
-      const createdByLabel = user?.id ?? 'SYSTEM';
-      printConsignmentSlip({
+      setConsignmentPrintPayload({
         consignmentCode: created.code,
-        consignmentDate: `${getTodayDateOnlyLocal()}T00:00:00.000Z`,
-        sourceBranchName,
-        destinationBranchName,
-        createdByLabel,
         items: selectedParcels,
       });
 
@@ -517,17 +533,33 @@ export function ParcelProcessedConsignmentPage() {
 
   const handleSaveEdit = async () => {
     if (!editingParcel) return;
-    const senderPhone = editSenderPhone.trim();
-    const senderPhone2 = editSenderPhone2.trim();
-    const receiverPhone = editReceiverPhone.trim();
-    const receiverPhone2 = editReceiverPhone2.trim();
+    const senderPhone = normalizePhoneDigits(editSenderPhone);
+    const senderPhone2 = normalizePhoneDigits(editSenderPhone2);
+    const receiverPhone = normalizePhoneDigits(editReceiverPhone);
+    const receiverPhone2 = normalizePhoneDigits(editReceiverPhone2);
 
     if (!senderPhone) {
       toast.error('Sender telephone is required');
       return;
     }
+    if (!isTenDigitPhone(senderPhone)) {
+      toast.error(phoneLengthMessage('Sender telephone'));
+      return;
+    }
+    if (!isOptionalTenDigitPhone(senderPhone2)) {
+      toast.error(phoneLengthMessage('Sender telephone 2'));
+      return;
+    }
     if (!receiverPhone) {
       toast.error('Receiver telephone is required');
+      return;
+    }
+    if (!isTenDigitPhone(receiverPhone)) {
+      toast.error(phoneLengthMessage('Receiver telephone'));
+      return;
+    }
+    if (!isOptionalTenDigitPhone(receiverPhone2)) {
+      toast.error(phoneLengthMessage('Receiver telephone 2'));
       return;
     }
 
@@ -580,12 +612,17 @@ export function ParcelProcessedConsignmentPage() {
       <ScrollableWrapper>
         <Card>
           <CardHeader>
-            <CardTitle>Processed Parcels for Consignment</CardTitle>
-            <CardDescription>
-              {isHeadOffice
-                ? 'Filter by agency branch, destination branch, and optionally destination location.'
-                : 'Use destination filters and create one consignment per destination branch.'}
-            </CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>Processed Parcels for Consignment</CardTitle>
+                <CardDescription>
+                  {isHeadOffice
+                    ? 'Filter by agency branch, destination branch, and optionally destination location.'
+                    : 'Use destination filters and create one consignment per destination branch.'}
+                </CardDescription>
+              </div>
+              <PaymentStatusLegend />
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div
@@ -775,10 +812,16 @@ export function ParcelProcessedConsignmentPage() {
         <ParcelReceiptActions
           data={reprintData}
           autoPrint
+          autoPrintSelection={reprintSelection}
+          stickerCopies={reprintStickerCopies}
           mode="reprint"
           onAutoPrintComplete={() => setReprintData(null)}
         />
       ) : null}
+      <ConsignmentPrintController
+        payload={consignmentPrintPayload}
+        onPrinted={() => setConsignmentPrintPayload(null)}
+      />
     </div>
   );
 }

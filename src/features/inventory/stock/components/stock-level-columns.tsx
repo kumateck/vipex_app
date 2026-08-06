@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { formatDateTime } from '@/lib/date';
+import { formatDateTime } from '@/lib/dates';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
 import type { StockLevel } from '../types/inventory-stock.types';
@@ -21,12 +21,13 @@ export function createStockLevelColumns(
 ): ColumnDef<StockLevel>[] {
   return [
     {
-      accessorFn: (row) => productNameById?.get(row.productId) ?? 'Unknown product',
+      accessorFn: (row) => productNameById?.get(row.productId) ?? row.productName ?? row.productId,
       id: 'productName',
       header: 'Product',
     },
     {
-      accessorFn: (row) => locationNameById?.get(row.locationId) ?? 'Unknown location',
+      accessorFn: (row) =>
+        locationNameById?.get(row.locationId) ?? row.locationName ?? row.locationId,
       id: 'locationName',
       header: 'Location',
     },

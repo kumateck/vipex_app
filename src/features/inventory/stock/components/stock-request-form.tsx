@@ -1,12 +1,12 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2 } from 'lucide-react';
+import { BranchType, StockRequestType } from '@/db/schemas/enums';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   Select,
   SelectContent,
@@ -18,13 +18,18 @@ import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
-import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
-import { UNIT_OF_MEASURE_OPTIONS } from '@/features/inventory/products/components/inventory-product-columns';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { convertToBaseUnits } from '@/shared/inventory/unit-conversion';
 import {
   createStockRequestSchema,
   type CreateStockRequestFormValues,
 } from '../schemas/stock-forms.schema';
+import {
+  getRequestedToLocations,
+  getRequesterLocations,
+  toLocationOption,
+} from './stock-request-form/stock-request-form-helpers';
+import { StockRequestLinesTable } from './stock-request-form/stock-request-lines-table';
 
 interface StockRequestFormProps {
   onSubmit: (data: CreateStockRequestFormValues) => Promise<void>;
@@ -33,20 +38,18 @@ interface StockRequestFormProps {
 
 export function StockRequestForm({ onSubmit, isSubmitting }: StockRequestFormProps) {
   const navigate = useNavigate();
-  const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
+  const user = useAuthStore((state) => state.user);
+  const companyId = user?.company?.id ?? null;
+  const userBranchId = user?.branch?.id ?? null;
+  const isHeadOffice = user?.branch?.type === BranchType.HEADOFFICE;
 
-  const { data: productsData, isLoading: isLoadingProducts } = useListInventoryProductsQuery(
-    {
-      page: 1,
-      pageSize: 500,
-      filters: { companyId },
-    },
+  const { data: products = [], isLoading: isLoadingProducts } = useListInventoryProductOptionsQuery(
+    { companyId },
     { skip: !companyId },
   );
   const { data: locations = [], isLoading: isLoadingLocations } =
     useListInventoryLocationOptionsQuery({ companyId }, { skip: !companyId });
 
-  const products = productsData?.data ?? [];
   const productById = useMemo(
     () => new Map(products.map((product) => [product.id, product] as const)),
     [products],
@@ -57,12 +60,14 @@ export function StockRequestForm({ onSubmit, isSubmitting }: StockRequestFormPro
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<CreateStockRequestFormValues>({
     resolver: zodResolver(createStockRequestSchema),
     defaultValues: {
       requesterLocationId: '',
       requestedToLocationId: '',
+      requestType: StockRequestType.INTER_BRANCH,
       notes: '',
       submit: true,
       lines: [
@@ -83,6 +88,56 @@ export function StockRequestForm({ onSubmit, isSubmitting }: StockRequestFormPro
   });
 
   const lineValues = watch('lines');
+  const requestType = watch('requestType') as StockRequestType;
+  const requesterLocationId = watch('requesterLocationId');
+
+  const requesterLocationOptions = useMemo(
+    () =>
+      getRequesterLocations({
+        locations,
+        requestType,
+        isHeadOffice,
+        userBranchId,
+      }).map(toLocationOption),
+    [locations, requestType, isHeadOffice, userBranchId],
+  );
+
+  const requestedToLocationOptions = useMemo(
+    () =>
+      getRequestedToLocations({
+        locations,
+        requestType,
+        requesterLocationId,
+        isHeadOffice,
+        userBranchId,
+      }).map(toLocationOption),
+    [locations, requestType, requesterLocationId, isHeadOffice, userBranchId],
+  );
+
+  useEffect(() => {
+    if (requesterLocationOptions.length === 1 && !requesterLocationId) {
+      setValue('requesterLocationId', requesterLocationOptions[0]?.value ?? '');
+    }
+  }, [requesterLocationId, requesterLocationOptions, setValue]);
+
+  useEffect(() => {
+    if (
+      requesterLocationId &&
+      !requesterLocationOptions.some((option) => option.value === requesterLocationId)
+    ) {
+      setValue('requesterLocationId', '');
+    }
+  }, [requesterLocationId, requesterLocationOptions, setValue]);
+
+  const requestedToLocationId = watch('requestedToLocationId') ?? '';
+  useEffect(() => {
+    if (
+      requestedToLocationId &&
+      !requestedToLocationOptions.some((option) => option.value === requestedToLocationId)
+    ) {
+      setValue('requestedToLocationId', '');
+    }
+  }, [requestedToLocationId, requestedToLocationOptions, setValue]);
 
   const submit = async (values: CreateStockRequestFormValues) => {
     const nextLines = values.lines.map((line) => {
@@ -110,6 +165,7 @@ export function StockRequestForm({ onSubmit, isSubmitting }: StockRequestFormPro
     await onSubmit({
       requesterLocationId: values.requesterLocationId,
       requestedToLocationId: values.requestedToLocationId,
+      requestType: values.requestType,
       notes: values.notes,
       submit: values.submit,
       lines: nextLines,
@@ -117,7 +173,7 @@ export function StockRequestForm({ onSubmit, isSubmitting }: StockRequestFormPro
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto p-4">
+    <div className="w-full p-4">
       <Card>
         <CardHeader>
           <CardTitle>Create stock request</CardTitle>
@@ -125,219 +181,86 @@ export function StockRequestForm({ onSubmit, isSubmitting }: StockRequestFormPro
         <CardContent>
           <form onSubmit={handleSubmit(submit)} className="space-y-4">
             <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="requesterLocationId">Requester location</FieldLabel>
-                <Controller
-                  control={control}
-                  name="requesterLocationId"
-                  render={({ field }) => (
-                    <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                      <SelectTrigger
-                        id="requesterLocationId"
-                        aria-invalid={!!errors.requesterLocationId}
-                        disabled={isLoadingLocations}
+              <div className="grid gap-4 lg:grid-cols-3">
+                <Field>
+                  <FieldLabel htmlFor="requestType">Request type</FieldLabel>
+                  <Controller
+                    control={control}
+                    name="requestType"
+                    render={({ field }) => (
+                      <Select
+                        value={String(field.value ?? StockRequestType.INTER_BRANCH)}
+                        onValueChange={(value) => field.onChange(Number(value))}
                       >
-                        <SelectValue
-                          placeholder={
-                            isLoadingLocations
-                              ? 'Loading locations...'
-                              : 'Select requester location'
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
+                        <SelectTrigger id="requestType">
+                          <SelectValue placeholder="Select request type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={String(StockRequestType.INTER_BRANCH)}>
+                            Inter branch
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.requesterLocationId?.message ? (
-                  <p className="text-sm text-destructive">{errors.requesterLocationId.message}</p>
-                ) : null}
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="requestedToLocationId">
-                  Requested to location (optional)
-                </FieldLabel>
-                <Controller
-                  control={control}
-                  name="requestedToLocationId"
-                  render={({ field }) => (
-                    <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                      <SelectTrigger
-                        id="requestedToLocationId"
-                        aria-invalid={!!errors.requestedToLocationId}
-                        disabled={isLoadingLocations}
-                      >
-                        <SelectValue
-                          placeholder={
-                            isLoadingLocations ? 'Loading locations...' : 'Select target location'
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
+                          <SelectItem value={String(StockRequestType.INTRA_BRANCH)}>
+                            Intra branch
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </Field>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </Field>
 
-              {fields.map((field, index) => {
-                const selectedProductId = lineValues?.[index]?.productId ?? '';
-                const selectedProduct = productById.get(selectedProductId);
-                const unitOptions = (
-                  selectedProduct?.unitConversions ?? [
-                    {
-                      unitOfMeasure: selectedProduct?.unitOfMeasure ?? 0,
-                      factorToBase: '1',
-                    },
-                  ]
-                )
-                  .map((item) =>
-                    UNIT_OF_MEASURE_OPTIONS.find((option) => option.value === item.unitOfMeasure),
-                  )
-                  .filter((item): item is (typeof UNIT_OF_MEASURE_OPTIONS)[number] =>
-                    Boolean(item),
-                  );
-
-                return (
-                  <div key={field.id} className="rounded-md border p-3 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">Line {index + 1}</p>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => remove(index)}
-                        disabled={fields.length <= 1}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Remove
-                      </Button>
-                    </div>
-                    <Field>
-                      <FieldLabel htmlFor={`lines.${index}.productId`}>Product</FieldLabel>
-                      <Controller
-                        control={control}
-                        name={`lines.${index}.productId`}
-                        render={({ field: lineField }) => (
-                          <Select value={lineField.value ?? ''} onValueChange={lineField.onChange}>
-                            <SelectTrigger
-                              id={`lines.${index}.productId`}
-                              aria-invalid={!!errors.lines?.[index]?.productId}
-                              disabled={isLoadingProducts}
-                            >
-                              <SelectValue
-                                placeholder={
-                                  isLoadingProducts ? 'Loading products...' : 'Select product'
-                                }
-                              />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {products.map((product) => (
-                                <SelectItem key={product.id} value={product.id}>
-                                  {product.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
+                <Field>
+                  <FieldLabel htmlFor="requesterLocationId">Requester location</FieldLabel>
+                  <Controller
+                    control={control}
+                    name="requesterLocationId"
+                    render={({ field }) => (
+                      <SearchableSelect
+                        options={requesterLocationOptions}
+                        value={field.value ?? ''}
+                        onValueChange={field.onChange}
+                        placeholder={
+                          isLoadingLocations ? 'Loading locations...' : 'Select location'
+                        }
+                        disabled={isLoadingLocations}
+                        isLoading={isLoadingLocations}
                       />
-                      {errors.lines?.[index]?.productId?.message ? (
-                        <p className="text-sm text-destructive">
-                          {errors.lines[index]?.productId?.message}
-                        </p>
-                      ) : null}
-                    </Field>
+                    )}
+                  />
+                  {errors.requesterLocationId?.message ? (
+                    <p className="text-sm text-destructive">{errors.requesterLocationId.message}</p>
+                  ) : null}
+                </Field>
 
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <Field>
-                        <FieldLabel htmlFor={`lines.${index}.requestedQuantity`}>
-                          Requested quantity
-                        </FieldLabel>
-                        <Input
-                          id={`lines.${index}.requestedQuantity`}
-                          placeholder="e.g. 5"
-                          aria-invalid={!!errors.lines?.[index]?.requestedQuantity}
-                          {...register(`lines.${index}.requestedQuantity`)}
-                        />
-                        {errors.lines?.[index]?.requestedQuantity?.message ? (
-                          <p className="text-sm text-destructive">
-                            {errors.lines[index]?.requestedQuantity?.message}
-                          </p>
-                        ) : null}
-                      </Field>
-
-                      <Field>
-                        <FieldLabel htmlFor={`lines.${index}.quantityUnitOfMeasure`}>
-                          Unit
-                        </FieldLabel>
-                        <Controller
-                          control={control}
-                          name={`lines.${index}.quantityUnitOfMeasure`}
-                          render={({ field: lineField }) => (
-                            <Select
-                              value={String(lineField.value ?? selectedProduct?.unitOfMeasure ?? 0)}
-                              onValueChange={(value) => lineField.onChange(Number(value))}
-                            >
-                              <SelectTrigger id={`lines.${index}.quantityUnitOfMeasure`}>
-                                <SelectValue placeholder="Select unit" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {unitOptions.map((option) => (
-                                  <SelectItem key={option.value} value={String(option.value)}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                      </Field>
-                    </div>
-
-                    <Field>
-                      <FieldLabel htmlFor={`lines.${index}.notes`}>
-                        Line notes (optional)
-                      </FieldLabel>
-                      <Textarea
-                        id={`lines.${index}.notes`}
-                        placeholder="Optional"
-                        aria-invalid={!!errors.lines?.[index]?.notes}
-                        {...register(`lines.${index}.notes`)}
+                <Field>
+                  <FieldLabel htmlFor="requestedToLocationId">Requested to location</FieldLabel>
+                  <Controller
+                    control={control}
+                    name="requestedToLocationId"
+                    render={({ field }) => (
+                      <SearchableSelect
+                        options={requestedToLocationOptions}
+                        value={field.value ?? ''}
+                        onValueChange={field.onChange}
+                        placeholder={isLoadingLocations ? 'Loading locations...' : 'Select source'}
+                        disabled={isLoadingLocations}
+                        isLoading={isLoadingLocations}
                       />
-                    </Field>
-                  </div>
-                );
-              })}
-
-              <div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    append({
-                      productId: '',
-                      quantityUnitOfMeasure: 0,
-                      requestedQuantity: '',
-                      notes: '',
-                    })
-                  }
-                >
-                  <Plus className="h-4 w-4" />
-                  Add line
-                </Button>
+                    )}
+                  />
+                </Field>
               </div>
+
+              <StockRequestLinesTable
+                control={control}
+                errors={errors}
+                fields={fields}
+                lineValues={lineValues}
+                products={products}
+                productById={productById}
+                isLoadingProducts={isLoadingProducts}
+                append={append}
+                remove={remove}
+              />
 
               <Field>
                 <FieldLabel htmlFor="notes">Notes (optional)</FieldLabel>

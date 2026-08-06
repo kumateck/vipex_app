@@ -1,3 +1,5 @@
+import { getPrintRuntime, printViaDesktop } from '@/features/printing';
+
 export type PrintableReportSection = {
   heading: string;
   headers: string[];
@@ -26,13 +28,14 @@ export function downloadCsv(filename: string, rows: string[][]) {
   window.URL.revokeObjectURL(url);
 }
 
-export function printHtml(title: string, sections: PrintableReportSection[]) {
+export async function printHtml(title: string, sections: PrintableReportSection[]) {
   if (typeof window === 'undefined') return;
   const html = `<!doctype html>
 <html>
   <head>
     <title>${title}</title>
     <style>
+      @page { size: A4 portrait; margin: 12mm; }
       body { font-family: Arial, sans-serif; padding: 24px; color: #111827; }
       h1 { margin-bottom: 24px; }
       h2 { margin-top: 32px; margin-bottom: 12px; }
@@ -61,6 +64,11 @@ export function printHtml(title: string, sections: PrintableReportSection[]) {
       .join('')}
   </body>
 </html>`;
+
+  if (getPrintRuntime() === 'desktop') {
+    const result = await printViaDesktop({ html, layout: 'report-a4', title });
+    if (result.ok) return;
+  }
 
   const printWindow = window.open('', '_blank', 'noopener,noreferrer');
   if (!printWindow) return;

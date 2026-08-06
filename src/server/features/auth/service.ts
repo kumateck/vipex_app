@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { hashPassword, verifyPassword } from '../../utils/password';
 import { signAccessToken } from '../../utils/jwt';
 import {
@@ -19,6 +18,8 @@ import { sendPasswordResetEmail } from '@/server/services/mail/templates/passwor
 import { UserStatus } from '@/db/schemas/enums';
 import { HttpError } from '@/server/utils/http-error';
 import { HttpStatus } from '@/server/utils/http-status';
+import { logger } from '@/server/utils/logger';
+import { generateOpaqueToken, generateOtpCode, hashOtp, sha256HexAsync } from '@/server/utils/otp';
 import {
   clearUserResetTokenRepo,
   findUserByEmailAndResetTokenRepo,
@@ -26,28 +27,12 @@ import {
   setUserResetTokenRepo,
 } from './repository.tokens';
 
-async function sha256HexAsync(input: string): Promise<string> {
-  const enc = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-function generateOpaqueToken(bytes = 32): string {
-  return randomBytes(bytes).toString('hex'); // 64 hex chars
-}
-
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-function generateOtpCode() {
-  return `${Math.floor(100000 + Math.random() * 900000)}`;
-}
-
 async function hashEmailOtp(email: string, otp: string) {
-  return sha256HexAsync(`${normalizeEmail(email)}:${otp.trim()}`);
+  return hashOtp(normalizeEmail(email), otp);
 }
 
 export async function loginSvc(email: string, password: string, ua?: string, ip?: string) {
@@ -184,21 +169,33 @@ export async function logoutSvc(refreshToken: string) {
 
 export async function forgotPasswordSvc(email: string) {
   const normalizedEmail = normalizeEmail(email);
+  logger.info('[AUTH_FORGOT] request received', { email: normalizedEmail });
   const user = await getUserByEmailRepo(normalizedEmail);
 
   // Always respond success to avoid user enumeration
-  if (!user) return;
+  if (!user) {
+    logger.info('[AUTH_FORGOT] user not found, skipping email send', { email: normalizedEmail });
+    return;
+  }
 
   const otp = generateOtpCode();
   const tokenHash = await hashEmailOtp(normalizedEmail, otp);
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
   await setUserResetTokenRepo({ userId: user.id, tokenHash, expiresAt });
+  logger.info('[AUTH_FORGOT] reset token stored', { userId: user.id, email: normalizedEmail });
 
   try {
+    logger.info('[AUTH_FORGOT] attempting email send', { userId: user.id, to: user.email });
     await sendPasswordResetEmail(user.email, otp);
+    logger.info('[AUTH_FORGOT] email send completed', { userId: user.id, to: user.email });
   } catch (err) {
     // Do not leak details to the client; log for operators
     console.error('Failed to send password reset email:', err);
+    logger.error('[AUTH_FORGOT] email send failed', {
+      userId: user.id,
+      to: user.email,
+      error: err instanceof Error ? err.message : String(err),
+    });
     // You can also capture with Sentry here if desired
     // Sentry.captureException(err);
   }

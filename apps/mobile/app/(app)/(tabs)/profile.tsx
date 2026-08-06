@@ -1,17 +1,16 @@
 import { useState } from 'react';
-import { router } from 'expo-router';
+import { router } from '@mobile/navigation/router-compat';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
 import type { AppearanceMode } from '@mobile/lib/storage';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { AppButton, AppCard, AppPageHeader } from '@/components/ui/mobile';
-import { StatCard } from '@mobile/components/courier';
 import {
   runNetworkDiagnostics,
   type NetworkDiagnosticsResult,
 } from '@mobile/lib/network-diagnostics';
-import { mobileRadius, mobileSpacing, mobileTypography } from '@mobile/theme/layout';
+import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import { UserType } from '@mobile/constants/user-types';
 
 export default function ProfileTabScreen() {
@@ -48,21 +47,18 @@ export default function ProfileTabScreen() {
     }
   }
 
+  const accountRows: Array<[string, string]> = [
+    ['Name', session.user?.fullname ?? '-'],
+    ['Email', session.user?.email ?? '-'],
+    ['User Type', userType],
+    ['Role', session.user?.role?.name ?? '-'],
+    ['Branch', session.user?.branch?.name ?? '-'],
+    ['Location', locationLabel],
+  ];
+
   return (
     <AppScreen>
-      <AppPageHeader title="Settings" subtitle="Account details and app preferences" />
-
-      <AppCard>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Account Snapshot</Text>
-        <View style={styles.statsGrid}>
-          <StatCard label="User Type" value={userType} />
-          <StatCard label="Role" value={session.user?.role?.name ?? '-'} />
-          <StatCard label="Name" value={session.user?.fullname ?? '-'} />
-          <StatCard label="Branch" value={session.user?.branch?.name ?? '-'} />
-          <StatCard label="Location" value={locationLabel} />
-          <StatCard label="Email" value={session.user?.email ?? '-'} />
-        </View>
-      </AppCard>
+      <AppPageHeader title="Profile" />
 
       <AppCard>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Appearance</Text>
@@ -75,7 +71,6 @@ export default function ProfileTabScreen() {
                 style={[
                   styles.modeChip,
                   {
-                    borderColor: selected ? theme.colors.primary : theme.colors.border,
                     backgroundColor: selected ? theme.colors.primary : theme.colors.cardMuted,
                   },
                 ]}
@@ -98,24 +93,14 @@ export default function ProfileTabScreen() {
 
       <AppCard>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Account</Text>
-        <Text style={[styles.metaRow, { color: theme.colors.textMuted }]}>
-          Name: {session.user?.fullname ?? '-'}
-        </Text>
-        <Text style={[styles.metaRow, { color: theme.colors.textMuted }]}>
-          Email: {session.user?.email ?? '-'}
-        </Text>
-        <Text style={[styles.metaRow, { color: theme.colors.textMuted }]}>
-          User Type: {userType}
-        </Text>
-        <Text style={[styles.metaRow, { color: theme.colors.textMuted }]}>
-          Role: {session.user?.role?.name ?? '-'}
-        </Text>
-        <Text style={[styles.metaRow, { color: theme.colors.textMuted }]}>
-          Branch: {session.user?.branch?.name ?? '-'}
-        </Text>
-        <Text style={[styles.metaRow, { color: theme.colors.textMuted }]}>
-          Location: {locationLabel}
-        </Text>
+        <View style={styles.metaList}>
+          {accountRows.map(([label, value]) => (
+            <View key={label} style={[styles.metaRow, { borderTopColor: theme.colors.separator }]}>
+              <Text style={[styles.metaLabel, { color: theme.colors.textSubtle }]}>{label}</Text>
+              <Text style={[styles.metaValue, { color: theme.colors.text }]}>{value}</Text>
+            </View>
+          ))}
+        </View>
       </AppCard>
 
       <AppCard>
@@ -131,9 +116,10 @@ export default function ProfileTabScreen() {
       <AppCard>
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Network Diagnostics</Text>
         <AppButton
-          title={diagnosticsLoading ? 'Running diagnostics...' : 'Run Network Diagnostics'}
+          title="Run Network Diagnostics"
           onPress={() => void handleRunDiagnostics()}
           disabled={diagnosticsLoading}
+          loading={diagnosticsLoading}
           variant="secondary"
         />
         {diagnosticsError ? (
@@ -201,17 +187,23 @@ export default function ProfileTabScreen() {
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: { fontSize: mobileTypography.sectionTitle, fontWeight: '700' },
-  statsGrid: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
-  metaRow: { lineHeight: 19 },
+  sectionTitle: { ...mobileTextStyles.headline },
+  metaList: { marginTop: -mobileSpacing.xs },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: mobileSpacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  metaLabel: { ...mobileTextStyles.subhead },
+  metaValue: { ...mobileTextStyles.subhead, fontWeight: '600' },
   modeRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },
   modeChip: {
-    borderWidth: 1,
     borderRadius: mobileRadius.pill,
     paddingVertical: mobileSpacing.sm,
     paddingHorizontal: mobileSpacing.md,
   },
   diagnosticList: { gap: 4, marginTop: mobileSpacing.sm },
-  debugTitle: { fontSize: mobileTypography.caption, fontWeight: '700' },
-  debugText: { fontSize: mobileTypography.caption },
+  debugTitle: { ...mobileTextStyles.caption1, fontWeight: '700' },
+  debugText: { ...mobileTextStyles.caption1 },
 });

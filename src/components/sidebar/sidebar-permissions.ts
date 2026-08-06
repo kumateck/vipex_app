@@ -1,5 +1,8 @@
 import { AccountingSetupPermissionKeys, PermissionKeys } from '@/shared/permissions/constants';
-import { inferRequiredPermissionByPath } from '@/shared/permissions/path-access';
+import {
+  hasRequiredPermissionForPath,
+  inferRequiredPermissionByPath,
+} from '@/shared/permissions/path-access';
 import { inferRequiredModuleByPath } from '@/shared/company-modules/route-modules';
 import { ROUTES, type MenuItem } from './navigation';
 
@@ -43,9 +46,10 @@ function canRenderSidebarNode(node: SidebarNode, allowedPermissions: Set<string>
     );
     return hasLegacySetupAccess || hasGranularSetupAccess;
   }
-  const effectivePermissionKey = node.permissionKey ?? inferRequiredPermissionByPath(node.url);
-  if (!effectivePermissionKey) return true;
-  return allowedPermissions.has(effectivePermissionKey);
+  const inferredPermissionKey = inferRequiredPermissionByPath(node.url);
+  if (inferredPermissionKey) return hasRequiredPermissionForPath(node.url, allowedPermissions);
+  if (!node.permissionKey) return true;
+  return allowedPermissions.has(node.permissionKey);
 }
 
 function filterSidebarTreeByPermissions(
@@ -68,7 +72,6 @@ function filterSidebarTreeByPermissions(
     (node.children?.length ?? 0) > 0 || (node.items?.length ?? 0) > 0,
   );
 
-  if (isContainerNode && !node.url && node.permissionKey && !isDirectlyVisible) return null;
   if (!isDirectlyVisible && !hasVisibleDescendant) return null;
   if (isContainerNode && !hasVisibleDescendant) return null;
   if (!node.url && !hasVisibleDescendant) return null;

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PaymentMethod } from '@/db/schemas/enums';
 import type { ParcelSearchRow } from '../../api/parcel.api';
-import type { ReceiptPrintData } from '../parcel-receipt-actions';
+import type { ReceiptPrintData } from '../parcel-receipt.types';
 import type { CardMode, HandoverTarget } from './receiver-cashier-types';
 
 export function useReceiverCashierDialogState() {
@@ -27,6 +27,26 @@ export function useReceiverCashierDialogState() {
   const [secondNewName, setSecondNewName] = useState('');
   const [secondNewPhone, setSecondNewPhone] = useState('');
 
+  const [momoTransactionId, setMomoTransactionId] = useState('');
+
+  const [otpSentAt, setOtpSentAt] = useState<string | null>(null);
+  const [otpExpiresAt, setOtpExpiresAt] = useState<string | null>(null);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpVerificationToken, setOtpVerificationToken] = useState('');
+  const [otpRequestPending, setOtpRequestPending] = useState(false);
+  const [otpVerifyPending, setOtpVerifyPending] = useState(false);
+
+  const resetOtpState = () => {
+    setOtpSentAt(null);
+    setOtpExpiresAt(null);
+    setOtpCode('');
+    setOtpVerified(false);
+    setOtpVerificationToken('');
+    setOtpRequestPending(false);
+    setOtpVerifyPending(false);
+  };
+
   const openParcelDialog = (parcel: ParcelSearchRow) => {
     setSelectedParcel(parcel);
     setHandoverTarget(parcel.secondReceiverId ? 'second' : 'main');
@@ -46,6 +66,18 @@ export function useReceiverCashierDialogState() {
     setSecondNewCardNumber('');
     setSecondNewName('');
     setSecondNewPhone('');
+    setMomoTransactionId('');
+    resetOtpState();
+  };
+
+  const setHandoverTargetAndResetOtp = (target: HandoverTarget) => {
+    setHandoverTarget(target);
+    resetOtpState();
+  };
+
+  const setPaymentMethodAndResetMomo = (method: string) => {
+    setPaymentMethod(method);
+    setMomoTransactionId('');
   };
 
   return {
@@ -53,11 +85,13 @@ export function useReceiverCashierDialogState() {
     setSelectedParcel,
     openParcelDialog,
     handoverTarget,
-    setHandoverTarget,
+    setHandoverTarget: setHandoverTargetAndResetOtp,
     pickerStaffId,
     setPickerStaffId,
     paymentMethod,
-    setPaymentMethod,
+    setPaymentMethod: setPaymentMethodAndResetMomo,
+    momoTransactionId,
+    setMomoTransactionId,
     paymentAmount,
     setPaymentAmount,
     storagePaymentAmount,
@@ -88,5 +122,20 @@ export function useReceiverCashierDialogState() {
     setSecondNewName,
     secondNewPhone,
     setSecondNewPhone,
+    otpSentAt,
+    otpExpiresAt,
+    otpCode,
+    setOtpCode,
+    otpVerified,
+    otpVerificationToken,
+    otpRequestPending,
+    otpVerifyPending,
+    setOtpSentAt,
+    setOtpExpiresAt,
+    setOtpVerified,
+    setOtpVerificationToken,
+    setOtpRequestPending,
+    setOtpVerifyPending,
+    resetOtpState,
   };
 }

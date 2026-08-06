@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { useGetBranchQuery } from '@/features/branches/api/branches.api';
+import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { useAuthStore } from '@/stores/auth-store';
 import {
@@ -23,16 +23,15 @@ export function ParcelPickupQueuePage() {
   const navigate = useNavigate();
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
-  const { data: currentBranch } = useGetBranchQuery(branchId ?? '', {
+  const { data: currentBranch } = useGetBranchOperationsSettingsQuery(branchId ?? '', {
     skip: !branchId,
-    refetchOnMountOrArgChange: true,
-    pollingInterval: 5000,
   });
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
 
   const [searchInput, setSearchInput] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedParcel, setSelectedParcel] = useState<ParcelSearchRow | null>(null);
+  const [sendSms, setSendSms] = useState(true);
 
   const [createPickupQueue, { isLoading: isCreatingQueue }] = useCreatePickupQueueMutation();
   const [searchParcels, { data: searchResults, isLoading: isSearching }] =
@@ -83,11 +82,16 @@ export function ParcelPickupQueuePage() {
 
     const queue = await createPickupQueue({
       parcelId: selectedParcel.id,
+      sendSms,
     }).unwrap();
 
     await refetchParcelDetails();
-    toast.success(`Queue number ${queue.queueCode} generated`);
-  }, [createPickupQueue, refetchParcelDetails, selectedParcel]);
+    toast.success(
+      sendSms
+        ? `Queue number ${queue.queueCode} generated. ${queue.smsSent ? 'SMS sent to receiver.' : 'SMS could not be sent.'}`
+        : `Queue number ${queue.queueCode} generated`,
+    );
+  }, [createPickupQueue, refetchParcelDetails, selectedParcel, sendSms]);
 
   return (
     <div className="w-full space-y-4 p-4">
@@ -147,6 +151,8 @@ export function ParcelPickupQueuePage() {
         parcelDetails={parcelDetails}
         isPickupQueueEnabled={isPickupQueueEnabled}
         isCreatingQueue={isCreatingQueue}
+        sendSms={sendSms}
+        onSendSmsChange={setSendSms}
         onClose={() => setSelectedParcel(null)}
         onGenerateQueueTicket={() => void handleGenerateQueueTicket()}
       />

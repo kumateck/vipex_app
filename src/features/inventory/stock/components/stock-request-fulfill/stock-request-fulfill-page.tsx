@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
@@ -21,7 +21,7 @@ import {
   useGetStockRequestQuery,
 } from '@/features/inventory/api';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
-import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { UNIT_OF_MEASURE_OPTIONS } from '@/features/inventory/products/components/inventory-product-columns';
 import { formatBaseQuantityWithBestUnits } from '@/shared/inventory/quantity-display';
 import { convertToBaseUnits } from '@/shared/inventory/unit-conversion';
@@ -32,6 +32,7 @@ import {
   type FulfillStockRequestLineFormValues,
 } from '../../schemas/stock-forms.schema';
 import { useAuthStore } from '@/stores/auth-store';
+import { StockRequestAllocationCandidatesTable } from './stock-request-allocation-candidates-table';
 
 export function StockRequestFulfillPage() {
   const navigate = useNavigate();
@@ -46,18 +47,16 @@ export function StockRequestFulfillPage() {
     { companyId },
     { skip: !companyId },
   );
-  const { data: productsData } = useListInventoryProductsQuery({
-    page: 1,
-    pageSize: 500,
-    filters: { companyId },
-  });
+  const { data: products = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
   const { onSubmit, isSubmitting } = useFulfillStockRequestLineAction(requestId);
   const { data: allocation } = useGetStockRequestLineAllocationQuery(
     { requestId, lineId },
     { skip: !requestId || !lineId },
   );
 
-  const products = productsData?.data ?? [];
   const productById = useMemo(
     () => new Map(products.map((product) => [product.id, product] as const)),
     [products],
@@ -87,6 +86,7 @@ export function StockRequestFulfillPage() {
     control,
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<FulfillStockRequestLineFormValues>({
     resolver: zodResolver(fulfillStockRequestLineSchema),
@@ -99,6 +99,8 @@ export function StockRequestFulfillPage() {
     },
     mode: 'onSubmit',
   });
+  const enteredQuantity = watch('fulfillQuantity');
+  const selectedUnit = watch('fulfillQuantityUnitOfMeasure');
 
   if (isLoading) {
     return (
@@ -113,13 +115,15 @@ export function StockRequestFulfillPage() {
   if (error || !request || !line) {
     return (
       <ScrollableWrapper>
-        <StockLoadError
-          message="Failed to load stock request line"
-          onBack={() => navigate(`/inventory/stock-requests/view/${requestId}`)}
-        />
+        <StockLoadError message="Failed to load stock request line" onBack={() => navigate(-1)} />
       </ScrollableWrapper>
     );
   }
+
+  const sourceLocationId = request.requestedToLocationId ?? '';
+  const sourceLocationName = sourceLocationId
+    ? (locationNameById.get(sourceLocationId) ?? sourceLocationId)
+    : '-';
 
   const submit = async (values: FulfillStockRequestLineFormValues) => {
     const sourceUnit = values.fulfillQuantityUnitOfMeasure ?? product?.unitOfMeasure ?? 0;
@@ -128,13 +132,34 @@ export function StockRequestFulfillPage() {
       sourceUnit,
       conversions,
     );
+    const selectedCandidate = allocation?.candidates?.find(
+      (candidate) => candidate.locationId === sourceLocationId,
+    );
+    const availableAtSource = Number(selectedCandidate?.availableQuantity ?? 0);
+    const maxFulfillableNow = Math.max(0, Math.min(remaining, availableAtSource));
+    if (fulfillBase > maxFulfillableNow) return;
+
     await onSubmit({
       lineId: values.lineId,
-      fromLocationId: values.fromLocationId,
+      fromLocationId: sourceLocationId,
       fulfillQuantity: String(fulfillBase),
       notes: values.notes,
     });
   };
+  const selectedCandidate = (allocation?.candidates ?? []).find(
+    (candidate) => candidate.locationId === sourceLocationId,
+  );
+  const availableAtSource = Number(selectedCandidate?.availableQuantity ?? 0);
+  const maxFulfillableNow = Math.max(0, Math.min(remaining, availableAtSource));
+  const sourceUnitForPreview = selectedUnit ?? product?.unitOfMeasure ?? 0;
+  const enteredBase = enteredQuantity
+    ? convertToBaseUnits(
+        Number.parseFloat(enteredQuantity || '0'),
+        sourceUnitForPreview,
+        conversions,
+      )
+    : 0;
+  const exceedsAvailable = enteredBase > maxFulfillableNow;
 
   return (
     <ScrollableWrapper>
@@ -172,58 +197,19 @@ export function StockRequestFulfillPage() {
               <CardTitle>Fulfillment details</CardTitle>
             </CardHeader>
             <CardContent>
-              {allocation?.candidates?.length ? (
-                <div className="mb-4">
-                  <p className="text-sm font-medium mb-2">
-                    Suggested source order (auto-allocation)
-                  </p>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm border-collapse">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-2 pr-4">Location</th>
-                          <th className="text-left py-2 pr-4">Available (base)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allocation.candidates.map((candidate) => (
-                          <tr key={candidate.locationId} className="border-b">
-                            <td className="py-2 pr-4">
-                              {locationNameById.get(candidate.locationId) ?? candidate.locationId}
-                            </td>
-                            <td className="py-2 pr-4">{candidate.availableQuantity}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ) : null}
+              <StockRequestAllocationCandidatesTable
+                candidates={allocation?.candidates ?? []}
+                locationNameById={locationNameById}
+              />
               <form onSubmit={handleSubmit(submit)} className="space-y-4">
                 <FieldGroup>
                   <Field>
-                    <FieldLabel htmlFor="fromLocationId">Source location</FieldLabel>
-                    <Controller
-                      control={control}
-                      name="fromLocationId"
-                      render={({ field }) => (
-                        <Select value={field.value ?? ''} onValueChange={field.onChange}>
-                          <SelectTrigger id="fromLocationId" aria-invalid={!!errors.fromLocationId}>
-                            <SelectValue placeholder="Select source location" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {locations.map((location) => (
-                              <SelectItem key={location.id} value={location.id}>
-                                {location.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.fromLocationId?.message ? (
-                      <p className="text-sm text-destructive">{errors.fromLocationId.message}</p>
-                    ) : null}
+                    <FieldLabel>Issuing location</FieldLabel>
+                    <p className="text-sm">{sourceLocationName}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Available at source: {availableAtSource} base | Max fulfillable now:{' '}
+                      {maxFulfillableNow} base
+                    </p>
                   </Field>
 
                   <div className="grid gap-3 md:grid-cols-2">
@@ -237,6 +223,11 @@ export function StockRequestFulfillPage() {
                       />
                       {errors.fulfillQuantity?.message ? (
                         <p className="text-sm text-destructive">{errors.fulfillQuantity.message}</p>
+                      ) : null}
+                      {exceedsAvailable ? (
+                        <p className="text-sm text-destructive">
+                          Quantity exceeds available source stock for this request line.
+                        </p>
                       ) : null}
                     </Field>
 
@@ -272,14 +263,23 @@ export function StockRequestFulfillPage() {
                   </Field>
 
                   <input type="hidden" {...register('lineId')} />
+                  <input type="hidden" value={sourceLocationId} {...register('fromLocationId')} />
 
                   <div className="flex gap-2 pt-2">
-                    <Button type="submit" disabled={isSubmitting}>
+                    <Button
+                      type="submit"
+                      disabled={
+                        isSubmitting ||
+                        !sourceLocationId ||
+                        maxFulfillableNow <= 0 ||
+                        exceedsAvailable
+                      }
+                    >
                       {isSubmitting ? <Spinner /> : null}
                       {isSubmitting ? 'Saving...' : 'Fulfill'}
                     </Button>
-                    <Button type="button" variant="outline" asChild>
-                      <Link to={`/inventory/stock-requests/view/${requestId}`}>Cancel</Link>
+                    <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+                      Cancel
                     </Button>
                   </div>
                 </FieldGroup>

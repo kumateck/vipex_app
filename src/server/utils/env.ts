@@ -91,6 +91,23 @@ const EnvSchema = z.object({
   LIVEKIT_API_SECRET: z.string().optional(),
   // PostGIS
   POSTGIS_REQUIRED: toBoolean.default(false),
+
+  // MTN SMS API (optional — used as a fallback when a company's SMS provider
+  // configJson doesn't set its own apiUrl/subscriptionKey)
+  MTN_SMS_API_BASE_URL: z.string().url().optional(),
+  MTN_SMS_DEFAULT_SUBSCRIPTION_KEY: z.string().optional(),
+
+  // MTN MoMo Collections API (optional — required only once a company enables MoMo)
+  MTN_MOMO_API_BASE_URL: z.string().url().default('https://sandbox.momodeveloper.mtn.com'),
+  MTN_MOMO_TARGET_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
+  MTN_MOMO_CALLBACK_HOST: z.string().optional(),
+  MTN_MOMO_SUBSCRIPTION_KEY: z.string().optional(),
+
+  // mNotify SMS API (optional — used as a fallback when a company's SMS
+  // provider configJson doesn't set its own apiUrl/apiKey/senderId)
+  MNOTIFY_API_URL: z.string().url().optional(),
+  MNOTIFY_API_KEY: z.string().optional(),
+  MNOTIFY_SENDER_ID: z.string().optional(),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
@@ -129,6 +146,8 @@ export const env = {
   APP_BASE_URL: resolvedAppBaseUrl,
   RESET_LINK_BASE_URL: resolvedResetLinkBaseUrl,
   INVITE_LINK_BASE_URL: resolvedInviteLinkBaseUrl,
+  MTN_MOMO_CALLBACK_HOST:
+    normalizeAppBaseUrl(parsed.data.MTN_MOMO_CALLBACK_HOST) ?? resolvedAppBaseUrl,
 };
 export const isProd = env.NODE_ENV === 'production';
 export const isDev = env.NODE_ENV === 'development';

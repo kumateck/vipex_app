@@ -14,7 +14,7 @@ import {
   useRequestParcelReconciliationCaseMutation,
   useSoftDeleteParcelMutation,
 } from '../../api/parcel.api';
-import type { ReceiptPrintData } from '../parcel-receipt-actions';
+import type { ReceiptPrintData } from '../parcel-receipt.types';
 import { buildSenderReceiptData } from './build-sender-receipt-data';
 import { useReconciliationRequestState } from './use-reconciliation-request-state';
 import { getSenderDuePsw, toDataUrl } from './utils';
@@ -68,7 +68,13 @@ export function useSenderPaymentsWorkflow() {
     handleReconciliationCaseTypeChange,
   } = useReconciliationRequestState();
   const [amount, setAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<string>(String(PaymentMethod.CASH));
+  const [paymentMethod, setPaymentMethodRaw] = useState<string>(String(PaymentMethod.CASH));
+  const [momoTransactionId, setMomoTransactionId] = useState('');
+
+  const setPaymentMethod = (method: string) => {
+    setPaymentMethodRaw(method);
+    setMomoTransactionId('');
+  };
 
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
     { companyId },
@@ -104,10 +110,12 @@ export function useSenderPaymentsWorkflow() {
     setSelectedParcel(parcel);
     setAmount((getSenderDuePsw(parcel) / 100).toFixed(2));
     setPaymentMethod(String(PaymentMethod.CASH));
+    setMomoTransactionId('');
   };
 
   const closeCollectPayment = () => {
     setSelectedParcel(null);
+    setMomoTransactionId('');
   };
 
   const openDeleteParcel = (parcel: SenderCashierParcel) => {
@@ -157,6 +165,7 @@ export function useSenderPaymentsWorkflow() {
           parcelId: selectedParcel.id,
           amountCedis: amountValue,
           method: Number(paymentMethod),
+          momoTransactionId: momoTransactionId || null,
         }).unwrap();
         payment = result.payment ?? undefined;
       } else {
@@ -276,6 +285,8 @@ export function useSenderPaymentsWorkflow() {
     setAmount,
     paymentMethod,
     setPaymentMethod,
+    momoTransactionId,
+    setMomoTransactionId,
     isSubmitting: isCollecting,
     handleCollectPayment,
     deleteTargetParcel,

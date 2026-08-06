@@ -72,6 +72,9 @@ Providers:
 - `POST /providers`
 - `PATCH /providers/:id`
 - `POST /providers/:id/default`
+- `GET /sms-settings` (company provider and application SMS definitions)
+- `PUT /sms-settings/default-provider`
+- `PUT /sms-settings/events/:eventCode`
 
 Templates:
 
@@ -130,12 +133,36 @@ Call-center event endpoint also allows existing call-center permission:
 
 Current behavior:
 
-- Default provider is resolved by channel (`sms` or `email`).
+- Default provider is resolved by company and channel (`sms` or `email`).
 - SMS providers are pluggable by `provider_key`.
 - Built-in SMS keys:
   - `log_only`
   - `custom_webhook`
+  - `mtn`
+  - `mnotify`
 - Email dispatch uses configured SMTP mailer pipeline.
+
+The Platform Configuration → SMS Configuration page can select the company-wide default SMS
+provider. Environment-backed providers such as `mnotify` are offered when their required server
+variables are present; secrets are not returned to the client.
+
+## Application SMS Definitions
+
+Transactional SMS actions use a central event catalog and a company-specific template override:
+
+- `pickup_queue_ticket`
+- `receiver_pickup_otp`
+- `parcel_status_call_pickup`
+- `parcel_status_call_delivery`
+- `parcel_status_call_follow_up`
+- `parcel_status_call_contacted`
+
+SMS Configuration displays the dispatch trigger, recipient, default/custom body, and supported
+`{{variable}}` tokens for every event. Unknown variables are rejected when a definition is saved.
+Every event dispatch creates a `notification_dispatches` record and resolves the authenticated
+company's active default SMS provider. These transactional SMS settings remain available even when
+the optional Notification Hub workspace module is disabled, because pickup and verification flows
+can still dispatch operational messages.
 
 Adding providers:
 

@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -6,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import type { ParcelFullDetails, ParcelSearchRow } from '../../api/parcel.api';
 import { formatCurrency, formatDateTime, getPaymentBucketLabel } from './parcel-pickup-queue-utils';
 
@@ -15,9 +17,21 @@ type PickupQueueTicketDialogProps = {
   parcelDetails: ParcelFullDetails | undefined;
   isPickupQueueEnabled: boolean;
   isCreatingQueue: boolean;
+  sendSms: boolean;
+  onSendSmsChange: (checked: boolean) => void;
   onClose: () => void;
   onGenerateQueueTicket: () => void;
 };
+
+function toLocalDateKey(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
 export function PickupQueueTicketDialog({
   open,
@@ -25,9 +39,15 @@ export function PickupQueueTicketDialog({
   parcelDetails,
   isPickupQueueEnabled,
   isCreatingQueue,
+  sendSms,
+  onSendSmsChange,
   onClose,
   onGenerateQueueTicket,
 }: PickupQueueTicketDialogProps) {
+  const queueDateKey = toLocalDateKey(parcelDetails?.pickupQueue?.queuedAt);
+  const todayDateKey = toLocalDateKey(new Date().toISOString());
+  const hasQueueForToday = Boolean(queueDateKey && todayDateKey && queueDateKey === todayDateKey);
+
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? onClose() : null)}>
       <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
@@ -78,18 +98,29 @@ export function PickupQueueTicketDialog({
                 Review the parcel details, then generate the queue ticket.
               </div>
             )}
+
+            {!hasQueueForToday ? (
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <Label htmlFor="queue-send-sms">Send SMS to receiver</Label>
+                <Checkbox
+                  id="queue-send-sms"
+                  checked={sendSms}
+                  onCheckedChange={(checked) => onSendSmsChange(checked === true)}
+                />
+              </div>
+            ) : null}
           </div>
         )}
         <DialogFooter>
           <Button variant="outline" type="button" onClick={onClose}>
             Close
           </Button>
-          {!parcelDetails?.pickupQueue ? (
+          {!hasQueueForToday ? (
             <Button
               onClick={onGenerateQueueTicket}
               disabled={isCreatingQueue || !isPickupQueueEnabled}
             >
-              Issue Queue Number
+              {parcelDetails?.pickupQueue ? 'Issue New Queue Number' : 'Issue Queue Number'}
             </Button>
           ) : null}
         </DialogFooter>

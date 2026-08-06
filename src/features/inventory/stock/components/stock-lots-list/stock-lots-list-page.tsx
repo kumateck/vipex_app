@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { InventoryLocationType } from '@/db/schemas/enums';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -13,6 +15,8 @@ import {
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListStockLotsQuery } from '@/features/inventory/api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
 
 function stockLotStatusLabel(status: number) {
   if (status === 0) return 'Active';
@@ -24,7 +28,17 @@ function stockLotStatusLabel(status: number) {
 
 export function StockLotsListPage() {
   const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
+  const branchId = useAuthStore((state) => state.user?.branch?.id ?? null);
+  const [locationTypeTab, setLocationTypeTab] = useState<'all' | 'main' | 'branch' | 'consumption'>(
+    'all',
+  );
   const [page, setPage] = useState(1);
+  const selectedLocationType = useMemo(() => {
+    if (locationTypeTab === 'main') return InventoryLocationType.MAIN_STORE;
+    if (locationTypeTab === 'branch') return InventoryLocationType.BRANCH_STORE;
+    if (locationTypeTab === 'consumption') return InventoryLocationType.CONSUMPTION_LOCATION;
+    return null;
+  }, [locationTypeTab]);
 
   const query = useMemo(
     () => ({
@@ -32,14 +46,32 @@ export function StockLotsListPage() {
       pageSize: 20,
       filters: {
         companyId: companyId ?? '',
+        branchId: branchId ?? undefined,
+        locationType: selectedLocationType,
       },
     }),
-    [companyId, page],
+    [branchId, companyId, page, selectedLocationType],
   );
 
-  const { data, isLoading } = useListStockLotsQuery(query, { skip: !companyId });
+  const { data, isLoading } = useListStockLotsQuery(query, { skip: !companyId || !branchId });
+  const { data: products = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
+  const { data: locations = [] } = useListInventoryLocationOptionsQuery(
+    { companyId },
+    { skip: !companyId },
+  );
   const rows = data?.data ?? [];
   const meta = data?.meta;
+  const productNameById = useMemo(
+    () => new Map(products.map((product) => [product.id, product.name] as const)),
+    [products],
+  );
+  const locationNameById = useMemo(
+    () => new Map(locations.map((location) => [location.id, location.name] as const)),
+    [locations],
+  );
 
   return (
     <ScrollableWrapper>
@@ -60,6 +92,20 @@ export function StockLotsListPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            <Tabs
+              value={locationTypeTab}
+              onValueChange={(value) => {
+                setLocationTypeTab(value as 'all' | 'main' | 'branch' | 'consumption');
+                setPage(1);
+              }}
+            >
+              <TabsList className="h-auto w-full max-w-xl grid grid-cols-4">
+                <TabsTrigger value="all">All Types</TabsTrigger>
+                <TabsTrigger value="main">Main Store</TabsTrigger>
+                <TabsTrigger value="branch">Branch Store</TabsTrigger>
+                <TabsTrigger value="consumption">Consumption</TabsTrigger>
+              </TabsList>
+            </Tabs>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -86,8 +132,10 @@ export function StockLotsListPage() {
                           {row.batchNumber}
                         </Link>
                       </TableCell>
-                      <TableCell>{row.productId}</TableCell>
-                      <TableCell>{row.locationId}</TableCell>
+                      <TableCell>{productNameById.get(row.productId) ?? row.productId}</TableCell>
+                      <TableCell>
+                        {locationNameById.get(row.locationId) ?? row.locationId}
+                      </TableCell>
                       <TableCell>{row.quantityOnHand}</TableCell>
                       <TableCell>{row.reservedQuantity}</TableCell>
                       <TableCell>

@@ -526,6 +526,8 @@ export interface DailyCashierSalesTransactionRow {
   parcelId: string;
   bookingCode: string;
   trackingCode: string;
+  payerName: string;
+  whoPaid: string;
   cashierId?: string | null;
   cashierName: string;
   branchId?: string | null;
@@ -543,12 +545,23 @@ export interface DailyCashierSalesTransactionRow {
   receiptNo?: string | null;
 }
 
+export interface DailyCashierSalesToBePaidRow {
+  parcelId: string;
+  sessionId?: string | null;
+  bookingCode: string;
+  senderName?: string | null;
+  receiverName?: string | null;
+  plannedToBePaidPsw: number;
+  createdAt: string;
+}
+
 export interface DailyCashierSalesReport {
   filters: Record<string, unknown>;
   generatedAt: string;
   totals: {
     sessions: number;
     transactions: number;
+    toBePaidPsw: number;
     grossPsw: number;
     netPsw: number;
     taxPsw: number;
@@ -567,6 +580,12 @@ export interface DailyCashierSalesReport {
   };
   sessions: DailyCashierSalesSessionRow[];
   transactions: DailyCashierSalesTransactionRow[];
+  toBePaidRows: DailyCashierSalesToBePaidRow[];
+}
+
+export interface DailyCashierSalesCashierOption {
+  id: string;
+  name: string;
 }
 
 export interface BranchProfitabilityReportRow {
@@ -900,6 +919,20 @@ export const reportingApi = api.injectEndpoints({
         params,
       }),
     }),
+    listDailyCashierSalesCashiers: builder.query<
+      DailyCashierSalesCashierOption[],
+      {
+        date: string;
+        branchId?: string | null;
+        locationId?: string | null;
+        cashierType?: number | null;
+      }
+    >({
+      query: (params) => ({
+        url: '/reports/daily-cashier-sales/cashiers',
+        params,
+      }),
+    }),
     getBranchProfitabilityReport: builder.query<
       BranchProfitabilityReport,
       {
@@ -997,6 +1030,7 @@ export const {
   useGetParcelStatusSummaryReportQuery,
   useGetShiftRevenueReportQuery,
   useGetDailyCashierSalesReportQuery,
+  useListDailyCashierSalesCashiersQuery,
   useGetBranchProfitabilityReportQuery,
   useGetCreditExposureReportQuery,
   useGetCustomerCreditAgingDetailReportQuery,

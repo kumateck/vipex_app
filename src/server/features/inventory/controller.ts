@@ -75,6 +75,8 @@ import {
   submitStockRequestSvc,
   upsertStockAllocationPolicySvc,
   listReorderSuggestionsSvc,
+  listInventoryReorderPoliciesSvc,
+  upsertInventoryReorderPolicySvc,
   listInventoryApprovalPoliciesSvc,
   createInventoryApprovalPolicySvc,
   submitInventoryApprovalRequestSvc,
@@ -230,7 +232,16 @@ export async function listProductOptionsCtrl(filters: {
   categoryId?: string | null;
   search?: string | null;
 }) {
-  return listProductOptionsSvc(filters);
+  const options = await listProductOptionsSvc(filters);
+  return options.map((product) => ({
+    ...product,
+    unitConversions: (
+      (product as { unitConversions?: UnitConversionLike[] }).unitConversions ?? []
+    ).map((conversion: UnitConversionLike) => ({
+      ...conversion,
+      factorToBase: conversion.factorToBase.toString(),
+    })),
+  }));
 }
 
 export async function createProductCtrl(input: {
@@ -365,6 +376,8 @@ export async function listStockLevelsCtrl(
     companyId?: string | null;
     productId?: string | null;
     locationId?: string | null;
+    branchId?: string | null;
+    locationType?: number | null;
   }>,
 ): Promise<PaginatedResponseDto<unknown>> {
   const pagination = normalizePagination(q, { pageSize: 20 });
@@ -374,6 +387,8 @@ export async function listStockLevelsCtrl(
     companyId: q.filters?.companyId ?? null,
     productId: q.filters?.productId ?? null,
     locationId: q.filters?.locationId ?? null,
+    branchId: q.filters?.branchId ?? null,
+    locationType: q.filters?.locationType ?? null,
     sort: pagination.sort ?? null,
   });
 
@@ -396,6 +411,9 @@ export async function getStockLevelCtrl(productId: string, locationId: string) {
   return {
     ...level,
     quantity: level.quantity.toString(),
+    pendingIncomingQuantity: String(level.pendingIncomingQuantity ?? 0),
+    pendingReceiptByDestinationQuantity: String(level.pendingReceiptByDestinationQuantity ?? 0),
+    pendingToIssueQuantity: String(level.pendingToIssueQuantity ?? 0),
   };
 }
 
@@ -427,6 +445,8 @@ export async function listStockLotsCtrl(
     companyId: string;
     productId?: string | null;
     locationId?: string | null;
+    branchId?: string | null;
+    locationType?: number | null;
     status?: number | null;
     batchNumber?: string | null;
   }>,
@@ -438,6 +458,8 @@ export async function listStockLotsCtrl(
     companyId: q.filters!.companyId,
     productId: q.filters?.productId ?? null,
     locationId: q.filters?.locationId ?? null,
+    branchId: q.filters?.branchId ?? null,
+    locationType: q.filters?.locationType ?? null,
     status: q.filters?.status ?? null,
     batchNumber: q.filters?.batchNumber ?? null,
     sort: pagination.sort ?? null,
@@ -690,6 +712,8 @@ export async function listStockMovementsCtrl(
     companyId?: string | null;
     productId?: string | null;
     locationId?: string | null;
+    branchId?: string | null;
+    locationType?: number | null;
     movementType?: number | null;
   }>,
 ): Promise<PaginatedResponseDto<unknown>> {
@@ -700,6 +724,8 @@ export async function listStockMovementsCtrl(
     companyId: q.filters?.companyId ?? null,
     productId: q.filters?.productId ?? null,
     locationId: q.filters?.locationId ?? null,
+    branchId: q.filters?.branchId ?? null,
+    locationType: q.filters?.locationType ?? null,
     movementType: q.filters?.movementType ?? null,
     sort: pagination.sort ?? null,
   });
@@ -755,6 +781,8 @@ export async function listStockAdjustmentsCtrl(
     companyId?: string | null;
     productId?: string | null;
     locationId?: string | null;
+    branchId?: string | null;
+    locationType?: number | null;
   }>,
 ): Promise<PaginatedResponseDto<unknown>> {
   const pagination = normalizePagination(q, { pageSize: 20 });
@@ -764,6 +792,8 @@ export async function listStockAdjustmentsCtrl(
     companyId: q.filters?.companyId ?? null,
     productId: q.filters?.productId ?? null,
     locationId: q.filters?.locationId ?? null,
+    branchId: q.filters?.branchId ?? null,
+    locationType: q.filters?.locationType ?? null,
     sort: pagination.sort ?? null,
   });
 
@@ -823,6 +853,8 @@ export async function listStockTransfersCtrl(
     companyId?: string | null;
     productId?: string | null;
     status?: number | null;
+    branchId?: string | null;
+    locationType?: number | null;
   }>,
 ): Promise<PaginatedResponseDto<unknown>> {
   const pagination = normalizePagination(q, { pageSize: 20 });
@@ -832,6 +864,8 @@ export async function listStockTransfersCtrl(
     companyId: q.filters?.companyId ?? null,
     productId: q.filters?.productId ?? null,
     status: q.filters?.status ?? null,
+    branchId: q.filters?.branchId ?? null,
+    locationType: q.filters?.locationType ?? null,
     sort: pagination.sort ?? null,
   });
 
@@ -1064,6 +1098,8 @@ export async function listStockRequestsCtrl(
   q: PaginationRequestDto<{
     companyId?: string | null;
     requesterLocationId?: string | null;
+    branchId?: string | null;
+    locationType?: number | null;
     status?: number | null;
   }>,
 ): Promise<PaginatedResponseDto<unknown>> {
@@ -1073,6 +1109,8 @@ export async function listStockRequestsCtrl(
     offset: pagination.offset,
     companyId: q.filters?.companyId ?? null,
     requesterLocationId: q.filters?.requesterLocationId ?? null,
+    branchId: q.filters?.branchId ?? null,
+    locationType: q.filters?.locationType ?? null,
     status: q.filters?.status ?? null,
     sort: pagination.sort ?? null,
   });
@@ -1080,6 +1118,54 @@ export async function listStockRequestsCtrl(
   return {
     data: data.map((request) => ({
       ...request,
+      totalRequestedQuantity:
+        (
+          request as {
+            totalRequestedQuantity?: number;
+          }
+        ).totalRequestedQuantity !== undefined
+          ? String((request as { totalRequestedQuantity?: number }).totalRequestedQuantity ?? 0)
+          : undefined,
+      totalFulfilledQuantity:
+        (
+          request as {
+            totalFulfilledQuantity?: number;
+          }
+        ).totalFulfilledQuantity !== undefined
+          ? String((request as { totalFulfilledQuantity?: number }).totalFulfilledQuantity ?? 0)
+          : undefined,
+      totalAcknowledgedQuantity:
+        (
+          request as {
+            totalAcknowledgedQuantity?: number;
+          }
+        ).totalAcknowledgedQuantity !== undefined
+          ? String(
+              (request as { totalAcknowledgedQuantity?: number }).totalAcknowledgedQuantity ?? 0,
+            )
+          : undefined,
+      totalPendingIssueQuantity:
+        (
+          request as {
+            totalPendingIssueQuantity?: number;
+          }
+        ).totalPendingIssueQuantity !== undefined
+          ? String(
+              (request as { totalPendingIssueQuantity?: number }).totalPendingIssueQuantity ?? 0,
+            )
+          : undefined,
+      totalPendingAcknowledgementQuantity:
+        (
+          request as {
+            totalPendingAcknowledgementQuantity?: number;
+          }
+        ).totalPendingAcknowledgementQuantity !== undefined
+          ? String(
+              (request as { totalPendingAcknowledgementQuantity?: number })
+                .totalPendingAcknowledgementQuantity ?? 0,
+            )
+          : undefined,
+      lineCount: (request as { lineCount?: number }).lineCount ?? 0,
       createdAt: request.createdAt?.toISOString?.() ?? request.createdAt,
       updatedAt: request.updatedAt?.toISOString?.() ?? request.updatedAt,
       approvedAt: request.approvedAt?.toISOString?.() ?? request.approvedAt,
@@ -1130,6 +1216,7 @@ export async function createStockRequestCtrl(input: {
   companyId: string;
   requesterLocationId: string;
   requestedToLocationId?: string | null;
+  requestType: number;
   notes?: string | null;
   requestedBy: string;
   submit?: boolean;
@@ -1325,6 +1412,7 @@ export async function listReorderSuggestionsCtrl(input: {
       ...row,
       currentQuantity: Number(row.currentQuantity ?? 0).toString(),
       minStockLevel: Number(row.minStockLevel ?? 0).toString(),
+      targetLevel: Number((row as { targetLevel?: number }).targetLevel ?? 0).toString(),
       reorderQuantity: Number(row.reorderQuantity ?? 0).toString(),
       suggestedSources: row.suggestedSources.map((source) => ({
         ...source,
@@ -1332,6 +1420,59 @@ export async function listReorderSuggestionsCtrl(input: {
       })),
     })),
   };
+}
+
+export async function listInventoryReorderPoliciesCtrl(input: {
+  companyId: string;
+  productId?: string | null;
+  branchId?: string | null;
+  locationType?: number | null;
+  locationId?: string | null;
+  active?: boolean | null;
+}) {
+  const rows = await listInventoryReorderPoliciesSvc(input);
+  return rows.map((row) => ({
+    ...row,
+    reorderPoint: Number(row.reorderPoint ?? 0).toString(),
+    targetLevel: Number(row.targetLevel ?? 0).toString(),
+    safetyStock: Number(row.safetyStock ?? 0).toString(),
+    createdAt: row.createdAt?.toISOString?.() ?? row.createdAt,
+    updatedAt: row.updatedAt?.toISOString?.() ?? row.updatedAt,
+  }));
+}
+
+export async function upsertInventoryReorderPolicyCtrl(input: {
+  companyId: string;
+  productId: string;
+  branchId: string;
+  locationType: number;
+  locationId?: string | null;
+  reorderPoint: string;
+  targetLevel?: string | null;
+  safetyStock?: string | null;
+  active?: boolean;
+  notes?: string | null;
+  createdBy: string;
+}) {
+  return upsertInventoryReorderPolicySvc({
+    companyId: input.companyId,
+    productId: input.productId,
+    branchId: input.branchId,
+    locationType: input.locationType,
+    locationId: input.locationId ?? null,
+    reorderPoint: Number.parseInt(input.reorderPoint, 10),
+    targetLevel:
+      input.targetLevel && input.targetLevel.trim().length
+        ? Number.parseInt(input.targetLevel, 10)
+        : undefined,
+    safetyStock:
+      input.safetyStock && input.safetyStock.trim().length
+        ? Number.parseInt(input.safetyStock, 10)
+        : undefined,
+    active: input.active,
+    notes: input.notes ?? null,
+    createdBy: input.createdBy,
+  });
 }
 
 export async function getInventoryDashboardSummaryCtrl(filters: {
@@ -1367,6 +1508,8 @@ export async function listStockMaintenanceRecordsCtrl(
   q: PaginationRequestDto<{
     companyId?: string | null;
     locationId?: string | null;
+    branchId?: string | null;
+    locationType?: number | null;
     issueType?: number | null;
     status?: number | null;
   }>,
@@ -1377,6 +1520,8 @@ export async function listStockMaintenanceRecordsCtrl(
     offset: pagination.offset,
     companyId: q.filters?.companyId ?? null,
     locationId: q.filters?.locationId ?? null,
+    branchId: q.filters?.branchId ?? null,
+    locationType: q.filters?.locationType ?? null,
     issueType: q.filters?.issueType ?? null,
     status: q.filters?.status ?? null,
     sort: pagination.sort ?? null,

@@ -27,6 +27,12 @@ function detailRow(label: string, value: string | number | null | undefined) {
   );
 }
 
+function branchLocationLabel(branchName?: string | null, locationName?: string | null) {
+  const branch = branchName?.trim() || '-';
+  const location = locationName?.trim() || '-';
+  return `${branch} (${location})`;
+}
+
 export function ParcelSuperSearchDetailsDialog({
   parcelId,
   companyId,
@@ -105,14 +111,33 @@ export function ParcelSuperSearchDetailsDialog({
                   PARCEL_STATUS_LABELS[parcelDetails.parcel.status] ?? parcelDetails.parcel.status,
                 )}
                 {detailRow(
-                  'Source Branch',
-                  branchNameById.get(parcelDetails.parcel.sourceId) ?? '-',
+                  'Source',
+                  branchLocationLabel(
+                    selectedParcelRow?.sourceName ??
+                      branchNameById.get(parcelDetails.parcel.sourceId),
+                    selectedParcelRow?.sourceLocationName,
+                  ),
                 )}
                 {detailRow(
-                  'Destination Branch',
-                  branchNameById.get(parcelDetails.parcel.destinationId) ?? '-',
+                  'Destination',
+                  branchLocationLabel(
+                    selectedParcelRow?.destinationName ??
+                      branchNameById.get(parcelDetails.parcel.destinationId),
+                    selectedParcelRow?.pickupLocationName,
+                  ),
                 )}
-                {detailRow('Destination Location', selectedParcelRow?.pickupLocationName ?? '-')}
+                {detailRow(
+                  'Route',
+                  `${branchLocationLabel(
+                    selectedParcelRow?.sourceName ??
+                      branchNameById.get(parcelDetails.parcel.sourceId),
+                    selectedParcelRow?.sourceLocationName,
+                  )} -> ${branchLocationLabel(
+                    selectedParcelRow?.destinationName ??
+                      branchNameById.get(parcelDetails.parcel.destinationId),
+                    selectedParcelRow?.pickupLocationName,
+                  )}`,
+                )}
                 <div className="grid grid-cols-3 gap-2 text-sm">
                   <span className="text-muted-foreground">Current Holder</span>
                   <div className="col-span-2">

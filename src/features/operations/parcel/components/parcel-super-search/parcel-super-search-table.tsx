@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical, Search } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -13,7 +14,6 @@ import {
 import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
-import { ParcelInternalHolderBadge } from '../parcel-internal-holder-badge';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { EMPTY_META, PARCEL_STATUS_LABELS } from './constants';
 import type { ParcelSuperSearchFilters } from './types';
@@ -47,34 +47,61 @@ export function ParcelSuperSearchTable({
 }: ParcelSuperSearchTableProps) {
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       {
         id: 'sender',
         header: 'Sender',
-        accessorFn: (row) =>
-          `${row.senderName ?? '-'}${row.senderPhone ? ` (${row.senderPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.senderName ?? '-'}</p>
+            <p className="text-xs text-muted-foreground">{row.original.senderPhone ?? '-'}</p>
+          </div>
+        ),
       },
       {
         id: 'receiver',
         header: 'Receiver',
-        accessorFn: (row) =>
-          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+            <p className="text-xs text-muted-foreground">{row.original.receiverPhone ?? '-'}</p>
+          </div>
+        ),
       },
       {
-        id: 'status',
-        header: 'Status',
-        accessorFn: (row) => PARCEL_STATUS_LABELS[row.status] ?? String(row.status),
+        id: 'source',
+        header: 'Source',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.sourceLocationName ?? '-'}</p>
+            <p className="text-xs text-muted-foreground">
+              {branchNameById.get(row.original.sourceId) ?? row.original.sourceName ?? '-'}
+            </p>
+          </div>
+        ),
       },
       {
         id: 'destination',
         header: 'Destination',
-        accessorFn: (row) => branchNameById.get(row.destinationId) ?? '-',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
+            <p className="text-xs text-muted-foreground">
+              {branchNameById.get(row.original.destinationId) ??
+                row.original.destinationName ??
+                '-'}
+            </p>
+          </div>
+        ),
       },
       {
-        id: 'holder',
-        header: 'Current Holder',
-        cell: ({ row }) => <ParcelInternalHolderBadge holder={row.original} />,
+        id: 'status',
+        header: 'Status',
+        cell: ({ row }) => (
+          <Badge variant="secondary">
+            {PARCEL_STATUS_LABELS[row.original.status] ?? `Status ${row.original.status}`}
+          </Badge>
+        ),
       },
       {
         id: 'actions',

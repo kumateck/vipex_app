@@ -6,7 +6,7 @@ import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Spinner } from '@/components/ui/spinner';
 import { useGetStockMaintenanceRecordQuery } from '@/features/inventory/api';
 import { useListInventoryLocationOptionsQuery } from '@/features/inventory/locations/api/inventory-locations.api';
-import { useListInventoryProductsQuery } from '@/features/inventory/products/api/inventory-products.api';
+import { useListInventoryProductOptionsQuery } from '@/features/inventory/products/api/inventory-products.api';
 import { useAuthStore } from '@/stores/auth-store';
 import { StockMaintenanceResolveForm } from '../../components/stock-maintenance-resolve-form';
 import { useResolveStockMaintenanceAction } from '../../hooks/use-stock-actions';
@@ -24,8 +24,8 @@ export function StockMaintenanceDetailPage() {
     { companyId },
     { skip: !companyId },
   );
-  const { data: productsData } = useListInventoryProductsQuery(
-    { page: 1, pageSize: 500, filters: { companyId } },
+  const { data: productsData = [] } = useListInventoryProductOptionsQuery(
+    { companyId },
     { skip: !companyId },
   );
   const locationNameById = useMemo(
@@ -33,7 +33,7 @@ export function StockMaintenanceDetailPage() {
     [locations],
   );
   const productNameById = useMemo(
-    () => new Map((productsData?.data ?? []).map((row) => [row.id, row.name] as const)),
+    () => new Map(productsData.map((row) => [row.id, row.name] as const)),
     [productsData],
   );
 

@@ -1,2 +1,7 @@
+import 'react-native-gesture-handler';
 import './src/lib/polyfills';
-import 'expo-router/entry';
+import { AppRegistry } from 'react-native';
+import App from './src/app';
+import { name as appName } from './app.json';
+
+AppRegistry.registerComponent(appName, () => App);

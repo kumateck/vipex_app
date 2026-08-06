@@ -77,6 +77,7 @@ export const updateStockTransferSchema = z
 export const createStockRequestSchema = z.object({
   requesterLocationId: requiredId,
   requestedToLocationId: optionalId,
+  requestType: z.number().int().min(0).max(1),
   notes: optionalText,
   submit: z.boolean().optional(),
   lines: z
@@ -109,23 +110,52 @@ export const acknowledgeStockRequestLineSchema = z.object({
   notes: optionalText,
 });
 
-export const acknowledgeStockTransferReceiptSchema = z
+export const acknowledgeStockRequestLineReceiptSchema = z
   .object({
-    acceptedQuantity: positiveIntegerString,
+    lineId: requiredId,
+    receiveMode: z.enum(['full', 'partial']),
+    partialReceivedQuantity: optionalNonNegativeIntegerString,
+    partialQuantityUnitOfMeasure: unitOfMeasure.optional(),
     damagedQuantity: optionalNonNegativeIntegerString,
+    damagedQuantityUnitOfMeasure: unitOfMeasure.optional(),
     missingQuantity: optionalNonNegativeIntegerString,
+    missingQuantityUnitOfMeasure: unitOfMeasure.optional(),
     notes: optionalText,
   })
   .refine(
     (values) => {
-      const accepted = Number.parseInt(values.acceptedQuantity, 10);
-      const damaged = values.damagedQuantity ? Number.parseInt(values.damagedQuantity, 10) : 0;
-      const missing = values.missingQuantity ? Number.parseInt(values.missingQuantity, 10) : 0;
-      return damaged + missing <= accepted;
+      if (values.receiveMode === 'full') return true;
+      return (
+        !!values.partialReceivedQuantity && Number.parseInt(values.partialReceivedQuantity, 10) > 0
+      );
     },
     {
-      message: 'Damaged + missing cannot exceed accepted quantity',
-      path: ['missingQuantity'],
+      message: 'Partial received quantity must be greater than zero',
+      path: ['partialReceivedQuantity'],
+    },
+  );
+
+export const acknowledgeStockTransferReceiptSchema = z
+  .object({
+    receiveMode: z.enum(['full', 'partial']),
+    partialReceivedQuantity: optionalNonNegativeIntegerString,
+    partialQuantityUnitOfMeasure: unitOfMeasure.optional(),
+    damagedQuantity: optionalNonNegativeIntegerString,
+    damagedQuantityUnitOfMeasure: unitOfMeasure.optional(),
+    missingQuantity: optionalNonNegativeIntegerString,
+    missingQuantityUnitOfMeasure: unitOfMeasure.optional(),
+    notes: optionalText,
+  })
+  .refine(
+    (values) => {
+      if (values.receiveMode === 'full') return true;
+      return (
+        !!values.partialReceivedQuantity && Number.parseInt(values.partialReceivedQuantity, 10) > 0
+      );
+    },
+    {
+      message: 'Partial received quantity must be greater than zero',
+      path: ['partialReceivedQuantity'],
     },
   );
 
@@ -156,6 +186,9 @@ export type RejectStockRequestFormValues = z.infer<typeof rejectStockRequestSche
 export type FulfillStockRequestLineFormValues = z.infer<typeof fulfillStockRequestLineSchema>;
 export type StockRequestLineAcknowledgeFormValues = z.infer<
   typeof acknowledgeStockRequestLineSchema
+>;
+export type StockRequestLineReceiptAcknowledgeFormValues = z.infer<
+  typeof acknowledgeStockRequestLineReceiptSchema
 >;
 export type AcknowledgeStockTransferReceiptFormValues = z.infer<
   typeof acknowledgeStockTransferReceiptSchema

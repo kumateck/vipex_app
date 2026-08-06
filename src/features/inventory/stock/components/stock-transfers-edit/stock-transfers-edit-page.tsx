@@ -118,7 +118,7 @@ export function StockTransfersEditPage() {
           transfer={transfer}
           onSubmit={onSubmit}
           isSubmitting={isSubmitting}
-          title="Update stock transfer"
+          title="Dispatch / fulfill stock transfer"
           submitButtonText="Save changes"
           productNameById={productNameById}
           productConversionsById={productConversionsById}

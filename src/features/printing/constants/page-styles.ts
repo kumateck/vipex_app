@@ -16,11 +16,20 @@ export const PAGE_STYLES: Record<PrintLayout, string> = {
     ${BASE_STYLE}
     @media print {
       @page {
-        size: 80mm auto;
+        size: 100mm 100mm;
         margin: 0;
       }
+      html,
       body {
+        width: 100mm;
+        height: 100mm;
         margin: 0;
+        overflow: hidden;
+      }
+      body {
+        display: grid;
+        align-items: center;
+        justify-items: center;
       }
     }
   `,

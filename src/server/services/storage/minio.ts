@@ -1,17 +1,23 @@
 import {
-  CreateBucketCommand,
   DeleteObjectCommand,
   GetObjectCommand,
-  HeadBucketCommand,
+  HeadObjectCommand,
   NoSuchKey,
   PutObjectCommand,
-  S3Client,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createId } from '@paralleldrive/cuid2';
 import { NotFound } from '@/server/utils/http-error';
 import { BadRequest } from '@/server/utils/http-error';
 import { env } from '@/server/utils/env';
 import { logger } from '@/server/utils/logger';
+import {
+  ensureMinioBucketReady,
+  getMinioClient,
+  getMinioErrorCode,
+  getMinioHttpStatusCode,
+  withMinioTimeout,
+} from './minio-client';
 
 const MIME_EXTENSIONS: Record<string, string> = {
   'image/png': 'png',
@@ -33,124 +39,7 @@ const MIME_EXTENSIONS: Record<string, string> = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
 };
 const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
-
-let ensureBucketPromise: Promise<void> | null = null;
-
-const MINIO_REQUEST_TIMEOUT_MS = Number.isFinite(Number(process.env.MINIO_REQUEST_TIMEOUT_MS))
-  ? Number(process.env.MINIO_REQUEST_TIMEOUT_MS)
-  : 45000;
-
-function getErrorCode(error: unknown): string {
-  if (typeof error !== 'object' || error === null) return '';
-  const code = (error as { code?: unknown }).code;
-  return typeof code === 'string' ? code : '';
-}
-
-function getHttpStatusCode(error: unknown): number | null {
-  if (typeof error !== 'object' || error === null) return null;
-  const metadata = (error as { $metadata?: { httpStatusCode?: number } }).$metadata;
-  return typeof metadata?.httpStatusCode === 'number' ? metadata.httpStatusCode : null;
-}
-
-async function withTimeout<T>(task: Promise<T>, operation: string): Promise<T> {
-  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutHandle = setTimeout(() => {
-      reject(new Error(`MINIO_TIMEOUT:${operation}:${MINIO_REQUEST_TIMEOUT_MS}ms`));
-    }, MINIO_REQUEST_TIMEOUT_MS);
-  });
-
-  try {
-    return await Promise.race([task, timeoutPromise]);
-  } finally {
-    if (timeoutHandle) clearTimeout(timeoutHandle);
-  }
-}
-
-function isConfigured() {
-  return Boolean(
-    env.MINIO_ENDPOINT && env.MINIO_ACCESS_KEY && env.MINIO_SECRET_KEY && env.MINIO_BUCKET,
-  );
-}
-
-function getClient() {
-  if (!isConfigured()) {
-    throw BadRequest('MinIO storage is not configured');
-  }
-
-  return new S3Client({
-    endpoint: env.MINIO_ENDPOINT,
-    region: env.MINIO_REGION,
-    credentials: {
-      accessKeyId: env.MINIO_ACCESS_KEY!,
-      secretAccessKey: env.MINIO_SECRET_KEY!,
-    },
-    forcePathStyle: env.MINIO_FORCE_PATH_STYLE,
-  });
-}
-
-async function ensureBucketReady() {
-  if (!isConfigured()) return;
-  if (ensureBucketPromise) return ensureBucketPromise;
-
-  ensureBucketPromise = (async () => {
-    const client = getClient();
-    const startedAt = Date.now();
-    logger.info('[minio] ensureBucketReady:start', {
-      endpoint: env.MINIO_ENDPOINT,
-      bucket: env.MINIO_BUCKET,
-      timeoutMs: MINIO_REQUEST_TIMEOUT_MS,
-    });
-
-    try {
-      await withTimeout(
-        client.send(new HeadBucketCommand({ Bucket: env.MINIO_BUCKET })),
-        'HeadBucket',
-      );
-      logger.info('[minio] ensureBucketReady:head-ok', {
-        bucket: env.MINIO_BUCKET,
-        elapsedMs: Date.now() - startedAt,
-      });
-    } catch (error) {
-      const statusCode = getHttpStatusCode(error);
-      const code = getErrorCode(error);
-      logger.warn('[minio] ensureBucketReady:head-failed', {
-        bucket: env.MINIO_BUCKET,
-        statusCode,
-        code,
-        message: error instanceof Error ? error.message : String(error),
-        elapsedMs: Date.now() - startedAt,
-      });
-
-      if (statusCode !== 404 && code !== 'NotFound' && code !== 'NoSuchBucket') {
-        throw error;
-      }
-
-      await withTimeout(
-        client.send(new CreateBucketCommand({ Bucket: env.MINIO_BUCKET })),
-        'CreateBucket',
-      );
-      logger.info('[minio] ensureBucketReady:create-ok', {
-        bucket: env.MINIO_BUCKET,
-        elapsedMs: Date.now() - startedAt,
-      });
-    }
-  })().catch((error) => {
-    // Allow retries on subsequent requests if initial bucket check/create fails.
-    ensureBucketPromise = null;
-    logger.error('[minio] ensureBucketReady:error', {
-      endpoint: env.MINIO_ENDPOINT,
-      bucket: env.MINIO_BUCKET,
-      code: getErrorCode(error),
-      statusCode: getHttpStatusCode(error),
-      message: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  });
-
-  return ensureBucketPromise;
-}
+const PRESIGNED_URL_TTL_SECONDS = 300;
 
 function parseDataUrl(dataUrl: string) {
   const match = dataUrl.match(/^data:([a-zA-Z0-9.+/-]+);base64,(.+)$/);
@@ -194,17 +83,17 @@ export async function uploadImageDataUrl(input: {
     dataUrlLength: input.dataUrl.length,
   });
 
-  await ensureBucketReady();
+  await ensureMinioBucketReady();
 
   const { buffer, contentType, extension } = parseDataUrl(input.dataUrl);
-  const client = getClient();
+  const client = getMinioClient();
   const folder = normalizeSegment(input.folder);
   const fileBase = normalizeSegment(input.fileName ?? createId());
   const date = new Date();
   const key = `${folder}/${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${createId()}-${fileBase}.${extension}`;
 
   try {
-    await withTimeout(
+    await withMinioTimeout(
       client.send(
         new PutObjectCommand({
           Bucket: env.MINIO_BUCKET,
@@ -223,8 +112,8 @@ export async function uploadImageDataUrl(input: {
       key,
       sizeBytes: buffer.length,
       contentType,
-      code: getErrorCode(error),
-      statusCode: getHttpStatusCode(error),
+      code: getMinioErrorCode(error),
+      statusCode: getMinioHttpStatusCode(error),
       message: error instanceof Error ? error.message : String(error),
       elapsedMs: Date.now() - startedAt,
     });
@@ -247,9 +136,12 @@ export async function uploadImageDataUrl(input: {
   };
 }
 
-export async function getStoredObjectResponse(key: string) {
-  await ensureBucketReady();
-  const client = getClient();
+export async function getStoredObjectResponse(
+  key: string,
+  options?: { cacheControl?: string; contentType?: string },
+) {
+  await ensureMinioBucketReady();
+  const client = getMinioClient();
 
   try {
     const response = await client.send(
@@ -261,8 +153,9 @@ export async function getStoredObjectResponse(key: string) {
 
     return new Response(response.Body?.transformToWebStream() ?? null, {
       headers: {
-        'content-type': response.ContentType ?? 'application/octet-stream',
-        'cache-control': response.CacheControl ?? 'public, max-age=31536000, immutable',
+        'content-type': options?.contentType ?? response.ContentType ?? 'application/octet-stream',
+        'cache-control':
+          options?.cacheControl ?? response.CacheControl ?? 'public, max-age=31536000, immutable',
       },
     });
   } catch (error) {
@@ -271,9 +164,55 @@ export async function getStoredObjectResponse(key: string) {
   }
 }
 
+export async function headStoredObject(key: string): Promise<void> {
+  await ensureMinioBucketReady();
+  const client = getMinioClient();
+
+  try {
+    await client.send(new HeadObjectCommand({ Bucket: env.MINIO_BUCKET, Key: key }));
+  } catch (error) {
+    const code = getMinioErrorCode(error);
+    const status = getMinioHttpStatusCode(error);
+
+    if (code === 'NotFound' || status === 404) {
+      throw NotFound('Stored file not found');
+    }
+
+    if (code === 'AccessDenied' || status === 403) {
+      logger.warn('[minio] headStoredObject:access-denied', {
+        key,
+        bucket: env.MINIO_BUCKET,
+        code,
+        status,
+      });
+      throw NotFound('Stored file not found');
+    }
+
+    throw error;
+  }
+}
+
+export async function getStoredObjectPresignedUrl(
+  key: string,
+  options?: { expiresInSeconds?: number; contentType?: string },
+): Promise<string> {
+  await ensureMinioBucketReady();
+  const client = getMinioClient();
+
+  const command = new GetObjectCommand({
+    Bucket: env.MINIO_BUCKET,
+    Key: key,
+    ...(options?.contentType ? { ResponseContentType: options.contentType } : {}),
+  });
+
+  return getSignedUrl(client, command, {
+    expiresIn: options?.expiresInSeconds ?? PRESIGNED_URL_TTL_SECONDS,
+  });
+}
+
 export async function deleteStoredObject(key: string) {
-  await ensureBucketReady();
-  const client = getClient();
+  await ensureMinioBucketReady();
+  const client = getMinioClient();
   await client.send(
     new DeleteObjectCommand({
       Bucket: env.MINIO_BUCKET,

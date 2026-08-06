@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -253,7 +254,7 @@ export function ITDashboardV1Page() {
                               </div>
                               <div className="text-muted-foreground">{row.message ?? '-'}</div>
                               <div className="text-xs text-muted-foreground">
-                                {new Date(row.createdAt).toLocaleString()}
+                                {formatDateTimeShared(row.createdAt)}
                               </div>
                             </div>
                           ))

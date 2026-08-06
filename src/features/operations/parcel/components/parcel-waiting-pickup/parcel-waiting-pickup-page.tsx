@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
+import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { EllipsisVertical } from 'lucide-react';
@@ -13,9 +15,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import { formatDateTime as formatDateTimeStandard } from '@/lib/date';
 import { ParcelStatus } from '@/db/schemas/enums';
-import { useGetBranchQuery } from '@/features/branches/api/branches.api';
+import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import {
@@ -42,7 +43,7 @@ function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
-  return formatDateTimeStandard(date);
+  return sharedFormatDateTime(value);
 }
 
 function formatPhones(primary?: string | null, secondary?: string | null) {
@@ -85,7 +86,9 @@ export function ParcelWaitingPickupPage() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
-  const { data: currentBranch } = useGetBranchQuery(branchId ?? '', { skip: !branchId });
+  const { data: currentBranch } = useGetBranchOperationsSettingsQuery(branchId ?? '', {
+    skip: !branchId,
+  });
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
 
   const [searchInput, setSearchInput] = useState('');
@@ -370,9 +373,13 @@ export function ParcelWaitingPickupPage() {
     if (handoverTarget === 'second') {
       if (!secondReceiverId) {
         const fullname = secondNewName.trim();
-        const telephone = secondNewPhone.trim();
+        const telephone = normalizePhoneDigits(secondNewPhone);
         if (!fullname || !telephone) {
           toast.error('Second receiver name and telephone are required');
+          return;
+        }
+        if (!isTenDigitPhone(telephone)) {
+          toast.error(phoneLengthMessage('Second receiver telephone'));
           return;
         }
         const created = await createCustomer({ fullname, telephone }).unwrap();

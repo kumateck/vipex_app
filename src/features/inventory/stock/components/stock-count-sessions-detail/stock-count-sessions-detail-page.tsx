@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -144,7 +145,7 @@ export function StockCountSessionsDetailPage() {
                   </p>
                   <p>
                     <strong>Created:</strong>{' '}
-                    {data.createdAt ? new Date(data.createdAt).toLocaleString() : 'N/A'}
+                    {data.createdAt ? formatDateTimeShared(data.createdAt) : 'N/A'}
                   </p>
                 </div>
                 <div className="flex gap-2">

@@ -58,8 +58,18 @@ const readNestedCode = (value: unknown, depth = 0): string | undefined => {
   return readNestedCode(candidate.cause, depth + 1);
 };
 
+const readNestedMessage = (value: unknown, depth = 0): string | undefined => {
+  if (!value || typeof value !== 'object' || depth > 4) return undefined;
+  const candidate = value as { message?: unknown; cause?: unknown };
+  if (typeof candidate.message === 'string' && candidate.message.trim().length > 0) {
+    return candidate.message;
+  }
+  return readNestedMessage(candidate.cause, depth + 1);
+};
+
 const toInfraMapping = (err: ErrorLike): InfraMapping => {
   const infraCode = err.code ?? readNestedCode(err.cause);
+  const infraMessage = err.message ?? readNestedMessage(err.cause) ?? '';
   const infraCommand =
     typeof err.command === 'string'
       ? err.command
@@ -86,6 +96,20 @@ const toInfraMapping = (err: ErrorLike): InfraMapping => {
   if (infraCode === 'ESOCKET' || infraCommand === 'CONN') {
     return {
       status: HttpStatus.BAD_GATEWAY,
+      code: 'UPSTREAM_UNAVAILABLE',
+      message: 'A dependent service is temporarily unavailable.',
+    };
+  }
+  if (
+    infraCode === 'CONNECT_TIMEOUT' ||
+    infraCode === 'ETIMEDOUT' ||
+    infraCode === 'ECONNREFUSED' ||
+    infraCode === 'EHOSTUNREACH' ||
+    infraCode === 'ENETUNREACH' ||
+    /connect timeout/i.test(infraMessage)
+  ) {
+    return {
+      status: HttpStatus.SERVICE_UNAVAILABLE,
       code: 'UPSTREAM_UNAVAILABLE',
       message: 'A dependent service is temporarily unavailable.',
     };
