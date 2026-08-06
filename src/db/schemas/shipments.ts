@@ -15,6 +15,10 @@ import { companies, branches, users, locations, warehouses } from './core';
 import { customers, cards } from './customers';
 import { sql } from 'drizzle-orm';
 import {
+  ParcelDispositionActionType,
+  ParcelReconciliationActionType,
+  ParcelReconciliationCaseStatus,
+  ParcelReconciliationCaseType,
   ParcelHolderType,
   ParcelInternalTransferStatus,
   ParcelStatus,
@@ -60,6 +64,7 @@ export const parcels = pgTable(
     sourceId: varchar('source_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
+    sourceLocationId: varchar('source_location_id', { length: 25 }).references(() => locations.id),
     destinationId: varchar('destination_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
@@ -105,6 +110,9 @@ export const parcels = pgTable(
 
     taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
+    deletedBy: varchar('deleted_by', { length: 25 }).references(() => users.id),
+    deletedAt: timestamp('deleted_at', { withTimezone: false }),
+    deleteReason: varchar('delete_reason', { length: 1000 }),
 
     createdBy: varchar('created_by', { length: 25 }),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
@@ -127,6 +135,82 @@ export const parcels = pgTable(
     byStatus: index('parcels_status_idx').on(t.status),
   }),
 );
+
+export const parcelDiscrepancies = pgTable(
+  'parcel_discrepancies',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    parcelId: varchar('parcel_id', { length: 25 }).references(() => parcels.id),
+    branchId: varchar('branch_id', { length: 25 }).references(() => branches.id),
+    trackingCode: varchar('tracking_code', { length: 255 }),
+    bookingCode: varchar('booking_code', { length: 255 }),
+    discrepancyType: varchar('discrepancy_type', { length: 100 }).notNull(),
+    notes: varchar('notes', { length: 1000 }),
+    status: smallint('status').notNull().default(0), // 0=open, 1=resolved
+    createdBy: varchar('created_by', { length: 25 }).references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    resolvedBy: varchar('resolved_by', { length: 25 }).references(() => users.id),
+    resolvedAt: timestamp('resolved_at', { withTimezone: false }),
+    resolutionNote: varchar('resolution_note', { length: 1000 }),
+  },
+  (t) => ({
+    byCompanyStatus: index('parcel_discrepancies_company_status_idx').on(t.companyId, t.status),
+    byParcel: index('parcel_discrepancies_parcel_idx').on(t.parcelId),
+    byCreated: index('parcel_discrepancies_created_idx').on(t.createdAt),
+    uqOpenByParcel: uniqueIndex('parcel_discrepancies_open_parcel_uq')
+      .on(t.parcelId)
+      .where(sql`${t.parcelId} IS NOT NULL AND ${t.status} = 0`),
+  }),
+);
+
+export const parcelReconciliationCases = pgTable(
+  'parcel_reconciliation_cases',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    parcelId: varchar('parcel_id', { length: 25 })
+      .notNull()
+      .references(() => parcels.id),
+    linkedParcelId: varchar('linked_parcel_id', { length: 25 }).references(() => parcels.id),
+    caseType: smallint('case_type').notNull().default(ParcelReconciliationCaseType.SHORTAGE),
+    actionType: smallint('action_type').default(ParcelReconciliationActionType.VOID_AND_REFUND),
+    status: smallint('status').notNull().default(ParcelReconciliationCaseStatus.REQUESTED),
+    notes: varchar('notes', { length: 1000 }),
+    resolutionNote: varchar('resolution_note', { length: 1000 }),
+    evidenceUrl: varchar('evidence_url', { length: 1000 }),
+    requestedBy: varchar('requested_by', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+    requestedAt: timestamp('requested_at', { withTimezone: false }).notNull().defaultNow(),
+    approvedBy: varchar('approved_by', { length: 25 }).references(() => users.id),
+    approvedAt: timestamp('approved_at', { withTimezone: false }),
+    executedBy: varchar('executed_by', { length: 25 }).references(() => users.id),
+    executedAt: timestamp('executed_at', { withTimezone: false }),
+    voidedPaymentCount: integer('voided_payment_count').notNull().default(0),
+    metadata: json('metadata'),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompanyStatus: index('parcel_recon_cases_company_status_idx').on(t.companyId, t.status),
+    byParcel: index('parcel_recon_cases_parcel_idx').on(t.parcelId),
+    byLinkedParcel: index('parcel_recon_cases_linked_parcel_idx').on(t.linkedParcelId),
+    byRequestedAt: index('parcel_recon_cases_requested_idx').on(t.requestedAt),
+    uqOpenByParcel: uniqueIndex('parcel_recon_cases_open_parcel_uq')
+      .on(t.parcelId)
+      .where(sql`${t.status} IN (0, 1)`),
+  }),
+);
+
 export const consignments = pgTable(
   'consignments',
   {
@@ -256,6 +340,7 @@ export const pickupQueues = pgTable(
     branchId: varchar('branch_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
+    locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
     parcelId: varchar('parcel_id', { length: 25 })
       .notNull()
       .references(() => parcels.id),
@@ -276,15 +361,17 @@ export const pickupQueues = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
   },
   (t) => ({
-    uqPickupQueueParcel: uniqueIndex('pickup_queues_parcel_uq').on(t.parcelId),
+    uqPickupQueueOpenParcelDaily: uniqueIndex('pickup_queues_open_parcel_daily_uq')
+      .on(t.parcelId, t.queueDate)
+      .where(sql`${t.endedAt} IS NULL`),
     uqPickupQueueDailyCode: uniqueIndex('pickup_queues_daily_code_uq').on(
       t.branchId,
+      t.locationId,
       t.queueDate,
-      t.paymentBucket,
       t.queueNumber,
     ),
     byBranchQueuedAt: index('pickup_queues_branch_queued_at_idx').on(t.branchId, t.queuedAt),
-    byQueueCode: uniqueIndex('pickup_queues_code_uq').on(t.queueCode),
+    byQueueCode: index('pickup_queues_code_idx').on(t.queueCode),
   }),
 );
 
@@ -383,5 +470,75 @@ export const parcelInternalTransferItems = pgTable(
   (t) => ({
     pk: uniqueIndex('parcel_internal_transfer_items_uq').on(t.transferId, t.parcelId),
     byParcel: index('parcel_internal_transfer_items_parcel_idx').on(t.parcelId),
+  }),
+);
+
+export const parcelDispositionActions = pgTable(
+  'parcel_disposition_actions',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    parcelId: varchar('parcel_id', { length: 25 })
+      .notNull()
+      .references(() => parcels.id),
+    actionType: smallint('action_type').notNull().default(ParcelDispositionActionType.NOTICE_SENT),
+    warehouseId: varchar('warehouse_id', { length: 25 }).references(() => warehouses.id),
+    notes: text('notes'),
+    recoveredAmountPsw: bigint('recovered_amount_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    performedBy: varchar('performed_by', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+    performedAt: timestamp('performed_at', { withTimezone: false }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompanyPerformedAt: index('parcel_disposition_actions_company_performed_idx').on(
+      t.companyId,
+      t.performedAt,
+    ),
+    byParcelPerformedAt: index('parcel_disposition_actions_parcel_performed_idx').on(
+      t.parcelId,
+      t.performedAt,
+    ),
+    byWarehouse: index('parcel_disposition_actions_warehouse_idx').on(t.warehouseId),
+  }),
+);
+
+export const parcelStorageWaivers = pgTable(
+  'parcel_storage_waivers',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    parcelId: varchar('parcel_id', { length: 25 })
+      .notNull()
+      .references(() => parcels.id),
+    waivedAmountPsw: bigint('waived_amount_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    reason: text('reason').notNull(),
+    waivedBy: varchar('waived_by', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+    waivedAt: timestamp('waived_at', { withTimezone: false }).notNull().defaultNow(),
+    accountingJournalEntryId: varchar('accounting_journal_entry_id', { length: 25 }),
+    accountingPostedAt: timestamp('accounting_posted_at', { withTimezone: false }),
+    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompanyWaivedAt: index('parcel_storage_waivers_company_waived_idx').on(
+      t.companyId,
+      t.waivedAt,
+    ),
+    byParcelWaivedAt: index('parcel_storage_waivers_parcel_waived_idx').on(t.parcelId, t.waivedAt),
   }),
 );

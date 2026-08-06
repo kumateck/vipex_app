@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, ilike, inArray, ne, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { users, roles, branches, companies, locations } from '@/db/schemas';
+import { users, roles, branches, companies, employees, locations } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
 
 export type ListUserParams = {
@@ -21,6 +21,12 @@ export type UserOptionRow = {
   id: string;
   fullname: string;
   email: string;
+  branchId: string | null;
+  locationId: string | null;
+  branchType: number | null;
+  roleName: string | null;
+  branchName: string | null;
+  locationName: string | null;
 };
 
 export async function listUsersRepo(p: ListUserParams) {
@@ -85,9 +91,12 @@ export async function listUsersRepo(p: ListUserParams) {
       roleId: users.roleId,
       companyId: users.companyId,
       employeeId: users.employeeId,
+      employeeName: employees.displayName,
+      employeeNumber: employees.employeeNumber,
       branchId: users.branchId,
       locationId: users.locationId,
       userType: users.userType,
+      cashierType: users.cashierType,
       createdBy: users.createdBy,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
@@ -101,6 +110,7 @@ export async function listUsersRepo(p: ListUserParams) {
     .leftJoin(branches, eq(branches.id, users.branchId))
     .leftJoin(locations, eq(locations.id, users.locationId))
     .leftJoin(companies, eq(companies.id, users.companyId))
+    .leftJoin(employees, eq(employees.id, users.employeeId))
     .where(
       where.length || p.search
         ? and(
@@ -157,8 +167,17 @@ export async function listUserOptionsRepo(p: {
       id: users.id,
       fullname: users.fullname,
       email: users.email,
+      branchId: users.branchId,
+      locationId: users.locationId,
+      branchType: branches.type,
+      roleName: roles.name,
+      branchName: branches.name,
+      locationName: locations.name,
     })
     .from(users)
+    .leftJoin(roles, eq(roles.id, users.roleId))
+    .leftJoin(branches, eq(branches.id, users.branchId))
+    .leftJoin(locations, eq(locations.id, users.locationId))
     .where(where.length ? and(...where) : undefined)
     .orderBy(asc(users.fullname), asc(users.id));
 }
@@ -177,6 +196,7 @@ export async function getUserRepo(id: string) {
       branchId: users.branchId,
       locationId: users.locationId,
       userType: users.userType,
+      cashierType: users.cashierType,
       createdBy: users.createdBy,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,

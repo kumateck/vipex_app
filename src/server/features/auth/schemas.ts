@@ -11,6 +11,8 @@ export const TokenPair = t.Object({
   refreshToken: t.String(),
 });
 
+export const PermissionsField = t.Array(t.String());
+
 export const AuthUserResponse = t.Object({
   id: UUID,
   email: t.String({ format: 'email' }),
@@ -48,6 +50,7 @@ export const AuthUserResponse = t.Object({
   locationId: t.Optional(t.Union([UUID, t.Null()])),
   locationName: t.Optional(t.Union([t.String(), t.Null()])),
   userType: t.Optional(t.Number()),
+  cashierType: t.Optional(t.Union([t.Number(), t.Null()])),
   role: t.Optional(
     t.Union([
       t.Object({
@@ -63,6 +66,7 @@ export const AuthUserResponse = t.Object({
 export const LoginResponse = t.Object({
   tokens: TokenPair,
   user: AuthUserResponse,
+  permissions: PermissionsField,
 });
 
 export const RefreshBody = t.Object({
@@ -75,14 +79,27 @@ export const ForgotPasswordBody = t.Object({
   email: t.String({ format: 'email' }),
 });
 
+export const OTPCode = t.String({ pattern: '^[0-9]{6}$' });
+
 export const ResetPasswordBody = t.Object({
-  token: t.String(),
+  email: t.String({ format: 'email' }),
+  otp: OTPCode,
+  password: t.String({ minLength: 8, maxLength: 128 }),
+});
+
+export const SetPasswordBody = t.Object({
+  email: t.String({ format: 'email' }),
+  otp: OTPCode,
   password: t.String({ minLength: 8, maxLength: 128 }),
 });
 
 export const ChangePasswordBody = t.Object({
   oldPassword: t.String({ minLength: 8, maxLength: 128 }),
   newPassword: t.String({ minLength: 8, maxLength: 128 }),
+});
+
+export const VerifyPasswordBody = t.Object({
+  password: t.String({ minLength: 1, maxLength: 128 }),
 });
 
 export const CurrentUserPermissionsResponse = t.Object({

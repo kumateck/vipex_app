@@ -1,17 +1,27 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import { EllipsisVertical } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { PermissionKeys } from '@/shared/permissions/constants';
+import { UnitOfMeasure } from '@/db/schemas/enums';
 import type { InventoryProduct } from '../types/inventory-product.types';
 
 export const UNIT_OF_MEASURE_OPTIONS = [
-  { value: 0, label: 'Piece' },
-  { value: 1, label: 'Box' },
-  { value: 2, label: 'Carton' },
-  { value: 3, label: 'Kg' },
-  { value: 4, label: 'Liter' },
-  { value: 5, label: 'Meter' },
-  { value: 6, label: 'Pack' },
-  { value: 7, label: 'Dozen' },
+  { value: UnitOfMeasure.PIECE, label: 'Piece' },
+  { value: UnitOfMeasure.BOX, label: 'Box' },
+  { value: UnitOfMeasure.CARTON, label: 'Carton' },
+  { value: UnitOfMeasure.KG, label: 'Kg' },
+  { value: UnitOfMeasure.LITER, label: 'Liter' },
+  { value: UnitOfMeasure.METER, label: 'Meter' },
+  { value: UnitOfMeasure.PACK, label: 'Pack' },
+  { value: UnitOfMeasure.DOZEN, label: 'Dozen' },
 ] as const;
 
 export function createInventoryProductColumns(
@@ -32,7 +42,7 @@ export function createInventoryProductColumns(
     },
     {
       accessorFn: (row) =>
-        row.categoryId ? categoryNameById?.get(row.categoryId) ?? row.categoryId : '-',
+        row.categoryId ? (categoryNameById?.get(row.categoryId) ?? 'Unknown category') : '-',
       id: 'categoryName',
       header: 'Category',
     },
@@ -42,19 +52,35 @@ export function createInventoryProductColumns(
       header: 'Unit',
     },
     {
+      accessorFn: (row) => (row.isRecoverable ? 'Recoverable' : 'Consumable'),
+      id: 'recoverability',
+      header: 'Lifecycle',
+    },
+    {
       accessorKey: 'minStockLevel',
       header: 'Min Stock',
       cell: ({ row }) => row.original.minStockLevel || '0',
     },
     {
       id: 'actions',
-      header: 'Actions',
-      size: 100,
+      header: 'Action',
+      size: 70,
       enableSorting: false,
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/inventory/products/edit/${row.original.id}`}>Edit</Link>
-        </Button>
+        <PermissionGuard permissionKey={PermissionKeys.CanUpdateProduct}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-8 w-8">
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link to={`/inventory/products/edit/${row.original.id}`}>Edit</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </PermissionGuard>
       ),
     },
   ];

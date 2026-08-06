@@ -1,5 +1,10 @@
 import type { Elysia } from 'elysia';
 import { BranchType } from '@/db/schemas/enums';
+import {
+  findRefreshTokenByIdRepo,
+  getUserByIdRepo,
+  listRolePermissionKeysRepo,
+} from '@/server/features/auth/repository';
 import { verifyAccessToken } from '../utils/jwt';
 import { Unauthorized as UnauthorizedError } from '../utils/http-error';
 import { Forbidden } from '../utils/http-error';
@@ -15,6 +20,7 @@ export type AuthUser = {
   branchType?: number | null;
   locationId?: string | null;
   userType?: number | null;
+  cashierType?: number | null;
   permissions?: string[];
   iat?: number;
   exp?: number;
@@ -28,7 +34,54 @@ export const authPlugin = (app: Elysia) =>
     const token = auth.slice('Bearer '.length).trim();
     try {
       const payload = await verifyAccessToken(token);
-      return { user: payload as AuthUser };
+      if (payload.sid && payload.email) {
+        const refreshTokenRow = await findRefreshTokenByIdRepo(payload.sid);
+        if (!refreshTokenRow) return { user: null as AuthUser | null };
+        if (refreshTokenRow.revokedAt) return { user: null as AuthUser | null };
+        if (refreshTokenRow.expiresAt.getTime() <= Date.now())
+          return { user: null as AuthUser | null };
+        return {
+          user: {
+            sub: payload.sub,
+            email: payload.email,
+            employeeId: payload.employeeId ?? null,
+            roleId: payload.roleId ?? null,
+            companyId: payload.companyId ?? null,
+            branchId: payload.branchId ?? null,
+            branchType: payload.branchType ?? null,
+            locationId: payload.locationId ?? null,
+            userType: payload.userType ?? null,
+            cashierType: payload.cashierType ?? null,
+            permissions: Array.isArray(refreshTokenRow.permissionsSnapshot)
+              ? refreshTokenRow.permissionsSnapshot
+              : [],
+            iat: payload.iat,
+            exp: payload.exp,
+          } satisfies AuthUser,
+        };
+      }
+
+      const userRow = await getUserByIdRepo(payload.sub);
+      if (!userRow?.id || !userRow.email) return { user: null as AuthUser | null };
+      const permissions = await listRolePermissionKeysRepo(userRow.roleId, userRow.companyId);
+
+      return {
+        user: {
+          sub: userRow.id,
+          email: userRow.email,
+          employeeId: userRow.employeeId ?? null,
+          roleId: userRow.roleId ?? null,
+          companyId: userRow.companyId ?? null,
+          branchId: userRow.branchId ?? null,
+          branchType: userRow.branch?.type ?? null,
+          locationId: userRow.locationId ?? null,
+          userType: userRow.userType ?? null,
+          cashierType: userRow.cashierType ?? null,
+          permissions,
+          iat: payload.iat,
+          exp: payload.exp,
+        } satisfies AuthUser,
+      };
     } catch {
       return { user: null as AuthUser | null };
     }

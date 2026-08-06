@@ -5,134 +5,281 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1774075519198,
-      "tag": "0000_volatile_sharon_ventura",
+      "when": 1774897497480,
+      "tag": "0000_old_lockheed",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1774076400000,
-      "tag": "0001_customer_gov_flags",
+      "when": 1774951082907,
+      "tag": "0001_ambitious_skin",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "7",
-      "when": 1774177800000,
-      "tag": "0002_customer_crm_credit",
+      "when": 1774951923664,
+      "tag": "0002_missing_module_tables_backfill",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "7",
-      "when": 1774179600000,
-      "tag": "0003_customer_credit_allocations",
+      "when": 1775040000000,
+      "tag": "0003_leave_ticket_policy_updates",
       "breakpoints": true
     },
     {
       "idx": 4,
       "version": "7",
-      "when": 1774202400000,
-      "tag": "0004_users_company_email_unique",
+      "when": 1775040060000,
+      "tag": "0004_communication_channels_visibility_voice",
       "breakpoints": true
     },
     {
       "idx": 5,
       "version": "7",
-      "when": 1774209300000,
-      "tag": "0005_customers_company_telephone_unique",
+      "when": 1775040120000,
+      "tag": "0005_communication_channel_read_state",
       "breakpoints": true
     },
     {
       "idx": 6,
       "version": "7",
-      "when": 1774210500000,
-      "tag": "0006_deliveries_signature_image_compat",
+      "when": 1775040180000,
+      "tag": "0006_communication_push_tokens",
       "breakpoints": true
     },
     {
       "idx": 7,
       "version": "7",
-      "when": 1774214100000,
-      "tag": "0007_pickup_queue",
+      "when": 1775304000000,
+      "tag": "0009_users_cashier_type",
       "breakpoints": true
     },
     {
       "idx": 8,
       "version": "7",
-      "when": 1774303200000,
-      "tag": "0008_accounting_foundation",
+      "when": 1775486400000,
+      "tag": "0010_parcel_reconciliation_cases",
       "breakpoints": true
     },
     {
       "idx": 9,
       "version": "7",
-      "when": 1774563000000,
-      "tag": "0009_company_accounting_toggle",
+      "when": 1775486460000,
+      "tag": "0011_pickup_queue_daily_location",
       "breakpoints": true
     },
     {
       "idx": 10,
       "version": "7",
-      "when": 1774564200000,
-      "tag": "0010_hr_payroll_foundation",
+      "when": 1775486520000,
+      "tag": "0012_pickup_queue_code_non_unique",
       "breakpoints": true
     },
     {
       "idx": 11,
       "version": "7",
-      "when": 1774565400000,
-      "tag": "0011_sync_accounting_module_flag",
+      "when": 1775667600000,
+      "tag": "0020_fleet_registry_backfill_hotfix",
       "breakpoints": true
     },
     {
       "idx": 12,
       "version": "7",
-      "when": 1774566600000,
-      "tag": "0012_payroll_settlement_fields",
+      "when": 1775667900000,
+      "tag": "0013_fleet_transport_foundation",
       "breakpoints": true
     },
     {
       "idx": 13,
       "version": "7",
-      "when": 1774821600000,
-      "tag": "0013_leave_foundation",
+      "when": 1775670000000,
+      "tag": "0021_fleet_route_planning_assignment",
       "breakpoints": true
     },
     {
       "idx": 14,
       "version": "7",
-      "when": 1774825200000,
-      "tag": "0014_payroll_variable_inputs",
+      "when": 1775670600000,
+      "tag": "0022_fleet_trip_check_events",
       "breakpoints": true
     },
     {
       "idx": 15,
       "version": "7",
-      "when": 1774828800000,
-      "tag": "0015_manager_approval_workflows",
+      "when": 1775671200000,
+      "tag": "0023_fleet_load_telemetry_rosters",
       "breakpoints": true
     },
     {
       "idx": 16,
       "version": "7",
-      "when": 1774900800000,
-      "tag": "0016_internal_parcel_transfers",
+      "when": 1775671800000,
+      "tag": "0024_parcel_storage_waivers_hotfix",
       "breakpoints": true
     },
     {
       "idx": 17,
       "version": "7",
-      "when": 1774988400000,
-      "tag": "0017_uploads_model",
+      "when": 1775672100000,
+      "tag": "0018_fleet_maintenance_reliability",
       "breakpoints": true
     },
     {
       "idx": 18,
       "version": "7",
-      "when": 1775074800000,
-      "tag": "0018_employee_profile_customer_card_images",
+      "when": 1775673000000,
+      "tag": "0025_leave_calendar_swaps",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1775672400000,
+      "tag": "0027_fleet_risk_parts_analytics",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1775673600000,
+      "tag": "0028_inventory_location_hierarchy_partial_transfers",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1775686200000,
+      "tag": "0029_schema_alignment_hotfix",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1775686800000,
+      "tag": "0030_product_unit_conversions",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1775692800000,
+      "tag": "0030_procurement_fleet_policy_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1775696400000,
+      "tag": "0031_stock_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1775699400000,
+      "tag": "0032_inventory_dashboard_maintenance_allocation",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1775703000000,
+      "tag": "0033_procurement_replenishment_orchestration",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1775712000000,
+      "tag": "0034_inventory_reservation_allocation_engine",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1775715600000,
+      "tag": "0035_inventory_lot_fefo_engine",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1775718600000,
+      "tag": "0036_procurement_grn_lot_capture",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1775722200000,
+      "tag": "0037_inventory_stock_count_reconciliation",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1775725800000,
+      "tag": "0038_inventory_acknowledgement_reorder_engine",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1775729400000,
+      "tag": "0039_inventory_major_modules_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1775716629000,
+      "tag": "0040_inventory_products_is_recoverable_hotfix",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1775731800000,
+      "tag": "0042_refresh_tokens_permissions_snapshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1776175200000,
+      "tag": "0043_stock_request_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1776252000000,
+      "tag": "0044_inventory_reorder_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1776255600000,
+      "tag": "0045_sticker_print_module",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1776262800000,
+      "tag": "0046_parcel_receiver_otps",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1776270000000,
+      "tag": "0047_momo_transactions",
       "breakpoints": true
     }
   ]

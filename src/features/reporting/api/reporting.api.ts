@@ -17,8 +17,8 @@ export interface EmployeeMasterReportRow {
   departmentName?: string | null;
   jobTitleId?: string | null;
   jobTitleName?: string | null;
-  managerEmployeeId?: string | null;
-  managerName?: string | null;
+  supervisorEmployeeId?: string | null;
+  supervisorName?: string | null;
   hasUserAccount: boolean;
   paymentMethod?: string | null;
   bankName?: string | null;
@@ -71,7 +71,7 @@ export interface LeaveRequestsReportRow {
   employeeId: string;
   employeeNumber?: string | null;
   employeeName?: string | null;
-  managerEmployeeId?: string | null;
+  supervisorEmployeeId?: string | null;
   leaveTypeId: string;
   leaveTypeName: string;
   leaveTypeIsPaid: boolean;
@@ -526,6 +526,8 @@ export interface DailyCashierSalesTransactionRow {
   parcelId: string;
   bookingCode: string;
   trackingCode: string;
+  payerName: string;
+  whoPaid: string;
   cashierId?: string | null;
   cashierName: string;
   branchId?: string | null;
@@ -543,12 +545,23 @@ export interface DailyCashierSalesTransactionRow {
   receiptNo?: string | null;
 }
 
+export interface DailyCashierSalesToBePaidRow {
+  parcelId: string;
+  sessionId?: string | null;
+  bookingCode: string;
+  senderName?: string | null;
+  receiverName?: string | null;
+  plannedToBePaidPsw: number;
+  createdAt: string;
+}
+
 export interface DailyCashierSalesReport {
   filters: Record<string, unknown>;
   generatedAt: string;
   totals: {
     sessions: number;
     transactions: number;
+    toBePaidPsw: number;
     grossPsw: number;
     netPsw: number;
     taxPsw: number;
@@ -567,6 +580,12 @@ export interface DailyCashierSalesReport {
   };
   sessions: DailyCashierSalesSessionRow[];
   transactions: DailyCashierSalesTransactionRow[];
+  toBePaidRows: DailyCashierSalesToBePaidRow[];
+}
+
+export interface DailyCashierSalesCashierOption {
+  id: string;
+  name: string;
 }
 
 export interface BranchProfitabilityReportRow {
@@ -712,6 +731,33 @@ export interface ToBePaidCollectionsReconciliationReport {
     variancePsw: number;
   };
   rows: ToBePaidCollectionsReconciliationReportRow[];
+}
+
+export interface StorageWaiverFinancialReportRow {
+  waiverId: string;
+  parcelId: string;
+  bookingCode: string;
+  trackingCode: string;
+  destinationBranchId: string;
+  destinationBranchName?: string | null;
+  waivedAmountPsw: number;
+  reason: string;
+  waivedByUserId: string;
+  waivedByName?: string | null;
+  waivedAt: string;
+  accountingJournalEntryId?: string | null;
+  accountingPostedAt?: string | null;
+}
+
+export interface StorageWaiverFinancialReport {
+  filters: Record<string, unknown>;
+  generatedAt: string;
+  totals: {
+    waivers: number;
+    waivedAmountPsw: number;
+    postedCount: number;
+  };
+  rows: StorageWaiverFinancialReportRow[];
 }
 
 export const reportingApi = api.injectEndpoints({
@@ -873,6 +919,20 @@ export const reportingApi = api.injectEndpoints({
         params,
       }),
     }),
+    listDailyCashierSalesCashiers: builder.query<
+      DailyCashierSalesCashierOption[],
+      {
+        date: string;
+        branchId?: string | null;
+        locationId?: string | null;
+        cashierType?: number | null;
+      }
+    >({
+      query: (params) => ({
+        url: '/reports/daily-cashier-sales/cashiers',
+        params,
+      }),
+    }),
     getBranchProfitabilityReport: builder.query<
       BranchProfitabilityReport,
       {
@@ -940,6 +1000,19 @@ export const reportingApi = api.injectEndpoints({
         params,
       }),
     }),
+    getStorageWaiverFinancialReport: builder.query<
+      StorageWaiverFinancialReport,
+      {
+        branchId?: string | null;
+        from: string;
+        to: string;
+      }
+    >({
+      query: (params) => ({
+        url: '/reports/accounting/storage-waivers',
+        params,
+      }),
+    }),
   }),
 });
 
@@ -957,9 +1030,11 @@ export const {
   useGetParcelStatusSummaryReportQuery,
   useGetShiftRevenueReportQuery,
   useGetDailyCashierSalesReportQuery,
+  useListDailyCashierSalesCashiersQuery,
   useGetBranchProfitabilityReportQuery,
   useGetCreditExposureReportQuery,
   useGetCustomerCreditAgingDetailReportQuery,
   useGetToBePaidOutstandingReportQuery,
   useGetToBePaidCollectionsReconciliationReportQuery,
+  useGetStorageWaiverFinancialReportQuery,
 } = reportingApi;

@@ -1,5 +1,10 @@
 import { t } from 'elysia';
-import { UUID, NonEmptyString255, PaginationRequestQueryProps, SmallInt } from '../../schemas/common';
+import {
+  UUID,
+  NonEmptyString255,
+  PaginationRequestQueryProps,
+  SmallInt,
+} from '../../schemas/common';
 
 // Product Category schemas
 export const ListProductCategoriesQuery = t.Object({
@@ -33,6 +38,15 @@ export const CreateProductBody = t.Object({
   name: NonEmptyString255,
   description: t.Optional(t.String()),
   unitOfMeasure: SmallInt,
+  isRecoverable: t.Optional(t.Boolean()),
+  unitConversions: t.Optional(
+    t.Array(
+      t.Object({
+        unitOfMeasure: SmallInt,
+        factorToBase: t.String(),
+      }),
+    ),
+  ),
   minStockLevel: t.Optional(t.String()), // bigint as string
   createdBy: UUID,
 });
@@ -42,6 +56,15 @@ export const UpdateProductBody = t.Object({
   name: t.Optional(NonEmptyString255),
   description: t.Optional(t.Union([t.String(), t.Null()])),
   unitOfMeasure: t.Optional(SmallInt),
+  isRecoverable: t.Optional(t.Boolean()),
+  unitConversions: t.Optional(
+    t.Array(
+      t.Object({
+        unitOfMeasure: SmallInt,
+        factorToBase: t.String(),
+      }),
+    ),
+  ),
   minStockLevel: t.Optional(t.String()), // bigint as string
 });
 
@@ -50,17 +73,23 @@ export const ListInventoryLocationsQuery = t.Object({
   ...PaginationRequestQueryProps,
   companyId: t.Optional(UUID),
   branchId: t.Optional(UUID),
+  locationType: t.Optional(SmallInt),
+  parentLocationId: t.Optional(UUID),
 });
 
 export const CreateInventoryLocationBody = t.Object({
   companyId: UUID,
   branchId: UUID,
+  locationType: t.Optional(SmallInt),
+  parentLocationId: t.Optional(t.Union([UUID, t.Null()])),
   name: NonEmptyString255,
   description: t.Optional(t.String()),
   createdBy: UUID,
 });
 
 export const UpdateInventoryLocationBody = t.Object({
+  locationType: t.Optional(SmallInt),
+  parentLocationId: t.Optional(t.Union([UUID, t.Null()])),
   name: t.Optional(NonEmptyString255),
   description: t.Optional(t.Union([t.String(), t.Null()])),
 });
@@ -71,6 +100,8 @@ export const ListStockLevelsQuery = t.Object({
   companyId: t.Optional(UUID),
   productId: t.Optional(UUID),
   locationId: t.Optional(UUID),
+  branchId: t.Optional(UUID),
+  locationType: t.Optional(SmallInt),
 });
 
 export const UpdateStockLevelBody = t.Object({
@@ -83,6 +114,8 @@ export const ListStockMovementsQuery = t.Object({
   companyId: t.Optional(UUID),
   productId: t.Optional(UUID),
   locationId: t.Optional(UUID),
+  branchId: t.Optional(UUID),
+  locationType: t.Optional(SmallInt),
   movementType: t.Optional(SmallInt),
 });
 
@@ -104,6 +137,8 @@ export const ListStockAdjustmentsQuery = t.Object({
   companyId: t.Optional(UUID),
   productId: t.Optional(UUID),
   locationId: t.Optional(UUID),
+  branchId: t.Optional(UUID),
+  locationType: t.Optional(SmallInt),
 });
 
 export const CreateStockAdjustmentBody = t.Object({
@@ -121,6 +156,8 @@ export const ListStockTransfersQuery = t.Object({
   ...PaginationRequestQueryProps,
   companyId: t.Optional(UUID),
   productId: t.Optional(UUID),
+  branchId: t.Optional(UUID),
+  locationType: t.Optional(SmallInt),
   status: t.Optional(SmallInt),
 });
 
@@ -135,8 +172,47 @@ export const CreateStockTransferBody = t.Object({
 });
 
 export const UpdateStockTransferBody = t.Object({
-  status: SmallInt,
+  status: t.Optional(SmallInt),
+  fulfillQuantity: t.Optional(t.String()), // bigint delta as string
   completedBy: t.Optional(UUID),
+});
+
+// Stock Request schemas
+export const ListStockRequestsQuery = t.Object({
+  ...PaginationRequestQueryProps,
+  companyId: t.Optional(UUID),
+  requesterLocationId: t.Optional(UUID),
+  status: t.Optional(SmallInt),
+});
+
+export const CreateStockRequestBody = t.Object({
+  companyId: UUID,
+  requesterLocationId: UUID,
+  requestedToLocationId: t.Optional(t.Union([UUID, t.Null()])),
+  requestType: SmallInt,
+  notes: t.Optional(t.String()),
+  requestedBy: UUID,
+  submit: t.Optional(t.Boolean()),
+  lines: t.Array(
+    t.Object({
+      productId: UUID,
+      requestedQuantity: t.String(),
+      notes: t.Optional(t.String()),
+    }),
+  ),
+});
+
+export const RejectStockRequestBody = t.Object({
+  rejectedBy: UUID,
+  reason: t.Optional(t.String()),
+});
+
+export const FulfillStockRequestLineBody = t.Object({
+  lineId: UUID,
+  fromLocationId: UUID,
+  fulfillQuantity: t.String(),
+  fulfilledBy: UUID,
+  notes: t.Optional(t.String()),
 });
 
 // Report schemas

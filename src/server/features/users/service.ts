@@ -1,6 +1,6 @@
 import { BadRequest, Forbidden, NotFound } from '../../utils/http-error';
 import { BRANCH_TYPES, USER_TYPES } from '@/shared/access/constants';
-import { BranchType } from '@/db/schemas/enums';
+import { BranchType, CashierType, UserType } from '@/db/schemas/enums';
 import { sendPasswordSetupInvite } from './service.invite';
 import {
   createUserRepo,
@@ -16,6 +16,21 @@ import {
 
 function normalizeUserEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+function isValidCashierType(value: number) {
+  return value >= CashierType.SENDING && value <= CashierType.FULL;
+}
+
+function normalizeCashierTypeByUserType(userType: number, cashierType?: number | null) {
+  if (userType !== UserType.CASHIER) return null;
+  if (cashierType === null || cashierType === undefined) {
+    throw BadRequest('Cashier type is required for cashier users');
+  }
+  if (!isValidCashierType(cashierType)) {
+    throw BadRequest('Invalid cashier type');
+  }
+  return cashierType;
 }
 
 export async function listUsersSvc(p: ListUserParams) {
@@ -48,6 +63,7 @@ export async function createUserSvc(input: {
   branchId: string;
   locationId?: string | null;
   userType: number;
+  cashierType?: CashierType | null;
   createdBy: string;
   sendInvite?: boolean;
   actor: {
@@ -65,6 +81,8 @@ export async function createUserSvc(input: {
   if (!USER_TYPES.includes(input.userType as (typeof USER_TYPES)[number])) {
     throw BadRequest('Invalid user type');
   }
+
+  const cashierType = normalizeCashierTypeByUserType(input.userType, input.cashierType);
 
   const targetBranch = await getBranchScopeRepo(input.branchId);
   if (!targetBranch) {
@@ -126,6 +144,7 @@ export async function createUserSvc(input: {
   const created = await createUserRepo({
     ...insertable,
     email: normalizedEmail,
+    cashierType,
   });
   if (created?.id && sendInvite) {
     await sendPasswordSetupInvite(created.id, normalizedEmail);
@@ -143,6 +162,7 @@ export async function updateUserSvc(
     branchId?: string;
     locationId?: string | null;
     userType?: number;
+    cashierType?: CashierType | null;
   },
 ) {
   const cur = await getUserRepo(id);
@@ -157,6 +177,11 @@ export async function updateUserSvc(
   ) {
     throw BadRequest('Invalid user type');
   }
+
+  const effectiveUserType = nextPatch.userType ?? cur.userType;
+  const cashierTypeProvided = Object.prototype.hasOwnProperty.call(nextPatch, 'cashierType');
+  const effectiveCashierType = cashierTypeProvided ? nextPatch.cashierType : cur.cashierType;
+  nextPatch.cashierType = normalizeCashierTypeByUserType(effectiveUserType, effectiveCashierType);
 
   const nextBranchId = nextPatch.branchId ?? cur.branchId;
   if (nextPatch.branchId) {

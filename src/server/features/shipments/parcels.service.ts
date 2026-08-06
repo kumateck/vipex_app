@@ -1,24 +1,77 @@
 import { toPesewas } from '@/server/utils/gh-money';
-import { ParcelStatus } from '@/db/schemas';
+import {
+  ParcelHolderType,
+  ParcelDispositionActionType,
+  ParcelReconciliationActionType,
+  ParcelReconciliationCaseStatus,
+  ParcelReconciliationCaseType,
+  ParcelStatus,
+  PaymentComponent,
+} from '@/db/schemas';
+import { JournalSourceType } from '@/db/schemas/enums';
+import { auditLogs } from '@/db/schemas/audit';
 import { db } from '@/db/config';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
-import { listPaymentsForParcelRepo } from '../payments/repository';
+import {
+  DEFAULT_PARCEL_AGEING_POLICY,
+  getParcelAgeingPolicyFromModuleSettings,
+  type ParcelAgeingPolicy,
+} from '@/shared/shipments/parcel-ageing-policy';
+import {
+  listAllPaymentsForParcelRepo,
+  listPaymentsForParcelRepo,
+  softVoidPaymentsByIdsRepo,
+} from '../payments/repository';
 import { getDeliveryByParcelRepo } from '../deliveries/repository';
 import { recordAuditLog } from '../audit/logger';
 import { listConsignmentsForParcelRepo } from './consignments.repository';
+import { removeActiveConsignmentItemsByParcelRepo } from './consignments.repository';
 import { getPickupQueueByParcelRepo } from '../pickup-queues/repository';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
-import { getParcelInternalHolderByParcelRepo } from '../parcel-internal-transfers/repository';
+import {
+  getParcelInternalHolderByParcelRepo,
+  getWarehouseForTransferRepo,
+  upsertParcelInternalHolderRepo,
+} from '../parcel-internal-transfers/repository';
+import { findCompanyModuleRepo } from '../company-modules/repository';
+import { postJournalEntrySvc } from '../accounting/posting.service';
+import { getAccountByCodeRepo } from '../accounting/repository';
+import { isAccountingEnabledForCompanySvc } from '../accounting/service';
+import {
+  createParcelDiscrepancyRepo,
+  getOpenDiscrepancyByParcelRepo,
+  listOpenParcelDiscrepanciesRepo,
+  resolveParcelDiscrepancyRepo,
+} from './parcel-discrepancies.repository';
+import {
+  createParcelReconciliationCaseRepo,
+  getOpenParcelReconciliationCaseByParcelRepo,
+  getParcelReconciliationCaseRepo,
+  listParcelReconciliationCasesRepo,
+  updateParcelReconciliationCaseRepo,
+} from './parcel-reconciliation-cases.repository';
 
 import {
+  createParcelDispositionActionRepo,
   createParcelRepo,
+  createParcelStorageWaiverRepo,
   getParcelRepo,
+  listParcelDispositionActionsRepo,
+  listParcelStorageWaiversRepo,
   listParcelsRepo,
+  sumParcelStorageWaiversPswRepo,
+  updateParcelStorageWaiverAccountingPostingRepo,
   updateParcelRepo,
   type ListParcelsParams,
   type ParcelRow,
 } from './parcels.repository';
 import { assertParcelFullyPaid } from './parcel-payment-settlement';
+import {
+  assertNoOutstandingStorageForHandover,
+  resolveAndValidateStorageWaiverAmountPsw,
+  validateStorageWaiverReason,
+} from './storage-accrual-guards';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 function getErrorCode(error: unknown): string | undefined {
@@ -37,8 +90,204 @@ function isSchemaCompatibilityError(error: unknown): boolean {
   return code === '42P01' || code === '42703';
 }
 
+function getAuditMetadataNote(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const candidate = (metadata as Record<string, unknown>).notes;
+  return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : null;
+}
+
+function isNonEmptyText(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function assertCaseType(value: number): ParcelReconciliationCaseType {
+  if (Object.values(ParcelReconciliationCaseType).includes(value)) {
+    return value as ParcelReconciliationCaseType;
+  }
+  throw BadRequest('Unsupported reconciliation case type');
+}
+
+function assertActionType(value: number): ParcelReconciliationActionType {
+  if (Object.values(ParcelReconciliationActionType).includes(value)) {
+    return value as ParcelReconciliationActionType;
+  }
+  throw BadRequest('Unsupported reconciliation action type');
+}
+
+function isReversalAllowedParcelStatus(status: number) {
+  return status !== ParcelStatus.DELIVERED_AT_HOME && status !== ParcelStatus.DELIVERED_BY_OFFICE;
+}
+
+const STORAGE_DAY_MS = 24 * 60 * 60 * 1000;
+const STORAGE_PAYMENT_NOTE_PREFIX = 'STORAGE_CHARGE';
+const STORAGE_WAIVER_RECEIVABLE_ACCOUNT_CODE = '1300';
+const STORAGE_WAIVER_EXPENSE_ACCOUNT_CODE = '5180';
+
+function addMonths(date: Date, months: number): Date {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
+}
+
+async function getCompanyParcelAgeingPolicy(companyId: string): Promise<ParcelAgeingPolicy> {
+  const shipmentsModule = await findCompanyModuleRepo(companyId, 'shipments');
+  return shipmentsModule?.settings
+    ? getParcelAgeingPolicyFromModuleSettings(shipmentsModule.settings)
+    : DEFAULT_PARCEL_AGEING_POLICY;
+}
+
+function computeParcelAgeingSnapshot(input: {
+  status: number;
+  receivedAt: Date | null;
+  policy: ParcelAgeingPolicy;
+  now: Date;
+}) {
+  const isCollectionStatus =
+    input.status === ParcelStatus.AWAITING_PICKUP ||
+    input.status === ParcelStatus.HOME_DELIVERY_REQUESTED;
+
+  if (!isCollectionStatus || !input.receivedAt) {
+    return {
+      isParcelAgeingEligible: false,
+      isParcelAged: false,
+      ageingDays: null,
+      storageChargeStartAt: null,
+      storageChargeDays: 0,
+      storageChargePsw: 0,
+      storageFeePerDayPsw: input.policy.storageFeePerDayPsw,
+      storageChargeGraceDays: input.policy.gracePeriodDays,
+      ageingThresholdMonths: input.policy.agedThresholdMonths,
+    };
+  }
+
+  const ageDays = Math.max(
+    0,
+    Math.floor((input.now.getTime() - input.receivedAt.getTime()) / STORAGE_DAY_MS),
+  );
+  const storageChargeStartAt = new Date(
+    input.receivedAt.getTime() + input.policy.gracePeriodDays * STORAGE_DAY_MS,
+  );
+  const chargeDays = Math.max(
+    0,
+    Math.floor((input.now.getTime() - storageChargeStartAt.getTime()) / STORAGE_DAY_MS),
+  );
+  const isAged =
+    addMonths(input.receivedAt, input.policy.agedThresholdMonths).getTime() <= input.now.getTime();
+
+  return {
+    isParcelAgeingEligible: true,
+    isParcelAged: isAged,
+    ageingDays: ageDays,
+    storageChargeStartAt: storageChargeStartAt.toISOString(),
+    storageChargeDays: chargeDays,
+    storageChargePsw: chargeDays * input.policy.storageFeePerDayPsw,
+    storageFeePerDayPsw: input.policy.storageFeePerDayPsw,
+    storageChargeGraceDays: input.policy.gracePeriodDays,
+    ageingThresholdMonths: input.policy.agedThresholdMonths,
+  };
+}
+
+function computeStorageAccrualPsw(input: {
+  status: number;
+  receivedAt: Date | null;
+  policy: ParcelAgeingPolicy;
+  now: Date;
+}) {
+  const isCollectionStatus =
+    input.status === ParcelStatus.AWAITING_PICKUP ||
+    input.status === ParcelStatus.HOME_DELIVERY_REQUESTED ||
+    input.status === ParcelStatus.AGED_IN_WAREHOUSE;
+  if (!isCollectionStatus || !input.receivedAt) return 0;
+  const storageChargeStartAt = new Date(
+    input.receivedAt.getTime() + input.policy.gracePeriodDays * STORAGE_DAY_MS,
+  );
+  const chargeDays = Math.max(
+    0,
+    Math.floor((input.now.getTime() - storageChargeStartAt.getTime()) / STORAGE_DAY_MS),
+  );
+  return chargeDays * input.policy.storageFeePerDayPsw;
+}
+
+export async function getParcelStorageSettlementSvc(
+  parcelId: string,
+  executor: DbExecutor = db,
+): Promise<{
+  parcelId: string;
+  accruedPsw: number;
+  paidPsw: number;
+  waivedPsw: number;
+  outstandingPsw: number;
+}> {
+  const parcel = await getParcelSvc(parcelId, executor);
+  const policy = await getCompanyParcelAgeingPolicy(parcel.companyId);
+  const accruedPsw = computeStorageAccrualPsw({
+    status: parcel.status,
+    receivedAt: parcel.receivedAt,
+    policy,
+    now: new Date(),
+  });
+
+  const [payments, waivedPsw] = await Promise.all([
+    listPaymentsForParcelRepo(parcelId, executor),
+    sumParcelStorageWaiversPswRepo(parcelId, executor),
+  ]);
+
+  const paidPsw = payments
+    .filter(
+      (payment) =>
+        payment.component === PaymentComponent.OTHER &&
+        (payment.notes ?? '').startsWith(STORAGE_PAYMENT_NOTE_PREFIX),
+    )
+    .reduce((sum, payment) => sum + Number(payment.grossAmountPsw ?? 0), 0);
+
+  const outstandingPsw = Math.max(accruedPsw - paidPsw - waivedPsw, 0);
+
+  return {
+    parcelId,
+    accruedPsw,
+    paidPsw,
+    waivedPsw,
+    outstandingPsw,
+  };
+}
+
 export async function listParcelsSvc(p: ListParcelsParams) {
-  return listParcelsRepo(p);
+  const policy =
+    p.companyId && (p.agedOnly || p.storageChargeAccruing)
+      ? await getCompanyParcelAgeingPolicy(p.companyId)
+      : DEFAULT_PARCEL_AGEING_POLICY;
+
+  const { data, totalRecords } = await listParcelsRepo({
+    ...p,
+    ageThresholdMonths: p.ageThresholdMonths ?? policy.agedThresholdMonths,
+    storageGraceDays: p.storageGraceDays ?? policy.gracePeriodDays,
+  });
+
+  const now = new Date();
+  const companyIds = [...new Set(data.map((row) => row.companyId).filter(Boolean))];
+  const policyByCompany = new Map<string, ParcelAgeingPolicy>();
+
+  await Promise.all(
+    companyIds.map(async (companyId) => {
+      policyByCompany.set(companyId, await getCompanyParcelAgeingPolicy(companyId));
+    }),
+  );
+
+  return {
+    data: data.map((row) => {
+      const rowPolicy = policyByCompany.get(row.companyId) ?? DEFAULT_PARCEL_AGEING_POLICY;
+      return {
+        ...row,
+        ...computeParcelAgeingSnapshot({
+          status: row.status,
+          receivedAt: row.receivedAt,
+          policy: rowPolicy,
+          now,
+        }),
+      };
+    }),
+    totalRecords,
+  };
 }
 export async function getParcelSvc(id: string, executor: DbExecutor = db): Promise<ParcelRow> {
   const row = await getParcelRepo(id, executor);
@@ -104,6 +353,8 @@ export async function updateParcelSvc(
   id: string,
   patch: {
     status?: number;
+    destinationId?: string;
+    sourceLocationId?: string | null;
     parcelDetails?: string;
     parcelContent?: string;
     secondReceiverId?: string | null;
@@ -119,14 +370,19 @@ export async function updateParcelSvc(
     method?: number;
     taxReportConfirmation?: boolean;
   },
+  actorUserId?: string | null,
 ): Promise<{ id: string }> {
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
   if (patch.status === ParcelStatus.DELIVERED_BY_OFFICE) {
     await assertParcelFullyPaid(id);
+    const storageSettlement = await getParcelStorageSettlementSvc(id);
+    assertNoOutstandingStorageForHandover(storageSettlement.outstandingPsw);
   }
   const setPatch: Partial<typeof cur> & { parcelValuePsw?: number } = {};
   if (patch.status !== undefined) setPatch.status = patch.status;
+  if (patch.destinationId !== undefined) setPatch.destinationId = patch.destinationId;
+  if (patch.sourceLocationId !== undefined) setPatch.sourceLocationId = patch.sourceLocationId;
   if (patch.parcelDetails) setPatch.parcelDetails = patch.parcelDetails;
   if (patch.parcelContent) setPatch.parcelContent = patch.parcelContent;
   if (patch.secondReceiverId !== undefined) setPatch.secondReceiverId = patch.secondReceiverId;
@@ -152,6 +408,24 @@ export async function updateParcelSvc(
 
   const updated = await updateParcelRepo(id, setPatch);
   if (!updated) throw NotFound('Parcel not found');
+
+  await recordAuditLog({
+    companyId: cur.companyId,
+    actorUserId: actorUserId ?? null,
+    entityType: 'parcel',
+    entityId: id,
+    action: 'PARCEL_UPDATED',
+    message: `Parcel ${cur.trackingCode} updated`,
+    metadata: {
+      patch,
+      previous: {
+        destinationId: cur.destinationId,
+        pickupLocationId: cur.pickupLocationId,
+        status: cur.status,
+      },
+    },
+  });
+
   const shouldEndPickupQueue =
     cur.status === ParcelStatus.AWAITING_PICKUP &&
     patch.status !== undefined &&
@@ -188,9 +462,379 @@ export async function setPlannedToBePaidSvc(id: string, plannedCedis: number | s
   return { id: updated.id, plannedToBePaidCedis: Number(plannedToBePaidPsw) / 100 };
 }
 
+export async function softDeleteParcelSvc(input: {
+  parcelId: string;
+  actorUserId: string;
+  reason: string;
+}) {
+  const reason = input.reason.trim();
+  if (!reason) {
+    throw BadRequest('Deletion reason is required');
+  }
+
+  return db.transaction(async (tx) => {
+    const parcel = await getParcelSvc(input.parcelId, tx);
+    if (parcel.isDeleted) {
+      throw BadRequest('Parcel is already deleted');
+    }
+    if (
+      parcel.status !== ParcelStatus.CREATED &&
+      parcel.status !== ParcelStatus.PROCESSED &&
+      parcel.status !== ParcelStatus.CANCELLED
+    ) {
+      throw BadRequest('Only created, processed, or cancelled parcels can be deleted');
+    }
+
+    const allPayments = await listAllPaymentsForParcelRepo(input.parcelId, tx);
+    const activePaymentIds = allPayments
+      .filter((payment) => !payment.voidedAt)
+      .map((payment) => payment.id);
+
+    const voidedNow = await softVoidPaymentsByIdsRepo(
+      activePaymentIds,
+      input.actorUserId,
+      reason,
+      tx,
+    );
+
+    const updated = await updateParcelRepo(
+      input.parcelId,
+      {
+        isDeleted: true,
+        deletedBy: input.actorUserId,
+        deletedAt: new Date(),
+        deleteReason: reason,
+      },
+      tx,
+    );
+    if (!updated) {
+      throw NotFound('Parcel not found');
+    }
+
+    const refreshedPayments = await listAllPaymentsForParcelRepo(input.parcelId, tx);
+    const totalPayments = refreshedPayments.length;
+    const totalVoidedPayments = refreshedPayments.filter((payment) =>
+      Boolean(payment.voidedAt),
+    ).length;
+    const allPaymentsVoided = totalPayments > 0 ? totalVoidedPayments === totalPayments : true;
+
+    await recordAuditLog({
+      companyId: parcel.companyId,
+      actorUserId: input.actorUserId,
+      entityType: 'parcel',
+      entityId: parcel.id,
+      action: 'PARCEL_SOFT_DELETED',
+      message: `Parcel ${parcel.trackingCode} soft-deleted`,
+      metadata: {
+        reason,
+        bookingCode: parcel.bookingCode,
+        trackingCode: parcel.trackingCode,
+        statusAtDelete: parcel.status,
+        paymentSummary: {
+          totalPayments,
+          voidedNow,
+          totalVoidedPayments,
+          allPaymentsVoided,
+        },
+      },
+    });
+
+    return {
+      id: parcel.id,
+      bookingCode: parcel.bookingCode,
+      trackingCode: parcel.trackingCode,
+      reason,
+      payments: {
+        total: totalPayments,
+        voidedNow,
+        totalVoided: totalVoidedPayments,
+        allVoided: allPaymentsVoided,
+      },
+    };
+  });
+}
+
+export async function requestParcelReconciliationCaseSvc(input: {
+  companyId: string;
+  actorUserId: string;
+  parcelId: string;
+  linkedParcelId?: string | null;
+  caseType: number;
+  notes: string;
+  evidenceUrl?: string | null;
+  actionType?: number | null;
+}) {
+  const caseType = assertCaseType(input.caseType);
+  const note = input.notes.trim();
+  if (!note) throw BadRequest('Case note is required');
+
+  const parcel = await getParcelSvc(input.parcelId);
+  if (parcel.companyId !== input.companyId) throw NotFound('Parcel not found in company');
+  if (parcel.isDeleted) throw BadRequest('Cannot open case for a deleted parcel');
+
+  if (!isReversalAllowedParcelStatus(parcel.status)) {
+    throw BadRequest('Delivered parcels require finance exception handling');
+  }
+
+  const existingOpen = await getOpenParcelReconciliationCaseByParcelRepo(input.parcelId);
+  if (existingOpen) throw Conflict('An open reconciliation case already exists for this parcel');
+
+  let linkedParcel: ParcelRow | null = null;
+  if (input.linkedParcelId) {
+    linkedParcel = await getParcelSvc(input.linkedParcelId);
+    if (linkedParcel.companyId !== input.companyId) {
+      throw BadRequest('Linked parcel does not belong to this company');
+    }
+    if (linkedParcel.id === parcel.id) throw BadRequest('Linked parcel must be different');
+  }
+
+  if (caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY && !linkedParcel) {
+    throw BadRequest('Duplicate entry case requires a linked parcel');
+  }
+  if (caseType !== ParcelReconciliationCaseType.DUPLICATE_ENTRY && linkedParcel) {
+    throw BadRequest('Linked parcel is only valid for duplicate entry cases');
+  }
+
+  const actionType = input.actionType != null ? assertActionType(input.actionType) : null;
+  if (
+    caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY &&
+    actionType != null &&
+    actionType !== ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE &&
+    actionType !== ParcelReconciliationActionType.MERGE_TO_SINGLE
+  ) {
+    throw BadRequest('Duplicate entry supports only duplicate-resolution actions');
+  }
+
+  const created = await createParcelReconciliationCaseRepo({
+    companyId: input.companyId,
+    parcelId: parcel.id,
+    linkedParcelId: linkedParcel?.id ?? null,
+    caseType,
+    actionType,
+    status: ParcelReconciliationCaseStatus.REQUESTED,
+    notes: note,
+    evidenceUrl: input.evidenceUrl?.trim() || null,
+    requestedBy: input.actorUserId,
+  });
+  if (!created) throw BadRequest('Failed to create reconciliation case');
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'parcel_reconciliation_case',
+    entityId: created.id,
+    action: 'PARCEL_RECONCILIATION_CASE_REQUESTED',
+    message: `Reconciliation case requested for parcel ${parcel.trackingCode}`,
+    metadata: {
+      parcelId: parcel.id,
+      linkedParcelId: linkedParcel?.id ?? null,
+      trackingCode: parcel.trackingCode,
+      linkedTrackingCode: linkedParcel?.trackingCode ?? null,
+      caseType,
+      actionType,
+      notes: note,
+      evidenceUrl: input.evidenceUrl?.trim() || null,
+    },
+  });
+
+  return { id: created.id };
+}
+
+export async function approveParcelReconciliationCaseSvc(input: {
+  caseId: string;
+  companyId: string;
+  actorUserId: string;
+  actionType: number;
+  resolutionNote?: string | null;
+}) {
+  const actionType = assertActionType(input.actionType);
+  const existing = await getParcelReconciliationCaseRepo(input.caseId);
+  if (!existing || existing.companyId !== input.companyId) throw NotFound('Case not found');
+  if (existing.status !== ParcelReconciliationCaseStatus.REQUESTED) {
+    throw BadRequest('Only requested cases can be approved');
+  }
+  if (existing.requestedBy === input.actorUserId) {
+    throw BadRequest('Requester cannot approve the same reconciliation case');
+  }
+  if (
+    existing.caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY &&
+    actionType !== ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE &&
+    actionType !== ParcelReconciliationActionType.MERGE_TO_SINGLE
+  ) {
+    throw BadRequest('Duplicate entry supports only duplicate-resolution actions');
+  }
+  if (
+    existing.caseType !== ParcelReconciliationCaseType.DUPLICATE_ENTRY &&
+    (actionType === ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE ||
+      actionType === ParcelReconciliationActionType.MERGE_TO_SINGLE)
+  ) {
+    throw BadRequest('Selected action is only valid for duplicate entry');
+  }
+
+  const note = input.resolutionNote?.trim() || null;
+  const updated = await updateParcelReconciliationCaseRepo(input.caseId, {
+    status: ParcelReconciliationCaseStatus.APPROVED,
+    actionType,
+    approvedBy: input.actorUserId,
+    approvedAt: new Date(),
+    resolutionNote: note,
+  });
+  if (!updated) throw NotFound('Case not found');
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'parcel_reconciliation_case',
+    entityId: input.caseId,
+    action: 'PARCEL_RECONCILIATION_CASE_APPROVED',
+    message: 'Parcel reconciliation case approved',
+    metadata: {
+      actionType,
+      resolutionNote: note,
+    },
+  });
+
+  return { id: input.caseId };
+}
+
+export async function executeParcelReconciliationCaseSvc(input: {
+  caseId: string;
+  companyId: string;
+  actorUserId: string;
+  executionNote?: string | null;
+}) {
+  return db.transaction(async (tx) => {
+    const existing = await getParcelReconciliationCaseRepo(input.caseId, tx);
+    if (!existing || existing.companyId !== input.companyId) throw NotFound('Case not found');
+    if (existing.status !== ParcelReconciliationCaseStatus.APPROVED) {
+      throw BadRequest('Only approved cases can be executed');
+    }
+    if (existing.actionType == null) throw BadRequest('Case action is not set');
+    const actionType = assertActionType(existing.actionType);
+    const primaryParcel = await getParcelSvc(existing.parcelId, tx);
+    const linkedParcel = existing.linkedParcelId
+      ? await getParcelSvc(existing.linkedParcelId, tx)
+      : null;
+    const targetParcels: ParcelRow[] = [];
+
+    if (existing.caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY) {
+      if (!linkedParcel) throw BadRequest('Duplicate case missing linked parcel');
+      targetParcels.push(linkedParcel);
+    } else {
+      targetParcels.push(primaryParcel);
+    }
+
+    let totalVoidedPayments = 0;
+    let totalConsignmentUnlinked = 0;
+    const executionReason = `Reconciliation case ${existing.id}: type ${existing.caseType}${isNonEmptyText(input.executionNote) ? ` (${input.executionNote.trim()})` : ''}`;
+    const touchedParcelIds: string[] = [];
+
+    for (const targetParcel of targetParcels) {
+      if (targetParcel.isDeleted) continue;
+      if (!isReversalAllowedParcelStatus(targetParcel.status)) {
+        throw BadRequest(`Parcel ${targetParcel.trackingCode} is already delivered`);
+      }
+
+      const allPayments = await listAllPaymentsForParcelRepo(targetParcel.id, tx);
+      const activePaymentIds = allPayments.filter((row) => !row.voidedAt).map((row) => row.id);
+      const voidedNow = await softVoidPaymentsByIdsRepo(
+        activePaymentIds,
+        input.actorUserId,
+        executionReason,
+        tx,
+      );
+      totalVoidedPayments += voidedNow;
+
+      const unlinked = await removeActiveConsignmentItemsByParcelRepo(targetParcel.id, new Date());
+      totalConsignmentUnlinked += unlinked;
+
+      await updateParcelRepo(
+        targetParcel.id,
+        {
+          status: ParcelStatus.CANCELLED,
+          isDeleted: true,
+          deletedBy: input.actorUserId,
+          deletedAt: new Date(),
+          deleteReason: executionReason,
+        },
+        tx,
+      );
+      touchedParcelIds.push(targetParcel.id);
+    }
+
+    await updateParcelReconciliationCaseRepo(
+      existing.id,
+      {
+        status: ParcelReconciliationCaseStatus.EXECUTED,
+        executedBy: input.actorUserId,
+        executedAt: new Date(),
+        voidedPaymentCount: totalVoidedPayments,
+        resolutionNote: isNonEmptyText(input.executionNote)
+          ? input.executionNote.trim()
+          : existing.resolutionNote,
+        metadata: {
+          ...(existing.metadata as Record<string, unknown> | null),
+          execution: {
+            actionType,
+            touchedParcelIds,
+            consignmentItemsUnlinked: totalConsignmentUnlinked,
+            voidedPayments: totalVoidedPayments,
+          },
+        },
+      },
+      tx,
+    );
+
+    await recordAuditLog({
+      companyId: input.companyId,
+      actorUserId: input.actorUserId,
+      entityType: 'parcel_reconciliation_case',
+      entityId: existing.id,
+      action: 'PARCEL_RECONCILIATION_CASE_EXECUTED',
+      message: 'Parcel reconciliation case executed',
+      metadata: {
+        caseType: existing.caseType,
+        actionType,
+        touchedParcelIds,
+        consignmentItemsUnlinked: totalConsignmentUnlinked,
+        voidedPayments: totalVoidedPayments,
+        executionNote: input.executionNote?.trim() || null,
+      },
+    });
+
+    return {
+      id: existing.id,
+      actionType,
+      touchedParcelIds,
+      voidedPayments: totalVoidedPayments,
+      consignmentItemsUnlinked: totalConsignmentUnlinked,
+    };
+  });
+}
+
+export async function listParcelReconciliationCasesSvc(input: {
+  companyId: string;
+  statuses?: number[] | null;
+  branchId?: string | null;
+  limit: number;
+  offset: number;
+  search?: string | null;
+}) {
+  return listParcelReconciliationCasesRepo(input);
+}
+
 export async function getParcelFullDetailsSvc(id: string) {
   const parcel = await getParcelSvc(id);
-  const [payments, delivery, consignments, pickupQueue, internalHolder] = await Promise.all([
+  const [
+    payments,
+    delivery,
+    consignments,
+    pickupQueue,
+    internalHolder,
+    dispositionActions,
+    storageWaivers,
+    storageSettlement,
+  ] = await Promise.all([
     (async () => {
       try {
         return await listPaymentsForParcelRepo(id);
@@ -231,6 +875,32 @@ export async function getParcelFullDetailsSvc(id: string) {
         throw error;
       }
     })(),
+    (async () => {
+      try {
+        return await listParcelDispositionActionsRepo(id);
+      } catch (error) {
+        if (isSchemaCompatibilityError(error)) return [];
+        throw error;
+      }
+    })(),
+    (async () => {
+      try {
+        return await listParcelStorageWaiversRepo(id);
+      } catch (error) {
+        if (isSchemaCompatibilityError(error)) return [];
+        throw error;
+      }
+    })(),
+    (async () => {
+      try {
+        return await getParcelStorageSettlementSvc(id);
+      } catch (error) {
+        if (isSchemaCompatibilityError(error)) {
+          return { parcelId: id, accruedPsw: 0, paidPsw: 0, waivedPsw: 0, outstandingPsw: 0 };
+        }
+        throw error;
+      }
+    })(),
   ]);
 
   return {
@@ -240,7 +910,234 @@ export async function getParcelFullDetailsSvc(id: string) {
     consignments,
     pickupQueue,
     internalHolder,
+    dispositionActions,
+    storageWaivers,
+    storageSettlement,
   };
+}
+
+export async function listParcelDispositionActionsSvc(parcelId: string) {
+  await getParcelSvc(parcelId);
+  return listParcelDispositionActionsRepo(parcelId);
+}
+
+export async function waiveParcelStorageAccrualSvc(input: {
+  parcelId: string;
+  actorUserId: string;
+  reason: string;
+  waivedAmountCedis?: number | string | null;
+}) {
+  const parcel = await getParcelSvc(input.parcelId);
+  const reason = validateStorageWaiverReason(input.reason);
+
+  const before = await getParcelStorageSettlementSvc(input.parcelId);
+
+  const requestedPswRaw =
+    input.waivedAmountCedis != null
+      ? Number(toPesewas(input.waivedAmountCedis))
+      : before.outstandingPsw;
+  const requestedPsw = resolveAndValidateStorageWaiverAmountPsw({
+    outstandingPsw: before.outstandingPsw,
+    requestedPsw: requestedPswRaw,
+  });
+
+  const posting = await db.transaction(async (tx) => {
+    const createdWaiver = await createParcelStorageWaiverRepo(
+      {
+        companyId: parcel.companyId,
+        parcelId: input.parcelId,
+        waivedAmountPsw: requestedPsw,
+        reason,
+        waivedBy: input.actorUserId,
+        waivedAt: new Date(),
+      },
+      tx,
+    );
+    if (!createdWaiver) throw NotFound('Failed to record parcel storage waiver');
+
+    if (!(await isAccountingEnabledForCompanySvc(parcel.companyId, tx))) {
+      return null;
+    }
+
+    const [receivableAccount, expenseAccount] = await Promise.all([
+      getAccountByCodeRepo(parcel.companyId, STORAGE_WAIVER_RECEIVABLE_ACCOUNT_CODE, tx),
+      getAccountByCodeRepo(parcel.companyId, STORAGE_WAIVER_EXPENSE_ACCOUNT_CODE, tx),
+    ]);
+
+    if (!receivableAccount || !receivableAccount.active) {
+      throw Conflict(
+        `Accounting account ${STORAGE_WAIVER_RECEIVABLE_ACCOUNT_CODE} is required and must be active to post storage waivers`,
+      );
+    }
+    if (!expenseAccount || !expenseAccount.active) {
+      throw Conflict(
+        `Accounting account ${STORAGE_WAIVER_EXPENSE_ACCOUNT_CODE} is required and must be active to post storage waivers`,
+      );
+    }
+
+    const posted = await postJournalEntrySvc(
+      {
+        companyId: parcel.companyId,
+        sourceType: JournalSourceType.PAYMENT,
+        sourceId: createdWaiver.id,
+        description: `Parcel storage waiver: ${parcel.trackingCode}`,
+        memo: reason,
+        branchId: parcel.destinationId,
+        locationId: parcel.pickupLocationId ?? null,
+        recordedByUserId: input.actorUserId,
+        approvedByUserId: input.actorUserId,
+        postedBy: input.actorUserId,
+        lines: [
+          {
+            accountId: expenseAccount.id,
+            debitPsw: requestedPsw,
+            description: `Storage waiver expense for ${parcel.trackingCode}`,
+            metadata: { parcelId: input.parcelId, waiverId: createdWaiver.id },
+          },
+          {
+            accountId: receivableAccount.id,
+            creditPsw: requestedPsw,
+            description: `Storage receivable write-off for ${parcel.trackingCode}`,
+            metadata: { parcelId: input.parcelId, waiverId: createdWaiver.id },
+          },
+        ],
+      },
+      tx,
+    );
+
+    const postedAt = new Date();
+    await updateParcelStorageWaiverAccountingPostingRepo(
+      createdWaiver.id,
+      {
+        accountingJournalEntryId: posted.entryId,
+        accountingPostedAt: postedAt,
+      },
+      tx,
+    );
+
+    return { journalEntryId: posted.entryId, postedAt };
+  });
+
+  const after = await getParcelStorageSettlementSvc(input.parcelId);
+
+  await recordAuditLog({
+    companyId: parcel.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'parcel',
+    entityId: input.parcelId,
+    action: 'PARCEL_STORAGE_WAIVED',
+    message: `Parcel storage accrual waived for ${parcel.trackingCode}`,
+    metadata: {
+      waivedAmountPsw: requestedPsw,
+      reason,
+      beforeOutstandingPsw: before.outstandingPsw,
+      afterOutstandingPsw: after.outstandingPsw,
+      accountingPosting: posting,
+    },
+  });
+
+  return { id: input.parcelId };
+}
+
+export async function recordParcelDispositionActionSvc(input: {
+  parcelId: string;
+  actorUserId: string;
+  actionType: number;
+  notes?: string | null;
+  warehouseId?: string | null;
+  recoveredAmountCedis?: number | string | null;
+}) {
+  const parcel = await getParcelSvc(input.parcelId);
+  const normalizedNotes = input.notes?.trim() || null;
+  const recoveredAmountPsw =
+    input.recoveredAmountCedis != null ? Number(toPesewas(input.recoveredAmountCedis)) : 0;
+
+  const actionType = Number(input.actionType);
+  if (!Object.values(ParcelDispositionActionType).includes(actionType)) {
+    throw BadRequest('Unsupported parcel disposition action');
+  }
+
+  if (
+    (actionType === ParcelDispositionActionType.SOLD ||
+      actionType === ParcelDispositionActionType.DESTROYED ||
+      actionType === ParcelDispositionActionType.DONATED) &&
+    !normalizedNotes
+  ) {
+    throw BadRequest('Notes are required for final disposition actions');
+  }
+
+  let nextStatus: number | null = null;
+  if (actionType === ParcelDispositionActionType.TRANSFERRED_TO_WAREHOUSE) {
+    nextStatus = ParcelStatus.AGED_IN_WAREHOUSE;
+    if (!input.warehouseId) throw BadRequest('Warehouse is required for warehouse transfer');
+    const warehouse = await getWarehouseForTransferRepo(input.warehouseId);
+    if (!warehouse || warehouse.isDeleted) throw NotFound('Selected warehouse not found');
+    if (!warehouse.active) throw Conflict('Selected warehouse is inactive');
+    if (warehouse.companyId !== parcel.companyId || warehouse.branchId !== parcel.destinationId) {
+      throw Conflict('Selected warehouse must belong to parcel destination branch');
+    }
+  } else if (actionType === ParcelDispositionActionType.SOLD) {
+    nextStatus = ParcelStatus.DISPOSED_BY_SALE;
+  } else if (actionType === ParcelDispositionActionType.DESTROYED) {
+    nextStatus = ParcelStatus.DISPOSED_BY_DESTRUCTION;
+  } else if (actionType === ParcelDispositionActionType.DONATED) {
+    nextStatus = ParcelStatus.DISPOSED_BY_DONATION;
+  }
+
+  const performedAt = new Date();
+
+  await db.transaction(async (tx) => {
+    await createParcelDispositionActionRepo(
+      {
+        companyId: parcel.companyId,
+        parcelId: input.parcelId,
+        actionType,
+        warehouseId: input.warehouseId ?? null,
+        notes: normalizedNotes,
+        recoveredAmountPsw,
+        performedBy: input.actorUserId,
+        performedAt,
+      },
+      tx,
+    );
+
+    if (nextStatus != null && parcel.status !== nextStatus) {
+      await updateParcelRepo(input.parcelId, { status: nextStatus }, tx);
+    }
+
+    if (actionType === ParcelDispositionActionType.TRANSFERRED_TO_WAREHOUSE && input.warehouseId) {
+      await upsertParcelInternalHolderRepo(
+        {
+          parcelId: input.parcelId,
+          companyId: parcel.companyId,
+          branchId: parcel.destinationId,
+          holderType: ParcelHolderType.WAREHOUSE,
+          locationId: null,
+          warehouseId: input.warehouseId,
+          updatedBy: input.actorUserId,
+        },
+        tx,
+      );
+    }
+  });
+
+  await recordAuditLog({
+    companyId: parcel.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'parcel',
+    entityId: input.parcelId,
+    action: 'PARCEL_DISPOSITION_ACTION_RECORDED',
+    message: `Parcel disposition action recorded for ${parcel.trackingCode}`,
+    metadata: {
+      actionType,
+      warehouseId: input.warehouseId ?? null,
+      notes: normalizedNotes,
+      recoveredAmountPsw,
+      nextStatus,
+    },
+  });
+
+  return { id: input.parcelId };
 }
 
 export async function logParcelDiscrepancySvc(input: {
@@ -254,6 +1151,55 @@ export async function logParcelDiscrepancySvc(input: {
   branchId?: string | null;
 }) {
   const parcel = input.parcelId ? await getParcelRepo(input.parcelId) : null;
+
+  if (input.discrepancyType === 'record_not_physical' && input.parcelId && parcel) {
+    try {
+      const open = await getOpenDiscrepancyByParcelRepo(input.parcelId);
+      if (!open) {
+        await createParcelDiscrepancyRepo({
+          companyId: input.companyId,
+          parcelId: input.parcelId,
+          branchId: input.branchId ?? parcel.destinationId ?? null,
+          trackingCode: input.trackingCode ?? parcel.trackingCode,
+          bookingCode: input.bookingCode ?? parcel.bookingCode,
+          discrepancyType: input.discrepancyType,
+          notes: input.notes?.trim() || null,
+          status: 0,
+          createdBy: input.actorUserId ?? null,
+        });
+      }
+    } catch (error) {
+      if (!isSchemaCompatibilityError(error)) throw error;
+    }
+
+    if (parcel.status !== ParcelStatus.DISCREPANCY) {
+      await updateParcelRepo(
+        input.parcelId,
+        {
+          status: ParcelStatus.DISCREPANCY,
+        },
+        db,
+      );
+    }
+  }
+
+  if (input.discrepancyType === 'physical_missing_in_system') {
+    try {
+      await createParcelDiscrepancyRepo({
+        companyId: input.companyId,
+        parcelId: input.parcelId ?? null,
+        branchId: input.branchId ?? null,
+        trackingCode: input.trackingCode ?? null,
+        bookingCode: input.bookingCode ?? null,
+        discrepancyType: input.discrepancyType,
+        notes: input.notes?.trim() || null,
+        status: 0,
+        createdBy: input.actorUserId ?? null,
+      });
+    } catch (error) {
+      if (!isSchemaCompatibilityError(error)) throw error;
+    }
+  }
 
   await recordAuditLog({
     companyId: input.companyId,
@@ -279,4 +1225,165 @@ export async function logParcelDiscrepancySvc(input: {
   });
 
   return { success: true };
+}
+
+export async function listOpenParcelDiscrepanciesSvc(input: {
+  companyId: string;
+  branchId?: string | null;
+  limit: number;
+  offset: number;
+  search?: string | null;
+}) {
+  try {
+    return await listOpenParcelDiscrepanciesRepo(input);
+  } catch (error) {
+    if (!isSchemaCompatibilityError(error)) throw error;
+
+    const { data, totalRecords } = await listParcelsRepo({
+      limit: input.limit,
+      offset: input.offset,
+      companyId: input.companyId,
+      destinationId: input.branchId ?? null,
+      status: ParcelStatus.DISCREPANCY,
+      statuses: null,
+      sourceId: null,
+      locationId: null,
+      senderPaid: null,
+      search: input.search ?? null,
+      received: null,
+      includeDeleted: false,
+      sort: null,
+    });
+
+    const parcelIds = data.map((parcel) => parcel.id);
+    const noteByParcelId = new Map<string, { note: string | null; createdAt: Date }>();
+
+    if (parcelIds.length > 0) {
+      const auditRows = await db
+        .select({
+          entityId: auditLogs.entityId,
+          metadata: auditLogs.metadata,
+          createdAt: auditLogs.createdAt,
+        })
+        .from(auditLogs)
+        .where(
+          and(
+            eq(auditLogs.companyId, input.companyId),
+            eq(auditLogs.action, 'PARCEL_DISCREPANCY_LOGGED'),
+            eq(auditLogs.entityType, 'parcel_discrepancy'),
+            inArray(auditLogs.entityId, parcelIds),
+          ),
+        )
+        .orderBy(desc(auditLogs.createdAt));
+
+      for (const row of auditRows) {
+        if (!row.entityId || noteByParcelId.has(row.entityId)) continue;
+        noteByParcelId.set(row.entityId, {
+          note: getAuditMetadataNote(row.metadata),
+          createdAt: row.createdAt,
+        });
+      }
+    }
+
+    return {
+      data: data.map((parcel) => ({
+        // Compatibility mode fallback when parcel_discrepancies table is not yet available.
+        id: parcel.id,
+        parcelId: parcel.id,
+        branchId: parcel.destinationId,
+        branchName: parcel.destinationName ?? null,
+        trackingCode: parcel.trackingCode,
+        bookingCode: parcel.bookingCode,
+        discrepancyType: 'record_not_physical',
+        notes: noteByParcelId.get(parcel.id)?.note ?? null,
+        createdBy: parcel.createdBy,
+        createdByName: null,
+        createdAt: noteByParcelId.get(parcel.id)?.createdAt ?? parcel.updatedAt,
+        parcelStatus: parcel.status,
+        sourceId: parcel.sourceId,
+        destinationId: parcel.destinationId,
+        pickupLocationId: parcel.pickupLocationId,
+        destinationLocationName: parcel.pickupLocationName ?? null,
+        senderName: parcel.senderName,
+        receiverName: parcel.receiverName,
+      })),
+      totalRecords,
+    };
+  }
+}
+
+export async function resolveParcelDiscrepancySvc(input: {
+  id: string;
+  companyId: string;
+  actorUserId: string;
+  resolutionNote?: string | null;
+}) {
+  let resolved: {
+    id: string;
+    parcelId: string | null;
+    companyId: string;
+    trackingCode: string | null;
+    bookingCode: string | null;
+  } | null;
+
+  try {
+    resolved = await resolveParcelDiscrepancyRepo(input.id, input.companyId, {
+      resolvedBy: input.actorUserId,
+      resolvedAt: new Date(),
+      resolutionNote: input.resolutionNote?.trim() || null,
+    });
+  } catch (error) {
+    if (!isSchemaCompatibilityError(error)) throw error;
+
+    const parcel = await getParcelRepo(input.id);
+    if (!parcel || parcel.companyId !== input.companyId) {
+      throw NotFound('Discrepancy parcel not found');
+    }
+    if (parcel.status !== ParcelStatus.DISCREPANCY) {
+      throw BadRequest('Parcel is not in discrepancy status');
+    }
+
+    await updateParcelRepo(parcel.id, { status: ParcelStatus.IN_TRANSIT }, db);
+
+    await recordAuditLog({
+      companyId: input.companyId,
+      actorUserId: input.actorUserId,
+      entityType: 'parcel_discrepancy',
+      entityId: parcel.id,
+      action: 'PARCEL_DISCREPANCY_RESOLVED',
+      message: 'Parcel discrepancy resolved (compat mode)',
+      metadata: {
+        parcelId: parcel.id,
+        trackingCode: parcel.trackingCode,
+        bookingCode: parcel.bookingCode,
+        resolutionNote: input.resolutionNote?.trim() || null,
+        compatibilityMode: true,
+      },
+    });
+
+    return { id: parcel.id, parcelId: parcel.id };
+  }
+
+  if (!resolved) throw NotFound('Open discrepancy not found');
+
+  if (resolved.parcelId) {
+    await updateParcelRepo(resolved.parcelId, { status: ParcelStatus.IN_TRANSIT }, db);
+  }
+
+  await recordAuditLog({
+    companyId: input.companyId,
+    actorUserId: input.actorUserId,
+    entityType: 'parcel_discrepancy',
+    entityId: resolved.id,
+    action: 'PARCEL_DISCREPANCY_RESOLVED',
+    message: 'Parcel discrepancy resolved',
+    metadata: {
+      parcelId: resolved.parcelId,
+      trackingCode: resolved.trackingCode,
+      bookingCode: resolved.bookingCode,
+      resolutionNote: input.resolutionNote?.trim() || null,
+    },
+  });
+
+  return { id: resolved.id, parcelId: resolved.parcelId };
 }

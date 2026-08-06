@@ -3,15 +3,21 @@ import type {
   BaseQueryFn,
   FetchArgs,
   FetchBaseQueryError,
+  FetchBaseQueryMeta,
   QueryReturnValue,
 } from '@reduxjs/toolkit/query';
 import { useAuthStore } from '@/stores/auth-store';
 import { TheAduseiErrorResponse } from '@/lib/TheAduseiErrorResponse';
 
-type QueryMeta = Record<string, never>;
+type QueryMeta = FetchBaseQueryMeta;
 type QueryResult = QueryReturnValue<unknown, FetchBaseQueryError, QueryMeta>;
 
 const inFlightRequests = new Map<string, Promise<QueryResult>>();
+let inFlightTokenRefresh: Promise<QueryResult> | null = null;
+
+export function clearApiInFlightRequests() {
+  inFlightRequests.clear();
+}
 
 function sanitizeQueryParams(params: FetchArgs['params']): FetchArgs['params'] {
   if (!params || typeof params !== 'object' || params instanceof URLSearchParams) {
@@ -56,15 +62,17 @@ function safeSerialize(value: unknown): string {
 }
 
 function buildRequestKey(args: string | FetchArgs): string {
+  const authState = useAuthStore.getState();
+  const userId = authState.user?.id ?? 'anonymous';
   if (typeof args === 'string') {
-    return `GET|${args}|`;
+    return `GET|${args}||${userId}`;
   }
 
   const method = (args.method ?? 'GET').toUpperCase();
   const url = args.url;
   const params = safeSerialize(args.params);
   const body = safeSerialize(args.body);
-  return `${method}|${url}|${params}|${body}`;
+  return `${method}|${url}|${params}|${body}|${userId}`;
 }
 
 function shouldDedupeRequest(args: string | FetchArgs): boolean {
@@ -85,29 +93,43 @@ const baseQuery = fetchBaseQuery({
 
 const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
   args,
-  api,
+  apiContext,
   extraOptions,
 ) => {
+  const runTokenRefresh = async (refreshToken: string): Promise<QueryResult> => {
+    if (inFlightTokenRefresh) return inFlightTokenRefresh;
+
+    const refreshRequest = Promise.resolve(
+      baseQuery(
+        {
+          url: '/auth/refresh',
+          method: 'POST',
+          body: { refreshToken },
+        },
+        apiContext,
+        extraOptions,
+      ),
+    );
+
+    inFlightTokenRefresh = refreshRequest.finally(() => {
+      inFlightTokenRefresh = null;
+    });
+
+    return refreshRequest;
+  };
+
   const requestArgs = sanitizeFetchArgs(args);
 
   const runRequest = async (): Promise<QueryResult> => {
-    let result = await baseQuery(requestArgs, api, extraOptions);
+    let result = await baseQuery(requestArgs, apiContext, extraOptions);
 
     // If we get a 401, try to refresh the token
     if (result.error && result.error.status === 401) {
       const refreshToken = useAuthStore.getState().refreshToken;
 
       if (refreshToken) {
-        // Try to refresh the token
-        const refreshResult = await baseQuery(
-          {
-            url: '/auth/refresh',
-            method: 'POST',
-            body: { refreshToken },
-          },
-          api,
-          extraOptions,
-        );
+        // Collapse concurrent 401 recoveries into one refresh call.
+        const refreshResult = await runTokenRefresh(refreshToken);
 
         if (refreshResult.data) {
           // Successfully refreshed - update auth state
@@ -126,23 +148,26 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
             });
 
             // Retry the original request with new token
-            result = await baseQuery(requestArgs, api, extraOptions);
+            result = await baseQuery(requestArgs, apiContext, extraOptions);
           }
         } else {
           // Refresh failed - logout user
+          clearApiInFlightRequests();
+          apiContext.dispatch(api.util.resetApiState());
           useAuthStore.getState().logout();
           TheAduseiErrorResponse(refreshResult.error ?? 'Session expired');
         }
       } else {
         // No refresh token available - logout user
+        clearApiInFlightRequests();
+        apiContext.dispatch(api.util.resetApiState());
         useAuthStore.getState().logout();
         TheAduseiErrorResponse('Your session has expired. Please log in again.');
       }
     }
 
-    if (result.error && result.error.status !== 401) {
-      TheAduseiErrorResponse(result.error);
-    }
+    // Non-401 API errors are handled by feature-level mutation/query consumers.
+    // Avoid global duplicate toasts (feature toast + global toast).
 
     return result as QueryReturnValue<unknown, FetchBaseQueryError, QueryMeta>;
   };
@@ -169,6 +194,9 @@ export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
   keepUnusedDataFor: 120,
+  refetchOnMountOrArgChange: false,
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
   tagTypes: [
     'Auth',
     'Bookings',
@@ -186,6 +214,13 @@ export const api = createApi({
     'Cashiers',
     'RBAC',
     'Accounting',
+    'Procurement',
+    'FleetTransport',
+    'CustomerWalletCredit',
+    'Reconciliation',
+    'NotificationHub',
+    'ItSupport',
+    'Communication',
   ],
   endpoints: () => ({}),
 });

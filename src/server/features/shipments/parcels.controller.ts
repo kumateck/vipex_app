@@ -1,13 +1,23 @@
 import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import {
+  approveParcelReconciliationCaseSvc,
   createParcelSvc,
+  executeParcelReconciliationCaseSvc,
   getParcelFullDetailsSvc,
   getParcelSvc,
+  listParcelReconciliationCasesSvc,
+  listParcelDispositionActionsSvc,
+  waiveParcelStorageAccrualSvc,
+  listOpenParcelDiscrepanciesSvc,
   listParcelsSvc,
   logParcelDiscrepancySvc,
   markParcelReceivedSvc,
+  recordParcelDispositionActionSvc,
+  requestParcelReconciliationCaseSvc,
+  resolveParcelDiscrepancySvc,
   setPlannedToBePaidSvc,
+  softDeleteParcelSvc,
   updateParcelSvc,
 } from './parcels.service';
 
@@ -16,9 +26,13 @@ export async function listParcelsCtrl(
     companyId?: string | null;
     sourceId?: string | null;
     destinationId?: string | null;
+    locationId?: string | null;
     status?: number | null;
     statuses?: number[] | null;
     senderPaid?: boolean | null;
+    hasPickupQueue?: boolean | null;
+    agedOnly?: boolean | null;
+    storageChargeAccruing?: boolean | null;
     received?: boolean | null;
     includeDeleted?: boolean | null;
   }>,
@@ -30,9 +44,13 @@ export async function listParcelsCtrl(
     companyId: q.filters?.companyId ?? null,
     sourceId: q.filters?.sourceId ?? null,
     destinationId: q.filters?.destinationId ?? null,
+    locationId: q.filters?.locationId ?? null,
     status: q.filters?.status ?? null,
     statuses: q.filters?.statuses ?? null,
     senderPaid: q.filters?.senderPaid ?? null,
+    hasPickupQueue: q.filters?.hasPickupQueue ?? null,
+    agedOnly: q.filters?.agedOnly ?? null,
+    storageChargeAccruing: q.filters?.storageChargeAccruing ?? null,
     search: pagination.search ?? null,
     received: q.filters?.received ?? null,
     includeDeleted: q.filters?.includeDeleted ?? null,
@@ -45,6 +63,7 @@ export async function listParcelsCtrl(
       updatedAt: p.updatedAt.toISOString(),
       receivedAt: p.receivedAt ? p.receivedAt.toISOString() : null,
       confirmedAt: p.confirmedAt ? p.confirmedAt.toISOString() : null,
+      deletedAt: p.deletedAt ? p.deletedAt.toISOString() : null,
       bookingCreatedAt: p.bookingCreatedAt ? p.bookingCreatedAt.toISOString() : null,
       pickupQueuedAt: p.pickupQueuedAt ? p.pickupQueuedAt.toISOString() : null,
       pickupQueueEndedAt: p.pickupQueueEndedAt ? p.pickupQueueEndedAt.toISOString() : null,
@@ -67,6 +86,7 @@ export async function getParcelDetailsCtrl(id: string) {
       updatedAt: result.parcel.updatedAt.toISOString(),
       receivedAt: result.parcel.receivedAt ? result.parcel.receivedAt.toISOString() : null,
       confirmedAt: result.parcel.confirmedAt ? result.parcel.confirmedAt.toISOString() : null,
+      deletedAt: result.parcel.deletedAt ? result.parcel.deletedAt.toISOString() : null,
     },
     payments: result.payments.map((payment) => ({
       ...payment,
@@ -113,6 +133,18 @@ export async function getParcelDetailsCtrl(id: string) {
           updatedAt: result.internalHolder.updatedAt.toISOString(),
         }
       : null,
+    dispositionActions: result.dispositionActions.map((row) => ({
+      ...row,
+      performedAt: row.performedAt ? row.performedAt.toISOString() : null,
+      createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+    })),
+    storageWaivers: result.storageWaivers.map((row) => ({
+      ...row,
+      waivedAt: row.waivedAt ? row.waivedAt.toISOString() : null,
+      accountingPostedAt: row.accountingPostedAt ? row.accountingPostedAt.toISOString() : null,
+      createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+    })),
+    storageSettlement: result.storageSettlement,
   };
 }
 export const createParcelCtrl = createParcelSvc;
@@ -120,3 +152,94 @@ export const updateParcelCtrl = updateParcelSvc;
 export const markParcelReceivedCtrl = markParcelReceivedSvc;
 export const setPlannedToBePaidCtrl = setPlannedToBePaidSvc;
 export const logParcelDiscrepancyCtrl = logParcelDiscrepancySvc;
+export const softDeleteParcelCtrl = softDeleteParcelSvc;
+export const listParcelDispositionActionsCtrl = listParcelDispositionActionsSvc;
+export const recordParcelDispositionActionCtrl = recordParcelDispositionActionSvc;
+export const waiveParcelStorageAccrualCtrl = waiveParcelStorageAccrualSvc;
+
+export async function listOpenParcelDiscrepanciesCtrl(input: {
+  companyId: string;
+  branchId?: string | null;
+  page: number;
+  pageSize: number;
+  search?: string | null;
+}) {
+  const page = Math.max(1, Number(input.page || 1));
+  const pageSize = Math.max(1, Math.min(100, Number(input.pageSize || 20)));
+  const { data, totalRecords } = await listOpenParcelDiscrepanciesSvc({
+    companyId: input.companyId,
+    branchId: input.branchId ?? null,
+    search: input.search?.trim() || null,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  });
+
+  return {
+    data,
+    meta: buildPaginationMeta({ totalRecords, page, pageSize }),
+  };
+}
+
+export const resolveParcelDiscrepancyCtrl = resolveParcelDiscrepancySvc;
+
+export async function requestParcelReconciliationCaseCtrl(input: {
+  companyId: string;
+  actorUserId: string;
+  parcelId: string;
+  linkedParcelId?: string | null;
+  caseType: number;
+  notes: string;
+  evidenceUrl?: string | null;
+  actionType?: number | null;
+}) {
+  return requestParcelReconciliationCaseSvc(input);
+}
+
+export async function approveParcelReconciliationCaseCtrl(input: {
+  caseId: string;
+  companyId: string;
+  actorUserId: string;
+  actionType: number;
+  resolutionNote?: string | null;
+}) {
+  return approveParcelReconciliationCaseSvc(input);
+}
+
+export async function executeParcelReconciliationCaseCtrl(input: {
+  caseId: string;
+  companyId: string;
+  actorUserId: string;
+  executionNote?: string | null;
+}) {
+  return executeParcelReconciliationCaseSvc(input);
+}
+
+export async function listParcelReconciliationCasesCtrl(input: {
+  companyId: string;
+  statuses?: number[] | null;
+  branchId?: string | null;
+  page: number;
+  pageSize: number;
+  search?: string | null;
+}) {
+  const page = Math.max(1, Number(input.page || 1));
+  const pageSize = Math.max(1, Math.min(100, Number(input.pageSize || 20)));
+  const { data, totalRecords } = await listParcelReconciliationCasesSvc({
+    companyId: input.companyId,
+    statuses: input.statuses ?? null,
+    branchId: input.branchId ?? null,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+    search: input.search?.trim() || null,
+  });
+
+  return {
+    data: data.map((row) => ({
+      ...row,
+      requestedAt: row.requestedAt.toISOString(),
+      approvedAt: row.approvedAt ? row.approvedAt.toISOString() : null,
+      executedAt: row.executedAt ? row.executedAt.toISOString() : null,
+    })),
+    meta: buildPaginationMeta({ totalRecords, page, pageSize }),
+  };
+}

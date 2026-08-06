@@ -1,12 +1,25 @@
 // Global test setup (runs before any test files)
-// - Loads .env.test (if present)
+// - Loads .env then overlays .env.test (if present)
+// - Supports TEST_DATABASE_URL override for tests
 // - Disables Swagger and Sentry during tests
 // - Forces NODE_ENV=test to ensure test-only branches
+import { config as loadEnv } from 'dotenv';
 
-import 'dotenv/config';
+const testDatabaseUrlOverride = process.env.TEST_DATABASE_URL?.trim();
+
+loadEnv({ path: '.env' });
+loadEnv({ path: '.env.test', override: true });
+
+if (testDatabaseUrlOverride) {
+  process.env.TEST_DATABASE_URL = testDatabaseUrlOverride;
+}
+
+if (process.env.TEST_DATABASE_URL?.trim()) {
+  process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+}
 
 // Force NODE_ENV to test
-process.env.NODE_ENV = 'test';
+Reflect.set(process.env, 'NODE_ENV', 'test');
 
 // Disable Swagger UI during tests to avoid polluting the app routes
 process.env.SWAGGER_ENABLED = 'false';
@@ -20,4 +33,4 @@ process.env.JWT_ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '5m';
 process.env.JWT_REFRESH_EXPIRES = process.env.JWT_REFRESH_EXPIRES || '7d';
 
 // Provide default PORT for server layer code that references it
-process.env.PORT = process.env.PORT || '3001';
+process.env.PORT = process.env.PORT || '3000';

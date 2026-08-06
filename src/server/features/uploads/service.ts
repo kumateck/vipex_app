@@ -6,6 +6,7 @@ import {
   uploadImageDataUrl,
 } from '@/server/services/storage/minio';
 import { BadRequest, NotFound } from '@/server/utils/http-error';
+import { logger as devLogger } from '@/server/utils/logger';
 import { createUploadRepo, deleteUploadRepo, getUploadRepo, listUploadsRepo } from './repository';
 
 export const UPLOAD_MODEL_TYPES = [
@@ -13,6 +14,8 @@ export const UPLOAD_MODEL_TYPES = [
   'customer-card-back-image',
   'employee-profile-image',
   'delivery-handover-signature',
+  'it-support-ticket',
+  'parcel-reconciliation-evidence',
 ] as const;
 
 function normalizeModelSegment(value: string) {
@@ -42,7 +45,7 @@ export async function createUploadSvc(input: {
   if (!modelId) throw BadRequest('modelId is required');
   if (!fileName) throw BadRequest('fileName is required');
 
-  console.log('[uploads] createUploadSvc:start', {
+  devLogger.info('[uploads] createUploadSvc:start', {
     companyId: input.companyId,
     uploadedBy: input.uploadedBy,
     modelType,
@@ -57,7 +60,7 @@ export async function createUploadSvc(input: {
       dataUrl: input.dataUrl,
       fileName,
     });
-    console.log('[uploads] storage:uploaded', {
+    devLogger.info('[uploads] storage:uploaded', {
       objectKey: stored.key,
       contentType: stored.contentType,
       sizeBytes: stored.size,
@@ -93,14 +96,14 @@ export async function createUploadSvc(input: {
       },
     });
 
-    console.log('[uploads] createUploadSvc:success', {
+    devLogger.info('[uploads] createUploadSvc:success', {
       uploadId: created.id,
       modelType,
       modelId,
     });
     return created;
   } catch (error) {
-    console.error('[uploads] createUploadSvc:error', {
+    devLogger.error('[uploads] createUploadSvc:error', {
       companyId: input.companyId,
       uploadedBy: input.uploadedBy,
       modelType,

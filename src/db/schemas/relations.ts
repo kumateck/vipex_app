@@ -181,6 +181,7 @@ export const departmentsRelations = relations(departments, ({ one, many }) => ({
 
 export const jobTitlesRelations = relations(jobTitles, ({ one, many }) => ({
   company: one(companies, { fields: [jobTitles.companyId], references: [companies.id] }),
+  department: one(departments, { fields: [jobTitles.departmentId], references: [departments.id] }),
   creator: one(users, { fields: [jobTitles.createdBy], references: [users.id] }),
   employees: many(employees),
   assignments: many(employeeJobAssignments),
@@ -192,6 +193,11 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
   location: one(locations, { fields: [employees.locationId], references: [locations.id] }),
   department: one(departments, { fields: [employees.departmentId], references: [departments.id] }),
   jobTitle: one(jobTitles, { fields: [employees.jobTitleId], references: [jobTitles.id] }),
+  reportingOfficerTitle: one(jobTitles, {
+    fields: [employees.reportingOfficerTitleId],
+    references: [jobTitles.id],
+  }),
+  officer: one(employees, { fields: [employees.officerEmployeeId], references: [employees.id] }),
   manager: one(employees, { fields: [employees.managerEmployeeId], references: [employees.id] }),
   creator: one(users, { fields: [employees.createdBy], references: [users.id] }),
   userAccounts: many(users),
@@ -350,6 +356,7 @@ export const parcelsRelations = relations(parcels, ({ one }) => ({
   booking: one(bookings, { fields: [parcels.bookingId], references: [bookings.id] }),
   sender: one(customers, { fields: [parcels.senderId], references: [customers.id] }),
   receiver: one(customers, { fields: [parcels.receiverId], references: [customers.id] }),
+  deletedByUser: one(users, { fields: [parcels.deletedBy], references: [users.id] }),
   pickupQueue: one(pickupQueues, { fields: [parcels.id], references: [pickupQueues.parcelId] }),
 }));
 
@@ -462,6 +469,7 @@ export const deliveriesRelations = relations(deliveries, ({ one }) => ({
 // Payments
 export const paymentsRelations = relations(payments, ({ one }) => ({
   parcel: one(parcels, { fields: [payments.parcelId], references: [parcels.id] }),
+  voidedByUser: one(users, { fields: [payments.voidedBy], references: [users.id] }),
 }));
 
 // Accounting
@@ -831,6 +839,7 @@ export const pendingBookingsRelations = relations(pendingBookings, ({ one }) => 
 export const pickupQueuesRelations = relations(pickupQueues, ({ one }) => ({
   company: one(companies, { fields: [pickupQueues.companyId], references: [companies.id] }),
   branch: one(branches, { fields: [pickupQueues.branchId], references: [branches.id] }),
+  location: one(locations, { fields: [pickupQueues.locationId], references: [locations.id] }),
   parcel: one(parcels, { fields: [pickupQueues.parcelId], references: [parcels.id] }),
   pickerStaff: one(users, { fields: [pickupQueues.pickerStaffId], references: [users.id] }),
   queuedByUser: one(users, { fields: [pickupQueues.queuedBy], references: [users.id] }),

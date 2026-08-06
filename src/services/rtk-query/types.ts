@@ -1,6 +1,7 @@
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 
 export const LIST_TAG_ID = 'LIST' as const;
+export const OPTIONS_TAG_ID = 'OPTIONS' as const;
 
 export type ResourceTag =
   | 'Auth'
@@ -17,7 +18,13 @@ export type ResourceTag =
   | 'Statuses'
   | 'Users'
   | 'Cashiers'
-  | 'RBAC';
+  | 'RBAC'
+  | 'Procurement'
+  | 'FleetTransport'
+  | 'CustomerWalletCredit'
+  | 'Reconciliation'
+  | 'NotificationHub'
+  | 'ItSupport';
 
 export type ServerListQuery<TFilters = Record<string, unknown>> = PaginationRequestDto<TFilters>;
 export type ServerListResponse<TItem> = PaginatedResponseDto<TItem>;

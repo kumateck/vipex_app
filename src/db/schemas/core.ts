@@ -70,7 +70,6 @@ export const locations = pgTable(
     companyId: varchar('company_id', { length: 25 })
       .notNull()
       .references(() => companies.id),
-    employeeId: varchar('employee_id', { length: 25 }),
     branchId: varchar('branch_id', { length: 25 })
       .notNull()
       .references(() => branches.id),
@@ -147,33 +146,6 @@ export const uploads = pgTable(
   }),
 );
 
-// Statuses (unique per company, case-insensitive)
-export const statuses = pgTable(
-  'statuses',
-  {
-    id: varchar('id', { length: 25 })
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    companyId: varchar('company_id', { length: 25 })
-      .notNull()
-      .references(() => companies.id),
-    type: smallint('type').notNull().default(CashierType.SENDING),
-    name: varchar('name', { length: 255 }).notNull(),
-    color: varchar('color', { length: 255 }).notNull(),
-    isDeleted: boolean('is_deleted').notNull().default(false),
-    createdBy: varchar('created_by', { length: 25 }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
-  },
-  (t) => ({
-    byCompany: index('statuses_company_idx').on(t.companyId),
-    uqCompanyLowerName: uniqueIndex('statuses_company_lower_name_uq').on(
-      t.companyId,
-      sql`lower(${t.name})`,
-    ),
-  }),
-);
-
 // Roles (unique per company, case-insensitive)
 export const roles = pgTable(
   'roles',
@@ -239,6 +211,7 @@ export const users = pgTable(
       .references(() => branches.id),
     locationId: varchar('location_id', { length: 25 }).references(() => locations.id),
     userType: smallint('user_type').notNull().default(UserType.STAFF),
+    cashierType: smallint('cashier_type').$type<CashierType>(),
     createdBy: varchar('created_by', { length: 25 }).notNull(),
     taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
     resetToken: varchar('reset_token', { length: 255 }),

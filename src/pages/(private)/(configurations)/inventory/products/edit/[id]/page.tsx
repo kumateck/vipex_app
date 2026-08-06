@@ -1,3 +1,3 @@
-import { InventoryProductsEditPage } from '@/features/inventory';
+import { InventoryProductsCreateEditPage } from '@/features/inventory';
 
-export default InventoryProductsEditPage;
+export default InventoryProductsCreateEditPage;

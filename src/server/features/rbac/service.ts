@@ -1,5 +1,9 @@
 import { Conflict, NotFound } from '@/server/utils/http-error';
-import { PermissionKeySet, type PermissionKey } from '@/shared/permissions/constants';
+import {
+  normalizePermissionKeys,
+  PermissionKeySet,
+  type PermissionKey,
+} from '@/shared/permissions/constants';
 import { recordAuditLog } from '../audit/logger';
 import {
   createRoleRepo,
@@ -9,6 +13,7 @@ import {
   listPermissionCatalogForCompanyRepo,
   listRolePermissionKeysRepo,
   listRolesRepo,
+  restoreRoleRepo,
   setRolePermissionsRepo,
   softDeleteRoleRepo,
   updateRoleRepo,
@@ -16,7 +21,12 @@ import {
 } from './repository';
 
 export async function listRolesSvc(p: ListRolesParams) {
-  return listRolesRepo(p);
+  const result = await listRolesRepo(p);
+  const normalizedPermissionsByRole = new Map<string, string[]>();
+  for (const [roleId, permissions] of result.permissionsByRole.entries()) {
+    normalizedPermissionsByRole.set(roleId, normalizePermissionKeys(permissions));
+  }
+  return { ...result, permissionsByRole: normalizedPermissionsByRole };
 }
 
 export async function listRoleOptionsSvc(p: {
@@ -41,6 +51,33 @@ export async function createRoleSvc(input: {
 }) {
   const existing = await findRoleByNameRepo(input.companyId, input.name);
   if (existing && !existing.isDeleted) throw Conflict('Role name already exists');
+
+  if (existing && existing.isDeleted) {
+    const restored = await restoreRoleRepo(existing.id, {
+      name: input.name,
+    });
+
+    if (!restored?.id) throw Conflict('Unable to restore role');
+
+    await setRolePermissionsSvc({
+      roleId: restored.id,
+      companyId: input.companyId,
+      createdBy: input.createdBy,
+      permissionKeys: input.permissionKeys,
+    });
+
+    await recordAuditLog({
+      companyId: input.companyId,
+      actorUserId: input.createdBy,
+      entityType: 'role',
+      entityId: restored.id,
+      action: 'ROLE_RESTORED',
+      message: 'Role restored from deleted state',
+      metadata: { name: input.name, permissionCount: input.permissionKeys.length },
+    });
+
+    return { id: restored.id };
+  }
 
   const created = await createRoleRepo({
     companyId: input.companyId,
@@ -80,7 +117,8 @@ export async function updateRoleSvc(
 
   if (patch.name !== role.name) {
     const existing = await findRoleByNameRepo(role.companyId, patch.name);
-    if (existing && existing.id !== id && !existing.isDeleted) throw Conflict('Role name already exists');
+    if (existing && existing.id !== id && !existing.isDeleted)
+      throw Conflict('Role name already exists');
   }
 
   const updated = await updateRoleRepo(id, { name: patch.name });
@@ -128,10 +166,14 @@ export async function setRolePermissionsSvc(input: {
   const role = await getRoleSvc(input.roleId);
   if (role.companyId !== input.companyId) throw NotFound('Role not found');
 
-  const validKeys = input.permissionKeys.filter((key) => PermissionKeySet.has(key)) as PermissionKey[];
-  if (validKeys.length !== input.permissionKeys.length) throw Conflict('Unknown permission key(s)');
+  const unknownKeys = input.permissionKeys.filter(
+    (key) => !PermissionKeySet.has(key) && normalizePermissionKeys([key]).length === 0,
+  );
+  if (unknownKeys.length > 0) throw Conflict('Unknown permission key(s)');
 
-  await setRolePermissionsRepo(input.roleId, input.companyId, validKeys);
+  const normalizedKeys = normalizePermissionKeys(input.permissionKeys);
+
+  await setRolePermissionsRepo(input.roleId, input.companyId, normalizedKeys);
   await recordAuditLog({
     companyId: input.companyId,
     actorUserId: input.createdBy,
@@ -139,11 +181,11 @@ export async function setRolePermissionsSvc(input: {
     entityId: input.roleId,
     action: 'ROLE_PERMISSIONS_UPDATED',
     message: 'Role permissions updated',
-    metadata: { permissionCount: validKeys.length, permissionKeys: validKeys },
+    metadata: { permissionCount: normalizedKeys.length, permissionKeys: normalizedKeys },
   });
   return { success: true };
 }
 
 export async function listRolePermissionKeysSvc(roleId: string, companyId: string) {
-  return listRolePermissionKeysRepo(roleId, companyId);
+  return normalizePermissionKeys(await listRolePermissionKeysRepo(roleId, companyId));
 }

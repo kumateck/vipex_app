@@ -3,5 +3,13 @@ set -e
 
 export PATH="$HOME/.bun/bin:$PATH"
 
+if git diff --cached --name-only | grep -q '^src/assets/'; then
+  echo "Detected changes in src/assets. Syncing brand assets..."
+  bun run assets:sync
+  git add apps/web/public/logo.png apps/web/public/logo.ico
+  git add apps/mobile/assets/icon.png apps/mobile/assets/android-icon-foreground.png
+  git add apps/mobile/assets/splash-icon.png apps/mobile/assets/favicon.png
+fi
+
 echo "Running pre-commit checks (staged files only)..."
-bunx --bun lint-staged
+bunx lint-staged --quiet --no-stash

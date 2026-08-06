@@ -1,4 +1,5 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import { formatDateTime } from '@/lib/dates';
 import type { StockAdjustment } from '../types/inventory-stock.types';
 import { stockAdjustmentReasonLabelByValue } from '../constants/stock-options';
 
@@ -8,12 +9,12 @@ export function createStockAdjustmentColumns(
 ): ColumnDef<StockAdjustment>[] {
   return [
     {
-      accessorFn: (row) => productNameById?.get(row.productId) ?? row.productId,
+      accessorFn: (row) => productNameById?.get(row.productId) ?? 'Unknown product',
       id: 'productName',
       header: 'Product',
     },
     {
-      accessorFn: (row) => locationNameById?.get(row.locationId) ?? row.locationId,
+      accessorFn: (row) => locationNameById?.get(row.locationId) ?? 'Unknown location',
       id: 'locationName',
       header: 'Location',
     },
@@ -29,7 +30,7 @@ export function createStockAdjustmentColumns(
     {
       accessorKey: 'createdAt',
       header: 'Created',
-      cell: ({ row }) => row.original.createdAt ?? '-',
+      cell: ({ row }) => (row.original.createdAt ? formatDateTime(row.original.createdAt) : '-'),
     },
   ];
 }

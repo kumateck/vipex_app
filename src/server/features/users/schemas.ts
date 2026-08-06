@@ -8,7 +8,7 @@ import {
   PaginationRequestQuery,
   SmallInt,
 } from '../../schemas/common';
-import { USER_TYPES } from '@/shared/access/constants';
+import { CASHIER_TYPES, USER_TYPES } from '@/shared/access/constants';
 
 // Request schemas
 export const ListUsersQuery = PaginationRequestQuery;
@@ -26,6 +26,7 @@ export const CreateUserBody = t.Object({
   locationId: t.Optional(t.Union([UUID, t.Null()])),
   roleId: UUID,
   userType: t.Union(USER_TYPES.map((value) => t.Literal(value))),
+  cashierType: t.Optional(t.Union([...CASHIER_TYPES.map((value) => t.Literal(value)), t.Null()])),
   // No password here – invites will handle password setup
   // Optional flag to control emailing (defaults true)
   sendInvite: t.Optional(t.Boolean()),
@@ -42,6 +43,7 @@ export const UserDto = t.Object({
   branchId: UUID,
   locationId: t.Optional(t.Union([UUID, t.Null()])),
   userType: t.Union(USER_TYPES.map((value) => t.Literal(value))),
+  cashierType: t.Optional(t.Union([...CASHIER_TYPES.map((value) => t.Literal(value)), t.Null()])),
   createdAt: t.Union([t.String({ format: 'date-time' }), t.Null()]),
 });
 

@@ -1,0 +1,56 @@
+name: Desktop Windows Test Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      desktop_web_base_url:
+        description: Hosted web app URL for the packaged test shell.
+        required: true
+        default: https://testing.app.vipexparcel.com/
+      desktop_update_feed_url:
+        description: Windows test update feed URL.
+        required: true
+        default: https://testing.app.vipexparcel.com/v1/desktop-updates/windows/latest/
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows-test:
+    name: Build Windows Test Installer
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      DESKTOP_WEB_BASE_URL: ${{ inputs.desktop_web_base_url }}
+      DESKTOP_UPDATE_FEED_URL: ${{ inputs.desktop_update_feed_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Sync Brand Assets
+        run: bun run assets:sync
+
+      - name: Typecheck Desktop Shell
+        run: bunx tsc -p apps/desktop/tsconfig.json --noEmit
+
+      - name: Build Windows Test Installer
+        run: bun run --cwd apps/desktop make:windows:test
+
+      - name: Upload Windows Test Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: vipex-desktop-windows-test-${{ github.run_number }}
+          path: apps/desktop/out/make/**
+          if-no-files-found: error
+          retention-days: 14

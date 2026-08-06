@@ -13,29 +13,39 @@ import { BranchType } from '@/db/schemas/enums';
 import {
   approveLeaveRequestCtrl,
   approveLeaveRequestByManagerCtrl,
+  approveLeaveSwapCtrl,
   checkInAttendanceCtrl,
   checkOutAttendanceCtrl,
   createDepartmentCtrl,
+  createEmployeeFromUserCtrl,
   createEmployeeCtrl,
   createEmployeeUserAccountCtrl,
   createJobTitleCtrl,
   createLeaveRequestCtrl,
+  createLeaveSwapCtrl,
   createLeaveTypeCtrl,
+  confirmLeaveSwapCtrl,
   getEmployeeCtrl,
   listDepartmentOptionsCtrl,
   listDepartmentsCtrl,
   listAttendanceCtrl,
+  listLeaveCalendarCtrl,
   listEmployeesCtrl,
+  listEmployeeOptionsCtrl,
   listJobTitleOptionsCtrl,
   listJobTitlesCtrl,
   listLeaveRequestsCtrl,
+  listLeaveSwapsCtrl,
   listLeaveTypeOptionsCtrl,
   listLeaveTypesCtrl,
+  linkEmployeeUserCtrl,
   rejectLeaveRequestCtrl,
   rejectLeaveRequestByManagerCtrl,
+  rejectLeaveSwapCtrl,
   updateDepartmentCtrl,
   updateEmployeeCtrl,
   updateJobTitleCtrl,
+  updateLeaveRequestCtrl,
 } from './controller';
 
 export const hrRoutes = new Elysia({ name: 'hr' })
@@ -189,9 +199,11 @@ export const hrRoutes = new Elysia({ name: 'hr' })
     async ({ body, set, user }) => {
       const result = await createJobTitleCtrl({
         companyId: (user as AuthUser).companyId!,
+        departmentId: body.departmentId ?? null,
         code: body.code ?? null,
         name: body.name,
         description: body.description ?? null,
+        defaultLeaveDays: body.defaultLeaveDays ?? 0,
         createdBy: (user as AuthUser).sub,
       });
       set.status = HttpStatus.CREATED;
@@ -199,9 +211,11 @@ export const hrRoutes = new Elysia({ name: 'hr' })
     },
     {
       body: t.Object({
+        departmentId: t.Optional(t.Union([UUID, t.Null()])),
         code: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
         name: NonEmpty255,
         description: t.Optional(t.Union([t.String(), t.Null()])),
+        defaultLeaveDays: t.Optional(t.Number({ minimum: 0 })),
       }),
       beforeHandle: [
         requireAuth(),
@@ -215,17 +229,21 @@ export const hrRoutes = new Elysia({ name: 'hr' })
     '/job-titles/:id',
     async ({ params, body, user }) =>
       updateJobTitleCtrl(params.id, (user as AuthUser).companyId!, {
+        departmentId: body.departmentId,
         code: body.code,
         name: body.name,
         description: body.description,
+        defaultLeaveDays: body.defaultLeaveDays,
         isActive: body.isActive,
       }),
     {
       params: t.Object({ id: UUID }),
       body: t.Object({
+        departmentId: t.Optional(t.Union([UUID, t.Null()])),
         code: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
         name: t.Optional(NonEmpty255),
         description: t.Optional(t.Union([t.String(), t.Null()])),
+        defaultLeaveDays: t.Optional(t.Number({ minimum: 0 })),
         isActive: t.Optional(t.Boolean()),
       }),
       beforeHandle: [
@@ -288,6 +306,8 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         code: body.code ?? null,
         name: body.name,
         isPaid: body.isPaid ?? true,
+        minAdvanceDays: body.minAdvanceDays ?? 0,
+        allowEmergencySameDay: body.allowEmergencySameDay ?? true,
         createdBy: (user as AuthUser).sub,
       });
       set.status = HttpStatus.CREATED;
@@ -298,6 +318,8 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         code: t.Optional(t.Union([t.String({ maxLength: 50 }), t.Null()])),
         name: NonEmpty255,
         isPaid: t.Optional(t.Boolean()),
+        minAdvanceDays: t.Optional(t.Number({ minimum: 0 })),
+        allowEmergencySameDay: t.Optional(t.Boolean()),
       }),
       beforeHandle: [
         requireAuth(),
@@ -305,6 +327,44 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         requireModuleEnabled('hr'),
       ],
       detail: { tags: ['HR'], summary: 'Create leave type', operationId: 'createLeaveType' },
+    },
+  )
+  .get(
+    '/employees/options',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      const isHeadOffice = authUser.branchType === BranchType.HEADOFFICE;
+      return listEmployeeOptionsCtrl({
+        companyId: authUser.companyId!,
+        branchId: isHeadOffice ? (query.branchId ?? null) : (authUser.branchId ?? null),
+        departmentId: query.departmentId ?? null,
+        jobTitleId: query.jobTitleId ?? null,
+        officerEmployeeId: query.officerEmployeeId ?? null,
+        status: query.status ?? null,
+        search: query.search ?? null,
+        unlinkedOnly: query.unlinkedOnly ?? false,
+      });
+    },
+    {
+      query: t.Object({
+        branchId: t.Optional(UUID),
+        departmentId: t.Optional(UUID),
+        jobTitleId: t.Optional(UUID),
+        officerEmployeeId: t.Optional(UUID),
+        status: t.Optional(t.Number()),
+        search: t.Optional(t.String()),
+        unlinkedOnly: t.Optional(t.Boolean()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanListEmployees),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'List employee options',
+        operationId: 'listEmployeeOptions',
+      },
     },
   )
   .get(
@@ -323,6 +383,8 @@ export const hrRoutes = new Elysia({ name: 'hr' })
           companyId: authUser.companyId!,
           branchId: isHeadOffice ? (query.branchId ?? null) : (authUser.branchId ?? null),
           departmentId: query.departmentId ?? null,
+          jobTitleId: query.jobTitleId ?? null,
+          officerEmployeeId: query.officerEmployeeId ?? null,
           status: query.status ?? null,
         },
       });
@@ -332,6 +394,8 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         ...PaginationRequestQueryProps,
         branchId: t.Optional(UUID),
         departmentId: t.Optional(UUID),
+        jobTitleId: t.Optional(UUID),
+        officerEmployeeId: t.Optional(UUID),
         status: t.Optional(t.Number()),
         search: t.Optional(t.String()),
       }),
@@ -365,7 +429,9 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         locationId: body.locationId ?? null,
         departmentId: body.departmentId ?? null,
         jobTitleId: body.jobTitleId ?? null,
-        managerEmployeeId: body.managerEmployeeId ?? null,
+        reportingOfficerTitleId: body.reportingOfficerTitleId ?? null,
+        officerEmployeeId: body.officerEmployeeId ?? null,
+        supervisorEmployeeId: body.supervisorEmployeeId ?? null,
         employmentStatus: body.employmentStatus ?? undefined,
         employmentType: body.employmentType ?? undefined,
         hireDate: new Date(body.hireDate),
@@ -392,7 +458,9 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         locationId: t.Optional(t.Union([UUID, t.Null()])),
         departmentId: t.Optional(t.Union([UUID, t.Null()])),
         jobTitleId: t.Optional(t.Union([UUID, t.Null()])),
-        managerEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        reportingOfficerTitleId: t.Optional(t.Union([UUID, t.Null()])),
+        officerEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        supervisorEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
         hireDate: t.String({ format: 'date' }),
         employmentStatus: t.Optional(t.Number()),
         employmentType: t.Optional(t.Number()),
@@ -403,6 +471,54 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         requireModuleEnabled('hr'),
       ],
       detail: { tags: ['HR'], summary: 'Create employee', operationId: 'createEmployee' },
+    },
+  )
+  .post(
+    '/employees/from-user/:userId',
+    async ({ params, body, set, user }) => {
+      const authUser = user as AuthUser;
+      const result = await createEmployeeFromUserCtrl({
+        companyId: authUser.companyId!,
+        userId: params.userId,
+        employeeNumber: body.employeeNumber,
+        firstName: body.firstName,
+        middleName: body.middleName ?? null,
+        lastName: body.lastName,
+        departmentId: body.departmentId ?? null,
+        jobTitleId: body.jobTitleId ?? null,
+        supervisorEmployeeId: body.supervisorEmployeeId ?? null,
+        hireDate: new Date(body.hireDate),
+        employmentStatus: body.employmentStatus ?? undefined,
+        employmentType: body.employmentType ?? undefined,
+        createdBy: authUser.sub,
+      });
+      set.status = HttpStatus.CREATED;
+      return result;
+    },
+    {
+      params: t.Object({ userId: UUID }),
+      body: t.Object({
+        employeeNumber: NonEmpty255,
+        firstName: NonEmpty255,
+        middleName: t.Optional(t.Union([t.String({ maxLength: 100 }), t.Null()])),
+        lastName: NonEmpty255,
+        departmentId: t.Optional(t.Union([UUID, t.Null()])),
+        jobTitleId: t.Optional(t.Union([UUID, t.Null()])),
+        supervisorEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        hireDate: t.String({ format: 'date' }),
+        employmentStatus: t.Optional(t.Number()),
+        employmentType: t.Optional(t.Number()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCreateEmployee, PermissionKeys.CanUpdateUsers),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Create and link an employee from an existing user',
+        operationId: 'createEmployeeFromUser',
+      },
     },
   )
   .get('/employees/:id', async ({ params }) => getEmployeeCtrl(params.id), {
@@ -435,7 +551,9 @@ export const hrRoutes = new Elysia({ name: 'hr' })
           locationId: body.locationId,
           departmentId: body.departmentId,
           jobTitleId: body.jobTitleId,
-          managerEmployeeId: body.managerEmployeeId,
+          reportingOfficerTitleId: body.reportingOfficerTitleId,
+          officerEmployeeId: body.officerEmployeeId,
+          supervisorEmployeeId: body.supervisorEmployeeId,
           employmentStatus: body.employmentStatus,
           employmentType: body.employmentType,
           confirmationDate: body.confirmationDate ? new Date(body.confirmationDate) : undefined,
@@ -463,7 +581,9 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         locationId: t.Optional(t.Union([UUID, t.Null()])),
         departmentId: t.Optional(t.Union([UUID, t.Null()])),
         jobTitleId: t.Optional(t.Union([UUID, t.Null()])),
-        managerEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        reportingOfficerTitleId: t.Optional(t.Union([UUID, t.Null()])),
+        officerEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
+        supervisorEmployeeId: t.Optional(t.Union([UUID, t.Null()])),
         employmentStatus: t.Optional(t.Number()),
         employmentType: t.Optional(t.Number()),
         confirmationDate: t.Optional(t.Union([t.String({ format: 'date' }), t.Null()])),
@@ -476,6 +596,35 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         requireModuleEnabled('hr'),
       ],
       detail: { tags: ['HR'], summary: 'Update employee', operationId: 'updateEmployee' },
+    },
+  )
+  .post(
+    '/employees/:id/link-user',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return linkEmployeeUserCtrl({
+        companyId: authUser.companyId!,
+        employeeId: params.id,
+        userId: body.userId,
+        actorUserId: authUser.sub,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({ userId: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(
+          PermissionKeys.CanCreateEmployeeUserAccount,
+          PermissionKeys.CanUpdateUsers,
+        ),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Link an existing user to an existing employee',
+        operationId: 'linkEmployeeUser',
+      },
     },
   )
   .post(
@@ -585,6 +734,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         filters: {
           companyId: (user as AuthUser).companyId!,
           employeeId: query.employeeId ?? null,
+          leaveTypeId: query.leaveTypeId ?? null,
           status: query.status ?? null,
         },
       }),
@@ -592,6 +742,7 @@ export const hrRoutes = new Elysia({ name: 'hr' })
       query: t.Object({
         ...PaginationRequestQueryProps,
         employeeId: t.Optional(UUID),
+        leaveTypeId: t.Optional(UUID),
         status: t.Optional(t.Number()),
       }),
       beforeHandle: [
@@ -602,15 +753,57 @@ export const hrRoutes = new Elysia({ name: 'hr' })
       detail: { tags: ['HR'], summary: 'List leave requests', operationId: 'listLeaveRequests' },
     },
   )
+  .get(
+    '/leave-calendar',
+    async ({ query, user }) =>
+      listLeaveCalendarCtrl({
+        companyId: (user as AuthUser).companyId!,
+        from: new Date(query.from),
+        to: new Date(query.to),
+        employeeId: query.employeeId ?? null,
+        status: query.status ?? null,
+        branchId: query.branchId ?? null,
+        departmentId: query.departmentId ?? null,
+      }),
+    {
+      query: t.Object({
+        from: t.String({ format: 'date' }),
+        to: t.String({ format: 'date' }),
+        employeeId: t.Optional(UUID),
+        status: t.Optional(t.Number()),
+        branchId: t.Optional(UUID),
+        departmentId: t.Optional(UUID),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanViewLeaveCalendar),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Leave calendar timeline',
+        operationId: 'listLeaveCalendar',
+      },
+    },
+  )
   .post(
     '/leave-requests',
     async ({ body, set, user }) => {
+      const selectionMode = body.selectionMode ?? 0;
+      const normalizedWeekCount =
+        selectionMode === 1
+          ? Math.max(1, Math.floor(Number(body.weekCount ?? 1)))
+          : (body.weekCount ?? null);
       const result = await createLeaveRequestCtrl({
         companyId: (user as AuthUser).companyId!,
         employeeId: body.employeeId,
         leaveTypeId: body.leaveTypeId,
         dateFrom: new Date(body.dateFrom),
         dateTo: new Date(body.dateTo),
+        selectionMode,
+        weekStartDate: body.weekStartDate ? new Date(body.weekStartDate) : null,
+        weekCount: normalizedWeekCount,
+        isEmergency: body.isEmergency ?? false,
         reason: body.reason ?? null,
         createdBy: (user as AuthUser).sub,
       });
@@ -623,6 +816,10 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         leaveTypeId: UUID,
         dateFrom: t.String({ format: 'date' }),
         dateTo: t.String({ format: 'date' }),
+        selectionMode: t.Optional(t.Number({ minimum: 0, maximum: 1 })),
+        weekStartDate: t.Optional(t.Union([t.String({ format: 'date' }), t.Null()])),
+        weekCount: t.Optional(t.Union([t.Number({ minimum: 1 }), t.Null()])),
+        isEmergency: t.Optional(t.Boolean()),
         reason: t.Optional(t.Union([t.String(), t.Null()])),
       }),
       beforeHandle: [
@@ -631,6 +828,166 @@ export const hrRoutes = new Elysia({ name: 'hr' })
         requireModuleEnabled('hr'),
       ],
       detail: { tags: ['HR'], summary: 'Create leave request', operationId: 'createLeaveRequest' },
+    },
+  )
+  .patch(
+    '/leave-requests/:id',
+    async ({ params, body, user }) => {
+      const selectionMode = body.selectionMode;
+      const normalizedWeekCount =
+        body.weekCount === undefined
+          ? undefined
+          : selectionMode === 1
+            ? Math.max(1, Math.floor(Number(body.weekCount ?? 1)))
+            : body.weekCount;
+
+      return updateLeaveRequestCtrl(params.id, (user as AuthUser).companyId!, {
+        employeeId: body.employeeId,
+        leaveTypeId: body.leaveTypeId,
+        dateFrom: body.dateFrom ? new Date(body.dateFrom) : undefined,
+        dateTo: body.dateTo ? new Date(body.dateTo) : undefined,
+        selectionMode,
+        weekStartDate:
+          body.weekStartDate === undefined
+            ? undefined
+            : body.weekStartDate
+              ? new Date(body.weekStartDate)
+              : null,
+        weekCount: normalizedWeekCount,
+        isEmergency: body.isEmergency,
+        reason: body.reason,
+        updatedBy: (user as AuthUser).sub,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        employeeId: t.Optional(UUID),
+        leaveTypeId: t.Optional(UUID),
+        dateFrom: t.Optional(t.String({ format: 'date' })),
+        dateTo: t.Optional(t.String({ format: 'date' })),
+        selectionMode: t.Optional(t.Number({ minimum: 0, maximum: 1 })),
+        weekStartDate: t.Optional(t.Union([t.String({ format: 'date' }), t.Null()])),
+        weekCount: t.Optional(t.Union([t.Number({ minimum: 1 }), t.Null()])),
+        isEmergency: t.Optional(t.Boolean()),
+        reason: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCreateLeaveRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: { tags: ['HR'], summary: 'Update leave request', operationId: 'updateLeaveRequest' },
+    },
+  )
+  .get(
+    '/leave-swaps',
+    async ({ query, user }) =>
+      listLeaveSwapsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+        filters: {
+          companyId: (user as AuthUser).companyId!,
+          employeeId: query.employeeId ?? null,
+          status: query.status ?? null,
+        },
+      }),
+    {
+      query: t.Object({
+        ...PaginationRequestQueryProps,
+        employeeId: t.Optional(UUID),
+        status: t.Optional(t.Number()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanViewLeaveCalendar),
+        requireModuleEnabled('hr'),
+      ],
+      detail: { tags: ['HR'], summary: 'List leave swaps', operationId: 'listLeaveSwaps' },
+    },
+  )
+  .post(
+    '/leave-swaps',
+    async ({ body, set, user }) => {
+      const result = await createLeaveSwapCtrl({
+        companyId: (user as AuthUser).companyId!,
+        requesterLeaveRequestId: body.requesterLeaveRequestId,
+        targetLeaveRequestId: body.targetLeaveRequestId,
+        createdBy: (user as AuthUser).sub,
+      });
+      set.status = HttpStatus.CREATED;
+      return result;
+    },
+    {
+      body: t.Object({
+        requesterLeaveRequestId: UUID,
+        targetLeaveRequestId: UUID,
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCreateLeaveSwapRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Create leave swap request',
+        operationId: 'createLeaveSwap',
+      },
+    },
+  )
+  .post(
+    '/leave-swaps/:id/confirm',
+    async ({ params, user }) => confirmLeaveSwapCtrl(params.id, (user as AuthUser).sub),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanConfirmLeaveSwapRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Confirm leave swap request by target employee',
+        operationId: 'confirmLeaveSwap',
+      },
+    },
+  )
+  .post(
+    '/leave-swaps/:id/approve',
+    async ({ params, user }) => approveLeaveSwapCtrl(params.id, (user as AuthUser).sub),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveLeaveSwapRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Approve leave swap request',
+        operationId: 'approveLeaveSwap',
+      },
+    },
+  )
+  .post(
+    '/leave-swaps/:id/reject',
+    async ({ params, body, user }) =>
+      rejectLeaveSwapCtrl(params.id, (user as AuthUser).sub, body.reason ?? null),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({ reason: t.Optional(t.Union([t.String(), t.Null()])) }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveLeaveSwapRequest),
+        requireModuleEnabled('hr'),
+      ],
+      detail: {
+        tags: ['HR'],
+        summary: 'Reject leave swap request',
+        operationId: 'rejectLeaveSwap',
+      },
     },
   )
   .post(

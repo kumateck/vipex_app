@@ -1,5 +1,5 @@
-import { ComingSoonPage } from '@/components/coming-soon-page';
+import { LeaveCalendarPage } from '@/features/hr/pages/leave-calendar-page';
 
 export default function ReportsPlaceholderPage() {
-  return <ComingSoonPage title="Leave Calendar" />;
+  return <LeaveCalendarPage />;
 }

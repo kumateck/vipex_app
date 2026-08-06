@@ -5,14 +5,25 @@ import {
   provideEntityListTags,
   type ServerListResponse,
 } from '@/services/rtk-query';
-import type { User, UserCreatePayload, UserListQuery, UserMutationInput } from '../types/user.types';
+import type {
+  User,
+  UserCreatePayload,
+  UserListQuery,
+  UserMutationInput,
+} from '../types/user.types';
 import { toCreateUserPayload, toUpdateUserPayload } from '../utils/user-payload';
-import type { UserType } from '@/shared/access/constants';
+import type { CashierType, UserType } from '@/shared/access/constants';
 
 export interface UserOption {
   id: string;
   fullname: string;
   email: string;
+  branchId?: string | null;
+  locationId?: string | null;
+  branchType?: number | null;
+  roleName?: string | null;
+  branchName?: string | null;
+  locationName?: string | null;
 }
 
 export const usersApi = api.injectEndpoints({
@@ -38,6 +49,7 @@ export const usersApi = api.injectEndpoints({
         locationId?: string | null;
         roleId?: string | null;
         userType?: UserType | null;
+        cashierType?: CashierType | null;
         status?: number;
         search?: string;
       } | void
@@ -64,7 +76,11 @@ export const usersApi = api.injectEndpoints({
         method: 'PATCH',
         body: toUpdateUserPayload(body),
       }),
-      invalidatesTags: (_result, _err, { id }) => [{ type: 'Users', id }, ...invalidateEntityListTag('Users')],
+      invalidatesTags: (_result, _err, { id }) => [
+        { type: 'Users', id },
+        ...invalidateEntityListTag('Users'),
+        'Auth',
+      ],
     }),
     updateUserStatus: builder.mutation<{ id: string }, { id: string; status: number }>({
       query: ({ id, status }) => ({
@@ -72,16 +88,26 @@ export const usersApi = api.injectEndpoints({
         method: 'PATCH',
         body: { status },
       }),
-      invalidatesTags: (_result, _err, { id }) => [{ type: 'Users', id }, ...invalidateEntityListTag('Users')],
+      invalidatesTags: (_result, _err, { id }) => [
+        { type: 'Users', id },
+        ...invalidateEntityListTag('Users'),
+        'Auth',
+      ],
     }),
 
-    resendSetupInvite: builder.mutation<{ ok: boolean; expiresAt: string }, { id: string; force?: boolean }>({
+    resendSetupInvite: builder.mutation<
+      { ok: boolean; expiresAt: string },
+      { id: string; force?: boolean }
+    >({
       query: ({ id, force = true }) => ({
         url: `/users/auth/resend-setup/${id}`,
         method: 'POST',
         body: { force },
       }),
-      invalidatesTags: (_result, _err, { id }) => [{ type: 'Users', id }, ...invalidateEntityListTag('Users')],
+      invalidatesTags: (_result, _err, { id }) => [
+        { type: 'Users', id },
+        ...invalidateEntityListTag('Users'),
+      ],
     }),
   }),
 });

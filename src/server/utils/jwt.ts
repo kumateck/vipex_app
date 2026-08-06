@@ -8,7 +8,8 @@ const alg = 'HS256';
 
 export type JwtPayload = {
   sub: string; // user id
-  email: string;
+  sid?: string; // refresh token session id
+  email?: string;
   employeeId?: string | null;
   roleId?: string | null;
   companyId?: string | null;
@@ -16,7 +17,7 @@ export type JwtPayload = {
   branchType?: number | null;
   locationId?: string | null;
   userType?: number | null;
-  permissions?: string[];
+  cashierType?: number | null;
 };
 
 export async function signAccessToken(payload: JwtPayload) {

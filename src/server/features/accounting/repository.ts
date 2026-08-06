@@ -1,19 +1,27 @@
-import { and, asc, eq, gte, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
+import { createId } from '@paralleldrive/cuid2';
+import { bigint, pgTable, smallint, timestamp, varchar } from 'drizzle-orm/pg-core';
 import {
   accountingApprovalPolicies,
   chartOfAccounts,
   cashierSessions,
   companies,
+  companyModules,
   dailyCashConfirmations,
   branches,
   companyBankAccounts,
+  cashToBankTransfers,
   expenseCategories,
   expenseRequests,
   journalBatches,
   journalEntries,
   journalLines,
+  manualJournalEntries,
+  manualJournalEntryLines,
   locations,
+  serviceCharges,
+  pettyCashReplenishments,
   pettyCashFunds,
   payments,
   employeeCompensation,
@@ -25,9 +33,81 @@ import {
   users,
 } from '@/db/schemas';
 import type { SQL } from 'drizzle-orm';
-import { CashierType, PaymentComponent, PaymentMethod } from '@/db/schemas/enums';
+import { ApprovalStatus, CashierType, PaymentComponent, PaymentMethod } from '@/db/schemas/enums';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
+
+const dailyCashConfirmationsLegacy = pgTable('daily_cash_confirmations', {
+  id: varchar('id', { length: 25 }).primaryKey(),
+  companyId: varchar('company_id', { length: 25 }).notNull(),
+  branchId: varchar('branch_id', { length: 25 }).notNull(),
+  locationId: varchar('location_id', { length: 25 }),
+  cashierUserId: varchar('cashier_user_id', { length: 25 }),
+  accountantUserId: varchar('accountant_user_id', { length: 25 }),
+  confirmationDate: timestamp('confirmation_date', { withTimezone: false }).notNull(),
+  expectedCashPsw: bigint('expected_cash_psw', { mode: 'number' }).notNull(),
+  countedCashPsw: bigint('counted_cash_psw', { mode: 'number' }).notNull(),
+  shortagePsw: bigint('shortage_psw', { mode: 'number' }).notNull(),
+  overagePsw: bigint('overage_psw', { mode: 'number' }).notNull(),
+  notes: varchar('notes', { length: 1000 }),
+  status: smallint('status').notNull(),
+  journalEntryId: varchar('journal_entry_id', { length: 25 }),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: false }),
+  postedAt: timestamp('posted_at', { withTimezone: false }),
+  createdBy: varchar('created_by', { length: 25 }),
+  createdAt: timestamp('created_at', { withTimezone: false }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: false }).notNull(),
+});
+
+function toDateOnlyParam(value: Date | string) {
+  if (typeof value === 'string') return value.length > 10 ? value.slice(0, 10) : value;
+  return value.toISOString().slice(0, 10);
+}
+
+function readErrorCode(value: unknown, depth = 0): string | null {
+  if (!value || typeof value !== 'object' || depth > 6) return null;
+  const obj = value as { code?: unknown; cause?: unknown };
+  if (typeof obj.code === 'string' && obj.code.length > 0) return obj.code;
+  return readErrorCode(obj.cause, depth + 1);
+}
+
+function readErrorMessage(value: unknown, depth = 0): string {
+  if (!value || typeof value !== 'object' || depth > 6) return '';
+  const obj = value as { message?: unknown; cause?: unknown };
+  const message = typeof obj.message === 'string' ? obj.message : '';
+  return `${message} ${readErrorMessage(obj.cause, depth + 1)}`.trim();
+}
+
+function isMissingDailyCashPaymentModeColumnsError(error: unknown) {
+  if (readErrorCode(error) !== '42703') return false;
+  const message = readErrorMessage(error);
+  return (
+    message.includes('expected_mtn_psw') ||
+    message.includes('expected_telecel_psw') ||
+    message.includes('expected_airtel_psw') ||
+    message.includes('counted_mtn_psw') ||
+    message.includes('counted_telecel_psw') ||
+    message.includes('counted_airtel_psw')
+  );
+}
+
+async function hasDailyCashPaymentModeColumns(executor: DbExecutor = db): Promise<boolean> {
+  const rows = await executor.execute(sql<{ total: string | number }>`
+    select count(*)::int as total
+    from information_schema.columns
+    where table_schema = current_schema()
+      and table_name = 'daily_cash_confirmations'
+      and column_name in (
+        'expected_mtn_psw',
+        'expected_telecel_psw',
+        'expected_airtel_psw',
+        'counted_mtn_psw',
+        'counted_telecel_psw',
+        'counted_airtel_psw'
+      )
+  `);
+  return Number(rows[0]?.total ?? 0) === 6;
+}
 
 export async function listAccountsRepo(input: { companyId: string; active?: boolean | null }) {
   const where = [eq(chartOfAccounts.companyId, input.companyId)];
@@ -89,6 +169,7 @@ export async function listApprovalPoliciesRepo(input: {
       policyCode: accountingApprovalPolicies.policyCode,
       name: accountingApprovalPolicies.name,
       amountLimitPsw: accountingApprovalPolicies.amountLimitPsw,
+      autoAuthorizeBelowThreshold: accountingApprovalPolicies.autoAuthorizeBelowThreshold,
       requiresHeadOfficeApproval: accountingApprovalPolicies.requiresHeadOfficeApproval,
       appliesToFundingSource: accountingApprovalPolicies.appliesToFundingSource,
       active: accountingApprovalPolicies.active,
@@ -98,6 +179,35 @@ export async function listApprovalPoliciesRepo(input: {
     .from(accountingApprovalPolicies)
     .where(and(...where))
     .orderBy(asc(accountingApprovalPolicies.policyCode));
+}
+
+export async function listServiceChargesRepo(input: {
+  companyId: string;
+  active?: boolean | null;
+}) {
+  const where = [eq(serviceCharges.companyId, input.companyId)];
+  if (input.active != null) where.push(eq(serviceCharges.active, input.active));
+
+  return db
+    .select({
+      id: serviceCharges.id,
+      companyId: serviceCharges.companyId,
+      code: serviceCharges.code,
+      name: serviceCharges.name,
+      description: serviceCharges.description,
+      amountPsw: serviceCharges.amountPsw,
+      taxable: serviceCharges.taxable,
+      active: serviceCharges.active,
+      sortOrder: serviceCharges.sortOrder,
+      payableAccountId: serviceCharges.payableAccountId,
+      effectiveFrom: serviceCharges.effectiveFrom,
+      effectiveTo: serviceCharges.effectiveTo,
+      createdAt: serviceCharges.createdAt,
+      updatedAt: serviceCharges.updatedAt,
+    })
+    .from(serviceCharges)
+    .where(and(...where))
+    .orderBy(asc(serviceCharges.sortOrder), asc(serviceCharges.code), asc(serviceCharges.name));
 }
 
 export async function listCompanyBankAccountsRepo(input: {
@@ -171,6 +281,77 @@ export async function listTaxComponentsRepo(input: {
     .orderBy(asc(taxComponents.profileId), asc(taxComponents.sortOrder), asc(taxComponents.key));
 }
 
+export async function getActiveTaxProfileWithComponentsRepo(
+  input: { companyId: string; at?: Date },
+  executor: DbExecutor = db,
+) {
+  const at = input.at ?? new Date();
+
+  const [profile] = await executor
+    .select({
+      id: taxProfiles.id,
+      name: taxProfiles.name,
+    })
+    .from(taxProfiles)
+    .where(and(eq(taxProfiles.companyId, input.companyId), eq(taxProfiles.active, true)))
+    .orderBy(desc(taxProfiles.updatedAt), asc(taxProfiles.name))
+    .limit(1);
+
+  if (!profile) return null;
+
+  const components = await executor
+    .select({
+      key: taxComponents.key,
+      numerator: taxComponents.numerator,
+      denominator: taxComponents.denominator,
+      inclusive: taxComponents.inclusive,
+      sortOrder: taxComponents.sortOrder,
+    })
+    .from(taxComponents)
+    .where(
+      and(
+        eq(taxComponents.profileId, profile.id),
+        eq(taxComponents.active, true),
+        lte(taxComponents.startsAt, at),
+        or(isNull(taxComponents.endsAt), gte(taxComponents.endsAt, at)),
+      ),
+    )
+    .orderBy(asc(taxComponents.sortOrder), asc(taxComponents.key));
+
+  return {
+    profileId: profile.id,
+    profileName: profile.name,
+    components,
+  };
+}
+
+export async function listActiveServiceChargesRepo(
+  input: { companyId: string; at?: Date },
+  executor: DbExecutor = db,
+) {
+  const at = input.at ?? new Date();
+  return executor
+    .select({
+      id: serviceCharges.id,
+      code: serviceCharges.code,
+      name: serviceCharges.name,
+      amountPsw: serviceCharges.amountPsw,
+      taxable: serviceCharges.taxable,
+      sortOrder: serviceCharges.sortOrder,
+      payableAccountId: serviceCharges.payableAccountId,
+    })
+    .from(serviceCharges)
+    .where(
+      and(
+        eq(serviceCharges.companyId, input.companyId),
+        eq(serviceCharges.active, true),
+        lte(serviceCharges.effectiveFrom, at),
+        or(isNull(serviceCharges.effectiveTo), gte(serviceCharges.effectiveTo, at)),
+      ),
+    )
+    .orderBy(asc(serviceCharges.sortOrder), asc(serviceCharges.code), asc(serviceCharges.name));
+}
+
 export async function getCompanyAccountingSettingsRepo(
   companyId: string,
   executor: DbExecutor = db,
@@ -179,8 +360,13 @@ export async function getCompanyAccountingSettingsRepo(
     .select({
       id: companies.id,
       useAccounting: companies.useAccounting,
+      moduleAccountingEnabled: companyModules.isEnabled,
     })
     .from(companies)
+    .leftJoin(
+      companyModules,
+      and(eq(companyModules.companyId, companies.id), eq(companyModules.moduleCode, 'accounting')),
+    )
     .where(eq(companies.id, companyId))
     .limit(1);
 
@@ -309,6 +495,7 @@ export async function getApprovalPolicyRepo(
       policyCode: accountingApprovalPolicies.policyCode,
       name: accountingApprovalPolicies.name,
       amountLimitPsw: accountingApprovalPolicies.amountLimitPsw,
+      autoAuthorizeBelowThreshold: accountingApprovalPolicies.autoAuthorizeBelowThreshold,
       requiresHeadOfficeApproval: accountingApprovalPolicies.requiresHeadOfficeApproval,
       appliesToFundingSource: accountingApprovalPolicies.appliesToFundingSource,
       active: accountingApprovalPolicies.active,
@@ -321,6 +508,35 @@ export async function getApprovalPolicyRepo(
       ),
     )
     .limit(1);
+  return row ?? null;
+}
+
+export async function getServiceChargeRepo(
+  companyId: string,
+  serviceChargeId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      id: serviceCharges.id,
+      companyId: serviceCharges.companyId,
+      code: serviceCharges.code,
+      name: serviceCharges.name,
+      description: serviceCharges.description,
+      amountPsw: serviceCharges.amountPsw,
+      taxable: serviceCharges.taxable,
+      active: serviceCharges.active,
+      sortOrder: serviceCharges.sortOrder,
+      payableAccountId: serviceCharges.payableAccountId,
+      effectiveFrom: serviceCharges.effectiveFrom,
+      effectiveTo: serviceCharges.effectiveTo,
+      createdAt: serviceCharges.createdAt,
+      updatedAt: serviceCharges.updatedAt,
+    })
+    .from(serviceCharges)
+    .where(and(eq(serviceCharges.companyId, companyId), eq(serviceCharges.id, serviceChargeId)))
+    .limit(1);
+
   return row ?? null;
 }
 
@@ -456,8 +672,9 @@ export async function getExpenseCategoryUsageSummaryRepo(
 export async function getCompanyBankAccountUsageSummaryRepo(
   companyId: string,
   bankAccountId: string,
+  executor: DbExecutor = db,
 ) {
-  const [row] = await db
+  const [row] = await executor
     .select({
       totalRequestCount: sql<number>`count(*)`,
       openRequestCount: sql<number>`count(*) filter (where ${expenseRequests.status} not in (3, 5))`,
@@ -470,7 +687,32 @@ export async function getCompanyBankAccountUsageSummaryRepo(
         eq(expenseRequests.companyBankAccountId, bankAccountId),
       ),
     );
-  return row ?? { totalRequestCount: 0, openRequestCount: 0, postedRequestCount: 0 };
+  const [transferRow] = await executor
+    .select({
+      cashToBankTransferCount: sql<number>`count(*)`,
+      pettyCashReplenishmentCount: sql<number>`count(*)`,
+    })
+    .from(companyBankAccounts)
+    .leftJoin(
+      cashToBankTransfers,
+      eq(cashToBankTransfers.companyBankAccountId, companyBankAccounts.id),
+    )
+    .leftJoin(
+      pettyCashReplenishments,
+      eq(pettyCashReplenishments.companyBankAccountId, companyBankAccounts.id),
+    )
+    .where(
+      and(eq(companyBankAccounts.companyId, companyId), eq(companyBankAccounts.id, bankAccountId)),
+    )
+    .groupBy(companyBankAccounts.id);
+
+  return {
+    totalRequestCount: Number(row?.totalRequestCount ?? 0),
+    openRequestCount: Number(row?.openRequestCount ?? 0),
+    postedRequestCount: Number(row?.postedRequestCount ?? 0),
+    cashToBankTransferCount: Number(transferRow?.cashToBankTransferCount ?? 0),
+    pettyCashReplenishmentCount: Number(transferRow?.pettyCashReplenishmentCount ?? 0),
+  };
 }
 
 export async function getTaxProfileUsageSummaryRepo(companyId: string, taxProfileId: string) {
@@ -487,6 +729,22 @@ export async function getTaxProfileUsageSummaryRepo(companyId: string, taxProfil
     .where(and(eq(taxProfiles.companyId, companyId), eq(taxProfiles.id, taxProfileId)))
     .groupBy(taxProfiles.id);
   return row ?? { compensationCount: 0, taxJournalItemCount: 0, taxComponentCount: 0 };
+}
+
+export async function getTaxComponentUsageSummaryRepo(
+  companyId: string,
+  taxComponentId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      taxProfileCount: sql<number>`count(distinct ${taxProfiles.id})`,
+    })
+    .from(taxComponents)
+    .innerJoin(taxProfiles, eq(taxProfiles.id, taxComponents.profileId))
+    .where(and(eq(taxProfiles.companyId, companyId), eq(taxComponents.id, taxComponentId)));
+
+  return { taxProfileCount: Number(row?.taxProfileCount ?? 0) };
 }
 
 export async function createAccountRepo(
@@ -547,6 +805,17 @@ export async function createApprovalPolicyRepo(
   return row ?? null;
 }
 
+export async function createServiceChargeRepo(
+  values: typeof serviceCharges.$inferInsert,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .insert(serviceCharges)
+    .values(values)
+    .returning({ id: serviceCharges.id });
+  return row ?? null;
+}
+
 export async function updateApprovalPolicyRepo(
   approvalPolicyId: string,
   patch: Partial<typeof accountingApprovalPolicies.$inferInsert>,
@@ -557,6 +826,19 @@ export async function updateApprovalPolicyRepo(
     .set({ ...patch, updatedAt: new Date() })
     .where(eq(accountingApprovalPolicies.id, approvalPolicyId))
     .returning({ id: accountingApprovalPolicies.id });
+  return row ?? null;
+}
+
+export async function updateServiceChargeRepo(
+  serviceChargeId: string,
+  patch: Partial<typeof serviceCharges.$inferInsert>,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .update(serviceCharges)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(eq(serviceCharges.id, serviceChargeId))
+    .returning({ id: serviceCharges.id });
   return row ?? null;
 }
 
@@ -656,6 +938,61 @@ export async function deleteExpenseCategoryRepo(
   return row ?? null;
 }
 
+export async function deleteApprovalPolicyRepo(
+  companyId: string,
+  approvalPolicyId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .delete(accountingApprovalPolicies)
+    .where(
+      and(
+        eq(accountingApprovalPolicies.companyId, companyId),
+        eq(accountingApprovalPolicies.id, approvalPolicyId),
+      ),
+    )
+    .returning({ id: accountingApprovalPolicies.id });
+  return row ?? null;
+}
+
+export async function deleteCompanyBankAccountRepo(
+  companyId: string,
+  bankAccountId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .delete(companyBankAccounts)
+    .where(
+      and(eq(companyBankAccounts.companyId, companyId), eq(companyBankAccounts.id, bankAccountId)),
+    )
+    .returning({ id: companyBankAccounts.id });
+  return row ?? null;
+}
+
+export async function deleteTaxProfileRepo(
+  companyId: string,
+  taxProfileId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .delete(taxProfiles)
+    .where(and(eq(taxProfiles.companyId, companyId), eq(taxProfiles.id, taxProfileId)))
+    .returning({ id: taxProfiles.id });
+  return row ?? null;
+}
+
+export async function deleteTaxComponentRepo(
+  _companyId: string,
+  taxComponentId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .delete(taxComponents)
+    .where(eq(taxComponents.id, taxComponentId))
+    .returning({ id: taxComponents.id });
+  return row ?? null;
+}
+
 export async function createJournalBatchRepo(
   values: typeof journalBatches.$inferInsert,
   executor: DbExecutor = db,
@@ -683,6 +1020,143 @@ export async function createJournalLinesRepo(
   executor: DbExecutor = db,
 ) {
   return executor.insert(journalLines).values(values).returning({ id: journalLines.id });
+}
+
+export async function createManualJournalEntryRepo(
+  values: typeof manualJournalEntries.$inferInsert,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .insert(manualJournalEntries)
+    .values(values)
+    .returning({ id: manualJournalEntries.id });
+  return row ?? null;
+}
+
+export async function createManualJournalEntryLinesRepo(
+  values: Array<typeof manualJournalEntryLines.$inferInsert>,
+  executor: DbExecutor = db,
+) {
+  return executor
+    .insert(manualJournalEntryLines)
+    .values(values)
+    .returning({ id: manualJournalEntryLines.id });
+}
+
+export async function listPendingManualJournalEntriesRepo(
+  input: { companyId: string },
+  executor: DbExecutor = db,
+) {
+  return executor
+    .select({
+      id: manualJournalEntries.id,
+      companyId: manualJournalEntries.companyId,
+      policyCode: manualJournalEntries.policyCode,
+      thresholdPsw: manualJournalEntries.thresholdPsw,
+      totalDebitPsw: manualJournalEntries.totalDebitPsw,
+      totalCreditPsw: manualJournalEntries.totalCreditPsw,
+      status: manualJournalEntries.status,
+      branchId: manualJournalEntries.branchId,
+      locationId: manualJournalEntries.locationId,
+      memo: manualJournalEntries.memo,
+      entryDate: manualJournalEntries.entryDate,
+      recordedByUserId: manualJournalEntries.recordedByUserId,
+      approvedByUserId: manualJournalEntries.approvedByUserId,
+      approvalReason: manualJournalEntries.approvalReason,
+      rejectionReason: manualJournalEntries.rejectionReason,
+      postedBatchId: manualJournalEntries.postedBatchId,
+      postedEntryId: manualJournalEntries.postedEntryId,
+      createdAt: manualJournalEntries.createdAt,
+      updatedAt: manualJournalEntries.updatedAt,
+    })
+    .from(manualJournalEntries)
+    .where(
+      and(
+        eq(manualJournalEntries.companyId, input.companyId),
+        eq(manualJournalEntries.status, ApprovalStatus.PENDING),
+      ),
+    )
+    .orderBy(desc(manualJournalEntries.createdAt));
+}
+
+export async function getManualJournalEntryRepo(
+  input: { companyId: string; id: string },
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({
+      id: manualJournalEntries.id,
+      companyId: manualJournalEntries.companyId,
+      policyCode: manualJournalEntries.policyCode,
+      thresholdPsw: manualJournalEntries.thresholdPsw,
+      totalDebitPsw: manualJournalEntries.totalDebitPsw,
+      totalCreditPsw: manualJournalEntries.totalCreditPsw,
+      status: manualJournalEntries.status,
+      branchId: manualJournalEntries.branchId,
+      locationId: manualJournalEntries.locationId,
+      memo: manualJournalEntries.memo,
+      entryDate: manualJournalEntries.entryDate,
+      recordedByUserId: manualJournalEntries.recordedByUserId,
+      approvedByUserId: manualJournalEntries.approvedByUserId,
+      approvalReason: manualJournalEntries.approvalReason,
+      rejectionReason: manualJournalEntries.rejectionReason,
+      postedBatchId: manualJournalEntries.postedBatchId,
+      postedEntryId: manualJournalEntries.postedEntryId,
+      createdAt: manualJournalEntries.createdAt,
+      updatedAt: manualJournalEntries.updatedAt,
+    })
+    .from(manualJournalEntries)
+    .where(
+      and(
+        eq(manualJournalEntries.companyId, input.companyId),
+        eq(manualJournalEntries.id, input.id),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+export async function listManualJournalEntryLinesRepo(
+  input: { companyId: string; manualEntryId: string },
+  executor: DbExecutor = db,
+) {
+  return executor
+    .select({
+      id: manualJournalEntryLines.id,
+      companyId: manualJournalEntryLines.companyId,
+      manualEntryId: manualJournalEntryLines.manualEntryId,
+      accountId: manualJournalEntryLines.accountId,
+      branchId: manualJournalEntryLines.branchId,
+      locationId: manualJournalEntryLines.locationId,
+      debitPsw: manualJournalEntryLines.debitPsw,
+      creditPsw: manualJournalEntryLines.creditPsw,
+      description: manualJournalEntryLines.description,
+      sortOrder: manualJournalEntryLines.sortOrder,
+      createdAt: manualJournalEntryLines.createdAt,
+    })
+    .from(manualJournalEntryLines)
+    .where(
+      and(
+        eq(manualJournalEntryLines.companyId, input.companyId),
+        eq(manualJournalEntryLines.manualEntryId, input.manualEntryId),
+      ),
+    )
+    .orderBy(asc(manualJournalEntryLines.sortOrder), asc(manualJournalEntryLines.createdAt));
+}
+
+export async function updateManualJournalEntryRepo(
+  input: {
+    id: string;
+    patch: Partial<typeof manualJournalEntries.$inferInsert>;
+  },
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .update(manualJournalEntries)
+    .set({ ...input.patch, updatedAt: new Date() })
+    .where(eq(manualJournalEntries.id, input.id))
+    .returning({ id: manualJournalEntries.id });
+  return row ?? null;
 }
 
 export async function listJournalLinesByBatchRepo(batchId: string, executor: DbExecutor = db) {
@@ -730,20 +1204,152 @@ export async function createDailyCashConfirmationRepo(
   values: typeof dailyCashConfirmations.$inferInsert,
   executor: DbExecutor = db,
 ) {
-  const [row] = await executor
-    .insert(dailyCashConfirmations)
-    .values(values)
-    .returning({ id: dailyCashConfirmations.id });
-  return row ?? null;
+  const supportsPaymentModeColumns = await hasDailyCashPaymentModeColumns(executor);
+  if (!supportsPaymentModeColumns) {
+    const now = new Date();
+    const [row] = await executor
+      .insert(dailyCashConfirmationsLegacy)
+      .values({
+        id: values.id ?? createId(),
+        companyId: values.companyId,
+        branchId: values.branchId,
+        locationId: values.locationId ?? null,
+        cashierUserId: values.cashierUserId ?? null,
+        accountantUserId: values.accountantUserId ?? null,
+        confirmationDate: values.confirmationDate,
+        expectedCashPsw: values.expectedCashPsw ?? 0,
+        countedCashPsw: values.countedCashPsw ?? 0,
+        shortagePsw: values.shortagePsw ?? 0,
+        overagePsw: values.overagePsw ?? 0,
+        notes: values.notes ?? null,
+        status: values.status ?? 0,
+        journalEntryId: values.journalEntryId ?? null,
+        confirmedAt: values.confirmedAt ?? null,
+        postedAt: values.postedAt ?? null,
+        createdBy: values.createdBy ?? null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: dailyCashConfirmationsLegacy.id });
+    return row ?? null;
+  }
+
+  try {
+    const [row] = await executor
+      .insert(dailyCashConfirmations)
+      .values(values)
+      .returning({ id: dailyCashConfirmations.id });
+    return row ?? null;
+  } catch (error) {
+    if (!isMissingDailyCashPaymentModeColumnsError(error)) throw error;
+    const now = new Date();
+    const [row] = await executor
+      .insert(dailyCashConfirmationsLegacy)
+      .values({
+        id: values.id ?? createId(),
+        companyId: values.companyId,
+        branchId: values.branchId,
+        locationId: values.locationId ?? null,
+        cashierUserId: values.cashierUserId ?? null,
+        accountantUserId: values.accountantUserId ?? null,
+        confirmationDate: values.confirmationDate,
+        expectedCashPsw: values.expectedCashPsw ?? 0,
+        countedCashPsw: values.countedCashPsw ?? 0,
+        shortagePsw: values.shortagePsw ?? 0,
+        overagePsw: values.overagePsw ?? 0,
+        notes: values.notes ?? null,
+        status: values.status ?? 0,
+        journalEntryId: values.journalEntryId ?? null,
+        confirmedAt: values.confirmedAt ?? null,
+        postedAt: values.postedAt ?? null,
+        createdBy: values.createdBy ?? null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: dailyCashConfirmationsLegacy.id });
+    return row ?? null;
+  }
 }
 
 export async function getDailyCashConfirmationRepo(id: string, executor: DbExecutor = db) {
-  const [row] = await executor
-    .select()
-    .from(dailyCashConfirmations)
-    .where(eq(dailyCashConfirmations.id, id))
-    .limit(1);
-  return row ?? null;
+  const supportsPaymentModeColumns = await hasDailyCashPaymentModeColumns(executor);
+  if (!supportsPaymentModeColumns) {
+    const [row] = await executor
+      .select({
+        id: dailyCashConfirmations.id,
+        companyId: dailyCashConfirmations.companyId,
+        branchId: dailyCashConfirmations.branchId,
+        locationId: dailyCashConfirmations.locationId,
+        cashierUserId: dailyCashConfirmations.cashierUserId,
+        accountantUserId: dailyCashConfirmations.accountantUserId,
+        confirmationDate: dailyCashConfirmations.confirmationDate,
+        expectedCashPsw: dailyCashConfirmations.expectedCashPsw,
+        expectedMtnPsw: sql<number>`0::bigint`,
+        expectedTelecelPsw: sql<number>`0::bigint`,
+        expectedAirtelPsw: sql<number>`0::bigint`,
+        countedCashPsw: dailyCashConfirmations.countedCashPsw,
+        countedMtnPsw: sql<number>`0::bigint`,
+        countedTelecelPsw: sql<number>`0::bigint`,
+        countedAirtelPsw: sql<number>`0::bigint`,
+        shortagePsw: dailyCashConfirmations.shortagePsw,
+        overagePsw: dailyCashConfirmations.overagePsw,
+        notes: dailyCashConfirmations.notes,
+        status: dailyCashConfirmations.status,
+        journalEntryId: dailyCashConfirmations.journalEntryId,
+        confirmedAt: dailyCashConfirmations.confirmedAt,
+        postedAt: dailyCashConfirmations.postedAt,
+        createdBy: dailyCashConfirmations.createdBy,
+        createdAt: dailyCashConfirmations.createdAt,
+        updatedAt: dailyCashConfirmations.updatedAt,
+      })
+      .from(dailyCashConfirmations)
+      .where(eq(dailyCashConfirmations.id, id))
+      .limit(1);
+    return row ?? null;
+  }
+
+  try {
+    const [row] = await executor
+      .select()
+      .from(dailyCashConfirmations)
+      .where(eq(dailyCashConfirmations.id, id))
+      .limit(1);
+    return row ?? null;
+  } catch (error) {
+    if (!isMissingDailyCashPaymentModeColumnsError(error)) throw error;
+    const [row] = await executor
+      .select({
+        id: dailyCashConfirmations.id,
+        companyId: dailyCashConfirmations.companyId,
+        branchId: dailyCashConfirmations.branchId,
+        locationId: dailyCashConfirmations.locationId,
+        cashierUserId: dailyCashConfirmations.cashierUserId,
+        accountantUserId: dailyCashConfirmations.accountantUserId,
+        confirmationDate: dailyCashConfirmations.confirmationDate,
+        expectedCashPsw: dailyCashConfirmations.expectedCashPsw,
+        expectedMtnPsw: sql<number>`0::bigint`,
+        expectedTelecelPsw: sql<number>`0::bigint`,
+        expectedAirtelPsw: sql<number>`0::bigint`,
+        countedCashPsw: dailyCashConfirmations.countedCashPsw,
+        countedMtnPsw: sql<number>`0::bigint`,
+        countedTelecelPsw: sql<number>`0::bigint`,
+        countedAirtelPsw: sql<number>`0::bigint`,
+        shortagePsw: dailyCashConfirmations.shortagePsw,
+        overagePsw: dailyCashConfirmations.overagePsw,
+        notes: dailyCashConfirmations.notes,
+        status: dailyCashConfirmations.status,
+        journalEntryId: dailyCashConfirmations.journalEntryId,
+        confirmedAt: dailyCashConfirmations.confirmedAt,
+        postedAt: dailyCashConfirmations.postedAt,
+        createdBy: dailyCashConfirmations.createdBy,
+        createdAt: dailyCashConfirmations.createdAt,
+        updatedAt: dailyCashConfirmations.updatedAt,
+      })
+      .from(dailyCashConfirmations)
+      .where(eq(dailyCashConfirmations.id, id))
+      .limit(1);
+    return row ?? null;
+  }
 }
 
 export async function listDailyCashConfirmationsRepo(
@@ -752,11 +1358,81 @@ export async function listDailyCashConfirmationsRepo(
 ) {
   const where: SQL<unknown>[] = [eq(dailyCashConfirmations.companyId, input.companyId)];
   if (input.branchId) where.push(eq(dailyCashConfirmations.branchId, input.branchId));
-  return executor
-    .select()
-    .from(dailyCashConfirmations)
-    .where(and(...where))
-    .orderBy(asc(dailyCashConfirmations.confirmationDate), asc(dailyCashConfirmations.id));
+  const supportsPaymentModeColumns = await hasDailyCashPaymentModeColumns(executor);
+  if (!supportsPaymentModeColumns) {
+    return executor
+      .select({
+        id: dailyCashConfirmations.id,
+        companyId: dailyCashConfirmations.companyId,
+        branchId: dailyCashConfirmations.branchId,
+        locationId: dailyCashConfirmations.locationId,
+        cashierUserId: dailyCashConfirmations.cashierUserId,
+        accountantUserId: dailyCashConfirmations.accountantUserId,
+        confirmationDate: dailyCashConfirmations.confirmationDate,
+        expectedCashPsw: dailyCashConfirmations.expectedCashPsw,
+        expectedMtnPsw: sql<number>`0::bigint`,
+        expectedTelecelPsw: sql<number>`0::bigint`,
+        expectedAirtelPsw: sql<number>`0::bigint`,
+        countedCashPsw: dailyCashConfirmations.countedCashPsw,
+        countedMtnPsw: sql<number>`0::bigint`,
+        countedTelecelPsw: sql<number>`0::bigint`,
+        countedAirtelPsw: sql<number>`0::bigint`,
+        shortagePsw: dailyCashConfirmations.shortagePsw,
+        overagePsw: dailyCashConfirmations.overagePsw,
+        notes: dailyCashConfirmations.notes,
+        status: dailyCashConfirmations.status,
+        journalEntryId: dailyCashConfirmations.journalEntryId,
+        confirmedAt: dailyCashConfirmations.confirmedAt,
+        postedAt: dailyCashConfirmations.postedAt,
+        createdBy: dailyCashConfirmations.createdBy,
+        createdAt: dailyCashConfirmations.createdAt,
+        updatedAt: dailyCashConfirmations.updatedAt,
+      })
+      .from(dailyCashConfirmations)
+      .where(and(...where))
+      .orderBy(asc(dailyCashConfirmations.confirmationDate), asc(dailyCashConfirmations.id));
+  }
+
+  try {
+    return await executor
+      .select()
+      .from(dailyCashConfirmations)
+      .where(and(...where))
+      .orderBy(asc(dailyCashConfirmations.confirmationDate), asc(dailyCashConfirmations.id));
+  } catch (error) {
+    if (!isMissingDailyCashPaymentModeColumnsError(error)) throw error;
+    return executor
+      .select({
+        id: dailyCashConfirmations.id,
+        companyId: dailyCashConfirmations.companyId,
+        branchId: dailyCashConfirmations.branchId,
+        locationId: dailyCashConfirmations.locationId,
+        cashierUserId: dailyCashConfirmations.cashierUserId,
+        accountantUserId: dailyCashConfirmations.accountantUserId,
+        confirmationDate: dailyCashConfirmations.confirmationDate,
+        expectedCashPsw: dailyCashConfirmations.expectedCashPsw,
+        expectedMtnPsw: sql<number>`0::bigint`,
+        expectedTelecelPsw: sql<number>`0::bigint`,
+        expectedAirtelPsw: sql<number>`0::bigint`,
+        countedCashPsw: dailyCashConfirmations.countedCashPsw,
+        countedMtnPsw: sql<number>`0::bigint`,
+        countedTelecelPsw: sql<number>`0::bigint`,
+        countedAirtelPsw: sql<number>`0::bigint`,
+        shortagePsw: dailyCashConfirmations.shortagePsw,
+        overagePsw: dailyCashConfirmations.overagePsw,
+        notes: dailyCashConfirmations.notes,
+        status: dailyCashConfirmations.status,
+        journalEntryId: dailyCashConfirmations.journalEntryId,
+        confirmedAt: dailyCashConfirmations.confirmedAt,
+        postedAt: dailyCashConfirmations.postedAt,
+        createdBy: dailyCashConfirmations.createdBy,
+        createdAt: dailyCashConfirmations.createdAt,
+        updatedAt: dailyCashConfirmations.updatedAt,
+      })
+      .from(dailyCashConfirmations)
+      .where(and(...where))
+      .orderBy(asc(dailyCashConfirmations.confirmationDate), asc(dailyCashConfirmations.id));
+  }
 }
 
 export async function getDailyCashExpectedSummaryRepo(
@@ -783,6 +1459,9 @@ export async function getDailyCashExpectedSummaryRepo(
   const [row] = await executor
     .select({
       cashSalesPsw: sql<number>`coalesce(sum(case when ${payments.method} = ${PaymentMethod.CASH} then ${payments.grossAmountPsw} else 0 end), 0)`,
+      mtnSalesPsw: sql<number>`coalesce(sum(case when ${payments.method} = ${PaymentMethod.MTN} then ${payments.grossAmountPsw} else 0 end), 0)`,
+      telecelSalesPsw: sql<number>`coalesce(sum(case when ${payments.method} = ${PaymentMethod.TELECEL} then ${payments.grossAmountPsw} else 0 end), 0)`,
+      airtelSalesPsw: sql<number>`coalesce(sum(case when ${payments.method} = ${PaymentMethod.AIRTEL} then ${payments.grossAmountPsw} else 0 end), 0)`,
       nonCashSalesPsw: sql<number>`coalesce(sum(case when ${payments.method} <> ${PaymentMethod.CASH} then ${payments.grossAmountPsw} else 0 end), 0)`,
       totalSalesPsw: sql<number>`coalesce(sum(${payments.grossAmountPsw}), 0)`,
       senderSalesPsw: sql<number>`coalesce(sum(case when ${payments.cashierType} = ${CashierType.SENDING} then ${payments.grossAmountPsw} else 0 end), 0)`,
@@ -799,6 +1478,9 @@ export async function getDailyCashExpectedSummaryRepo(
 
   return {
     cashSalesPsw: Number(row?.cashSalesPsw ?? 0),
+    mtnSalesPsw: Number(row?.mtnSalesPsw ?? 0),
+    telecelSalesPsw: Number(row?.telecelSalesPsw ?? 0),
+    airtelSalesPsw: Number(row?.airtelSalesPsw ?? 0),
     nonCashSalesPsw: Number(row?.nonCashSalesPsw ?? 0),
     totalSalesPsw: Number(row?.totalSalesPsw ?? 0),
     senderSalesPsw: Number(row?.senderSalesPsw ?? 0),
@@ -856,12 +1538,54 @@ export async function updateDailyCashConfirmationRepo(
   patch: Partial<typeof dailyCashConfirmations.$inferInsert>,
   executor: DbExecutor = db,
 ) {
-  const [row] = await executor
-    .update(dailyCashConfirmations)
-    .set(patch)
-    .where(eq(dailyCashConfirmations.id, id))
-    .returning();
-  return row ?? null;
+  const supportsPaymentModeColumns = await hasDailyCashPaymentModeColumns(executor);
+  if (!supportsPaymentModeColumns) {
+    const [row] = await executor
+      .update(dailyCashConfirmationsLegacy)
+      .set({
+        ...(patch.accountantUserId !== undefined
+          ? { accountantUserId: patch.accountantUserId ?? null }
+          : {}),
+        ...(patch.status !== undefined ? { status: patch.status } : {}),
+        ...(patch.confirmedAt !== undefined ? { confirmedAt: patch.confirmedAt ?? null } : {}),
+        ...(patch.journalEntryId !== undefined
+          ? { journalEntryId: patch.journalEntryId ?? null }
+          : {}),
+        ...(patch.postedAt !== undefined ? { postedAt: patch.postedAt ?? null } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(dailyCashConfirmationsLegacy.id, id))
+      .returning({ id: dailyCashConfirmationsLegacy.id });
+    return row ?? null;
+  }
+
+  try {
+    const [row] = await executor
+      .update(dailyCashConfirmations)
+      .set(patch)
+      .where(eq(dailyCashConfirmations.id, id))
+      .returning();
+    return row ?? null;
+  } catch (error) {
+    if (!isMissingDailyCashPaymentModeColumnsError(error)) throw error;
+    const [row] = await executor
+      .update(dailyCashConfirmationsLegacy)
+      .set({
+        ...(patch.accountantUserId !== undefined
+          ? { accountantUserId: patch.accountantUserId ?? null }
+          : {}),
+        ...(patch.status !== undefined ? { status: patch.status } : {}),
+        ...(patch.confirmedAt !== undefined ? { confirmedAt: patch.confirmedAt ?? null } : {}),
+        ...(patch.journalEntryId !== undefined
+          ? { journalEntryId: patch.journalEntryId ?? null }
+          : {}),
+        ...(patch.postedAt !== undefined ? { postedAt: patch.postedAt ?? null } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(dailyCashConfirmationsLegacy.id, id))
+      .returning({ id: dailyCashConfirmationsLegacy.id });
+    return row ?? null;
+  }
 }
 
 export async function createExpenseRequestRepo(
@@ -937,8 +1661,8 @@ export async function listJournalLinesForReportingRepo(
     companyId: string;
     branchId?: string | null;
     locationId?: string | null;
-    dateFrom?: Date | null;
-    dateTo?: Date | null;
+    dateFrom?: Date | string | null;
+    dateTo?: Date | string | null;
     accountId?: string | null;
   },
   executor: DbExecutor = db,
@@ -947,8 +1671,10 @@ export async function listJournalLinesForReportingRepo(
   if (input.branchId) where.push(eq(journalLines.branchId, input.branchId));
   if (input.locationId) where.push(eq(journalLines.locationId, input.locationId));
   if (input.accountId) where.push(eq(journalLines.accountId, input.accountId));
-  if (input.dateFrom) where.push(sql`${journalEntries.entryDate} >= ${input.dateFrom}`);
-  if (input.dateTo) where.push(sql`${journalEntries.entryDate} <= ${input.dateTo}`);
+  if (input.dateFrom)
+    where.push(sql`${journalEntries.entryDate} >= ${toDateOnlyParam(input.dateFrom)}`);
+  if (input.dateTo)
+    where.push(sql`${journalEntries.entryDate} <= ${toDateOnlyParam(input.dateTo)}`);
 
   return executor
     .select({

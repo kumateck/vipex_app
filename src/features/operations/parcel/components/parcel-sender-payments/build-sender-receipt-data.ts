@@ -1,0 +1,53 @@
+import type { SenderCashierParcel } from '../../api/parcel.api';
+import type { ReceiptPrintData } from '../parcel-receipt.types';
+
+type SenderPaymentTaxBreakdown = {
+  vatCedis: number;
+  getfundCedis: number;
+  nhilCedis: number;
+  covidCedis: number;
+  taxTotalCedis: number;
+};
+
+type BuildSenderReceiptDataArgs = {
+  parcel: SenderCashierParcel;
+  senderDueCedis: number;
+  amountValue: number;
+  totalChargeCedis: number;
+  receiverToPayCedis: number;
+  destinationBranchName: string;
+  destinationLocationName: string;
+  taxBreakdown?: SenderPaymentTaxBreakdown;
+};
+
+export function buildSenderReceiptData({
+  parcel,
+  senderDueCedis,
+  amountValue,
+  totalChargeCedis,
+  receiverToPayCedis,
+  destinationBranchName,
+  destinationLocationName,
+  taxBreakdown,
+}: BuildSenderReceiptDataArgs): ReceiptPrintData {
+  return {
+    bookingCode: parcel.bookingCode,
+    trackingCode: parcel.trackingCode,
+    parcelDetails: parcel.parcelDetails,
+    parcelContent: parcel.parcelContent,
+    parcelValueCedis: Number(parcel.parcelValuePsw ?? 0) / 100,
+    senderName: parcel.senderName ?? '-',
+    senderTelephone: parcel.senderPhone ?? '-',
+    senderTelephone2: parcel.senderPhone2 ?? null,
+    receiverName: parcel.receiverName ?? '-',
+    receiverTelephone: parcel.receiverPhone ?? '-',
+    receiverTelephone2: parcel.receiverPhone2 ?? null,
+    destinationBranchName,
+    destinationLocationName,
+    totalChargeCedis,
+    senderPaidCedis: senderDueCedis > 0 ? amountValue : 0,
+    receiverToPayCedis,
+    issuedAt: new Date().toISOString(),
+    taxBreakdown,
+  };
+}

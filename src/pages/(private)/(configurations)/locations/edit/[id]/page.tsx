@@ -1,3 +1,3 @@
-import { LocationsEditPage } from '@/features/locations';
+import { LocationsCreateEditPage } from '@/features/locations';
 
-export default LocationsEditPage;
+export default LocationsCreateEditPage;

@@ -1,4 +1,18 @@
-import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, lt, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  lt,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
 import {
@@ -26,6 +40,7 @@ import {
   payrollPeriods,
   payrollRunEmployees,
   payrollRuns,
+  parcelStorageWaivers,
   payments,
   shiftTypes,
   users,
@@ -33,6 +48,7 @@ import {
 import {
   CustomerCreditSourceType,
   CustomerCreditTransactionType,
+  CashierType,
   ParcelStatus,
   PaymentComponent,
   PaymentMethod,
@@ -284,11 +300,13 @@ export type DailyCashierSalesSessionRow = {
 };
 
 export type DailyCashierSalesTransactionRow = {
-  sessionId: string | null;
+  sessionId: string;
   paymentId: string;
   parcelId: string;
   bookingCode: string;
   trackingCode: string;
+  senderName: string | null;
+  receiverName: string | null;
   cashierType: number;
   method: number;
   component: number;
@@ -298,6 +316,16 @@ export type DailyCashierSalesTransactionRow = {
   taxTotalPsw: number;
   receivedAt: Date;
   receiptNo: string | null;
+};
+
+export type DailyCashierSalesToBePaidRow = {
+  parcelId: string;
+  sessionId: string | null;
+  bookingCode: string;
+  senderName: string | null;
+  receiverName: string | null;
+  plannedToBePaidPsw: number;
+  createdAt: Date;
 };
 
 export async function listCashierSessionsForDayRepo(input: {
@@ -401,8 +429,18 @@ export async function listDailyCashierSalesSessionsRepo(input: {
     .where(
       and(
         eq(users.companyId, input.companyId),
-        gte(cashierSessions.scheduledStartTime, dayStart),
-        lt(cashierSessions.scheduledStartTime, nextDayStart),
+        or(
+          and(
+            isNotNull(cashierSessions.actualStartTime),
+            gte(cashierSessions.actualStartTime, dayStart),
+            lt(cashierSessions.actualStartTime, nextDayStart),
+          ),
+          and(
+            isNull(cashierSessions.actualStartTime),
+            gte(cashierSessions.scheduledStartTime, dayStart),
+            lt(cashierSessions.scheduledStartTime, nextDayStart),
+          ),
+        ),
         ...(input.branchId ? [eq(cashierSessions.branchId, input.branchId)] : []),
         ...(input.locationId ? [eq(users.locationId, input.locationId)] : []),
       ),
@@ -416,13 +454,24 @@ export async function listDailyCashierSalesTransactionsRepo(input: {
 }): Promise<DailyCashierSalesTransactionRow[]> {
   if (!input.sessionIds.length) return [];
 
+  const sender = alias(customers, 'daily_cashier_sales_sender');
+  const receiver = alias(customers, 'daily_cashier_sales_receiver');
+  const cashierTypeFilter =
+    input.cashierType === CashierType.FULL
+      ? [inArray(payments.cashierType, [CashierType.SENDING, CashierType.TOBEPAID])]
+      : input.cashierType !== null && input.cashierType !== undefined
+        ? [eq(payments.cashierType, input.cashierType)]
+        : [];
+
   return db
     .select({
-      sessionId: parcels.cashierSessionId,
+      sessionId: cashierSessions.id,
       paymentId: payments.id,
       parcelId: payments.parcelId,
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
+      senderName: sender.fullname,
+      receiverName: receiver.fullname,
       cashierType: payments.cashierType,
       method: payments.method,
       component: payments.component,
@@ -434,17 +483,70 @@ export async function listDailyCashierSalesTransactionsRepo(input: {
       receiptNo: payments.receiptNo,
     })
     .from(payments)
+    .innerJoin(cashierSessions, eq(cashierSessions.cashierId, payments.cashierUserId))
     .innerJoin(parcels, eq(parcels.id, payments.parcelId))
+    .leftJoin(sender, eq(sender.id, parcels.senderId))
+    .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
     .where(
       and(
-        inArray(parcels.cashierSessionId, input.sessionIds),
+        inArray(cashierSessions.id, input.sessionIds),
+        eq(payments.branchId, cashierSessions.branchId),
+        gte(
+          payments.receivedAt,
+          sql<Date>`coalesce(${cashierSessions.actualStartTime}, ${cashierSessions.scheduledStartTime})`,
+        ),
+        or(
+          isNull(cashierSessions.actualEndTime),
+          lte(payments.receivedAt, cashierSessions.actualEndTime),
+        ),
         isNull(payments.voidedAt),
-        ...(input.cashierType !== null && input.cashierType !== undefined
-          ? [eq(payments.cashierType, input.cashierType)]
-          : []),
+        ...cashierTypeFilter,
       ),
     )
     .orderBy(asc(payments.receivedAt), asc(payments.id));
+}
+
+export async function listDailyCashierSalesToBePaidRowsRepo(input: {
+  companyId: string;
+  date: Date;
+  branchId?: string | null;
+  locationId?: string | null;
+  cashierUserId?: string | null;
+}): Promise<DailyCashierSalesToBePaidRow[]> {
+  const dayStart = new Date(input.date);
+  dayStart.setHours(0, 0, 0, 0);
+  const nextDayStart = new Date(dayStart);
+  nextDayStart.setDate(nextDayStart.getDate() + 1);
+
+  const sender = alias(customers, 'daily_cashier_sales_tbp_sender');
+  const receiver = alias(customers, 'daily_cashier_sales_tbp_receiver');
+
+  return db
+    .select({
+      parcelId: parcels.id,
+      sessionId: parcels.cashierSessionId,
+      bookingCode: parcels.bookingCode,
+      senderName: sender.fullname,
+      receiverName: receiver.fullname,
+      plannedToBePaidPsw: parcels.plannedToBePaidPsw,
+      createdAt: parcels.createdAt,
+    })
+    .from(parcels)
+    .leftJoin(sender, eq(sender.id, parcels.senderId))
+    .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
+    .where(
+      and(
+        eq(parcels.companyId, input.companyId),
+        gte(parcels.createdAt, dayStart),
+        lt(parcels.createdAt, nextDayStart),
+        sql`${parcels.plannedToBePaidPsw} > 0`,
+        eq(parcels.isDeleted, false),
+        ...(input.branchId ? [eq(parcels.sourceId, input.branchId)] : []),
+        ...(input.locationId ? [eq(parcels.sourceLocationId, input.locationId)] : []),
+        ...(input.cashierUserId ? [eq(parcels.createdBy, input.cashierUserId)] : []),
+      ),
+    )
+    .orderBy(asc(parcels.createdAt), asc(parcels.id));
 }
 
 export async function listDailyCashConfirmationReportRowsRepo(input: {
@@ -649,8 +751,10 @@ export async function listEmployeeMasterReportRowsRepo(input: {
       departmentName: departments.name,
       jobTitleId: employees.jobTitleId,
       jobTitleName: jobTitles.name,
-      managerEmployeeId: employees.managerEmployeeId,
-      managerName: manager.displayName,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
+      supervisorName: manager.displayName,
       hasUserAccount: employees.hasUserAccount,
       paymentMethod: sql<string | null>`NULL`,
       bankName: sql<string | null>`NULL`,
@@ -662,7 +766,10 @@ export async function listEmployeeMasterReportRowsRepo(input: {
     .leftJoin(locations, eq(locations.id, employees.locationId))
     .leftJoin(departments, eq(departments.id, employees.departmentId))
     .leftJoin(jobTitles, eq(jobTitles.id, employees.jobTitleId))
-    .leftJoin(manager, eq(manager.id, employees.managerEmployeeId))
+    .leftJoin(
+      manager,
+      sql`${manager.id} = coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
+    )
     .where(and(...where))
     .orderBy(asc(employees.displayName), asc(employees.id));
 }
@@ -720,7 +827,9 @@ export async function listLeaveRequestReportRowsRepo(input: {
       employeeId: leaveRequests.employeeId,
       employeeNumber: employees.employeeNumber,
       employeeName: employees.displayName,
-      managerEmployeeId: employees.managerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
       leaveTypeId: leaveRequests.leaveTypeId,
       leaveTypeName: leaveTypes.name,
       leaveTypeIsPaid: leaveTypes.isPaid,
@@ -938,6 +1047,62 @@ export async function listParcelStatusReportRowsRepo(input: {
       ),
     )
     .orderBy(desc(parcels.createdAt), desc(parcels.id));
+}
+
+export type StorageWaiverFinancialReportRow = {
+  waiverId: string;
+  parcelId: string;
+  bookingCode: string;
+  trackingCode: string;
+  destinationBranchId: string;
+  destinationBranchName: string | null;
+  waivedAmountPsw: number;
+  reason: string;
+  waivedByUserId: string;
+  waivedByName: string | null;
+  waivedAt: Date;
+  accountingJournalEntryId: string | null;
+  accountingPostedAt: Date | null;
+};
+
+export async function listStorageWaiverFinancialReportRowsRepo(input: {
+  companyId: string;
+  from: Date;
+  to: Date;
+  branchId?: string | null;
+}) {
+  const waivedBy = alias(users, 'report_storage_waived_by');
+  const destination = alias(branches, 'report_storage_destination');
+
+  return db
+    .select({
+      waiverId: parcelStorageWaivers.id,
+      parcelId: parcelStorageWaivers.parcelId,
+      bookingCode: parcels.bookingCode,
+      trackingCode: parcels.trackingCode,
+      destinationBranchId: parcels.destinationId,
+      destinationBranchName: destination.name,
+      waivedAmountPsw: parcelStorageWaivers.waivedAmountPsw,
+      reason: parcelStorageWaivers.reason,
+      waivedByUserId: parcelStorageWaivers.waivedBy,
+      waivedByName: waivedBy.fullname,
+      waivedAt: parcelStorageWaivers.waivedAt,
+      accountingJournalEntryId: parcelStorageWaivers.accountingJournalEntryId,
+      accountingPostedAt: parcelStorageWaivers.accountingPostedAt,
+    })
+    .from(parcelStorageWaivers)
+    .innerJoin(parcels, eq(parcels.id, parcelStorageWaivers.parcelId))
+    .leftJoin(waivedBy, eq(waivedBy.id, parcelStorageWaivers.waivedBy))
+    .leftJoin(destination, eq(destination.id, parcels.destinationId))
+    .where(
+      and(
+        eq(parcelStorageWaivers.companyId, input.companyId),
+        gte(parcelStorageWaivers.waivedAt, input.from),
+        lte(parcelStorageWaivers.waivedAt, input.to),
+        ...(input.branchId ? [eq(parcels.destinationId, input.branchId)] : []),
+      ),
+    )
+    .orderBy(desc(parcelStorageWaivers.waivedAt), desc(parcelStorageWaivers.id));
 }
 
 export async function listShiftRevenueSessionsRepo(input: {
@@ -1287,6 +1452,9 @@ export async function listToBePaidOutstandingReportRowsRepo(input: {
   from?: Date | null;
   to?: Date | null;
 }) {
+  const fromParam = input.from ? input.from.toISOString() : null;
+  const toParam = input.to ? input.to.toISOString() : null;
+
   const rows = await db.execute(sql<{
     parcel_id: string;
     booking_code: string;
@@ -1341,8 +1509,8 @@ export async function listToBePaidOutstandingReportRowsRepo(input: {
       AND GREATEST(pr.planned_tobepaid_psw - COALESCE(pp.paid_principal_psw, 0), 0) > 0
       ${input.sourceBranchId ? sql`AND pr.source_id = ${input.sourceBranchId}` : sql``}
       ${input.destinationBranchId ? sql`AND pr.destination_id = ${input.destinationBranchId}` : sql``}
-      ${input.from ? sql`AND pr.created_at >= ${input.from}` : sql``}
-      ${input.to ? sql`AND pr.created_at <= ${input.to}` : sql``}
+      ${fromParam ? sql`AND pr.created_at >= ${fromParam}` : sql``}
+      ${toParam ? sql`AND pr.created_at <= ${toParam}` : sql``}
     ORDER BY outstanding_psw DESC, pr.created_at DESC
   `);
 
@@ -1374,6 +1542,9 @@ export async function listToBePaidCollectionsReconciliationReportRowsRepo(input:
   from?: Date | null;
   to?: Date | null;
 }) {
+  const fromParam = input.from ? input.from.toISOString() : null;
+  const toParam = input.to ? input.to.toISOString() : null;
+
   const rows = await db.execute(sql<{
     parcel_id: string;
     booking_code: string;
@@ -1451,8 +1622,8 @@ export async function listToBePaidCollectionsReconciliationReportRowsRepo(input:
       AND pr.planned_tobepaid_psw > 0
       ${input.sourceBranchId ? sql`AND pr.source_id = ${input.sourceBranchId}` : sql``}
       ${input.destinationBranchId ? sql`AND pr.destination_id = ${input.destinationBranchId}` : sql``}
-      ${input.from ? sql`AND pr.created_at >= ${input.from}` : sql``}
-      ${input.to ? sql`AND pr.created_at <= ${input.to}` : sql``}
+      ${fromParam ? sql`AND pr.created_at >= ${fromParam}` : sql``}
+      ${toParam ? sql`AND pr.created_at <= ${toParam}` : sql``}
     ORDER BY pr.created_at DESC, pr.booking_code DESC
   `);
 

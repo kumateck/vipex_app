@@ -22,6 +22,9 @@ export const devMailRoutes = new Elysia({ name: 'dev-mail' })
           ok: true,
           messageId: info.messageId,
           envelope: info.envelope,
+          accepted: info.accepted,
+          rejected: info.rejected,
+          response: info.response,
         };
       } catch (err) {
         const error = err as { message?: string; code?: string; command?: string };
@@ -63,6 +66,9 @@ export const devMailRoutes = new Elysia({ name: 'dev-mail' })
           ok: true,
           messageId: info.messageId,
           envelope: info.envelope,
+          accepted: info.accepted,
+          rejected: info.rejected,
+          response: info.response,
         };
       } catch (err) {
         const error = err as { message?: string; code?: string; command?: string };
@@ -88,5 +94,9 @@ export const devMailRoutes = new Elysia({ name: 'dev-mail' })
   // Trailing slash redirects
   .get(
     '/dev/mail-test/',
-    () => new Response(null, { status: HttpStatus.PERMANENT_REDIRECT, headers: { Location: '/dev/mail-test' } }),
+    () =>
+      new Response(null, {
+        status: HttpStatus.PERMANENT_REDIRECT,
+        headers: { Location: '/dev/mail-test' },
+      }),
   );

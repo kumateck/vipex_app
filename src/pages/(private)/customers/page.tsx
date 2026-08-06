@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { CustomerType, useListCustomersQuery } from '@/features/customers/api';
+import { PermissionKeys } from '@/shared/permissions/constants';
 
 const PAGE_SIZE = 30;
 
@@ -17,7 +19,7 @@ export default function CustomersPage() {
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setSearch(searchInput);
-    }, 300);
+    }, 3000);
 
     return () => {
       window.clearTimeout(timeoutId);
@@ -46,12 +48,14 @@ export default function CustomersPage() {
           <h1 className="text-xl font-semibold">Customers</h1>
           <p className="text-sm text-muted-foreground">Customer list with CRM profile access.</p>
         </div>
-        <Button asChild>
-          <Link to="/customers/new">
-            <Plus className="size-4" />
-            New customer
-          </Link>
-        </Button>
+        <PermissionGuard permissionKey={PermissionKeys.CanCreateCustomers}>
+          <Button asChild>
+            <Link to="/customers/new">
+              <Plus className="size-4" />
+              New customer
+            </Link>
+          </Button>
+        </PermissionGuard>
       </div>
 
       <Card className="h-[calc(100vh-11rem)] min-h-[28rem] flex flex-col overflow-hidden">

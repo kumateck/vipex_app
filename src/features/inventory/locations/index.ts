@@ -10,3 +10,4 @@ export * from './hooks/use-inventory-location-actions';
 export * from './pages/inventory-locations-list-page';
 export * from './pages/inventory-locations-create-page';
 export * from './pages/inventory-locations-edit-page';
+export * from './pages/inventory-locations-create-edit-page';

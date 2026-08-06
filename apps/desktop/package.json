@@ -1,0 +1,29 @@
+{
+  "name": "vipex-desktop",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Vipex desktop shell for parcel operations and native integrations.",
+  "author": "Vipex Co. LTD",
+  "main": ".vite/build/main.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "make": "electron-forge make",
+    "make:windows:test": "electron-forge make --config forge.windows-test.config.js --platform win32 --arch x64 --targets @electron-forge/maker-squirrel",
+    "package": "electron-forge package",
+    "package:windows:test": "electron-forge package --config forge.windows-test.config.js --platform win32 --arch x64"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.10.2",
+    "@electron-forge/maker-deb": "^7.10.2",
+    "@electron-forge/maker-rpm": "^7.10.2",
+    "@electron-forge/maker-squirrel": "^7.10.2",
+    "@electron-forge/maker-zip": "^7.10.2",
+    "@electron-forge/plugin-vite": "^7.10.2",
+    "electron": "^37.3.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3"
+  }
+}

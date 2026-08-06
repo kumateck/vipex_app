@@ -14,7 +14,10 @@ import type {
   InventoryProductMutationInput,
   InventoryProductUpdatePayload,
 } from '../types/inventory-product.types';
-import { toCreateInventoryProductPayload, toUpdateInventoryProductPayload } from '../utils/inventory-product-payload';
+import {
+  toCreateInventoryProductPayload,
+  toUpdateInventoryProductPayload,
+} from '../utils/inventory-product-payload';
 
 type InventoryProductCategoryOptionsParams = {
   companyId?: string | null;
@@ -31,11 +34,16 @@ export interface InventoryProductOption {
   id: string;
   name: string;
   sku: string;
+  unitOfMeasure: number;
+  unitConversions?: { unitOfMeasure: number; factorToBase: string; sortOrder?: number }[];
 }
 
 export const inventoryProductsApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    listInventoryProducts: builder.query<ServerListResponse<InventoryProduct>, InventoryProductListQuery | void>({
+    listInventoryProducts: builder.query<
+      ServerListResponse<InventoryProduct>,
+      InventoryProductListQuery | void
+    >({
       query: (query) => ({
         url: '/inventory/products',
         params: buildServerPaginationParams(query),
@@ -59,7 +67,10 @@ export const inventoryProductsApi = api.injectEndpoints({
       }),
       providesTags: [{ type: 'Inventory', id: 'CATEGORY_OPTIONS' }],
     }),
-    listInventoryProductOptions: builder.query<InventoryProductOption[], InventoryProductOptionsParams | void>({
+    listInventoryProductOptions: builder.query<
+      InventoryProductOption[],
+      InventoryProductOptionsParams | void
+    >({
       query: (params) => ({
         url: '/inventory/products/options',
         params: {
@@ -86,7 +97,10 @@ export const inventoryProductsApi = api.injectEndpoints({
       },
       invalidatesTags: invalidateEntityListTag('Inventory'),
     }),
-    updateInventoryProduct: builder.mutation<{ id: string }, { id: string; body: InventoryProductMutationInput }>({
+    updateInventoryProduct: builder.mutation<
+      { id: string },
+      { id: string; body: InventoryProductMutationInput }
+    >({
       query: ({ id, body }) => ({
         url: `/inventory/products/${id}`,
         method: 'PATCH',

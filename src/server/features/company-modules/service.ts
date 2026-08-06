@@ -1,8 +1,10 @@
 import { BadRequest, Conflict, Forbidden } from '@/server/utils/http-error';
+import { withDbRetry } from '@/server/utils/db-retry';
+import { DEFAULT_MODULE_CATALOG } from '@/shared/company-modules/catalog';
 import { recordAuditLog } from '../audit/logger';
 import {
+  ensureModuleCatalogEntriesRepo,
   findCatalogModulesRepo,
-  getCompanyAccountingFlagRepo,
   findCompanyModuleRepo,
   listCompanyModulesRepo,
   listModuleCatalogRepo,
@@ -12,21 +14,24 @@ import {
 
 export const MODULE_DEPENDENCIES: Record<string, string[]> = {
   payroll: ['hr'],
+  procurement: ['accounting'],
+  fleet_transport: ['shipments'],
+  customer_wallet_credit: ['customers', 'payments'],
+  sla_claims: ['shipments', 'customers'],
+  reconciliation: ['payments', 'accounting'],
+  document_compliance: ['customers'],
+  dispatch_optimization: ['shipments'],
+  notification_hub: ['customers'],
+  communication_internal: [],
+  communication_customer_service: ['customers', 'communication_internal'],
+  communication_calls_livekit: ['communication_internal'],
+  it_support: [],
+  bi_executive_dashboard: ['accounting'],
+  partner_agent_portal: ['shipments', 'customers', 'payments'],
 };
 
-function readErrorCode(value: unknown, depth = 0): string | null {
-  if (!value || typeof value !== 'object' || depth > 6) return null;
-  const obj = value as { code?: unknown; cause?: unknown };
-  if (typeof obj.code === 'string' && obj.code.length > 0) return obj.code;
-  return readErrorCode(obj.cause, depth + 1);
-}
-
-function isMissingSchemaError(error: unknown) {
-  const code = readErrorCode(error);
-  return code === '42P01' || code === '42703';
-}
-
 async function ensureModuleExists(moduleCode: string) {
+  await ensureModuleCatalogEntriesRepo(DEFAULT_MODULE_CATALOG);
   const modules = await findCatalogModulesRepo([moduleCode]);
   const module = modules[0];
   if (!module) throw BadRequest(`Unknown module: ${moduleCode}`);
@@ -34,10 +39,13 @@ async function ensureModuleExists(moduleCode: string) {
 }
 
 export async function listCompanyModulesSvc(companyId: string) {
-  const [catalog, enabled] = await Promise.all([
-    listModuleCatalogRepo(),
-    listCompanyModulesRepo(companyId),
-  ]);
+  const [catalog, enabled] = await withDbRetry(
+    async () => {
+      await ensureModuleCatalogEntriesRepo(DEFAULT_MODULE_CATALOG);
+      return Promise.all([listModuleCatalogRepo(), listCompanyModulesRepo(companyId)]);
+    },
+    { operationName: 'Company modules lookup' },
+  );
 
   const enabledByCode = new Map(enabled.map((row) => [row.moduleCode, row]));
   return catalog.map((module) => {
@@ -54,37 +62,13 @@ export async function listCompanyModulesSvc(companyId: string) {
 }
 
 export async function ensureCompanyModuleEnabledSvc(companyId: string, moduleCode: string) {
-  try {
-    const existing = await findCompanyModuleRepo(companyId, moduleCode);
-    if (!existing?.isEnabled) {
-      throw Forbidden(`Module "${moduleCode}" is not enabled for this company`);
-    }
-    return existing;
-  } catch (error) {
-    if (!isMissingSchemaError(error)) throw error;
-
-    // Backward-compatible mode for environments missing module tables/columns.
-    // Keep accounting gated by the legacy company-level accounting flag when available.
-    if (moduleCode === 'accounting') {
-      const legacyAccounting = await getCompanyAccountingFlagRepo(companyId);
-      if (legacyAccounting && !legacyAccounting.useAccounting) {
-        throw Forbidden(`Module "${moduleCode}" is not enabled for this company`);
-      }
-    }
-
-    return {
-      id: 'legacy-schema-fallback',
-      companyId,
-      moduleCode,
-      isEnabled: true,
-      enabledAt: null,
-      disabledAt: null,
-      configuredBy: null,
-      settings: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+  const existing = await withDbRetry(() => findCompanyModuleRepo(companyId, moduleCode), {
+    operationName: 'Module access check',
+  });
+  if (!existing?.isEnabled) {
+    throw Forbidden(`Module "${moduleCode}" is not enabled for this company`);
   }
+  return existing;
 }
 
 export async function setCompanyModuleStateSvc(input: {

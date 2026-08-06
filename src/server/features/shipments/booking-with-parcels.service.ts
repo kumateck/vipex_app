@@ -7,7 +7,7 @@ import {
   type CreateBookingWithParcelsInput,
   type CreateBookingWithParcelsOutput,
 } from './booking-with-parcels.repository';
-import { PaymentMethod } from '@/db/schemas';
+import { PaymentMethod, PaymentResponsibility } from '@/db/schemas';
 import { assertActiveSessionSvc } from '../cashiers/service';
 import { recordAuditLog } from '../audit/logger';
 import { getCustomerCreditSummarySvc, getCustomerSvc } from '../customers/service';
@@ -16,12 +16,15 @@ export type CreateBookingWithParcelsBody = {
   senderId: string;
   companyId: string;
   sourceId: string;
+  sourceLocationId?: string | null;
   status: number;
   createdBy: string;
   cashierSessionId?: string | null;
   bookingCode?: string | null;
+  requireActiveCashierSession?: boolean;
   parcels: Array<{
     destinationId: string;
+    pickupLocationId?: string | null;
     receiverId: string;
     status: number;
     parcelDetails: string;
@@ -33,6 +36,7 @@ export type CreateBookingWithParcelsBody = {
     trackingCode?: string | null;
     senderPaymentCedis?: number | string | null;
     senderPaymentMethod?: PaymentMethod;
+    paymentResponsibility?: PaymentResponsibility;
     cashierUserId: string;
     branchId: string;
   }>;
@@ -54,7 +58,9 @@ export async function createBookingWithParcelsSvc(
     throw BadRequest('At least one parcel is required');
   }
 
-  const creditParcels = body.parcels.filter(
+  const normalizedParcels = normalizeParcels(body);
+
+  const creditParcels = normalizedParcels.filter(
     (parcel) => parcel.method === PaymentMethod.CREDIT && Number(parcel.chargeCedis ?? 0) > 0,
   );
 
@@ -85,39 +91,37 @@ export async function createBookingWithParcelsSvc(
     throw BadRequest('Cashier user and branch are required for parcel booking');
   }
 
-  const hasImmediateSenderPayments = body.parcels.some(
-    (parcel) => Number(parcel.senderPaymentCedis ?? 0) > 0,
+  const hasMixedCashierOrBranch = body.parcels.some(
+    (parcel) =>
+      parcel.cashierUserId !== primaryParcel.cashierUserId ||
+      parcel.branchId !== primaryParcel.branchId,
   );
-
-  let resolvedCashierSessionId: string | null = body.cashierSessionId ?? null;
-  if (hasImmediateSenderPayments) {
-    const activeSession = await assertActiveSessionSvc({
-      cashierId: primaryParcel.cashierUserId,
-      branchId: primaryParcel.branchId,
-    });
-
-    const hasMixedCashierOrBranch = body.parcels.some(
-      (parcel) =>
-        parcel.cashierUserId !== primaryParcel.cashierUserId ||
-        parcel.branchId !== primaryParcel.branchId,
-    );
-    if (hasMixedCashierOrBranch) {
-      throw BadRequest('All parcels in one booking must belong to the same cashier and branch');
-    }
-
-    resolvedCashierSessionId = body.cashierSessionId ?? activeSession.id;
+  if (hasMixedCashierOrBranch) {
+    throw BadRequest('All parcels in one booking must belong to the same cashier and branch');
   }
+
+  const activeSession = body.requireActiveCashierSession
+    ? await assertActiveSessionSvc({
+        cashierId: primaryParcel.cashierUserId,
+        branchId: primaryParcel.branchId,
+      })
+    : null;
+  const resolvedCashierSessionId: string | null = activeSession
+    ? (body.cashierSessionId ?? activeSession.id)
+    : null;
 
   const input: CreateBookingWithParcelsInput = {
     senderId: body.senderId,
     companyId: body.companyId,
     sourceId: body.sourceId,
+    sourceLocationId: body.sourceLocationId ?? null,
     status: body.status,
     createdBy: body.createdBy,
     cashierSessionId: resolvedCashierSessionId,
     // bookingCode: body.bookingCode ?? null,
-    parcels: body.parcels.map((p) => ({
+    parcels: normalizedParcels.map((p) => ({
       destinationId: p.destinationId,
+      pickupLocationId: p.pickupLocationId ?? null,
       receiverId: p.receiverId,
       status: p.status,
       parcelDetails: p.parcelDetails,
@@ -170,4 +174,41 @@ export async function createBookingWithParcelsSvc(
   });
 
   return created;
+}
+
+function normalizeParcels(body: CreateBookingWithParcelsBody) {
+  return body.parcels.map((parcel, index) => {
+    const normalizedContent = parcel.parcelContent.trim();
+    const normalizedDetails = parcel.parcelDetails.trim();
+
+    if (!normalizedDetails.length) {
+      throw BadRequest(`Parcel details are required for parcel ${index + 1}`);
+    }
+    if (!normalizedContent.length) {
+      throw BadRequest(`Parcel content is required for parcel ${index + 1}`);
+    }
+    if (normalizedDetails.length > 255) {
+      throw BadRequest(`Parcel details must be 255 characters or less for parcel ${index + 1}`);
+    }
+    if (normalizedContent.length > 255) {
+      throw BadRequest(`Parcel content must be 255 characters or less for parcel ${index + 1}`);
+    }
+
+    const paymentResponsibility =
+      parcel.paymentResponsibility ??
+      (Number(parcel.senderPaymentCedis ?? 0) > 0
+        ? Number(parcel.plannedToBePaidCedis ?? 0) > 0
+          ? PaymentResponsibility.SPLIT
+          : PaymentResponsibility.SENDER
+        : Number(parcel.plannedToBePaidCedis ?? 0) > 0
+          ? PaymentResponsibility.RECIPIENT
+          : PaymentResponsibility.SENDER);
+
+    return {
+      ...parcel,
+      parcelContent: normalizedContent,
+      parcelDetails: normalizedDetails,
+      paymentResponsibility,
+    };
+  });
 }

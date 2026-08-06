@@ -11,6 +11,7 @@ import {
   doorToDoorRiderGivenToCustomerSvc,
   listDoorstepByRiderSvc,
   markOfficePickupCompleteSvc,
+  riderBranchBenchmarkSvc,
 } from './service';
 
 export const createDeliveryCtrl = createDeliverySvc;
@@ -25,3 +26,4 @@ export const ddListByRiderCtrl = listDoorstepByRiderSvc;
 export const ddRiderGivenCtrl = doorToDoorRiderGivenToCustomerSvc;
 export const ddReturnToOfficeCtrl = doorToDoorReturnToOfficeSvc;
 export const ddFinalizeAtOfficeCtrl = doorToDoorFinalizeAtOfficeSvc;
+export const ddRiderBranchBenchmarkCtrl = riderBranchBenchmarkSvc;

@@ -1,0 +1,128 @@
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import type { useParcelReceiverCashierWorkflow } from './use-parcel-receiver-cashier-workflow';
+
+type WorkflowDialog = ReturnType<typeof useParcelReceiverCashierWorkflow>['dialog'];
+
+type ReceiverOtpSectionProps = {
+  dialog: WorkflowDialog;
+};
+
+function useCountdownSeconds(expiresAt: string | null) {
+  const [remaining, setRemaining] = useState(0);
+
+  useEffect(() => {
+    if (!expiresAt) {
+      setRemaining(0);
+      return;
+    }
+    const target = new Date(expiresAt).getTime();
+    const tick = () => setRemaining(Math.max(0, Math.round((target - Date.now()) / 1000)));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+
+  return remaining;
+}
+
+export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
+  const remainingSeconds = useCountdownSeconds(dialog.otpVerified ? null : dialog.otpExpiresAt);
+  const isExpired = Boolean(dialog.otpSentAt) && remainingSeconds <= 0;
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+
+  const handleSend = async () => {
+    try {
+      await dialog.handleRequestOtp(Boolean(dialog.otpSentAt));
+      toast.success('Verification code sent to receiver');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to send OTP');
+    }
+  };
+
+  const handleVerify = async () => {
+    try {
+      await dialog.handleVerifyOtp();
+      toast.success('Receiver verified');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Invalid OTP');
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded-md border p-3">
+      <div className="flex items-center justify-between">
+        <Label>Receiver Verification (OTP)</Label>
+        {dialog.otpVerified ? (
+          <Badge variant="outline" className="border-green-600 text-green-600">
+            Verified
+          </Badge>
+        ) : null}
+      </div>
+
+      {dialog.otpVerified ? (
+        <p className="text-xs text-muted-foreground">
+          Receiver identity confirmed via one-time code.
+        </p>
+      ) : (
+        <>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void handleSend()}
+              disabled={dialog.otpRequestPending || (Boolean(dialog.otpSentAt) && !isExpired)}
+            >
+              {dialog.otpRequestPending
+                ? 'Sending...'
+                : dialog.otpSentAt
+                  ? 'Resend Code'
+                  : 'Send Code'}
+            </Button>
+            {dialog.otpSentAt ? (
+              isExpired ? (
+                <span className="text-xs text-destructive">Code expired. Resend to try again.</span>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  Expires in {minutes}:{String(seconds).padStart(2, '0')}
+                </span>
+              )
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                A 6-digit code will be texted to the receiver.
+              </span>
+            )}
+          </div>
+
+          {dialog.otpSentAt && !isExpired ? (
+            <div className="flex items-center gap-2">
+              <Input
+                value={dialog.otpCode}
+                onChange={(event) =>
+                  dialog.setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 6))
+                }
+                placeholder="6-digit code"
+                inputMode="numeric"
+                maxLength={6}
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void handleVerify()}
+                disabled={dialog.otpVerifyPending || dialog.otpCode.length !== 6}
+              >
+                {dialog.otpVerifyPending ? 'Verifying...' : 'Verify'}
+              </Button>
+            </div>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}

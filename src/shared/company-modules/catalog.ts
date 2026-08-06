@@ -1,0 +1,173 @@
+export type ModuleCatalogDefinition = {
+  code: string;
+  name: string;
+  isCore: boolean;
+  isActive: boolean;
+  description: string;
+};
+
+export const DEFAULT_MODULE_CATALOG: ModuleCatalogDefinition[] = [
+  {
+    code: 'shipments',
+    name: 'Shipments',
+    isCore: true,
+    isActive: true,
+    description: 'Shipments module',
+  },
+  {
+    code: 'customers',
+    name: 'Customers',
+    isCore: true,
+    isActive: true,
+    description: 'Customers module',
+  },
+  {
+    code: 'payments',
+    name: 'Payments',
+    isCore: true,
+    isActive: true,
+    description: 'Payments module',
+  },
+  {
+    code: 'accounting',
+    name: 'Accounting',
+    isCore: true,
+    isActive: true,
+    description: 'Accounting module',
+  },
+  {
+    code: 'parcel_content_pricing',
+    name: 'Parcel Content Pricing',
+    isCore: false,
+    isActive: true,
+    description: 'Parcel Content Pricing module',
+  },
+  {
+    code: 'parcel_packaging_styles',
+    name: 'Parcel Packaging Styles',
+    isCore: false,
+    isActive: true,
+    description: 'Parcel Packaging Styles module',
+  },
+  {
+    code: 'sticker_print',
+    name: 'Sticker Print',
+    isCore: true,
+    isActive: true,
+    description: 'Controls parcel sticker printing for each company',
+  },
+  {
+    code: 'inventory',
+    name: 'Inventory',
+    isCore: true,
+    isActive: true,
+    description: 'Inventory module',
+  },
+  { code: 'shifts', name: 'Shifts', isCore: true, isActive: true, description: 'Shifts module' },
+  { code: 'hr', name: 'HR', isCore: false, isActive: true, description: 'HR module' },
+  {
+    code: 'payroll',
+    name: 'Payroll',
+    isCore: false,
+    isActive: true,
+    description: 'Payroll module',
+  },
+  {
+    code: 'procurement',
+    name: 'Procurement & Vendor Management',
+    isCore: false,
+    isActive: true,
+    description: 'Procurement & Vendor Management module',
+  },
+  {
+    code: 'fleet_transport',
+    name: 'Fleet & Transport Operations',
+    isCore: false,
+    isActive: true,
+    description: 'Fleet & Transport Operations module',
+  },
+  {
+    code: 'customer_wallet_credit',
+    name: 'Customer Wallet / Credit Control',
+    isCore: false,
+    isActive: true,
+    description: 'Customer Wallet / Credit Control module',
+  },
+  {
+    code: 'sla_claims',
+    name: 'Service Level & Claims (SLA)',
+    isCore: false,
+    isActive: true,
+    description: 'Service Level & Claims (SLA) module',
+  },
+  {
+    code: 'reconciliation',
+    name: 'Reconciliation',
+    isCore: false,
+    isActive: true,
+    description: 'Reconciliation module',
+  },
+  {
+    code: 'document_compliance',
+    name: 'Document & Compliance',
+    isCore: false,
+    isActive: true,
+    description: 'Document & Compliance module',
+  },
+  {
+    code: 'dispatch_optimization',
+    name: 'Advanced Dispatch Optimization',
+    isCore: false,
+    isActive: true,
+    description: 'Advanced Dispatch Optimization module',
+  },
+  {
+    code: 'notification_hub',
+    name: 'Notification & Communication Hub',
+    isCore: false,
+    isActive: true,
+    description: 'Notification & Communication Hub module',
+  },
+  {
+    code: 'communication_internal',
+    name: 'Communication (Internal)',
+    isCore: false,
+    isActive: true,
+    description: 'Communication (Internal) module',
+  },
+  {
+    code: 'communication_customer_service',
+    name: 'Communication (Customer Service)',
+    isCore: false,
+    isActive: true,
+    description: 'Communication (Customer Service) module',
+  },
+  {
+    code: 'communication_calls_livekit',
+    name: 'Communication Calls (LiveKit)',
+    isCore: false,
+    isActive: true,
+    description: 'Communication Calls (LiveKit) module',
+  },
+  {
+    code: 'it_support',
+    name: 'IT Support Tickets',
+    isCore: false,
+    isActive: true,
+    description: 'IT Support Tickets module',
+  },
+  {
+    code: 'bi_executive_dashboard',
+    name: 'BI & Executive Dashboard',
+    isCore: false,
+    isActive: true,
+    description: 'BI & Executive Dashboard module',
+  },
+  {
+    code: 'partner_agent_portal',
+    name: 'API Partner / Agent Portal',
+    isCore: false,
+    isActive: true,
+    description: 'API Partner / Agent Portal module',
+  },
+];

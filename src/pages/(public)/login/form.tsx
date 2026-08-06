@@ -21,12 +21,12 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from =
-    (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/dashboard';
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/';
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
@@ -36,6 +36,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
     },
     mode: 'onSubmit',
   });
+  const emailValue = watch('email');
 
   const onSubmit = async (data: LoginSchema) => {
     // replace with your auth call
@@ -91,6 +92,15 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
                   {...register('password')}
                 />
               </Field>
+
+              <FieldDescription className="text-center">
+                <Link
+                  to={`/set-password${emailValue?.trim() ? `?email=${encodeURIComponent(emailValue.trim())}` : ''}`}
+                  className="text-sm underline-offset-2 hover:underline"
+                >
+                  Have an invite OTP? Set your password
+                </Link>
+              </FieldDescription>
 
               <Field>
                 <Button type="submit" disabled={isSubmitting} className="flex gap-2">

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { PHONE_DIGITS, limitPhoneDigits } from '@/lib/phone';
 import {
   Select,
   SelectContent,
@@ -142,9 +143,16 @@ export function BranchForm({
                 <FieldLabel htmlFor="telephone">Telephone</FieldLabel>
                 <Input
                   id="telephone"
-                  placeholder="Optional"
+                  placeholder="0240000000"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  maxLength={PHONE_DIGITS}
                   aria-invalid={!!errors.telephone}
-                  {...register('telephone')}
+                  {...register('telephone', {
+                    onChange: (event) => {
+                      event.target.value = limitPhoneDigits(event.target.value);
+                    },
+                  })}
                 />
                 {errors.telephone?.message ? (
                   <p className="text-sm text-destructive">{errors.telephone.message}</p>

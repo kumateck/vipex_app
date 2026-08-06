@@ -10,3 +10,4 @@ export * from './hooks/use-inventory-product-actions';
 export * from './pages/inventory-products-list-page';
 export * from './pages/inventory-products-create-page';
 export * from './pages/inventory-products-edit-page';
+export * from './pages/inventory-products-create-edit-page';

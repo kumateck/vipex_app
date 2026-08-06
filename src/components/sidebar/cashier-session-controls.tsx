@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +18,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select-searchable';
+import { CashierSessionSummaryBadges } from './cashier-session-summary-badges';
 import {
   useCloseSessionMutation,
   useGetCurrentActiveSessionQuery,
@@ -28,17 +28,8 @@ import {
   useOpenSessionMutation,
 } from '@/features/cashiers/api/cashiers.api';
 import { useAuthStore } from '@/stores/auth-store';
-import { UserType } from '@/db/schemas/enums';
+import { CashierType, UserType } from '@/db/schemas/enums';
 import { PermissionKeys } from '@/shared/permissions/constants';
-
-function formatCedisFromPsw(valuePsw: number): string {
-  return new Intl.NumberFormat('en-GH', {
-    style: 'currency',
-    currency: 'GHS',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(valuePsw / 100);
-}
 
 export function CashierSessionControls() {
   const authUser = useAuthStore((state) => state.user);
@@ -50,44 +41,81 @@ export function CashierSessionControls() {
   const [closingBalance, setClosingBalance] = useState('0');
 
   const permissions = useMemo(() => new Set(authUser?.permissions ?? []), [authUser?.permissions]);
-  const isCashierUser = authUser?.userType === UserType.CASHIER;
+  const isCashierUser =
+    authUser?.userType === UserType.CASHIER ||
+    (authUser?.cashierType !== null && authUser?.cashierType !== undefined);
 
   const canReadSessions = permissions.has(PermissionKeys.CanReadCashierSessions);
   const canOpenSessions = permissions.has(PermissionKeys.CanOpenCashierSessions);
   const canCloseSessions = permissions.has(PermissionKeys.CanCloseCashierSessions);
-  const roleName = authUser?.role?.name?.toLowerCase() ?? '';
+  const canAccessSessionControls = canReadSessions || canOpenSessions || canCloseSessions;
+  const cashierType = authUser?.cashierType ?? null;
   const isReceiverRoute = location.pathname.startsWith('/parcels/receiver-cashier');
-  const cashierMode: 'sender' | 'receiver' | 'delivery' = isReceiverRoute
-    ? 'receiver'
-    : roleName.includes('receiver')
+  const isDeliveryRoute = location.pathname.startsWith('/parcels/delivery-cashier');
+  const routeMode: 'sender' | 'receiver' | 'delivery' = isDeliveryRoute
+    ? 'delivery'
+    : isReceiverRoute
       ? 'receiver'
-      : permissions.has(PermissionKeys.CanCompleteDoorstepDelivery)
-        ? 'delivery'
-        : permissions.has(PermissionKeys.CanCompleteOfficePickup)
-          ? 'receiver'
-          : 'sender';
+      : 'sender';
+  const fullCashierMode: 'sender' | 'receiver' = isReceiverRoute ? 'receiver' : 'sender';
+  const cashierMode: 'sender' | 'receiver' | 'delivery' =
+    cashierType === CashierType.SENDING
+      ? 'sender'
+      : cashierType === CashierType.TOBEPAID
+        ? 'receiver'
+        : cashierType === CashierType.DELIVERY
+          ? 'delivery'
+          : cashierType === CashierType.FULL
+            ? fullCashierMode
+            : permissions.has(PermissionKeys.CanCompleteDoorstepDelivery)
+              ? 'delivery'
+              : permissions.has(PermissionKeys.CanCompleteOfficePickup)
+                ? 'receiver'
+                : routeMode;
+  const isFullCashier = cashierType === CashierType.FULL;
 
   const { data: activeSession, isLoading: isLoadingActiveSession } =
     useGetCurrentActiveSessionQuery(undefined, {
-      skip: !isCashierUser || !canReadSessions,
+      skip: !isCashierUser || !canAccessSessionControls,
     });
+  const summaryMode: 'sender' | 'receiver' | 'delivery' | 'full' = isFullCashier
+    ? 'full'
+    : cashierMode;
+  const closeMode: 'sender' | 'receiver' | 'delivery' | 'full' = isFullCashier
+    ? 'full'
+    : cashierMode;
+
   const { data: summary } = useGetCurrentActiveSessionSummaryQuery(
-    { mode: cashierMode },
+    { mode: summaryMode },
     {
       skip: !isCashierUser || !canReadSessions,
     },
   );
+
+  useEffect(() => {
+    if (!isCloseDialogOpen) return;
+    const expectedPsw =
+      closeMode === 'receiver'
+        ? (summary?.totalToBePaidCollectedPsw ?? 0)
+        : closeMode === 'delivery'
+          ? (summary?.totalDeliveryFeeCollectedPsw ?? 0) + (summary?.totalToBePaidCollectedPsw ?? 0)
+          : closeMode === 'full'
+            ? (summary?.totalFullCashierExpectedPsw ?? 0)
+            : (summary?.amountPaidPsw ?? 0);
+    setClosingBalance((expectedPsw / 100).toFixed(2));
+  }, [closeMode, summary, isCloseDialogOpen]);
+
   const { data: sessionTypes, isLoading: isLoadingSessionTypes } = useListSessionTypesQuery(
     undefined,
     {
-      skip: !isCashierUser || !canOpenSessions || !!activeSession,
+      skip: !isCashierUser || !canOpenSessions || isLoadingActiveSession || !!activeSession,
     },
   );
 
   const [openSession, { isLoading: isOpeningSession }] = useOpenSessionMutation();
   const [closeSession, { isLoading: isClosingSession }] = useCloseSessionMutation();
 
-  if (!isCashierUser || !canReadSessions) return null;
+  if (!isCashierUser || !canAccessSessionControls) return null;
 
   const handleOpenSession = async () => {
     if (!sessionTypeId) {
@@ -200,20 +228,7 @@ export function CashierSessionControls() {
 
   return (
     <div className="flex items-center gap-2">
-      {cashierMode === 'receiver' ? (
-        <Badge variant="secondary">
-          Receiver Payments: {formatCedisFromPsw(summary?.totalToBePaidCollectedPsw ?? 0)}
-        </Badge>
-      ) : (
-        <>
-          <Badge variant="secondary">
-            Amount Paid: {formatCedisFromPsw(summary?.amountPaidPsw ?? 0)}
-          </Badge>
-          <Badge variant="outline">
-            To Be Paid: {formatCedisFromPsw(summary?.toBePaidPsw ?? 0)}
-          </Badge>
-        </>
-      )}
+      <CashierSessionSummaryBadges mode={summaryMode} summary={summary} />
       {canCloseSessions ? (
         <>
           <Button
@@ -235,17 +250,17 @@ export function CashierSessionControls() {
               <DialogHeader>
                 <DialogTitle>Close Cashier Session</DialogTitle>
                 <DialogDescription>
-                  Confirm closing balance before ending the session.
+                  System preloads the expected total received for this cashier type. Confirm to end
+                  the session.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-2">
-                <Label htmlFor="sidebar-closing-balance">Closing Balance (GHS)</Label>
+                <Label htmlFor="sidebar-closing-balance">Expected Total Received (GHS)</Label>
                 <Input
                   id="sidebar-closing-balance"
                   inputMode="decimal"
-                  placeholder="0.00"
                   value={closingBalance}
-                  onChange={(event) => setClosingBalance(event.target.value)}
+                  readOnly
                 />
               </div>
               <DialogFooter>

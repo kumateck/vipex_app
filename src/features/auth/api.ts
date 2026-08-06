@@ -1,5 +1,8 @@
 import { api } from '@/services/api';
 import { useAuthStore, type AuthUser } from '@/stores/auth-store';
+import { store } from '@/store';
+import { useBreadcrumbStore } from '@/stores/route-store';
+import { clearApiInFlightRequests } from '@/services/api';
 
 export interface LoginRequest {
   email: string;
@@ -37,11 +40,22 @@ export interface ForgotPasswordResponse {
 }
 
 export interface ResetPasswordRequest {
-  token: string;
+  email: string;
+  otp: string;
+  password: string;
+}
+
+export interface SetPasswordRequest {
+  email: string;
+  otp: string;
   password: string;
 }
 
 export interface ResetPasswordResponse {
+  success: boolean;
+}
+
+export interface SetPasswordResponse {
   success: boolean;
 }
 
@@ -70,6 +84,35 @@ export interface CurrentUserReadOnlyPermissionsResponse {
   readOnlyPermissions: string[];
 }
 
+export interface CurrentUserProfileResponse {
+  id: string;
+  fullname: string;
+  email: string;
+  telephone: string;
+  employeeId: string | null;
+  role: { id: string; name: string } | null;
+  branch: { id: string; name: string; type: number } | null;
+  company: { id: string; name: string; useAccounting: boolean } | null;
+  location: { id: string; name: string } | null;
+  locationId: string | null;
+  locationName: string | null;
+  userType: number | null;
+  cashierType: number | null;
+}
+
+export interface UpdateCurrentUserProfileRequest {
+  fullname?: string;
+  telephone?: string;
+}
+
+export interface VerifyCurrentUserPasswordRequest {
+  password: string;
+}
+
+export interface VerifyCurrentUserPasswordResponse {
+  success: boolean;
+}
+
 export const authApi = api.injectEndpoints({
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, LoginRequest>({
@@ -82,6 +125,12 @@ export const authApi = api.injectEndpoints({
       async onQueryStarted(_args, { queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
+          clearApiInFlightRequests();
+          store.dispatch(api.util.resetApiState());
+          useAuthStore.persist.clearStorage();
+          useAuthStore.getState().logout();
+          useBreadcrumbStore.getState().reset();
+          useBreadcrumbStore.persist.clearStorage();
           const accessToken = data.tokens?.accessToken ?? data.accessToken ?? '';
           const refreshToken = data.tokens?.refreshToken ?? data.refreshToken ?? '';
 
@@ -110,7 +159,12 @@ export const authApi = api.injectEndpoints({
           await queryFulfilled;
         } finally {
           // Always clear auth state on logout, even if request fails
+          clearApiInFlightRequests();
+          store.dispatch(api.util.resetApiState());
           useAuthStore.getState().logout();
+          useAuthStore.persist.clearStorage();
+          useBreadcrumbStore.getState().reset();
+          useBreadcrumbStore.persist.clearStorage();
         }
       },
     }),
@@ -135,7 +189,12 @@ export const authApi = api.injectEndpoints({
           }
         } catch (_err) {
           // If refresh fails, logout user
+          clearApiInFlightRequests();
+          store.dispatch(api.util.resetApiState());
           useAuthStore.getState().logout();
+          useAuthStore.persist.clearStorage();
+          useBreadcrumbStore.getState().reset();
+          useBreadcrumbStore.persist.clearStorage();
         }
       },
     }),
@@ -156,6 +215,14 @@ export const authApi = api.injectEndpoints({
       }),
     }),
 
+    setPassword: builder.mutation<SetPasswordResponse, SetPasswordRequest>({
+      query: (body) => ({
+        url: '/auth/set-password',
+        method: 'POST',
+        body,
+      }),
+    }),
+
     changePassword: builder.mutation<ChangePasswordResponse, ChangePasswordRequest>({
       query: (body) => ({
         url: '/auth/change-password',
@@ -163,6 +230,17 @@ export const authApi = api.injectEndpoints({
         body,
       }),
       invalidatesTags: ['Auth'],
+    }),
+
+    verifyCurrentUserPassword: builder.mutation<
+      VerifyCurrentUserPasswordResponse,
+      VerifyCurrentUserPasswordRequest
+    >({
+      query: (body) => ({
+        url: '/auth/me/verify-password',
+        method: 'POST',
+        body,
+      }),
     }),
 
     getCurrentUserPermissions: builder.query<CurrentUserPermissionsResponse, void>({
@@ -178,6 +256,37 @@ export const authApi = api.injectEndpoints({
       }),
       providesTags: ['Auth'],
     }),
+
+    getCurrentUserProfile: builder.query<CurrentUserProfileResponse, void>({
+      query: () => ({
+        url: '/auth/me/profile',
+      }),
+      providesTags: ['Auth'],
+    }),
+
+    updateCurrentUserProfile: builder.mutation<
+      CurrentUserProfileResponse,
+      UpdateCurrentUserProfileRequest
+    >({
+      query: (body) => ({
+        url: '/auth/me/profile',
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['Auth'],
+      async onQueryStarted(_args, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          const store = useAuthStore.getState();
+          const current = store.user;
+          if (current) {
+            store.updateUser({ fullname: data.fullname, telephone: data.telephone });
+          }
+        } catch (_err) {
+          // Error handled by consumer
+        }
+      },
+    }),
   }),
 });
 
@@ -187,7 +296,11 @@ export const {
   useRefreshTokenMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
+  useSetPasswordMutation,
   useChangePasswordMutation,
+  useVerifyCurrentUserPasswordMutation,
   useGetCurrentUserPermissionsQuery,
   useGetCurrentUserReadOnlyPermissionsQuery,
+  useGetCurrentUserProfileQuery,
+  useUpdateCurrentUserProfileMutation,
 } = authApi;

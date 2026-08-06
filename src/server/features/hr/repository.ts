@@ -1,4 +1,18 @@
-import { and, asc, count, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lte,
+  not,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
   attendanceRecords,
@@ -8,11 +22,13 @@ import {
   employeeJobAssignments,
   jobTitles,
   leaveRequests,
+  leaveSwaps,
   leaveTypes,
   locations,
   users,
 } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
+import { alias } from 'drizzle-orm/pg-core';
 
 export type ListEmployeeParams = {
   limit: number;
@@ -20,9 +36,12 @@ export type ListEmployeeParams = {
   companyId: string;
   branchId?: string | null;
   departmentId?: string | null;
+  jobTitleId?: string | null;
+  officerEmployeeId?: string | null;
   status?: number | null;
   search?: string | null;
   sort?: SortField[] | null;
+  noPagination?: boolean;
 };
 
 export type ListDepartmentParams = {
@@ -54,7 +73,30 @@ export type ListLeaveRequestParams = {
   offset: number;
   companyId: string;
   employeeId?: string | null;
+  leaveTypeId?: string | null;
   status?: number | null;
+  dateFrom?: Date | null;
+  dateTo?: Date | null;
+};
+
+export type ListLeaveCalendarParams = {
+  companyId: string;
+  from: Date;
+  to: Date;
+  employeeId?: string | null;
+  status?: number | null;
+  branchId?: string | null;
+  departmentId?: string | null;
+};
+
+export type ListLeaveSwapParams = {
+  companyId: string;
+  employeeId?: string | null;
+  status?: number | null;
+  from?: Date | null;
+  to?: Date | null;
+  limit: number;
+  offset: number;
 };
 
 export async function listDepartmentsRepo(p: ListDepartmentParams) {
@@ -146,15 +188,19 @@ export async function listJobTitlesRepo(p: ListJobTitleParams) {
     .select({
       id: jobTitles.id,
       companyId: jobTitles.companyId,
+      departmentId: jobTitles.departmentId,
+      departmentName: departments.name,
       code: jobTitles.code,
       name: jobTitles.name,
       description: jobTitles.description,
+      defaultLeaveDays: jobTitles.defaultLeaveDays,
       isActive: jobTitles.isActive,
       createdBy: jobTitles.createdBy,
       createdAt: jobTitles.createdAt,
       updatedAt: jobTitles.updatedAt,
     })
     .from(jobTitles)
+    .leftJoin(departments, eq(jobTitles.departmentId, departments.id))
     .where(and(...where))
     .orderBy(asc(jobTitles.name), asc(jobTitles.id))
     .limit(p.limit)
@@ -165,8 +211,16 @@ export async function listJobTitlesRepo(p: ListJobTitleParams) {
 
 export async function listJobTitleOptionsRepo(companyId: string, search?: string | null) {
   return db
-    .select({ id: jobTitles.id, code: jobTitles.code, name: jobTitles.name })
+    .select({
+      id: jobTitles.id,
+      code: jobTitles.code,
+      name: jobTitles.name,
+      departmentId: jobTitles.departmentId,
+      departmentName: departments.name,
+      defaultLeaveDays: jobTitles.defaultLeaveDays,
+    })
     .from(jobTitles)
+    .leftJoin(departments, eq(jobTitles.departmentId, departments.id))
     .where(
       and(
         eq(jobTitles.companyId, companyId),
@@ -195,6 +249,10 @@ export async function listLeaveTypesRepo(p: ListLeaveTypeParams) {
       code: leaveTypes.code,
       name: leaveTypes.name,
       isPaid: leaveTypes.isPaid,
+      minAdvanceDays: leaveTypes.minAdvanceDays,
+      allowEmergencySameDay: leaveTypes.allowEmergencySameDay,
+      colorHex: leaveTypes.colorHex,
+      calendarPriority: leaveTypes.calendarPriority,
       isActive: leaveTypes.isActive,
       createdAt: leaveTypes.createdAt,
       updatedAt: leaveTypes.updatedAt,
@@ -215,6 +273,10 @@ export async function listLeaveTypeOptionsRepo(companyId: string) {
       code: leaveTypes.code,
       name: leaveTypes.name,
       isPaid: leaveTypes.isPaid,
+      minAdvanceDays: leaveTypes.minAdvanceDays,
+      allowEmergencySameDay: leaveTypes.allowEmergencySameDay,
+      colorHex: leaveTypes.colorHex,
+      calendarPriority: leaveTypes.calendarPriority,
     })
     .from(leaveTypes)
     .where(and(eq(leaveTypes.companyId, companyId), eq(leaveTypes.isActive, true)))
@@ -242,6 +304,10 @@ export async function getLeaveTypeRepo(id: string) {
       companyId: leaveTypes.companyId,
       name: leaveTypes.name,
       isPaid: leaveTypes.isPaid,
+      minAdvanceDays: leaveTypes.minAdvanceDays,
+      allowEmergencySameDay: leaveTypes.allowEmergencySameDay,
+      colorHex: leaveTypes.colorHex,
+      calendarPriority: leaveTypes.calendarPriority,
       isActive: leaveTypes.isActive,
     })
     .from(leaveTypes)
@@ -280,11 +346,15 @@ export async function listEmployeesRepo(p: ListEmployeeParams) {
   const where = [eq(employees.companyId, p.companyId), eq(employees.isDeleted, false)];
   if (p.branchId) where.push(eq(employees.branchId, p.branchId));
   if (p.departmentId) where.push(eq(employees.departmentId, p.departmentId));
+  if (p.jobTitleId) where.push(eq(employees.jobTitleId, p.jobTitleId));
+  if (p.officerEmployeeId) where.push(eq(employees.officerEmployeeId, p.officerEmployeeId));
   if (p.status !== null && p.status !== undefined)
     where.push(eq(employees.employmentStatus, p.status));
 
   const searchPredicate = p.search
     ? or(
+        ilike(employees.firstName, `%${p.search}%`),
+        ilike(employees.lastName, `%${p.search}%`),
         ilike(employees.displayName, `%${p.search}%`),
         ilike(employees.employeeNumber, `%${p.search}%`),
         ilike(employees.email, `%${p.search}%`),
@@ -311,7 +381,7 @@ export async function listEmployeesRepo(p: ListEmployeeParams) {
     .from(employees)
     .where(and(...where, ...(searchPredicate ? [searchPredicate] : [])));
 
-  const data = await db
+  const baseQuery = db
     .select({
       id: employees.id,
       companyId: employees.companyId,
@@ -339,7 +409,11 @@ export async function listEmployeesRepo(p: ListEmployeeParams) {
       departmentName: departments.name,
       jobTitleId: employees.jobTitleId,
       jobTitleName: jobTitles.name,
-      managerEmployeeId: employees.managerEmployeeId,
+      reportingOfficerTitleId: employees.reportingOfficerTitleId,
+      officerEmployeeId: employees.officerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
       hasUserAccount: employees.hasUserAccount,
       createdAt: employees.createdAt,
       updatedAt: employees.updatedAt,
@@ -350,14 +424,60 @@ export async function listEmployeesRepo(p: ListEmployeeParams) {
     .leftJoin(departments, eq(employees.departmentId, departments.id))
     .leftJoin(jobTitles, eq(employees.jobTitleId, jobTitles.id))
     .where(and(...where, ...(searchPredicate ? [searchPredicate] : [])))
-    .orderBy(...(orderBy.length ? orderBy : [asc(employees.createdAt), asc(employees.id)]))
-    .limit(p.limit)
-    .offset(p.offset);
+    .orderBy(...(orderBy.length ? orderBy : [asc(employees.displayName), asc(employees.id)]));
+
+  const data = p.noPagination ? await baseQuery : await baseQuery.limit(p.limit).offset(p.offset);
 
   return {
     data,
     totalRecords: Number((countRow?.c as unknown as bigint) ?? 0n),
   };
+}
+
+export async function listEmployeeOptionsRepo(input: {
+  companyId: string;
+  branchId?: string | null;
+  departmentId?: string | null;
+  jobTitleId?: string | null;
+  officerEmployeeId?: string | null;
+  status?: number | null;
+  search?: string | null;
+  unlinkedOnly?: boolean;
+}) {
+  const where = [eq(employees.companyId, input.companyId), eq(employees.isDeleted, false)];
+  if (input.branchId) where.push(eq(employees.branchId, input.branchId));
+  if (input.departmentId) where.push(eq(employees.departmentId, input.departmentId));
+  if (input.jobTitleId) where.push(eq(employees.jobTitleId, input.jobTitleId));
+  if (input.officerEmployeeId) where.push(eq(employees.officerEmployeeId, input.officerEmployeeId));
+  if (input.status !== null && input.status !== undefined)
+    where.push(eq(employees.employmentStatus, input.status));
+  if (input.unlinkedOnly) where.push(eq(employees.hasUserAccount, false));
+
+  const searchPredicate = input.search
+    ? or(
+        ilike(employees.displayName, `%${input.search}%`),
+        ilike(employees.employeeNumber, `%${input.search}%`),
+        ilike(employees.firstName, `%${input.search}%`),
+        ilike(employees.lastName, `%${input.search}%`),
+        ilike(employees.email, `%${input.search}%`),
+      )
+    : undefined;
+
+  return db
+    .select({
+      id: employees.id,
+      employeeNumber: employees.employeeNumber,
+      displayName: employees.displayName,
+      branchId: employees.branchId,
+      locationId: employees.locationId,
+      departmentId: employees.departmentId,
+      jobTitleId: employees.jobTitleId,
+      employmentStatus: employees.employmentStatus,
+      hasUserAccount: employees.hasUserAccount,
+    })
+    .from(employees)
+    .where(and(...where, ...(searchPredicate ? [searchPredicate] : [])))
+    .orderBy(asc(employees.displayName), asc(employees.id));
 }
 
 export async function getEmployeeRepo(id: string) {
@@ -401,7 +521,11 @@ export async function getEmployeeRepo(id: string) {
       locationId: employees.locationId,
       departmentId: employees.departmentId,
       jobTitleId: employees.jobTitleId,
-      managerEmployeeId: employees.managerEmployeeId,
+      reportingOfficerTitleId: employees.reportingOfficerTitleId,
+      officerEmployeeId: employees.officerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
       hasUserAccount: employees.hasUserAccount,
       isDeleted: employees.isDeleted,
       createdBy: employees.createdBy,
@@ -425,6 +549,95 @@ export async function findEmployeeByNumberRepo(companyId: string, employeeNumber
 
 export async function createEmployeeRepo(values: typeof employees.$inferInsert) {
   const [row] = await db.insert(employees).values(values).returning({ id: employees.id });
+  return row ?? null;
+}
+
+export class EmployeeUserLinkConflictError extends Error {}
+
+export async function linkEmployeeUserRepo(input: {
+  companyId: string;
+  employeeId: string;
+  userId: string;
+}) {
+  return db.transaction(async (tx) => {
+    const [user] = await tx
+      .update(users)
+      .set({ employeeId: input.employeeId, updatedAt: new Date() })
+      .where(
+        and(
+          eq(users.id, input.userId),
+          eq(users.companyId, input.companyId),
+          isNull(users.employeeId),
+        ),
+      )
+      .returning({ id: users.id });
+    if (!user) throw new EmployeeUserLinkConflictError('User is already linked');
+
+    const [employee] = await tx
+      .update(employees)
+      .set({ hasUserAccount: true, updatedAt: new Date() })
+      .where(
+        and(
+          eq(employees.id, input.employeeId),
+          eq(employees.companyId, input.companyId),
+          eq(employees.hasUserAccount, false),
+          eq(employees.isDeleted, false),
+        ),
+      )
+      .returning({ id: employees.id });
+    if (!employee) throw new EmployeeUserLinkConflictError('Employee is already linked');
+
+    return { userId: user.id, employeeId: employee.id };
+  });
+}
+
+export async function createEmployeeForUserRepo(input: {
+  companyId: string;
+  userId: string;
+  employee: typeof employees.$inferInsert;
+  assignment: Omit<typeof employeeJobAssignments.$inferInsert, 'employeeId'>;
+}) {
+  return db.transaction(async (tx) => {
+    const [employee] = await tx
+      .insert(employees)
+      .values({ ...input.employee, hasUserAccount: true })
+      .returning({ id: employees.id });
+    if (!employee) throw new EmployeeUserLinkConflictError('Employee could not be created');
+
+    const [user] = await tx
+      .update(users)
+      .set({ employeeId: employee.id, updatedAt: new Date() })
+      .where(
+        and(
+          eq(users.id, input.userId),
+          eq(users.companyId, input.companyId),
+          isNull(users.employeeId),
+        ),
+      )
+      .returning({ id: users.id });
+    if (!user) throw new EmployeeUserLinkConflictError('User is already linked');
+
+    await tx.insert(employeeJobAssignments).values({
+      ...input.assignment,
+      employeeId: employee.id,
+    });
+
+    return { userId: user.id, employeeId: employee.id };
+  });
+}
+
+export async function findEmployeeByCompanyEmailRepo(companyId: string, email: string) {
+  const [row] = await db
+    .select({ id: employees.id, hasUserAccount: employees.hasUserAccount })
+    .from(employees)
+    .where(
+      and(
+        eq(employees.companyId, companyId),
+        eq(employees.isDeleted, false),
+        sql`lower(${employees.email}) = ${email.trim().toLowerCase()}`,
+      ),
+    )
+    .limit(1);
   return row ?? null;
 }
 
@@ -550,7 +763,7 @@ export async function listAttendanceRepo(p: ListAttendanceParams) {
         lte(attendanceRecords.attendanceDate, p.to),
       ),
     )
-    .orderBy(desc(attendanceRecords.attendanceDate), desc(attendanceRecords.createdAt))
+    .orderBy(asc(attendanceRecords.attendanceDate), asc(attendanceRecords.createdAt))
     .limit(p.limit)
     .offset(p.offset);
 
@@ -564,7 +777,10 @@ export async function listLeaveRequestsRepo(p: ListLeaveRequestParams) {
   const where = [
     eq(leaveRequests.companyId, p.companyId),
     ...(p.employeeId ? [eq(leaveRequests.employeeId, p.employeeId)] : []),
+    ...(p.leaveTypeId ? [eq(leaveRequests.leaveTypeId, p.leaveTypeId)] : []),
     ...(p.status !== null && p.status !== undefined ? [eq(leaveRequests.status, p.status)] : []),
+    ...(p.dateFrom ? [gte(leaveRequests.dateFrom, p.dateFrom)] : []),
+    ...(p.dateTo ? [lte(leaveRequests.dateTo, p.dateTo)] : []),
   ];
 
   const [countRow] = await db
@@ -583,8 +799,15 @@ export async function listLeaveRequestsRepo(p: ListLeaveRequestParams) {
       dateFrom: leaveRequests.dateFrom,
       dateTo: leaveRequests.dateTo,
       daysCount: leaveRequests.daysCount,
+      selectionMode: leaveRequests.selectionMode,
+      weekStartDate: leaveRequests.weekStartDate,
+      weekCount: leaveRequests.weekCount,
+      swapLockUntil: leaveRequests.swapLockUntil,
+      isEmergency: leaveRequests.isEmergency,
       reason: leaveRequests.reason,
-      managerEmployeeId: employees.managerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
       managerApprovalStatus: leaveRequests.managerApprovalStatus,
       managerApprovedBy: leaveRequests.managerApprovedBy,
       managerApprovedAt: leaveRequests.managerApprovedAt,
@@ -600,7 +823,7 @@ export async function listLeaveRequestsRepo(p: ListLeaveRequestParams) {
     .innerJoin(employees, eq(leaveRequests.employeeId, employees.id))
     .innerJoin(leaveTypes, eq(leaveRequests.leaveTypeId, leaveTypes.id))
     .where(and(...where))
-    .orderBy(desc(leaveRequests.dateFrom), desc(leaveRequests.createdAt))
+    .orderBy(asc(leaveRequests.dateFrom), asc(leaveRequests.createdAt))
     .limit(p.limit)
     .offset(p.offset);
 
@@ -622,6 +845,12 @@ export async function getLeaveRequestRepo(id: string) {
       dateFrom: leaveRequests.dateFrom,
       dateTo: leaveRequests.dateTo,
       daysCount: leaveRequests.daysCount,
+      selectionMode: leaveRequests.selectionMode,
+      weekStartDate: leaveRequests.weekStartDate,
+      weekCount: leaveRequests.weekCount,
+      swapLockUntil: leaveRequests.swapLockUntil,
+      isEmergency: leaveRequests.isEmergency,
+      reason: leaveRequests.reason,
       managerApprovalStatus: leaveRequests.managerApprovalStatus,
       managerApprovedBy: leaveRequests.managerApprovedBy,
       managerApprovedAt: leaveRequests.managerApprovedAt,
@@ -630,7 +859,10 @@ export async function getLeaveRequestRepo(id: string) {
       approvedBy: leaveRequests.approvedBy,
       approvedAt: leaveRequests.approvedAt,
       rejectionReason: leaveRequests.rejectionReason,
-      managerEmployeeId: employees.managerEmployeeId,
+      officerEmployeeId: employees.officerEmployeeId,
+      supervisorEmployeeId: sql<
+        string | null
+      >`coalesce(${employees.officerEmployeeId}, ${employees.managerEmployeeId})`,
     })
     .from(leaveRequests)
     .innerJoin(employees, eq(leaveRequests.employeeId, employees.id))
@@ -649,6 +881,273 @@ export async function updateLeaveRequestRepo(
     .where(eq(leaveRequests.id, id))
     .returning({ id: leaveRequests.id });
   return row ?? null;
+}
+
+export async function listLeaveCalendarRepo(p: ListLeaveCalendarParams) {
+  const employeeWhere = [
+    eq(employees.companyId, p.companyId),
+    eq(employees.isDeleted, false),
+    ...(p.employeeId ? [eq(employees.id, p.employeeId)] : []),
+    ...(p.branchId ? [eq(employees.branchId, p.branchId)] : []),
+    ...(p.departmentId ? [eq(employees.departmentId, p.departmentId)] : []),
+  ];
+
+  const employeeRows = await db
+    .select({
+      id: employees.id,
+      employeeNumber: employees.employeeNumber,
+      displayName: employees.displayName,
+      branchId: employees.branchId,
+      branchName: branches.name,
+      departmentId: employees.departmentId,
+      departmentName: departments.name,
+      jobTitleName: jobTitles.name,
+    })
+    .from(employees)
+    .leftJoin(branches, eq(branches.id, employees.branchId))
+    .leftJoin(departments, eq(departments.id, employees.departmentId))
+    .leftJoin(jobTitles, eq(jobTitles.id, employees.jobTitleId))
+    .where(and(...employeeWhere))
+    .orderBy(asc(employees.displayName), asc(employees.id));
+
+  const employeeIds = employeeRows.map((row) => row.id);
+  if (!employeeIds.length) {
+    return { employees: employeeRows, leaveItems: [] };
+  }
+
+  const leaveRows = await db
+    .select({
+      id: leaveRequests.id,
+      employeeId: leaveRequests.employeeId,
+      leaveTypeId: leaveRequests.leaveTypeId,
+      leaveTypeName: leaveTypes.name,
+      leaveTypeColorHex: leaveTypes.colorHex,
+      leaveTypeCalendarPriority: leaveTypes.calendarPriority,
+      dateFrom: leaveRequests.dateFrom,
+      dateTo: leaveRequests.dateTo,
+      daysCount: leaveRequests.daysCount,
+      status: leaveRequests.status,
+      managerApprovalStatus: leaveRequests.managerApprovalStatus,
+      reason: leaveRequests.reason,
+      selectionMode: leaveRequests.selectionMode,
+      weekStartDate: leaveRequests.weekStartDate,
+      weekCount: leaveRequests.weekCount,
+      swapLockUntil: leaveRequests.swapLockUntil,
+      isEmergency: leaveRequests.isEmergency,
+    })
+    .from(leaveRequests)
+    .innerJoin(leaveTypes, eq(leaveTypes.id, leaveRequests.leaveTypeId))
+    .where(
+      and(
+        eq(leaveRequests.companyId, p.companyId),
+        inArray(leaveRequests.employeeId, employeeIds),
+        lte(leaveRequests.dateFrom, p.to),
+        gte(leaveRequests.dateTo, p.from),
+        ...(p.status !== null && p.status !== undefined
+          ? [eq(leaveRequests.status, p.status)]
+          : []),
+      ),
+    )
+    .orderBy(
+      asc(leaveRequests.employeeId),
+      asc(leaveRequests.dateFrom),
+      desc(leaveTypes.calendarPriority),
+      asc(leaveRequests.id),
+    );
+
+  return { employees: employeeRows, leaveItems: leaveRows };
+}
+
+export async function countEmployeeLeaveConflictsRepo(input: {
+  companyId: string;
+  employeeId: string;
+  from: Date;
+  to: Date;
+  excludeLeaveRequestIds?: string[];
+}) {
+  const [row] = await db
+    .select({ c: count() })
+    .from(leaveRequests)
+    .where(
+      and(
+        eq(leaveRequests.companyId, input.companyId),
+        eq(leaveRequests.employeeId, input.employeeId),
+        inArray(leaveRequests.status, [0, 1]),
+        lte(leaveRequests.dateFrom, input.to),
+        gte(leaveRequests.dateTo, input.from),
+        ...(input.excludeLeaveRequestIds?.length
+          ? [not(inArray(leaveRequests.id, input.excludeLeaveRequestIds))]
+          : []),
+      ),
+    );
+  return Number((row?.c as unknown as bigint) ?? 0n);
+}
+
+export async function createLeaveSwapRepo(values: typeof leaveSwaps.$inferInsert) {
+  const [row] = await db.insert(leaveSwaps).values(values).returning({ id: leaveSwaps.id });
+  return row ?? null;
+}
+
+export async function getLeaveSwapRepo(id: string) {
+  const [row] = await db
+    .select({
+      id: leaveSwaps.id,
+      companyId: leaveSwaps.companyId,
+      requesterEmployeeId: leaveSwaps.requesterEmployeeId,
+      requesterLeaveRequestId: leaveSwaps.requesterLeaveRequestId,
+      targetEmployeeId: leaveSwaps.targetEmployeeId,
+      targetLeaveRequestId: leaveSwaps.targetLeaveRequestId,
+      requesterProposedFrom: leaveSwaps.requesterProposedFrom,
+      requesterProposedTo: leaveSwaps.requesterProposedTo,
+      targetProposedFrom: leaveSwaps.targetProposedFrom,
+      targetProposedTo: leaveSwaps.targetProposedTo,
+      status: leaveSwaps.status,
+      peerConfirmedBy: leaveSwaps.peerConfirmedBy,
+      peerConfirmedAt: leaveSwaps.peerConfirmedAt,
+      approvedBy: leaveSwaps.approvedBy,
+      approvedAt: leaveSwaps.approvedAt,
+      rejectedBy: leaveSwaps.rejectedBy,
+      rejectedAt: leaveSwaps.rejectedAt,
+      rejectionReason: leaveSwaps.rejectionReason,
+    })
+    .from(leaveSwaps)
+    .where(eq(leaveSwaps.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function listLeaveSwapsRepo(p: ListLeaveSwapParams) {
+  const requester = alias(employees, 'leave_swap_requester');
+  const target = alias(employees, 'leave_swap_target');
+
+  const where = [
+    eq(leaveSwaps.companyId, p.companyId),
+    ...(p.employeeId
+      ? [
+          or(
+            eq(leaveSwaps.requesterEmployeeId, p.employeeId),
+            eq(leaveSwaps.targetEmployeeId, p.employeeId),
+          )!,
+        ]
+      : []),
+    ...(p.status !== null && p.status !== undefined ? [eq(leaveSwaps.status, p.status)] : []),
+    ...(p.from ? [gte(leaveSwaps.createdAt, p.from)] : []),
+    ...(p.to ? [lte(leaveSwaps.createdAt, p.to)] : []),
+  ];
+
+  const [countRow] = await db
+    .select({ c: count() })
+    .from(leaveSwaps)
+    .where(and(...where));
+
+  const data = await db
+    .select({
+      id: leaveSwaps.id,
+      companyId: leaveSwaps.companyId,
+      requesterEmployeeId: leaveSwaps.requesterEmployeeId,
+      requesterEmployeeName: requester.displayName,
+      requesterLeaveRequestId: leaveSwaps.requesterLeaveRequestId,
+      targetEmployeeId: leaveSwaps.targetEmployeeId,
+      targetEmployeeName: target.displayName,
+      targetLeaveRequestId: leaveSwaps.targetLeaveRequestId,
+      requesterOriginalFrom: leaveSwaps.requesterOriginalFrom,
+      requesterOriginalTo: leaveSwaps.requesterOriginalTo,
+      targetOriginalFrom: leaveSwaps.targetOriginalFrom,
+      targetOriginalTo: leaveSwaps.targetOriginalTo,
+      requesterProposedFrom: leaveSwaps.requesterProposedFrom,
+      requesterProposedTo: leaveSwaps.requesterProposedTo,
+      targetProposedFrom: leaveSwaps.targetProposedFrom,
+      targetProposedTo: leaveSwaps.targetProposedTo,
+      status: leaveSwaps.status,
+      peerConfirmedBy: leaveSwaps.peerConfirmedBy,
+      peerConfirmedAt: leaveSwaps.peerConfirmedAt,
+      approvedBy: leaveSwaps.approvedBy,
+      approvedAt: leaveSwaps.approvedAt,
+      rejectedBy: leaveSwaps.rejectedBy,
+      rejectedAt: leaveSwaps.rejectedAt,
+      rejectionReason: leaveSwaps.rejectionReason,
+      createdBy: leaveSwaps.createdBy,
+      createdAt: leaveSwaps.createdAt,
+      updatedAt: leaveSwaps.updatedAt,
+    })
+    .from(leaveSwaps)
+    .leftJoin(requester, eq(requester.id, leaveSwaps.requesterEmployeeId))
+    .leftJoin(target, eq(target.id, leaveSwaps.targetEmployeeId))
+    .where(and(...where))
+    .orderBy(desc(leaveSwaps.createdAt), asc(leaveSwaps.id))
+    .limit(p.limit)
+    .offset(p.offset);
+
+  return { data, totalRecords: Number((countRow?.c as unknown as bigint) ?? 0n) };
+}
+
+export async function updateLeaveSwapRepo(
+  id: string,
+  patch: Partial<typeof leaveSwaps.$inferInsert>,
+) {
+  const [row] = await db
+    .update(leaveSwaps)
+    .set(patch)
+    .where(eq(leaveSwaps.id, id))
+    .returning({ id: leaveSwaps.id });
+  return row ?? null;
+}
+
+export async function executeLeaveSwapRepo(input: {
+  swapId: string;
+  requesterLeaveRequestId: string;
+  targetLeaveRequestId: string;
+  requesterProposedFrom: Date;
+  requesterProposedTo: Date;
+  targetProposedFrom: Date;
+  targetProposedTo: Date;
+  approvedBy: string;
+  approvedAt: Date;
+}) {
+  return db.transaction(async (tx) => {
+    await tx
+      .update(leaveRequests)
+      .set({
+        dateFrom: input.requesterProposedFrom,
+        dateTo: input.requesterProposedTo,
+        daysCount:
+          Math.round(
+            (input.requesterProposedTo.getTime() - input.requesterProposedFrom.getTime()) /
+              86400000,
+          ) + 1,
+        selectionMode: 0,
+        weekStartDate: null,
+        weekCount: null,
+      })
+      .where(eq(leaveRequests.id, input.requesterLeaveRequestId));
+
+    await tx
+      .update(leaveRequests)
+      .set({
+        dateFrom: input.targetProposedFrom,
+        dateTo: input.targetProposedTo,
+        daysCount:
+          Math.round(
+            (input.targetProposedTo.getTime() - input.targetProposedFrom.getTime()) / 86400000,
+          ) + 1,
+        selectionMode: 0,
+        weekStartDate: null,
+        weekCount: null,
+      })
+      .where(eq(leaveRequests.id, input.targetLeaveRequestId));
+
+    const [row] = await tx
+      .update(leaveSwaps)
+      .set({
+        status: 5,
+        approvedBy: input.approvedBy,
+        approvedAt: input.approvedAt,
+        updatedAt: input.approvedAt,
+      })
+      .where(eq(leaveSwaps.id, input.swapId))
+      .returning({ id: leaveSwaps.id });
+    return row ?? null;
+  });
 }
 
 export async function getPaidLeaveSummariesRepo(input: {
@@ -687,6 +1186,34 @@ export async function getPaidLeaveSummariesRepo(input: {
   return daysByEmployeeId;
 }
 
+export async function getEmployeeBookedLeaveDaysRepo(input: {
+  companyId: string;
+  employeeId: string;
+  from: Date;
+  to: Date;
+  excludeLeaveRequestIds?: string[];
+}) {
+  const [row] = await db
+    .select({
+      totalDays: sql<number>`COALESCE(SUM(${leaveRequests.daysCount}), 0)`,
+    })
+    .from(leaveRequests)
+    .where(
+      and(
+        eq(leaveRequests.companyId, input.companyId),
+        eq(leaveRequests.employeeId, input.employeeId),
+        inArray(leaveRequests.status, [0, 1]),
+        lte(leaveRequests.dateFrom, input.to),
+        gte(leaveRequests.dateTo, input.from),
+        ...(input.excludeLeaveRequestIds?.length
+          ? [not(inArray(leaveRequests.id, input.excludeLeaveRequestIds))]
+          : []),
+      ),
+    );
+
+  return Number(row?.totalDays ?? 0);
+}
+
 export async function updateEmployeeHasUserAccountRepo(id: string, hasUserAccount: boolean) {
   const [row] = await db
     .update(employees)
@@ -707,7 +1234,13 @@ export async function getDepartmentRepo(id: string) {
 
 export async function getJobTitleRepo(id: string) {
   const [row] = await db
-    .select({ id: jobTitles.id, companyId: jobTitles.companyId, name: jobTitles.name })
+    .select({
+      id: jobTitles.id,
+      companyId: jobTitles.companyId,
+      departmentId: jobTitles.departmentId,
+      name: jobTitles.name,
+      defaultLeaveDays: jobTitles.defaultLeaveDays,
+    })
     .from(jobTitles)
     .where(eq(jobTitles.id, id))
     .limit(1);

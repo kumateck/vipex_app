@@ -1,18 +1,15 @@
-import { randomBytes } from 'node:crypto';
 import { hashPassword, verifyPassword } from '../../utils/password';
 import { signAccessToken } from '../../utils/jwt';
 import {
-  findPasswordResetRepo,
   findRefreshTokenRepo,
   getUserByEmailRepo,
   getUserByIdRepo,
-  insertPasswordResetRepo,
   insertRefreshTokenRepo,
   listRolePermissionKeysRepo,
-  markPasswordResetUsedRepo,
   revokeAllUserTokensRepo,
   revokeRefreshTokenRepo,
   rotateRefreshTokenRepo,
+  updateCurrentUserProfileRepo,
   updateUserPasswordRepo,
 } from './repository';
 import { env } from '../../utils/env';
@@ -21,45 +18,37 @@ import { sendPasswordResetEmail } from '@/server/services/mail/templates/passwor
 import { UserStatus } from '@/db/schemas/enums';
 import { HttpError } from '@/server/utils/http-error';
 import { HttpStatus } from '@/server/utils/http-status';
-import { PermissionCatalog } from '@/shared/permissions/constants';
+import { logger } from '@/server/utils/logger';
+import { generateOpaqueToken, generateOtpCode, hashOtp, sha256HexAsync } from '@/server/utils/otp';
+import {
+  clearUserResetTokenRepo,
+  findUserByEmailAndResetTokenRepo,
+  setPasswordAndActivateUserRepo,
+  setUserResetTokenRepo,
+} from './repository.tokens';
 
-async function sha256HexAsync(input: string): Promise<string> {
-  const enc = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
 }
 
-function generateOpaqueToken(bytes = 32): string {
-  return randomBytes(bytes).toString('hex'); // 64 hex chars
+async function hashEmailOtp(email: string, otp: string) {
+  return hashOtp(normalizeEmail(email), otp);
 }
 
 export async function loginSvc(email: string, password: string, ua?: string, ip?: string) {
   const user = await getUserByEmailRepo(email);
   if (!user || user === null) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
+  if (user.status === UserStatus.INVITED) {
+    throw new HttpError(
+      HttpStatus.FORBIDDEN,
+      'Account setup pending. Use your invite OTP on the Set Password page.',
+    );
+  }
   if (user.status && user.status !== UserStatus.ACTIVE)
     throw new HttpError(HttpStatus.FORBIDDEN, 'Account disabled');
   const ok = await verifyPassword(password, user?.password);
   if (!ok) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
   const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
-  const resolvedPermissionKeys =
-    permissionKeys.length > 0
-      ? permissionKeys
-      : PermissionCatalog.map((permission) => permission.key);
-  const payload = {
-    sub: user.id,
-    email: user.email,
-    employeeId: user.employeeId ?? null,
-    roleId: user.roleId ?? null,
-    companyId: user.companyId ?? null,
-    branchId: user.branchId ?? null,
-    branchType: user.branch?.type ?? null,
-    locationId: user.locationId ?? null,
-    userType: user.userType ?? null,
-    permissions: resolvedPermissionKeys,
-  };
-  const accessToken = await signAccessToken(payload);
   const refreshPlain = generateOpaqueToken(32);
   const refreshHash = await sha256HexAsync(refreshPlain);
   const refreshExpSec = parseDurationToSeconds(env.JWT_REFRESH_EXPIRES);
@@ -69,8 +58,26 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
     userId: user.id,
     tokenHash: refreshHash,
     expiresAt: refreshExpiresAt,
+    permissionsSnapshot: permissionKeys,
     userAgent: ua,
     ip,
+  });
+
+  const persistedRefresh = await findRefreshTokenRepo(refreshHash);
+  if (!persistedRefresh) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
+
+  const accessToken = await signAccessToken({
+    sub: user.id,
+    sid: persistedRefresh.id,
+    email: user.email,
+    employeeId: user.employeeId ?? null,
+    roleId: user.roleId ?? null,
+    companyId: user.companyId ?? null,
+    branchId: user.branchId ?? null,
+    branchType: user.branch?.type ?? null,
+    locationId: user.locationId ?? null,
+    userType: user.userType ?? null,
+    cashierType: user.cashierType ?? null,
   });
   return {
     tokens: { accessToken, refreshToken: refreshPlain },
@@ -86,7 +93,8 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
       locationId: user.locationId ?? null,
       locationName: user.location?.name ?? null,
       userType: user.userType ?? null,
-      permissions: resolvedPermissionKeys,
+      cashierType: user.cashierType ?? null,
+      permissions: permissionKeys,
     },
   };
 }
@@ -101,21 +109,24 @@ export async function refreshSvc(refreshToken: string) {
 
   const user = await getUserByIdRepo(current.userId);
   if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
-  const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
-  const resolvedPermissionKeys =
-    permissionKeys.length > 0
-      ? permissionKeys
-      : PermissionCatalog.map((permission) => permission.key);
+  const permissionKeys =
+    Array.isArray(current.permissionsSnapshot) && current.permissionsSnapshot.length > 0
+      ? current.permissionsSnapshot
+      : await listRolePermissionKeysRepo(user.roleId, user.companyId);
 
   // Rotate
   const nextPlain = generateOpaqueToken(32);
   const nextHash = await sha256HexAsync(nextPlain);
   const refreshExpSec = parseDurationToSeconds(env.JWT_REFRESH_EXPIRES);
   const nextExpiresAt = new Date(Date.now() + refreshExpSec * 1000);
-  await rotateRefreshTokenRepo(hash, nextHash, nextExpiresAt);
+  await rotateRefreshTokenRepo(hash, nextHash, nextExpiresAt, permissionKeys);
+
+  const nextRefresh = await findRefreshTokenRepo(nextHash);
+  if (!nextRefresh) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
 
   const accessToken = await signAccessToken({
     sub: user.id,
+    sid: nextRefresh.id,
     email: user.email,
     employeeId: user.employeeId ?? null,
     roleId: user.roleId ?? null,
@@ -124,7 +135,7 @@ export async function refreshSvc(refreshToken: string) {
     branchType: user.branch?.type ?? null,
     locationId: user.locationId ?? null,
     userType: user.userType ?? null,
-    permissions: resolvedPermissionKeys,
+    cashierType: user.cashierType ?? null,
   });
 
   return {
@@ -142,7 +153,8 @@ export async function refreshSvc(refreshToken: string) {
       locationId: user.locationId ?? null,
       locationName: user.location?.name ?? null,
       userType: user.userType ?? null,
-      permissions: resolvedPermissionKeys,
+      cashierType: user.cashierType ?? null,
+      permissions: permissionKeys,
     },
   };
 }
@@ -155,64 +167,69 @@ export async function logoutSvc(refreshToken: string) {
   }
 }
 
-// export async function forgotPasswordSvc(email: string) {
-//   const user = await getUserByEmailRepo(email);
-//   // Always respond success to avoid user enumeration
-//   if (!user) return;
-
-//   const tokenPlain = generateOpaqueToken(32);
-//   const tokenHash = await sha256HexAsync(tokenPlain);
-//   const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-
-//   await insertPasswordResetRepo({ userId: user.id, tokenHash, expiresAt });
-
-//   // Send email with token link
-//   const resetUrl = `${
-//     process.env.APP_BASE_URL || 'http://localhost:3000'
-//   }/reset-password?token=${tokenPlain}`;
-//   // Replace with real mailer integration later
-//   console.log(`Password reset link for ${email}: ${resetUrl}`);
-// }
-
 export async function forgotPasswordSvc(email: string) {
-  const user = await getUserByEmailRepo(email);
+  const normalizedEmail = normalizeEmail(email);
+  logger.info('[AUTH_FORGOT] request received', { email: normalizedEmail });
+  const user = await getUserByEmailRepo(normalizedEmail);
 
   // Always respond success to avoid user enumeration
-  if (!user) return;
+  if (!user) {
+    logger.info('[AUTH_FORGOT] user not found, skipping email send', { email: normalizedEmail });
+    return;
+  }
 
-  const tokenPlain = randomBytes(32).toString('hex');
-  const enc = new TextEncoder().encode(tokenPlain);
-  const digest = await crypto.subtle.digest('SHA-256', enc);
-  const tokenHash = Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-  await insertPasswordResetRepo({ userId: user.id, tokenHash, expiresAt });
-
-  const resetUrl = `${env.APP_BASE_URL}/reset-password?token=${tokenPlain}`;
+  const otp = generateOtpCode();
+  const tokenHash = await hashEmailOtp(normalizedEmail, otp);
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+  await setUserResetTokenRepo({ userId: user.id, tokenHash, expiresAt });
+  logger.info('[AUTH_FORGOT] reset token stored', { userId: user.id, email: normalizedEmail });
 
   try {
-    await sendPasswordResetEmail(user.email, resetUrl);
+    logger.info('[AUTH_FORGOT] attempting email send', { userId: user.id, to: user.email });
+    await sendPasswordResetEmail(user.email, otp);
+    logger.info('[AUTH_FORGOT] email send completed', { userId: user.id, to: user.email });
   } catch (err) {
     // Do not leak details to the client; log for operators
     console.error('Failed to send password reset email:', err);
+    logger.error('[AUTH_FORGOT] email send failed', {
+      userId: user.id,
+      to: user.email,
+      error: err instanceof Error ? err.message : String(err),
+    });
     // You can also capture with Sentry here if desired
     // Sentry.captureException(err);
   }
 }
-export async function resetPasswordSvc(token: string, newPassword: string) {
-  const tokenHash = await sha256HexAsync(token);
-  const record = await findPasswordResetRepo(tokenHash);
-  if (!record) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid token');
-  if (record.usedAt) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token already used');
-  if (record.expiresAt.getTime() <= Date.now())
-    throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token expired');
+export async function resetPasswordSvc(email: string, otp: string, newPassword: string) {
+  const normalizedEmail = normalizeEmail(email);
+  const tokenHash = await hashEmailOtp(normalizedEmail, otp);
+  const user = await findUserByEmailAndResetTokenRepo(normalizedEmail, tokenHash);
+  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid or expired OTP');
+  if (user.status === UserStatus.INVITED) {
+    throw new HttpError(
+      HttpStatus.BAD_REQUEST,
+      'This OTP is for account setup. Please use Set Password.',
+    );
+  }
+  const passwordHash = await hashPassword(newPassword);
+  await updateUserPasswordRepo(user.id, passwordHash);
+  await clearUserResetTokenRepo(user.id);
+  await revokeAllUserTokensRepo(user.id);
+}
+
+export async function setPasswordSvc(email: string, otp: string, newPassword: string) {
+  const normalizedEmail = normalizeEmail(email);
+  const tokenHash = await hashEmailOtp(normalizedEmail, otp);
+  const user = await findUserByEmailAndResetTokenRepo(normalizedEmail, tokenHash);
+  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid or expired OTP');
+  if (user.status !== UserStatus.INVITED) {
+    throw new HttpError(HttpStatus.BAD_REQUEST, 'User is not in invited state');
+  }
 
   const passwordHash = await hashPassword(newPassword);
-  await updateUserPasswordRepo(record.userId, passwordHash);
-  await markPasswordResetUsedRepo(tokenHash);
-  await revokeAllUserTokensRepo(record.userId);
+  await setPasswordAndActivateUserRepo({ userId: user.id, passwordHash, setActiveIfInvited: true });
+  await clearUserResetTokenRepo(user.id);
+  await revokeAllUserTokensRepo(user.id);
 }
 
 export async function changePasswordSvc(userId: string, oldPassword: string, newPassword: string) {
@@ -227,18 +244,74 @@ export async function changePasswordSvc(userId: string, oldPassword: string, new
   await revokeAllUserTokensRepo(user.id);
 }
 
+export async function verifyCurrentUserPasswordSvc(userId: string, password: string) {
+  const user = await getUserByIdRepo(userId);
+  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
+
+  const ok = await verifyPassword(password, user.password);
+  if (!ok) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid password');
+
+  return { success: true };
+}
+
 export async function getCurrentUserPermissionsSvc(userId: string) {
   const user = await getUserByIdRepo(userId);
   if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
 
   const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
-  const allPermissions =
-    permissionKeys.length > 0
-      ? permissionKeys
-      : PermissionCatalog.map((permission) => permission.key);
+  const allPermissions = permissionKeys;
   const readOnlyPermissions = allPermissions.filter((permission) =>
     /^Can(Read|List|Get)/.test(permission),
   );
 
   return { allPermissions, readOnlyPermissions };
+}
+
+export async function getCurrentUserProfileSvc(userId: string) {
+  const user = await getUserByIdRepo(userId);
+  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
+
+  return {
+    id: user.id,
+    fullname: user.fullname,
+    email: user.email,
+    telephone: user.telephone,
+    employeeId: user.employeeId ?? null,
+    role: user.role ?? null,
+    branch: user.branch ?? null,
+    company: user.company ?? null,
+    location: user.location ?? null,
+    locationId: user.locationId ?? null,
+    locationName: user.location?.name ?? null,
+    userType: user.userType ?? null,
+    cashierType: user.cashierType ?? null,
+  };
+}
+
+export async function updateCurrentUserProfileSvc(
+  userId: string,
+  patch: { fullname?: string; telephone?: string },
+) {
+  const updates: { fullname?: string; telephone?: string } = {};
+
+  if (patch.fullname !== undefined) {
+    const fullname = patch.fullname.trim();
+    if (!fullname) throw new HttpError(HttpStatus.BAD_REQUEST, 'Full name is required');
+    updates.fullname = fullname;
+  }
+
+  if (patch.telephone !== undefined) {
+    const telephone = patch.telephone.trim();
+    if (!telephone) throw new HttpError(HttpStatus.BAD_REQUEST, 'Telephone is required');
+    updates.telephone = telephone;
+  }
+
+  if (!Object.keys(updates).length) {
+    throw new HttpError(HttpStatus.BAD_REQUEST, 'No profile fields provided');
+  }
+
+  const updated = await updateCurrentUserProfileRepo(userId, updates);
+  if (!updated) throw new HttpError(HttpStatus.UNAUTHORIZED, 'User not found');
+
+  return getCurrentUserProfileSvc(userId);
 }

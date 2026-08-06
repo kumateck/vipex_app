@@ -1,0 +1,101 @@
+import { useMemo } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
+import { EllipsisVertical } from 'lucide-react';
+import { DataTable } from '@/components/datatable';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import type { RiderDoorstepRecord } from '../../api/parcel.api';
+
+type RiderCurrentTableProps = {
+  data:
+    | {
+        rows: RiderDoorstepRecord[];
+        totals: { expectedDeliveryFeePsw: number; expectedToBePaidPsw: number };
+      }
+    | undefined;
+  isReturning: boolean;
+  onOpenDeliveryDetails: (row: RiderDoorstepRecord) => void;
+  onReturn: (row: RiderDoorstepRecord) => Promise<void>;
+};
+
+export function RiderCurrentTable({
+  data,
+  isReturning,
+  onOpenDeliveryDetails,
+  onReturn,
+}: RiderCurrentTableProps) {
+  const columns = useMemo<ColumnDef<RiderDoorstepRecord>[]>(
+    () => [
+      { accessorKey: 'trackingCode', header: 'Tracking' },
+      { accessorKey: 'bookingCode', header: 'Booking' },
+      { accessorKey: 'parcelDetails', header: 'Parcel Details' },
+      {
+        id: 'receiver',
+        header: 'Receiver',
+        accessorFn: (row) =>
+          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+      },
+      {
+        id: 'action',
+        header: 'Action',
+        cell: ({ row }) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="outline" className="h-8 w-8" disabled={isReturning}>
+                <EllipsisVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onOpenDeliveryDetails(row.original)}>
+                Delivery Details
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void onReturn(row.original)}>
+                Return
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
+      },
+    ],
+    [isReturning, onOpenDeliveryDetails, onReturn],
+  );
+
+  return (
+    <ScrollableWrapper>
+      <Card>
+        <CardHeader>
+          <CardTitle>Rider Current Deliveries</CardTitle>
+          <CardDescription>
+            Current dispatched parcels assigned to you. Confirm signature on handover.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2 text-sm">
+            <p>
+              <strong>Expected Delivery Fee:</strong> GHS{' '}
+              {((data?.totals.expectedDeliveryFeePsw ?? 0) / 100).toFixed(2)}
+            </p>
+            <p>
+              <strong>Expected To Be Paid:</strong> GHS{' '}
+              {((data?.totals.expectedToBePaidPsw ?? 0) / 100).toFixed(2)}
+            </p>
+          </div>
+          <DataTable
+            mode="client"
+            data={data?.rows ?? []}
+            columns={columns}
+            loading={false}
+            enableVirtualization={false}
+          />
+        </CardContent>
+      </Card>
+    </ScrollableWrapper>
+  );
+}

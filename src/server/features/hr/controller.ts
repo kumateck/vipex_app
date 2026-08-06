@@ -4,28 +4,38 @@ import {
   checkInAttendanceSvc,
   checkOutAttendanceSvc,
   createDepartmentSvc,
+  createEmployeeFromUserSvc,
   createEmployeeSvc,
   createEmployeeUserAccountSvc,
   createJobTitleSvc,
   createLeaveRequestSvc,
+  createLeaveSwapSvc,
   createLeaveTypeSvc,
   getEmployeeSvc,
   listDepartmentOptionsSvc,
   listDepartmentsSvc,
   listAttendanceSvc,
   listEmployeesSvc,
+  listEmployeeOptionsSvc,
   listJobTitleOptionsSvc,
   listJobTitlesSvc,
   listLeaveRequestsSvc,
+  listLeaveCalendarSvc,
+  listLeaveSwapsSvc,
   listLeaveTypeOptionsSvc,
   listLeaveTypesSvc,
+  linkEmployeeUserSvc,
   approveLeaveRequestSvc,
   approveLeaveRequestByManagerSvc,
   rejectLeaveRequestSvc,
   rejectLeaveRequestByManagerSvc,
+  rejectLeaveSwapSvc,
+  confirmLeaveSwapSvc,
+  approveLeaveSwapSvc,
   updateDepartmentSvc,
   updateEmployeeSvc,
   updateJobTitleSvc,
+  updateLeaveRequestSvc,
 } from './service';
 
 export async function listDepartmentsCtrl(
@@ -143,6 +153,8 @@ export async function listEmployeesCtrl(
     companyId: string;
     branchId?: string | null;
     departmentId?: string | null;
+    jobTitleId?: string | null;
+    officerEmployeeId?: string | null;
     status?: number | null;
   }>,
 ) {
@@ -153,6 +165,8 @@ export async function listEmployeesCtrl(
     companyId: q.filters!.companyId,
     branchId: q.filters?.branchId ?? null,
     departmentId: q.filters?.departmentId ?? null,
+    jobTitleId: q.filters?.jobTitleId ?? null,
+    officerEmployeeId: q.filters?.officerEmployeeId ?? null,
     status: q.filters?.status ?? null,
     search: pagination.search ?? null,
     sort: pagination.sort ?? null,
@@ -168,12 +182,35 @@ export async function listEmployeesCtrl(
   };
 }
 
+export async function listEmployeeOptionsCtrl(input: {
+  companyId: string;
+  branchId?: string | null;
+  departmentId?: string | null;
+  jobTitleId?: string | null;
+  officerEmployeeId?: string | null;
+  status?: number | null;
+  search?: string | null;
+  unlinkedOnly?: boolean;
+}) {
+  return listEmployeeOptionsSvc(input);
+}
+
 export async function getEmployeeCtrl(id: string) {
   return getEmployeeSvc(id);
 }
 
 export async function createEmployeeCtrl(input: Parameters<typeof createEmployeeSvc>[0]) {
   return createEmployeeSvc(input);
+}
+
+export async function createEmployeeFromUserCtrl(
+  input: Parameters<typeof createEmployeeFromUserSvc>[0],
+) {
+  return createEmployeeFromUserSvc(input);
+}
+
+export async function linkEmployeeUserCtrl(input: Parameters<typeof linkEmployeeUserSvc>[0]) {
+  return linkEmployeeUserSvc(input);
 }
 
 export async function updateEmployeeCtrl(
@@ -226,6 +263,7 @@ export async function listLeaveRequestsCtrl(
   q: PaginationRequestDto<{
     companyId: string;
     employeeId?: string | null;
+    leaveTypeId?: string | null;
     status?: number | null;
   }>,
 ) {
@@ -235,7 +273,10 @@ export async function listLeaveRequestsCtrl(
     offset: pagination.offset,
     companyId: q.filters!.companyId,
     employeeId: q.filters?.employeeId ?? null,
+    leaveTypeId: q.filters?.leaveTypeId ?? null,
     status: q.filters?.status ?? null,
+    dateFrom: q.dateFrom ? new Date(q.dateFrom) : null,
+    dateTo: q.dateTo ? new Date(q.dateTo) : null,
   });
 
   return {
@@ -248,8 +289,71 @@ export async function listLeaveRequestsCtrl(
   };
 }
 
+export async function listLeaveCalendarCtrl(input: {
+  companyId: string;
+  from: Date;
+  to: Date;
+  employeeId?: string | null;
+  status?: number | null;
+  branchId?: string | null;
+  departmentId?: string | null;
+}) {
+  return listLeaveCalendarSvc(input);
+}
+
 export async function createLeaveRequestCtrl(input: Parameters<typeof createLeaveRequestSvc>[0]) {
   return createLeaveRequestSvc(input);
+}
+
+export async function updateLeaveRequestCtrl(
+  id: string,
+  companyId: string,
+  input: Parameters<typeof updateLeaveRequestSvc>[2],
+) {
+  return updateLeaveRequestSvc(id, companyId, input);
+}
+
+export async function createLeaveSwapCtrl(input: Parameters<typeof createLeaveSwapSvc>[0]) {
+  return createLeaveSwapSvc(input);
+}
+
+export async function listLeaveSwapsCtrl(
+  q: PaginationRequestDto<{
+    companyId: string;
+    employeeId?: string | null;
+    status?: number | null;
+  }>,
+) {
+  const pagination = normalizePagination(q, { pageSize: 20 });
+  const { data, totalRecords } = await listLeaveSwapsSvc({
+    companyId: q.filters!.companyId,
+    employeeId: q.filters?.employeeId ?? null,
+    status: q.filters?.status ?? null,
+    from: q.dateFrom ? new Date(q.dateFrom) : null,
+    to: q.dateTo ? new Date(q.dateTo) : null,
+    limit: pagination.pageSize,
+    offset: pagination.offset,
+  });
+  return {
+    data,
+    meta: buildPaginationMeta({
+      totalRecords,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+    }),
+  };
+}
+
+export async function confirmLeaveSwapCtrl(id: string, actorUserId: string) {
+  return confirmLeaveSwapSvc(id, actorUserId);
+}
+
+export async function approveLeaveSwapCtrl(id: string, actorUserId: string) {
+  return approveLeaveSwapSvc(id, actorUserId);
+}
+
+export async function rejectLeaveSwapCtrl(id: string, actorUserId: string, reason?: string | null) {
+  return rejectLeaveSwapSvc(id, actorUserId, reason);
 }
 
 export async function approveLeaveRequestCtrl(id: string, approvedBy: string) {

@@ -1,8 +1,15 @@
 import { useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useFindCustomersByTelephoneQuery } from '@/features/customers/api';
+import { PHONE_DIGITS, limitPhoneDigits, normalizePhoneDigits } from '@/lib/phone';
 import { useDebouncedValue } from '../hooks/use-debounced-value';
 
 type CustomerPhoneLookupFieldProps = {
@@ -24,8 +31,8 @@ export function CustomerPhoneLookupField({
   onSelectedCustomerIdChange,
   onFallbackNameChange,
 }: CustomerPhoneLookupFieldProps) {
-  const debouncedPhone = useDebouncedValue(phone, 3000);
-  const canLookup = debouncedPhone.trim().length >= 10;
+  const debouncedPhone = useDebouncedValue(normalizePhoneDigits(phone), 3000);
+  const canLookup = debouncedPhone.length === PHONE_DIGITS;
 
   const { data: customers = [], isFetching } = useFindCustomersByTelephoneQuery(
     { telephone: debouncedPhone, limit: 10 },
@@ -55,14 +62,20 @@ export function CustomerPhoneLookupField({
         <Label>{label} Telephone</Label>
         <Input
           value={phone}
-          onChange={(event) => onPhoneChange(event.target.value)}
+          onChange={(event) => onPhoneChange(limitPhoneDigits(event.target.value))}
           placeholder="0240000000"
           inputMode="numeric"
+          autoComplete="tel"
+          maxLength={PHONE_DIGITS}
         />
-        <p className="text-xs text-muted-foreground">Lookup starts after 3 seconds when 10+ digits are entered.</p>
+        <p className="text-xs text-muted-foreground">
+          Lookup starts after 3 seconds when exactly 10 digits are entered.
+        </p>
       </div>
 
-      {canLookup && isFetching ? <p className="text-xs text-muted-foreground">Searching customer records...</p> : null}
+      {canLookup && isFetching ? (
+        <p className="text-xs text-muted-foreground">Searching customer records...</p>
+      ) : null}
 
       {customers.length ? (
         <div className="space-y-2">
@@ -90,7 +103,9 @@ export function CustomerPhoneLookupField({
             onChange={(event) => onFallbackNameChange(event.target.value)}
             placeholder={`Enter ${label.toLowerCase()} fullname`}
           />
-          <p className="text-xs text-muted-foreground">No existing customer found. A new customer will be created on submit.</p>
+          <p className="text-xs text-muted-foreground">
+            No existing customer found. A new customer will be created on submit.
+          </p>
         </div>
       ) : null}
     </div>

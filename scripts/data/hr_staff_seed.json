@@ -1,0 +1,1682 @@
+[
+  {
+    "staffId": "VIP0001",
+    "name": "KINGSLEY AMISSAH",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0002",
+    "name": "OBED KWAKU ADU",
+    "branch": "ACCRA",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0003",
+    "name": "BERNICE KORANTENG",
+    "branch": "ACCRA",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0004",
+    "name": "EDWARD OBINIM",
+    "branch": "ACCRA",
+    "jobTitle": "FRONT DESK",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0005",
+    "name": "MUSTAPHA YAKUBU",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0007",
+    "name": "DEBORAH MENSAH",
+    "branch": "ACCRA",
+    "jobTitle": "FRONT DESK",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0008",
+    "name": "SAMUEL QUAINOO",
+    "branch": "KUMASI",
+    "jobTitle": "BRANCH MANAGER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0009",
+    "name": "FAUSTINA SACKEY",
+    "branch": "ACCRA",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0010",
+    "name": "ROBERT MENSAH",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0011",
+    "name": "ISAAC TAKYI",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0012",
+    "name": "DAN NYAME",
+    "branch": "KUMASI",
+    "jobTitle": "INTERCITY DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0013",
+    "name": "ISAAC AIDOO",
+    "branch": "SUNYANI",
+    "jobTitle": "BRANCH MANAGER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0014",
+    "name": "YVONNE AHMED",
+    "branch": "ACCRA",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0015",
+    "name": "ERNEST KOFI BOADI",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0016",
+    "name": "BECKY ARTHUR",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0017",
+    "name": "ILLIASU ABDUL- AZIZ",
+    "branch": "ACCRA",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0018",
+    "name": "GODWIN YETSOWODO",
+    "branch": "ACCRA",
+    "jobTitle": "SECURITY",
+    "reportingOfficerTitle": "SECURITY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0019",
+    "name": "ANITA BRAKO",
+    "branch": "ACCRA",
+    "jobTitle": "FRONT DESK SUPERVISORS",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0020",
+    "name": "JANET FRIMPONG",
+    "branch": "KUMASI",
+    "jobTitle": "ACCOUNT OFFICER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0021",
+    "name": "DERBIE ASANTE",
+    "branch": "ACCRA",
+    "jobTitle": "FRONT DESK",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0022",
+    "name": "RUKAYA ADAMS",
+    "branch": "ACCRA",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0023",
+    "name": "JACOB ARMAH",
+    "branch": "KUMASI",
+    "jobTitle": "ACTING TRANSPORT OFFICER",
+    "reportingOfficerTitle": "TRANSPORT MANAGER"
+  },
+  {
+    "staffId": "VIP0024",
+    "name": "FRANCIS  AYUUM",
+    "branch": "KUMASI",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0025",
+    "name": "GIFTY ADIDOH",
+    "branch": "ACCRA",
+    "jobTitle": "FRONT DESK SUPERVISORS",
+    "reportingOfficerTitle": "ASS. BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0026",
+    "name": "IRENE DARKEY MAKAFUI",
+    "branch": "ACCRA",
+    "jobTitle": "BRANCH STORES REP",
+    "reportingOfficerTitle": "STORES MANAGER"
+  },
+  {
+    "staffId": "VIP0027",
+    "name": "SANDRA ADJEI",
+    "branch": "ACCRA",
+    "jobTitle": "ASS BRANCH MANAGER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0028",
+    "name": "EMMANUEL KUMI OKYERE",
+    "branch": "ACCRA",
+    "jobTitle": "BRANCH MANAGER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0030",
+    "name": "EMMANUEL KONADU",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0031",
+    "name": "VERA SERWAA YEBOAH",
+    "branch": "KUMASI",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0032",
+    "name": "SHERIF AMANKWAH OBENG",
+    "branch": "KUMASI",
+    "jobTitle": "DELIVERY SUPERVISOR",
+    "reportingOfficerTitle": "DELIVERY MANAGER"
+  },
+  {
+    "staffId": "VIP0033",
+    "name": "PATIENCE AYAMA",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER-DELIVERY",
+    "reportingOfficerTitle": "DELIVERY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0034",
+    "name": "HECTORIA OPPONG",
+    "branch": "KUMASI",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0035",
+    "name": "PRISCILLA FOFIE",
+    "branch": "KUMASI",
+    "jobTitle": "FRONT DESK SUPERVISORS",
+    "reportingOfficerTitle": "ASS. BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0036",
+    "name": "OTIS OWUSU BOATENG",
+    "branch": "ACCRA",
+    "jobTitle": "SECURITY SUPERVISOR",
+    "reportingOfficerTitle": "HEAD OF SECURITY"
+  },
+  {
+    "staffId": "VIP0037",
+    "name": "EMMANUEL YAW AKAKPO",
+    "branch": "ACCRA",
+    "jobTitle": "FIELD LEADER",
+    "reportingOfficerTitle": "BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0038",
+    "name": "SARAHOOD ADJEI MENSAH",
+    "branch": "KUMASI",
+    "jobTitle": "CUSTOMER SERVICE SUPERVISOR",
+    "reportingOfficerTitle": "BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0039",
+    "name": "REAGAN PWAZAGAH",
+    "branch": "KUMASI",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0040",
+    "name": "WILLIAM SARPONG",
+    "branch": "ACCRA",
+    "jobTitle": "ESTATE & TRANSPORT MANAGER",
+    "reportingOfficerTitle": "OPERATIONS STRATEGIST"
+  },
+  {
+    "staffId": "VIP0041",
+    "name": "EVELYN OSEI",
+    "branch": "KUMASI",
+    "jobTitle": "FRONT DESK SUPERVISORS",
+    "reportingOfficerTitle": "ASS. BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0043",
+    "name": "MAVIS NABILA",
+    "branch": "KUMASI",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0044",
+    "name": "ABIGAIL ADOFO",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0045",
+    "name": "ABDUL RASHID MOHAMMED",
+    "branch": "KUMASI",
+    "jobTitle": "INTERCITY DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0046",
+    "name": "ELVIS AKWASI NIMO",
+    "branch": "KUMASI",
+    "jobTitle": "BRANCH MANAGER",
+    "reportingOfficerTitle": "OPERATIONS STRATEGIST"
+  },
+  {
+    "staffId": "VIP0047",
+    "name": "HAGAR ODURO",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0048",
+    "name": "EBENEZER KUFFOUR",
+    "branch": "KUMASI",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0049",
+    "name": "BENEDICTA AGYAPONG",
+    "branch": "KUMASI",
+    "jobTitle": "FRONT DESK SUPERVISORS",
+    "reportingOfficerTitle": "ASS. BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0050",
+    "name": "EUGENE OWUSU",
+    "branch": "KUMASI",
+    "jobTitle": "BRANCH MANAGER",
+    "reportingOfficerTitle": "OPERATIONS STRATEGIST"
+  },
+  {
+    "staffId": "VIP0051",
+    "name": "GIFTY ESSEL",
+    "branch": "KUMASI",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0052",
+    "name": "EMMANUEL ASIMENG",
+    "branch": "SUNYANI",
+    "jobTitle": "BRANCH MANAGER",
+    "reportingOfficerTitle": "OPERATIONS STRATEGIST"
+  },
+  {
+    "staffId": "VIP0053",
+    "name": "SAKINA MOHAMMED",
+    "branch": "KUMASI",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0054",
+    "name": "FRANK  OTENG-BONSU",
+    "branch": "KUMASI",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0057",
+    "name": "FRANK OKYERE MARFO",
+    "branch": "SUNYANI",
+    "jobTitle": "FIELD LEADER",
+    "reportingOfficerTitle": "BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0058",
+    "name": "VANESSAH OWUSU-ANSAH",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0059",
+    "name": "BEAUTY AMOAH",
+    "branch": "ACCRA",
+    "jobTitle": "FRONT DESK SUPERVISORS",
+    "reportingOfficerTitle": "ASS. BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0060",
+    "name": "EMMANUEL ADUSEI",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0061",
+    "name": "ERIC ADU ASARE",
+    "branch": "KUMASI",
+    "jobTitle": "BRANCH MANAGER",
+    "reportingOfficerTitle": "OPERATIONS STRATEGIST"
+  },
+  {
+    "staffId": "VIP0062",
+    "name": "VICTORIA ODURO",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0063",
+    "name": "ESTHER TWUM",
+    "branch": "ACCRA",
+    "jobTitle": "ACCOUNT OFFICER",
+    "reportingOfficerTitle": "FINANCIAL CONTROLLER"
+  },
+  {
+    "staffId": "VIP0064",
+    "name": "ERNEST PREMPEH AGYEMANG",
+    "branch": "SUNYANI",
+    "jobTitle": "FIELD LEADER",
+    "reportingOfficerTitle": "BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0065",
+    "name": "ABIGAIL ADU GYEBI",
+    "branch": "ACCRA",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0067",
+    "name": "ISAAC BAFFOUR ANANE",
+    "branch": "ACCRA",
+    "jobTitle": "BRANCH MANAGER",
+    "reportingOfficerTitle": "OPERATIONS STRATEGIST"
+  },
+  {
+    "staffId": "VIP0068",
+    "name": "JOSEPH ADJEI",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0069",
+    "name": "MICHAEL BARIMA KWANTWI",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0070",
+    "name": "ANGELA OSEI",
+    "branch": "KUMASI",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0071",
+    "name": "SHADRACK OPPONG",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0072",
+    "name": "EMMANUEL KOFI MENSAH",
+    "branch": "KUMASI",
+    "jobTitle": "DELIVERY SUPERVISOR",
+    "reportingOfficerTitle": "DELIVERY MANAGER"
+  },
+  {
+    "staffId": "VIP0073",
+    "name": "FRANCIS KWASI DWUMAH",
+    "branch": "KUMASI",
+    "jobTitle": "BRANCH MANAGER",
+    "reportingOfficerTitle": "OPERATIONS STRATEGIST"
+  },
+  {
+    "staffId": "VIP0074",
+    "name": "DANIEL OSEI",
+    "branch": "KUMASI",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0075",
+    "name": "ANDERSON DAVID OMONO-ASAMOAH",
+    "branch": "ACCRA",
+    "jobTitle": "SECURITY",
+    "reportingOfficerTitle": "SECURITY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0076",
+    "name": "ELLEN AMOAH",
+    "branch": "ACCRA",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0077",
+    "name": "DOROTHY DARKO SARPONG",
+    "branch": "ACCRA",
+    "jobTitle": "HEAD OF ACCOUNTS & STORES",
+    "reportingOfficerTitle": "OPERATIONS STRATEGIST"
+  },
+  {
+    "staffId": "VIP0078",
+    "name": "EMMANUEL  MENSAH OWUSU",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0079",
+    "name": "PORTIA AMPADU AMOAH",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0080",
+    "name": "PHILIP OSEI BONSU",
+    "branch": "KUMASI",
+    "jobTitle": "FINANCIAL CONTROLLER",
+    "reportingOfficerTitle": "OPERATIONS STRATEGIST"
+  },
+  {
+    "staffId": "VIP0081",
+    "name": "CHRISTIAN AGYEN FRIMPONG",
+    "branch": "KUMASI",
+    "jobTitle": "SECURITY",
+    "reportingOfficerTitle": "SECURITY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0083",
+    "name": "FORDJOUR AHMED",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0084",
+    "name": "YAW OSEI",
+    "branch": "KUMASI",
+    "jobTitle": "INTERCITY DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0085",
+    "name": "EVANS DANKWAH APPIAH",
+    "branch": "ACCRA",
+    "jobTitle": "FRONT DESK",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0086",
+    "name": "JULIANA ASANTE",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0088",
+    "name": "JOSEPH AFRIYIE",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0089",
+    "name": "COLLINS AFRIYIE",
+    "branch": "KUMASI",
+    "jobTitle": "FIELD LEADER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0090",
+    "name": "BENJAMIN ACHEAMPONG",
+    "branch": "KUMASI",
+    "jobTitle": "SECURITY",
+    "reportingOfficerTitle": "SECURITY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0091",
+    "name": "VERONICA BOATENG-FORKUO",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0092",
+    "name": "PRINCE KORANG AMANIAMPONG",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL AUDITOR",
+    "reportingOfficerTitle": "AUDIT MANAGER"
+  },
+  {
+    "staffId": "VIP0095",
+    "name": "EMELIA AKAMPUE",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0096",
+    "name": "LORD AGYEKUM",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0097",
+    "name": "RITA BOATENG",
+    "branch": "KUMASI",
+    "jobTitle": "ACCOUNT OFFICER",
+    "reportingOfficerTitle": "FINANCIAL CONTROLLER"
+  },
+  {
+    "staffId": "VIP0098",
+    "name": "CUTECY YAMOAH ARTHUR",
+    "branch": "KUMASI",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0099",
+    "name": "ISAAC OPOKU",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0100",
+    "name": "NANA AGYEMANG PREMPEH",
+    "branch": "ACCRA",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0101",
+    "name": "BLESSING SEYRAM KUDJAWU",
+    "branch": "SUNYANI",
+    "jobTitle": "ACCOUNT OFFICER",
+    "reportingOfficerTitle": "FINANCIAL CONTROLLER"
+  },
+  {
+    "staffId": "VIP0102",
+    "name": "MAMUDA ADAMU",
+    "branch": "KUMASI",
+    "jobTitle": "SECURITY",
+    "reportingOfficerTitle": "SECURITY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0103",
+    "name": "ALHASSAN GOYONDODO",
+    "branch": "KUMASI",
+    "jobTitle": "TRANSPORT OFFICER",
+    "reportingOfficerTitle": "TRANSPORT MANAGER"
+  },
+  {
+    "staffId": "VIP0104",
+    "name": "REBECCA AFIA WANA",
+    "branch": "KUMASI",
+    "jobTitle": "ASS BRANCH MANAGER",
+    "reportingOfficerTitle": "BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0105",
+    "name": "OPHELIA KYERAH",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0106",
+    "name": "GEORGINA ATTAA DUGBATEY",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0107",
+    "name": "JESSICA PEPRAH",
+    "branch": "KUMASI",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0108",
+    "name": "MOHAMMED ABUBAKARI",
+    "branch": "TAMALE",
+    "jobTitle": "ACCOUNT OFFICER",
+    "reportingOfficerTitle": "FINANCIAL CONTROLLER"
+  },
+  {
+    "staffId": "VIP0109",
+    "name": "HAIRIYA ABDALLAH",
+    "branch": "TAMALE",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0110",
+    "name": "ELIASU IBRAHIM",
+    "branch": "ACCRA",
+    "jobTitle": "FIELD LEADER",
+    "reportingOfficerTitle": "BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0111",
+    "name": "DAVID EWURA",
+    "branch": "TAMALE",
+    "jobTitle": "BRANCH MANAGER",
+    "reportingOfficerTitle": "OPERATIONS STRATEGIST"
+  },
+  {
+    "staffId": "VIP0113",
+    "name": "GORINAM JABITEE",
+    "branch": "KUMASI",
+    "jobTitle": "FRONT DESK",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0115",
+    "name": "WILLIAMS AWUNI",
+    "branch": "ACCRA",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0116",
+    "name": "CYNTHIA YEBOAH",
+    "branch": "KUMASI",
+    "jobTitle": "FRONT DESK",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0117",
+    "name": "WINDY KAWIRE",
+    "branch": "ACCRA",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0118",
+    "name": "MARIAM IBRAHIM",
+    "branch": "SUNYANI",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0119",
+    "name": "FREDA  BONSU",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0120",
+    "name": "ROBERT GYAMFI",
+    "branch": "ACCRA",
+    "jobTitle": "INTERNAL DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0121",
+    "name": "THOMAS OKUM",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0122",
+    "name": "GEORGE DANSO",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0123",
+    "name": "KINGSFORD AKOLOGO",
+    "branch": "SUNYANI",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0124",
+    "name": "DEGRAFT FORDJOUR",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0125",
+    "name": "LOUIS ODURO",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0126",
+    "name": "DIVINE ADJEI",
+    "branch": "SUNYANI",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0127",
+    "name": "JUSTICE AMPONSAH APPIAH",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0129",
+    "name": "AGNES POKUAA AMANKWAA",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0130",
+    "name": "PERPETUAL NKUMENI",
+    "branch": "ACCRA",
+    "jobTitle": "CUSTOMER SERVICE REP",
+    "reportingOfficerTitle": "CUSTOMER SERVICE SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0131",
+    "name": "GIFTY DEDE AGAMAH",
+    "branch": "ACCRA",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0132",
+    "name": "CHARLOTTE FOSUA",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0133",
+    "name": "LETICIA AMOH",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL AUDITOR",
+    "reportingOfficerTitle": "AUDIT MANAGER"
+  },
+  {
+    "staffId": "VIP0134",
+    "name": "ISAAC JABITE",
+    "branch": "ACCRA",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0135",
+    "name": "ALICE ANSAH",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0136",
+    "name": "OZIAS BONSU",
+    "branch": "KUMASI",
+    "jobTitle": "IT ADMIN",
+    "reportingOfficerTitle": "OPERATIONS STRATEGIST"
+  },
+  {
+    "staffId": "VIP0138",
+    "name": "ZENABU AWUDU",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0139",
+    "name": "EMMANUEL AMISSAH",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0142",
+    "name": "PATIENCE FRIMPONG",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0143",
+    "name": "BILAL ABDULAI",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0144",
+    "name": "BRIGHT ADENU",
+    "branch": "ACCRA",
+    "jobTitle": "ASS BRANCH MANAGER",
+    "reportingOfficerTitle": "BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0145",
+    "name": "MOHAMMED HABAB ABUKARI",
+    "branch": "ACCRA",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0146",
+    "name": "DANIELLA OPPONG",
+    "branch": "KUMASI",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0148",
+    "name": "BERNARD BOAKYE",
+    "branch": "KUMASI",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0150",
+    "name": "JOSEPH ASAMOAH",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0151",
+    "name": "JOSEPH GYAN OWUSU",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0152",
+    "name": "PRISCILLA AMOAKO",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0153",
+    "name": "SAMUEL MENSAH",
+    "branch": "KUMASI",
+    "jobTitle": "INTERCITY DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0154",
+    "name": "GRAFACE AMPONSAH ADU",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0155",
+    "name": "SETH NYAMEKYE",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0157",
+    "name": "MICHAEL AGYENIM-BOATENG",
+    "branch": "KUMASI",
+    "jobTitle": "IT OFFICER",
+    "reportingOfficerTitle": "IT ADMINISTRATOR"
+  },
+  {
+    "staffId": "VIP0158",
+    "name": "RACHEAL  KUBBY APPIAH",
+    "branch": "ACCRA",
+    "jobTitle": "ACCOUNT OFFICER",
+    "reportingOfficerTitle": "FINANCIAL CONTROLLER"
+  },
+  {
+    "staffId": "VIP0159",
+    "name": "MICHAEL KOJO ANTWI",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0163",
+    "name": "CYNTHIA BAWA",
+    "branch": "ACCRA",
+    "jobTitle": "CUSTOMER SERVICE REP",
+    "reportingOfficerTitle": "CUSTOMER SERVICE SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0164",
+    "name": "FRANCIS MAWORWI PUWURAYRE",
+    "branch": "ACCRA",
+    "jobTitle": "INTERNAL DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0165",
+    "name": "EMMANUEL OWUSU",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0166",
+    "name": "KELVIN BOADI",
+    "branch": "ACCRA",
+    "jobTitle": "FRONT DESK SUPERVISORS",
+    "reportingOfficerTitle": "ASS. BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0167",
+    "name": "LOUISA OPOKU-AGYEMAN",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0168",
+    "name": "SAMUEL NONGID",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0172",
+    "name": "MOSES ATUAH",
+    "branch": "KUMASI",
+    "jobTitle": "DISPATCH RIDER",
+    "reportingOfficerTitle": "DELIVERY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0173",
+    "name": "EMMANUEL OBIRI YEBOAH",
+    "branch": "KUMASI",
+    "jobTitle": "AUDIT MANAGER",
+    "reportingOfficerTitle": "OPERATIONS STRATEGIST"
+  },
+  {
+    "staffId": "VIP0174",
+    "name": "SANDY PREMPEH",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0175",
+    "name": "JANET BROWN",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0176",
+    "name": "JOSEPHINE GIFTY DORGYE",
+    "branch": "KUMASI",
+    "jobTitle": "ASS BRANCH MANAGER",
+    "reportingOfficerTitle": "DELIVERY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0177",
+    "name": "ROCKSON APAGANE",
+    "branch": "KUMASI",
+    "jobTitle": "DISPATCH RIDER",
+    "reportingOfficerTitle": "DELIVERY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0178",
+    "name": "ROBERT ATANGA",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0179",
+    "name": "PRINCE BOTCHWEY",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0180",
+    "name": "ERIC OPOKU",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0181",
+    "name": "IDDRISU SHAIBU",
+    "branch": "KUMASI",
+    "jobTitle": "DISPATCH RIDER",
+    "reportingOfficerTitle": "DELIVERY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0182",
+    "name": "JAMES SAKYI",
+    "branch": "ACCRA",
+    "jobTitle": "DISPATCH RIDER",
+    "reportingOfficerTitle": "DELIVERY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0183",
+    "name": "SELORM SOWAH LATSU",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0184",
+    "name": "BENJAMIN DANEKU",
+    "branch": "KUMASI",
+    "jobTitle": "DISPATCH RIDER",
+    "reportingOfficerTitle": "DELIVERY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0185",
+    "name": "FRANCIS NYARKO",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0187",
+    "name": "GODFRED  GYASI",
+    "branch": "ACCRA",
+    "jobTitle": "DELIVERY SUPERVISOR",
+    "reportingOfficerTitle": "DELIVERY MANAGER"
+  },
+  {
+    "staffId": "VIP0188",
+    "name": "PRISCILLA DOMSON",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0189",
+    "name": "PRISCILLA OSEI-BAFFOUR",
+    "branch": "ACCRA",
+    "jobTitle": "FRONT DESK",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0190",
+    "name": "MABEL ADJEIBEA OWUSU",
+    "branch": "ACCRA",
+    "jobTitle": "CUSTOMER SERVICE REP",
+    "reportingOfficerTitle": "CUSTOMER SERVICE SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0192",
+    "name": "COLLINS BOAMPONG AMANKWAH",
+    "branch": "SUNYANI",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0194",
+    "name": "FRANCIS ADU",
+    "branch": "ACCRA",
+    "jobTitle": "SECURITY",
+    "reportingOfficerTitle": "SECURITY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0195",
+    "name": "YAKUBU ISSAH",
+    "branch": "ACCRA",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0196",
+    "name": "ELLEN OFUMA",
+    "branch": "SUNYANI",
+    "jobTitle": "FRONT DESK",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0197",
+    "name": "AGYEI VICTOR",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0198",
+    "name": "MONICA SIVOTEY",
+    "branch": "SUNYANI",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0199",
+    "name": "BISMARK AKOMEAH",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0200",
+    "name": "BERNARD ATTAKORAH",
+    "branch": "KUMASI",
+    "jobTitle": "IT OFFICER",
+    "reportingOfficerTitle": "IT ADMINISTRATOR"
+  },
+  {
+    "staffId": "VIP0201",
+    "name": "EMMANUEL NYAME",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0203",
+    "name": "FRANCIS BOATENG",
+    "branch": "KUMASI",
+    "jobTitle": "MATE",
+    "reportingOfficerTitle": "DRIVERS"
+  },
+  {
+    "staffId": "VIP0204",
+    "name": "EMMANUELLA OSEI",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL AUDITOR",
+    "reportingOfficerTitle": "AUDIT MANAGER"
+  },
+  {
+    "staffId": "VIP0205",
+    "name": "EVELYN NKRUMAH",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0206",
+    "name": "CHARITY YEBOAH",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0207",
+    "name": "ZULAIHA SULEMAN",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0208",
+    "name": "EVELYN DUFIE NKRUMAH",
+    "branch": "KUMASI",
+    "jobTitle": "STORES MANAGER",
+    "reportingOfficerTitle": "HEAD OF STORES DEPARTMENT"
+  },
+  {
+    "staffId": "VIP0210",
+    "name": "YOUNG ISAAC TATSI",
+    "branch": "ACCRA",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0216",
+    "name": "CHRISTOPHER ADONTENGACHEAMPONG",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0217",
+    "name": "MICHAEL ASARE",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0218",
+    "name": "CHRISTIANA OSEI-BONSU",
+    "branch": "ACCRA",
+    "jobTitle": "FRONT DESK SUPERVISORS",
+    "reportingOfficerTitle": "ASS. BRANCH MANAGER"
+  },
+  {
+    "staffId": "VIP0219",
+    "name": "REUBEN NYEDEB",
+    "branch": "KUMASI",
+    "jobTitle": "SECURITY",
+    "reportingOfficerTitle": "SECURITY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0221",
+    "name": "CHRISTIAN OSEI OWUSU",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0222",
+    "name": "JUSTINA APOSEWENE ABULIKO",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0223",
+    "name": "EUGENE OTENG",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL AUDITOR",
+    "reportingOfficerTitle": "AUDIT MANAGER"
+  },
+  {
+    "staffId": "VIP0224",
+    "name": "NATHANIEL KYEREMATENG",
+    "branch": "ACCRA",
+    "jobTitle": "IT OFFICER",
+    "reportingOfficerTitle": "IT ADMINISTRATOR"
+  },
+  {
+    "staffId": "VIP0225",
+    "name": "EVANS ANKUTSEY",
+    "branch": "ACCRA",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0226",
+    "name": "GYAMFUA OPHELIA BOADI",
+    "branch": "KUMASI",
+    "jobTitle": "ACCOUNT OFFICER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0227",
+    "name": "DANIEL AMUZU",
+    "branch": "KUMASI",
+    "jobTitle": "MATE",
+    "reportingOfficerTitle": "DRIVERS"
+  },
+  {
+    "staffId": "VIP0230",
+    "name": "MILLS BOATENG",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0231",
+    "name": "PRINCE AGYEI",
+    "branch": "KUMASI",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0234",
+    "name": "JONES KWAKU AGYEMANG",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0235",
+    "name": "MAXWELL MENSAH",
+    "branch": "KUMASI",
+    "jobTitle": "MATE",
+    "reportingOfficerTitle": "DRIVERS"
+  },
+  {
+    "staffId": "VIP0236",
+    "name": "STEPHEN OWUSU AMANFO",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0239",
+    "name": "RICHARD ASANTE",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0242",
+    "name": "REGINA OPOKU YEBOAH",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0243",
+    "name": "JULIET DONKOR",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER-DELIVERY",
+    "reportingOfficerTitle": "DELIVERY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0244",
+    "name": "MABEL AKOTO SARFO",
+    "branch": "ACCRA",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0245",
+    "name": "JONES ADU GYAMFI",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0246",
+    "name": "JENNIFER OFORI",
+    "branch": "ACCRA",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0247",
+    "name": "GODFRED ACQUAH",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0248",
+    "name": "DIANA SARFOWAA",
+    "branch": "SUNYANI",
+    "jobTitle": "FRONT DESK",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0249",
+    "name": "MARK SACKITEY",
+    "branch": "ACCRA",
+    "jobTitle": "SECURITY",
+    "reportingOfficerTitle": "SECURITY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0251",
+    "name": "DESMOND GYASI OPPONG",
+    "branch": "ACCRA",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0253",
+    "name": "EUGENIA OHENEWAA ASIEDU APAU",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER-DELIVERY",
+    "reportingOfficerTitle": "DELIVERY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0254",
+    "name": "SOLOMON ODZI MENSAH",
+    "branch": "ACCRA",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0255",
+    "name": "YAW WIREDU",
+    "branch": "ACCRA",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0258",
+    "name": "FAUSTINA DUAH",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0259",
+    "name": "LILLY OSEI ASSIBEY",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0260",
+    "name": "RHODALINE NAADEI HAMMOND",
+    "branch": "ACCRA",
+    "jobTitle": "CUSTOMER SERVICE REP",
+    "reportingOfficerTitle": "CUSTOMER SERVICE SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0262",
+    "name": "ANITA ANANE",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0263",
+    "name": "DIVINE KENNETH OWUSU",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0264",
+    "name": "MARILYN ANIWAA DANKWAH",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0265",
+    "name": "PRISCILLA ADU-GYAMFI",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0266",
+    "name": "ABIGAIL FRIMPONG",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0267",
+    "name": "AFIA NYARKO ASABERE",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0268",
+    "name": "JEMIMA ARABA FORSON",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0269",
+    "name": "GEORGE ATOURA",
+    "branch": "KUMASI",
+    "jobTitle": "INTERCITY DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0271",
+    "name": "EMMANUEL KUSI",
+    "branch": "SUNYANI",
+    "jobTitle": "INTERCITY DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0272",
+    "name": "MARTIN N-YIRIPA",
+    "branch": "KUMASI",
+    "jobTitle": "DISPATCH RIDER",
+    "reportingOfficerTitle": "DELIVERY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0274",
+    "name": "DICKSON EGHAN",
+    "branch": "ACCRA",
+    "jobTitle": "SECURITY",
+    "reportingOfficerTitle": "SECURITY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0275",
+    "name": "ANTHONY OBENG",
+    "branch": "KUMASI",
+    "jobTitle": "INTERCITY DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0276",
+    "name": "AMADU YAUZA",
+    "branch": "Kumasi",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0277",
+    "name": "TRACY HANSEN-SACKEY",
+    "branch": "ACCRA",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0278",
+    "name": "STEPHEN BENTUM",
+    "branch": "ACCRA",
+    "jobTitle": "SECURITY",
+    "reportingOfficerTitle": "SECURITY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0279",
+    "name": "PORTIA TANDOH",
+    "branch": "KUMASI",
+    "jobTitle": "ADMINISTRATIVE OFFICER",
+    "reportingOfficerTitle": "OPERATION STRATEGIST"
+  },
+  {
+    "staffId": "VIP0280",
+    "name": "SYLVESTER OPOKU",
+    "branch": "KUMASI",
+    "jobTitle": "MATE",
+    "reportingOfficerTitle": "DRIVERS"
+  },
+  {
+    "staffId": "VIP0281",
+    "name": "MUSAH HABIBU",
+    "branch": "ACCRA",
+    "jobTitle": "DISPATCH RIDER",
+    "reportingOfficerTitle": "DELIVERY SUPERVISOR"
+  },
+  {
+    "staffId": "VIP0282",
+    "name": "GIDEON ADJEI BOAHEN",
+    "branch": "SUNYANI",
+    "jobTitle": "FIELD OFFICER",
+    "reportingOfficerTitle": "FIELD LEADER"
+  },
+  {
+    "staffId": "VIP0283",
+    "name": "OSCAR TETTEH MENSAH",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL AUDITOR",
+    "reportingOfficerTitle": "AUDIT MANAGER"
+  },
+  {
+    "staffId": "VIP0284",
+    "name": "BRUCE NTI AGYEN",
+    "branch": "KUMASI",
+    "jobTitle": "CASHIER",
+    "reportingOfficerTitle": "ACCOUNT OFFICER"
+  },
+  {
+    "staffId": "VIP0285",
+    "name": "MESHAK ANTWI",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0286",
+    "name": "ABIGAIL OWUSU BOATENG",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0287",
+    "name": "EMMANUEL NARH",
+    "branch": "KUMASI",
+    "jobTitle": "PARCEL OFFICER",
+    "reportingOfficerTitle": "SUPERVISORS"
+  },
+  {
+    "staffId": "VIP0288",
+    "name": "MOHAMMED ALHASSAN",
+    "branch": "KUMASI",
+    "jobTitle": "INTERCITY DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0289",
+    "name": "INUSAH KAMAL",
+    "branch": "KUMASI",
+    "jobTitle": "INTERNAL DRIVER",
+    "reportingOfficerTitle": "TRANSPORT OFFICER"
+  },
+  {
+    "staffId": "VIP0290",
+    "name": "CLEMENT AFFUL",
+    "branch": "ACCRA",
+    "jobTitle": "STORES OFFICER",
+    "reportingOfficerTitle": "BRANCH STORES REP"
+  },
+  {
+    "staffId": "VIP0291",
+    "name": "SAMUEL LOMOTEY",
+    "branch": "ACCRA",
+    "jobTitle": "STORES OFFICER",
+    "reportingOfficerTitle": "BRANCH STORES REP"
+  }
+]

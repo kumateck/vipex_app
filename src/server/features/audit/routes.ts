@@ -1,14 +1,10 @@
 import { Elysia, t } from 'elysia';
 import { PaginationRequestQueryProps, UUID } from '@/server/schemas/common';
-import {
-  authPlugin,
-  requireAnyPermissions,
-  requireAuth,
-  requirePermissions,
-} from '@/server/plugins/auth';
+import { authPlugin, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import {
   createAuditExportJobCtrl,
+  getAuditAnalyticsCtrl,
   getAuditLogCtrl,
   listAuditLogsCtrl,
   listEntityAuditHistoryCtrl,
@@ -52,6 +48,28 @@ export const auditRoutes = new Elysia({ name: 'audit' })
     },
   )
   .get(
+    '/analytics',
+    async ({ query, user }) => {
+      return getAuditAnalyticsCtrl({
+        companyId: user!.companyId!,
+        from: query.from ?? null,
+        to: query.to ?? null,
+      });
+    },
+    {
+      query: t.Object({
+        from: t.Optional(t.String({ format: 'date-time' })),
+        to: t.Optional(t.String({ format: 'date-time' })),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanListAuditLogs)],
+      detail: {
+        tags: ['Audit'],
+        summary: 'Get audit analytics summary',
+        operationId: 'getAuditAnalytics',
+      },
+    },
+  )
+  .get(
     '/logs/:id',
     async ({ params, user }) => {
       return getAuditLogCtrl(params.id, user!.companyId!);
@@ -84,13 +102,7 @@ export const auditRoutes = new Elysia({ name: 'audit' })
         from: t.Optional(t.String({ format: 'date-time' })),
         to: t.Optional(t.String({ format: 'date-time' })),
       }),
-      beforeHandle: [
-        requireAuth(),
-        requireAnyPermissions(
-          PermissionKeys.CanGetEntityAuditHistory,
-          PermissionKeys.CanManageAccountingSetup,
-        ),
-      ],
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanGetEntityAuditHistory)],
       detail: {
         tags: ['Audit'],
         summary: 'Get entity audit history',

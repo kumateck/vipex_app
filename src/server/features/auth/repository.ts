@@ -88,6 +88,7 @@ export async function insertRefreshTokenRepo(data: {
   userId: string;
   tokenHash: string;
   expiresAt: Date;
+  permissionsSnapshot: string[];
   userAgent?: string | null;
   ip?: string | null;
 }) {
@@ -95,6 +96,7 @@ export async function insertRefreshTokenRepo(data: {
     userId: data.userId,
     tokenHash: data.tokenHash,
     expiresAt: data.expiresAt,
+    permissionsSnapshot: data.permissionsSnapshot,
     userAgent: data.userAgent || null,
     ip: data.ip || null,
   });
@@ -109,10 +111,16 @@ export async function findRefreshTokenRepo(tokenHash: string) {
   return rt ?? null;
 }
 
+export async function findRefreshTokenByIdRepo(id: string) {
+  const [rt] = await db.select().from(refreshTokens).where(eq(refreshTokens.id, id)).limit(1);
+  return rt ?? null;
+}
+
 export async function rotateRefreshTokenRepo(
   prevHash: string,
   nextHash: string,
   nextExpires: Date,
+  permissionsSnapshot: string[],
 ) {
   // Mark previous as revoked and rotated, then insert new
   await db.transaction(async (tx) => {
@@ -130,6 +138,7 @@ export async function rotateRefreshTokenRepo(
         userId: prev[0]!.userId,
         tokenHash: nextHash,
         expiresAt: nextExpires,
+        permissionsSnapshot,
       });
     }
   });
@@ -179,4 +188,20 @@ export async function markPasswordResetUsedRepo(tokenHash: string) {
 
 export async function updateUserPasswordRepo(userId: string, passwordHash: string) {
   await db.update(users).set({ password: passwordHash }).where(eq(users.id, userId));
+}
+
+export async function updateCurrentUserProfileRepo(
+  userId: string,
+  patch: { fullname?: string; telephone?: string },
+) {
+  const [row] = await db
+    .update(users)
+    .set({
+      ...(patch.fullname !== undefined ? { fullname: patch.fullname } : {}),
+      ...(patch.telephone !== undefined ? { telephone: patch.telephone } : {}),
+    })
+    .where(eq(users.id, userId))
+    .returning({ id: users.id });
+
+  return row ?? null;
 }

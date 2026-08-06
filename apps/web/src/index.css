@@ -1,0 +1,15 @@
+@import './globals.css';
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+@layer base {
+  :root {
+    @apply font-sans;
+    @apply h-full w-full;
+  }
+}

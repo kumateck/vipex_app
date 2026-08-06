@@ -9,9 +9,10 @@ export enum Payer {
 }
 
 export enum CashierType {
-  SENDING = 0,
-  TOBEPAID = 1,
-  DELIVERY = 2,
+  SENDING = 0, // SENDER pays at cashier for sending a parcel
+  TOBEPAID = 1, // RECIPIENT pays at cashier when picking up a parcel (if sender chose recipient to pay)
+  DELIVERY = 2, // RECIPIENT pays at cashier for home delivery (if sender chose recipient to pay and requested home delivery)
+  FULL = 3, // Cashier that does both sending and receiving payments (e.g. for walk-in customers or when payer type is not specified)
 }
 
 export enum PaymentMethod {
@@ -66,6 +67,7 @@ export enum UserType {
   CASHIER = 1,
   RIDER = 2,
 }
+
 export enum Gender {
   MALE = 0,
   FEMALE = 1,
@@ -100,6 +102,18 @@ export enum LeaveRequestStatus {
   APPROVED = 1,
   REJECTED = 2,
   CANCELLED = 3,
+}
+export enum LeaveSelectionMode {
+  DATE_RANGE = 0,
+  WEEK_RANGE = 1,
+}
+export enum LeaveSwapStatus {
+  PENDING_PEER = 0,
+  PENDING_HR = 1,
+  APPROVED = 2,
+  REJECTED = 3,
+  CANCELLED = 4,
+  EXECUTED = 5,
 }
 export enum ApprovalStatus {
   PENDING = 0,
@@ -164,6 +178,74 @@ export enum TransferStatus {
   IN_TRANSIT = 1,
   COMPLETED = 2,
   CANCELLED = 3,
+  PARTIALLY_FULFILLED = 4,
+}
+
+export enum StockRequestStatus {
+  DRAFT = 0,
+  SUBMITTED = 1,
+  APPROVED = 2,
+  PARTIALLY_FULFILLED = 3,
+  FULFILLED = 4,
+  REJECTED = 5,
+  CANCELLED = 6,
+}
+
+export enum StockRequestType {
+  INTER_BRANCH = 0,
+  INTRA_BRANCH = 1,
+}
+
+export enum InventoryMaintenanceIssueType {
+  MAINTENANCE = 0,
+  DAMAGE = 1,
+  MISSING = 2,
+}
+
+export enum InventoryMaintenanceStatus {
+  OPEN = 0,
+  CLOSED = 1,
+}
+
+export enum InventoryLocationType {
+  MAIN_STORE = 0,
+  BRANCH_STORE = 1,
+  CONSUMPTION_LOCATION = 2,
+}
+
+export enum StockAllocationStrategy {
+  FEFO = 0,
+  OLDEST_RECEIPT = 1,
+  HIGHEST_AVAILABLE = 2,
+}
+
+export enum StockReservationStatus {
+  OPEN = 0,
+  PARTIALLY_ALLOCATED = 1,
+  ALLOCATED = 2,
+  ISSUED = 3,
+  SHORT = 4,
+  CANCELLED = 5,
+}
+
+export enum StockReservationAllocationStatus {
+  RESERVED = 0,
+  RELEASED = 1,
+  ISSUED = 2,
+}
+
+export enum StockLotStatus {
+  ACTIVE = 0,
+  EXPIRED = 1,
+  QUARANTINED = 2,
+  DEPLETED = 3,
+}
+
+export enum StockCountSessionStatus {
+  DRAFT = 0,
+  SUBMITTED = 1,
+  APPROVED = 2,
+  CANCELLED = 3,
 }
 
 export enum UnitOfMeasure {
@@ -175,6 +257,61 @@ export enum UnitOfMeasure {
   METER = 5,
   PACK = 6,
   DOZEN = 7,
+}
+
+// Inventory major workflow enums
+export enum InventoryApprovalEntityType {
+  STOCK_REQUEST = 0,
+  STOCK_TRANSFER = 1,
+  STOCK_ADJUSTMENT = 2,
+  REPLENISHMENT_PROPOSAL = 3,
+}
+
+export enum InventoryApprovalStatus {
+  PENDING = 0,
+  APPROVED = 1,
+  REJECTED = 2,
+  ESCALATED = 3,
+  CANCELLED = 4,
+}
+
+export enum InventoryValuationMethod {
+  WEIGHTED_AVERAGE = 0,
+  FIFO = 1,
+}
+
+export enum InventoryReplenishmentProposalStatus {
+  DRAFT = 0,
+  SUBMITTED = 1,
+  APPROVED = 2,
+  REJECTED = 3,
+  CANCELLED = 4,
+}
+
+export enum InventoryTaskType {
+  PICK = 0,
+  PACK = 1,
+  DISPATCH = 2,
+  CYCLE_COUNT = 3,
+}
+
+export enum InventoryTaskStatus {
+  OPEN = 0,
+  IN_PROGRESS = 1,
+  COMPLETED = 2,
+  CANCELLED = 3,
+}
+
+export enum InventoryEventType {
+  POLICY_UPDATED = 0,
+  APPROVAL_SUBMITTED = 1,
+  APPROVAL_DECIDED = 2,
+  VALUATION_RECOMPUTED = 3,
+  REPLENISHMENT_GENERATED = 4,
+  REPLENISHMENT_DECIDED = 5,
+  TASK_CREATED = 6,
+  TASK_SCANNED = 7,
+  CORRECTION_POSTED = 8,
 }
 
 export enum PaymentResponsibility {
@@ -256,6 +393,12 @@ export enum TaxFilingPeriodStatus {
   CLOSED = 3,
 }
 
+export enum ManualJournalEntryStatus {
+  PENDING_APPROVAL = 0,
+  POSTED = 1,
+  REJECTED = 2,
+}
+
 export enum ParcelHolderType {
   BRANCH = 0,
   LOCATION = 1,
@@ -294,6 +437,45 @@ export enum ParcelStatus {
   RETURNED_TO_OFFICE = 12, // Parcel returned to branch office
   RETURNED_TO_SENDER = 13, // Parcel returned to sender/source
   CANCELLED = 14, // Parcel order cancelled
+  DISCREPANCY = 15, // Parcel has a reported issue or discrepancy
+  AGED_IN_WAREHOUSE = 16, // Aged parcel moved to warehouse pending final disposition
+  DISPOSED_BY_SALE = 17, // Aged parcel sold to recover outstanding charges
+  DISPOSED_BY_DESTRUCTION = 18, // Aged parcel destroyed/disposed as waste
+  DISPOSED_BY_DONATION = 19, // Aged parcel donated/disposed without sale
+}
+
+export enum ParcelDispositionActionType {
+  NOTICE_SENT = 0,
+  TRANSFERRED_TO_WAREHOUSE = 1,
+  SOLD = 2,
+  DESTROYED = 3,
+  DONATED = 4,
+  WRITTEN_OFF = 5,
+}
+
+export enum ParcelReconciliationCaseStatus {
+  REQUESTED = 0,
+  APPROVED = 1,
+  EXECUTED = 2,
+  REJECTED = 3,
+}
+
+export enum ParcelReconciliationCaseType {
+  SHORTAGE = 0,
+  OVERAGE = 1,
+  WRONG_AMOUNT = 2,
+  WRONG_PARCEL_TYPE = 3,
+  DUPLICATE_ENTRY = 4,
+  CUSTOMER_CANCELLATION_BEFORE_DELIVERY = 5,
+  DATA_ENTRY_ERROR = 6,
+}
+
+export enum ParcelReconciliationActionType {
+  VOID_AND_REFUND = 0,
+  VOID_AND_REBOOK = 1,
+  VOID_TO_SUSPENSE = 2,
+  KEEP_ORIGINAL_VOID_DUPLICATE = 3,
+  MERGE_TO_SINGLE = 4,
 }
 export enum DeliveryFeeBasis {
   DISTANCE = 0,

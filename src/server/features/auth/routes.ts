@@ -11,16 +11,23 @@ import {
   RefreshBody,
   TokenPair,
   AuthUserResponse,
+  PermissionsField,
+  SetPasswordBody,
+  VerifyPasswordBody,
 } from './schemas';
 import {
   changePasswordCtrl,
   currentUserPermissionsCtrl,
+  currentUserProfileCtrl,
   currentUserReadOnlyPermissionsCtrl,
   forgotPasswordCtrl,
   loginCtrl,
   logoutCtrl,
   refreshCtrl,
   resetPasswordCtrl,
+  setPasswordCtrl,
+  updateCurrentUserProfileCtrl,
+  verifyCurrentUserPasswordCtrl,
 } from './controller';
 
 export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/auth', (app) =>
@@ -52,7 +59,11 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
       },
       {
         body: RefreshBody,
-        response: t.Object({ tokens: TokenPair, user: AuthUserResponse }),
+        response: t.Object({
+          tokens: TokenPair,
+          user: AuthUserResponse,
+          permissions: PermissionsField,
+        }),
         detail: {
           tags: ['Auth'],
           summary: 'Refresh',
@@ -91,19 +102,49 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
     .post(
       '/reset-password',
       async ({ body }) => {
-        await resetPasswordCtrl(body.token, body.password);
+        await resetPasswordCtrl(body.email, body.otp, body.password);
         return { success: true };
       },
       {
-        body: t.Object({
-          token: t.String(),
-          password: t.String({ minLength: 8, maxLength: 128 }),
-        }),
+        body: SetPasswordBody,
         response: t.Object({ success: t.Boolean() }),
         detail: {
           tags: ['Auth'],
-          summary: 'Reset password',
+          summary: 'Reset password with OTP',
           operationId: 'resetPassword',
+        },
+      },
+    )
+    .post(
+      '/set-password',
+      async ({ body }) => {
+        await setPasswordCtrl(body.email, body.otp, body.password);
+        return { success: true };
+      },
+      {
+        body: SetPasswordBody,
+        response: t.Object({ success: t.Boolean() }),
+        detail: {
+          tags: ['Auth'],
+          summary: 'Set password with invitation OTP',
+          operationId: 'setPassword',
+        },
+      },
+    )
+    .post(
+      '/me/verify-password',
+      async ({ user, body }) => {
+        return verifyCurrentUserPasswordCtrl(user!.sub, body.password);
+      },
+      {
+        body: VerifyPasswordBody,
+        response: t.Object({ success: t.Boolean() }),
+        beforeHandle: requireAuth(),
+        detail: {
+          tags: ['Auth'],
+          summary: 'Verify current user password',
+          operationId: 'verifyCurrentUserPassword',
+          security: [{ bearerAuth: [] }],
         },
       },
     )
@@ -135,6 +176,72 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
         security: [{ bearerAuth: [] }],
       },
     })
+    .get('/me/profile', async ({ user }) => currentUserProfileCtrl(user!.sub), {
+      response: t.Object({
+        id: t.String(),
+        fullname: t.String(),
+        email: t.String({ format: 'email' }),
+        telephone: t.String(),
+        employeeId: t.Union([t.String(), t.Null()]),
+        role: t.Union([t.Object({ id: t.String(), name: t.String() }), t.Null()]),
+        company: t.Union([
+          t.Object({
+            id: t.String(),
+            name: t.String(),
+            useAccounting: t.Boolean(),
+          }),
+          t.Null(),
+        ]),
+        branch: t.Union([
+          t.Object({
+            id: t.String(),
+            name: t.String(),
+            type: t.Number(),
+          }),
+          t.Null(),
+        ]),
+        location: t.Union([
+          t.Object({
+            id: t.String(),
+            name: t.String(),
+          }),
+          t.Null(),
+        ]),
+        locationId: t.Union([t.String(), t.Null()]),
+        locationName: t.Union([t.String(), t.Null()]),
+        userType: t.Union([t.Number(), t.Null()]),
+        cashierType: t.Union([t.Number(), t.Null()]),
+      }),
+      beforeHandle: requireAuth(),
+      detail: {
+        tags: ['Auth'],
+        summary: 'Get current user profile',
+        operationId: 'getCurrentUserProfile',
+        security: [{ bearerAuth: [] }],
+      },
+    })
+    .patch(
+      '/me/profile',
+      async ({ user, body }) => {
+        return updateCurrentUserProfileCtrl(user!.sub, {
+          fullname: body.fullname,
+          telephone: body.telephone,
+        });
+      },
+      {
+        body: t.Object({
+          fullname: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
+          telephone: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
+        }),
+        beforeHandle: requireAuth(),
+        detail: {
+          tags: ['Auth'],
+          summary: 'Update current user profile',
+          operationId: 'updateCurrentUserProfile',
+          security: [{ bearerAuth: [] }],
+        },
+      },
+    )
     .get(
       '/me/permissions/read-only',
       async ({ user }) => currentUserReadOnlyPermissionsCtrl(user!.sub),

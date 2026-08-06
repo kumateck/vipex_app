@@ -21,20 +21,22 @@ export const cashiersApi = api.injectEndpoints({
       providesTags: [{ type: 'Cashiers', id: 'SESSION_TYPES' }],
     }),
 
-    listSessions: builder.query<ServerListResponse<CashierSession>, CashierSessionListQuery | void>({
-      query: (query) => ({
-        url: '/cashiers/sessions',
-        params: buildServerPaginationParams(query),
-      }),
-      providesTags: (result) => provideEntityListTags('Cashiers', result),
-    }),
+    listSessions: builder.query<ServerListResponse<CashierSession>, CashierSessionListQuery | void>(
+      {
+        query: (query) => ({
+          url: '/cashiers/sessions',
+          params: buildServerPaginationParams(query),
+        }),
+        providesTags: (result) => provideEntityListTags('Cashiers', result),
+      },
+    ),
     getCurrentActiveSession: builder.query<CashierSession | null, void>({
       query: () => ({ url: '/cashiers/sessions/active/current' }),
       providesTags: [{ type: 'Cashiers', id: 'ACTIVE_SESSION' }],
     }),
     getCurrentActiveSessionSummary: builder.query<
       CashierSessionSummary | null,
-      { mode: 'sender' | 'receiver' | 'delivery' }
+      { mode: 'sender' | 'receiver' | 'delivery' | 'full' }
     >({
       query: (params) => ({ url: '/cashiers/sessions/active/current/summary', params }),
       providesTags: [{ type: 'Cashiers', id: 'ACTIVE_SESSION_SUMMARY' }],

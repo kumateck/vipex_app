@@ -1,14 +1,32 @@
 import { Elysia, t } from 'elysia';
+import {
+  authPlugin,
+  type AuthUser,
+  requireAnyPermissions,
+  requireAuth,
+  requirePermissions,
+} from '@/server/plugins/auth';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import { HttpStatus } from '../../utils/http-status';
 import { UUID } from '../../schemas/common';
 import {
+  approveParcelReconciliationCaseCtrl,
   createParcelCtrl,
+  executeParcelReconciliationCaseCtrl,
   getParcelByIdCtrl,
   getParcelDetailsCtrl,
+  listParcelReconciliationCasesCtrl,
+  listParcelDispositionActionsCtrl,
+  listOpenParcelDiscrepanciesCtrl,
   listParcelsCtrl,
   logParcelDiscrepancyCtrl,
   markParcelReceivedCtrl,
+  recordParcelDispositionActionCtrl,
+  waiveParcelStorageAccrualCtrl,
+  requestParcelReconciliationCaseCtrl,
+  resolveParcelDiscrepancyCtrl,
   setPlannedToBePaidCtrl,
+  softDeleteParcelCtrl,
   updateParcelCtrl,
 } from './parcels.controller';
 
@@ -30,6 +48,7 @@ function parseStatuses(value: string | number[] | undefined): number[] | null {
 }
 
 export const parcelsRoutes = new Elysia({ name: 'parcels' })
+  .use(authPlugin)
   .get(
     '/',
     async ({ query }) =>
@@ -44,9 +63,13 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           companyId: query.companyId ?? null,
           sourceId: query.sourceId ?? null,
           destinationId: query.destinationId ?? null,
+          locationId: query.locationId ?? null,
           status: query.status ?? null,
           statuses: parseStatuses(query.statuses),
           senderPaid: query.senderPaid ?? null,
+          hasPickupQueue: query.hasPickupQueue ?? null,
+          agedOnly: query.agedOnly ?? null,
+          storageChargeAccruing: query.storageChargeAccruing ?? null,
           received: query.received ?? null,
           includeDeleted: query.includeDeleted ?? null,
         },
@@ -70,13 +93,43 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         companyId: t.Optional(UUID),
         sourceId: t.Optional(UUID),
         destinationId: t.Optional(UUID),
+        locationId: t.Optional(UUID),
         status: t.Optional(t.Number()),
         statuses: t.Optional(t.Union([t.Array(t.Number()), t.String()])),
         senderPaid: t.Optional(t.Boolean()),
+        hasPickupQueue: t.Optional(t.Boolean()),
+        agedOnly: t.Optional(t.Boolean()),
+        storageChargeAccruing: t.Optional(t.Boolean()),
         received: t.Optional(t.Boolean()),
         includeDeleted: t.Optional(t.Boolean()),
       }),
       detail: { tags: ['Shipments'], summary: 'List/search parcels' },
+    },
+  )
+  .get(
+    '/reconciliation-cases',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      return listParcelReconciliationCasesCtrl({
+        companyId: query.companyId ?? authUser.companyId ?? '',
+        statuses: parseStatuses(query.statuses),
+        branchId: query.branchId ?? authUser.branchId ?? null,
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 20,
+        search: query.search ?? null,
+      });
+    },
+    {
+      query: t.Object({
+        companyId: t.Optional(UUID),
+        branchId: t.Optional(t.Union([UUID, t.Null()])),
+        statuses: t.Optional(t.Union([t.Array(t.Number()), t.String()])),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+        search: t.Optional(t.String()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelReconciliation)],
+      detail: { tags: ['Shipments'], summary: 'List parcel reconciliation cases' },
     },
   )
   .get('/:id', async ({ params }) => getParcelByIdCtrl(params.id), {
@@ -90,6 +143,62 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       summary: 'Get parcel full details (payments, delivery, consignments)',
     },
   })
+  .get(
+    '/:id/disposition-actions',
+    async ({ params }) => listParcelDispositionActionsCtrl(params.id),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcels)],
+      detail: { tags: ['Shipments'], summary: 'List parcel disposition actions' },
+    },
+  )
+  .post(
+    '/:id/disposition-actions',
+    async ({ params, body, user }) =>
+      recordParcelDispositionActionCtrl({
+        parcelId: params.id,
+        actorUserId: (user as AuthUser).sub,
+        actionType: (body as { actionType: number }).actionType,
+        notes: (body as { notes?: string | null }).notes ?? null,
+        warehouseId: (body as { warehouseId?: string | null }).warehouseId ?? null,
+        recoveredAmountCedis:
+          (body as { recoveredAmountCedis?: number | string | null }).recoveredAmountCedis ?? null,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        actionType: t.Number(),
+        notes: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+        warehouseId: t.Optional(t.Union([UUID, t.Null()])),
+        recoveredAmountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateParcels)],
+      detail: { tags: ['Shipments'], summary: 'Record parcel disposition action' },
+    },
+  )
+  .post(
+    '/:id/storage-waivers',
+    async ({ params, body, user }) =>
+      waiveParcelStorageAccrualCtrl({
+        parcelId: params.id,
+        actorUserId: (user as AuthUser).sub,
+        reason: (body as { reason: string }).reason,
+        waivedAmountCedis:
+          (body as { waivedAmountCedis?: number | string | null }).waivedAmountCedis ?? null,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        reason: t.String({ minLength: 3, maxLength: 1000 }),
+        waivedAmountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanWaiveParcelStorageAccrual),
+      ],
+      detail: { tags: ['Shipments'], summary: 'Waive parcel storage accrual with reason' },
+    },
+  )
   .post(
     '/',
     async ({ body, set }) => {
@@ -142,11 +251,13 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
   )
   .patch(
     '/:id',
-    async ({ params, body }) =>
+    async ({ params, body, user }) =>
       updateParcelCtrl(
         params.id,
         body as {
           status?: number;
+          destinationId?: string;
+          sourceLocationId?: string | null;
           parcelDetails?: string;
           parcelContent?: string;
           secondReceiverId?: string | null;
@@ -162,11 +273,14 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           method?: number;
           taxReportConfirmation?: boolean;
         },
+        (user as AuthUser | null)?.sub ?? null,
       ),
     {
       params: t.Object({ id: UUID }),
       body: t.Object({
         status: t.Optional(t.Number()),
+        destinationId: t.Optional(UUID),
+        sourceLocationId: t.Optional(t.Union([UUID, t.Null()])),
         parcelDetails: t.Optional(t.String()),
         parcelContent: t.Optional(t.String()),
         secondReceiverId: t.Optional(t.Union([UUID, t.Null()])),
@@ -183,6 +297,85 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         taxReportConfirmation: t.Optional(t.Boolean()),
       }),
       detail: { tags: ['Shipments'], summary: 'Update parcel' },
+    },
+  )
+  .post(
+    '/reconciliation-cases/request',
+    async ({ body, user }) => {
+      const authUser = user as AuthUser;
+      return requestParcelReconciliationCaseCtrl({
+        companyId: authUser.companyId ?? '',
+        actorUserId: authUser.sub,
+        parcelId: (body as { parcelId: string }).parcelId,
+        linkedParcelId: (body as { linkedParcelId?: string | null }).linkedParcelId ?? null,
+        caseType: (body as { caseType: number }).caseType,
+        notes: (body as { notes: string }).notes,
+        evidenceUrl: (body as { evidenceUrl?: string | null }).evidenceUrl ?? null,
+        actionType: (body as { actionType?: number | null }).actionType ?? null,
+      });
+    },
+    {
+      body: t.Object({
+        parcelId: UUID,
+        linkedParcelId: t.Optional(t.Union([UUID, t.Null()])),
+        caseType: t.Number(),
+        actionType: t.Optional(t.Union([t.Number(), t.Null()])),
+        notes: t.String({ minLength: 3, maxLength: 1000 }),
+        evidenceUrl: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanRequestParcelReconciliation),
+      ],
+      detail: { tags: ['Shipments'], summary: 'Request parcel reconciliation case' },
+    },
+  )
+  .post(
+    '/reconciliation-cases/:id/approve',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return approveParcelReconciliationCaseCtrl({
+        caseId: params.id,
+        companyId: authUser.companyId ?? '',
+        actorUserId: authUser.sub,
+        actionType: (body as { actionType: number }).actionType,
+        resolutionNote: (body as { resolutionNote?: string | null }).resolutionNote ?? null,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        actionType: t.Number(),
+        resolutionNote: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanApproveParcelReconciliation),
+      ],
+      detail: { tags: ['Shipments'], summary: 'Approve parcel reconciliation case' },
+    },
+  )
+  .post(
+    '/reconciliation-cases/:id/execute',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return executeParcelReconciliationCaseCtrl({
+        caseId: params.id,
+        companyId: authUser.companyId ?? '',
+        actorUserId: authUser.sub,
+        executionNote: (body as { executionNote?: string | null }).executionNote ?? null,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        executionNote: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanExecuteParcelReconciliation),
+      ],
+      detail: { tags: ['Shipments'], summary: 'Execute parcel reconciliation case' },
     },
   )
   .post(
@@ -214,7 +407,52 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         notes: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
         branchId: t.Optional(t.Union([UUID, t.Null()])),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
       detail: { tags: ['Shipments'], summary: 'Log parcel discrepancy for incoming transit' },
+    },
+  )
+  .get(
+    '/discrepancies/open',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      return listOpenParcelDiscrepanciesCtrl({
+        companyId: query.companyId ?? authUser.companyId ?? '',
+        branchId: query.branchId ?? authUser.branchId ?? null,
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 20,
+        search: query.search ?? null,
+      });
+    },
+    {
+      query: t.Object({
+        companyId: t.Optional(UUID),
+        branchId: t.Optional(t.Union([UUID, t.Null()])),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+        search: t.Optional(t.String()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
+      detail: { tags: ['Shipments'], summary: 'List open parcel discrepancies' },
+    },
+  )
+  .post(
+    '/discrepancies/:id/resolve',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return resolveParcelDiscrepancyCtrl({
+        id: params.id,
+        companyId: authUser.companyId ?? '',
+        actorUserId: authUser.sub,
+        resolutionNote: (body as { resolutionNote?: string | null }).resolutionNote ?? null,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        resolutionNote: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
+      detail: { tags: ['Shipments'], summary: 'Resolve parcel discrepancy' },
     },
   )
   .post(
@@ -231,6 +469,13 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         receivedAt: t.Optional(t.String({ format: 'date-time' })),
         status: t.Optional(t.Number()),
       }),
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanReadParcelIncoming,
+          PermissionKeys.CanReadParcelScan,
+        ),
+      ],
       detail: { tags: ['Shipments'], summary: 'Mark parcel received' },
     },
   )
@@ -245,5 +490,30 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       params: t.Object({ id: UUID }),
       body: t.Object({ plannedToBePaidCedis: t.Union([t.Number(), t.String()]) }),
       detail: { tags: ['Shipments'], summary: 'Set planned to-be-paid (principal)' },
+    },
+  )
+  .post(
+    '/:id/soft-delete',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return softDeleteParcelCtrl({
+        parcelId: params.id,
+        actorUserId: authUser.sub,
+        reason: (body as { reason: string }).reason,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        reason: t.String({ minLength: 3, maxLength: 500 }),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanSoftDeleteParcelsAndPayments),
+      ],
+      detail: {
+        tags: ['Shipments'],
+        summary: 'Soft delete parcel and soft-delete (void) associated payments with reason',
+      },
     },
   );

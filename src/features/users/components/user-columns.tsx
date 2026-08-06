@@ -1,6 +1,8 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import { EllipsisVertical } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { PermissionGuard } from '@/components/permissions/permission-guard';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,8 +14,17 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { PermissionKeys } from '@/shared/permissions/constants';
+import { useAuthStore } from '@/stores/auth-store';
 import type { User } from '../types/user.types';
-import { USER_TYPE_LABELS } from '@/shared/access/constants';
+import { CASHIER_TYPE_LABELS, USER_TYPE_LABELS } from '@/shared/access/constants';
+import { UserType } from '@/db/schemas/enums';
 
 const USER_STATUS_LABELS: Record<number, string> = {
   0: 'Active',
@@ -30,23 +41,43 @@ export function createUserColumns(options?: {
   onToggleStatus?: (user: User) => void;
   isResendingInvite?: boolean;
   isUpdatingStatus?: boolean;
+  onLinkEmployee?: (user: User) => void;
 }): ColumnDef<User>[] {
   const onResendInvite = options?.onResendInvite;
   const onToggleStatus = options?.onToggleStatus;
   const isResendingInvite = options?.isResendingInvite ?? false;
   const isUpdatingStatus = options?.isUpdatingStatus ?? false;
+  const onLinkEmployee = options?.onLinkEmployee;
 
   return [
     { accessorKey: 'fullname', header: 'Full name' },
     { accessorKey: 'email', header: 'Email' },
     { accessorKey: 'telephone', header: 'Telephone' },
-    { accessorFn: (row) => row.roleName ?? row.roleId, id: 'roleName', header: 'Role' },
+    { accessorFn: (row) => row.roleName ?? 'Unassigned role', id: 'roleName', header: 'Role' },
+    {
+      accessorFn: (row) =>
+        row.employeeId
+          ? `${row.employeeName ?? 'Employee'}${row.employeeNumber ? ` (${row.employeeNumber})` : ''}`
+          : 'Not linked',
+      id: 'employee',
+      header: 'Employee',
+    },
     {
       accessorFn: (row) => USER_TYPE_LABELS[row.userType] ?? row.userType,
       id: 'userType',
       header: 'User type',
     },
-    { accessorFn: (row) => row.branchName ?? row.branchId, id: 'branchName', header: 'Branch' },
+    {
+      accessorFn: (row) =>
+        row.userType === UserType.CASHIER &&
+        row.cashierType !== null &&
+        row.cashierType !== undefined
+          ? (CASHIER_TYPE_LABELS[row.cashierType] ?? String(row.cashierType))
+          : '-',
+      id: 'cashierType',
+      header: 'Cashier type',
+    },
+    { accessorFn: (row) => row.branchName ?? 'Unknown branch', id: 'branchName', header: 'Branch' },
     { accessorFn: (row) => row.locationName ?? '-', id: 'locationName', header: 'Location' },
     {
       accessorFn: (row) => USER_STATUS_LABELS[row.status] ?? String(row.status),
@@ -55,9 +86,9 @@ export function createUserColumns(options?: {
     },
     {
       id: 'actions',
-      header: 'Actions',
+      header: 'Action',
       enableSorting: false,
-      size: 220,
+      size: 70,
       cell: ({ row }) => {
         return (
           <UserActionsCell
@@ -66,6 +97,7 @@ export function createUserColumns(options?: {
             onToggleStatus={onToggleStatus}
             isResendingInvite={isResendingInvite}
             isUpdatingStatus={isUpdatingStatus}
+            onLinkEmployee={onLinkEmployee}
           />
         );
       },
@@ -79,13 +111,16 @@ function UserActionsCell({
   onToggleStatus,
   isResendingInvite,
   isUpdatingStatus,
+  onLinkEmployee,
 }: {
   user: User;
   onResendInvite?: (user: User) => void;
   onToggleStatus?: (user: User) => void;
   isResendingInvite: boolean;
   isUpdatingStatus: boolean;
+  onLinkEmployee?: (user: User) => void;
 }) {
+  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const canResendInvite = user.status === 1;
   const isActive = user.status === 0;
@@ -94,32 +129,51 @@ function UserActionsCell({
   const statusDialogDescription = isActive
     ? `This will set ${user.fullname} to inactive and limit account access until reactivated.`
     : `This will reactivate ${user.fullname}'s account.`;
+  const canLinkExistingEmployee =
+    permissions.includes(PermissionKeys.CanListEmployees) &&
+    permissions.includes(PermissionKeys.CanCreateEmployeeUserAccount);
+  const canLinkEmployee =
+    Boolean(onLinkEmployee) &&
+    !user.employeeId &&
+    permissions.includes(PermissionKeys.CanUpdateUsers) &&
+    (permissions.includes(PermissionKeys.CanCreateEmployee) || canLinkExistingEmployee);
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/users/edit/${user.id}`}>Edit</Link>
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={isUpdatingStatus}
-          onClick={() => setIsStatusDialogOpen(true)}
-        >
-          {statusActionLabel}
-        </Button>
-        {canResendInvite ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={isResendingInvite}
-            onClick={() => onResendInvite?.(user)}
-          >
-            Resend invite
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon" className="h-8 w-8">
+            <EllipsisVertical className="h-4 w-4" />
           </Button>
-        ) : null}
-      </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <PermissionGuard permissionKey={PermissionKeys.CanUpdateUsers}>
+            <DropdownMenuItem asChild>
+              <Link to={`/users/edit/${user.id}`}>Edit</Link>
+            </DropdownMenuItem>
+          </PermissionGuard>
+          <PermissionGuard permissionKey={PermissionKeys.CanUpdateUsers}>
+            <DropdownMenuItem
+              disabled={isUpdatingStatus}
+              onClick={() => setIsStatusDialogOpen(true)}
+            >
+              {statusActionLabel}
+            </DropdownMenuItem>
+          </PermissionGuard>
+          {canResendInvite ? (
+            <PermissionGuard permissionKey={PermissionKeys.CanResendSetupInvite}>
+              <DropdownMenuItem disabled={isResendingInvite} onClick={() => onResendInvite?.(user)}>
+                Resend invite
+              </DropdownMenuItem>
+            </PermissionGuard>
+          ) : null}
+          {canLinkEmployee ? (
+            <DropdownMenuItem onClick={() => onLinkEmployee?.(user)}>
+              Link employee
+            </DropdownMenuItem>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <AlertDialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -128,15 +182,17 @@ function UserActionsCell({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isUpdatingStatus}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isUpdatingStatus}
-              onClick={() => {
-                onToggleStatus?.(user);
-                setIsStatusDialogOpen(false);
-              }}
-            >
-              {isUpdatingStatus ? 'Saving...' : statusActionLabel}
-            </AlertDialogAction>
+            <PermissionGuard permissionKey={PermissionKeys.CanUpdateUsers}>
+              <AlertDialogAction
+                disabled={isUpdatingStatus}
+                onClick={() => {
+                  onToggleStatus?.(user);
+                  setIsStatusDialogOpen(false);
+                }}
+              >
+                {isUpdatingStatus ? 'Saving...' : statusActionLabel}
+              </AlertDialogAction>
+            </PermissionGuard>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
