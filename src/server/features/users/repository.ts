@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, ilike, inArray, ne, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { users, roles, branches, companies, locations } from '@/db/schemas';
+import { users, roles, branches, companies, employees, locations } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
 
 export type ListUserParams = {
@@ -91,6 +91,8 @@ export async function listUsersRepo(p: ListUserParams) {
       roleId: users.roleId,
       companyId: users.companyId,
       employeeId: users.employeeId,
+      employeeName: employees.displayName,
+      employeeNumber: employees.employeeNumber,
       branchId: users.branchId,
       locationId: users.locationId,
       userType: users.userType,
@@ -108,6 +110,7 @@ export async function listUsersRepo(p: ListUserParams) {
     .leftJoin(branches, eq(branches.id, users.branchId))
     .leftJoin(locations, eq(locations.id, users.locationId))
     .leftJoin(companies, eq(companies.id, users.companyId))
+    .leftJoin(employees, eq(employees.id, users.employeeId))
     .where(
       where.length || p.search
         ? and(

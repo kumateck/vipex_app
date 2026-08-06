@@ -17,7 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select-searchable';
+import { PaymentMethod } from '@/db/schemas/enums';
+import { MomoRequestToPayPanel } from '@/features/operations/momo/components/momo-request-to-pay-panel';
 import { PAYMENT_METHOD_OPTIONS } from './receiver-cashier-constants';
+import { ReceiverOtpSection } from './receiver-otp-section';
 import { ReceiverPaymentSecondarySections } from './receiver-payment-secondary-sections';
 import { formatCurrency, formatDateTime, formatStorageCharge } from './receiver-cashier-utils';
 import type { useParcelReceiverCashierWorkflow } from './use-parcel-receiver-cashier-workflow';
@@ -204,10 +207,24 @@ export function ReceiverPaymentDeliveryDialog({
                   ))}
                 </SelectContent>
               </Select>
+
+              {dialog.paymentMethod === String(PaymentMethod.MTN) ? (
+                <MomoRequestToPayPanel
+                  parcelId={parcel.id}
+                  flow="receiver"
+                  amountCedis={
+                    Number(dialog.paymentAmount || 0) + Number(dialog.storagePaymentAmount || 0)
+                  }
+                  onConfirmed={dialog.setMomoTransactionId}
+                  disabled={dialog.isSaving}
+                />
+              ) : null}
             </div>
 
+            <ReceiverOtpSection dialog={dialog} />
+
             <div className="space-y-2 rounded-md border p-3">
-              <Label>Main Receiver ID Card (required)</Label>
+              <Label>Main Receiver ID Card (optional)</Label>
               <Select
                 value={dialog.mainCardMode}
                 onValueChange={(value) => dialog.setMainCardMode(value as 'existing' | 'new')}
@@ -285,7 +302,12 @@ export function ReceiverPaymentDeliveryDialog({
                 toast.error(error instanceof Error ? error.message : 'Failed to confirm delivery');
               }
             }}
-            disabled={dialog.isSaving || (context.isPickupQueueEnabled && !dialog.hasPickupQueue)}
+            disabled={
+              dialog.isSaving ||
+              !dialog.otpVerified ||
+              (dialog.paymentMethod === String(PaymentMethod.MTN) && !dialog.momoTransactionId) ||
+              (context.isPickupQueueEnabled && !dialog.hasPickupQueue)
+            }
           >
             {dialog.isSaving ? 'Processing...' : 'Receive Payment + Deliver'}
           </Button>

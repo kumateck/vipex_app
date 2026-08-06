@@ -54,6 +54,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
   } = props;
 
   const isToBePaidReceipt = senderPaidCedis <= 0 && receiverToPayCedis > 0;
+  const isPartialReceipt = senderPaidCedis > 0 && receiverToPayCedis > 0;
   const totalPaid = amountPaidCedis;
   const priceBeforeTax = Math.max(totalPaid - tax.totalTax, 0);
   const valueOfParcelLabel =
@@ -99,7 +100,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
               />
               <div>
                 <div style={{ fontSize: '6.8mm', fontWeight: 700, lineHeight: 1 }}>
-                  VIPEX CO. LTD
+                  VIPEX COMPANY LTD
                 </div>
                 <div style={{ fontSize: '6.8mm', fontWeight: 700, lineHeight: 0.92 }}>PARCELS</div>
               </div>
@@ -112,6 +113,18 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
             {isToBePaidReceipt ? (
               <div style={{ marginTop: '0.5mm', fontSize: '4.4mm', fontWeight: 700 }}>
                 TO BE PAID RECEIPT
+              </div>
+            ) : null}
+            {isPartialReceipt ? (
+              <div style={{ marginTop: '0.5mm', fontSize: '4.4mm', fontWeight: 700 }}>
+                PARTIAL PAYMENT RECEIPT
+              </div>
+            ) : null}
+            {isToBePaidReceipt || isPartialReceipt ? (
+              <div
+                style={{ marginTop: '0.4mm', fontSize: '2.6mm', fontWeight: 600, lineHeight: 1.15 }}
+              >
+                Disclaimer: Sender did not pay at the point of sending.
               </div>
             ) : null}
           </div>

@@ -35,6 +35,7 @@ export async function getSessionAmountPaidPswRepo(input: {
           lte(payments.receivedAt, cashierSessions.actualEndTime),
         ),
         isNull(payments.voidedAt),
+        isNull(payments.momoTransactionId),
       ),
     );
 
@@ -62,6 +63,7 @@ export async function getSessionToBePaidCollectedPswRepo(input: {
           lte(payments.receivedAt, cashierSessions.actualEndTime),
         ),
         isNull(payments.voidedAt),
+        isNull(payments.momoTransactionId),
       ),
     );
 
@@ -89,6 +91,7 @@ export async function getSessionDeliveryFeeCollectedPswRepo(input: {
           lte(payments.receivedAt, cashierSessions.actualEndTime),
         ),
         isNull(payments.voidedAt),
+        isNull(payments.momoTransactionId),
       ),
     );
 
@@ -117,6 +120,7 @@ export async function getSessionDeliveryPrincipalCollectedPswRepo(input: {
           lte(payments.receivedAt, cashierSessions.actualEndTime),
         ),
         isNull(payments.voidedAt),
+        isNull(payments.momoTransactionId),
       ),
     );
 
@@ -144,6 +148,7 @@ export async function getSessionFullCashierExpectedPswRepo(input: {
           lte(payments.receivedAt, cashierSessions.actualEndTime),
         ),
         isNull(payments.voidedAt),
+        isNull(payments.momoTransactionId),
       ),
     );
 
@@ -167,6 +172,7 @@ export async function getSessionFullCashierExpectedPswRepo(input: {
           lte(payments.receivedAt, cashierSessions.actualEndTime),
         ),
         isNull(payments.voidedAt),
+        isNull(payments.momoTransactionId),
       ),
     );
 

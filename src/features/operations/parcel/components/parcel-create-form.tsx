@@ -179,6 +179,8 @@ export function ParcelCreateForm() {
         parcels={senderPayment.pendingParcels}
         paymentMethod={senderPayment.paymentMethod}
         onPaymentMethodChange={senderPayment.setPaymentMethod}
+        momoTransactionId={senderPayment.momoTransactionId}
+        onMomoConfirmed={senderPayment.setMomoTransactionId}
         isSubmitting={senderPayment.isSubmittingPayment}
         onClose={senderPayment.closePaymentDialog}
         onSubmit={senderPayment.handlePayAndPrint}

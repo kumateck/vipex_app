@@ -49,6 +49,13 @@ export const payments = pgTable(
     voidedBy: varchar('voided_by', { length: 25 }).references(() => users.id),
     voidReason: varchar('void_reason', { length: 1000 }),
 
+    // Set only when this payment was created from a gateway-confirmed MTN
+    // MoMo Request-to-Pay (see momo-transactions.ts, which holds the real FK
+    // back to this row via its own paymentId column). Manually-recorded
+    // "MTN" payments (method=MTN, no real API call) leave this null, which
+    // keeps them counted as cash-owed for cashier reconciliation as today.
+    momoTransactionId: varchar('momo_transaction_id', { length: 25 }),
+
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   },
   (t) => ({

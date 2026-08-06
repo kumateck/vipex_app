@@ -1,4 +1,18 @@
-import { and, asc, count, desc, eq, gte, ilike, inArray, lte, not, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lte,
+  not,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
   attendanceRecords,
@@ -428,6 +442,7 @@ export async function listEmployeeOptionsRepo(input: {
   officerEmployeeId?: string | null;
   status?: number | null;
   search?: string | null;
+  unlinkedOnly?: boolean;
 }) {
   const where = [eq(employees.companyId, input.companyId), eq(employees.isDeleted, false)];
   if (input.branchId) where.push(eq(employees.branchId, input.branchId));
@@ -436,6 +451,7 @@ export async function listEmployeeOptionsRepo(input: {
   if (input.officerEmployeeId) where.push(eq(employees.officerEmployeeId, input.officerEmployeeId));
   if (input.status !== null && input.status !== undefined)
     where.push(eq(employees.employmentStatus, input.status));
+  if (input.unlinkedOnly) where.push(eq(employees.hasUserAccount, false));
 
   const searchPredicate = input.search
     ? or(
@@ -457,6 +473,7 @@ export async function listEmployeeOptionsRepo(input: {
       departmentId: employees.departmentId,
       jobTitleId: employees.jobTitleId,
       employmentStatus: employees.employmentStatus,
+      hasUserAccount: employees.hasUserAccount,
     })
     .from(employees)
     .where(and(...where, ...(searchPredicate ? [searchPredicate] : [])))
@@ -532,6 +549,95 @@ export async function findEmployeeByNumberRepo(companyId: string, employeeNumber
 
 export async function createEmployeeRepo(values: typeof employees.$inferInsert) {
   const [row] = await db.insert(employees).values(values).returning({ id: employees.id });
+  return row ?? null;
+}
+
+export class EmployeeUserLinkConflictError extends Error {}
+
+export async function linkEmployeeUserRepo(input: {
+  companyId: string;
+  employeeId: string;
+  userId: string;
+}) {
+  return db.transaction(async (tx) => {
+    const [user] = await tx
+      .update(users)
+      .set({ employeeId: input.employeeId, updatedAt: new Date() })
+      .where(
+        and(
+          eq(users.id, input.userId),
+          eq(users.companyId, input.companyId),
+          isNull(users.employeeId),
+        ),
+      )
+      .returning({ id: users.id });
+    if (!user) throw new EmployeeUserLinkConflictError('User is already linked');
+
+    const [employee] = await tx
+      .update(employees)
+      .set({ hasUserAccount: true, updatedAt: new Date() })
+      .where(
+        and(
+          eq(employees.id, input.employeeId),
+          eq(employees.companyId, input.companyId),
+          eq(employees.hasUserAccount, false),
+          eq(employees.isDeleted, false),
+        ),
+      )
+      .returning({ id: employees.id });
+    if (!employee) throw new EmployeeUserLinkConflictError('Employee is already linked');
+
+    return { userId: user.id, employeeId: employee.id };
+  });
+}
+
+export async function createEmployeeForUserRepo(input: {
+  companyId: string;
+  userId: string;
+  employee: typeof employees.$inferInsert;
+  assignment: Omit<typeof employeeJobAssignments.$inferInsert, 'employeeId'>;
+}) {
+  return db.transaction(async (tx) => {
+    const [employee] = await tx
+      .insert(employees)
+      .values({ ...input.employee, hasUserAccount: true })
+      .returning({ id: employees.id });
+    if (!employee) throw new EmployeeUserLinkConflictError('Employee could not be created');
+
+    const [user] = await tx
+      .update(users)
+      .set({ employeeId: employee.id, updatedAt: new Date() })
+      .where(
+        and(
+          eq(users.id, input.userId),
+          eq(users.companyId, input.companyId),
+          isNull(users.employeeId),
+        ),
+      )
+      .returning({ id: users.id });
+    if (!user) throw new EmployeeUserLinkConflictError('User is already linked');
+
+    await tx.insert(employeeJobAssignments).values({
+      ...input.assignment,
+      employeeId: employee.id,
+    });
+
+    return { userId: user.id, employeeId: employee.id };
+  });
+}
+
+export async function findEmployeeByCompanyEmailRepo(companyId: string, email: string) {
+  const [row] = await db
+    .select({ id: employees.id, hasUserAccount: employees.hasUserAccount })
+    .from(employees)
+    .where(
+      and(
+        eq(employees.companyId, companyId),
+        eq(employees.isDeleted, false),
+        sql`lower(${employees.email}) = ${email.trim().toLowerCase()}`,
+      ),
+    )
+    .limit(1);
   return row ?? null;
 }
 

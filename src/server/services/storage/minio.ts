@@ -3,10 +3,12 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
+  HeadObjectCommand,
   NoSuchKey,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createId } from '@paralleldrive/cuid2';
 import { NotFound } from '@/server/utils/http-error';
 import { BadRequest } from '@/server/utils/http-error';
@@ -33,6 +35,7 @@ const MIME_EXTENSIONS: Record<string, string> = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
 };
 const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+const PRESIGNED_URL_TTL_SECONDS = 300;
 
 let ensureBucketPromise: Promise<void> | null = null;
 
@@ -273,6 +276,52 @@ export async function getStoredObjectResponse(
     if (error instanceof NoSuchKey) throw NotFound('Stored file not found');
     throw error;
   }
+}
+
+export async function headStoredObject(key: string): Promise<void> {
+  await ensureBucketReady();
+  const client = getClient();
+
+  try {
+    await client.send(new HeadObjectCommand({ Bucket: env.MINIO_BUCKET, Key: key }));
+  } catch (error) {
+    const code = getErrorCode(error);
+    const status = getHttpStatusCode(error);
+
+    if (code === 'NotFound' || status === 404) {
+      throw NotFound('Stored file not found');
+    }
+
+    if (code === 'AccessDenied' || status === 403) {
+      logger.warn('[minio] headStoredObject:access-denied', {
+        key,
+        bucket: env.MINIO_BUCKET,
+        code,
+        status,
+      });
+      throw NotFound('Stored file not found');
+    }
+
+    throw error;
+  }
+}
+
+export async function getStoredObjectPresignedUrl(
+  key: string,
+  options?: { expiresInSeconds?: number; contentType?: string },
+): Promise<string> {
+  await ensureBucketReady();
+  const client = getClient();
+
+  const command = new GetObjectCommand({
+    Bucket: env.MINIO_BUCKET,
+    Key: key,
+    ...(options?.contentType ? { ResponseContentType: options.contentType } : {}),
+  });
+
+  return getSignedUrl(client, command, {
+    expiresIn: options?.expiresInSeconds ?? PRESIGNED_URL_TTL_SECONDS,
+  });
 }
 
 export async function deleteStoredObject(key: string) {

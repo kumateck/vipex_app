@@ -140,6 +140,33 @@ export async function getDefaultProviderByChannelRepo(companyId: string, channel
   return row ?? null;
 }
 
+export async function getNotificationTemplateByCodeRepo(
+  companyId: string,
+  channel: string,
+  code: string,
+) {
+  const [row] = await db
+    .select({
+      id: notificationTemplates.id,
+      channel: notificationTemplates.channel,
+      code: notificationTemplates.code,
+      subject: notificationTemplates.subject,
+      body: notificationTemplates.body,
+    })
+    .from(notificationTemplates)
+    .where(
+      and(
+        eq(notificationTemplates.companyId, companyId),
+        eq(notificationTemplates.channel, channel.toLowerCase()),
+        sql`lower(${notificationTemplates.code}) = ${code.toLowerCase()}`,
+        eq(notificationTemplates.isActive, true),
+      ),
+    )
+    .limit(1);
+
+  return row ?? null;
+}
+
 export type ListNotificationTemplatesParams = {
   companyId: string;
   limit: number;

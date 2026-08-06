@@ -1,4 +1,4 @@
-import { getStoredObjectResponse } from '@/server/services/storage/minio';
+import { getStoredObjectPresignedUrl, headStoredObject } from '@/server/services/storage/minio';
 import { BadRequest } from '@/server/utils/http-error';
 
 const WINDOWS_LATEST_PREFIX = 'desktop/windows/latest';
@@ -29,19 +29,13 @@ function getContentType(fileName: string) {
   return 'application/octet-stream';
 }
 
-function getCacheControl(fileName: string) {
-  if (fileName === 'latest.yml' || fileName === 'RELEASES') {
-    return 'private, no-cache, no-store, must-revalidate';
-  }
-
-  return 'private, max-age=31536000, immutable';
-}
-
-export function getWindowsDesktopUpdateObjectSvc(fileName: string) {
+export async function getWindowsDesktopUpdateRedirectUrlSvc(fileName: string): Promise<string> {
   const safeFileName = normalizeWindowsUpdateFile(fileName);
+  const key = `${WINDOWS_LATEST_PREFIX}/${safeFileName}`;
 
-  return getStoredObjectResponse(`${WINDOWS_LATEST_PREFIX}/${safeFileName}`, {
-    cacheControl: getCacheControl(safeFileName),
+  await headStoredObject(key);
+
+  return getStoredObjectPresignedUrl(key, {
     contentType: getContentType(safeFileName),
   });
 }

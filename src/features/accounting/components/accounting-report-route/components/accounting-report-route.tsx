@@ -115,7 +115,7 @@ export function AccountingReportRoute({ report }: { report: AccountingRouteRepor
             <Button
               variant="outline"
               disabled={!data.appliedFilters}
-              onClick={() => printHtml(exportConfig.title, exportConfig.sections)}
+              onClick={() => void printHtml(exportConfig.title, exportConfig.sections)}
             >
               Print Report
             </Button>

@@ -51,6 +51,7 @@ export const pickupQueuesRoutes = new Elysia({ name: 'pickup-queues' })
           pickerStaffId?: string | null;
           idCardTypeId?: string | null;
           idCardNumber?: string | null;
+          sendSms?: boolean;
         }),
         queuedBy: authUser.sub,
       });
@@ -61,6 +62,7 @@ export const pickupQueuesRoutes = new Elysia({ name: 'pickup-queues' })
         pickerStaffId: t.Optional(t.Union([UUID, t.Null()])),
         idCardTypeId: t.Optional(t.Union([UUID, t.Null()])),
         idCardNumber: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
+        sendSms: t.Optional(t.Boolean()),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreatePickupQueue)],
       detail: { tags: ['Pickup Queues'], summary: 'Create pickup queue ticket for a parcel' },

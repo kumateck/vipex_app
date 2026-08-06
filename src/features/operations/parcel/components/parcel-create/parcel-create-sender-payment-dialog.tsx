@@ -15,6 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select-searchable';
+import { PaymentMethod } from '@/db/schemas/enums';
+import { MomoRequestToPayPanel } from '@/features/operations/momo/components/momo-request-to-pay-panel';
 import { ParcelSenderPaymentSummary } from '../parcel-sender-payment-summary';
 import { PAYMENT_METHOD_OPTIONS } from '../parcel-sender-payments/constants';
 import type { PendingSenderPaymentParcel } from './parcel-form.types';
@@ -23,6 +25,8 @@ type ParcelCreateSenderPaymentDialogProps = {
   parcels: PendingSenderPaymentParcel[];
   paymentMethod: string;
   onPaymentMethodChange: (value: string) => void;
+  momoTransactionId: string;
+  onMomoConfirmed: (momoTransactionId: string) => void;
   isSubmitting: boolean;
   onClose: () => void;
   onSubmit: () => Promise<void>;
@@ -32,6 +36,8 @@ export function ParcelCreateSenderPaymentDialog({
   parcels,
   paymentMethod,
   onPaymentMethodChange,
+  momoTransactionId,
+  onMomoConfirmed,
   isSubmitting,
   onClose,
   onSubmit,
@@ -89,13 +95,29 @@ export function ParcelCreateSenderPaymentDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {paymentMethod === String(PaymentMethod.MTN) && parcels[0] ? (
+            <MomoRequestToPayPanel
+              parcelId={parcels[0].parcelId}
+              flow="sender"
+              amountCedis={totalDue}
+              onConfirmed={onMomoConfirmed}
+              disabled={isSubmitting}
+            />
+          ) : null}
         </div>
 
         <DialogFooter>
           <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>
             Print Later
           </Button>
-          <Button type="button" onClick={() => void onSubmit()} disabled={isSubmitting}>
+          <Button
+            type="button"
+            onClick={() => void onSubmit()}
+            disabled={
+              isSubmitting || (paymentMethod === String(PaymentMethod.MTN) && !momoTransactionId)
+            }
+          >
             {isSubmitting ? 'Processing...' : 'Pay and Print'}
           </Button>
         </DialogFooter>

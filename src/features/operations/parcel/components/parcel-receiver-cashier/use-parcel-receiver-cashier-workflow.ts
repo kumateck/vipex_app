@@ -20,8 +20,10 @@ import {
   type ParcelSearchRow,
   useCollectReceiverAndDeliverMutation,
   useGetParcelDetailsQuery,
+  useRequestReceiverOtpMutation,
   useSearchParcelsQuery,
   useUpdateParcelMutation,
+  useVerifyReceiverOtpMutation,
   useWaiveParcelStorageAccrualMutation,
 } from '../../api/parcel.api';
 import { confirmReceiverDelivery } from './confirm-receiver-delivery';
@@ -72,6 +74,8 @@ export function useParcelReceiverCashierWorkflow() {
   const [waiveParcelStorageAccrual, { isLoading: isWaivingStorage }] =
     useWaiveParcelStorageAccrualMutation();
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
+  const [requestReceiverOtp] = useRequestReceiverOtpMutation();
+  const [verifyReceiverOtp] = useVerifyReceiverOtpMutation();
 
   const { data: cardOptions = [] } = useListCardOptionsQuery();
   const { data: staffOptions = [] } = useListUserOptionsQuery(
@@ -204,6 +208,41 @@ export function useParcelReceiverCashierWorkflow() {
     dialog.setWaiveStorageAmount('0.00');
   };
 
+  const handleRequestOtp = async (force = false) => {
+    if (!selectedParcel) return;
+    dialog.setOtpRequestPending(true);
+    try {
+      const result = await requestReceiverOtp({
+        parcelId: selectedParcel.id,
+        targetReceiver: dialog.handoverTarget,
+        force,
+      }).unwrap();
+      dialog.setOtpSentAt(new Date().toISOString());
+      dialog.setOtpExpiresAt(result.expiresAt);
+      dialog.setOtpVerified(false);
+      dialog.setOtpVerificationToken('');
+      dialog.setOtpCode('');
+    } finally {
+      dialog.setOtpRequestPending(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!selectedParcel) return;
+    dialog.setOtpVerifyPending(true);
+    try {
+      const result = await verifyReceiverOtp({
+        parcelId: selectedParcel.id,
+        targetReceiver: dialog.handoverTarget,
+        otp: dialog.otpCode,
+      }).unwrap();
+      dialog.setOtpVerified(true);
+      dialog.setOtpVerificationToken(result.verificationToken);
+    } finally {
+      dialog.setOtpVerifyPending(false);
+    }
+  };
+
   const handleConfirmDelivered = async () => {
     if (!selectedParcel) return;
     const destinationBranchName =
@@ -235,6 +274,8 @@ export function useParcelReceiverCashierWorkflow() {
       paymentMethod: dialog.paymentMethod,
       destinationBranchName,
       destinationLocationName,
+      receiverOtpVerificationToken: dialog.otpVerificationToken,
+      momoTransactionId: dialog.momoTransactionId || null,
       addCustomerCard: (args) => addCustomerCard(args).unwrap(),
       createCustomer: (args) => createCustomer(args).unwrap(),
       collectReceiverAndDeliver: (args) => collectReceiverAndDeliver(args).unwrap(),
@@ -271,6 +312,8 @@ export function useParcelReceiverCashierWorkflow() {
       secondReceiverCards,
       handleConfirmDelivered,
       handleWaiveStorageAccrual,
+      handleRequestOtp,
+      handleVerifyOtp,
       isSaving,
     },
     receipt: {

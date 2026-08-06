@@ -25,6 +25,7 @@ export function ThermalStickerPortraitTemplate({
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value))
     .join(' / ');
+  const statusRowHeight = hasToBePaid ? '13mm' : '11mm';
 
   return (
     <div
@@ -37,7 +38,7 @@ export function ThermalStickerPortraitTemplate({
         padding: '1.2mm',
         fontFamily: 'Arial, sans-serif',
         display: 'grid',
-        gridTemplateRows: '16mm 11mm 11mm 1fr',
+        gridTemplateRows: `16mm ${statusRowHeight} 13mm 1fr`,
         gap: '0.6mm',
         overflow: 'hidden',
       }}
@@ -65,7 +66,7 @@ export function ThermalStickerPortraitTemplate({
         />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: '4.4mm', fontWeight: 900, lineHeight: 0.85 }}>VIPEX</div>
-          <div style={{ fontSize: '2.4mm', fontWeight: 800, lineHeight: 1 }}>Parcel Co. LTD</div>
+          <div style={{ fontSize: '2.4mm', fontWeight: 800, lineHeight: 1 }}>Parcels</div>
         </div>
         <PortraitBranchContacts />
         <div
@@ -118,6 +119,13 @@ export function ThermalStickerPortraitTemplate({
               {statusAmountLabel}
             </div>
           ) : null}
+          {hasToBePaid ? (
+            <div
+              style={{ marginTop: '0.3mm', fontSize: '1.5mm', fontWeight: 700, lineHeight: 1.05 }}
+            >
+              Sender did not pay at the point of sending
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -127,21 +135,36 @@ export function ThermalStickerPortraitTemplate({
           display: 'grid',
           minWidth: 0,
           overflow: 'hidden',
+          placeItems: 'center',
+          textAlign: 'center',
+          padding: '0.3mm 1mm',
         }}
       >
-        <div
-          style={{
-            display: 'grid',
-            placeItems: 'center',
-            paddingBlock: '0.15mm',
-            fontSize: bookingCode.length > 14 ? '7.8mm' : '9.2mm',
-            fontWeight: 900,
-            lineHeight: 0.86,
-            letterSpacing: '0',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {bookingCode}
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: '1.8mm',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              lineHeight: 1,
+            }}
+          >
+            Receiver
+          </div>
+          <div
+            style={{
+              marginTop: '0.25mm',
+              fontSize: receiverNameFontSize(receiverName),
+              fontWeight: 900,
+              lineHeight: 0.95,
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {receiverName}
+          </div>
+          <div style={{ marginTop: '0.3mm', fontSize: '3.2mm', fontWeight: 800, lineHeight: 1 }}>
+            {receiverTelephones}
+          </div>
         </div>
       </section>
 
@@ -149,20 +172,40 @@ export function ThermalStickerPortraitTemplate({
         style={{
           minHeight: 0,
           display: 'grid',
-          gridTemplateRows: '8mm 7mm 12mm 7mm 7mm 6mm',
+          gridTemplateRows: '12mm 7mm 7mm 1fr 5mm',
           gap: 0,
           overflow: 'hidden',
         }}
       >
-        <StickerRow label="Receiver" value={receiverName} emphasis />
-        <StickerRow label="Receiver Tel" value={receiverTelephones} />
         <DestinationRow branch={destinationBranchName} location={destinationLocationName} />
         <StickerRow label="Sender" value={senderName} />
         <StickerRow label="Sender Tel" value={senderTelephones} />
         <StickerRow label="Parcel Details" value={parcelDetails} />
+        <div
+          style={{
+            minWidth: 0,
+            borderTop: '0.35mm solid #111',
+            boxSizing: 'border-box',
+            display: 'grid',
+            placeItems: 'center',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ fontSize: '2.4mm', fontWeight: 700, letterSpacing: '0.02em' }}>
+            {bookingCode}
+          </div>
+        </div>
       </main>
     </div>
   );
+}
+
+function receiverNameFontSize(name: string) {
+  const length = name.length;
+  if (length > 26) return '3.2mm';
+  if (length > 18) return '4mm';
+  if (length > 12) return '5mm';
+  return '6mm';
 }
 
 function PortraitBranchContacts() {

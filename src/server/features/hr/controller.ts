@@ -4,6 +4,7 @@ import {
   checkInAttendanceSvc,
   checkOutAttendanceSvc,
   createDepartmentSvc,
+  createEmployeeFromUserSvc,
   createEmployeeSvc,
   createEmployeeUserAccountSvc,
   createJobTitleSvc,
@@ -23,6 +24,7 @@ import {
   listLeaveSwapsSvc,
   listLeaveTypeOptionsSvc,
   listLeaveTypesSvc,
+  linkEmployeeUserSvc,
   approveLeaveRequestSvc,
   approveLeaveRequestByManagerSvc,
   rejectLeaveRequestSvc,
@@ -188,6 +190,7 @@ export async function listEmployeeOptionsCtrl(input: {
   officerEmployeeId?: string | null;
   status?: number | null;
   search?: string | null;
+  unlinkedOnly?: boolean;
 }) {
   return listEmployeeOptionsSvc(input);
 }
@@ -198,6 +201,16 @@ export async function getEmployeeCtrl(id: string) {
 
 export async function createEmployeeCtrl(input: Parameters<typeof createEmployeeSvc>[0]) {
   return createEmployeeSvc(input);
+}
+
+export async function createEmployeeFromUserCtrl(
+  input: Parameters<typeof createEmployeeFromUserSvc>[0],
+) {
+  return createEmployeeFromUserSvc(input);
+}
+
+export async function linkEmployeeUserCtrl(input: Parameters<typeof linkEmployeeUserSvc>[0]) {
+  return linkEmployeeUserSvc(input);
 }
 
 export async function updateEmployeeCtrl(

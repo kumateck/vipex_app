@@ -78,6 +78,21 @@ export interface EmployeeOption {
   departmentId?: string | null;
   jobTitleId?: string | null;
   employmentStatus: number;
+  hasUserAccount?: boolean;
+}
+
+export interface CreateEmployeeFromUserInput {
+  userId: string;
+  employeeNumber: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  departmentId?: string | null;
+  jobTitleId?: string | null;
+  supervisorEmployeeId?: string | null;
+  hireDate: string;
+  employmentStatus?: number;
+  employmentType?: number;
 }
 
 export interface AttendanceRecord {
@@ -337,6 +352,7 @@ export const hrApi = api.injectEndpoints({
         officerEmployeeId?: string | null;
         status?: number | null;
         search?: string;
+        unlinkedOnly?: boolean;
       } | void
     >({
       query: (params) => ({
@@ -438,6 +454,36 @@ export const hrApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { employeeId }) => [
         { type: 'HR', id: employeeId },
         ...invalidateEntityListTag('HR'),
+      ],
+    }),
+    linkEmployeeUser: builder.mutation<
+      { userId: string; employeeId: string },
+      { userId: string; employeeId: string }
+    >({
+      query: ({ userId, employeeId }) => ({
+        url: `/hr/employees/${employeeId}/link-user`,
+        method: 'POST',
+        body: { userId },
+      }),
+      invalidatesTags: (_result, _error, { employeeId }) => [
+        { type: 'HR', id: employeeId },
+        { type: 'HR', id: 'EMPLOYEE_OPTIONS' },
+        { type: 'Users', id: 'LIST' },
+      ],
+    }),
+    createEmployeeFromUser: builder.mutation<
+      { id: string; userId: string },
+      CreateEmployeeFromUserInput
+    >({
+      query: ({ userId, ...body }) => ({
+        url: `/hr/employees/from-user/${userId}`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [
+        { type: 'HR', id: 'LIST' },
+        { type: 'HR', id: 'EMPLOYEE_OPTIONS' },
+        { type: 'Users', id: 'LIST' },
       ],
     }),
     listAttendance: builder.query<
@@ -729,6 +775,8 @@ export const {
   useGetEmployeeQuery,
   useUpdateEmployeeMutation,
   useCreateEmployeeUserAccountMutation,
+  useLinkEmployeeUserMutation,
+  useCreateEmployeeFromUserMutation,
   useListAttendanceQuery,
   useCheckInAttendanceMutation,
   useCheckOutAttendanceMutation,

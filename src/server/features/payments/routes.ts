@@ -6,6 +6,8 @@ import {
   collectSenderPaymentAndProcessCtrl,
   createPaymentCtrl,
   listPaymentsForParcelCtrl,
+  requestReceiverOtpCtrl,
+  verifyReceiverOtpCtrl,
 } from './controller';
 import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
@@ -76,6 +78,7 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
           parcelId: string;
           method: number;
           amountCedis?: number | string | null;
+          momoTransactionId?: string | null;
         }),
         companyId: authUser.companyId ?? '',
         branchId: authUser.branchId ?? '',
@@ -87,6 +90,7 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
         parcelId: UUID,
         method: t.Number(),
         amountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
+        momoTransactionId: t.Optional(t.Union([UUID, t.Null()])),
       }),
       detail: {
         tags: ['Payments'],
@@ -111,6 +115,9 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
           secondCardNumber?: string | null;
           amountCedis?: number | string | null;
           storageAmountCedis?: number | string | null;
+          receiverOtpVerificationToken: string;
+          receiverOtpTarget: 'main' | 'second';
+          momoTransactionId?: string | null;
         }),
         companyId: authUser.companyId ?? '',
         branchId: authUser.branchId ?? '',
@@ -129,10 +136,59 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
         secondCardNumber: t.Optional(t.Union([t.String(), t.Null()])),
         amountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
         storageAmountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
+        receiverOtpVerificationToken: t.String({ minLength: 1 }),
+        receiverOtpTarget: t.Union([t.Literal('main'), t.Literal('second')]),
+        momoTransactionId: t.Optional(t.Union([UUID, t.Null()])),
       }),
       detail: {
         tags: ['Payments'],
         summary: 'Atomically collect receiver payment (optional) and deliver parcel',
+      },
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateReceiverPayments)],
+    },
+  )
+  .post(
+    '/receiver-otp/request',
+    async ({ body, user }) => {
+      const authUser = user as AuthUser;
+      return requestReceiverOtpCtrl({
+        ...(body as { parcelId: string; targetReceiver: 'main' | 'second'; force?: boolean }),
+        companyId: authUser.companyId ?? '',
+        branchId: authUser.branchId ?? '',
+        requestedBy: authUser.sub,
+      });
+    },
+    {
+      body: t.Object({
+        parcelId: UUID,
+        targetReceiver: t.Union([t.Literal('main'), t.Literal('second')]),
+        force: t.Optional(t.Boolean()),
+      }),
+      detail: {
+        tags: ['Payments'],
+        summary: 'Send a receiver pickup verification OTP by SMS (5-minute expiry)',
+      },
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateReceiverPayments)],
+    },
+  )
+  .post(
+    '/receiver-otp/verify',
+    async ({ body, user }) => {
+      const authUser = user as AuthUser;
+      return verifyReceiverOtpCtrl({
+        ...(body as { parcelId: string; targetReceiver: 'main' | 'second'; otp: string }),
+        companyId: authUser.companyId ?? '',
+      });
+    },
+    {
+      body: t.Object({
+        parcelId: UUID,
+        targetReceiver: t.Union([t.Literal('main'), t.Literal('second')]),
+        otp: t.String({ pattern: '^[0-9]{6}$' }),
+      }),
+      detail: {
+        tags: ['Payments'],
+        summary: 'Verify a receiver pickup verification OTP',
       },
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateReceiverPayments)],
     },
