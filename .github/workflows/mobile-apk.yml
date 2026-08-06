@@ -123,6 +123,15 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Validate Native Android Project
+        if: ${{ steps.mobile_mode.outputs.build_mode == 'native' }}
+        run: |
+          set -euo pipefail
+          if [ ! -f apps/mobile/android/gradlew ]; then
+            echo "Native mode requires the tracked apps/mobile/android project."
+            exit 1
+          fi
+
       - name: Build APK with Gradle
         if: ${{ steps.mobile_mode.outputs.build_mode == 'native' }}
         working-directory: apps/mobile/android
