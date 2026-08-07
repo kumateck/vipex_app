@@ -3,11 +3,6 @@ import { InfoBlock, ParcelStack, SenderBlock } from './thermal-sticker-info-sect
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
 
 export function ThermalStickerLandscapeTemplate({
-  bookingCode,
-  issuedAtLabel,
-  printedByName,
-  printedByBranchName,
-  printedByLocationName,
   senderName,
   senderTelephones,
   receiverName,
@@ -43,7 +38,7 @@ export function ThermalStickerLandscapeTemplate({
         style={{
           minWidth: 0,
           display: 'grid',
-          gridTemplateRows: '16mm 1fr 5mm',
+          gridTemplateRows: '18mm 1fr',
           borderLeft: '0.25mm solid #111',
           borderRight: '0.25mm solid #111',
         }}
@@ -56,7 +51,6 @@ export function ThermalStickerLandscapeTemplate({
             display: 'grid',
             gridTemplateColumns: '32mm minmax(0, 1.15fr) minmax(0, 1fr)',
             borderTop: '0.25mm solid #111',
-            borderBottom: '0.25mm solid #111',
           }}
         >
           <InfoBlock
@@ -66,12 +60,6 @@ export function ThermalStickerLandscapeTemplate({
           />
           <SenderBlock senderName={senderName} senderTelephones={senderTelephones} />
           <ParcelStack parcelContent={parcelContent} parcelDetails={parcelDetails} />
-        </div>
-
-        <div style={{ display: 'grid', placeItems: 'center' }}>
-          <div style={{ fontSize: '2.2mm', fontWeight: 700, letterSpacing: '0.03em' }}>
-            {bookingCode}
-          </div>
         </div>
       </main>
 
@@ -105,7 +93,7 @@ export function ThermalStickerLandscapeTemplate({
             ) : null}
             {hasToBePaid ? (
               <div style={{ marginTop: '0.6mm', fontSize: '1.7mm', fontWeight: 700 }}>
-                Sender did not pay at the point of sending
+                Please Note: Sender did not pay at the point of sending,
               </div>
             ) : null}
           </div>
@@ -114,19 +102,11 @@ export function ThermalStickerLandscapeTemplate({
           style={{
             alignSelf: 'center',
             display: 'grid',
-            gridTemplateColumns: '1fr 24mm',
-            alignItems: 'center',
-            gap: '3mm',
+            placeItems: 'center',
             minWidth: 0,
             width: '100%',
           }}
         >
-          <PrintMetaBlock
-            issuedAtLabel={issuedAtLabel}
-            printedByName={printedByName}
-            printedByBranchName={printedByBranchName}
-            printedByLocationName={printedByLocationName}
-          />
           <div
             aria-label="Parcel tracking QR code"
             style={{ width: '24mm', height: '24mm', justifySelf: 'end' }}
@@ -134,40 +114,6 @@ export function ThermalStickerLandscapeTemplate({
           />
         </div>
       </aside>
-    </div>
-  );
-}
-
-function PrintMetaBlock({
-  issuedAtLabel,
-  printedByName,
-  printedByBranchName,
-  printedByLocationName,
-}: {
-  issuedAtLabel: string;
-  printedByName?: string | null;
-  printedByBranchName?: string | null;
-  printedByLocationName?: string | null;
-}) {
-  const printerLocation = [printedByBranchName, printedByLocationName]
-    .map((value) => value?.trim())
-    .filter((value): value is string => Boolean(value))
-    .join(' / ');
-
-  return (
-    <div
-      style={{
-        minWidth: 0,
-        fontSize: '1.8mm',
-        fontWeight: 800,
-        lineHeight: 1.15,
-        textAlign: 'left',
-        overflowWrap: 'anywhere',
-      }}
-    >
-      <div>Printed: {issuedAtLabel}</div>
-      <div style={{ marginTop: '0.45mm' }}>Printed by: {printedByName?.trim() || '-'}</div>
-      <div style={{ marginTop: '0.35mm' }}>Source: {printerLocation || '-'}</div>
     </div>
   );
 }
@@ -185,7 +131,7 @@ function ReceiverHeader({
         display: 'grid',
         gridTemplateColumns: '1fr',
         alignItems: 'center',
-        padding: '1mm 2mm',
+        padding: '0.6mm 2mm',
         textAlign: 'center',
         overflow: 'hidden',
       }}
@@ -203,7 +149,7 @@ function ReceiverHeader({
       >
         {receiverName}
       </div>
-      <div style={{ marginTop: '0.5mm', fontSize: '3.6mm', fontWeight: 700, lineHeight: 1 }}>
+      <div style={{ marginTop: '0.5mm', fontSize: '4.6mm', fontWeight: 900, lineHeight: 1 }}>
         {receiverTelephones}
       </div>
     </header>

@@ -1,18 +1,10 @@
 import logoPng from '@/assets/logo.png';
-import {
-  DestinationRow,
-  PortraitBranchContacts,
-  receiverNameFontSize,
-} from './thermal-sticker-portrait-sections';
+import { DestinationRow, receiverNameFontSize } from './thermal-sticker-portrait-sections';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
 import { StickerRow } from './thermal-sticker-template-utils';
+import { ThermalStickerWordmark } from './thermal-sticker-wordmark';
 
 export function ThermalStickerPortraitTemplate({
-  bookingCode,
-  issuedAtLabel,
-  printedByName,
-  printedByBranchName,
-  printedByLocationName,
   senderName,
   senderTelephones,
   receiverName,
@@ -25,10 +17,6 @@ export function ThermalStickerPortraitTemplate({
   hasToBePaid,
   qrSvg,
 }: PreparedThermalStickerTemplateProps) {
-  const printedLocation = [printedByBranchName, printedByLocationName]
-    .map((value) => value?.trim())
-    .filter((value): value is string => Boolean(value))
-    .join(' / ');
   const statusRowHeight = hasToBePaid ? '13mm' : '11mm';
 
   return (
@@ -51,44 +39,21 @@ export function ThermalStickerPortraitTemplate({
         style={{
           minWidth: 0,
           display: 'grid',
-          gridTemplateColumns: '11mm 1fr 24mm 16mm',
-          gridTemplateRows: '8mm 7mm',
-          alignItems: 'start',
-          columnGap: '1.5mm',
-          rowGap: '0.6mm',
+          gridTemplateColumns: '12mm 1fr 16mm',
+          alignItems: 'center',
+          columnGap: '2mm',
         }}
       >
         <img
           src={logoPng}
           alt="Vipex logo"
           style={{
-            width: '10mm',
-            height: '10mm',
+            width: '12mm',
+            height: '12mm',
             objectFit: 'contain',
-            gridRow: '1 / 3',
           }}
         />
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: '4.4mm', fontWeight: 900, lineHeight: 0.85 }}>VIPEX</div>
-          <div style={{ fontSize: '2.4mm', fontWeight: 800, lineHeight: 1 }}>Parcels</div>
-        </div>
-        <PortraitBranchContacts />
-        <div
-          style={{
-            minWidth: 0,
-            justifySelf: 'end',
-            alignSelf: 'start',
-            marginRight: '1.5mm',
-            fontSize: '1.5mm',
-            fontWeight: 800,
-            lineHeight: 1.15,
-            overflowWrap: 'anywhere',
-          }}
-        >
-          <div>Printed: {issuedAtLabel}</div>
-          <div style={{ marginTop: '0.35mm' }}>Printed by: {printedByName?.trim() || '-'}</div>
-          <div style={{ marginTop: '0.3mm' }}>Source: {printedLocation || '-'}</div>
-        </div>
+        <ThermalStickerWordmark />
         <div
           aria-label="Parcel tracking QR code"
           style={{
@@ -127,7 +92,7 @@ export function ThermalStickerPortraitTemplate({
             <div
               style={{ marginTop: '0.3mm', fontSize: '1.5mm', fontWeight: 700, lineHeight: 1.05 }}
             >
-              Sender did not pay at the point of sending
+              Please Note: Sender did not pay at the point of sending,
             </div>
           ) : null}
         </div>
@@ -166,7 +131,7 @@ export function ThermalStickerPortraitTemplate({
           >
             {receiverName}
           </div>
-          <div style={{ marginTop: '0.3mm', fontSize: '3.2mm', fontWeight: 800, lineHeight: 1 }}>
+          <div style={{ marginTop: '0.3mm', fontSize: '4.2mm', fontWeight: 900, lineHeight: 1 }}>
             {receiverTelephones}
           </div>
         </div>
@@ -176,7 +141,7 @@ export function ThermalStickerPortraitTemplate({
         style={{
           minHeight: 0,
           display: 'grid',
-          gridTemplateRows: '12mm 7mm 7mm 1fr 5mm',
+          gridTemplateRows: '12mm 7mm 7mm 1fr',
           gap: 0,
           overflow: 'hidden',
         }}
@@ -185,20 +150,6 @@ export function ThermalStickerPortraitTemplate({
         <StickerRow label="Sender" value={senderName} />
         <StickerRow label="Sender Tel" value={senderTelephones} />
         <StickerRow label="Parcel Details" value={parcelDetails} />
-        <div
-          style={{
-            minWidth: 0,
-            borderTop: '0.35mm solid #111',
-            boxSizing: 'border-box',
-            display: 'grid',
-            placeItems: 'center',
-            overflow: 'hidden',
-          }}
-        >
-          <div style={{ fontSize: '2.4mm', fontWeight: 700, letterSpacing: '0.02em' }}>
-            {bookingCode}
-          </div>
-        </div>
       </main>
     </div>
   );
