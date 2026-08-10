@@ -2,6 +2,7 @@ export * from './types';
 export * from './constants/page-styles';
 export * from './hooks/use-managed-react-print';
 export * from './hooks/use-print-scenarios';
+export * from './hooks/use-routed-document-print';
 export * from './services/desktop-print';
 export * from './services/html-document';
 export * from './services/browser-print';

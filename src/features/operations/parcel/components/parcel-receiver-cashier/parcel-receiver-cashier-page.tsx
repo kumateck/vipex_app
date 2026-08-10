@@ -115,6 +115,7 @@ export function ParcelReceiverCashierPage() {
           <ParcelReceiptActions
             data={receipt.lastPrintedReceipt}
             autoPrint
+            autoPrintSelection="invoice"
             mode="receiver-payment"
             onAutoPrintComplete={receipt.clearLastPrintedReceipt}
           />

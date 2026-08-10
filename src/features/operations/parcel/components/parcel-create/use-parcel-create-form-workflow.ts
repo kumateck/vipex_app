@@ -224,12 +224,12 @@ export function useParcelCreateFormWorkflow() {
         shouldPrintOnSubmit && printPreference.canPrintAfterSubmit
           ? await senderPayment.openPaymentDialog(receipt)
           : false;
-
+      const autoPrintReceipt = shouldPrintOnSubmit && printPreference.canPrintAfterSubmit;
+      resetCreateForm({ closePaymentDialog: !openedPaymentDialog });
       if (!openedPaymentDialog) {
         setLatestReceipt(receipt);
+        setShouldPrintOnSubmit(autoPrintReceipt);
       }
-
-      resetCreateForm({ closePaymentDialog: !openedPaymentDialog });
       toast.success(
         isCashierUser
           ? 'Parcel transaction created successfully'

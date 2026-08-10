@@ -7,6 +7,7 @@ export * from './parcel-card-destination-section';
 export * from './parcel-card-info-section';
 export * from './parcel-card-recipient-section';
 export * from './parcel-create-form.utils';
+export * from './parcel-create-print.utils';
 export * from './parcel-create-sender-payment-dialog';
 export * from './parcel-form.types';
 export * from './parcel-receipts';
