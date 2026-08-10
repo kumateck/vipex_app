@@ -1,5 +1,6 @@
 import type { ParcelInternalTransferDetails, ParcelInternalTransferRow } from '../api/parcel.api';
 import { formatDateTime } from '@/lib/dates';
+import { getPrintRuntime, printViaDesktop } from '@/features/printing/services/desktop-print';
 
 function holderTypeLabel(value: number) {
   if (value === 0) return 'Main Branch';
@@ -36,10 +37,7 @@ function formatDate(value: string | null | undefined) {
   return formatDateTime(date);
 }
 
-export function printParcelInternalTransferSlip(details: ParcelInternalTransferDetails) {
-  const printWindow = window.open('', '_blank', 'width=900,height=700,noopener,noreferrer');
-  if (!printWindow) return;
-
+export async function printParcelInternalTransferSlip(details: ParcelInternalTransferDetails) {
   const itemRows = details.items
     .map(
       (item, index) => `
@@ -171,6 +169,18 @@ export function printParcelInternalTransferSlip(details: ParcelInternalTransferD
       </body>
     </html>
   `;
+
+  if (getPrintRuntime() === 'desktop') {
+    const result = await printViaDesktop({
+      html,
+      layout: 'report-a4',
+      title: `transfer-${details.transfer.referenceNo ?? 'slip'}`,
+    });
+    if (result.ok) return;
+  }
+
+  const printWindow = window.open('', '_blank', 'width=900,height=700,noopener,noreferrer');
+  if (!printWindow) return;
 
   printWindow.document.write(html);
   printWindow.document.close();

@@ -77,7 +77,10 @@ export function ParcelInternalTransferDetailsCard({
               ))}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => printParcelInternalTransferSlip(details)}>
+              <Button
+                variant="outline"
+                onClick={() => void printParcelInternalTransferSlip(details)}
+              >
                 Print Transfer Slip
               </Button>
               {canAcknowledge ? (

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Link } from 'react-router-dom';
-import { useReactToPrint } from 'react-to-print';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
@@ -41,6 +40,8 @@ import { useGetCustomerStatementQuery, useListCustomersQuery } from '@/features/
 import { useListDepartmentOptionsQuery, useListEmployeeOptionsQuery } from '@/features/hr';
 import { useListPayrollCyclesQuery } from '@/features/payroll';
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
+import { PAGE_STYLES } from '@/features/printing/constants/page-styles';
+import { useRoutedDocumentPrint } from '@/features/printing/hooks/use-routed-document-print';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
 import {
@@ -2104,9 +2105,11 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
     to,
   ]);
 
-  const printReport = useReactToPrint({
+  const printReport = useRoutedDocumentPrint({
     contentRef: printRef,
     documentTitle: REPORT_LABELS[activeReport].toLowerCase().replaceAll(/\s+/g, '-'),
+    layout: 'report-a4',
+    pageStyle: PAGE_STYLES['report-a4'],
   });
 
   const handleLoadReport = () => {

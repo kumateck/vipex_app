@@ -8,25 +8,27 @@ import type { ParcelBookingFormValues } from './parcel-form.types';
 type ParcelCardDestinationSectionProps = {
   control: Control<ParcelBookingFormValues>;
   destinationBranchName: FieldPathByValue<ParcelBookingFormValues, string>;
-  destinationLocationName: FieldPathByValue<ParcelBookingFormValues, string>;
+  destinationLocationIdName: FieldPathByValue<ParcelBookingFormValues, string>;
   branchOptions: Array<{ id: string; name: string }>;
   locationOptions: Array<{ id: string; name: string }>;
   destinationBranchId: string;
   locationPlaceholder: string;
   isLoadingLocations: boolean;
   clearErrors: UseFormClearErrors<ParcelBookingFormValues>;
+  onLocationNameChange: (locationId: string) => void;
 };
 
 export function ParcelCardDestinationSection({
   control,
   destinationBranchName,
-  destinationLocationName,
+  destinationLocationIdName,
   branchOptions,
   locationOptions,
   destinationBranchId,
   locationPlaceholder,
   isLoadingLocations,
   clearErrors,
+  onLocationNameChange,
 }: ParcelCardDestinationSectionProps) {
   return (
     <Card size="sm" className="border-muted/50 bg-muted/20 shadow-none">
@@ -63,7 +65,7 @@ export function ParcelCardDestinationSection({
 
         <FormField
           control={control}
-          name={destinationLocationName}
+          name={destinationLocationIdName}
           rules={{ required: 'Pickup location is required' }}
           render={({ field }) => (
             <FormItem>
@@ -73,7 +75,8 @@ export function ParcelCardDestinationSection({
                   value={sanitizeString(field.value)}
                   onValueChange={(value) => {
                     field.onChange(value);
-                    clearErrors(destinationLocationName);
+                    onLocationNameChange(value);
+                    clearErrors(destinationLocationIdName);
                   }}
                   isLoading={isLoadingLocations}
                   placeholder={locationPlaceholder}

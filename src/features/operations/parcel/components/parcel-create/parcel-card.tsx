@@ -38,6 +38,7 @@ export function ParcelCard({
     field:
       | 'destinationBranchId'
       | 'destinationLocationId'
+      | 'destinationLocationName'
       | 'parcelDetails'
       | 'parcelContent'
       | 'parcelValue'
@@ -52,7 +53,8 @@ export function ParcelCard({
   ) => `parcels.${index}.${field}` as FieldPathByValue<ParcelBookingFormValues, string>;
 
   const destinationBranchName = parcelFieldName('destinationBranchId');
-  const destinationLocationName = parcelFieldName('destinationLocationId');
+  const destinationLocationIdName = parcelFieldName('destinationLocationId');
+  const destinationLocationLabelName = parcelFieldName('destinationLocationName');
   const parcelDetailsName = parcelFieldName('parcelDetails');
   const parcelContentName = parcelFieldName('parcelContent');
   const parcelValueName = parcelFieldName('parcelValue');
@@ -68,7 +70,7 @@ export function ParcelCard({
 
   const destinationBranchId = sanitizeString(useWatch({ control, name: destinationBranchName }));
   const destinationLocationId = sanitizeString(
-    useWatch({ control, name: destinationLocationName }),
+    useWatch({ control, name: destinationLocationIdName }),
   );
   const parcelChargeValue = sanitizeString(useWatch({ control, name: parcelChargeName }));
   const paymentResponsibility = sanitizeString(
@@ -112,9 +114,16 @@ export function ParcelCard({
   useEffect(() => {
     if (previousBranchId.current === destinationBranchId) return;
     previousBranchId.current = destinationBranchId;
-    setValue(destinationLocationName, '', { shouldDirty: true, shouldValidate: false });
-    clearErrors(destinationLocationName);
-  }, [clearErrors, destinationBranchId, destinationLocationName, setValue]);
+    setValue(destinationLocationIdName, '', { shouldDirty: true, shouldValidate: false });
+    setValue(destinationLocationLabelName, '', { shouldDirty: true, shouldValidate: false });
+    clearErrors(destinationLocationIdName);
+  }, [
+    clearErrors,
+    destinationBranchId,
+    destinationLocationIdName,
+    destinationLocationLabelName,
+    setValue,
+  ]);
 
   useEffect(() => {
     if (
@@ -125,15 +134,20 @@ export function ParcelCard({
     ) {
       return;
     }
-    const onlyLocationId = locationOptions[0]?.id;
-    if (!onlyLocationId) return;
-    setValue(destinationLocationName, onlyLocationId, { shouldDirty: true, shouldValidate: true });
-    clearErrors(destinationLocationName);
+    const onlyLocation = locationOptions[0];
+    if (!onlyLocation) return;
+    setValue(destinationLocationIdName, onlyLocation.id, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setValue(destinationLocationLabelName, onlyLocation.name, { shouldDirty: true });
+    clearErrors(destinationLocationIdName);
   }, [
     clearErrors,
     destinationBranchId,
     destinationLocationId,
-    destinationLocationName,
+    destinationLocationIdName,
+    destinationLocationLabelName,
     isLoadingLocations,
     locationOptions,
     setValue,
@@ -188,13 +202,18 @@ export function ParcelCard({
               <ParcelCardDestinationSection
                 control={control}
                 destinationBranchName={destinationBranchName}
-                destinationLocationName={destinationLocationName}
+                destinationLocationIdName={destinationLocationIdName}
                 branchOptions={branchOptions}
                 locationOptions={locationOptions}
                 destinationBranchId={destinationBranchId}
                 locationPlaceholder={locationPlaceholder}
                 isLoadingLocations={isLoadingLocations}
                 clearErrors={clearErrors}
+                onLocationNameChange={(locationId) => {
+                  const locationName =
+                    locationOptions.find((location) => location.id === locationId)?.name ?? '';
+                  setValue(destinationLocationLabelName, locationName, { shouldDirty: true });
+                }}
               />
               <ParcelCardRecipientSection
                 receiverPhoneName={receiverPhoneName}

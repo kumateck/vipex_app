@@ -1,4 +1,5 @@
 import logoPng from '@/assets/logo.png';
+import { PAYMENT_DUE_NOTE } from './thermal-sticker-copy';
 import { DestinationRow, receiverNameFontSize } from './thermal-sticker-portrait-sections';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
 import { StickerRow } from './thermal-sticker-template-utils';
@@ -92,7 +93,7 @@ export function ThermalStickerPortraitTemplate({
             <div
               style={{ marginTop: '0.3mm', fontSize: '1.5mm', fontWeight: 700, lineHeight: 1.05 }}
             >
-              Please Note: Sender did not pay at the point of sending,
+              {PAYMENT_DUE_NOTE}
             </div>
           ) : null}
         </div>

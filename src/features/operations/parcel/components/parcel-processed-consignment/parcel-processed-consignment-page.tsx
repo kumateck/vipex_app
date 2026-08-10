@@ -169,6 +169,7 @@ export function ParcelProcessedConsignmentPage() {
   const [reprintStickerCopies, setReprintStickerCopies] = useState(1);
   const [consignmentPrintPayload, setConsignmentPrintPayload] =
     useState<ConsignmentPrintPayload | null>(null);
+  const clearConsignmentPrintPayload = useCallback(() => setConsignmentPrintPayload(null), []);
   const [editDestinationId, setEditDestinationId] = useState<string>('');
   const [editSourceLocationId, setEditSourceLocationId] = useState<string>('');
   const [editPickupLocationId, setEditPickupLocationId] = useState<string>('');
@@ -820,7 +821,7 @@ export function ParcelProcessedConsignmentPage() {
       ) : null}
       <ConsignmentPrintController
         payload={consignmentPrintPayload}
-        onPrinted={() => setConsignmentPrintPayload(null)}
+        onPrinted={clearConsignmentPrintPayload}
       />
     </div>
   );
