@@ -1,4 +1,5 @@
 import { useCallback, type RefObject } from 'react';
+import { toast } from 'sonner';
 import {
   createPrintableHtmlDocument,
   getPrinterPreferenceMapping,
@@ -78,7 +79,9 @@ export function useParcelDesktopParallelPrint({
       const failed = result.jobs.filter((job) => !job.ok);
       const reason = failed.map((job) => `${job.layout}: ${job.reason ?? 'failed'}`).join(' | ');
       console.warn('[PRINT_PARALLEL_FAILED]', reason);
-      return false;
+      toast.error(`One or more print jobs failed: ${reason}`);
+      onAutoPrintComplete?.();
+      return true;
     }
 
     onAutoPrintComplete?.();

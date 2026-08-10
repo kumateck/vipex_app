@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { printViaDesktop } from '@/features/printing/services/desktop-print';
+import {
+  printParallelViaDesktop,
+  printViaDesktop,
+} from '@/features/printing/services/desktop-print';
 import { getPreferredPrinterForLayout } from '@/features/printing/services/printer-preferences';
-import type { DesktopPrintRequest } from '@/features/printing/types';
+import type { DesktopParallelPrintRequest, DesktopPrintRequest } from '@/features/printing/types';
 
 const MAPPING = {
   stickerPrinter: 'Thermal Printer',
@@ -55,4 +58,71 @@ describe('printer preference routing', () => {
       title: 'Daily report',
     });
   });
+
+  test('dispatches A5 receipts silently to the configured invoice printer', async () => {
+    let dispatchedRequest: DesktopPrintRequest | undefined;
+    installDesktopPrintMocks((request) => {
+      dispatchedRequest = request;
+      return Promise.resolve({ ok: true });
+    });
+
+    const result = await printViaDesktop({
+      html: '<p>Parcel receipt</p>',
+      layout: 'invoice-a5-receipt',
+      title: 'Parcel receipt',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(dispatchedRequest?.deviceName).toBe(MAPPING.invoicePrinter);
+    expect(dispatchedRequest?.silent).toBe(true);
+  });
+
+  test('routes parallel sticker and receipt jobs to separate printers', async () => {
+    let dispatchedRequest: DesktopParallelPrintRequest | undefined;
+    installPrinterPreferences();
+    Reflect.set(globalThis, 'window', {
+      api: {
+        printParallel: (request: DesktopParallelPrintRequest) => {
+          dispatchedRequest = request;
+          return Promise.resolve({
+            ok: true,
+            jobs: request.jobs.map((job) => ({ ...job, ok: true })),
+          });
+        },
+      },
+    });
+
+    const result = await printParallelViaDesktop({
+      jobs: [
+        { html: '<p>Sticker</p>', layout: 'thermal-sticker', title: 'Sticker' },
+        { html: '<p>Receipt</p>', layout: 'invoice-a5-receipt', title: 'Receipt' },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(dispatchedRequest?.jobs).toEqual([
+      expect.objectContaining({ deviceName: MAPPING.stickerPrinter, silent: true }),
+      expect.objectContaining({ deviceName: MAPPING.invoicePrinter, silent: true }),
+    ]);
+  });
 });
+
+function installPrinterPreferences() {
+  const preferences = new Map([
+    ['vipex:printer:sticker', MAPPING.stickerPrinter],
+    ['vipex:printer:invoice', MAPPING.invoicePrinter],
+    ['vipex:printer:a4', MAPPING.a4Printer],
+  ]);
+  Reflect.set(globalThis, 'localStorage', {
+    getItem: (key: string) => preferences.get(key) ?? null,
+    removeItem: (key: string) => preferences.delete(key),
+    setItem: (key: string, value: string) => preferences.set(key, value),
+  });
+}
+
+function installDesktopPrintMocks(
+  printHtml: (request: DesktopPrintRequest) => Promise<{ ok: true }>,
+) {
+  installPrinterPreferences();
+  Reflect.set(globalThis, 'window', { api: { printHtml } });
+}

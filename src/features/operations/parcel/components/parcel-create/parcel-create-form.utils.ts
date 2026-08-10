@@ -5,6 +5,7 @@ import { sanitizeNumber, sanitizeString } from '@/lib/utils';
 export const createEmptyParcel = (): ParcelFormValues => ({
   destinationBranchId: '',
   destinationLocationId: '',
+  destinationLocationName: '',
   parcelDetails: '',
   parcelContent: '',
   parcelValue: '0',

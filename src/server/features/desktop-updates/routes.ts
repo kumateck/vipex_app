@@ -1,20 +1,18 @@
 import { Elysia } from 'elysia';
 import { authPlugin, requireAuth } from '@/server/plugins/auth';
-import { getWindowsDesktopUpdateRedirectUrlSvc } from './service';
+import { getWindowsDesktopUpdateResponseSvc } from './service';
 
 export const desktopUpdatesRoutes = new Elysia({ name: 'desktop-updates' }).use(authPlugin).get(
   '/windows/latest/*',
-  async ({ params, redirect }) => {
+  async ({ params }) => {
     const fileName = (params as { '*': string })['*'];
-    const url = await getWindowsDesktopUpdateRedirectUrlSvc(fileName);
-    return redirect(url, 302);
+    return getWindowsDesktopUpdateResponseSvc(fileName);
   },
   {
     beforeHandle: [requireAuth()],
     detail: {
       tags: ['Desktop Updates'],
-      summary:
-        'Redirect to a short-lived presigned MinIO URL for a private Windows desktop update artifact',
+      summary: 'Stream a private Windows desktop update artifact through the app server',
     },
   },
 );

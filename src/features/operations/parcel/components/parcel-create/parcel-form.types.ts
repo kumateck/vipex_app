@@ -11,6 +11,7 @@ export type CustomerFormValues = {
 export type ParcelFormValues = {
   destinationBranchId: string;
   destinationLocationId: string;
+  destinationLocationName: string;
   parcelDetails: string;
   parcelContent: string;
   parcelValue: string;
