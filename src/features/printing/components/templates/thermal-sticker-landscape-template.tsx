@@ -1,5 +1,6 @@
 import { ThermalStickerHeaderPanel } from './thermal-sticker-header-panel';
 import { InfoBlock, ParcelStack, SenderBlock } from './thermal-sticker-info-sections';
+import { PAYMENT_DUE_NOTE } from './thermal-sticker-copy';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
 
 export function ThermalStickerLandscapeTemplate({
@@ -93,7 +94,7 @@ export function ThermalStickerLandscapeTemplate({
             ) : null}
             {hasToBePaid ? (
               <div style={{ marginTop: '0.6mm', fontSize: '1.7mm', fontWeight: 700 }}>
-                Please Note: Sender did not pay at the point of sending,
+                {PAYMENT_DUE_NOTE}
               </div>
             ) : null}
           </div>

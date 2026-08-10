@@ -11,6 +11,7 @@ export * from './components/templates/thermal-sticker-header-panel';
 export * from './components/templates/thermal-sticker-info-sections';
 export * from './components/templates/thermal-sticker-landscape-template';
 export * from './components/templates/thermal-sticker-portrait-template';
+export * from './components/templates/thermal-sticker-copy';
 export * from './components/templates/thermal-sticker-template';
 export * from './components/templates/thermal-sticker-template-types';
 export * from './components/templates/thermal-sticker-wordmark';

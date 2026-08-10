@@ -55,7 +55,7 @@ export function buildParcelCreateReceipt({
         destinationBranchName:
           branchOptions.find((branch) => branch.id === formParcel?.destinationBranchId)?.name ??
           '-',
-        destinationLocationName: formParcel?.destinationLocationId ?? '-',
+        destinationLocationName: formParcel?.destinationLocationName?.trim() || '-',
         totalChargeCedis: charge,
         senderPaidCedis,
         receiverToPayCedis:
