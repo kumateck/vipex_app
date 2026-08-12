@@ -599,7 +599,10 @@ export const parcelApi = api.injectEndpoints({
     >({
       query: (query) => ({
         url: '/shipments/parcels',
-        params: buildServerPaginationParams(query),
+        params: {
+          ...buildServerPaginationParams(query),
+          createdAtOrder: 'desc',
+        },
       }),
       providesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),

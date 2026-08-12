@@ -6,8 +6,9 @@ Date: 2026-03-29
 
 1. Desktop auto-update source:
 
-- MinIO feed (Windows Squirrel artifacts + `RELEASES`)
-- Triggered by PR to `desktop` branch
+- MinIO feed (Windows NSIS installer + `latest.yml`)
+- Platform-specific authenticated app proxies for Windows and macOS
+- Triggered by a push to the `desktop` branch
 
 2. Mobile update source:
 
@@ -70,9 +71,10 @@ Date: 2026-03-29
 
 ### Desktop
 
-Set runtime env for packaged desktop app:
+The release workflow embeds these platform-specific feeds in the packaged apps:
 
 - `DESKTOP_UPDATE_FEED_URL=<APP_BASE_URL>/v1/desktop-updates/windows/latest/`
+- `DESKTOP_UPDATE_FEED_URL=<APP_BASE_URL>/v1/desktop-updates/macos/latest/`
 
 Private desktop feeds are checked and downloaded from the in-app **App Updates** page with
 the logged-in user's bearer token. The API validates that token, then streams the update
@@ -105,8 +107,9 @@ In `apps/mobile/eas.json`:
 
 ### Desktop
 
-- App compares current version with MinIO feed metadata
+- App compares its installed semantic version with `latest.yml` (Windows) or `latest-mac.yml` (macOS)
 - If newer: available -> download -> install on restart
+- Each `desktop` branch build receives a monotonically increasing `0.1.<run number>` version
 
 ### Mobile (OTA)
 
@@ -118,5 +121,8 @@ In `apps/mobile/eas.json`:
 ## Notes
 
 - This pipeline is private-distribution friendly (no App Store / Microsoft Store required).
-- Devices must be able to reach MinIO/EAS endpoints.
+- Windows auto-update uses NSIS because `electron-updater` does not support Squirrel.Windows.
+- Test the first Squirrel-to-NSIS upgrade on an existing Windows installation before broad rollout.
+- macOS auto-install requires an Apple-signed application; configure signing/notarization secrets before release.
+- Desktop devices must reach the authenticated app endpoint; mobile devices must reach EAS.
 - For iOS private distribution, add a separate workflow/profile when you are ready to ship IPA internally.

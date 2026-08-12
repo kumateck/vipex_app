@@ -16,6 +16,7 @@ import {
 } from '../../api/parcel.api';
 import type { ReceiptPrintData } from '../parcel-receipt.types';
 import { buildSenderReceiptData } from './build-sender-receipt-data';
+import { SENDER_PAYMENTS_DEFAULT_SORT } from './constants';
 import { useReconciliationRequestState } from './use-reconciliation-request-state';
 import { getSenderDuePsw, toDataUrl } from './utils';
 
@@ -39,6 +40,7 @@ export function useSenderPaymentsWorkflow() {
   const [query, setQuery] = useState<SenderPaymentsQuery>({
     page: 1,
     pageSize: 20,
+    sort: SENDER_PAYMENTS_DEFAULT_SORT,
     filters: {
       companyId,
       sourceId: branchId,
@@ -88,6 +90,7 @@ export function useSenderPaymentsWorkflow() {
     setQuery((prev) => ({
       ...prev,
       page: 1,
+      sort: SENDER_PAYMENTS_DEFAULT_SORT,
       filters: {
         companyId,
         sourceId: branchId,

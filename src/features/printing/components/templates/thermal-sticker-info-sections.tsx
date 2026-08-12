@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { landscapePrimaryFontSize } from './thermal-sticker-font-size.utils';
 
 export function InfoBlock({
   label,
@@ -19,7 +20,7 @@ export function InfoBlock({
       <div
         style={{
           marginTop: '1mm',
-          fontSize: primaryFontSize(primary),
+          fontSize: landscapePrimaryFontSize(primary),
           fontWeight: 800,
           lineHeight: 1,
           overflowWrap: 'anywhere',
@@ -147,16 +148,9 @@ function ParcelBlock({
 function primaryValueStyle(value?: string | null): CSSProperties {
   return {
     marginTop: '0.8mm',
-    fontSize: primaryFontSize(value),
+    fontSize: landscapePrimaryFontSize(value),
     fontWeight: 800,
     lineHeight: 1,
     overflowWrap: 'anywhere',
   };
-}
-
-function primaryFontSize(value?: string | null) {
-  const length = value?.length ?? 0;
-  if (length > 34) return '3.5mm';
-  if (length > 24) return '4.1mm';
-  return '5mm';
 }

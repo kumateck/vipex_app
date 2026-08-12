@@ -1,10 +1,4 @@
-export function receiverNameFontSize(name: string) {
-  const length = name.length;
-  if (length > 26) return '3.2mm';
-  if (length > 18) return '4mm';
-  if (length > 12) return '5mm';
-  return '6mm';
-}
+import { portraitDestinationFontSize } from './thermal-sticker-font-size.utils';
 
 export function DestinationRow({
   branch,
@@ -50,9 +44,7 @@ function StickerRowContent({
   const displayValue = value?.trim() || '-';
   const fontSize =
     scale === 'large'
-      ? displayValue.length > 18
-        ? '6.6mm'
-        : '8.4mm'
+      ? portraitDestinationFontSize(displayValue)
       : displayValue.length > 18
         ? '3.3mm'
         : '4.2mm';
