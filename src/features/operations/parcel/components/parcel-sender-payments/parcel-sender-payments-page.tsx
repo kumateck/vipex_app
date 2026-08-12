@@ -21,6 +21,8 @@ export function ParcelSenderPaymentsPage() {
     setAmount,
     paymentMethod,
     setPaymentMethod,
+    mtnPaymentFlow,
+    setMtnPaymentFlow,
     momoTransactionId,
     setMomoTransactionId,
     isSubmitting,
@@ -80,6 +82,8 @@ export function ParcelSenderPaymentsPage() {
           onAmountChange={setAmount}
           paymentMethod={paymentMethod}
           onPaymentMethodChange={setPaymentMethod}
+          mtnPaymentFlow={mtnPaymentFlow}
+          onMtnPaymentFlowChange={setMtnPaymentFlow}
           momoTransactionId={momoTransactionId}
           onMomoConfirmed={setMomoTransactionId}
           isSubmitting={isSubmitting}

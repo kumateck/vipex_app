@@ -25,6 +25,7 @@ jobs:
     env:
       DESKTOP_WEB_BASE_URL: ${{ inputs.desktop_web_base_url }}
       DESKTOP_UPDATE_FEED_URL: ${{ inputs.desktop_update_feed_url }}
+      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
 
     steps:
       - name: Checkout
@@ -34,6 +35,14 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Restore Electron Builder Cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ELECTRON_BUILDER_CACHE }}
+          key: electron-builder-${{ runner.os }}-${{ hashFiles('bun.lock', 'apps/desktop/package.json') }}
+          restore-keys: |
+            electron-builder-${{ runner.os }}-
 
       - name: Install Dependencies
         run: bun install
@@ -45,7 +54,20 @@ jobs:
         run: bunx tsc -p apps/desktop/tsconfig.json --noEmit
 
       - name: Build Windows Test Installer
-        run: bun run --cwd apps/desktop make:windows:test
+        run: |
+          for attempt in 1 2 3; do
+            echo "Windows test NSIS build attempt ${attempt} of 3"
+            if bun run --cwd apps/desktop make:windows:test; then
+              exit 0
+            fi
+            if [ "${attempt}" -eq 3 ]; then
+              echo "Windows test NSIS build failed after 3 attempts"
+              exit 1
+            fi
+            delay=$((attempt * 15))
+            echo "Build download failed; retrying in ${delay} seconds"
+            sleep "${delay}"
+          done
 
       - name: Upload Windows Test Installer
         uses: actions/upload-artifact@v4
