@@ -3,20 +3,17 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { MakerDeb } = require('@electron-forge/maker-deb');
 const { MakerRpm } = require('@electron-forge/maker-rpm');
-const { MakerSquirrel } = require('@electron-forge/maker-squirrel');
 const { MakerZIP } = require('@electron-forge/maker-zip');
 const { VitePlugin } = require('@electron-forge/plugin-vite');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const logoBasePath = path.resolve(__dirname, '../../src/assets/logo');
-const logoIcoPath = `${logoBasePath}.ico`;
 const logoIcnsPath = `${logoBasePath}.icns`;
 const hasMacNotaryEnv =
   Boolean(process.env.APPLE_ID) &&
   Boolean(process.env.APPLE_APP_SPECIFIC_PASSWORD) &&
   Boolean(process.env.APPLE_TEAM_ID);
 const hasIcns = fs.existsSync(logoIcnsPath);
-const hasIco = fs.existsSync(logoIcoPath);
 
 module.exports = {
   packagerConfig: {
@@ -47,18 +44,7 @@ module.exports = {
           }
         : undefined,
   },
-  makers: [
-    new MakerSquirrel(
-      hasIco
-        ? {
-            setupIcon: logoIcoPath,
-          }
-        : {},
-    ),
-    new MakerZIP({}, ['darwin']),
-    new MakerRpm({}),
-    new MakerDeb({}),
-  ],
+  makers: [new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
   plugins: [
     new VitePlugin({
       build: [

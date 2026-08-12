@@ -7,7 +7,7 @@ import {
   type CreateBookingWithParcelsInput,
   type CreateBookingWithParcelsOutput,
 } from './booking-with-parcels.repository';
-import { PaymentMethod, PaymentResponsibility } from '@/db/schemas';
+import { ParcelStatus, PaymentMethod, PaymentResponsibility } from '@/db/schemas';
 import { assertActiveSessionSvc } from '../cashiers/service';
 import { recordAuditLog } from '../audit/logger';
 import { getCustomerCreditSummarySvc, getCustomerSvc } from '../customers/service';
@@ -41,6 +41,24 @@ export type CreateBookingWithParcelsBody = {
     branchId: string;
   }>;
 };
+
+export function deferBookingToSenderCashier(
+  body: CreateBookingWithParcelsBody,
+): CreateBookingWithParcelsBody {
+  return {
+    ...body,
+    status: ParcelStatus.CREATED,
+    cashierSessionId: null,
+    requireActiveCashierSession: false,
+    parcels: body.parcels.map((parcel) => ({
+      ...parcel,
+      status: ParcelStatus.CREATED,
+      method: PaymentMethod.CASH,
+      senderPaymentCedis: 0,
+      senderPaymentMethod: undefined,
+    })),
+  };
+}
 
 export async function createBookingWithParcelsSvc(
   body: CreateBookingWithParcelsBody,

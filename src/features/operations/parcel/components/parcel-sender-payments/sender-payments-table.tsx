@@ -14,7 +14,7 @@ import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { ParcelStatus } from '@/db/schemas/enums';
 import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import type { SenderCashierParcel } from '../../api/parcel.api';
-import { EMPTY_META, PAYMENT_TYPE_LEGEND } from './constants';
+import { EMPTY_META, PAYMENT_TYPE_LEGEND, SENDER_PAYMENTS_DEFAULT_SORT } from './constants';
 import {
   formatCurrency,
   formatPhones,
@@ -101,7 +101,7 @@ export function SenderPaymentsTable({
         accessorFn: (row) => formatCurrency(row.chargePsw),
       },
       {
-        id: 'createdAtLabel',
+        id: 'createdAt',
         header: 'Created At',
         accessorFn: (row) => formatSenderParcelDate(row.createdAt),
       },
@@ -189,6 +189,7 @@ export function SenderPaymentsTable({
             columns={columns}
             meta={meta ?? EMPTY_META}
             loading={loading}
+            defaultSort={SENDER_PAYMENTS_DEFAULT_SORT}
             serverFilters={{ companyId, sourceId: branchId, status: ParcelStatus.CREATED }}
             onRequestChange={onRequestChange}
             searchPlaceholder="Search by tracking, booking, sender or receiver"

@@ -22,10 +22,11 @@ const __dirname = path.dirname(__filename);
 let mainWindow: BrowserWindow | null = null;
 const PACKAGED_WEB_BASE_URL = 'https://testing.app.vipexparcel.com/';
 const DEV_WEB_BASE_URL = 'http://localhost:5173/';
+const DEFAULT_DESKTOP_UPDATE_PLATFORM = process.platform === 'darwin' ? 'macos' : 'windows';
 const DEFAULT_DESKTOP_UPDATE_FEED_URL = `${PACKAGED_WEB_BASE_URL.replace(
   /\/$/,
   '',
-)}/v1/desktop-updates/windows/latest/`;
+)}/v1/desktop-updates/${DEFAULT_DESKTOP_UPDATE_PLATFORM}/latest/`;
 const BUILD_DESKTOP_WEB_BASE_URL = __DESKTOP_WEB_BASE_URL__.trim();
 const BUILD_DESKTOP_UPDATE_FEED_URL = __DESKTOP_UPDATE_FEED_URL__.trim();
 let pendingDeepLink: string | null = null;
@@ -41,9 +42,11 @@ let updateStatus: {
     | 'not-available'
     | 'error';
   version?: string;
+  currentVersion: string;
+  availableVersion?: string;
   progress?: number;
   message?: string;
-} = { state: 'idle', version: app.getVersion() };
+} = { state: 'idle', version: app.getVersion(), currentVersion: app.getVersion() };
 
 type PrintLayout = 'thermal-sticker' | 'invoice-a5' | 'invoice-a5-receipt' | 'report-a4';
 
@@ -323,6 +326,8 @@ function setUpdateStatus(
       | 'not-available'
       | 'error';
     version?: string;
+    currentVersion?: string;
+    availableVersion?: string;
     progress?: number;
     message?: string;
   }>,
@@ -385,13 +390,21 @@ function configureAutoUpdater() {
   }
 
   autoUpdater.on('checking-for-update', () => {
-    setUpdateStatus({ state: 'checking', message: undefined, progress: undefined });
+    setUpdateStatus({
+      state: 'checking',
+      currentVersion: app.getVersion(),
+      availableVersion: undefined,
+      message: undefined,
+      progress: undefined,
+    });
   });
 
   autoUpdater.on('update-available', (info) => {
     setUpdateStatus({
       state: 'available',
       version: info.version,
+      currentVersion: app.getVersion(),
+      availableVersion: info.version,
       message: 'Update is available for download.',
       progress: undefined,
     });
@@ -400,6 +413,9 @@ function configureAutoUpdater() {
   autoUpdater.on('update-not-available', () => {
     setUpdateStatus({
       state: 'not-available',
+      version: app.getVersion(),
+      currentVersion: app.getVersion(),
+      availableVersion: undefined,
       message: 'You are on the latest version.',
       progress: undefined,
     });
@@ -417,6 +433,8 @@ function configureAutoUpdater() {
     setUpdateStatus({
       state: 'downloaded',
       version: info.version,
+      currentVersion: app.getVersion(),
+      availableVersion: info.version,
       progress: 100,
       message: 'Update downloaded. Restart to install.',
     });

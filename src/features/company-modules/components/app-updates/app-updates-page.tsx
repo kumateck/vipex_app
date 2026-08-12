@@ -29,6 +29,8 @@ type DesktopUpdateStatus = NonNullable<Window['api']>['updates'] extends {
         | 'not-available'
         | 'error';
       version?: string;
+      currentVersion?: string;
+      availableVersion?: string;
       progress?: number;
       message?: string;
     };
@@ -175,7 +177,14 @@ export function AppUpdatesPage() {
           <CardContent className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">{STATUS_LABEL[status.state]}</Badge>
-              {status.version ? <Badge variant="secondary">Version: {status.version}</Badge> : null}
+              {(status.currentVersion ?? status.version) ? (
+                <Badge variant="secondary">
+                  Installed: {status.currentVersion ?? status.version}
+                </Badge>
+              ) : null}
+              {status.availableVersion ? (
+                <Badge variant="default">Available: {status.availableVersion}</Badge>
+              ) : null}
               {status.state === 'downloaded' ? (
                 <Badge variant="default" className="gap-1">
                   <CheckCircle2 className="h-3.5 w-3.5" />

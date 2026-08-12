@@ -30,62 +30,70 @@ export default function LoginScreen() {
 
   return (
     <AppScreen>
-      <View style={styles.hero}>
-        <Text style={[styles.brand, { color: theme.colors.primary }]}>VIPEX</Text>
-        <Text style={[styles.title, { color: theme.colors.text }]}>Welcome back</Text>
-        <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-          Sign in to continue to your operations workspace.
-        </Text>
-      </View>
+      <View style={styles.content}>
+        <View style={styles.hero}>
+          <Text style={[styles.brand, { color: theme.colors.primary }]}>VIPEX</Text>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Welcome back</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
+            Sign in to continue to your operations workspace.
+          </Text>
+        </View>
 
-      <AppCard>
-        <View style={styles.formGroup}>
-          <AppLabel>Email</AppLabel>
-          <AppInput
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="you@company.com"
+        <AppCard>
+          <View style={styles.formGroup}>
+            <AppLabel>Email</AppLabel>
+            <AppInput
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="you@company.com"
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <AppLabel>Password</AppLabel>
+            <PasswordInput value={password} onChangeText={setPassword} placeholder="••••••••" />
+          </View>
+
+          {error ? (
+            <Text style={[styles.error, { color: theme.colors.danger }]}>{error}</Text>
+          ) : null}
+
+          <AppButton
+            title="Sign In"
+            onPress={() => void handleLogin()}
+            disabled={loading}
+            loading={loading}
           />
+        </AppCard>
+
+        <View style={styles.links}>
+          <Link href="/(auth)/forgot-password" asChild>
+            <Pressable hitSlop={8}>
+              <Text style={[styles.linkText, { color: theme.colors.secondary }]}>
+                Forgot password?
+              </Text>
+            </Pressable>
+          </Link>
+          <Link href="/(auth)/set-password" asChild>
+            <Pressable hitSlop={8}>
+              <Text style={[styles.linkText, { color: theme.colors.secondary }]}>Set password</Text>
+            </Pressable>
+          </Link>
         </View>
-
-        <View style={styles.formGroup}>
-          <AppLabel>Password</AppLabel>
-          <PasswordInput value={password} onChangeText={setPassword} placeholder="••••••••" />
-        </View>
-
-        {error ? <Text style={[styles.error, { color: theme.colors.danger }]}>{error}</Text> : null}
-
-        <AppButton
-          title="Sign In"
-          onPress={() => void handleLogin()}
-          disabled={loading}
-          loading={loading}
-        />
-      </AppCard>
-
-      <View style={styles.links}>
-        <Link href="/(auth)/forgot-password" asChild>
-          <Pressable hitSlop={8}>
-            <Text style={[styles.linkText, { color: theme.colors.secondary }]}>
-              Forgot password?
-            </Text>
-          </Pressable>
-        </Link>
-        <Link href="/(auth)/set-password" asChild>
-          <Pressable hitSlop={8}>
-            <Text style={[styles.linkText, { color: theme.colors.secondary }]}>Set password</Text>
-          </Pressable>
-        </Link>
       </View>
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: mobileSpacing.md,
+  },
   hero: {
-    paddingTop: mobileSpacing.md,
     paddingBottom: mobileSpacing.sm,
     gap: 4,
   },

@@ -18,6 +18,8 @@ type DesktopUpdateStatus = NonNullable<Window['api']>['updates'] extends {
         | 'not-available'
         | 'error';
       version?: string;
+      currentVersion?: string;
+      availableVersion?: string;
       progress?: number;
       message?: string;
     };
