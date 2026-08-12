@@ -166,15 +166,16 @@ Important:
 
 ## Environment
 
-Default API base in `apps/mobile/app.json` points to:
+Android release builds load their endpoints from `apps/mobile/.env.production`:
 
 - `https://testing.app.vipexparcel.com`
 
 Runtime uses `/v1` automatically in mobile API layer.
 
-You can override with:
+Debug builds load `apps/mobile/.env`, where local development can override with:
 
-- `EXPO_PUBLIC_API_BASE_URL`
+- `API_BASE_URL`
+- `COMMUNICATION_WS_URL`
 
 ## Notes
 

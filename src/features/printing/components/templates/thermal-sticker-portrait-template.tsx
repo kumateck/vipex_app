@@ -18,7 +18,7 @@ export function ThermalStickerPortraitTemplate({
   hasToBePaid,
   qrSvg,
 }: PreparedThermalStickerTemplateProps) {
-  const statusRowHeight = hasToBePaid ? '13mm' : '11mm';
+  const statusRowHeight = hasToBePaid ? '14mm' : '11mm';
 
   return (
     <div
@@ -91,7 +91,7 @@ export function ThermalStickerPortraitTemplate({
           ) : null}
           {hasToBePaid ? (
             <div
-              style={{ marginTop: '0.3mm', fontSize: '1.5mm', fontWeight: 700, lineHeight: 1.05 }}
+              style={{ marginTop: '0.5mm', fontSize: '2.1mm', fontWeight: 700, lineHeight: 1.05 }}
             >
               {PAYMENT_DUE_NOTE}
             </div>
@@ -142,15 +142,15 @@ export function ThermalStickerPortraitTemplate({
         style={{
           minHeight: 0,
           display: 'grid',
-          gridTemplateRows: '12mm 7mm 7mm 1fr',
+          gridTemplateRows: '12mm 8mm 8mm 1fr',
           gap: 0,
           overflow: 'hidden',
         }}
       >
         <DestinationRow branch={destinationBranchName} location={destinationLocationName} />
-        <StickerRow label="Sender" value={senderName} />
-        <StickerRow label="Sender Tel" value={senderTelephones} />
-        <StickerRow label="Parcel Details" value={parcelDetails} />
+        <StickerRow label="Sender" value={senderName} align="center" emphasis />
+        <StickerRow label="Sender Tel" value={senderTelephones} align="center" emphasis />
+        <StickerRow label="Parcel Details" value={parcelDetails} align="center" emphasis />
       </main>
     </div>
   );
