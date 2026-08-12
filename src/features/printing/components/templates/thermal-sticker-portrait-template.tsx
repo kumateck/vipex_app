@@ -1,6 +1,7 @@
 import logoPng from '@/assets/logo.png';
 import { PAYMENT_DUE_NOTE } from './thermal-sticker-copy';
-import { DestinationRow, receiverNameFontSize } from './thermal-sticker-portrait-sections';
+import { portraitDestinationFontSize } from './thermal-sticker-font-size.utils';
+import { DestinationRow } from './thermal-sticker-portrait-sections';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
 import { StickerRow } from './thermal-sticker-template-utils';
 import { ThermalStickerWordmark } from './thermal-sticker-wordmark';
@@ -19,6 +20,7 @@ export function ThermalStickerPortraitTemplate({
   qrSvg,
 }: PreparedThermalStickerTemplateProps) {
   const statusRowHeight = hasToBePaid ? '14mm' : '11mm';
+  const receiverFontSize = portraitDestinationFontSize(destinationBranchName);
 
   return (
     <div
@@ -31,7 +33,7 @@ export function ThermalStickerPortraitTemplate({
         padding: '1.2mm',
         fontFamily: 'Arial, sans-serif',
         display: 'grid',
-        gridTemplateRows: `16mm ${statusRowHeight} 13mm 1fr`,
+        gridTemplateRows: `16mm ${statusRowHeight} 20mm 1fr`,
         gap: '0.6mm',
         overflow: 'hidden',
       }}
@@ -124,7 +126,7 @@ export function ThermalStickerPortraitTemplate({
           <div
             style={{
               marginTop: '0.25mm',
-              fontSize: receiverNameFontSize(receiverName),
+              fontSize: receiverFontSize,
               fontWeight: 900,
               lineHeight: 0.95,
               overflowWrap: 'anywhere',
@@ -132,7 +134,14 @@ export function ThermalStickerPortraitTemplate({
           >
             {receiverName}
           </div>
-          <div style={{ marginTop: '0.3mm', fontSize: '4.2mm', fontWeight: 900, lineHeight: 1 }}>
+          <div
+            style={{
+              marginTop: '0.3mm',
+              fontSize: receiverFontSize,
+              fontWeight: 900,
+              lineHeight: 1,
+            }}
+          >
             {receiverTelephones}
           </div>
         </div>

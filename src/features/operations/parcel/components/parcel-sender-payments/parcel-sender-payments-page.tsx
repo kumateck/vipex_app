@@ -120,6 +120,7 @@ export function ParcelSenderPaymentsPage() {
           <ParcelReceiptActions
             data={lastPrintedReceipt}
             autoPrint
+            autoPrintSelection="both"
             mode="sender-payment"
             onAutoPrintComplete={clearLastPrintedReceipt}
           />

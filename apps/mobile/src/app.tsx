@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from '@mobile/providers/auth-provider';
 import { AppearanceProvider, useAppearance } from '@mobile/providers/appearance-provider';
 import { SnackbarProvider } from '@mobile/providers/snackbar-provider';
 import { CommunicationNotificationsProvider } from '@mobile/providers/communication-notifications-provider';
+import { MobileUpdateGate } from '@mobile/features/mobile-updates';
 import { MobileDrawerContent } from '@mobile/components/navigation/mobile-drawer-content';
 import { mobileRadius, mobileShadow } from '@mobile/theme/layout';
 import { navigationRef } from '@mobile/navigation/navigation-service';
@@ -159,7 +160,7 @@ function AppDrawer() {
       <Drawer.Screen
         name="ParcelCreate"
         component={ParcelCreateScreen}
-        options={{ title: 'Create TobePaid', headerShown: false }}
+        options={{ title: 'Create Parcel', headerShown: false }}
       />
       <Drawer.Screen
         name="SuperSearch"
@@ -259,6 +260,7 @@ export default function App() {
     <SafeAreaProvider>
       <AppearanceProvider>
         <AuthProvider>
+          <MobileUpdateGate />
           <CommunicationNotificationsProvider>
             <SnackbarProvider>
               <AppShell />

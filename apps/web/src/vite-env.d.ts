@@ -20,6 +20,8 @@ type DesktopUpdateStatus = {
     | 'not-available'
     | 'error';
   version?: string;
+  currentVersion?: string;
+  availableVersion?: string;
   progress?: number;
   message?: string;
 };

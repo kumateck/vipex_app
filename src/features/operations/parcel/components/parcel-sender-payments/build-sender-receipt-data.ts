@@ -30,6 +30,8 @@ export function buildSenderReceiptData({
   destinationLocationName,
   taxBreakdown,
 }: BuildSenderReceiptDataArgs): ReceiptPrintData {
+  const amountPaidCedis = senderDueCedis > 0 ? amountValue : 0;
+
   return {
     bookingCode: parcel.bookingCode,
     trackingCode: parcel.trackingCode,
@@ -45,8 +47,9 @@ export function buildSenderReceiptData({
     destinationBranchName,
     destinationLocationName,
     totalChargeCedis,
-    senderPaidCedis: senderDueCedis > 0 ? amountValue : 0,
+    senderPaidCedis: amountPaidCedis,
     receiverToPayCedis,
+    amountPaidCedis,
     issuedAt: new Date().toISOString(),
     taxBreakdown,
   };

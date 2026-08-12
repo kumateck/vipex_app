@@ -4,7 +4,7 @@ export function getParcelCreationPrintSelection(
   parcel: ReceiptSummary['parcels'][number],
 ): 'sticker' | 'both' {
   const senderPaidCedis = parcel.amountPaidCedis ?? parcel.senderPaidCedis;
-  return senderPaidCedis > 0 ? 'both' : 'sticker';
+  return senderPaidCedis > 0 || parcel.receiverToPayCedis > 0 ? 'both' : 'sticker';
 }
 
 export function mergePaidParcelsIntoReceipt(

@@ -10,7 +10,7 @@ type ParcelReceiptPrintControlsProps = {
   autoPrint: boolean;
   canPrintForSession: boolean;
   isLoading: boolean;
-  isSenderPaid: boolean;
+  hasPrintableReceipt: boolean;
   isStickerPrintEnabled: boolean;
   showSelectionMenu: boolean;
   triggerLabel: string;
@@ -23,7 +23,7 @@ export function ParcelReceiptPrintControls({
   autoPrint,
   canPrintForSession,
   isLoading,
-  isSenderPaid,
+  hasPrintableReceipt,
   isStickerPrintEnabled,
   showSelectionMenu,
   triggerLabel,
@@ -32,7 +32,7 @@ export function ParcelReceiptPrintControls({
   onPrintSticker,
 }: ParcelReceiptPrintControlsProps) {
   if (autoPrint) return null;
-  if (!showSelectionMenu && !isStickerPrintEnabled && !isSenderPaid) return null;
+  if (!showSelectionMenu && !isStickerPrintEnabled && !hasPrintableReceipt) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -55,7 +55,7 @@ export function ParcelReceiptPrintControls({
         </DropdownMenu>
       ) : (
         <Button type="button" onClick={onPrintBoth} disabled={isLoading || !canPrintForSession}>
-          {isSenderPaid
+          {hasPrintableReceipt
             ? isStickerPrintEnabled
               ? triggerLabel
               : 'Print Invoice'

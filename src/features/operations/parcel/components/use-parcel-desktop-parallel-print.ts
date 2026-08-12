@@ -12,7 +12,7 @@ type UseParcelDesktopParallelPrintParams = {
   bookingCode: string;
   canPrintForSession: boolean;
   invoiceRef: RefObject<HTMLDivElement | null>;
-  isSenderPaid: boolean;
+  hasPrintableReceipt: boolean;
   isStickerPrintEnabled: boolean;
   mode: 'sender-payment' | 'receiver-payment' | 'reprint' | 'default';
   onAutoPrintComplete?: () => void;
@@ -23,7 +23,7 @@ export function useParcelDesktopParallelPrint({
   bookingCode,
   canPrintForSession,
   invoiceRef,
-  isSenderPaid,
+  hasPrintableReceipt,
   isStickerPrintEnabled,
   mode,
   onAutoPrintComplete,
@@ -32,7 +32,7 @@ export function useParcelDesktopParallelPrint({
   return useCallback(async () => {
     if (
       mode !== 'sender-payment' ||
-      !isSenderPaid ||
+      !hasPrintableReceipt ||
       !isStickerPrintEnabled ||
       !canPrintForSession ||
       typeof window === 'undefined' ||
@@ -90,7 +90,7 @@ export function useParcelDesktopParallelPrint({
     bookingCode,
     canPrintForSession,
     invoiceRef,
-    isSenderPaid,
+    hasPrintableReceipt,
     isStickerPrintEnabled,
     mode,
     onAutoPrintComplete,
