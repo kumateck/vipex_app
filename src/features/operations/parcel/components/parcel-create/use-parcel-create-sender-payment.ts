@@ -6,6 +6,7 @@ import {
   useCollectSenderAndProcessMutation,
   useLazyGetParcelDetailsQuery,
 } from '../../api/parcel.api';
+import { mergePaidParcelsIntoReceipt } from './parcel-create-print.utils';
 import type { PendingSenderPaymentParcel, ReceiptSummary } from './parcel-form.types';
 
 type UseParcelCreateSenderPaymentArgs = {
@@ -43,7 +44,7 @@ export function useParcelCreateSenderPayment({
         .filter((parcel): parcel is PendingSenderPaymentParcel => Boolean(parcel));
 
       if (loadedParcels.length === 0) return false;
-      setPendingReceipt({ bookingId: receipt.bookingId, parcels: loadedParcels });
+      setPendingReceipt(receipt);
       setPendingParcels(loadedParcels);
       setPaymentMethodRaw(String(PaymentMethod.CASH));
       setMomoTransactionId('');
@@ -83,7 +84,7 @@ export function useParcelCreateSenderPayment({
         }),
       );
 
-      onPaidReceiptsReady({ bookingId: pendingReceipt.bookingId, parcels: paidParcels });
+      onPaidReceiptsReady(mergePaidParcelsIntoReceipt(pendingReceipt, paidParcels));
       toast.success('Sender payment collected. Printing receipts.');
       setPendingReceipt(null);
       setPendingParcels([]);

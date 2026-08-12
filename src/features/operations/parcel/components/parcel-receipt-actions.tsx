@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { PAGE_STYLES, useManagedReactPrint } from '@/features/printing';
 import { useGetCurrentActiveSessionQuery } from '@/features/cashiers/api/cashiers.api';
+import { PAGE_STYLES } from '@/features/printing/constants/page-styles';
+import { useManagedReactPrint } from '@/features/printing/hooks/use-managed-react-print';
 import { useAuthStore } from '@/stores/auth-store';
 import { useStickerPrintModule } from '../hooks';
 import { ParcelReceiptPrintControls } from './parcel-receipt-print-controls';
 import { ParcelReceiptPrintContent } from './parcel-receipt-print-content';
 import type { ReceiptPrintData } from './parcel-receipt.types';
+import { useParcelDesktopInvoicePrint } from './parcel-desktop-print';
 import { useParcelDesktopParallelPrint } from './use-parcel-desktop-parallel-print';
 import { useParcelDesktopStickerPrint } from './use-parcel-desktop-sticker-print';
 
@@ -44,6 +46,7 @@ export function ParcelReceiptActions({
   const [queueInvoiceAfterSticker, setQueueInvoiceAfterSticker] = useState(false);
   const canPrintStickerViaDesktop =
     typeof window !== 'undefined' && typeof window.api?.printHtml === 'function';
+  const canPrintInvoiceViaDesktop = canPrintStickerViaDesktop;
   const qrUrl = useMemo(
     () => `https://vipexparcel.com/tracking/${encodeURIComponent(data.trackingCode)}`,
     [data.trackingCode],
@@ -100,6 +103,11 @@ export function ParcelReceiptActions({
     canPrintStickerViaDesktop,
     stickerRef: desktopStickerRef,
   });
+  const printInvoiceViaDesktop = useParcelDesktopInvoicePrint({
+    bookingCode: data.bookingCode,
+    canPrintViaDesktop: canPrintInvoiceViaDesktop,
+    invoiceRef,
+  });
 
   const handlePrintStickerOnly = useCallback(() => {
     if (!canPrintForSession) {
@@ -134,6 +142,10 @@ export function ParcelReceiptActions({
     }
     if (!isStickerPrintEnabled) {
       if (isSenderPaid) {
+        if (canPrintInvoiceViaDesktop) {
+          void printInvoiceViaDesktop().then(() => onAutoPrintComplete?.());
+          return;
+        }
         void printInvoice();
         return;
       }
@@ -146,11 +158,8 @@ export function ParcelReceiptActions({
       return;
     }
     if (canPrintStickerViaDesktop) {
-      void printStickerViaDesktop(1).then((printed) => {
-        if (printed) {
-          void printInvoice();
-          return;
-        }
+      void printStickerViaDesktop(1).then(async (printed) => {
+        if (printed) await printInvoiceViaDesktop();
         onAutoPrintComplete?.();
       });
       return;
@@ -159,12 +168,14 @@ export function ParcelReceiptActions({
     void printSticker();
   }, [
     canPrintForSession,
+    canPrintInvoiceViaDesktop,
     canPrintStickerViaDesktop,
     handlePrintStickerOnly,
     isSenderPaid,
     isStickerPrintEnabled,
     onAutoPrintComplete,
     printInvoice,
+    printInvoiceViaDesktop,
     printSticker,
     printStickerViaDesktop,
   ]);
@@ -183,8 +194,18 @@ export function ParcelReceiptActions({
       toast.error('Open a cashier session before printing receipts');
       return;
     }
+    if (canPrintInvoiceViaDesktop) {
+      void printInvoiceViaDesktop().then(() => onAutoPrintComplete?.());
+      return;
+    }
     void printInvoice();
-  }, [canPrintForSession, printInvoice]);
+  }, [
+    canPrintForSession,
+    canPrintInvoiceViaDesktop,
+    onAutoPrintComplete,
+    printInvoice,
+    printInvoiceViaDesktop,
+  ]);
   useEffect(() => {
     if (
       !autoPrint ||
