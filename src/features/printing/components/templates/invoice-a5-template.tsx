@@ -1,6 +1,6 @@
-import { QRCode } from 'react-qrcode-logo';
 import logoPng from '@/assets/logo.png';
 import { InvoiceTaxSummary } from './invoice-tax-summary';
+import { createQrSvg } from './thermal-sticker-template-utils';
 
 type InvoiceA5TemplateProps = {
   bookingCode: string;
@@ -67,12 +67,14 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     { label: 'NHIL', value: tax.nhil },
     { label: 'VAT', value: tax.vat },
   ];
+  const qrSvg = createQrSvg(qrValue);
 
   return (
     <div
       className="invoice-a5-root bg-white text-black"
       style={{
         width: '198mm',
+        boxSizing: 'border-box',
         border: '0.35mm solid #111',
         padding: '2.6mm 3.2mm',
         fontFamily: 'Arial, sans-serif',
@@ -249,9 +251,11 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4mm' }}>
-          <div style={{ alignSelf: 'center' }}>
-            <QRCode value={qrValue} size={130} quietZone={1} ecLevel="M" />
-          </div>
+          <div
+            aria-label="Parcel tracking QR code"
+            style={{ alignSelf: 'center', width: '34mm', height: '34mm', overflow: 'hidden' }}
+            dangerouslySetInnerHTML={{ __html: qrSvg }}
+          />
         </div>
       </div>
 

@@ -47,7 +47,7 @@ export const PAGE_STYLES: Record<PrintLayout, string> = {
     @media print {
       @page {
         size: A5 landscape;
-        margin: 6mm;
+        margin: 0;
       }
       html, body {
         width: 210mm;
@@ -55,6 +55,12 @@ export const PAGE_STYLES: Record<PrintLayout, string> = {
       }
       body {
         margin: 0;
+        padding: 6mm;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
       }
     }
   `,

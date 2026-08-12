@@ -4,7 +4,6 @@ type ThermalStickerWordmarkProps = {
 
 export function ThermalStickerWordmark({ size = 'portrait' }: ThermalStickerWordmarkProps) {
   const vipFontSize = size === 'landscape' ? '10mm' : '7.2mm';
-  const parcelFontSize = size === 'landscape' ? '5.8mm' : '4.4mm';
 
   return (
     <div
@@ -24,7 +23,7 @@ export function ThermalStickerWordmark({ size = 'portrait' }: ThermalStickerWord
           <span
             style={{
               position: 'absolute',
-              top: '61%',
+              top: '82%',
               left: '40%',
               fontSize: '0.34em',
               fontWeight: 900,
@@ -35,7 +34,7 @@ export function ThermalStickerWordmark({ size = 'portrait' }: ThermalStickerWord
           </span>
         </span>
       </span>
-      <span style={{ fontSize: parcelFontSize, lineHeight: 1, letterSpacing: '0.02em' }}>
+      <span style={{ fontSize: vipFontSize, lineHeight: 0.82, letterSpacing: '0.02em' }}>
         PARCEL
       </span>
     </div>
