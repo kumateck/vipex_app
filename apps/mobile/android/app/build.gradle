@@ -8,7 +8,31 @@ project.ext.vectoricons = [
 ]
 
 apply from: file("../../../../node_modules/react-native-vector-icons/fonts.gradle")
+
+project.ext.envConfigFiles = [
+    debug: ".env",
+    debugoptimized: ".env",
+    release: ".env.production"
+]
 apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
+
+def isReleaseBuildRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.toLowerCase().contains("release")
+}
+
+if (isReleaseBuildRequested) {
+    def releaseApiBaseUrl = project.env.get("API_BASE_URL")?.trim()
+    def forbiddenReleaseHosts = ["localhost", "127.0.0.1", "10.0.2.2"]
+    def usesForbiddenReleaseHost = forbiddenReleaseHosts.any { host ->
+        releaseApiBaseUrl?.contains(host)
+    }
+
+    if (!releaseApiBaseUrl?.startsWith("https://") || usesForbiddenReleaseHost) {
+        throw new GradleException(
+            "Release API_BASE_URL must be a non-local HTTPS URL; received: ${releaseApiBaseUrl ?: '(missing)'}"
+        )
+    }
+}
 
 react {
     entryFile = file("../../index.js")

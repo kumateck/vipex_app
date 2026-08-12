@@ -226,7 +226,17 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
                   }}
                 >
                   <div style={{ fontWeight: 700 }}>Code No:</div>
-                  <div style={{ marginTop: '0.3mm' }}>{bookingCode}</div>
+                  <div
+                    style={{
+                      marginTop: '0.45mm',
+                      fontSize: '5.2mm',
+                      fontWeight: 900,
+                      lineHeight: 1,
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    {bookingCode}
+                  </div>
                 </div>
                 <div style={{ paddingBottom: '0.5mm', paddingLeft: '1.6mm' }}>
                   <div style={{ fontWeight: 700 }}>Destination:</div>
