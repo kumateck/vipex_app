@@ -25,7 +25,6 @@ jobs:
     env:
       DESKTOP_WEB_BASE_URL: ${{ inputs.desktop_web_base_url }}
       DESKTOP_UPDATE_FEED_URL: ${{ inputs.desktop_update_feed_url }}
-      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
 
     steps:
       - name: Checkout
@@ -39,7 +38,7 @@ jobs:
       - name: Restore Electron Builder Cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.ELECTRON_BUILDER_CACHE }}
+          path: ${{ runner.temp }}/electron-builder-cache
           key: electron-builder-${{ runner.os }}-${{ hashFiles('bun.lock', 'apps/desktop/package.json') }}
           restore-keys: |
             electron-builder-${{ runner.os }}-
@@ -54,6 +53,8 @@ jobs:
         run: bunx tsc -p apps/desktop/tsconfig.json --noEmit
 
       - name: Build Windows Test Installer
+        env:
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
         run: |
           for attempt in 1 2 3; do
             echo "Windows test NSIS build attempt ${attempt} of 3"
