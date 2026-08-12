@@ -15,8 +15,6 @@ jobs:
   build-windows-desktop:
     name: Build Windows Desktop Artifact
     runs-on: windows-latest
-    env:
-      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
     defaults:
       run:
         shell: bash
@@ -33,7 +31,7 @@ jobs:
       - name: Restore Electron Builder Cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.ELECTRON_BUILDER_CACHE }}
+          path: ${{ runner.temp }}/electron-builder-cache
           key: electron-builder-${{ runner.os }}-${{ hashFiles('bun.lock', 'apps/desktop/package.json') }}
           restore-keys: |
             electron-builder-${{ runner.os }}-
@@ -52,6 +50,7 @@ jobs:
         env:
           DESKTOP_WEB_BASE_URL: https://testing.app.vipexparcel.com/
           DESKTOP_UPDATE_FEED_URL: https://testing.app.vipexparcel.com/v1/desktop-updates/windows/latest/
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
         run: |
           for attempt in 1 2 3; do
             echo "Windows NSIS build attempt ${attempt} of 3"
