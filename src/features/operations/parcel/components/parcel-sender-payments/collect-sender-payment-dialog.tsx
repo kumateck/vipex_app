@@ -16,11 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select-searchable';
-import { PaymentMethod } from '@/db/schemas/enums';
 import { MomoRequestToPayPanel } from '@/features/operations/momo/components/momo-request-to-pay-panel';
 import type { SenderCashierParcel } from '../../api/parcel.api';
 import { ParcelSenderPaymentSummary } from '../parcel-sender-payment-summary';
 import { PAYMENT_METHOD_OPTIONS } from './constants';
+import { isMtnPayment, type MtnPaymentFlow } from './sender-payment-method';
 import { getSenderDuePsw } from './utils';
 
 type CollectSenderPaymentDialogProps = {
@@ -30,6 +30,8 @@ type CollectSenderPaymentDialogProps = {
   onAmountChange: (value: string) => void;
   paymentMethod: string;
   onPaymentMethodChange: (value: string) => void;
+  mtnPaymentFlow: MtnPaymentFlow;
+  onMtnPaymentFlowChange: (value: MtnPaymentFlow) => void;
   momoTransactionId: string;
   onMomoConfirmed: (momoTransactionId: string) => void;
   isSubmitting: boolean;
@@ -44,6 +46,8 @@ export function CollectSenderPaymentDialog({
   onAmountChange,
   paymentMethod,
   onPaymentMethodChange,
+  mtnPaymentFlow,
+  onMtnPaymentFlowChange,
   momoTransactionId,
   onMomoConfirmed,
   isSubmitting,
@@ -118,7 +122,28 @@ export function CollectSenderPaymentDialog({
             </Select>
           </div>
 
-          {parcel && senderDuePsw > 0 && paymentMethod === String(PaymentMethod.MTN) ? (
+          {parcel && senderDuePsw > 0 && isMtnPayment(paymentMethod) ? (
+            <div className="space-y-2">
+              <Label htmlFor="sender-mtn-payment-flow">MTN payment flow</Label>
+              <Select
+                value={mtnPaymentFlow}
+                onValueChange={(value) => onMtnPaymentFlowChange(value as MtnPaymentFlow)}
+              >
+                <SelectTrigger id="sender-mtn-payment-flow">
+                  <SelectValue placeholder="Select MTN payment flow" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="automated">Automated Request-to-Pay</SelectItem>
+                  <SelectItem value="manual">Manual — customer already sent payment</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+
+          {parcel &&
+          senderDuePsw > 0 &&
+          isMtnPayment(paymentMethod) &&
+          mtnPaymentFlow === 'automated' ? (
             <MomoRequestToPayPanel
               parcelId={parcel.id}
               flow="sender"
@@ -126,6 +151,16 @@ export function CollectSenderPaymentDialog({
               onConfirmed={onMomoConfirmed}
               disabled={isSubmitting}
             />
+          ) : null}
+
+          {parcel &&
+          senderDuePsw > 0 &&
+          isMtnPayment(paymentMethod) &&
+          mtnPaymentFlow === 'manual' ? (
+            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+              Confirm that the customer has already sent the payment to the company MTN MoMo number.
+              No payment request will be initiated.
+            </p>
           ) : null}
         </div>
 
@@ -139,7 +174,8 @@ export function CollectSenderPaymentDialog({
             disabled={
               isSubmitting ||
               (senderDuePsw > 0 &&
-                paymentMethod === String(PaymentMethod.MTN) &&
+                isMtnPayment(paymentMethod) &&
+                mtnPaymentFlow === 'automated' &&
                 !momoTransactionId)
             }
           >
