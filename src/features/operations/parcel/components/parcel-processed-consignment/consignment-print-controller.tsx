@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useReactToPrint } from 'react-to-print';
+import { useRoutedDocumentPrint } from '@/features/printing/hooks/use-routed-document-print';
 import {
   ConsignmentPrintDocument,
   type ConsignmentPrintPayload,
@@ -61,9 +61,10 @@ export function ConsignmentPrintController({
   onPrinted: () => void;
 }) {
   const printRef = useRef<HTMLDivElement>(null);
-  const printConsignment = useReactToPrint({
+  const printConsignment = useRoutedDocumentPrint({
     contentRef: printRef,
     documentTitle: payload ? `consignment-${payload.consignmentCode}` : 'consignment',
+    layout: 'report-a4',
     pageStyle: CONSIGNMENT_PAGE_STYLE,
     onAfterPrint: onPrinted,
   });

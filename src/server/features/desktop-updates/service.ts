@@ -1,11 +1,13 @@
-import { getStoredObjectPresignedUrl, headStoredObject } from '@/server/services/storage/minio';
+import { getStoredObjectResponse } from '@/server/services/storage/minio';
 import { BadRequest } from '@/server/utils/http-error';
 
 const WINDOWS_LATEST_PREFIX = 'desktop/windows/latest';
 const WINDOWS_UPDATE_FILE_PATTERN =
   /^[a-zA-Z0-9][a-zA-Z0-9 ._()+-]{0,180}\.(?:yml|yaml|exe|nupkg|blockmap|zip)$/;
 
-function normalizeWindowsUpdateFile(fileName: string) {
+type StoredObjectReader = typeof getStoredObjectResponse;
+
+export function normalizeWindowsUpdateFile(fileName: string) {
   const decoded = decodeURIComponent(fileName).trim();
 
   if (!decoded || decoded.includes('/') || decoded.includes('\\') || decoded.includes('..')) {
@@ -29,13 +31,15 @@ function getContentType(fileName: string) {
   return 'application/octet-stream';
 }
 
-export async function getWindowsDesktopUpdateRedirectUrlSvc(fileName: string): Promise<string> {
+export async function getWindowsDesktopUpdateResponseSvc(
+  fileName: string,
+  readObject: StoredObjectReader = getStoredObjectResponse,
+): Promise<Response> {
   const safeFileName = normalizeWindowsUpdateFile(fileName);
   const key = `${WINDOWS_LATEST_PREFIX}/${safeFileName}`;
 
-  await headStoredObject(key);
-
-  return getStoredObjectPresignedUrl(key, {
+  return readObject(key, {
+    cacheControl: 'private, no-store',
     contentType: getContentType(safeFileName),
   });
 }
