@@ -38,7 +38,7 @@ export function StickerRow({
       style={{
         minWidth: 0,
         borderTop: '0.35mm solid #111',
-        padding: '0.35mm 0',
+        padding: emphasis ? '0.45mm 0.8mm' : '0.35mm 0',
         boxSizing: 'border-box',
         overflow: 'hidden',
       }}
@@ -46,7 +46,7 @@ export function StickerRow({
       <div style={{ minWidth: 0 }}>
         <div
           style={{
-            fontSize: '1.9mm',
+            fontSize: emphasis ? '2.2mm' : '1.9mm',
             fontWeight: 700,
             lineHeight: 1,
             textTransform: 'uppercase',

@@ -23,13 +23,12 @@ const DESKTOP_THERMAL_STICKER_PAGE_STYLE = `
       width: 100mm;
       height: 100mm;
       overflow: hidden;
-      display: block;
+      display: grid;
+      place-items: center;
     }
 
     .desktop-sticker-content {
-      position: absolute;
-      top: 4.5mm;
-      left: 5mm;
+      position: static;
       transform-origin: top left;
     }
 
