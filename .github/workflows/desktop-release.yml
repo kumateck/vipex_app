@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  DESKTOP_RELEASE_VERSION: 0.1.${{ github.run_number }}
+
 jobs:
   build-windows-desktop:
     name: Build Windows Desktop Artifact
@@ -31,8 +34,15 @@ jobs:
       - name: Sync Brand Assets
         run: bun run assets:sync
 
-      - name: Build Windows Desktop Release (Squirrel)
-        run: bun run --cwd apps/desktop make -- --targets @electron-forge/maker-squirrel
+      - name: Apply Desktop Release Version
+        run: |
+          node -e "const fs=require('node:fs');const file='apps/desktop/package.json';const pkg=JSON.parse(fs.readFileSync(file,'utf8'));pkg.version=process.env.DESKTOP_RELEASE_VERSION;fs.writeFileSync(file,JSON.stringify(pkg,null,2)+'\\n')"
+
+      - name: Build Windows Desktop Release (NSIS)
+        env:
+          DESKTOP_WEB_BASE_URL: https://testing.app.vipexparcel.com/
+          DESKTOP_UPDATE_FEED_URL: https://testing.app.vipexparcel.com/v1/desktop-updates/windows/latest/
+        run: bun run --cwd apps/desktop make:windows
 
       - name: Resolve Desktop Version
         id: desktop_version
@@ -78,7 +88,14 @@ jobs:
       - name: Sync Brand Assets
         run: bun run assets:sync
 
+      - name: Apply Desktop Release Version
+        run: |
+          node -e "const fs=require('node:fs');const file='apps/desktop/package.json';const pkg=JSON.parse(fs.readFileSync(file,'utf8'));pkg.version=process.env.DESKTOP_RELEASE_VERSION;fs.writeFileSync(file,JSON.stringify(pkg,null,2)+'\\n')"
+
       - name: Build macOS Desktop Release (ZIP)
+        env:
+          DESKTOP_WEB_BASE_URL: https://testing.app.vipexparcel.com/
+          DESKTOP_UPDATE_FEED_URL: https://testing.app.vipexparcel.com/v1/desktop-updates/macos/latest/
         run: bun run --cwd apps/desktop make -- --targets @electron-forge/maker-zip
 
       - name: Resolve Desktop Version
@@ -86,6 +103,52 @@ jobs:
         run: |
           VERSION=$(node -p "require('./apps/desktop/package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Generate macOS electron-updater metadata
+        env:
+          VERSION: ${{ steps.desktop_version.outputs.version }}
+        run: |
+          node <<'NODE'
+          const crypto = require('node:crypto');
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const root = 'apps/desktop/out/make';
+          const zipFiles = [];
+          const visit = (directory) => {
+            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+              const fullPath = path.join(directory, entry.name);
+              if (entry.isDirectory()) visit(fullPath);
+              else if (entry.name.toLowerCase().endsWith('.zip')) zipFiles.push(fullPath);
+            }
+          };
+          visit(root);
+
+          if (zipFiles.length !== 1) {
+            console.error(`Expected one macOS ZIP under ${root}, found ${zipFiles.length}`);
+            process.exit(1);
+          }
+
+          const zipPath = zipFiles[0];
+          const releaseDir = path.dirname(zipPath);
+          const zipFile = path.basename(zipPath);
+          const zipBuffer = fs.readFileSync(zipPath);
+          const sha512 = crypto.createHash('sha512').update(zipBuffer).digest('base64');
+          const yaml = [
+            `version: ${process.env.VERSION}`,
+            'files:',
+            `  - url: ${zipFile}`,
+            `    sha512: ${sha512}`,
+            `    size: ${zipBuffer.length}`,
+            `path: ${zipFile}`,
+            `sha512: ${sha512}`,
+            `releaseDate: '${new Date().toISOString()}'`,
+            '',
+          ].join('\n');
+
+          fs.writeFileSync(path.join(releaseDir, 'latest-mac.yml'), yaml);
+          console.log(`Generated latest-mac.yml for ${zipFile}`);
+          NODE
 
       - name: Upload macOS Desktop Artifact
         uses: actions/upload-artifact@v4
@@ -121,7 +184,7 @@ jobs:
           LATEST_PREFIX="${PREFIX}/latest"
           VERSION_PREFIX="${PREFIX}/v${VERSION}"
 
-          FILES=$(find apps/desktop/out/make -type f \( -name "*.zip" -o -name "*.dmg" \) || true)
+          FILES=$(find apps/desktop/out/make -type f \( -name "*.zip" -o -name "*.dmg" -o -name "*.yml" -o -name "*.blockmap" \) || true)
           if [ -z "${FILES}" ]; then
             echo "No macOS distributables found under apps/desktop/out/make"
             exit 1
@@ -183,7 +246,7 @@ jobs:
       - name: Resolve Desktop Version
         id: desktop_version
         run: |
-          VERSION=$(node -p "require('./apps/desktop/package.json').version")
+          VERSION="${DESKTOP_RELEASE_VERSION}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Download build artifact
@@ -192,61 +255,20 @@ jobs:
           name: vipex-desktop-windows-${{ github.event.pull_request.number || github.run_number }}
           path: .tmp/desktop-make
 
-      - name: Locate Squirrel output
+      - name: Locate NSIS update feed
         id: find_output
         run: |
           set -euo pipefail
           ROOT=".tmp/desktop-make"
-          RELEASE_FILE=$(find "$ROOT" -type f -name "RELEASES" | head -n 1 || true)
-          if [ -z "$RELEASE_FILE" ]; then
-            echo "RELEASES file not found in downloaded artifact"
+          METADATA_FILE=$(find "$ROOT" -type f -name "latest.yml" | head -n 1 || true)
+          if [ -z "$METADATA_FILE" ]; then
+            echo "electron-builder latest.yml not found in downloaded artifact"
             find "$ROOT" -maxdepth 5 -type f | sed -n '1,200p'
             exit 1
           fi
-          RELEASE_DIR=$(dirname "$RELEASE_FILE")
+          RELEASE_DIR=$(dirname "$METADATA_FILE")
           echo "release_dir=$RELEASE_DIR" >> "$GITHUB_OUTPUT"
           ls -lah "$RELEASE_DIR"
-
-      - name: Generate electron-updater metadata
-        env:
-          RELEASE_DIR: ${{ steps.find_output.outputs.release_dir }}
-          VERSION: ${{ steps.desktop_version.outputs.version }}
-        run: |
-          node <<'NODE'
-          const crypto = require('node:crypto');
-          const fs = require('node:fs');
-          const path = require('node:path');
-
-          const releaseDir = process.env.RELEASE_DIR;
-          const version = process.env.VERSION;
-          const files = fs.readdirSync(releaseDir);
-          const setupFile = files.find((file) => file.toLowerCase().endsWith('.exe'));
-
-          if (!setupFile) {
-            console.error(`No Windows installer .exe found in ${releaseDir}`);
-            process.exit(1);
-          }
-
-          const setupPath = path.join(releaseDir, setupFile);
-          const setupBuffer = fs.readFileSync(setupPath);
-          const sha512 = crypto.createHash('sha512').update(setupBuffer).digest('base64');
-          const size = setupBuffer.length;
-          const releaseDate = new Date().toISOString();
-          const yaml = [
-            `version: ${version}`,
-            'files:',
-            `  - url: ${setupFile}`,
-            `    sha512: ${sha512}`,
-            `    size: ${size}`,
-            `path: ${setupFile}`,
-            `sha512: ${sha512}`,
-            `releaseDate: '${releaseDate}'`,
-            '',
-          ].join('\n');
-
-          fs.writeFileSync(path.join(releaseDir, 'latest.yml'), yaml);
-          console.log(`Generated latest.yml for ${setupFile}`);
-          NODE
 
       - name: Configure AWS CLI for MinIO
         run: |
@@ -300,5 +322,5 @@ jobs:
 
       - name: Feed URL hint
         run: |
-          echo "Set DESKTOP_UPDATE_FEED_URL in desktop runtime to:"
-          echo "https://testing.app.vipexparcel.com/v1/desktop-updates/windows/latest/"
+          echo "Windows feed: https://testing.app.vipexparcel.com/v1/desktop-updates/windows/latest/"
+          echo "macOS feed: https://testing.app.vipexparcel.com/v1/desktop-updates/macos/latest/"

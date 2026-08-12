@@ -51,7 +51,8 @@ export function ParcelReceiptActions({
     () => `https://vipexparcel.com/tracking/${encodeURIComponent(data.trackingCode)}`,
     [data.trackingCode],
   );
-  const isSenderPaid = (data.amountPaidCedis ?? data.senderPaidCedis) > 0;
+  const hasPaidAmount = (data.amountPaidCedis ?? data.senderPaidCedis) > 0;
+  const hasPrintableReceipt = hasPaidAmount || data.receiverToPayCedis > 0;
   const tax = useMemo(() => {
     const amountPaid = data.amountPaidCedis ?? data.senderPaidCedis;
     if (data.taxBreakdown) {
@@ -141,7 +142,7 @@ export function ParcelReceiptActions({
       return;
     }
     if (!isStickerPrintEnabled) {
-      if (isSenderPaid) {
+      if (hasPrintableReceipt) {
         if (canPrintInvoiceViaDesktop) {
           void printInvoiceViaDesktop().then(() => onAutoPrintComplete?.());
           return;
@@ -153,7 +154,7 @@ export function ParcelReceiptActions({
       onAutoPrintComplete?.();
       return;
     }
-    if (!isSenderPaid) {
+    if (!hasPrintableReceipt) {
       handlePrintStickerOnly();
       return;
     }
@@ -171,7 +172,7 @@ export function ParcelReceiptActions({
     canPrintInvoiceViaDesktop,
     canPrintStickerViaDesktop,
     handlePrintStickerOnly,
-    isSenderPaid,
+    hasPrintableReceipt,
     isStickerPrintEnabled,
     onAutoPrintComplete,
     printInvoice,
@@ -183,7 +184,7 @@ export function ParcelReceiptActions({
     bookingCode: data.bookingCode,
     canPrintForSession,
     invoiceRef,
-    isSenderPaid,
+    hasPrintableReceipt,
     isStickerPrintEnabled,
     mode,
     onAutoPrintComplete,
@@ -268,7 +269,7 @@ export function ParcelReceiptActions({
         autoPrint={autoPrint}
         canPrintForSession={canPrintForSession}
         isLoading={isLoadingActiveSession || isLoadingStickerPrintModule}
-        isSenderPaid={isSenderPaid}
+        hasPrintableReceipt={hasPrintableReceipt}
         isStickerPrintEnabled={isStickerPrintEnabled}
         showSelectionMenu={showSelectionMenu}
         triggerLabel={triggerLabel}

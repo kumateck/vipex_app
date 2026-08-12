@@ -51,6 +51,7 @@ import { customerWalletCreditRoutes } from './features/customer-wallet-credit/ro
 import { reconciliationRoutes } from './features/reconciliation/routes';
 import { notificationHubRoutes } from './features/notification-hub/routes';
 import { desktopUpdatesRoutes } from './features/desktop-updates/routes';
+import { mobileUpdatesRoutes } from './features/mobile-updates/routes';
 import { momoRoutes } from './features/momo/routes';
 
 export const app = new Elysia()
@@ -104,6 +105,7 @@ export const app = new Elysia()
       .group('/notification-hub', (r) => r.use(notificationHubRoutes))
       .group('/momo', (r) => r.use(momoRoutes))
       .group('/desktop-updates', (r) => r.use(desktopUpdatesRoutes))
+      .group('/mobile-updates', (r) => r.use(mobileUpdatesRoutes))
       .group('/communication', (r) => r.use(communicationRoutes))
       .group('/customer-service', (r) => r.use(customerServiceRoutes))
       .group('/it-support', (r) => r.use(itSupportRoutes))

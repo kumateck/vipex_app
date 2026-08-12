@@ -29,6 +29,7 @@ import {
   softDeleteParcelCtrl,
   updateParcelCtrl,
 } from './parcels.controller';
+import { resolveParcelSort } from './parcel-sort';
 
 function parseStatuses(value: string | number[] | undefined): number[] | null {
   if (Array.isArray(value)) {
@@ -56,7 +57,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         page: query.page,
         pageSize: query.pageSize,
         search: query.search,
-        sort: query.sort,
+        sort: resolveParcelSort(query.sort, query.createdAtOrder),
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
         filters: {
@@ -88,6 +89,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
             { minItems: 1 },
           ),
         ),
+        createdAtOrder: t.Optional(t.Union([t.Literal('asc'), t.Literal('desc')])),
         dateFrom: t.Optional(t.String({ format: 'date-time' })),
         dateTo: t.Optional(t.String({ format: 'date-time' })),
         companyId: t.Optional(UUID),

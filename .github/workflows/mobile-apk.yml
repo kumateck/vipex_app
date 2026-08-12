@@ -13,7 +13,6 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-latest
     env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       DEPLOY_MINIO_ENDPOINT: ${{ secrets.DEPLOY_MINIO_ENDPOINT }}
       MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
       MINIO_REGION: ${{ secrets.MINIO_REGION }}
@@ -21,12 +20,13 @@ jobs:
       MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
       MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
       MOBILE_MINIO_PREFIX: mobile/android
+      MOBILE_RELEASE_VERSION: 1.0.${{ github.run_number }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Remove non-Bun lockfiles for EAS
+      - name: Remove non-Bun lockfiles
         run: |
           rm -f package-lock.json pnpm-lock.yaml
 
@@ -49,82 +49,22 @@ jobs:
       - name: Resolve Mobile Version
         id: mobile_version
         run: |
-          VERSION=$(node -e "try{const app=require('./apps/mobile/app.json');process.stdout.write(app?.expo?.version||'')}catch{process.stdout.write('')}")
-          if [ -z "$VERSION" ]; then
-            VERSION=$(node -p "require('./apps/mobile/package.json').version")
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "version=${MOBILE_RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "version_code=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
-      - name: Detect Android Build Mode
-        id: mobile_mode
+      - name: Apply Android Release Version
         run: |
-          set -euo pipefail
-          EAS_PROJECT_ID=$(node -e "try{const app=require('./apps/mobile/app.json');process.stdout.write(app?.expo?.extra?.eas?.projectId||'')}catch{process.stdout.write('')}")
-          if [ -n "${EAS_PROJECT_ID}" ] && [ "${EAS_PROJECT_ID}" != "REPLACE_WITH_EAS_PROJECT_ID" ]; then
-            echo "build_mode=eas" >> "$GITHUB_OUTPUT"
-            echo "Using EAS remote APK build."
-          else
-            echo "build_mode=native" >> "$GITHUB_OUTPUT"
-            echo "Using native Gradle APK build."
-          fi
-
-      - name: Verify Expo Token
-        if: ${{ steps.mobile_mode.outputs.build_mode == 'eas' }}
-        run: |
-          if [ -z "$EXPO_TOKEN" ]; then
-            echo "EXPO_TOKEN is missing. Add it in GitHub repo secrets."
-            exit 1
-          fi
-
-      - name: Validate EAS project id
-        if: ${{ steps.mobile_mode.outputs.build_mode == 'eas' }}
-        run: |
-          set -euo pipefail
-          PROJECT_ID=$(node -p "require('./apps/mobile/app.json').expo?.extra?.eas?.projectId || ''")
-          if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "REPLACE_WITH_EAS_PROJECT_ID" ]; then
-            echo "apps/mobile/app.json expo.extra.eas.projectId must be set to a real EAS project id."
-            exit 1
-          fi
-
-      - name: Publish OTA Update (Preview Channel)
-        if: ${{ steps.mobile_mode.outputs.build_mode == 'eas' }}
-        id: ota_publish
-        working-directory: apps/mobile
-        run: |
-          set -euo pipefail
-          bunx eas-cli whoami
-          bunx eas-cli update --channel preview --non-interactive --message "Build #${{ github.run_number }} (${GITHUB_SHA::7})"
-
-      - name: Trigger and Wait for EAS Android APK Build
-        if: ${{ steps.mobile_mode.outputs.build_mode == 'eas' }}
-        id: eas_build
-        working-directory: apps/mobile
-        run: |
-          set -euo pipefail
-          bunx eas-cli whoami
-          bunx eas-cli build --platform android --profile preview --non-interactive --wait --json > eas-build.json
-          cat eas-build.json
-
-          APK_URL=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('eas-build.json','utf8'));const item=Array.isArray(j)?j[0]:j;console.log(item?.artifacts?.buildUrl||'')")
-          BUILD_ID=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('eas-build.json','utf8'));const item=Array.isArray(j)?j[0]:j;console.log(item?.id||'')")
-
-          if [ -z "$APK_URL" ]; then
-            echo "Could not resolve APK URL from EAS output"
-            exit 1
-          fi
-
-          echo "apk_url=$APK_URL" >> "$GITHUB_OUTPUT"
-          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          bun run scripts/set-mobile-android-version.ts \
+            "${{ steps.mobile_version.outputs.version }}" \
+            "${{ steps.mobile_version.outputs.version_code }}"
 
       - name: Setup Java (Native Android Build)
-        if: ${{ steps.mobile_mode.outputs.build_mode == 'native' }}
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Validate Native Android Project
-        if: ${{ steps.mobile_mode.outputs.build_mode == 'native' }}
         run: |
           set -euo pipefail
           if [ ! -f apps/mobile/android/gradlew ]; then
@@ -133,7 +73,6 @@ jobs:
           fi
 
       - name: Build APK with Gradle
-        if: ${{ steps.mobile_mode.outputs.build_mode == 'native' }}
         working-directory: apps/mobile/android
         run: |
           set -euo pipefail
@@ -141,38 +80,48 @@ jobs:
           ./gradlew assembleRelease --no-daemon
           find app/build/outputs/apk -type f -name "*.apk" -print
 
-      - name: Download APK from EAS
-        if: ${{ steps.mobile_mode.outputs.build_mode == 'eas' }}
-        run: |
-          mkdir -p artifacts
-          curl -L "${{ steps.eas_build.outputs.apk_url }}" -o artifacts/vipex-mobile-${{ github.run_number }}.apk
-          ls -lah artifacts
-
       - name: Collect APK from Native Build
-        if: ${{ steps.mobile_mode.outputs.build_mode == 'native' }}
         run: |
           set -euo pipefail
           mkdir -p artifacts
           mapfile -t APK_FILES < <(find apps/mobile/android/app/build/outputs/apk -type f -name "*.apk")
-          if [ "${#APK_FILES[@]}" -eq 0 ]; then
-            echo "No APK files found from native Gradle build."
+          if [ "${#APK_FILES[@]}" -ne 1 ]; then
+            echo "Expected one release APK, found ${#APK_FILES[@]}."
             exit 1
           fi
-          for file in "${APK_FILES[@]}"; do
-            cp "$file" "artifacts/$(basename "$file")"
-          done
+          cp "${APK_FILES[0]}" artifacts/vipex-mobile-android.apk
           ls -lah artifacts
+
+      - name: Create Android Update Manifest
+        env:
+          VERSION: ${{ steps.mobile_version.outputs.version }}
+          VERSION_CODE: ${{ steps.mobile_version.outputs.version_code }}
+        run: |
+          set -euo pipefail
+          SHA256=$(sha256sum artifacts/vipex-mobile-android.apk | cut -d ' ' -f 1)
+          PUBLISHED_AT=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+          SHA256="$SHA256" PUBLISHED_AT="$PUBLISHED_AT" node -e "const fs=require('node:fs');fs.writeFileSync('artifacts/latest.json',JSON.stringify({version:process.env.VERSION,versionCode:Number(process.env.VERSION_CODE),fileName:'vipex-mobile-android.apk',releaseNotes:'Latest Vipex Mobile improvements and fixes.',publishedAt:process.env.PUBLISHED_AT,sha256:process.env.SHA256},null,2)+'\n')"
+
+      - name: Validate MinIO Release Configuration
+        run: |
+          set -euo pipefail
+          UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
+          : "${UPLOAD_MINIO_ENDPOINT:?DEPLOY_MINIO_ENDPOINT (or MINIO_ENDPOINT fallback) secret is required}"
+          : "${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY secret is required}"
+          : "${MINIO_SECRET_KEY:?MINIO_SECRET_KEY secret is required}"
+          : "${MINIO_BUCKET:?MINIO_BUCKET secret is required}"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: vipex-mobile-android-apk-${{ github.event.pull_request.number || github.run_number }}
-          path: artifacts/*.apk
+          path: |
+            artifacts/*.apk
+            artifacts/latest.json
           if-no-files-found: error
           retention-days: 14
 
       - name: Configure AWS CLI for MinIO
-        if: ${{ (env.DEPLOY_MINIO_ENDPOINT != '' || env.MINIO_ENDPOINT != '') && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
         run: |
           mkdir -p ~/.aws
           cat <<EOF > ~/.aws/credentials
@@ -186,8 +135,7 @@ jobs:
           output=json
           EOF
 
-      - name: Mirror APK to MinIO (optional)
-        if: ${{ (env.DEPLOY_MINIO_ENDPOINT != '' || env.MINIO_ENDPOINT != '') && env.MINIO_ACCESS_KEY != '' && env.MINIO_SECRET_KEY != '' && env.MINIO_BUCKET != '' }}
+      - name: Publish APK and Update Manifest to MinIO
         env:
           VERSION: ${{ steps.mobile_version.outputs.version }}
         run: |
@@ -208,27 +156,39 @@ jobs:
             aws --endpoint-url "${UPLOAD_MINIO_ENDPOINT}" s3api put-object \
               --bucket "${MINIO_BUCKET}" \
               --key "${LATEST_PREFIX}/${base}" \
+              --content-type "application/vnd.android.package-archive" \
+              --cache-control "no-store" \
               --body "${file}" >/dev/null
 
             aws --endpoint-url "${UPLOAD_MINIO_ENDPOINT}" s3api put-object \
               --bucket "${MINIO_BUCKET}" \
               --key "${VERSION_PREFIX}/${base}" \
+              --content-type "application/vnd.android.package-archive" \
+              --cache-control "public, max-age=31536000, immutable" \
               --body "${file}" >/dev/null
           done
 
+          aws --endpoint-url "${UPLOAD_MINIO_ENDPOINT}" s3api put-object \
+            --bucket "${MINIO_BUCKET}" \
+            --key "${LATEST_PREFIX}/latest.json" \
+            --content-type "application/json" \
+            --cache-control "no-store" \
+            --body artifacts/latest.json >/dev/null
+
+          aws --endpoint-url "${UPLOAD_MINIO_ENDPOINT}" s3api put-object \
+            --bucket "${MINIO_BUCKET}" \
+            --key "${VERSION_PREFIX}/latest.json" \
+            --content-type "application/json" \
+            --body artifacts/latest.json >/dev/null
+
       - name: Distribution summary
         run: |
-          if [ "${{ steps.mobile_mode.outputs.build_mode }}" = "eas" ]; then
-            echo "OTA channel published: preview"
-          else
-            echo "Native Gradle APK build completed."
-          fi
+          echo "Native Gradle APK build completed."
+          echo "Release: ${{ steps.mobile_version.outputs.version }} (${{ steps.mobile_version.outputs.version_code }})"
           echo "APK artifact uploaded to GitHub artifacts."
-          if [ -n "${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}" ] && [ -n "${MINIO_BUCKET}" ]; then
-            PREFIX="${MOBILE_MINIO_PREFIX:-mobile/android}"
-            UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
-            echo "MinIO mirror base: ${UPLOAD_MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/"
-          fi
+          PREFIX="${MOBILE_MINIO_PREFIX:-mobile/android}"
+          UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
+          echo "MinIO release base: ${UPLOAD_MINIO_ENDPOINT%/}/${MINIO_BUCKET}/${PREFIX}/"
 
   build-ios:
     if: ${{ false }} # Paused for now; keep config for quick re-enable

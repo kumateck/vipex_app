@@ -1,9 +1,16 @@
 import { Text } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { BranchType } from '@mobile/constants/branch';
+import { PaymentResponsibility } from '@mobile/constants/payment';
 import type { BranchOption, LocationOption } from '@mobile/types/booking';
 import { mobileTextStyles } from '@mobile/theme/layout';
 import { AppCard, AppInput, AppLabel, AppSelectField } from '@mobile/components/ui/mobile';
+import type { MobilePaymentResponsibility } from '../../mobile-parcel-payment-plan';
+
+const PAYMENT_RESPONSIBILITY_OPTIONS = [
+  { value: String(PaymentResponsibility.SENDER), label: 'Sender pay — complete at cashier' },
+  { value: String(PaymentResponsibility.RECIPIENT), label: 'To be paid — receiver pays' },
+];
 
 type ParcelBookingFieldsProps = {
   branchOptions: BranchOption[];
@@ -15,6 +22,7 @@ type ParcelBookingFieldsProps = {
   parcelContent: string;
   parcelValue: string;
   charge: string;
+  paymentResponsibility: MobilePaymentResponsibility;
   isLoadingBranches: boolean;
   isLoadingLocations: boolean;
   onDestinationChange: (value: string) => void;
@@ -23,6 +31,7 @@ type ParcelBookingFieldsProps = {
   onParcelContentChange: (value: string) => void;
   onParcelValueChange: (value: string) => void;
   onChargeChange: (value: string) => void;
+  onPaymentResponsibilityChange: (value: MobilePaymentResponsibility) => void;
 };
 
 export function ParcelBookingFields({
@@ -35,6 +44,7 @@ export function ParcelBookingFields({
   parcelContent,
   parcelValue,
   charge,
+  paymentResponsibility,
   isLoadingBranches,
   isLoadingLocations,
   onDestinationChange,
@@ -43,11 +53,18 @@ export function ParcelBookingFields({
   onParcelContentChange,
   onParcelValueChange,
   onChargeChange,
+  onPaymentResponsibilityChange,
 }: ParcelBookingFieldsProps) {
   const { theme } = useAppearance();
-  const destinationOptions = branchOptions
-    .filter((branch) => branch.id !== userBranchId && branch.type !== BranchType.HEADOFFICE)
-    .map((branch) => ({ value: branch.id, label: branch.name }));
+  const destinationOptions = branchOptions.reduce<Array<{ value: string; label: string }>>(
+    (options, branch) => {
+      if (branch.id !== userBranchId && branch.type !== BranchType.HEADOFFICE) {
+        options.push({ value: branch.id, label: branch.name });
+      }
+      return options;
+    },
+    [],
+  );
   const locationSelectOptions = locationOptions.map((location) => ({
     value: location.id,
     label: location.name,
@@ -108,8 +125,18 @@ export function ParcelBookingFields({
           placeholder="0.00"
           keyboardType="decimal-pad"
         />
+        <AppSelectField
+          label="Payment Responsibility"
+          value={String(paymentResponsibility)}
+          onValueChange={(value) =>
+            onPaymentResponsibilityChange(Number(value) as MobilePaymentResponsibility)
+          }
+          options={PAYMENT_RESPONSIBILITY_OPTIONS}
+          placeholder="Select who pays"
+        />
         <Text style={[mobileTextStyles.footnote, { color: theme.colors.textSubtle }]}>
-          The receiver will be asked to pay this full amount at pickup.
+          Payment and all sticker or receipt printing must be completed from Sender Cashier Payments
+          on desktop.
         </Text>
       </AppCard>
     </>
