@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { AppScreen } from '@mobile/components/screen';
+import { useLocalSearchParams } from '@mobile/navigation/router-compat';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { canCreateParcelBooking } from '@mobile/lib/permissions';
 import { BranchType } from '@mobile/constants/branch';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
-import { PaymentMethod, PaymentResponsibility } from '@mobile/constants/payment';
+import { PaymentResponsibility } from '@mobile/constants/payment';
 import {
   createBookingWithParcels,
   createCustomer,
@@ -22,6 +23,11 @@ import {
   type UseCustomerLookupResult,
 } from '../../use-customer-lookup';
 import { ParcelCreateHeader } from '../parcel-create-header';
+import {
+  buildMobileParcelPaymentPlan,
+  getInitialMobilePaymentResponsibility,
+  type MobilePaymentResponsibility,
+} from '../../mobile-parcel-payment-plan';
 import { ParcelBookingFields } from './parcel-booking-fields';
 
 function parseAmount(raw: string): number | null {
@@ -32,6 +38,22 @@ function parseAmount(raw: string): number | null {
 }
 
 export function ParcelCreateScreen() {
+  const { payment } = useLocalSearchParams<{ payment?: string }>();
+  const initialPaymentResponsibility = getInitialMobilePaymentResponsibility(payment);
+
+  return (
+    <ParcelCreateForm
+      key={initialPaymentResponsibility}
+      initialPaymentResponsibility={initialPaymentResponsibility}
+    />
+  );
+}
+
+function ParcelCreateForm({
+  initialPaymentResponsibility,
+}: {
+  initialPaymentResponsibility: MobilePaymentResponsibility;
+}) {
   const { session, withAuth } = useAuth();
   const permissions = session.user?.permissions ?? [];
   const canCreate = canCreateParcelBooking(permissions);
@@ -47,6 +69,9 @@ export function ParcelCreateScreen() {
   const [parcelContent, setParcelContent] = useState('');
   const [parcelValue, setParcelValue] = useState('');
   const [charge, setCharge] = useState('');
+  const [paymentResponsibility, setPaymentResponsibility] = useState<MobilePaymentResponsibility>(
+    initialPaymentResponsibility,
+  );
   const [branchOptions, setBranchOptions] = useState<BranchOption[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
   const [locationOptions, setLocationOptions] = useState<LocationOption[]>([]);
@@ -138,6 +163,7 @@ export function ParcelCreateScreen() {
     setParcelContent('');
     setParcelValue('');
     setCharge('');
+    setPaymentResponsibility(initialPaymentResponsibility);
   };
 
   const handleSubmit = async () => {
@@ -176,6 +202,7 @@ export function ParcelCreateScreen() {
         createBookingWithParcels(token, {
           senderId,
           status: ParcelStatus.CREATED,
+          deferSenderCashierCompletion: true,
           parcels: [
             {
               destinationId: destinationBranchId,
@@ -184,20 +211,17 @@ export function ParcelCreateScreen() {
               status: ParcelStatus.CREATED,
               parcelDetails: parcelDetails.trim(),
               parcelContent: parcelContent.trim(),
-              method: PaymentMethod.CASH,
               parcelValueCedis: valueAmount,
               chargeCedis: chargeAmount,
-              plannedToBePaidCedis: chargeAmount,
-              senderPaymentCedis: 0,
-              paymentResponsibility: PaymentResponsibility.RECIPIENT,
+              ...buildMobileParcelPaymentPlan(paymentResponsibility, chargeAmount),
             },
           ],
         }),
       );
       const created = response.parcels[0];
       notifySuccess(
-        `Tracking ${created?.trackingCode ?? '-'} · Booking ${created?.bookingCode ?? response.bookingId}. Receiver pays GHS ${chargeAmount.toFixed(2)} on pickup.`,
-        'To-be-paid parcel created',
+        `Tracking ${created?.trackingCode ?? '-'} · Booking ${created?.bookingCode ?? response.bookingId}. Complete this transaction from Sender Cashier Payments; mobile printing is disabled.`,
+        'Parcel queued for sender cashier',
       );
       void hapticSuccess();
       resetForm();
@@ -214,7 +238,7 @@ export function ParcelCreateScreen() {
 
   return (
     <AppScreen>
-      <ParcelCreateHeader />
+      <ParcelCreateHeader paymentResponsibility={paymentResponsibility} />
       <CustomerLookupCard title="Sender" lookup={sender} />
       <CustomerLookupCard title="Recipient" lookup={receiver} />
       <ParcelBookingFields
@@ -227,6 +251,7 @@ export function ParcelCreateScreen() {
         parcelContent={parcelContent}
         parcelValue={parcelValue}
         charge={charge}
+        paymentResponsibility={paymentResponsibility}
         isLoadingBranches={isLoadingBranches}
         isLoadingLocations={isLoadingLocations}
         onDestinationChange={(value) => {
@@ -238,9 +263,16 @@ export function ParcelCreateScreen() {
         onParcelContentChange={setParcelContent}
         onParcelValueChange={setParcelValue}
         onChargeChange={setCharge}
+        onPaymentResponsibilityChange={setPaymentResponsibility}
       />
       <AppButton
-        title={isSubmitting ? 'Creating...' : 'Create To-Be-Paid Booking'}
+        title={
+          isSubmitting
+            ? 'Creating...'
+            : paymentResponsibility === PaymentResponsibility.SENDER
+              ? 'Create Paid Booking'
+              : 'Create TobePaid Booking'
+        }
         onPress={() => void handleSubmit()}
         disabled={isSubmitting}
         loading={isSubmitting}

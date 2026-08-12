@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { router } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
@@ -10,7 +10,7 @@ import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { canMarkParcelArrived, canViewReceiveScreen } from '@mobile/lib/permissions';
 import { hapticError, hapticSuccess, hapticTap, hapticWarning } from '@mobile/lib/haptics';
-import { ParcelCard, ScannerView, StatCard } from '@mobile/components/courier';
+import { ParcelCard, ScannerView } from '@mobile/components/courier';
 import { ReceiveScreenHeader } from '@mobile/features/receive';
 import type { ReceiveMode } from '@mobile/features/receive';
 import {
@@ -20,7 +20,7 @@ import {
   AppSkeletonCard,
   MobileNoAccess,
 } from '@/components/ui/mobile';
-import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
+import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 export default function ReceiveScanScreen() {
   const { theme } = useAppearance();
@@ -38,8 +38,9 @@ export default function ReceiveScanScreen() {
   const [searchAllCompany, setSearchAllCompany] = useState(false);
   const [rows, setRows] = useState<ParcelSearchRow[]>([]);
   const [mode, setMode] = useState<ReceiveMode>('scan');
+  const scanInFlightRef = useRef(false);
 
-  async function loadIncomingList() {
+  const loadIncomingList = useCallback(async () => {
     if (!companyId) {
       Alert.alert('Missing context', 'User company is missing.');
       void hapticWarning();
@@ -65,58 +66,63 @@ export default function ReceiveScanScreen() {
     } finally {
       setSearchBusy(false);
     }
-  }
+  }, [branchId, companyId, search, searchAllCompany, withAuth]);
 
-  async function receiveByCode(code: string) {
-    if (!companyId || !branchId) {
-      Alert.alert('Missing context', 'User company or branch is missing.');
-      void hapticWarning();
-      return;
-    }
-    if (scanBusy) return;
-    if (!canMarkArrived) {
-      notifyError('Permission denied', 'You do not have permission to mark parcels arrived.');
-      void hapticWarning();
-      return;
-    }
-    setScanBusy(true);
-    setLastCode(code);
-
-    try {
-      const response = await withAuth((token) =>
-        searchParcels(token, {
-          search: code,
-          companyId,
-          destinationId: branchId,
-          status: ParcelStatus.IN_TRANSIT,
-          page: 1,
-          pageSize: 20,
-        }),
-      );
-
-      const parcel = response.data.find((row) => row.bookingCode === code) ?? response.data[0];
-
-      if (!parcel) {
-        notifyError('Not found', 'No in-transit parcel to your branch matches this code.');
+  const receiveByCode = useCallback(
+    async (code: string) => {
+      if (!companyId || !branchId) {
+        Alert.alert('Missing context', 'User company or branch is missing.');
+        void hapticWarning();
         return;
       }
+      if (scanInFlightRef.current) return;
+      if (!canMarkArrived) {
+        notifyError('Permission denied', 'You do not have permission to mark parcels arrived.');
+        void hapticWarning();
+        return;
+      }
+      scanInFlightRef.current = true;
+      setScanBusy(true);
+      setLastCode(code);
 
-      await withAuth((token) =>
-        updateParcelStatus(token, parcel.id, ParcelStatus.ARRIVED_AT_DESTINATION),
-      );
-      notifySuccess(`Parcel ${parcel.bookingCode} marked ARRIVED_AT_DESTINATION.`);
-      void hapticSuccess();
-      await loadIncomingList();
-    } catch (err) {
-      notifyError(
-        'Receive failed',
-        err instanceof Error ? err.message : 'Unable to receive parcel',
-      );
-      void hapticError();
-    } finally {
-      setScanBusy(false);
-    }
-  }
+      try {
+        const response = await withAuth((token) =>
+          searchParcels(token, {
+            search: code,
+            companyId,
+            destinationId: branchId,
+            status: ParcelStatus.IN_TRANSIT,
+            page: 1,
+            pageSize: 20,
+          }),
+        );
+
+        const parcel = response.data.find((row) => row.bookingCode === code) ?? response.data[0];
+
+        if (!parcel) {
+          notifyError('Not found', 'No in-transit parcel to your branch matches this code.');
+          return;
+        }
+
+        await withAuth((token) =>
+          updateParcelStatus(token, parcel.id, ParcelStatus.ARRIVED_AT_DESTINATION),
+        );
+        notifySuccess(`Parcel ${parcel.bookingCode} marked ARRIVED_AT_DESTINATION.`);
+        void hapticSuccess();
+        await loadIncomingList();
+      } catch (err) {
+        notifyError(
+          'Receive failed',
+          err instanceof Error ? err.message : 'Unable to receive parcel',
+        );
+        void hapticError();
+      } finally {
+        scanInFlightRef.current = false;
+        setScanBusy(false);
+      }
+    },
+    [branchId, canMarkArrived, companyId, loadIncomingList, withAuth],
+  );
 
   if (!canView) {
     return (
@@ -134,27 +140,38 @@ export default function ReceiveScanScreen() {
         branchName={session.user?.branch?.name}
       />
 
-      <AppCard>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Overview</Text>
-        <View style={styles.kpiRow}>
-          <StatCard label="Incoming Parcels" value={rows.length} />
-          <StatCard label="Last Scanned Code" value={lastCode || '-'} />
+      <View style={styles.overviewSection}>
+        <View
+          style={[
+            styles.overview,
+            { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Overview</Text>
+          <View style={styles.incomingSummary}>
+            <Text style={[styles.incomingCount, { color: theme.colors.secondary }]}>
+              {rows.length}
+            </Text>
+            <Text style={[styles.incomingLabel, { color: theme.colors.textMuted }]}>
+              Incoming Parcels
+            </Text>
+          </View>
         </View>
-      </AppCard>
+        <Text numberOfLines={2} style={[styles.lastScanText, { color: theme.colors.textSubtle }]}>
+          Last scanned code: {lastCode || '-'}
+        </Text>
+      </View>
 
       {mode === 'scan' ? (
         <AppCard>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Scanner</Text>
-          <ScannerView onCodeScanned={(code) => void receiveByCode(code)} />
+          <ScannerView onCodeScanned={receiveByCode} />
 
           {scanBusy ? (
             <Text style={[styles.helperText, { color: theme.colors.textSubtle }]}>
               Processing scanned parcel...
             </Text>
           ) : null}
-          <Text style={[styles.helperText, { color: theme.colors.textSubtle }]}>
-            Most recent scan: {lastCode || '-'}
-          </Text>
           {!canMarkArrived ? (
             <Text style={[styles.helperText, { color: theme.colors.textSubtle }]}>
               You can scan and view parcels, but cannot mark arrival.
@@ -213,7 +230,22 @@ export default function ReceiveScanScreen() {
 }
 
 const styles = StyleSheet.create({
-  kpiRow: { flexDirection: 'row', gap: mobileSpacing.sm },
+  overviewSection: { gap: mobileSpacing.xs },
+  overview: {
+    minHeight: 64,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: mobileRadius.md,
+    paddingHorizontal: mobileSpacing.md,
+    paddingVertical: mobileSpacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: mobileSpacing.md,
+  },
+  incomingSummary: { flexDirection: 'row', alignItems: 'baseline', gap: mobileSpacing.sm },
+  incomingCount: { ...mobileTextStyles.title2, fontWeight: '800' },
+  incomingLabel: { ...mobileTextStyles.caption1, fontWeight: '700' },
+  lastScanText: { ...mobileTextStyles.caption2, paddingHorizontal: mobileSpacing.xs },
   sectionTitle: { ...mobileTextStyles.headline },
   helperText: { ...mobileTextStyles.subhead },
   buttonRow: { flexDirection: 'row', gap: mobileSpacing.sm, flexWrap: 'wrap' },

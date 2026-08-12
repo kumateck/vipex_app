@@ -23,6 +23,7 @@ export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
     .filter(Boolean)
     .join(' — ');
   const amountDue = `GHS ${receiverToPayCedis.toFixed(2)}`;
+  const parcelCode = `#${bookingCode.trim().replace(/^#+/, '')}`;
   const qrSvg = createQrSvg(qrValue);
 
   return (
@@ -40,50 +41,8 @@ export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
     >
       <InvoiceA5Header issuedAtLabel={issuedAtLabel} title="ACKNOWLEDGEMENT NOTE" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 40mm', gap: '4mm' }}>
-        <div>
-          <div style={{ textAlign: 'center', fontSize: '6mm', fontWeight: 900 }}>
-            PARCEL DELIVERY RECEIPT
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '1.2mm 5mm',
-              marginTop: '2mm',
-            }}
-          >
-            <ReceiptField label="Receipt Number" value="#________________" />
-            <ReceiptField label="Date" value={issuedAtLabel} />
-          </div>
-
-          <ReceiptField label="Parcel Code" value={bookingCode} emphasis />
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5mm' }}>
-            <ReceiptParty title="Sender Information" name={senderName} phone={senderTelephone} />
-            <ReceiptParty
-              title="Recipient Information"
-              name={receiverName}
-              phone={receiverTelephone}
-            />
-          </div>
-
-          <ReceiptField label="Delivery Address" value={deliveryAddress} />
-          <ReceiptField label="Item Description" value={itemDescription || '-'} />
-          <ReceiptField label="Amount Due upon Delivery" value={amountDue} emphasis />
-        </div>
-
-        <div
-          aria-label="Parcel tracking QR code"
-          style={{ width: '36mm', height: '36mm', justifySelf: 'center', alignSelf: 'start' }}
-          dangerouslySetInnerHTML={{ __html: qrSvg }}
-        />
-      </div>
-
       <div
         style={{
-          marginTop: '2.2mm',
           border: '0.35mm solid #111',
           padding: '2mm 2.4mm',
           fontSize: '4.2mm',
@@ -96,17 +55,60 @@ export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
         <strong>{amountDue}</strong> will be collected from the recipient before the parcel is
         released.
       </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 40mm', gap: '4mm' }}>
+        <div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '1.2mm 5mm',
+              marginTop: '2mm',
+            }}
+          >
+            <ReceiptField label="Parcel Code" value={parcelCode} emphasis />
+            <ReceiptField label="Date" value={issuedAtLabel} />
+          </div>
+
+          <ReceiptParty label="Sender" name={senderName} phone={senderTelephone} />
+          <ReceiptParty label="Recipient" name={receiverName} phone={receiverTelephone} />
+          <ReceiptField label="Delivery Location" value={deliveryAddress} />
+          <ReceiptField label="Item Description" value={itemDescription || '-'} />
+
+          <div
+            style={{
+              marginTop: '2mm',
+              border: '0.35mm solid #111',
+              padding: '1.5mm 2mm',
+              textAlign: 'center',
+              fontSize: '4.8mm',
+              fontWeight: 900,
+            }}
+          >
+            PAYMENT STATUS: TO BE PAID
+          </div>
+
+          <ReceiptField label="Amount Due for payment" value={amountDue} emphasis />
+        </div>
+
+        <div
+          aria-label="Parcel tracking QR code"
+          style={{ width: '36mm', height: '36mm', justifySelf: 'center', alignSelf: 'start' }}
+          dangerouslySetInnerHTML={{ __html: qrSvg }}
+        />
+      </div>
     </div>
   );
 }
 
-function ReceiptParty({ title, name, phone }: { title: string; name: string; phone: string }) {
+function ReceiptParty({ label, name, phone }: { label: string; name: string; phone: string }) {
   return (
-    <section style={{ borderTop: '0.25mm solid #111', paddingTop: '1.2mm', marginTop: '1.5mm' }}>
-      <div style={{ fontSize: '4.2mm', fontWeight: 900 }}>{title}</div>
-      <ReceiptField label="Name" value={name} />
-      <ReceiptField label="Phone Number" value={phone || '-'} />
-    </section>
+    <div style={{ marginTop: '1.5mm', minWidth: 0, overflowWrap: 'anywhere' }}>
+      <span style={{ fontWeight: 700 }}>{label}: </span>
+      <span style={{ fontWeight: 600 }}>
+        {name || '-'} ({phone || '-'})
+      </span>
+    </div>
   );
 }
 
