@@ -20,7 +20,7 @@ export const EMPTY_META: PaginationMeta = {
 
 export const PAYMENT_METHOD_OPTIONS = [
   { value: PaymentMethod.CASH, label: 'Cash' },
-  { value: PaymentMethod.MTN, label: 'MTN' },
+  { value: PaymentMethod.MTN, label: 'MTN MoMo' },
   { value: PaymentMethod.TELECEL, label: 'Telecel' },
   { value: PaymentMethod.AIRTEL, label: 'Airtel' },
 ];
