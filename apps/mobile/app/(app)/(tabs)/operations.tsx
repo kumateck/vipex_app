@@ -44,13 +44,22 @@ export default function OperationsTabScreen() {
       <AppPageHeader title="Operations" subtitle="Quick access to core workflow modules." />
 
       {canCreateBooking ? (
-        <ModuleCard
-          icon="cash-outline"
-          title="Create TobePaid"
-          description="Create a to-be-paid parcel booking. The receiver pays the full charge on pickup."
-          href="/(app)/parcel-create"
-          linkLabel="Open Create TobePaid"
-        />
+        <>
+          <ModuleCard
+            icon="cash-outline"
+            title="Create Paid"
+            description="Create a sender-pay parcel for completion at the sender cashier."
+            href="/(app)/parcel-create?payment=sender"
+            linkLabel="Open Create Paid"
+          />
+          <ModuleCard
+            icon="wallet-outline"
+            title="Create TobePaid"
+            description="Create a receiver-pay parcel for completion at the sender cashier."
+            href="/(app)/parcel-create?payment=recipient"
+            linkLabel="Open Create TobePaid"
+          />
+        </>
       ) : null}
       <ModuleCard
         icon="search-outline"

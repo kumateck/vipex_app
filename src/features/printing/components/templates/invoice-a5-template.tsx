@@ -1,35 +1,9 @@
-import logoPng from '@/assets/logo.png';
+import { InvoiceA5Header } from './invoice-a5-header';
+import type { InvoiceA5TemplateProps } from './invoice-a5-template.types';
+import { isToBePaidDeliveryReceipt } from './invoice-a5-template.utils';
 import { InvoiceTaxSummary } from './invoice-tax-summary';
 import { createQrSvg } from './thermal-sticker-template-utils';
-
-type InvoiceA5TemplateProps = {
-  bookingCode: string;
-  issuedAtLabel: string;
-  parcelDetails: string;
-  parcelContent?: string | null;
-  parcelValueCedis?: number | null;
-  receivedByName?: string | null;
-  destinationBranchName: string;
-  destinationLocationName: string;
-  senderName: string;
-  senderTelephone: string;
-  receiverName: string;
-  receiverTelephone: string;
-  paymentModeLabel: string;
-  totalChargeCedis: number;
-  senderPaidCedis: number;
-  receiverToPayCedis: number;
-  amountPaidCedis: number;
-  amountInWords: string;
-  tax: {
-    vat: number;
-    getfund: number;
-    nhil: number;
-    totalTax: number;
-  };
-  qrValue: string;
-  formatMoney: (amount: number) => string;
-};
+import { ToBePaidReceiptA5Template } from './to-be-paid-receipt-a5-template';
 
 export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
   const {
@@ -37,13 +11,10 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     issuedAtLabel,
     parcelContent,
     parcelValueCedis,
-    receivedByName,
     destinationBranchName,
     destinationLocationName,
     senderName,
     senderTelephone,
-    receiverName,
-    receiverTelephone,
     senderPaidCedis,
     receiverToPayCedis,
     amountPaidCedis,
@@ -53,7 +24,10 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     formatMoney,
   } = props;
 
-  const isToBePaidReceipt = senderPaidCedis <= 0 && receiverToPayCedis > 0;
+  if (isToBePaidDeliveryReceipt(props)) {
+    return <ToBePaidReceiptA5Template {...props} />;
+  }
+
   const isPartialReceipt = senderPaidCedis > 0 && receiverToPayCedis > 0;
   const totalPaid = amountPaidCedis;
   const priceBeforeTax = Math.max(totalPaid - tax.totalTax, 0);
@@ -82,76 +56,11 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
         lineHeight: 1.1,
       }}
     >
-      <div
-        style={{ borderBottom: '0.28mm solid #111', paddingBottom: '1.1mm', marginBottom: '1.1mm' }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: '2.4mm',
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.6mm' }}>
-              <img
-                src={logoPng}
-                alt="Vipex logo"
-                style={{ width: '16mm', height: '16mm', objectFit: 'contain' }}
-              />
-              <div>
-                <div style={{ fontSize: '6.8mm', fontWeight: 700, lineHeight: 1 }}>
-                  VIPEX COMPANY LTD
-                </div>
-                <div style={{ fontSize: '6.8mm', fontWeight: 700, lineHeight: 0.92 }}>PARCELS</div>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ textAlign: 'center', minWidth: '50mm' }}>
-            <div style={{ fontSize: '6.8mm', fontWeight: 700 }}>Tax Invoice</div>
-            <div style={{ fontSize: '5mm', marginTop: '0.4mm' }}>TIN #: C0003621138</div>
-            {isToBePaidReceipt ? (
-              <div style={{ marginTop: '0.5mm', fontSize: '4.4mm', fontWeight: 700 }}>
-                TO BE PAID RECEIPT
-              </div>
-            ) : null}
-            {isPartialReceipt ? (
-              <div style={{ marginTop: '0.5mm', fontSize: '4.4mm', fontWeight: 700 }}>
-                PARTIAL PAYMENT RECEIPT
-              </div>
-            ) : null}
-            {isToBePaidReceipt || isPartialReceipt ? (
-              <div
-                style={{ marginTop: '0.4mm', fontSize: '2.6mm', fontWeight: 600, lineHeight: 1.15 }}
-              >
-                Disclaimer: Sender did not pay at the point of sending.
-              </div>
-            ) : null}
-          </div>
-
-          <div style={{ textAlign: 'right', fontSize: '3.1mm', minWidth: '46mm' }}>
-            <div>P. O. BOX 16875 - Kumasi - Ashanti</div>
-            <div style={{ marginTop: '0.4mm' }}>user: SYSTEM</div>
-            <div style={{ marginTop: '0.7mm' }}>Date: {issuedAtLabel}</div>
-          </div>
-        </div>
-
-        <div
-          style={{
-            marginTop: '0.8mm',
-            fontSize: '3.6mm',
-            textAlign: 'center',
-            lineHeight: 1.2,
-          }}
-        >
-          Kumasi (Accra): 0204353512 / 0540121502 | Accra (Kumasi): 0204353513 / 0507243966 |
-          Sunyani (Accra): 0540121503 / 0204252090 | Accra (Sunyani): 0540305280
-          <br />
-          Kumasi (Sunyani): 0204353512 | Sunyani (Kumasi): 0540121503
-        </div>
-      </div>
+      <InvoiceA5Header
+        issuedAtLabel={issuedAtLabel}
+        title="Tax Invoice"
+        subtitle={isPartialReceipt ? 'PARTIAL PAYMENT RECEIPT' : undefined}
+      />
 
       <div
         style={{
@@ -176,15 +85,11 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
                 paddingRight: '1.6mm',
               }}
             >
-              <div style={{ fontWeight: 700 }}>
-                {isToBePaidReceipt ? 'Receiver Info' : 'Sender Info'}
-              </div>
+              <div style={{ fontWeight: 700 }}>Sender Info</div>
               <div style={{ marginTop: '0.5mm', fontWeight: 700, fontSize: '5.1mm' }}>
-                {isToBePaidReceipt ? receiverName : senderName}
+                {senderName}
               </div>
-              <div style={{ marginTop: '0.2mm', fontSize: '5.1mm' }}>
-                {isToBePaidReceipt ? receiverTelephone || '-' : senderTelephone || '-'}
-              </div>
+              <div style={{ marginTop: '0.2mm', fontSize: '5.1mm' }}>{senderTelephone || '-'}</div>
             </div>
             <div style={{ paddingLeft: '1.6mm', paddingBottom: '0.9mm' }}>
               <div style={{ fontWeight: 700 }}>Amount in Words</div>
@@ -243,19 +148,6 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
                   <div style={{ marginTop: '0.3mm' }}>{destinationLabel}</div>
                 </div>
               </div>
-
-              {isToBePaidReceipt ? (
-                <div
-                  style={{
-                    marginTop: '0.3mm',
-                    borderTop: '0.2mm solid #222',
-                    paddingTop: '0.5mm',
-                  }}
-                >
-                  <div style={{ fontWeight: 700 }}>Parcel Received By:</div>
-                  <div style={{ marginTop: '0.3mm' }}>{receivedByName || receiverName || '-'}</div>
-                </div>
-              ) : null}
             </div>
           </div>
         </div>
@@ -304,7 +196,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
 
             <InvoiceTaxSummary
               formatMoney={formatMoney}
-              isToBePaidReceipt={isToBePaidReceipt}
+              isToBePaidReceipt={false}
               priceBeforeTax={priceBeforeTax}
               taxRows={taxRows}
               totalPaid={totalPaid}

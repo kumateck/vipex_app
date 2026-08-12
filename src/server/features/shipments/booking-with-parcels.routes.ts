@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
 import { UUID } from '../../schemas/common';
 import { createBookingWithParcelsCtrl } from './booking-with-parcels.controller';
+import { deferBookingToSenderCashier } from './booking-with-parcels.service';
 import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { Forbidden } from '@/server/utils/http-error';
@@ -21,6 +22,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
         status: number;
         cashierSessionId?: string | null;
         bookingCode?: string | null;
+        deferSenderCashierCompletion?: boolean;
         parcels: Array<{
           destinationId: string;
           pickupLocationId?: string | null;
@@ -38,7 +40,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
           paymentResponsibility?: number;
         }>;
       };
-      const res = await createBookingWithParcelsCtrl({
+      const createBody = {
         senderId: payload.senderId,
         companyId: authUser.companyId ?? '',
         sourceId: authUser.branchId ?? '',
@@ -54,7 +56,10 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
           cashierUserId: authUser.sub,
           branchId: authUser.branchId ?? '',
         })),
-      });
+      };
+      const res = await createBookingWithParcelsCtrl(
+        payload.deferSenderCashierCompletion ? deferBookingToSenderCashier(createBody) : createBody,
+      );
       set.status = HttpStatus.CREATED;
       return res;
     },
@@ -62,6 +67,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
       body: t.Object({
         senderId: UUID,
         status: t.Number(),
+        deferSenderCashierCompletion: t.Optional(t.Boolean()),
         cashierSessionId: t.Optional(UUID),
         bookingCode: t.Optional(t.String()),
         parcels: t.Array(

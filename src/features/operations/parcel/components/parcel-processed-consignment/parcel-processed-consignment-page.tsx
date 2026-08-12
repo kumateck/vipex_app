@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select-searchable';
 import { ParcelStatus } from '@/db/schemas/enums';
-import type { PaginationMeta } from '@/server/types/pagination.types';
+import type { PaginationMeta, SortField } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
@@ -57,6 +57,7 @@ const EMPTY_META: PaginationMeta = {
 };
 const ALL_VALUE = '__all__';
 const EMPTY_ROWS: ProcessedParcel[] = [];
+const NEWEST_FIRST_SORT: SortField[] = [{ field: 'createdAt', direction: 'desc' }];
 
 function formatDate(isoDate: string) {
   const date = new Date(isoDate);
@@ -84,7 +85,7 @@ function toReceiptPrintData(
   const totalChargeCedis = Number(parcel.chargePsw ?? 0) / 100;
   const receiverToPayCedis = Number(parcel.plannedToBePaidPsw ?? 0) / 100;
   const senderPaidCedis = Math.max(totalChargeCedis - receiverToPayCedis, 0);
-  const amountPaidCedis = senderPaidCedis > 0 ? senderPaidCedis : receiverToPayCedis;
+  const amountPaidCedis = senderPaidCedis;
 
   return {
     bookingCode: parcel.bookingCode ?? '-',
@@ -157,6 +158,7 @@ export function ParcelProcessedConsignmentPage() {
   >({
     page: 1,
     pageSize: 20,
+    sort: NEWEST_FIRST_SORT,
     filters: serverFilters,
   });
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -768,6 +770,7 @@ export function ParcelProcessedConsignmentPage() {
               columns={columns}
               meta={hasLoaded ? (data?.meta ?? EMPTY_META) : EMPTY_META}
               loading={hasLoaded ? isLoading : false}
+              defaultSort={NEWEST_FIRST_SORT}
               serverFilters={{
                 ...serverFilters,
               }}

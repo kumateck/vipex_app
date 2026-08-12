@@ -6,8 +6,8 @@ export const PaymentMethod = {
   CREDIT: 4,
 } as const;
 
-// Mirrors src/db/schemas/enums.ts PaymentResponsibility. Mobile booking
-// creation only ever books the RECIPIENT ("to be paid") responsibility.
+// Mirrors src/db/schemas/enums.ts PaymentResponsibility. Mobile creation records
+// responsibility only; the sender cashier completes payment and printing later.
 export const PaymentResponsibility = {
   SENDER: 0,
   RECIPIENT: 1,

@@ -1,13 +1,9 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const fs = require('node:fs');
 const path = require('node:path');
-const { MakerSquirrel } = require('@electron-forge/maker-squirrel');
 const { VitePlugin } = require('@electron-forge/plugin-vite');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const logoBasePath = path.resolve(__dirname, '../../src/assets/logo');
-const logoIcoPath = `${logoBasePath}.ico`;
-const hasIco = fs.existsSync(logoIcoPath);
 
 module.exports = {
   packagerConfig: {
@@ -23,20 +19,7 @@ module.exports = {
       OriginalFilename: 'vipex-desktop-test.exe',
     },
   },
-  makers: [
-    new MakerSquirrel(
-      hasIco
-        ? {
-            name: 'vipex_desktop_test',
-            setupExe: 'VipexDesktopTestSetup.exe',
-            setupIcon: logoIcoPath,
-          }
-        : {
-            name: 'vipex_desktop_test',
-            setupExe: 'VipexDesktopTestSetup.exe',
-          },
-    ),
-  ],
+  makers: [],
   plugins: [
     new VitePlugin({
       build: [

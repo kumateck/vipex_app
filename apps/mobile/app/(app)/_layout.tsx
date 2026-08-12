@@ -92,7 +92,7 @@ export default function AppLayout() {
       <Drawer.Screen
         name="parcel-create"
         options={{
-          title: 'Create TobePaid',
+          title: 'Create Parcel',
           headerShown: false,
           drawerIcon: ({ size, color }) => (
             <Ionicons name="cash-outline" size={size} color={color} />
@@ -126,6 +126,7 @@ export default function AppLayout() {
         name="receive"
         options={{
           title: 'Scan To Receive',
+          headerShown: false,
           drawerIcon: ({ size, color }) => (
             <Ionicons name="qr-code-outline" size={size} color={color} />
           ),

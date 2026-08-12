@@ -2,11 +2,21 @@ import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAppearance } from '@mobile/providers/appearance-provider';
+import { PaymentResponsibility } from '@mobile/constants/payment';
 import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
+import type { MobilePaymentResponsibility } from '../../mobile-parcel-payment-plan';
 
-export function ParcelCreateHeader() {
+export function ParcelCreateHeader({
+  paymentResponsibility,
+}: {
+  paymentResponsibility: MobilePaymentResponsibility;
+}) {
   const { theme } = useAppearance();
   const navigation = useNavigation();
+  const title =
+    paymentResponsibility === PaymentResponsibility.SENDER
+      ? 'Create Paid Parcel'
+      : 'Create TobePaid Parcel';
 
   return (
     <View style={styles.header}>
@@ -20,9 +30,9 @@ export function ParcelCreateHeader() {
         <Ionicons name="menu-outline" size={26} color={theme.colors.text} />
       </Pressable>
       <View style={styles.titleGroup}>
-        <Text style={[styles.title, { color: theme.colors.text }]}>Create TobePaid</Text>
+        <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
         <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-          To be paid — the receiver pays the full charge on pickup.
+          Create the booking here, then complete payment and printing at the sender cashier.
         </Text>
       </View>
     </View>

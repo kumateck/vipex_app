@@ -3,7 +3,11 @@ import {
   ParcelReconciliationCaseType,
   PaymentMethod,
 } from '@/db/schemas/enums';
-import type { PaginationMeta } from '@/server/types/pagination.types';
+import type { PaginationMeta, SortField } from '@/server/types/pagination.types';
+
+export const SENDER_PAYMENTS_DEFAULT_SORT: SortField[] = [
+  { field: 'createdAt', direction: 'desc' },
+];
 
 export const EMPTY_META: PaginationMeta = {
   totalRecords: 0,

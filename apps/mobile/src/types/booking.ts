@@ -20,6 +20,7 @@ export type LocationOption = {
 export type CreateBookingWithParcelsInput = {
   senderId: string;
   status: number;
+  deferSenderCashierCompletion?: boolean;
   parcels: Array<{
     destinationId: string;
     pickupLocationId?: string | null;

@@ -6,14 +6,14 @@ import {
 import type { ReceiptSummary } from '@/features/operations/parcel/components/parcel-create/parcel-form.types';
 
 describe('parcel creation print queue', () => {
-  test('prints a receipt only when the sender paid an amount', () => {
+  test('prints A5 receipts for sender-paid and receiver-pay parcels', () => {
     const parcels = createReceipt().parcels;
     const senderPaid = parcels[0]!;
     const receiverPay = parcels[1]!;
     const credit = parcels[2]!;
 
     expect(getParcelCreationPrintSelection(senderPaid)).toBe('both');
-    expect(getParcelCreationPrintSelection(receiverPay)).toBe('sticker');
+    expect(getParcelCreationPrintSelection(receiverPay)).toBe('both');
     expect(getParcelCreationPrintSelection(credit)).toBe('sticker');
   });
 

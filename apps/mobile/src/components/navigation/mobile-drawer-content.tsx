@@ -91,13 +91,26 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
             inactiveTintColor={theme.colors.text}
           />
           {canCreateBooking ? (
-            <DrawerItem
-              label="Create TobePaid"
-              labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
-              icon={({ size, color }) => <Ionicons name="cash-outline" size={size} color={color} />}
-              onPress={() => props.navigation.navigate('ParcelCreate')}
-              inactiveTintColor={theme.colors.text}
-            />
+            <>
+              <DrawerItem
+                label="Create Paid"
+                labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+                icon={({ size, color }) => (
+                  <Ionicons name="cash-outline" size={size} color={color} />
+                )}
+                onPress={() => props.navigation.navigate('ParcelCreate', { payment: 'sender' })}
+                inactiveTintColor={theme.colors.text}
+              />
+              <DrawerItem
+                label="Create TobePaid"
+                labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+                icon={({ size, color }) => (
+                  <Ionicons name="wallet-outline" size={size} color={color} />
+                )}
+                onPress={() => props.navigation.navigate('ParcelCreate', { payment: 'recipient' })}
+                inactiveTintColor={theme.colors.text}
+              />
+            </>
           ) : null}
           {canUseQueue ? (
             <DrawerItem
