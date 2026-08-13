@@ -20,6 +20,9 @@ jobs:
     environment: production
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Validate required secrets
         env:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
