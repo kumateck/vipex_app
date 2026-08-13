@@ -1,0 +1,119 @@
+name: Build and Deploy to Testing
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE_NAME: kumateck/vipex_app
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ github.sha }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          file: Dockerfile
+          tags: |
+            ${{ env.DOCKER_IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.DOCKER_IMAGE_NAME }}:latest
+          no-cache: true
+
+  deploy-testing:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: testing
+
+    steps:
+      - name: Validate required secrets
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_PUBLIC_URL: ${{ secrets.LIVEKIT_PUBLIC_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          missing=0
+          for key in EMAIL_USER EMAIL_PASSWORD SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS LIVEKIT_API_KEY LIVEKIT_API_SECRET LIVEKIT_URL LIVEKIT_PUBLIC_URL DATABASE_URL JWT_SECRET; do
+            if [ -z "${!key}" ]; then
+              echo "Missing required secret in the 'testing' environment: $key"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Deploy container
+        uses: ./.github/actions/deploy-container
+        with:
+          image: ${{ env.DOCKER_IMAGE_NAME }}:${{ needs.build.outputs.image_tag }}
+          container_name: vipex_app_dev
+          host_port: '11000'
+          app_env: development
+          app_base_url: https://testing.app.vipexparcel.com
+          reset_link_base_url: https://testing.app.vipexparcel.com
+          invite_link_base_url: https://testing.app.vipexparcel.com
+          database_url: ${{ secrets.DATABASE_URL }}
+          jwt_secret: ${{ secrets.JWT_SECRET }}
+          email_user: ${{ secrets.EMAIL_USER }}
+          email_password: ${{ secrets.EMAIL_PASSWORD }}
+          smtp_host: ${{ secrets.SMTP_HOST }}
+          smtp_port: ${{ secrets.SMTP_PORT }}
+          smtp_secure: ${{ secrets.SMTP_SECURE }}
+          smtp_user: ${{ secrets.SMTP_USER }}
+          smtp_pass: ${{ secrets.SMTP_PASS }}
+          smtp_from: ${{ secrets.SMTP_FROM }}
+          smtp_require_tls: ${{ secrets.SMTP_REQUIRE_TLS }}
+          smtp_debug: ${{ secrets.SMTP_DEBUG }}
+          livekit_api_key: ${{ secrets.LIVEKIT_API_KEY }}
+          livekit_api_secret: ${{ secrets.LIVEKIT_API_SECRET }}
+          livekit_url: ${{ secrets.LIVEKIT_URL }}
+          livekit_public_url: ${{ secrets.LIVEKIT_PUBLIC_URL }}
+          sentry_dsn: ${{ secrets.SENTRY_DSN }}
+          discord_webhook_production: ${{ secrets.DISCORD_WEBHOOK_PRODUCTION }}
+          discord_webhook_development: ${{ secrets.DISCORD_WEBHOOK_DEVELOPMENT }}
+          minio_endpoint: ${{ secrets.MINIO_ENDPOINT }}
+          minio_region: ${{ secrets.MINIO_REGION }}
+          minio_access_key: ${{ secrets.MINIO_ACCESS_KEY }}
+          minio_secret_key: ${{ secrets.MINIO_SECRET_KEY }}
+          minio_bucket: ${{ secrets.MINIO_BUCKET }}
+          minio_force_path_style: ${{ secrets.MINIO_FORCE_PATH_STYLE }}
+          mtn_momo_target_environment: sandbox
+          mtn_momo_subscription_key: ${{ secrets.MTN_MOMO_SUBSCRIPTION_KEY }}
+          mnotify_api_url: ${{ secrets.MNOTIFY_API_URL }}
+          mnotify_api_key: ${{ secrets.MNOTIFY_API_KEY }}
+          mnotify_sender_id: ${{ secrets.MNOTIFY_SENDER_ID }}
+          docker_username: ${{ secrets.DOCKER_USERNAME }}
+          docker_password: ${{ secrets.DOCKER_PASSWORD }}
+          ssh_host: ${{ secrets.SSH_HOST }}
+          ssh_username: ${{ secrets.SSH_USERNAME }}
+          ssh_port: ${{ secrets.SSH_PORT }}
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}

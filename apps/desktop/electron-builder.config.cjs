@@ -3,7 +3,7 @@ const path = require('node:path');
 const logoPath = path.resolve(__dirname, '../../src/assets/logo-512.png');
 const updateFeedUrl =
   process.env.DESKTOP_UPDATE_FEED_URL ||
-  'https://testing.app.vipexparcel.com/v1/desktop-updates/windows/latest/';
+  'https://app.vipexparcels.com/v1/desktop-updates/windows/latest/';
 
 module.exports = {
   appId: 'com.vipex.desktop',

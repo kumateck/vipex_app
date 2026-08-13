@@ -48,8 +48,8 @@ jobs:
 
       - name: Build Windows Desktop Release (NSIS)
         env:
-          DESKTOP_WEB_BASE_URL: https://testing.app.vipexparcel.com/
-          DESKTOP_UPDATE_FEED_URL: https://testing.app.vipexparcel.com/v1/desktop-updates/windows/latest/
+          DESKTOP_WEB_BASE_URL: https://app.vipexparcels.com/
+          DESKTOP_UPDATE_FEED_URL: https://app.vipexparcels.com/v1/desktop-updates/windows/latest/
           ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder-cache
         run: |
           for attempt in 1 2 3; do
@@ -116,8 +116,8 @@ jobs:
 
       - name: Build macOS Desktop Release (ZIP)
         env:
-          DESKTOP_WEB_BASE_URL: https://testing.app.vipexparcel.com/
-          DESKTOP_UPDATE_FEED_URL: https://testing.app.vipexparcel.com/v1/desktop-updates/macos/latest/
+          DESKTOP_WEB_BASE_URL: https://app.vipexparcels.com/
+          DESKTOP_UPDATE_FEED_URL: https://app.vipexparcels.com/v1/desktop-updates/macos/latest/
         run: bun run --cwd apps/desktop make -- --targets @electron-forge/maker-zip
 
       - name: Resolve Desktop Version
@@ -344,5 +344,5 @@ jobs:
 
       - name: Feed URL hint
         run: |
-          echo "Windows feed: https://testing.app.vipexparcel.com/v1/desktop-updates/windows/latest/"
-          echo "macOS feed: https://testing.app.vipexparcel.com/v1/desktop-updates/macos/latest/"
+          echo "Windows feed: https://app.vipexparcels.com/v1/desktop-updates/windows/latest/"
+          echo "macOS feed: https://app.vipexparcels.com/v1/desktop-updates/macos/latest/"
