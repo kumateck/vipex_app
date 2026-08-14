@@ -1,0 +1,257 @@
+name: Deploy container over SSH
+description: Pulls a pre-built image tag and (re)starts a named container on the target host with environment-specific config. Used identically by every environment so the deploy logic lives in one place.
+
+inputs:
+  image:
+    description: Full image reference to pull, e.g. kumateck/vipex_app:<sha>
+    required: true
+  container_name:
+    required: true
+  host_port:
+    required: true
+  container_port:
+    required: false
+    default: '3000'
+
+  node_env:
+    required: false
+    default: production
+  app_env:
+    required: true
+  app_base_url:
+    required: true
+  reset_link_base_url:
+    required: true
+  invite_link_base_url:
+    required: true
+
+  database_url:
+    required: true
+  jwt_secret:
+    required: true
+
+  email_user:
+    required: true
+  email_password:
+    required: true
+  smtp_host:
+    required: true
+  smtp_port:
+    required: true
+  smtp_secure:
+    required: true
+  smtp_user:
+    required: true
+  smtp_pass:
+    required: true
+  smtp_from:
+    required: true
+  smtp_require_tls:
+    required: true
+  smtp_debug:
+    required: true
+
+  livekit_api_key:
+    required: true
+  livekit_api_secret:
+    required: true
+  livekit_url:
+    required: true
+  livekit_public_url:
+    required: true
+
+  sentry_dsn:
+    required: false
+    default: ''
+  discord_webhook_production:
+    required: false
+    default: ''
+  discord_webhook_development:
+    required: false
+    default: ''
+
+  minio_endpoint:
+    required: false
+    default: ''
+  minio_region:
+    required: false
+    default: ''
+  minio_access_key:
+    required: false
+    default: ''
+  minio_secret_key:
+    required: false
+    default: ''
+  minio_bucket:
+    required: false
+    default: ''
+  minio_force_path_style:
+    required: false
+    default: ''
+
+  mtn_momo_target_environment:
+    description: sandbox or production
+    required: false
+    default: sandbox
+  mtn_momo_subscription_key:
+    required: false
+    default: ''
+
+  mnotify_api_url:
+    required: false
+    default: ''
+  mnotify_api_key:
+    required: false
+    default: ''
+  mnotify_sender_id:
+    required: false
+    default: ''
+
+  docker_username:
+    required: true
+  docker_password:
+    required: true
+  ssh_host:
+    required: true
+  ssh_username:
+    required: true
+  ssh_port:
+    required: true
+  ssh_private_key:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install SSH client
+      shell: bash
+      run: sudo apt-get install -y openssh-client
+
+    - name: Deploy ${{ inputs.container_name }}
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+        CONTAINER_NAME: ${{ inputs.container_name }}
+        HOST_PORT: ${{ inputs.host_port }}
+        CONTAINER_PORT: ${{ inputs.container_port }}
+        NODE_ENV: ${{ inputs.node_env }}
+        APP_ENV: ${{ inputs.app_env }}
+        APP_BASE_URL: ${{ inputs.app_base_url }}
+        RESET_LINK_BASE_URL: ${{ inputs.reset_link_base_url }}
+        INVITE_LINK_BASE_URL: ${{ inputs.invite_link_base_url }}
+        DATABASE_URL: ${{ inputs.database_url }}
+        JWT_SECRET: ${{ inputs.jwt_secret }}
+        EMAIL_USER: ${{ inputs.email_user }}
+        EMAIL_PASSWORD: ${{ inputs.email_password }}
+        SMTP_HOST: ${{ inputs.smtp_host }}
+        SMTP_PORT: ${{ inputs.smtp_port }}
+        SMTP_SECURE: ${{ inputs.smtp_secure }}
+        SMTP_USER: ${{ inputs.smtp_user }}
+        SMTP_PASS: ${{ inputs.smtp_pass }}
+        SMTP_FROM: ${{ inputs.smtp_from }}
+        SMTP_REQUIRE_TLS: ${{ inputs.smtp_require_tls }}
+        SMTP_DEBUG: ${{ inputs.smtp_debug }}
+        LIVEKIT_API_KEY: ${{ inputs.livekit_api_key }}
+        LIVEKIT_API_SECRET: ${{ inputs.livekit_api_secret }}
+        LIVEKIT_URL: ${{ inputs.livekit_url }}
+        LIVEKIT_PUBLIC_URL: ${{ inputs.livekit_public_url }}
+        SENTRY_DSN: ${{ inputs.sentry_dsn }}
+        DISCORD_WEBHOOK_PRODUCTION: ${{ inputs.discord_webhook_production }}
+        DISCORD_WEBHOOK_DEVELOPMENT: ${{ inputs.discord_webhook_development }}
+        MINIO_ENDPOINT: ${{ inputs.minio_endpoint }}
+        MINIO_REGION: ${{ inputs.minio_region }}
+        MINIO_ACCESS_KEY: ${{ inputs.minio_access_key }}
+        MINIO_SECRET_KEY: ${{ inputs.minio_secret_key }}
+        MINIO_BUCKET: ${{ inputs.minio_bucket }}
+        MINIO_FORCE_PATH_STYLE: ${{ inputs.minio_force_path_style }}
+        MTN_MOMO_TARGET_ENVIRONMENT: ${{ inputs.mtn_momo_target_environment }}
+        MTN_MOMO_SUBSCRIPTION_KEY: ${{ inputs.mtn_momo_subscription_key }}
+        MNOTIFY_API_URL: ${{ inputs.mnotify_api_url }}
+        MNOTIFY_API_KEY: ${{ inputs.mnotify_api_key }}
+        MNOTIFY_SENDER_ID: ${{ inputs.mnotify_sender_id }}
+        SSH_PRIVATE_KEY: ${{ inputs.ssh_private_key }}
+        SSH_USERNAME: ${{ inputs.ssh_username }}
+        SSH_HOST: ${{ inputs.ssh_host }}
+        SSH_PORT: ${{ inputs.ssh_port }}
+        DOCKER_USERNAME: ${{ inputs.docker_username }}
+        DOCKER_PASSWORD: ${{ inputs.docker_password }}
+      run: |
+        set -euo pipefail
+
+        # Always-present vars are passed through as-is. Optional/URL-validated
+        # vars are only appended when non-empty, since the app's Zod schema
+        # rejects an empty string as an invalid URL for optional fields.
+        DOCKER_ENV_ARGS="-e DATABASE_URL=$(printf '%q' "$DATABASE_URL")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e JWT_SECRET=$(printf '%q' "$JWT_SECRET")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e EMAIL_USER=$(printf '%q' "$EMAIL_USER")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e EMAIL_PASSWORD=$(printf '%q' "$EMAIL_PASSWORD")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e SMTP_HOST=$(printf '%q' "$SMTP_HOST")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e SMTP_PORT=$(printf '%q' "$SMTP_PORT")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e SMTP_SECURE=$(printf '%q' "$SMTP_SECURE")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e SMTP_USER=$(printf '%q' "$SMTP_USER")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e SMTP_PASS=$(printf '%q' "$SMTP_PASS")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e SMTP_FROM=$(printf '%q' "$SMTP_FROM")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e SMTP_REQUIRE_TLS=$(printf '%q' "$SMTP_REQUIRE_TLS")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e SMTP_DEBUG=$(printf '%q' "$SMTP_DEBUG")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e LIVEKIT_API_KEY=$(printf '%q' "$LIVEKIT_API_KEY")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e LIVEKIT_API_SECRET=$(printf '%q' "$LIVEKIT_API_SECRET")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e LIVEKIT_URL=$(printf '%q' "$LIVEKIT_URL")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e LIVEKIT_PUBLIC_URL=$(printf '%q' "$LIVEKIT_PUBLIC_URL")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e NODE_ENV=$(printf '%q' "$NODE_ENV")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e APP_ENV=$(printf '%q' "$APP_ENV")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e APP_BASE_URL=$(printf '%q' "$APP_BASE_URL")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e RESET_LINK_BASE_URL=$(printf '%q' "$RESET_LINK_BASE_URL")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e INVITE_LINK_BASE_URL=$(printf '%q' "$INVITE_LINK_BASE_URL")"
+        DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e MTN_MOMO_TARGET_ENVIRONMENT=$(printf '%q' "$MTN_MOMO_TARGET_ENVIRONMENT")"
+
+        add_optional_env() {
+          # $1 = var name, $2 = value
+          if [ -n "$2" ]; then
+            DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e $1=$(printf '%q' "$2")"
+          fi
+        }
+        add_optional_env SENTRY_DSN "$SENTRY_DSN"
+        add_optional_env DISCORD_WEBHOOK_PRODUCTION "$DISCORD_WEBHOOK_PRODUCTION"
+        add_optional_env DISCORD_WEBHOOK_DEVELOPMENT "$DISCORD_WEBHOOK_DEVELOPMENT"
+        add_optional_env MINIO_ENDPOINT "$MINIO_ENDPOINT"
+        add_optional_env MINIO_REGION "$MINIO_REGION"
+        add_optional_env MINIO_ACCESS_KEY "$MINIO_ACCESS_KEY"
+        add_optional_env MINIO_SECRET_KEY "$MINIO_SECRET_KEY"
+        add_optional_env MINIO_BUCKET "$MINIO_BUCKET"
+        add_optional_env MINIO_FORCE_PATH_STYLE "$MINIO_FORCE_PATH_STYLE"
+        add_optional_env MTN_MOMO_SUBSCRIPTION_KEY "$MTN_MOMO_SUBSCRIPTION_KEY"
+        add_optional_env MNOTIFY_API_URL "$MNOTIFY_API_URL"
+        add_optional_env MNOTIFY_API_KEY "$MNOTIFY_API_KEY"
+        add_optional_env MNOTIFY_SENDER_ID "$MNOTIFY_SENDER_ID"
+
+        mkdir -p ~/.ssh
+        echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+
+        ssh -o StrictHostKeyChecking=no "${SSH_USERNAME}@${SSH_HOST}" -p "${SSH_PORT}" << EOF
+          set -e
+          echo "Logging in to Docker Hub"
+          docker login -u '${DOCKER_USERNAME}' -p '${DOCKER_PASSWORD}'
+
+          echo "Pulling image: ${IMAGE}"
+          docker pull "${IMAGE}"
+
+          echo "Stopping and removing the existing container if it exists"
+          if [ \$(docker ps -a | grep "${CONTAINER_NAME}" | wc -l) -gt 0 ]; then
+            docker stop "${CONTAINER_NAME}"
+            docker rm "${CONTAINER_NAME}"
+          fi
+
+          echo "Ensuring 'sail' network exists"
+          docker network inspect sail >/dev/null 2>&1 || docker network create sail
+
+          echo "Pruning unused Docker images"
+          docker image prune -a -f
+
+          echo "Running the new container"
+          docker run -d --restart always --net sail \
+            -p "${HOST_PORT}:${CONTAINER_PORT}" \
+            --name "${CONTAINER_NAME}" \
+            ${DOCKER_ENV_ARGS} \
+            "${IMAGE}"
+        EOF
