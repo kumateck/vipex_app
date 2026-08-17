@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDownCircle, AlertTriangle, CheckCircle2, RefreshCcw } from 'lucide-react';
+import { ArrowDownCircle, CheckCircle2, RefreshCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 type DesktopUpdateStatus = NonNullable<Window['api']>['updates'] extends {
   getStatus: () => Promise<infer T>;
@@ -61,41 +61,49 @@ export function UpdateIndicator() {
   }, [isDesktop]);
 
   if (!isDesktop) return null;
-  if (status.state === 'idle' || status.state === 'not-available') return null;
+  // Only shown for a genuine, actionable update — not while merely checking or on error.
+  if (
+    status.state !== 'available' &&
+    status.state !== 'downloading' &&
+    status.state !== 'downloaded'
+  )
+    return null;
 
   const meta =
     status.state === 'downloaded'
       ? {
-          label: 'Update ready',
+          label: 'Update ready to install',
           Icon: CheckCircle2,
-          className: 'bg-green-500/10 text-green-600 border-green-500/30',
+          dot: 'bg-green-500',
+          icon: 'text-green-600',
+          ring: 'border-green-500/60',
         }
-      : status.state === 'available' ||
-          status.state === 'downloading' ||
-          status.state === 'checking'
-        ? {
-            label: status.state === 'downloading' ? 'Downloading update' : 'Update available',
-            Icon: status.state === 'checking' ? RefreshCcw : ArrowDownCircle,
-            className: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
-          }
-        : {
-            label: 'Update issue',
-            Icon: AlertTriangle,
-            className: 'bg-destructive/10 text-destructive border-destructive/30',
-          };
+      : {
+          label: status.state === 'downloading' ? 'Downloading update...' : 'Update available',
+          Icon: status.state === 'downloading' ? RefreshCcw : ArrowDownCircle,
+          dot: 'bg-amber-500',
+          icon: 'text-amber-600',
+          ring: 'border-amber-500/60',
+        };
 
   return (
     <Button
       type="button"
-      variant="ghost"
-      className="h-8 px-2"
+      variant="outline"
+      size="icon"
+      className={cn('relative', meta.ring)}
       onClick={() => navigate('/settings/app-updates')}
       title={status.message ?? meta.label}
+      aria-label={meta.label}
     >
-      <Badge variant="outline" className={meta.className}>
-        <meta.Icon className="mr-1 h-3.5 w-3.5" />
-        {meta.label}
-      </Badge>
+      <meta.Icon className={cn('size-4', meta.icon)} />
+      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+        <span
+          className={cn('absolute inline-flex h-full w-full animate-ping rounded-full', meta.dot)}
+        />
+        <span className={cn('relative inline-flex h-3 w-3 rounded-full', meta.dot)} />
+      </span>
+      <span className="sr-only">{meta.label}</span>
     </Button>
   );
 }

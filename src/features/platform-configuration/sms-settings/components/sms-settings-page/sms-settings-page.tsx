@@ -51,6 +51,9 @@ export function SmsSettingsPage() {
               isSaving={settings.isSavingProvider}
               onProviderChange={settings.setSelectedProviderKey}
               onSave={settings.saveDefaultProvider}
+              providerBalance={settings.providerBalance}
+              isLoadingProviderBalance={settings.isLoadingProviderBalance}
+              providerBalanceError={settings.providerBalanceError}
             />
           </TabsContent>
 

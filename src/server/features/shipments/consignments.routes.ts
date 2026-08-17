@@ -1,6 +1,8 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
 import { UUID } from '../../schemas/common';
+import { authPlugin, requireAuth, requirePermissions } from '../../plugins/auth';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import {
   addItemsToConsignmentCtrl,
   createConsignmentCtrl,
@@ -8,6 +10,7 @@ import {
 } from './consignments.controller';
 
 export const consignmentsRoutes = new Elysia({ name: 'consignments' })
+  .use(authPlugin)
   .post(
     '/',
     async ({ body, set }) => {
@@ -31,6 +34,7 @@ export const consignmentsRoutes = new Elysia({ name: 'consignments' })
         consignmentDate: t.String({ format: 'date' }),
         createdBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateConsignments)],
       detail: { tags: ['Shipments'], summary: 'Create consignment with daily serial' },
     },
   )
@@ -44,6 +48,7 @@ export const consignmentsRoutes = new Elysia({ name: 'consignments' })
     {
       params: t.Object({ id: UUID }),
       body: t.Object({ parcelIds: t.Array(UUID, { minItems: 1 }) }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateConsignments)],
       detail: { tags: ['Shipments'], summary: 'Add parcels to consignment' },
     },
   )
@@ -57,6 +62,7 @@ export const consignmentsRoutes = new Elysia({ name: 'consignments' })
     {
       params: t.Object({ id: UUID }),
       body: t.Object({ parcelId: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateConsignments)],
       detail: { tags: ['Shipments'], summary: 'Remove parcel from consignment (mark removedAt)' },
     },
   );

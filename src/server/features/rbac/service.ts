@@ -1,4 +1,4 @@
-import { Conflict, NotFound } from '@/server/utils/http-error';
+import { Conflict, Forbidden, NotFound } from '@/server/utils/http-error';
 import {
   normalizePermissionKeys,
   PermissionKeySet,
@@ -48,6 +48,7 @@ export async function createRoleSvc(input: {
   name: string;
   createdBy: string;
   permissionKeys: PermissionKey[];
+  actorPermissions: string[];
 }) {
   const existing = await findRoleByNameRepo(input.companyId, input.name);
   if (existing && !existing.isDeleted) throw Conflict('Role name already exists');
@@ -64,6 +65,7 @@ export async function createRoleSvc(input: {
       companyId: input.companyId,
       createdBy: input.createdBy,
       permissionKeys: input.permissionKeys,
+      actorPermissions: input.actorPermissions,
     });
 
     await recordAuditLog({
@@ -93,6 +95,7 @@ export async function createRoleSvc(input: {
     companyId: input.companyId,
     createdBy: input.createdBy,
     permissionKeys: input.permissionKeys,
+    actorPermissions: input.actorPermissions,
   });
 
   await recordAuditLog({
@@ -162,6 +165,7 @@ export async function setRolePermissionsSvc(input: {
   companyId: string;
   createdBy: string;
   permissionKeys: PermissionKey[];
+  actorPermissions: string[];
 }) {
   const role = await getRoleSvc(input.roleId);
   if (role.companyId !== input.companyId) throw NotFound('Role not found');
@@ -172,6 +176,18 @@ export async function setRolePermissionsSvc(input: {
   if (unknownKeys.length > 0) throw Conflict('Unknown permission key(s)');
 
   const normalizedKeys = normalizePermissionKeys(input.permissionKeys);
+
+  // A caller may only grant permissions they themselves already hold — never more.
+  // Without this bound, anyone with CanSetRolePermissions could hand their own role
+  // (or a new one) every permission in the catalog regardless of what they actually have.
+  const existingKeys = new Set(await listRolePermissionKeysRepo(input.roleId, input.companyId));
+  const actorGranted = new Set(normalizePermissionKeys(input.actorPermissions));
+  const escalatedKeys = normalizedKeys.filter(
+    (key) => !existingKeys.has(key) && !actorGranted.has(key),
+  );
+  if (escalatedKeys.length > 0) {
+    throw Forbidden(`Cannot grant permission(s) you do not hold: ${escalatedKeys.join(', ')}`);
+  }
 
   await setRolePermissionsRepo(input.roleId, input.companyId, normalizedKeys);
   await recordAuditLog({

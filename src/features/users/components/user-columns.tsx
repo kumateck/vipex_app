@@ -23,8 +23,13 @@ import {
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
 import type { User } from '../types/user.types';
-import { CASHIER_TYPE_LABELS, USER_TYPE_LABELS } from '@/shared/access/constants';
-import { UserType } from '@/db/schemas/enums';
+import {
+  UserAccessCell,
+  UserEmployeeCell,
+  UserIdentityCell,
+  UserStatusBadge,
+  UserWorkplaceCell,
+} from './user-table-cells';
 
 const USER_STATUS_LABELS: Record<number, string> = {
   0: 'Active',
@@ -50,39 +55,38 @@ export function createUserColumns(options?: {
   const onLinkEmployee = options?.onLinkEmployee;
 
   return [
-    { accessorKey: 'fullname', header: 'Full name' },
-    { accessorKey: 'email', header: 'Email' },
-    { accessorKey: 'telephone', header: 'Telephone' },
-    { accessorFn: (row) => row.roleName ?? 'Unassigned role', id: 'roleName', header: 'Role' },
     {
-      accessorFn: (row) =>
-        row.employeeId
-          ? `${row.employeeName ?? 'Employee'}${row.employeeNumber ? ` (${row.employeeNumber})` : ''}`
-          : 'Not linked',
+      accessorFn: (row) => `${row.fullname} ${row.email} ${row.telephone}`,
+      id: 'user',
+      header: 'User',
+      cell: ({ row }) => <UserIdentityCell user={row.original} />,
+    },
+    {
+      accessorFn: (row) => `${row.roleName ?? ''} ${row.userType} ${row.cashierType ?? ''}`,
+      id: 'access',
+      header: 'Access',
+      cell: ({ row }) => <UserAccessCell user={row.original} />,
+    },
+    {
+      accessorFn: (row) => `${row.employeeName ?? ''} ${row.employeeNumber ?? ''}`,
       id: 'employee',
       header: 'Employee',
+      cell: ({ row }) => <UserEmployeeCell user={row.original} />,
     },
     {
-      accessorFn: (row) => USER_TYPE_LABELS[row.userType] ?? row.userType,
-      id: 'userType',
-      header: 'User type',
+      accessorFn: (row) => `${row.branchName ?? ''} ${row.locationName ?? ''}`,
+      id: 'workplace',
+      header: 'Workplace',
+      cell: ({ row }) => <UserWorkplaceCell user={row.original} />,
     },
-    {
-      accessorFn: (row) =>
-        row.userType === UserType.CASHIER &&
-        row.cashierType !== null &&
-        row.cashierType !== undefined
-          ? (CASHIER_TYPE_LABELS[row.cashierType] ?? String(row.cashierType))
-          : '-',
-      id: 'cashierType',
-      header: 'Cashier type',
-    },
-    { accessorFn: (row) => row.branchName ?? 'Unknown branch', id: 'branchName', header: 'Branch' },
-    { accessorFn: (row) => row.locationName ?? '-', id: 'locationName', header: 'Location' },
     {
       accessorFn: (row) => USER_STATUS_LABELS[row.status] ?? String(row.status),
       id: 'statusLabel',
       header: 'Status',
+      cell: ({ row }) => {
+        const label = USER_STATUS_LABELS[row.original.status] ?? String(row.original.status);
+        return <UserStatusBadge status={row.original.status} label={label} />;
+      },
     },
     {
       id: 'actions',

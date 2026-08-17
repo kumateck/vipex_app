@@ -9,7 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { CompanySmsSettings } from '../../types';
+import type { CompanySmsSettings, SmsProviderBalance } from '../../types';
+import { getSmsSettingsErrorMessage } from '../../utils';
 
 export function DefaultSmsProviderCard({
   settings,
@@ -20,6 +21,9 @@ export function DefaultSmsProviderCard({
   isSaving,
   onProviderChange,
   onSave,
+  providerBalance,
+  isLoadingProviderBalance,
+  providerBalanceError,
 }: {
   settings?: CompanySmsSettings;
   isLoading: boolean;
@@ -29,6 +33,9 @@ export function DefaultSmsProviderCard({
   isSaving: boolean;
   onProviderChange: (providerKey: string) => void;
   onSave: () => Promise<void>;
+  providerBalance?: SmsProviderBalance;
+  isLoadingProviderBalance?: boolean;
+  providerBalanceError?: unknown;
 }) {
   return (
     <Card>
@@ -82,6 +89,38 @@ export function DefaultSmsProviderCard({
             </Button>
           </div>
         )}
+        {selectedProviderKey.toLowerCase() === 'mnotify' ? (
+          <div className="mt-4 rounded-lg border bg-muted/40 p-4">
+            {isLoadingProviderBalance ? (
+              <p className="text-sm text-muted-foreground">Checking balance...</p>
+            ) : providerBalance ? (
+              <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+                <div>
+                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    SMS Balance
+                  </p>
+                  <p className="text-3xl leading-tight font-bold tabular-nums">
+                    {providerBalance.balance.toLocaleString()}
+                  </p>
+                </div>
+                {providerBalance.bonus > 0 ? (
+                  <div>
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      Bonus
+                    </p>
+                    <p className="text-3xl leading-tight font-bold tabular-nums">
+                      {providerBalance.bonus.toLocaleString()}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ) : providerBalanceError ? (
+              <p className="text-sm text-destructive">
+                {getSmsSettingsErrorMessage(providerBalanceError, 'Could not fetch balance')}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         {!canManage ? (
           <p className="mt-3 text-xs text-muted-foreground">
             You can view this setting but need provider-management permission to change it.

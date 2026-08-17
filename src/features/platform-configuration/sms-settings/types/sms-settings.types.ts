@@ -25,6 +25,12 @@ export interface CompanySmsSettings {
   events: CompanySmsEventDefinition[];
 }
 
+export interface SmsProviderBalance {
+  providerKey: string;
+  balance: number;
+  bonus: number;
+}
+
 export interface CompanySmsTemplate {
   id: string;
   channel: string;
