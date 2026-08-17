@@ -34,6 +34,7 @@ import {
 } from './controller';
 import {
   getCompanySmsSettingsCtrl,
+  getSmsProviderBalanceCtrl,
   setCompanyDefaultSmsProviderCtrl,
   updateCompanySmsEventCtrl,
 } from './sms-settings.controller';
@@ -48,6 +49,19 @@ export const notificationHubRoutes = new Elysia({ name: 'notification-hub' })
     {
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCompanyProfile)],
       detail: { tags: ['Notification Hub'], summary: 'Get company SMS settings' },
+    },
+  )
+  .get(
+    '/sms-settings/providers/:providerKey/balance',
+    async ({ params, user }) =>
+      getSmsProviderBalanceCtrl({
+        companyId: (user as AuthUser).companyId!,
+        providerKey: params.providerKey,
+      }),
+    {
+      params: t.Object({ providerKey: t.String({ minLength: 2, maxLength: 64 }) }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCompanyProfile)],
+      detail: { tags: ['Notification Hub'], summary: 'Get SMS provider balance' },
     },
   )
   .put(

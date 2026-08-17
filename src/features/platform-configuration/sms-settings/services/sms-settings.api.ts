@@ -4,6 +4,7 @@ import type {
   CompanySmsSettings,
   CompanySmsTemplate,
   CreateBulkSmsInput,
+  SmsProviderBalance,
   SmsTemplateFormValues,
 } from '../types';
 
@@ -12,6 +13,11 @@ export const smsSettingsApi = api.injectEndpoints({
     getCompanySmsSettings: builder.query<CompanySmsSettings, void>({
       query: () => ({ url: '/notification-hub/sms-settings' }),
       providesTags: [{ type: 'NotificationHub', id: 'SMS_SETTINGS' }],
+    }),
+    getSmsProviderBalance: builder.query<SmsProviderBalance, string>({
+      query: (providerKey) => ({
+        url: `/notification-hub/sms-settings/providers/${providerKey}/balance`,
+      }),
     }),
     setCompanyDefaultSmsProvider: builder.mutation<
       { providerKey: string },
@@ -89,6 +95,7 @@ export const smsSettingsApi = api.injectEndpoints({
 
 export const {
   useGetCompanySmsSettingsQuery,
+  useGetSmsProviderBalanceQuery,
   useSetCompanyDefaultSmsProviderMutation,
   useUpdateCompanySmsEventMutation,
   useListCompanySmsTemplatesQuery,

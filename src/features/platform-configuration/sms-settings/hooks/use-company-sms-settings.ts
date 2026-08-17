@@ -4,8 +4,11 @@ import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   useGetCompanySmsSettingsQuery,
+  useGetSmsProviderBalanceQuery,
   useSetCompanyDefaultSmsProviderMutation,
 } from '../services';
+
+const PROVIDERS_WITH_BALANCE = new Set(['mnotify']);
 
 export function useCompanySmsSettings() {
   const permissions = useAuthStore((state) => state.user?.permissions ?? []);
@@ -21,6 +24,9 @@ export function useCompanySmsSettings() {
     useSetCompanyDefaultSmsProviderMutation();
   const [draftProviderKey, setDraftProviderKey] = useState<string | null>(null);
   const selectedProviderKey = draftProviderKey ?? query.data?.defaultProviderKey ?? '';
+  const balanceQuery = useGetSmsProviderBalanceQuery(selectedProviderKey, {
+    skip: !PROVIDERS_WITH_BALANCE.has(selectedProviderKey.toLowerCase()),
+  });
 
   const saveDefaultProvider = useCallback(async () => {
     if (!selectedProviderKey) return;
@@ -42,6 +48,9 @@ export function useCompanySmsSettings() {
     isSavingProvider,
     selectedProviderKey,
     setSelectedProviderKey: setDraftProviderKey,
+    providerBalance: balanceQuery.data,
+    isLoadingProviderBalance: balanceQuery.isFetching,
+    providerBalanceError: balanceQuery.error,
     isProviderDirty:
       Boolean(draftProviderKey) && draftProviderKey !== query.data?.defaultProviderKey,
     saveDefaultProvider,
