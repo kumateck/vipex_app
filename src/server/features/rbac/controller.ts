@@ -75,6 +75,7 @@ export async function createRoleCtrl(input: {
   createdBy: string;
   name: string;
   permissionKeys: PermissionKey[];
+  actorPermissions: string[];
 }) {
   return createRoleSvc(input);
 }
@@ -116,6 +117,7 @@ export async function setRolePermissionsCtrl(input: {
   companyId: string;
   createdBy: string;
   permissionKeys: PermissionKey[];
+  actorPermissions: string[];
 }) {
   return setRolePermissionsSvc(input);
 }
