@@ -1,5 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
+import { authPlugin, requireAuth, requirePermissions } from '../../plugins/auth';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import {
   UUID,
   NonEmptyString255,
@@ -110,6 +112,7 @@ import {
 } from './controller';
 
 export const inventoryRoutes = new Elysia({ name: 'inventory' })
+  .use(authPlugin)
   // Product Categories
   .get(
     '/categories/options',
@@ -123,6 +126,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         companyId: t.Optional(UUID),
         search: t.Optional(t.String()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadProductCategories)],
       detail: {
         tags: ['Inventory'],
         summary: 'List product category options',
@@ -144,6 +148,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
       }),
     {
       query: t.Object({ ...PaginationRequestQueryProps, companyId: t.Optional(UUID) }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadProductCategories)],
       detail: {
         tags: ['Inventory'],
         summary: 'List product categories',
@@ -153,6 +158,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
   .get('/categories/:id', async ({ params }) => getProductCategoryCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadProductCategories)],
     detail: {
       tags: ['Inventory'],
       summary: 'Get product category',
@@ -173,6 +179,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         description: t.Optional(t.String()),
         createdBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateProductCategory)],
       detail: {
         tags: ['Inventory'],
         summary: 'Create product category',
@@ -189,6 +196,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         name: t.Optional(NonEmptyString255),
         description: t.Optional(t.Union([t.String(), t.Null()])),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateProductCategory)],
       detail: {
         tags: ['Inventory'],
         summary: 'Update product category',
@@ -198,6 +206,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
   .delete('/categories/:id', async ({ params }) => deleteProductCategoryCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanDeleteProductCategory)],
     detail: {
       tags: ['Inventory'],
       summary: 'Delete product category',
@@ -220,6 +229,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         categoryId: t.Optional(UUID),
         search: t.Optional(t.String()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadProducts)],
       detail: {
         tags: ['Inventory'],
         summary: 'List product options',
@@ -247,11 +257,13 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         companyId: t.Optional(UUID),
         categoryId: t.Optional(UUID),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadProducts)],
       detail: { tags: ['Inventory'], summary: 'List products', operationId: 'listProducts' },
     },
   )
   .get('/products/:id', async ({ params }) => getProductCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadProducts)],
     detail: { tags: ['Inventory'], summary: 'Get product', operationId: 'getProduct' },
   })
   .post(
@@ -281,6 +293,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         minStockLevel: t.Optional(t.String()),
         createdBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateProduct)],
       detail: { tags: ['Inventory'], summary: 'Create product', operationId: 'createProduct' },
     },
   )
@@ -302,6 +315,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
       ),
       minStockLevel: t.Optional(t.String()),
     }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateProduct)],
     detail: { tags: ['Inventory'], summary: 'Update product', operationId: 'updateProduct' },
   })
   .put('/products/:id', async ({ params, body }) => updateProductCtrl(params.id, body), {
@@ -323,6 +337,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
       ),
       minStockLevel: t.Optional(t.String()),
     }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateProduct)],
     detail: {
       tags: ['Inventory'],
       summary: 'Update product (legacy PUT)',
@@ -331,6 +346,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   })
   .delete('/products/:id', async ({ params }) => deleteProductCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanDeleteProduct)],
     detail: { tags: ['Inventory'], summary: 'Delete product', operationId: 'deleteProduct' },
   })
 
@@ -353,6 +369,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         parentLocationId: t.Optional(UUID),
         search: t.Optional(t.String()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryLocations)],
       detail: {
         tags: ['Inventory'],
         summary: 'List inventory location options',
@@ -385,6 +402,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         locationType: t.Optional(SmallInt),
         parentLocationId: t.Optional(UUID),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryLocations)],
       detail: {
         tags: ['Inventory'],
         summary: 'List inventory locations',
@@ -394,6 +412,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
   .get('/locations/:id', async ({ params }) => getInventoryLocationCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryLocations)],
     detail: {
       tags: ['Inventory'],
       summary: 'Get inventory location',
@@ -417,6 +436,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         description: t.Optional(t.String()),
         createdBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateInventoryLocation)],
       detail: {
         tags: ['Inventory'],
         summary: 'Create inventory location',
@@ -435,6 +455,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         name: t.Optional(NonEmptyString255),
         description: t.Optional(t.Union([t.String(), t.Null()])),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateInventoryLocation)],
       detail: {
         tags: ['Inventory'],
         summary: 'Update inventory location',
@@ -444,6 +465,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
   .delete('/locations/:id', async ({ params }) => deleteInventoryLocationCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanDeleteInventoryLocation)],
     detail: {
       tags: ['Inventory'],
       summary: 'Delete inventory location',
@@ -466,6 +488,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         daysAhead: t.Optional(SmallInt),
         issueLookbackDays: t.Optional(SmallInt),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryOverview)],
       detail: {
         tags: ['Inventory'],
         summary: 'Inventory monitoring summary (risk + reservation + cycle count)',
@@ -491,6 +514,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         sendEmailAlerts: t.Optional(t.Boolean()),
         recipientEmails: t.Optional(t.Array(t.String({ format: 'email' }))),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryOverview)],
       detail: {
         tags: ['Inventory'],
         summary: 'Run inventory daily automation hook',
@@ -521,6 +545,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         locationId: t.Optional(UUID),
         status: t.Optional(SmallInt),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockLevels)],
       detail: {
         tags: ['Inventory'],
         summary: 'List stock count sessions',
@@ -530,6 +555,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
   .get('/stock-count-sessions/:id', async ({ params }) => getStockCountSessionCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockLevels)],
     detail: {
       tags: ['Inventory'],
       summary: 'Get stock count session',
@@ -557,6 +583,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         createdBy: UUID,
         productIds: t.Optional(t.Array(UUID)),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateStockMovement)],
       detail: {
         tags: ['Inventory'],
         summary: 'Create stock count session',
@@ -581,6 +608,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         varianceReason: t.Optional(t.Union([t.String(), t.Null()])),
         countedBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateStockMovement)],
       detail: {
         tags: ['Inventory'],
         summary: 'Update stock count line counted quantity',
@@ -598,6 +626,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     {
       params: t.Object({ id: UUID }),
       body: t.Object({ submittedBy: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateStockMovement)],
       detail: {
         tags: ['Inventory'],
         summary: 'Submit stock count session',
@@ -619,6 +648,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         approvedBy: UUID,
         applyAdjustments: t.Optional(t.Boolean()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateStockAdjustment)],
       detail: {
         tags: ['Inventory'],
         summary: 'Approve stock count session and apply reconciliation adjustments',
@@ -655,6 +685,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         branchId: t.Optional(UUID),
         locationType: t.Optional(SmallInt),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockLevels)],
       detail: { tags: ['Inventory'], summary: 'List stock levels', operationId: 'listStockLevels' },
     },
   )
@@ -663,11 +694,13 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     async ({ params }) => getStockLevelCtrl(params.productId, params.locationId),
     {
       params: t.Object({ productId: UUID, locationId: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockLevels)],
       detail: { tags: ['Inventory'], summary: 'Get stock level', operationId: 'getStockLevel' },
     },
   )
   .get('/products/:id/stock', async ({ params }) => getProductStockLevelsCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockLevels)],
     detail: {
       tags: ['Inventory'],
       summary: 'Get stock levels for a product (legacy compatibility)',
@@ -692,6 +725,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         issueLookbackDays: t.Optional(SmallInt),
         locationId: t.Optional(UUID),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockLevels)],
       detail: {
         tags: ['Inventory'],
         summary: 'Get stock lot analytics (aging + FEFO compliance)',
@@ -730,6 +764,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         status: t.Optional(SmallInt),
         batchNumber: t.Optional(t.String({ maxLength: 100 })),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockLevels)],
       detail: {
         tags: ['Inventory'],
         summary: 'List stock lots',
@@ -739,6 +774,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
   .get('/stock-lots/:id', async ({ params }) => getStockLotCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockLevels)],
     detail: {
       tags: ['Inventory'],
       summary: 'Get stock lot',
@@ -750,6 +786,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     async ({ params }) => getStockLotTraceabilityCtrl(params.id),
     {
       params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockLevels)],
       detail: {
         tags: ['Inventory'],
         summary: 'Get stock lot traceability (GRN/PO/supplier)',
@@ -778,6 +815,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         notes: t.Optional(t.Union([t.String(), t.Null()])),
         createdBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateStockMovement)],
       detail: {
         tags: ['Inventory'],
         summary: 'Create stock lot (or add quantity to existing batch)',
@@ -799,6 +837,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         status: t.Optional(SmallInt),
         notes: t.Optional(t.Union([t.String(), t.Null()])),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateStockMovement)],
       detail: {
         tags: ['Inventory'],
         summary: 'Update stock lot status/notes',
@@ -818,6 +857,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         companyId: UUID,
         actorUserId: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateStockMovement)],
       detail: {
         tags: ['Inventory'],
         summary: 'Sweep and mark expired lots',
@@ -839,6 +879,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         daysAhead: t.Optional(t.Numeric()),
         locationId: t.Optional(UUID),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockLevels)],
       detail: {
         tags: ['Inventory'],
         summary: 'Get near-expiry and expired lot alerts',
@@ -881,6 +922,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         locationType: t.Optional(SmallInt),
         movementType: t.Optional(SmallInt),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockMovements)],
       detail: {
         tags: ['Inventory'],
         summary: 'List stock movements',
@@ -913,6 +955,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         notes: t.Optional(t.String()),
         createdBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateStockMovement)],
       detail: {
         tags: ['Inventory'],
         summary: 'Create stock movement',
@@ -949,6 +992,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         branchId: t.Optional(UUID),
         locationType: t.Optional(SmallInt),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockAdjustments)],
       detail: {
         tags: ['Inventory'],
         summary: 'List stock adjustments',
@@ -979,6 +1023,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         notes: t.Optional(t.String()),
         createdBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateStockAdjustment)],
       detail: {
         tags: ['Inventory'],
         summary: 'Create stock adjustment',
@@ -1015,6 +1060,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         branchId: t.Optional(UUID),
         locationType: t.Optional(SmallInt),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockTransfers)],
       detail: {
         tags: ['Inventory'],
         summary: 'List stock transfers',
@@ -1024,6 +1070,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
   .get('/stock-transfers/:id', async ({ params }) => getStockTransferCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockTransfers)],
     detail: { tags: ['Inventory'], summary: 'Get stock transfer', operationId: 'getStockTransfer' },
   })
   .post(
@@ -1043,6 +1090,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         notes: t.Optional(t.String()),
         createdBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateStockTransfer)],
       detail: {
         tags: ['Inventory'],
         summary: 'Create stock transfer',
@@ -1060,6 +1108,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         fulfillQuantity: t.Optional(t.String()),
         completedBy: t.Optional(UUID),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateStockTransfer)],
       detail: {
         tags: ['Inventory'],
         summary: 'Update stock transfer',
@@ -1087,6 +1136,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         notes: t.Optional(t.String()),
         acknowledgedBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateStockTransfer)],
       detail: {
         tags: ['Inventory'],
         summary: 'Acknowledge stock transfer receipt (supports partial acceptance and variance)',
@@ -1121,6 +1171,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         fromLocationId: t.Optional(UUID),
         toLocationId: t.Optional(UUID),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockTransfers)],
       detail: {
         tags: ['Inventory'],
         summary: 'List stock transfers (legacy compatibility)',
@@ -1130,6 +1181,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
   .get('/transfers/:id', async ({ params }) => getLegacyTransferCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockTransfers)],
     detail: {
       tags: ['Inventory'],
       summary: 'Get stock transfer (legacy compatibility)',
@@ -1157,6 +1209,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         notes: t.Optional(t.String()),
         requestedBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateStockTransfer)],
       detail: {
         tags: ['Inventory'],
         summary: 'Create stock transfer (legacy compatibility)',
@@ -1174,6 +1227,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         notes: t.Optional(t.String()),
         cancellationReason: t.Optional(t.String()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateStockTransfer)],
       detail: {
         tags: ['Inventory'],
         summary: 'Update stock transfer status (legacy compatibility)',
@@ -1187,6 +1241,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     {
       params: t.Object({ id: UUID }),
       body: t.Object({ userId: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateStockTransfer)],
       detail: {
         tags: ['Inventory'],
         summary: 'Complete stock transfer (legacy compatibility)',
@@ -1213,6 +1268,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         locationId: t.Optional(UUID),
         lowStockLimit: t.Optional(t.Numeric()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryOverview)],
       detail: {
         tags: ['Inventory'],
         summary: 'Get inventory dashboard summary by location scope',
@@ -1234,6 +1290,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         locationId: t.Optional(UUID),
         includeZeroMin: t.Optional(t.Boolean()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryOverview)],
       detail: {
         tags: ['Inventory'],
         summary: 'List inventory reorder suggestions by min stock and hierarchy',
@@ -1261,6 +1318,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         locationId: t.Optional(UUID),
         active: t.Optional(t.Boolean()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryOverview)],
       detail: {
         tags: ['Inventory'],
         summary: 'List inventory reorder policies',
@@ -1289,6 +1347,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         notes: t.Optional(t.Union([t.String(), t.Null()])),
         createdBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryOverview)],
       detail: {
         tags: ['Inventory'],
         summary: 'Create or update an inventory reorder policy',
@@ -1323,6 +1382,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         locationType: t.Optional(SmallInt),
         status: t.Optional(SmallInt),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockRequests)],
       detail: {
         tags: ['Inventory'],
         summary: 'List stock requests',
@@ -1332,6 +1392,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
   .get('/stock-requests/:id', async ({ params }) => getStockRequestCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanGetStockRequest)],
     detail: {
       tags: ['Inventory'],
       summary: 'Get stock request',
@@ -1362,6 +1423,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
           }),
         ),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateStockRequest)],
       detail: {
         tags: ['Inventory'],
         summary: 'Create stock request',
@@ -1371,6 +1433,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
   .post('/stock-requests/:id/submit', async ({ params }) => submitStockRequestCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanSubmitStockRequest)],
     detail: {
       tags: ['Inventory'],
       summary: 'Submit stock request',
@@ -1383,6 +1446,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     {
       params: t.Object({ id: UUID }),
       body: t.Object({ approvedBy: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanApproveStockRequest)],
       detail: {
         tags: ['Inventory'],
         summary: 'Approve stock request',
@@ -1399,6 +1463,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         rejectedBy: UUID,
         reason: t.Optional(t.String()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanRejectStockRequest)],
       detail: {
         tags: ['Inventory'],
         summary: 'Reject stock request',
@@ -1426,6 +1491,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         fulfilledBy: UUID,
         notes: t.Optional(t.String()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanFulfillStockRequest)],
       detail: {
         tags: ['Inventory'],
         summary: 'Fulfill stock request line',
@@ -1443,6 +1509,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     {
       params: t.Object({ id: UUID }),
       query: t.Object({ lineId: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanGetStockRequest)],
       detail: {
         tags: ['Inventory'],
         summary: 'Get stock request allocation suggestion for a line',
@@ -1466,6 +1533,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         fulfilledBy: UUID,
         notes: t.Optional(t.String()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanFulfillStockRequest)],
       detail: {
         tags: ['Inventory'],
         summary: 'Auto-fulfill stock request line using prioritized source locations',
@@ -1490,6 +1558,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         acknowledgedBy: UUID,
         notes: t.Optional(t.String()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanFulfillStockRequest)],
       detail: {
         tags: ['Inventory'],
         summary: 'Acknowledge received quantity for a stock request line',
@@ -1507,6 +1576,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     {
       params: t.Object({ id: UUID }),
       body: t.Object({ actorUserId: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanFulfillStockRequest)],
       detail: {
         tags: ['Inventory'],
         summary: 'Create missing reservations for stock request lines',
@@ -1539,6 +1609,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         requestId: t.Optional(UUID),
         productId: t.Optional(UUID),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockRequests)],
       detail: {
         tags: ['Inventory'],
         summary: 'List stock reservations',
@@ -1548,6 +1619,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
   .get('/stock-reservations/:id', async ({ params }) => getStockReservationCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockRequests)],
     detail: {
       tags: ['Inventory'],
       summary: 'Get stock reservation',
@@ -1564,6 +1636,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     {
       params: t.Object({ id: UUID }),
       body: t.Object({ actorUserId: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanFulfillStockRequest)],
       detail: {
         tags: ['Inventory'],
         summary: 'Allocate stock reservation using policy',
@@ -1585,6 +1658,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         actorUserId: UUID,
         notes: t.Optional(t.String()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanFulfillStockRequest)],
       detail: {
         tags: ['Inventory'],
         summary: 'Issue from reserved allocations',
@@ -1597,6 +1671,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     async ({ query }) => getStockReservationExceptionsSummaryCtrl(query.companyId),
     {
       query: t.Object({ companyId: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockRequests)],
       detail: {
         tags: ['Inventory'],
         summary: 'Get reservation exception summary',
@@ -1616,6 +1691,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         companyId: UUID,
         requesterRootLocationId: t.Optional(t.Union([UUID, t.Null()])),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanApproveStockRequest)],
       detail: {
         tags: ['Inventory'],
         summary: 'Get allocation policy',
@@ -1650,6 +1726,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         active: t.Optional(t.Boolean()),
         createdBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanApproveStockRequest)],
       detail: {
         tags: ['Inventory'],
         summary: 'Create or update allocation policy',
@@ -1686,6 +1763,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         issueType: t.Optional(SmallInt),
         status: t.Optional(SmallInt),
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadStockMaintenanceRecords),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'List stock maintenance records',
@@ -1695,6 +1776,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
   .get('/stock-maintenance/:id', async ({ params }) => getStockMaintenanceRecordCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanGetStockMaintenanceRecord)],
     detail: {
       tags: ['Inventory'],
       summary: 'Get stock maintenance record',
@@ -1718,6 +1800,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         notes: t.Optional(t.String()),
         createdBy: UUID,
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCreateStockMaintenanceRecord),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'Create stock maintenance record',
@@ -1743,6 +1829,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         notes: t.Optional(t.String()),
         resolvedBy: UUID,
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanResolveStockMaintenanceRecord),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'Resolve stock maintenance record',
@@ -1758,6 +1848,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
       branchId: t.Optional(UUID),
       locationId: t.Optional(UUID),
     }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockLevels)],
     detail: {
       tags: ['Inventory'],
       summary: 'Get low stock report',
@@ -1791,6 +1882,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         startDate: t.Optional(t.String({ format: 'date-time' })),
         endDate: t.Optional(t.String({ format: 'date-time' })),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadStockMovements)],
       detail: {
         tags: ['Inventory'],
         summary: 'Get movement history report',
@@ -1814,6 +1906,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         entityType: t.Optional(SmallInt),
         active: t.Optional(t.Boolean()),
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadInventoryApprovalPolicies),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'List inventory approval policies',
@@ -1854,6 +1950,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         active: t.Optional(t.Boolean()),
         createdBy: UUID,
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadInventoryApprovalPolicies),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'Create inventory approval policy',
@@ -1882,6 +1982,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         amount: t.Numeric(),
         submittedBy: UUID,
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadInventoryApprovalRequests),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'Submit approval request for inventory entity',
@@ -1903,6 +2007,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         status: t.Optional(SmallInt),
         entityType: t.Optional(SmallInt),
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadInventoryApprovalRequests),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'List inventory approval requests',
@@ -1926,6 +2034,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         decidedBy: UUID,
         reason: t.Optional(t.Union([t.String(), t.Null()])),
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadInventoryApprovalRequests),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'Approve or reject inventory approval request',
@@ -1945,6 +2057,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         companyId: UUID,
         actorUserId: UUID,
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadInventoryApprovalRequests),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'Escalate overdue inventory approval requests',
@@ -1966,6 +2082,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         companyId: UUID,
         locationId: t.Optional(UUID),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryValuation)],
       detail: {
         tags: ['Inventory'],
         summary: 'Get inventory valuation summary',
@@ -1987,6 +2104,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         method: t.Optional(SmallInt),
         actorUserId: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryValuation)],
       detail: {
         tags: ['Inventory'],
         summary: 'Recompute inventory valuation snapshots',
@@ -2010,6 +2128,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         dateFrom: t.Optional(t.Union([t.String({ format: 'date-time' }), t.Null()])),
         dateTo: t.Optional(t.Union([t.String({ format: 'date-time' }), t.Null()])),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryValuation)],
       detail: {
         tags: ['Inventory'],
         summary: 'Sync missing inventory financial postings',
@@ -2042,6 +2161,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         notes: t.Optional(t.Union([t.String(), t.Null()])),
         generatedBy: UUID,
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadReplenishmentProposals),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'Generate replenishment proposal from reorder suggestions',
@@ -2061,6 +2184,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         companyId: UUID,
         status: t.Optional(SmallInt),
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadReplenishmentProposals),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'List replenishment proposals',
@@ -2073,6 +2200,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
     async ({ params }) => getReplenishmentProposalCtrl(params.id),
     {
       params: t.Object({ id: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadReplenishmentProposals),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'Get replenishment proposal',
@@ -2094,6 +2225,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         status: SmallInt,
         actorUserId: UUID,
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadReplenishmentProposals),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'Submit/approve/reject replenishment proposal',
@@ -2117,6 +2252,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         status: t.Optional(SmallInt),
         taskType: t.Optional(SmallInt),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryTasks)],
       detail: {
         tags: ['Inventory'],
         summary: 'List inventory tasks',
@@ -2126,6 +2262,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
   )
   .get('/tasks/:id', async ({ params }) => getInventoryTaskCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryTasks)],
     detail: {
       tags: ['Inventory'],
       summary: 'Get inventory task',
@@ -2161,6 +2298,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         notes: t.Optional(t.Union([t.String(), t.Null()])),
         createdBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryTasks)],
       detail: {
         tags: ['Inventory'],
         summary: 'Create inventory task',
@@ -2182,6 +2320,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         status: SmallInt,
         actorUserId: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryTasks)],
       detail: {
         tags: ['Inventory'],
         summary: 'Update inventory task status',
@@ -2205,6 +2344,7 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         quantity: t.String(),
         scannedBy: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadInventoryTasks)],
       detail: {
         tags: ['Inventory'],
         summary: 'Record a task scan event',
@@ -2230,6 +2370,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         entityId: t.Optional(UUID),
         eventType: t.Optional(SmallInt),
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadInventoryAuditJournal),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'List inventory immutable event journal entries',
@@ -2260,6 +2404,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         notes: t.Optional(t.Union([t.String(), t.Null()])),
         actorUserId: UUID,
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanCreateInventoryCorrection),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'Post manual inventory correction',
@@ -2283,6 +2431,10 @@ export const inventoryRoutes = new Elysia({ name: 'inventory' })
         locationId: t.Optional(UUID),
         days: t.Optional(t.Numeric()),
       }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadInventoryEnterpriseKpis),
+      ],
       detail: {
         tags: ['Inventory'],
         summary: 'Get enterprise inventory KPI pack',

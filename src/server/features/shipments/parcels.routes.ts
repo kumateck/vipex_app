@@ -105,6 +105,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         received: t.Optional(t.Boolean()),
         includeDeleted: t.Optional(t.Boolean()),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcels)],
       detail: { tags: ['Shipments'], summary: 'List/search parcels' },
     },
   )
@@ -136,10 +137,12 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
   )
   .get('/:id', async ({ params }) => getParcelByIdCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcels)],
     detail: { tags: ['Shipments'], summary: 'Get parcel' },
   })
   .get('/:id/details', async ({ params }) => getParcelDetailsCtrl(params.id), {
     params: t.Object({ id: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcels)],
     detail: {
       tags: ['Shipments'],
       summary: 'Get parcel full details (payments, delivery, consignments)',
@@ -248,6 +251,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         createdBy: t.Optional(UUID),
         cashierSessionId: t.Optional(UUID),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateParcels)],
       detail: { tags: ['Shipments'], summary: 'Create parcel' },
     },
   )
@@ -298,6 +302,24 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         method: t.Optional(t.Number()),
         taxReportConfirmation: t.Optional(t.Boolean()),
       }),
+      beforeHandle: [
+        requireAuth(),
+        // This single endpoint is reused by several distinct status-transition workflows
+        // (call outcomes, office pickup, scan-to-receive, doorstep address collection,
+        // in-transit-incoming edits) that each gate their own page with a different
+        // permission today. Accept any of them here so existing flows keep working while
+        // closing the previously-total lack of enforcement. TODO: split into dedicated
+        // per-transition endpoints (matching the /deliveries/dd/* pattern) for real
+        // per-action granularity instead of this broad allow-list.
+        requireAnyPermissions(
+          PermissionKeys.CanUpdateParcels,
+          PermissionKeys.CanReadCallCenterParcelStatus,
+          PermissionKeys.CanCompleteOfficePickup,
+          PermissionKeys.CanReadParcelScan,
+          PermissionKeys.CanMarkDoorstepCalled,
+          PermissionKeys.CanReadParcelIncoming,
+        ),
+      ],
       detail: { tags: ['Shipments'], summary: 'Update parcel' },
     },
   )
@@ -491,6 +513,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
     {
       params: t.Object({ id: UUID }),
       body: t.Object({ plannedToBePaidCedis: t.Union([t.Number(), t.String()]) }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateParcels)],
       detail: { tags: ['Shipments'], summary: 'Set planned to-be-paid (principal)' },
     },
   )
