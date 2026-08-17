@@ -1,11 +1,16 @@
 import {
   getCompanySmsSettingsSvc,
+  getSmsProviderBalanceSvc,
   setCompanyDefaultSmsProviderSvc,
   updateCompanySmsEventSvc,
 } from './sms-settings.service';
 
 export function getCompanySmsSettingsCtrl(companyId: string) {
   return getCompanySmsSettingsSvc(companyId);
+}
+
+export function getSmsProviderBalanceCtrl(input: { companyId: string; providerKey: string }) {
+  return getSmsProviderBalanceSvc(input);
 }
 
 export function setCompanyDefaultSmsProviderCtrl(input: {

@@ -1,14 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select-searchable';
 import {
   Table,
   TableBody,
@@ -18,20 +10,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import {
-  useCreateJobTitleMutation,
-  useListDepartmentOptionsQuery,
-  useListJobTitlesQuery,
-} from '../../api/hr.api';
+import { useListJobTitlesQuery } from '../../api/hr.api';
+import { AddJobTitleDialog } from './add-job-title-dialog';
 
 export function JobTitlesPage() {
-  const [name, setName] = useState('');
-  const [code, setCode] = useState('');
-  const [departmentId, setDepartmentId] = useState('');
-  const [defaultLeaveDays, setDefaultLeaveDays] = useState('0');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { data, isLoading } = useListJobTitlesQuery();
-  const { data: departmentOptions = [] } = useListDepartmentOptionsQuery();
-  const [createJobTitle, { isLoading: isCreating }] = useCreateJobTitleMutation();
 
   const rows = data?.data ?? [];
 
@@ -39,58 +23,11 @@ export function JobTitlesPage() {
     <ScrollableWrapper>
       <div className="w-full p-4 space-y-4">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Job Titles</CardTitle>
+            <Button onClick={() => setIsDialogOpen(true)}>Add job title</Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-2 md:grid-cols-5">
-              <Select value={departmentId} onValueChange={setDepartmentId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departmentOptions.map((department) => (
-                    <SelectItem key={department.id} value={department.id}>
-                      {department.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="Job title code"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-              />
-              <Input
-                placeholder="Job title name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <Input
-                type="number"
-                min={0}
-                placeholder="Default leave days"
-                value={defaultLeaveDays}
-                onChange={(e) => setDefaultLeaveDays(e.target.value)}
-              />
-              <Button
-                disabled={!name.trim() || !departmentId || isCreating}
-                onClick={async () => {
-                  await createJobTitle({
-                    departmentId,
-                    code: code || null,
-                    name: name.trim(),
-                    defaultLeaveDays: Math.max(0, Number(defaultLeaveDays) || 0),
-                  }).unwrap();
-                  setDepartmentId('');
-                  setCode('');
-                  setName('');
-                  setDefaultLeaveDays('0');
-                }}
-              >
-                Add
-              </Button>
-            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -126,6 +63,7 @@ export function JobTitlesPage() {
           </CardContent>
         </Card>
       </div>
+      <AddJobTitleDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
     </ScrollableWrapper>
   );
 }
