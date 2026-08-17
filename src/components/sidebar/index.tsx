@@ -1,14 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { useLocation } from 'react-router-dom';
-import { Icon } from '@/components/ui';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Icon, type LucideIconProps } from '@/components/ui/icon';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarRail } from '@/components/ui/sidebar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import appLogo from '@/assets/logo.png';
 import { useListCompanyModulesQuery } from '@/features/company-modules/api';
 import { CommunicationSidebarPanel } from '@/features/communication/components/communication-sidebar';
+import { HelpSidebarPanel } from '@/features/help/user-manual/components/help-sidebar';
 import {
   dashboardPathForDomain,
   resolvePrimaryDomain,
@@ -25,19 +26,7 @@ import {
   withDynamicDashboardRoute,
 } from './sidebar-permissions';
 
-type IconName =
-  | 'LayoutGrid'
-  | 'MessageSquare'
-  | 'Package'
-  | 'Megaphone'
-  | 'Wallet'
-  | 'Boxes'
-  | 'UsersRound'
-  | 'Cpu'
-  | 'ShieldCheck'
-  | 'ChartBar';
-
-const TAB_ICON_MAP: Record<string, IconName> = {
+const TAB_ICON_MAP: Record<string, LucideIconProps> = {
   Workspace: 'LayoutGrid',
   Operations: 'Package',
   Commercial: 'Megaphone',
@@ -53,12 +42,14 @@ type SidebarIconGroup = {
   id: string;
   title: string;
   menu: MenuItem[];
-  iconName: IconName;
+  iconName: LucideIconProps;
   isCommunication?: boolean;
+  isHelp?: boolean;
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
+  const navigate = useNavigate();
   const storePermissions = useAuthStore((state) => state.user?.permissions ?? []);
   const user = useAuthStore((state) => state.user);
   const companyAccountingEnabled = useAuthStore(
@@ -68,7 +59,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const enabledModules = React.useMemo(() => {
     const rows = normalizeModuleRows(companyModules);
-    const modules = new Set(rows.filter((module) => module.isEnabled).map((module) => module.code));
+    const modules = new Set<string>();
+    for (const module of rows) {
+      if (module.isEnabled) modules.add(module.code);
+    }
     if (companyAccountingEnabled) modules.add('accounting');
     return modules;
   }, [companyAccountingEnabled, companyModules]);
@@ -86,6 +80,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const hasCommunicationMenu = Boolean(
     workspaceGroup?.menu.some((item) => item.title === 'Internal Communication'),
   );
+  const hasHelpMenu = Boolean(workspaceGroup?.menu.some((item) => item.title === 'Help Center'));
 
   const iconGroups = React.useMemo<SidebarIconGroup[]>(
     () =>
@@ -97,23 +92,37 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           iconName: TAB_ICON_MAP[group.title] ?? 'LayoutGrid',
         };
 
-        if (group.title !== 'Workspace' || !hasCommunicationMenu) return [baseGroup];
+        if (group.title !== 'Workspace') return [baseGroup];
 
-        return [
+        const workspaceIconGroups: SidebarIconGroup[] = [
           {
             ...baseGroup,
-            menu: group.menu.filter((item) => item.title !== 'Internal Communication'),
+            menu: group.menu.filter(
+              (item) => item.title !== 'Internal Communication' && item.title !== 'Help Center',
+            ),
           },
-          {
+        ];
+        if (hasCommunicationMenu) {
+          workspaceIconGroups.push({
             id: 'Internal Communication',
             title: 'Chats',
             menu: [],
             iconName: 'MessageSquare',
             isCommunication: true,
-          },
-        ];
+          });
+        }
+        if (hasHelpMenu) {
+          workspaceIconGroups.push({
+            id: 'Help Center',
+            title: 'Help',
+            menu: [],
+            iconName: 'CircleQuestionMark',
+            isHelp: true,
+          });
+        }
+        return workspaceIconGroups;
       }),
-    [filteredRoutes, hasCommunicationMenu],
+    [filteredRoutes, hasCommunicationMenu, hasHelpMenu],
   );
 
   const [activeGroupId, setActiveGroupId] = React.useState<string>('');
@@ -134,6 +143,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       if (hasCommunicationMenu && location.pathname.startsWith('/communication/')) {
         return 'Internal Communication';
       }
+      if (hasHelpMenu && location.pathname.startsWith('/help')) return 'Help Center';
 
       const matchingGroup = iconGroups.find((group) =>
         group.menu.some((item) => routeContainsPath(item, location.pathname)),
@@ -141,7 +151,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       return matchingGroup?.id ?? iconGroups[0]!.id;
     });
-  }, [hasCommunicationMenu, iconGroups, location.pathname]);
+  }, [hasCommunicationMenu, hasHelpMenu, iconGroups, location.pathname]);
 
   const activeGroup =
     iconGroups.find((group) => group.id === activeGroupId) ?? iconGroups[0] ?? null;
@@ -175,7 +185,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <button
                         type="button"
                         title={group.title}
-                        onClick={() => setActiveGroupId(group.id)}
+                        onClick={() => {
+                          setActiveGroupId(group.id);
+                          if (group.isHelp && !location.pathname.startsWith('/help')) {
+                            navigate('/help');
+                          }
+                        }}
                         className={cn(
                           'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex h-9 w-full items-center justify-center rounded-md transition-colors',
                           isActive && 'bg-primary text-primary-foreground',
@@ -240,6 +255,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </TabsList>
                 </Tabs>
               </div>
+            ) : activeGroup?.isHelp ? (
+              <div>
+                <h2 className="truncate text-sm font-semibold">Help Center</h2>
+                <p className="text-xs text-muted-foreground">Table of contents</p>
+              </div>
             ) : (
               <h2 className="truncate text-sm font-semibold">
                 {activeGroup?.title ?? 'Navigation'}
@@ -247,10 +267,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             )}
           </SidebarHeader>
           <SidebarContent
-            className={cn('min-w-0', activeGroup?.isCommunication && 'overflow-hidden')}
+            className={cn(
+              'min-w-0',
+              (activeGroup?.isCommunication || activeGroup?.isHelp) && 'overflow-hidden',
+            )}
           >
             {activeGroup?.isCommunication ? (
               <CommunicationSidebarPanel key={communicationTab} activeTab={communicationTab} />
+            ) : activeGroup?.isHelp ? (
+              <HelpSidebarPanel />
             ) : activeGroup ? (
               <NavMain title={activeGroup.title} items={activeGroup.menu} />
             ) : null}

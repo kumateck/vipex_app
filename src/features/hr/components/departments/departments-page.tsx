@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -10,14 +9,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useCreateDepartmentMutation, useListDepartmentsQuery } from '../../api/hr.api';
+import { useListDepartmentsQuery } from '../../api/hr.api';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import { AddDepartmentDialog } from './add-department-dialog';
 
 export function DepartmentsPage() {
-  const [name, setName] = useState('');
-  const [code, setCode] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { data, isLoading } = useListDepartmentsQuery();
-  const [createDepartment, { isLoading: isCreating }] = useCreateDepartmentMutation();
 
   const rows = data?.data ?? [];
 
@@ -25,32 +23,11 @@ export function DepartmentsPage() {
     <ScrollableWrapper>
       <div className="w-full p-4 space-y-4">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Departments</CardTitle>
+            <Button onClick={() => setIsDialogOpen(true)}>Add department</Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Department code"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-              />
-              <Input
-                placeholder="Department name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <Button
-                disabled={!name.trim() || isCreating}
-                onClick={async () => {
-                  await createDepartment({ code: code || null, name: name.trim() }).unwrap();
-                  setCode('');
-                  setName('');
-                }}
-              >
-                Add
-              </Button>
-            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -82,6 +59,7 @@ export function DepartmentsPage() {
           </CardContent>
         </Card>
       </div>
+      <AddDepartmentDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
     </ScrollableWrapper>
   );
 }

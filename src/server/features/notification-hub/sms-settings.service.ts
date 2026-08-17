@@ -106,6 +106,47 @@ export async function getCompanySmsSettingsSvc(companyId: string) {
   };
 }
 
+export async function getSmsProviderBalanceSvc(input: { companyId: string; providerKey: string }) {
+  const providerKey = input.providerKey.trim().toLowerCase();
+  if (providerKey !== 'mnotify') {
+    throw BadRequest('Balance lookup is only supported for the mNotify provider');
+  }
+
+  const existing = (
+    await listNotificationProvidersRepo({
+      companyId: input.companyId,
+      channel: 'sms',
+      limit: 100,
+      offset: 0,
+    })
+  ).data.find((provider) => provider.providerKey.toLowerCase() === providerKey);
+
+  const cfg =
+    existing?.configJson && typeof existing.configJson === 'object'
+      ? (existing.configJson as Record<string, unknown>)
+      : {};
+  const apiKey = (typeof cfg.apiKey === 'string' && cfg.apiKey) || env.MNOTIFY_API_KEY || '';
+  const apiUrl = (typeof cfg.apiUrl === 'string' && cfg.apiUrl) || env.MNOTIFY_API_URL || '';
+  if (!apiKey || !apiUrl) {
+    throw BadRequest('mNotify provider is missing configuration (apiKey/apiUrl)');
+  }
+
+  const response = await fetch(`${apiUrl}/balance/sms?key=${encodeURIComponent(apiKey)}`);
+  if (!response.ok) {
+    throw BadRequest(`mNotify balance check failed: ${response.status}`);
+  }
+  const payload = (await response.json()) as {
+    status?: string;
+    balance?: number;
+    bonus?: number;
+  };
+  if (payload.status !== 'success') {
+    throw BadRequest('mNotify balance check failed');
+  }
+
+  return { providerKey, balance: payload.balance ?? 0, bonus: payload.bonus ?? 0 };
+}
+
 export async function setCompanyDefaultSmsProviderSvc(input: {
   companyId: string;
   actorUserId: string;

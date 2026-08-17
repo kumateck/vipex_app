@@ -126,6 +126,11 @@ const BASE_ROUTES: Route[] = [
         url: '/settings/appearance',
         icon: 'Palette',
       },
+      {
+        title: 'Help Center',
+        url: '/help',
+        icon: 'CircleQuestionMark',
+      },
     ],
   },
   {
