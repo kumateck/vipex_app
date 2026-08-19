@@ -72,22 +72,22 @@ export function ConsignmentReceivingSessionPage() {
       try {
         const result = await receiveConsignmentItem({ consignmentId: id, code: trimmed }).unwrap();
         if (result.outcome === 'RECEIVED') {
-          toast.success(`Received ${result.trackingCode} (${result.arrived} of ${result.total})`);
+          toast.success(`Received ${result.bookingCode} (${result.arrived} of ${result.total})`);
         } else if (result.outcome === 'ALREADY_RECEIVED') {
           toast.warning(
-            `${result.trackingCode} was already received at ${formatDate(result.arrivedAt)}${
+            `${result.bookingCode} was already received at ${formatDate(result.arrivedAt)}${
               result.arrivedByName ? ` by ${result.arrivedByName}` : ''
             }`,
           );
         } else if (result.outcome === 'NOT_DISPATCHED') {
           toast.error(
-            `${result.trackingCode} hasn't been dispatched yet — it's still at ${
+            `${result.bookingCode} hasn't been dispatched yet — it's still at ${
               result.sourceBranchName ?? 'the sending branch'
             } and hasn't been loaded onto a consignment.`,
           );
         } else {
           toast.error(
-            `${result.trackingCode} does not belong to this consignment${
+            `${result.bookingCode} does not belong to this consignment${
               result.belongsToConsignmentCode
                 ? ` — it belongs to ${result.belongsToConsignmentCode}`
                 : ''
@@ -164,7 +164,7 @@ export function ConsignmentReceivingSessionPage() {
                 <div>
                   <CardTitle>Receive Consignment {consignment?.code ?? ''}</CardTitle>
                   <CardDescription>
-                    Scan or enter each parcel's tracking/booking code to receive it against this
+                    Scan or enter each parcel's booking code or QR code to receive it against this
                     consignment's checklist.
                   </CardDescription>
                 </div>
@@ -188,7 +188,7 @@ export function ConsignmentReceivingSessionPage() {
                   ref={inputRef}
                   value={code}
                   onChange={(event) => setCode(event.target.value)}
-                  placeholder="Scan or type tracking / booking code"
+                  placeholder="Scan or type booking code"
                   className="h-11 text-base"
                   disabled={!isOpen || isReceiving}
                   autoFocus
@@ -231,10 +231,8 @@ export function ConsignmentReceivingSessionPage() {
                       className="flex items-center justify-between gap-3 p-3 text-sm"
                     >
                       <div className="leading-tight">
-                        <p className="font-medium">{item.trackingCode}</p>
-                        <p className="text-muted-foreground text-xs">
-                          {item.bookingCode} &middot; {item.receiverName}
-                        </p>
+                        <p className="font-medium">{item.bookingCode}</p>
+                        <p className="text-muted-foreground text-xs">{item.receiverName}</p>
                       </div>
                       <div className="flex items-center gap-2 text-right">
                         {item.arrivedAt ? (

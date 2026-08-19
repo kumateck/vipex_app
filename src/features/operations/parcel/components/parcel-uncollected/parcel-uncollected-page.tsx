@@ -137,7 +137,7 @@ export function ParcelUncollectedPage() {
                 <Label htmlFor="uncollected-search">Search</Label>
                 <Input
                   id="uncollected-search"
-                  placeholder="Tracking, booking, receiver name, or phone"
+                  placeholder="Booking, receiver name, or phone"
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                 />

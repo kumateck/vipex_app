@@ -358,7 +358,7 @@ export function ParcelProcessedConsignmentPage() {
             <Checkbox
               checked={isChecked}
               onCheckedChange={(checked) => toggleRowSelection(parcel, Boolean(checked))}
-              aria-label={`Select parcel ${parcel.trackingCode}`}
+              aria-label={`Select parcel ${parcel.bookingCode}`}
               disabled={!isChecked && isDifferentDestination}
             />
           );
