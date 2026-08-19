@@ -18,3 +18,7 @@ export { ParcelHomeDeliveryRiderAssignedPage } from './pages/parcel-home-deliver
 export { ParcelRiderCurrentPage } from './pages/parcel-rider-current-page';
 export { ParcelRiderHistoryPage } from './pages/parcel-rider-history-page';
 export { ParcelDeliveryCashierPage } from './pages/parcel-delivery-cashier-page';
+export {
+  IncomingConsignmentsPage,
+  ConsignmentReceivingSessionPage,
+} from './pages/incoming-consignments-page';

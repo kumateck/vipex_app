@@ -13,6 +13,11 @@ export type ConsignmentRow = {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+  status: number;
+  closedBy: string | null;
+  closedAt: Date | null;
+  closedWithExceptions: boolean;
+  closeExceptionReason: string | null;
 };
 
 export async function getNextSerialForDayRepo(

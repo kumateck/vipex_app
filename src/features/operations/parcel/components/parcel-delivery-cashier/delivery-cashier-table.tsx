@@ -16,6 +16,7 @@ import { ParcelStatus } from '@/db/schemas/enums';
 import { formatDateTime } from '@/lib/dates';
 import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import { CallSenderBadge } from '../call-sender-badge';
 import { EMPTY_META } from './constants';
 import { formatMoney, formatPhones } from './utils';
 
@@ -59,7 +60,12 @@ export function DeliveryCashierTable({
         cell: ({ row }) => (
           <div className="space-y-1 leading-tight">
             <div>
-              <div>{row.original.receiverName ?? '-'}</div>
+              <div className="flex items-center gap-1.5">
+                <div>{row.original.receiverName ?? '-'}</div>
+                {row.original.callSender ? (
+                  <CallSenderBadge className="h-5 px-1.5 text-[10px]" />
+                ) : null}
+              </div>
               <div className="text-xs text-muted-foreground">
                 {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
               </div>

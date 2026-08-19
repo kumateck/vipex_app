@@ -278,6 +278,8 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           pickupLocationId?: string | null;
           method?: number;
           taxReportConfirmation?: boolean;
+          receiverOtpVerificationToken?: string;
+          receiverOtpTarget?: 'main' | 'second';
         },
         (user as AuthUser | null)?.sub ?? null,
       ),
@@ -301,6 +303,8 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         pickupLocationId: t.Optional(t.Union([UUID, t.Null()])),
         method: t.Optional(t.Number()),
         taxReportConfirmation: t.Optional(t.Boolean()),
+        receiverOtpVerificationToken: t.Optional(t.String({ minLength: 1 })),
+        receiverOtpTarget: t.Optional(t.Union([t.Literal('main'), t.Literal('second')])),
       }),
       beforeHandle: [
         requireAuth(),

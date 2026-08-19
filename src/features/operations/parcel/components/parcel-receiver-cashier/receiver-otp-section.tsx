@@ -39,7 +39,7 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
   const handleSend = async () => {
     try {
       await dialog.handleRequestOtp(Boolean(dialog.otpSentAt));
-      toast.success('Verification code sent to receiver');
+      toast.success('Collection OTP sent to the customer');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to send OTP');
     }
@@ -48,7 +48,7 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
   const handleVerify = async () => {
     try {
       await dialog.handleVerifyOtp();
-      toast.success('Receiver verified');
+      toast.success('Customer presence confirmed');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Invalid OTP');
     }
@@ -57,7 +57,12 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
   return (
     <div className="space-y-3 rounded-md border p-3">
       <div className="flex items-center justify-between">
-        <Label>Receiver Verification (OTP)</Label>
+        <div>
+          <Label>Customer at Premises</Label>
+          <p className="text-xs text-muted-foreground">
+            Verify the customer&apos;s collection OTP before releasing the parcel.
+          </p>
+        </div>
         {dialog.otpVerified ? (
           <Badge variant="outline" className="border-green-600 text-green-600">
             Verified
@@ -67,7 +72,7 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
 
       {dialog.otpVerified ? (
         <p className="text-xs text-muted-foreground">
-          Receiver identity confirmed via one-time code.
+          Customer presence confirmed with the one-time collection code.
         </p>
       ) : (
         <>
@@ -95,7 +100,7 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
               )
             ) : (
               <span className="text-xs text-muted-foreground">
-                A 6-digit code will be texted to the receiver.
+                A 6-digit code will be sent to the selected receiver.
               </span>
             )}
           </div>

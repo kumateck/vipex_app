@@ -63,7 +63,7 @@ export function ExecuteReconciliationCaseDialog({
             This action will void active payments and cancel/archive affected parcel records.
           </p>
           <p className="text-sm text-muted-foreground">
-            Tracking: <strong>{reconciliationCase?.trackingCode ?? '-'}</strong>
+            Booking: <strong>{reconciliationCase?.bookingCode ?? '-'}</strong>
           </p>
 
           <div className="space-y-2">

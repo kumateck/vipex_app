@@ -125,12 +125,15 @@ export function ReceiverPaymentSecondarySections({
 
             <Select
               value={dialog.secondCardMode}
-              onValueChange={(value) => dialog.setSecondCardMode(value as 'existing' | 'new')}
+              onValueChange={(value) =>
+                dialog.setSecondCardMode(value as 'none' | 'existing' | 'new')
+              }
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="none">No card</SelectItem>
                 <SelectItem value="existing" disabled={dialog.secondReceiverCards.length === 0}>
                   Use existing card
                 </SelectItem>
@@ -154,7 +157,7 @@ export function ReceiverPaymentSecondarySections({
                   ))}
                 </SelectContent>
               </Select>
-            ) : (
+            ) : dialog.secondCardMode === 'new' ? (
               <div className="grid gap-2 md:grid-cols-2">
                 <Select
                   value={dialog.secondNewCardTypeId}
@@ -177,6 +180,10 @@ export function ReceiverPaymentSecondarySections({
                   placeholder="Second receiver card number"
                 />
               </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No ID card will be recorded for the second receiver.
+              </p>
             )}
           </div>
         ) : null}

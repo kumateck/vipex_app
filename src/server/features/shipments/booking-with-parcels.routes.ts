@@ -38,6 +38,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
           senderPaymentCedis?: number | string | null;
           senderPaymentMethod?: number;
           paymentResponsibility?: number;
+          callSender?: boolean;
         }>;
       };
       const createBody = {
@@ -92,6 +93,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
                 t.Literal(PaymentResponsibility.SPLIT),
               ]),
             ),
+            callSender: t.Optional(t.Boolean()),
           }),
           { minItems: 1 },
         ),

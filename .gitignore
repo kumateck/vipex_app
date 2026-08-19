@@ -34,6 +34,9 @@ src/routes/generated.tsx
 # IntelliJ based IDEs
 .idea
 
+# local tooling config
+.claude
+
 # Finder (MacOS) folder config
 .DS_Store
 

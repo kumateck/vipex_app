@@ -4,6 +4,7 @@ import { router } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 import { searchParcels, updateParcelStatus } from '@mobile/lib/api';
+import { extractScannedCode } from '@mobile/lib/scan-code';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
 import type { ParcelSearchRow } from '@mobile/types/parcels';
 import { useAuth } from '@mobile/providers/auth-provider';
@@ -69,7 +70,8 @@ export default function ReceiveScanScreen() {
   }, [branchId, companyId, search, searchAllCompany, withAuth]);
 
   const receiveByCode = useCallback(
-    async (code: string) => {
+    async (rawCode: string) => {
+      const code = extractScannedCode(rawCode);
       if (!companyId || !branchId) {
         Alert.alert('Missing context', 'User company or branch is missing.');
         void hapticWarning();
@@ -97,7 +99,9 @@ export default function ReceiveScanScreen() {
           }),
         );
 
-        const parcel = response.data.find((row) => row.bookingCode === code) ?? response.data[0];
+        const parcel =
+          response.data.find((row) => row.bookingCode === code || row.trackingCode === code) ??
+          response.data[0];
 
         if (!parcel) {
           notifyError('Not found', 'No in-transit parcel to your branch matches this code.');

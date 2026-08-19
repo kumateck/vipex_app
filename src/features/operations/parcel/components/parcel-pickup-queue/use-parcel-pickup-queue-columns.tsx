@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import { CallSenderBadge } from '../call-sender-badge';
 import { formatPhones, getPaymentBucketLabel } from './parcel-pickup-queue-utils';
 
 type UseParcelPickupQueueColumnsOptions = {
@@ -24,7 +25,12 @@ export function useParcelPickupQueueColumns({ onViewQueue }: UseParcelPickupQueu
         header: 'Receiver',
         cell: ({ row }) => (
           <div className="leading-tight">
-            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+              {row.original.callSender ? (
+                <CallSenderBadge className="h-5 px-1.5 text-[10px]" />
+              ) : null}
+            </div>
             <p className="text-muted-foreground text-xs">
               {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
             </p>

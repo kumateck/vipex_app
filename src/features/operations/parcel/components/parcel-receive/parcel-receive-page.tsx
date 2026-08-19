@@ -22,9 +22,10 @@ import { useAuthStore } from '@/stores/auth-store';
 import {
   type ParcelSearchRow,
   useLazySearchParcelsQuery,
+  useMarkParcelReceivedMutation,
   useSearchParcelsQuery,
-  useUpdateParcelStatusMutation,
 } from '../../api/parcel.api';
+import { extractScannedCode } from '../../utils/scan-code';
 import { ParcelInternalHolderBadge } from '../parcel-internal-holder-badge';
 
 type BarcodeDetectorLike = {
@@ -193,7 +194,7 @@ export function ParcelReceivePage() {
   const flashTimeoutRef = useRef<number | null>(null);
 
   const [searchParcelsTrigger] = useLazySearchParcelsQuery();
-  const [updateParcelStatus, { isLoading: isUpdating }] = useUpdateParcelStatusMutation();
+  const [markParcelReceived, { isLoading: isUpdating }] = useMarkParcelReceivedMutation();
 
   const playSuccessBeep = useCallback(() => {
     const AudioCtx =
@@ -304,26 +305,32 @@ export function ParcelReceivePage() {
 
   const confirmReceive = useCallback(
     async (parcel: ParcelSearchRow, mode: 'scan' | 'manual') => {
-      await updateParcelStatus({
+      if (!user?.id) {
+        toast.error('Your user account could not be identified');
+        return;
+      }
+      await markParcelReceived({
         id: parcel.id,
+        receivedBy: user.id,
         status: ParcelStatus.ARRIVED_AT_DESTINATION,
       }).unwrap();
 
       toast.success(
         mode === 'scan'
-          ? `Parcel ${parcel.trackingCode} marked as ARRIVED_AT_DESTINATION`
-          : `Received ${parcel.trackingCode}`,
+          ? `Parcel ${parcel.bookingCode} marked as ARRIVED_AT_DESTINATION`
+          : `Received ${parcel.bookingCode}`,
       );
 
       if (manualQuery.search && manualQuery.search.trim().length > 0) {
         await refetchManual();
       }
     },
-    [manualQuery.search, refetchManual, updateParcelStatus],
+    [manualQuery.search, markParcelReceived, refetchManual, user?.id],
   );
 
   const handleDetectedByScanner = useCallback(
-    async (code: string) => {
+    async (rawCode: string) => {
+      const code = extractScannedCode(rawCode);
       setLastScannedCode(code);
 
       if (autoReceiveTimerRef.current !== null) window.clearTimeout(autoReceiveTimerRef.current);
@@ -362,7 +369,6 @@ export function ParcelReceivePage() {
 
   const manualColumns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       { accessorKey: 'parcelContent', header: 'Parcel Content' },

@@ -68,7 +68,7 @@ export function ApproveReconciliationCaseDialog({
 
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Tracking: <strong>{reconciliationCase?.trackingCode ?? '-'}</strong>
+            Booking: <strong>{reconciliationCase?.bookingCode ?? '-'}</strong>
           </p>
 
           <ReconciliationActionSelect

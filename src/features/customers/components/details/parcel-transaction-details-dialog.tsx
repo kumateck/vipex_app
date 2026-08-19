@@ -47,7 +47,6 @@ export function ParcelTransactionDetailsDialog({
                 <CardTitle className="text-base">Parcel Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {detailRow('Tracking', details.parcel.trackingCode)}
                 {detailRow('Booking', details.parcel.bookingCode)}
                 {detailRow('Status', STATUS_LABELS[details.parcel.status] ?? details.parcel.status)}
                 {detailRow('Source Branch', branchNameById.get(details.parcel.sourceId) ?? '-')}

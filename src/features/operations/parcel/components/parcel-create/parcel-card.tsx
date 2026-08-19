@@ -62,6 +62,10 @@ export function ParcelCard({
   const parcelPaymentName = parcelFieldName('paymentResponsibility');
   const parcelSettlementName = parcelFieldName('senderSettlementMode');
   const senderPartialPaymentName = parcelFieldName('senderPartialPayment');
+  const callSenderName = `parcels.${index}.callSender` as FieldPathByValue<
+    ParcelBookingFormValues,
+    boolean
+  >;
   const receiverPhoneName = parcelFieldName('receiver.telephone');
   const receiverSecondaryPhoneName = parcelFieldName('receiver.telephone2');
   const receiverCustomerName = parcelFieldName('receiver.customerId');
@@ -229,6 +233,7 @@ export function ParcelCard({
                 parcelDetailsName={parcelDetailsName}
                 parcelContentName={parcelContentName}
                 parcelValueName={parcelValueName}
+                callSenderName={callSenderName}
               />
               <ParcelCardChargeSection
                 control={control}

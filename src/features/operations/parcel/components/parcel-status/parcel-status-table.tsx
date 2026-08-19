@@ -14,8 +14,9 @@ import {
 import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import { CallSenderBadge } from '../call-sender-badge';
 import { STATUS_LABELS } from './constants';
-import { canReturnToPickup, formatCurrency, formatPhones } from './utils';
+import { canReturnToPickup, formatCurrency, formatPhones, formatReceivedAt } from './utils';
 
 type ParcelStatusTableProps = {
   rows: ParcelSearchRow[];
@@ -44,15 +45,49 @@ export function ParcelStatusTable({
 }: ParcelStatusTableProps) {
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'bookingCode', header: 'Booking' },
-      { accessorKey: 'parcelDetails', header: 'Parcel Details' },
-      { accessorKey: 'parcelContent', header: 'Parcel Content' },
+      {
+        id: 'rowNumber',
+        header: 'No.',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="tabular-nums text-muted-foreground">{row.index + 1}</span>
+        ),
+      },
+      {
+        id: 'booking',
+        header: 'Booking',
+        accessorFn: (row) => row.bookingCode,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.bookingCode}</p>
+            <p className="text-muted-foreground text-xs">
+              Received {formatReceivedAt(row.original.receivedAt)}
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'parcel',
+        header: 'Parcel',
+        accessorFn: (row) => `${row.parcelDetails} ${row.parcelContent}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.parcelDetails || '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.parcelContent || '-'}</p>
+          </div>
+        ),
+      },
       {
         id: 'receiver',
         header: 'Receiver',
         cell: ({ row }) => (
           <div className="leading-tight">
-            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+              {row.original.callSender ? (
+                <CallSenderBadge className="h-5 px-1.5 text-[10px]" />
+              ) : null}
+            </div>
             <p className="text-muted-foreground text-xs">
               {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
             </p>

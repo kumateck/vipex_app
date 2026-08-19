@@ -89,7 +89,6 @@ export default function DeletedParcelAuditPage() {
 
   const columns = useMemo<ColumnDef<DeletedParcelAuditRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       {
         accessorKey: 'reason',
