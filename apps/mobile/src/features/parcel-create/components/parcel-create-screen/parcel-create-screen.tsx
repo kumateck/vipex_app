@@ -220,7 +220,7 @@ function ParcelCreateForm({
       );
       const created = response.parcels[0];
       notifySuccess(
-        `Tracking ${created?.trackingCode ?? '-'} · Booking ${created?.bookingCode ?? response.bookingId}. Complete this transaction from Sender Cashier Payments; mobile printing is disabled.`,
+        `Booking ${created?.bookingCode ?? response.bookingId}. Complete this transaction from Sender Cashier Payments; mobile printing is disabled.`,
         'Parcel queued for sender cashier',
       );
       void hapticSuccess();

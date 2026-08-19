@@ -151,9 +151,7 @@ export function FleetDispatchLoadMatchingPage() {
             ) : null}
             {candidates?.data.slice(0, 20).map((row) => (
               <div key={row.parcelId} className="rounded border p-3">
-                <p className="font-medium">
-                  {row.trackingCode} | {row.bookingCode}
-                </p>
+                <p className="font-medium">{row.bookingCode ?? row.parcelId}</p>
                 <p className="text-muted-foreground">
                   Source: {row.sourceId ?? '-'} | Destination: {row.destinationId ?? '-'} | Route
                   aligned: {row.routeAligned === null ? '-' : row.routeAligned ? 'Yes' : 'No'}
@@ -200,14 +198,12 @@ export function FleetDispatchLoadMatchingPage() {
             ) : null}
             {visibleMatches.map((match) => (
               <div key={match.id} className="rounded border p-3">
-                <p className="font-medium">Parcel {match.trackingCode ?? match.parcelId}</p>
+                <p className="font-medium">Parcel {match.bookingCode ?? match.parcelId}</p>
                 <p className="text-muted-foreground">
                   Status: {loadStatusLabel(match.status)} | Matched at{' '}
                   {formatDateTimeShared(match.matchedAt)}
                 </p>
-                <p className="text-muted-foreground">
-                  Booking: {match.bookingCode ?? '-'} | Note: {match.note ?? '-'}
-                </p>
+                <p className="text-muted-foreground">Note: {match.note ?? '-'}</p>
 
                 <div className="mt-2 flex flex-wrap gap-2">
                   {match.status === 0 ? (

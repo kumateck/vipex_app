@@ -1,4 +1,4 @@
-name: Desktop Release (Windows + macOS) (Push to desktop)
+name: Desktop Release (Windows; macOS paused) (Push to desktop)
 
 on:
   push:
@@ -13,8 +13,18 @@ env:
 
 jobs:
   build-windows-desktop:
-    name: Build Windows Desktop Artifact
+    name: Build and Publish Windows Desktop
     runs-on: windows-latest
+    env:
+      DEPLOY_MINIO_ENDPOINT: ${{ secrets.DEPLOY_MINIO_ENDPOINT }}
+      MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+      MINIO_REGION: ${{ secrets.MINIO_REGION }}
+      MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+      MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+      MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
+      DESKTOP_MINIO_PREFIX: desktop/windows
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
     defaults:
       run:
         shell: bash
@@ -72,16 +82,62 @@ jobs:
           VERSION=$(node -p "require('./apps/desktop/package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Upload Windows Desktop Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: vipex-desktop-windows-${{ github.event.pull_request.number || github.run_number }}
-          path: apps/desktop/out/make/**
-          if-no-files-found: error
-          retention-days: 14
+      - name: Validate MinIO secrets
+        run: |
+          set -euo pipefail
+          UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
+          : "${UPLOAD_MINIO_ENDPOINT:?DEPLOY_MINIO_ENDPOINT (or MINIO_ENDPOINT fallback) secret is required}"
+          : "${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY secret is required}"
+          : "${MINIO_SECRET_KEY:?MINIO_SECRET_KEY secret is required}"
+          : "${MINIO_BUCKET:?MINIO_BUCKET secret is required}"
+
+      - name: Configure AWS CLI for MinIO
+        run: |
+          mkdir -p ~/.aws
+          cat <<EOF > ~/.aws/credentials
+          [default]
+          aws_access_key_id=${MINIO_ACCESS_KEY}
+          aws_secret_access_key=${MINIO_SECRET_KEY}
+          EOF
+          cat <<EOF > ~/.aws/config
+          [default]
+          region=${MINIO_REGION:-us-east-1}
+          output=json
+          EOF
+
+      - name: Publish Windows feed to MinIO
+        env:
+          VERSION: ${{ steps.desktop_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          METADATA_FILE=$(find apps/desktop/out/make -type f -name "latest.yml" | head -n 1 || true)
+          if [ -z "$METADATA_FILE" ]; then
+            echo "electron-builder latest.yml not found"
+            find apps/desktop/out/make -maxdepth 5 -type f | sed -n '1,200p'
+            exit 1
+          fi
+
+          RELEASE_DIR=$(dirname "$METADATA_FILE")
+          UPLOAD_MINIO_ENDPOINT="${DEPLOY_MINIO_ENDPOINT:-${MINIO_ENDPOINT}}"
+          PREFIX="${DESKTOP_MINIO_PREFIX:-desktop/windows}"
+          LATEST_PREFIX="${PREFIX}/latest"
+          VERSION_PREFIX="${PREFIX}/v${VERSION}"
+
+          for file in "$RELEASE_DIR"/*; do
+            [ -f "$file" ] || continue
+            base=$(basename "$file")
+            aws --endpoint-url "$UPLOAD_MINIO_ENDPOINT" s3api put-object \
+              --bucket "$MINIO_BUCKET" --key "$LATEST_PREFIX/$base" --body "$file" >/dev/null
+            aws --endpoint-url "$UPLOAD_MINIO_ENDPOINT" s3api put-object \
+              --bucket "$MINIO_BUCKET" --key "$VERSION_PREFIX/$base" --body "$file" >/dev/null
+          done
+
+          echo "Windows feed: https://app.vipexparcels.com/v1/desktop-updates/windows/latest/"
 
   build-macos-desktop:
     name: Build macOS Desktop Artifact
+    # Resume by creating the repository variable ENABLE_MACOS_DESKTOP_BUILD=true.
+    if: ${{ vars.ENABLE_MACOS_DESKTOP_BUILD == 'true' }}
     runs-on: macos-latest
     defaults:
       run:
@@ -239,6 +295,8 @@ jobs:
 
   publish-windows-feed:
     name: Publish Windows Feed to MinIO
+    # Publishing now happens in the Windows build job, avoiding GitHub Actions artifact storage.
+    if: ${{ false }}
     needs: build-windows-desktop
     runs-on: ubuntu-latest
     env:
