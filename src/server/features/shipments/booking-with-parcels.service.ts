@@ -39,6 +39,7 @@ export type CreateBookingWithParcelsBody = {
     paymentResponsibility?: PaymentResponsibility;
     cashierUserId: string;
     branchId: string;
+    callSender?: boolean;
   }>;
 };
 
@@ -137,30 +138,46 @@ export async function createBookingWithParcelsSvc(
     createdBy: body.createdBy,
     cashierSessionId: resolvedCashierSessionId,
     // bookingCode: body.bookingCode ?? null,
-    parcels: normalizedParcels.map((p) => ({
-      destinationId: p.destinationId,
-      pickupLocationId: p.pickupLocationId ?? null,
-      receiverId: p.receiverId,
-      status: p.status,
-      parcelDetails: p.parcelDetails,
-      parcelContent: p.parcelContent,
-      parcelValuePsw: p.parcelValueCedis != null ? Number(toPesewas(p.parcelValueCedis)) : 0,
-      chargePsw:
+    parcels: normalizedParcels.map((p) => {
+      const chargePsw =
         p.chargeCedis != null
           ? Number(toPesewas(p.chargeCedis))
           : Number(
               (p.senderPaymentCedis != null ? toPesewas(p.senderPaymentCedis) : 0n) +
                 (p.plannedToBePaidCedis != null ? toPesewas(p.plannedToBePaidCedis) : 0n),
-            ),
-      plannedToBePaidPsw:
-        p.plannedToBePaidCedis != null ? Number(toPesewas(p.plannedToBePaidCedis)) : 0,
-      method: p.method,
-      trackingCode: p.trackingCode ?? null,
-      senderPaymentPsw: p.senderPaymentCedis != null ? Number(toPesewas(p.senderPaymentCedis)) : 0,
-      senderPaymentMethod: p.senderPaymentMethod ?? undefined,
-      cashierUserId: p.cashierUserId,
-      branchId: p.branchId,
-    })),
+            );
+      const plannedToBePaidPsw =
+        p.plannedToBePaidCedis != null ? Number(toPesewas(p.plannedToBePaidCedis)) : 0;
+      // A cashier creating a parcel with nothing owed by the sender (fully receiver-pay,
+      // or a split already covered) has no sender-cashier step left to do — skip straight
+      // to PROCESSED. Non-cashier bookings still defer everything to Sender Payments.
+      const status =
+        body.requireActiveCashierSession &&
+        p.status === ParcelStatus.CREATED &&
+        chargePsw <= plannedToBePaidPsw
+          ? ParcelStatus.PROCESSED
+          : p.status;
+
+      return {
+        destinationId: p.destinationId,
+        pickupLocationId: p.pickupLocationId ?? null,
+        receiverId: p.receiverId,
+        status,
+        parcelDetails: p.parcelDetails,
+        parcelContent: p.parcelContent,
+        parcelValuePsw: p.parcelValueCedis != null ? Number(toPesewas(p.parcelValueCedis)) : 0,
+        chargePsw,
+        plannedToBePaidPsw,
+        method: p.method,
+        trackingCode: p.trackingCode ?? null,
+        senderPaymentPsw:
+          p.senderPaymentCedis != null ? Number(toPesewas(p.senderPaymentCedis)) : 0,
+        senderPaymentMethod: p.senderPaymentMethod ?? undefined,
+        cashierUserId: p.cashierUserId,
+        branchId: p.branchId,
+        callSender: p.callSender ?? false,
+      };
+    }),
   };
 
   const created = await createBookingWithParcelsAndPaymentsRepo(input, (psw) => {

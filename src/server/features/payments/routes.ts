@@ -9,7 +9,13 @@ import {
   requestReceiverOtpCtrl,
   verifyReceiverOtpCtrl,
 } from './controller';
-import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
+import {
+  authPlugin,
+  type AuthUser,
+  requireAnyPermissions,
+  requireAuth,
+  requirePermissions,
+} from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 
 export const paymentsRoutes = new Elysia({ name: 'payments' })
@@ -168,7 +174,13 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
         tags: ['Payments'],
         summary: 'Send a receiver pickup verification OTP by SMS (5-minute expiry)',
       },
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateReceiverPayments)],
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanCreateReceiverPayments,
+          PermissionKeys.CanCompleteOfficePickup,
+        ),
+      ],
     },
   )
   .post(
@@ -190,7 +202,13 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
         tags: ['Payments'],
         summary: 'Verify a receiver pickup verification OTP',
       },
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateReceiverPayments)],
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanCreateReceiverPayments,
+          PermissionKeys.CanCompleteOfficePickup,
+        ),
+      ],
     },
   )
   .get('/by-parcel/:parcelId', async ({ params }) => listPaymentsForParcelCtrl(params.parcelId), {

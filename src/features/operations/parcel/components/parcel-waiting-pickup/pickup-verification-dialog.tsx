@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -17,7 +16,10 @@ import {
   SelectValue,
 } from '@/components/ui/select-searchable';
 import type { ParcelFullDetails, ParcelSearchRow } from '../../api/parcel.api';
+import { PickupMainCardSection } from './pickup-main-card-section';
+import { PickupOtpVerificationSection } from './pickup-otp-verification-section';
 import { PickupVerificationHandoverSection } from './pickup-verification-handover-section';
+import type { PickupOtpVerification } from './use-pickup-otp-verification';
 type StaffOption = {
   id: string;
   fullname: string;
@@ -38,6 +40,7 @@ type PickupVerificationDialogProps = {
   pickerStaffId: string;
   onPickerStaffIdChange: (value: string) => void;
   staffOptions: StaffOption[];
+  staffLocationName: string | null;
   isPickupQueueEnabled: boolean;
   hasPickupQueue: boolean;
   parcelDetails: ParcelFullDetails | undefined;
@@ -67,6 +70,7 @@ type PickupVerificationDialogProps = {
   onSecondNewCardNumberChange: (value: string) => void;
   secondReceiverCards: CustomerCard[];
   cardOptions: CardOption[];
+  otp: PickupOtpVerification;
   isSaving: boolean;
   onRequestHomeDelivery: () => Promise<void>;
   onConfirmDelivered: () => Promise<void>;
@@ -78,6 +82,7 @@ export function PickupVerificationDialog({
   pickerStaffId,
   onPickerStaffIdChange,
   staffOptions,
+  staffLocationName,
   isPickupQueueEnabled,
   hasPickupQueue,
   parcelDetails,
@@ -107,6 +112,7 @@ export function PickupVerificationDialog({
   onSecondNewCardNumberChange,
   secondReceiverCards,
   cardOptions,
+  otp,
   isSaving,
   onRequestHomeDelivery,
   onConfirmDelivered,
@@ -151,6 +157,11 @@ export function PickupVerificationDialog({
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                {staffLocationName
+                  ? `Only active staff assigned to ${staffLocationName} are shown.`
+                  : 'Your user account needs an assigned location before staff can be selected.'}
+              </p>
             </div>
             {isPickupQueueEnabled ? (
               <div className="space-y-3 rounded-md border p-3">
@@ -181,57 +192,18 @@ export function PickupVerificationDialog({
                 )}
               </div>
             ) : null}
-            <div className="space-y-2 rounded-md border p-3">
-              <Label>Main Receiver ID Card (required)</Label>
-              <Select value={mainCardMode} onValueChange={onMainCardModeChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="existing" disabled={mainReceiverCards.length === 0}>
-                    Use existing card
-                  </SelectItem>
-                  <SelectItem value="new">Add new card</SelectItem>
-                </SelectContent>
-              </Select>
-              {mainCardMode === 'existing' ? (
-                <Select
-                  value={mainExistingCardRecordId}
-                  onValueChange={onMainExistingCardRecordIdChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select existing card" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mainReceiverCards.map((card) => (
-                      <SelectItem key={card.id} value={card.id}>
-                        {card.cardName} - {card.cardNumber}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="grid gap-2 md:grid-cols-2">
-                  <Select value={mainNewCardTypeId} onValueChange={onMainNewCardTypeIdChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select card type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cardOptions.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    value={mainNewCardNumber}
-                    onChange={(event) => onMainNewCardNumberChange(event.target.value)}
-                    placeholder="Card number"
-                  />
-                </div>
-              )}
-            </div>
+            <PickupMainCardSection
+              mode={mainCardMode}
+              onModeChange={onMainCardModeChange}
+              existingCardRecordId={mainExistingCardRecordId}
+              onExistingCardRecordIdChange={onMainExistingCardRecordIdChange}
+              newCardTypeId={mainNewCardTypeId}
+              onNewCardTypeIdChange={onMainNewCardTypeIdChange}
+              newCardNumber={mainNewCardNumber}
+              onNewCardNumberChange={onMainNewCardNumberChange}
+              receiverCards={mainReceiverCards}
+              cardOptions={cardOptions}
+            />
             <PickupVerificationHandoverSection
               parcelSecondReceiverId={parcel.secondReceiverId}
               handoverTarget={handoverTarget}
@@ -251,6 +223,7 @@ export function PickupVerificationDialog({
               secondReceiverCards={secondReceiverCards}
               cardOptions={cardOptions}
             />
+            <PickupOtpVerificationSection otp={otp} />
             {parcelDetails ? (
               <div className="rounded-md border p-3 text-sm">
                 <p>
@@ -290,7 +263,7 @@ export function PickupVerificationDialog({
                 toast.error(error instanceof Error ? error.message : 'Failed to confirm delivery');
               }
             }}
-            disabled={isSaving || (isPickupQueueEnabled && !hasPickupQueue)}
+            disabled={isSaving || !otp.otpVerified || (isPickupQueueEnabled && !hasPickupQueue)}
           >
             Confirm Delivered
           </Button>

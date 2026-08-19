@@ -1,2 +1,2 @@
-export type CardMode = 'existing' | 'new';
+export type CardMode = 'none' | 'existing' | 'new';
 export type HandoverTarget = 'main' | 'second';

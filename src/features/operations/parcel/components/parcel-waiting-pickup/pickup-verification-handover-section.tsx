@@ -101,6 +101,7 @@ export function PickupVerificationHandoverSection({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">No card</SelectItem>
               <SelectItem value="existing" disabled={secondReceiverCards.length === 0}>
                 Use existing card
               </SelectItem>
@@ -124,7 +125,7 @@ export function PickupVerificationHandoverSection({
                 ))}
               </SelectContent>
             </Select>
-          ) : (
+          ) : secondCardMode === 'new' ? (
             <div className="grid gap-2 md:grid-cols-2">
               <Select value={secondNewCardTypeId} onValueChange={onSecondNewCardTypeIdChange}>
                 <SelectTrigger>
@@ -144,6 +145,10 @@ export function PickupVerificationHandoverSection({
                 placeholder="Second receiver card number"
               />
             </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No ID card will be recorded for the second receiver.
+            </p>
           )}
         </div>
       ) : null}

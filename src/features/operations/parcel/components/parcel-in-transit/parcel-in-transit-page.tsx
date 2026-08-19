@@ -25,10 +25,14 @@ import {
   type ParcelSearchRow,
   useGetParcelDetailsQuery,
   useLogParcelDiscrepancyMutation,
+  useMarkParcelReceivedMutation,
   useSearchParcelsQuery,
   useUpdateParcelMutation,
-  useUpdateParcelStatusMutation,
 } from '../../api/parcel.api';
+import { CallSenderBadge } from '../call-sender-badge';
+import { PaymentStatusLegend } from '../parcel-processed-consignment/payment-status-legend';
+import { getConsignmentPaymentStatus } from '../parcel-processed-consignment/payment-status';
+import { ConfirmMarkArrivedDialog } from './confirm-mark-arrived-dialog';
 import { EditIncomingTransitParcelDialog } from './edit-incoming-transit-parcel-dialog';
 import { LogDiscrepancyDialog } from './log-discrepancy-dialog';
 import { ParcelDetailsDialog } from './parcel-details-dialog';
@@ -100,6 +104,8 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
   });
 
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
+  const [arrivalConfirmationParcel, setArrivalConfirmationParcel] =
+    useState<ParcelSearchRow | null>(null);
   const [editingParcel, setEditingParcel] = useState<ParcelSearchRow | null>(null);
   const [editParcelDetails, setEditParcelDetails] = useState('');
   const [editReceiverName, setEditReceiverName] = useState('');
@@ -111,7 +117,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
   const [discrepancyNotes, setDiscrepancyNotes] = useState('');
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [updateCustomer, { isLoading: isUpdatingCustomer }] = useUpdateCustomerMutation();
-  const [updateParcelStatus, { isLoading: isUpdatingStatus }] = useUpdateParcelStatusMutation();
+  const [markParcelReceived, { isLoading: isUpdatingStatus }] = useMarkParcelReceivedMutation();
   const [logDiscrepancy, { isLoading: isLoggingDiscrepancy }] = useLogParcelDiscrepancyMutation();
 
   useEffect(() => {
@@ -157,13 +163,18 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
 
   const handleMarkAsArrived = useCallback(
     async (parcel: ParcelSearchRow) => {
-      await updateParcelStatus({
+      if (!user?.id) {
+        toast.error('Your user account could not be identified');
+        return;
+      }
+      await markParcelReceived({
         id: parcel.id,
+        receivedBy: user.id,
         status: ParcelStatus.ARRIVED_AT_DESTINATION,
       }).unwrap();
       toast.success(`Received ${parcel.trackingCode}`);
     },
-    [updateParcelStatus],
+    [markParcelReceived, user?.id],
   );
 
   const { data, isLoading, refetch } = useSearchParcelsQuery(query, {
@@ -180,6 +191,16 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
     { companyId },
     { skip: !companyId },
   );
+  const handleConfirmMarkAsArrived = useCallback(async () => {
+    if (!arrivalConfirmationParcel) return;
+    try {
+      await handleMarkAsArrived(arrivalConfirmationParcel);
+      await refetch();
+      setArrivalConfirmationParcel(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update parcel status');
+    }
+  }, [arrivalConfirmationParcel, handleMarkAsArrived, refetch]);
   const rowById = useMemo(
     () => new Map((data?.data ?? []).map((row) => [row.id, row])),
     [data?.data],
@@ -189,12 +210,54 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
     () => new Map(branchOptions.map((branch) => [branch.id, branch.name])),
     [branchOptions],
   );
+  const rowNumberOffset =
+    ((data?.meta.page ?? query.page ?? 1) - 1) *
+    (data?.meta.pageSize ?? query.pageSize ?? EMPTY_META.pageSize);
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'bookingCode', header: 'Booking' },
-      { accessorKey: 'parcelDetails', header: 'Parcel Details' },
-      { accessorKey: 'parcelContent', header: 'Parcel Content' },
+      {
+        id: 'rowNumber',
+        header: 'No.',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="tabular-nums text-muted-foreground">
+            {rowNumberOffset + row.index + 1}
+          </span>
+        ),
+      },
+      {
+        id: 'booking',
+        header: 'Booking',
+        accessorFn: (row) => row.bookingCode,
+        cell: ({ row }) => {
+          const paymentStatus = getConsignmentPaymentStatus(row.original);
+          return (
+            <div className="leading-tight">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${paymentStatus.dotClassName}`}
+                />
+                <p className="font-medium">{row.original.bookingCode}</p>
+              </div>
+              <p className="pl-[18px] text-muted-foreground text-xs">
+                Sent {formatDate(row.original.consignmentCreatedAt)}
+              </p>
+            </div>
+          );
+        },
+      },
+      {
+        id: 'parcel',
+        header: 'Parcel',
+        accessorFn: (row) => `${row.parcelDetails} ${row.parcelContent}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.parcelDetails || '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.parcelContent || '-'}</p>
+          </div>
+        ),
+      },
       {
         id: 'sender',
         header: 'Sender',
@@ -212,7 +275,12 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         header: 'Receiver',
         cell: ({ row }) => (
           <div className="leading-tight">
-            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="font-medium">{row.original.receiverName ?? '-'}</p>
+              {row.original.callSender ? (
+                <CallSenderBadge className="h-5 px-1.5 text-[10px]" />
+              ) : null}
+            </div>
             <p className="text-muted-foreground text-xs">
               {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
             </p>
@@ -252,6 +320,21 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         id: 'consignment',
         header: 'Consignment',
         accessorFn: (row) => formatConsignmentLabel(row.consignmentSerialForDay),
+        cell: ({ row }) => {
+          const outstandingPsw = Math.max(row.original.plannedToBePaidPsw ?? 0, 0);
+          return (
+            <div className="leading-tight">
+              <p className="font-medium">
+                {formatConsignmentLabel(row.original.consignmentSerialForDay)}
+              </p>
+              {outstandingPsw > 0 ? (
+                <p className="text-muted-foreground text-xs">
+                  Remaining {formatCurrency(outstandingPsw)}
+                </p>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         id: 'actions',
@@ -301,18 +384,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
                   </DropdownMenuItem>
                 ) : null}
                 {view === 'incoming' ? (
-                  <DropdownMenuItem
-                    onClick={async () => {
-                      try {
-                        await handleMarkAsArrived(parcel);
-                        await refetch();
-                      } catch (error) {
-                        toast.error(
-                          error instanceof Error ? error.message : 'Failed to update parcel status',
-                        );
-                      }
-                    }}
-                  >
+                  <DropdownMenuItem onClick={() => setArrivalConfirmationParcel(parcel)}>
                     Mark Arrived
                   </DropdownMenuItem>
                 ) : null}
@@ -322,7 +394,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         },
       },
     ],
-    [branchNameById, handleMarkAsArrived, isUpdatingStatus, view],
+    [branchNameById, isUpdatingStatus, rowNumberOffset, view],
   );
 
   const handleSaveIncomingEdits = useCallback(async () => {
@@ -458,8 +530,13 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
       <ScrollableWrapper>
         <Card>
           <CardHeader>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>{title}</CardTitle>
+                <CardDescription>{description}</CardDescription>
+              </div>
+              <PaymentStatusLegend />
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {view === 'incoming' ? (
@@ -532,6 +609,13 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         formatCurrency={formatCurrency}
         formatDate={formatDate}
         paymentMethodLabel={paymentMethodLabel}
+      />
+
+      <ConfirmMarkArrivedDialog
+        parcel={arrivalConfirmationParcel}
+        isConfirming={isUpdatingStatus}
+        onCancel={() => setArrivalConfirmationParcel(null)}
+        onConfirm={handleConfirmMarkAsArrived}
       />
 
       <LogDiscrepancyDialog

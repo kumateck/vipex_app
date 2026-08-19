@@ -15,6 +15,7 @@ import { companies, branches, users, locations, warehouses } from './core';
 import { customers, cards } from './customers';
 import { sql } from 'drizzle-orm';
 import {
+  ConsignmentReceivingStatus,
   ParcelDispositionActionType,
   ParcelReconciliationActionType,
   ParcelReconciliationCaseStatus,
@@ -109,6 +110,7 @@ export const parcels = pgTable(
     method: smallint('method').notNull().default(PaymentMethod.CASH),
 
     taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
+    callSender: boolean('call_sender').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),
     deletedBy: varchar('deleted_by', { length: 25 }).references(() => users.id),
     deletedAt: timestamp('deleted_at', { withTimezone: false }),
@@ -147,6 +149,7 @@ export const parcelDiscrepancies = pgTable(
       .references(() => companies.id),
     parcelId: varchar('parcel_id', { length: 25 }).references(() => parcels.id),
     branchId: varchar('branch_id', { length: 25 }).references(() => branches.id),
+    consignmentId: varchar('consignment_id', { length: 25 }).references(() => consignments.id),
     trackingCode: varchar('tracking_code', { length: 255 }),
     bookingCode: varchar('booking_code', { length: 255 }),
     discrepancyType: varchar('discrepancy_type', { length: 100 }).notNull(),
@@ -162,6 +165,7 @@ export const parcelDiscrepancies = pgTable(
     byCompanyStatus: index('parcel_discrepancies_company_status_idx').on(t.companyId, t.status),
     byParcel: index('parcel_discrepancies_parcel_idx').on(t.parcelId),
     byCreated: index('parcel_discrepancies_created_idx').on(t.createdAt),
+    byConsignment: index('parcel_discrepancies_consignment_idx').on(t.consignmentId),
     uqOpenByParcel: uniqueIndex('parcel_discrepancies_open_parcel_uq')
       .on(t.parcelId)
       .where(sql`${t.parcelId} IS NOT NULL AND ${t.status} = 0`),
@@ -241,6 +245,13 @@ export const consignments = pgTable(
       .references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+
+    // Receiving completeness lifecycle
+    status: smallint('status').notNull().default(ConsignmentReceivingStatus.OPEN),
+    closedBy: varchar('closed_by', { length: 25 }).references(() => users.id),
+    closedAt: timestamp('closed_at', { withTimezone: false }),
+    closedWithExceptions: boolean('closed_with_exceptions').notNull().default(false),
+    closeExceptionReason: varchar('close_exception_reason', { length: 1000 }),
   },
   (t) => ({
     uqDailySerial: uniqueIndex('consignments_daily_serial_uq').on(
@@ -250,6 +261,7 @@ export const consignments = pgTable(
       t.serialForDay,
     ),
     byRoute: index('consignments_route_idx').on(t.sourceId, t.destinationId),
+    byStatus: index('consignments_status_idx').on(t.status),
   }),
 );
 
@@ -264,6 +276,11 @@ export const consignmentItems = pgTable(
       .references(() => parcels.id),
     addedAt: timestamp('added_at', { withTimezone: false }).notNull().defaultNow(),
     removedAt: timestamp('removed_at', { withTimezone: false }),
+
+    // Per-item receiving record, scoped to this consignment (source of truth for
+    // duplicate-scan and wrong-consignment detection)
+    arrivedAt: timestamp('arrived_at', { withTimezone: false }),
+    arrivedBy: varchar('arrived_by', { length: 25 }).references(() => users.id),
   },
   (t) => ({
     pk: uniqueIndex('consignment_items_uq').on(t.consignmentId, t.parcelId),
@@ -271,6 +288,10 @@ export const consignmentItems = pgTable(
     uqActiveParcel: uniqueIndex('consignment_items_parcel_active_uq')
       .on(t.parcelId)
       .where(sql`${t.removedAt} IS NULL`),
+    byConsignmentArrived: index('consignment_items_consignment_arrived_idx').on(
+      t.consignmentId,
+      t.arrivedAt,
+    ),
   }),
 );
 

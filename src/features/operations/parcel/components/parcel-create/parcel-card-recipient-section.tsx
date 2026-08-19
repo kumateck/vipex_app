@@ -1,6 +1,7 @@
 import type { FieldPathByValue } from 'react-hook-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CustomerLookupSection } from './customer-lookup-section';
+import { ExistingCustomerEditAction } from './existing-customer-edit-action';
 import type { ParcelBookingFormValues } from './parcel-form.types';
 
 type ParcelCardRecipientSectionProps = {
@@ -23,6 +24,13 @@ export function ParcelCardRecipientSection({
         <CardDescription className="text-xs">
           Search by phone or create a new recipient.
         </CardDescription>
+        <ExistingCustomerEditAction
+          label="Recipient"
+          phoneName={receiverPhoneName}
+          customerIdName={receiverCustomerName}
+          fullnameName={receiverFullnameName}
+          secondaryPhoneName={receiverSecondaryPhoneName}
+        />
       </CardHeader>
       <CardContent>
         <CustomerLookupSection

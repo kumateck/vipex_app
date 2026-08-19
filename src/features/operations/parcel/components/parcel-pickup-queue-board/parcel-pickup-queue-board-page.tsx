@@ -7,6 +7,7 @@ import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/bra
 import { useAuthStore } from '@/stores/auth-store';
 import { useListPickupQueueCardsQuery } from '../../api/parcel.api';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import { CallSenderBadge } from '../call-sender-badge';
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
@@ -97,9 +98,14 @@ export function ParcelPickupQueueBoardPage({
                       <CardDescription className="mt-1 text-xs uppercase tracking-[0.2em]">
                         Queue #{card.queueNumber}
                       </CardDescription>
-                      <p className="mt-3 text-sm font-medium text-muted-foreground">
-                        {card.receiverName ?? 'Unknown Receiver'}
-                      </p>
+                      <div className="mt-3 flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {card.receiverName ?? 'Unknown Receiver'}
+                        </p>
+                        {card.callSender ? (
+                          <CallSenderBadge className="h-5 px-1.5 text-[10px]" />
+                        ) : null}
+                      </div>
                     </div>
                     <Badge variant={index === 0 ? 'default' : 'secondary'}>
                       {index === 0 ? 'Next to Call' : 'Waiting'}

@@ -26,6 +26,8 @@ export function useParcelReceiverCashierWorkflow() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
+  const cashierLocationId = user?.location?.id ?? user?.locationId ?? null;
+  const cashierLocationName = user?.location?.name ?? user?.locationName ?? null;
   const canWaiveStorageAccrual = (user?.permissions ?? []).includes(
     PermissionKeys.CanWaiveParcelStorageAccrual,
   );
@@ -69,6 +71,7 @@ export function useParcelReceiverCashierWorkflow() {
   const resources = useReceiverCashierResources({
     companyId,
     branchId,
+    cashierLocationId,
     selectedParcel,
     query,
     isPickupQueueEnabled,
@@ -113,12 +116,6 @@ export function useParcelReceiverCashierWorkflow() {
     dialog.setStoragePaymentAmount((storageOutstandingPsw / 100).toFixed(2));
     dialog.setWaiveStorageAmount((storageOutstandingPsw / 100).toFixed(2));
   }, [dialog, selectedParcel, storageOutstandingPsw]);
-
-  useEffect(() => {
-    if (!selectedParcel || mainReceiverCards.length > 0) return;
-    dialog.setMainCardMode('new');
-    dialog.setMainExistingCardRecordId('');
-  }, [dialog, mainReceiverCards.length, selectedParcel]);
 
   const isSaving =
     isAddingCard ||
@@ -218,7 +215,13 @@ export function useParcelReceiverCashierWorkflow() {
   };
 
   return {
-    context: { companyId, branchId, canWaiveStorageAccrual, isPickupQueueEnabled },
+    context: {
+      companyId,
+      branchId,
+      cashierLocationName,
+      canWaiveStorageAccrual,
+      isPickupQueueEnabled,
+    },
     table: {
       query,
       setQuery,

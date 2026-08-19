@@ -35,7 +35,7 @@ export function ReceiverPaymentPrimarySections({
       <ParcelSummary dialog={dialog} parcel={parcel} />
       <PaymentInputs dialog={dialog} parcel={parcel} />
       <StorageWaiver context={context} dialog={dialog} />
-      <PickerAndMomo dialog={dialog} parcel={parcel} />
+      <PickerAndMomo context={context} dialog={dialog} parcel={parcel} />
     </>
   );
 }
@@ -89,9 +89,6 @@ function StorageChargeSummary({
 function ParcelSummary({ dialog, parcel }: { dialog: WorkflowDialog; parcel: SelectedParcel }) {
   return (
     <div className="grid gap-2 text-sm">
-      <p>
-        <strong>Tracking:</strong> {parcel.trackingCode}
-      </p>
       <p>
         <strong>Booking:</strong> {parcel.bookingCode}
       </p>
@@ -195,7 +192,15 @@ function StorageWaiver({ context, dialog }: { context: WorkflowContext; dialog: 
   );
 }
 
-function PickerAndMomo({ dialog, parcel }: { dialog: WorkflowDialog; parcel: SelectedParcel }) {
+function PickerAndMomo({
+  context,
+  dialog,
+  parcel,
+}: {
+  context: WorkflowContext;
+  dialog: WorkflowDialog;
+  parcel: SelectedParcel;
+}) {
   return (
     <div className="space-y-2">
       <Label>Shelf Picker Staff</Label>
@@ -211,6 +216,11 @@ function PickerAndMomo({ dialog, parcel }: { dialog: WorkflowDialog; parcel: Sel
           ))}
         </SelectContent>
       </Select>
+      <p className="text-xs text-muted-foreground">
+        {context.cashierLocationName
+          ? `Only active staff assigned to ${context.cashierLocationName} are shown.`
+          : 'Your user account needs an assigned location before staff can be selected.'}
+      </p>
       {dialog.paymentMethod === String(PaymentMethod.MTN) ? (
         <MomoRequestToPayPanel
           parcelId={parcel.id}

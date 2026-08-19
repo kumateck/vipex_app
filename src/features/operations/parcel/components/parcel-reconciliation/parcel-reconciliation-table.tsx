@@ -39,7 +39,6 @@ export function ParcelReconciliationTable({
 }: ParcelReconciliationTableProps) {
   const columns = useMemo<ColumnDef<ParcelReconciliationCaseRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       {
         accessorKey: 'caseType',

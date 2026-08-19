@@ -1,6 +1,6 @@
 import type { PaginationMeta } from '@/server/types/pagination.types';
 
-export type CardMode = 'existing' | 'new';
+export type CardMode = 'none' | 'existing' | 'new';
 export type HandoverTarget = 'main' | 'second';
 
 export type CustomerCardRecord = {

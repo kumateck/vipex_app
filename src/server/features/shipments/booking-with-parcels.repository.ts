@@ -49,6 +49,7 @@ export type CreateBookingWithParcelsInput = {
     senderPaymentMethod?: PaymentMethod; // fallback to parcel.method if not provided
     cashierUserId: string; // sending cashier user id for this parcel
     branchId: string; // branch taking the cash
+    callSender?: boolean; // sender must be called before parcel is given to receiver
   }>;
 };
 
@@ -182,6 +183,7 @@ export async function createBookingWithParcelsAndPaymentsRepo(
         chargePsw: p.chargePsw ?? 0,
         plannedToBePaidPsw: p.plannedToBePaidPsw ?? 0,
         method: p.method,
+        callSender: p.callSender ?? false,
         createdBy: input.createdBy,
         cashierSessionId: input.cashierSessionId ?? null,
       };

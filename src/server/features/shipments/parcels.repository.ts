@@ -11,6 +11,7 @@ import {
   isNotNull,
   lte,
   or,
+  sql,
 } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
@@ -31,6 +32,7 @@ import {
   parcelStorageWaivers,
 } from '@/db/schemas';
 import type { SortField } from '@/server/types/pagination.types';
+import { extractScannedCode } from '@/server/utils/scan-code';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 export type ParcelRow = {
   id: string;
@@ -57,6 +59,7 @@ export type ParcelRow = {
   plannedToBePaidPsw: number;
   method: number;
   taxReportConfirmation: boolean;
+  callSender: boolean;
   isDeleted: boolean;
   deletedBy: string | null;
   deletedAt: Date | null;
@@ -99,6 +102,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     consignmentId: string | null;
     consignmentCode: string | null;
     consignmentSerialForDay: number | null;
+    consignmentCreatedAt: Date | null;
     senderName: string | null;
     senderPhone: string | null;
     senderPhone2: string | null;
@@ -265,6 +269,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       method: parcels.method,
       taxReportConfirmation: parcels.taxReportConfirmation,
+      callSender: parcels.callSender,
       isDeleted: parcels.isDeleted,
       deletedBy: parcels.deletedBy,
       deletedAt: parcels.deletedAt,
@@ -272,7 +277,17 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       createdBy: parcels.createdBy,
       createdAt: parcels.createdAt,
       receivedBy: parcels.receivedBy,
-      receivedAt: parcels.receivedAt,
+      receivedAt: sql<Date | null>`coalesce(
+          ${parcels.receivedAt},
+          (
+            select min(receive_audit.created_at)
+            from audit_logs receive_audit
+            where receive_audit.entity_type = 'parcel'
+              and receive_audit.entity_id = ${parcels.id}
+              and receive_audit.action = 'PARCEL_UPDATED'
+              and receive_audit.metadata->'patch'->>'status' = '3'
+          )
+        )`.mapWith((value) => (value == null ? null : new Date(String(value)))),
       confirmedBy: parcels.confirmedBy,
       confirmedAt: parcels.confirmedAt,
       updatedAt: parcels.updatedAt,
@@ -284,6 +299,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       consignmentId: cg.id,
       consignmentCode: cg.code,
       consignmentSerialForDay: cg.serialForDay,
+      consignmentCreatedAt: cg.createdAt,
       senderName: s.fullname,
       senderPhone: s.telephone,
       senderPhone2: s.telephone2,
@@ -387,6 +403,7 @@ export async function getParcelRepo(
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       method: parcels.method,
       taxReportConfirmation: parcels.taxReportConfirmation,
+      callSender: parcels.callSender,
       isDeleted: parcels.isDeleted,
       deletedBy: parcels.deletedBy,
       deletedAt: parcels.deletedAt,
@@ -548,4 +565,29 @@ export async function sumParcelStorageWaiversPswRepo(
     .where(eq(parcelStorageWaivers.parcelId, parcelId));
 
   return rows.reduce((sum, row) => sum + Number(row.waivedAmountPsw ?? 0), 0);
+}
+
+export async function getParcelByCodeRepo(
+  companyId: string,
+  code: string,
+  executor: DbExecutor = db,
+): Promise<{ id: string; trackingCode: string; bookingCode: string; sourceId: string } | null> {
+  const trimmed = extractScannedCode(code);
+  if (!trimmed) return null;
+  const [row] = await executor
+    .select({
+      id: parcels.id,
+      trackingCode: parcels.trackingCode,
+      bookingCode: parcels.bookingCode,
+      sourceId: parcels.sourceId,
+    })
+    .from(parcels)
+    .where(
+      and(
+        eq(parcels.companyId, companyId),
+        or(eq(parcels.trackingCode, trimmed), eq(parcels.bookingCode, trimmed)),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
 }
