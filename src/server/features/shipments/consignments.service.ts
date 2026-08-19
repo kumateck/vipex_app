@@ -1,6 +1,7 @@
 import { BadRequest, NotFound } from '../../utils/http-error';
 import { ParcelStatus } from '@/db/schemas';
 import {
+  getConsignmentReceivingCountsRepo,
   listConsignmentItemsRepo,
   listIncomingConsignmentsRepo,
 } from './consignments-receiving.repository';
