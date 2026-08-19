@@ -32,11 +32,11 @@ export function ConsignmentScannerCard({
       {scanBusy ? (
         <Text style={[styles.helper, { color: theme.colors.textSubtle }]}>Processing scan...</Text>
       ) : null}
-      <AppLabel>Or type tracking / booking code</AppLabel>
+      <AppLabel>Or type booking code</AppLabel>
       <AppInput
         value={manualCode}
         onChangeText={onChangeManualCode}
-        placeholder="Tracking or booking code"
+        placeholder="Booking code"
         autoCapitalize="characters"
       />
       <AppButton

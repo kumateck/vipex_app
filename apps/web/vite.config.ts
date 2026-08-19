@@ -9,7 +9,9 @@ const webDir = path.dirname(fileURLToPath(import.meta.url));
 const appBuildId = process.env.VIPEX_BUILD_ID ?? process.env.GITHUB_SHA ?? new Date().toISOString();
 
 export default defineConfig({
-  base: './',
+  // The app is served from the domain root. Absolute asset URLs keep client-side
+  // routes such as /parcels from resolving bundles relative to the route path.
+  base: '/',
   plugins: [
     react(),
     tailwindcss(),

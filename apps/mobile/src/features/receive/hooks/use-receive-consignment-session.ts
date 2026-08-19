@@ -72,24 +72,24 @@ export function useReceiveConsignmentSession() {
           receiveConsignmentItem(token, consignmentId, code),
         );
         if (result.outcome === 'RECEIVED') {
-          notifySuccess(`Received ${result.trackingCode} (${result.arrived} of ${result.total})`);
+          notifySuccess(`Received ${result.bookingCode} (${result.arrived} of ${result.total})`);
           void hapticSuccess();
         } else if (result.outcome === 'ALREADY_RECEIVED') {
           notifyError(
             'Already received',
-            `${result.trackingCode} was already received at ${formatConsignmentDate(result.arrivedAt)}${result.arrivedByName ? ` by ${result.arrivedByName}` : ''}`,
+            `${result.bookingCode} was already received at ${formatConsignmentDate(result.arrivedAt)}${result.arrivedByName ? ` by ${result.arrivedByName}` : ''}`,
           );
           void hapticWarning();
         } else if (result.outcome === 'NOT_DISPATCHED') {
           notifyError(
             'Not dispatched yet',
-            `${result.trackingCode} hasn't been dispatched yet — it's still at ${result.sourceBranchName ?? 'the sending branch'} and hasn't been loaded onto a consignment.`,
+            `${result.bookingCode} hasn't been dispatched yet — it's still at ${result.sourceBranchName ?? 'the sending branch'} and hasn't been loaded onto a consignment.`,
           );
           void hapticWarning();
         } else {
           notifyError(
             'Wrong consignment',
-            `${result.trackingCode} belongs to ${result.belongsToConsignmentCode ?? 'another consignment'}, not this one.`,
+            `${result.bookingCode} belongs to ${result.belongsToConsignmentCode ?? 'another consignment'}, not this one.`,
           );
           void hapticWarning();
         }

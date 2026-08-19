@@ -1,4 +1,4 @@
-# Private App Update Pipeline (Desktop + Mobile)
+# App Update Pipeline (Desktop + Mobile)
 
 Date: 2026-03-29
 
@@ -7,7 +7,7 @@ Date: 2026-03-29
 1. Desktop auto-update source:
 
 - MinIO feed (Windows NSIS installer + `latest.yml`)
-- Platform-specific authenticated app proxies for Windows and macOS
+- Platform-specific, filename-restricted app proxies for Windows and macOS
 - Triggered by a push to the `desktop` branch
 
 2. Mobile update source:
@@ -54,7 +54,7 @@ Date: 2026-03-29
 - Workflow default prefix: `desktop/windows`
 - Internal object path produced:
   - `<MINIO_ENDPOINT>/<MINIO_BUCKET>/desktop/windows/latest/`
-- Do not use the MinIO URL directly in the desktop app. Use the authenticated app proxy:
+- Do not use the MinIO URL directly in the desktop app. Use the app proxy:
   - `<APP_BASE_URL>/v1/desktop-updates/windows/latest/`
 
 ### Mobile publish path
@@ -73,11 +73,11 @@ The release workflow embeds these platform-specific feeds in the packaged apps:
 - `DESKTOP_UPDATE_FEED_URL=<APP_BASE_URL>/v1/desktop-updates/windows/latest/`
 - `DESKTOP_UPDATE_FEED_URL=<APP_BASE_URL>/v1/desktop-updates/macos/latest/`
 
-Private desktop feeds are checked and downloaded from the in-app **App Updates** page with
-the logged-in user's bearer token. The API validates that token, then streams the update
-metadata and artifacts from private MinIO storage. Unauthenticated startup update checks
-are disabled by default to avoid `401`/`403` responses from private feeds. Only set
-`DESKTOP_ALLOW_UNAUTHENTICATED_UPDATE_CHECK=true` when the feed is intentionally public.
+Desktop update URLs are public because the generic Electron updater cannot reliably attach an
+interactive application session to every metadata and installer request. The API permits only
+validated update filenames and streams those files from private MinIO storage; it cannot be used
+to retrieve arbitrary objects. Unauthenticated startup checks remain disabled by default to avoid
+surprising downloads before a user opens the desktop app.
 
 For pre-deploy Windows testing, run the manual **Desktop Windows Test Build** workflow or build locally on Windows:
 
@@ -116,5 +116,6 @@ Optional build-time defaults:
 - Windows auto-update uses NSIS because `electron-updater` does not support Squirrel.Windows.
 - Test the first Squirrel-to-NSIS upgrade on an existing Windows installation before broad rollout.
 - macOS auto-install requires an Apple-signed application; configure signing/notarization secrets before release.
-- Desktop and mobile devices must reach the authenticated app endpoint and MinIO download host.
+- Desktop and mobile devices must reach the app endpoint. The desktop API proxy accesses MinIO;
+  the desktop application never connects to MinIO directly.
 - For iOS private distribution, add a separate workflow/profile when you are ready to ship IPA internally.

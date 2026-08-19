@@ -27,7 +27,7 @@ export function ConsignmentChecklistCard({ items, loading }: ConsignmentChecklis
               style={[styles.row, { borderTopColor: theme.colors.separator }]}
             >
               <View style={styles.itemText}>
-                <Text style={[styles.code, { color: theme.colors.text }]}>{item.trackingCode}</Text>
+                <Text style={[styles.code, { color: theme.colors.text }]}>{item.bookingCode}</Text>
                 <Text style={[styles.meta, { color: theme.colors.textSubtle }]}>
                   {item.receiverName}
                 </Text>

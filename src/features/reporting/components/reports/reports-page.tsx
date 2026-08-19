@@ -1418,14 +1418,13 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
           sections: [
             {
               heading: 'Statement Lines',
-              headers: ['Timestamp', 'Type', 'Direction', 'Booking', 'Tracking', 'Notes', 'Amount'],
+              headers: ['Timestamp', 'Type', 'Direction', 'Booking', 'Notes', 'Amount'],
               rows:
                 customerStatement?.rows.map((row) => [
                   formatDateTime(row.timestamp),
                   row.entryType,
                   row.direction,
                   row.bookingCode ?? '-',
-                  row.trackingCode ?? '-',
                   row.notes,
                   row.amountPsw === null ? '-' : formatMoneyPsw(row.amountPsw),
                 ]) ?? [],
@@ -1475,7 +1474,6 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
             {
               heading: 'Parcel Detail',
               headers: [
-                'Tracking',
                 'Booking',
                 'Status',
                 'Source',
@@ -1486,7 +1484,6 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
               ],
               rows:
                 parcelStatusReport?.rows.map((row) => [
-                  row.trackingCode,
                   row.bookingCode,
                   PARCEL_STATUS_LABELS[row.status] ?? String(row.status),
                   row.sourceBranchName ?? '-',
@@ -1550,7 +1547,6 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
               heading: 'Delivery Detail',
               headers: [
                 'Created',
-                'Tracking',
                 'Booking',
                 'Rider',
                 'Destination',
@@ -1564,7 +1560,6 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
               rows:
                 deliveryPerformanceReport?.rows.map((row) => [
                   formatDateTime(row.createdAt),
-                  row.trackingCode,
                   row.bookingCode,
                   row.riderName ?? '-',
                   row.destinationBranchName ?? '-',
@@ -1873,7 +1868,6 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
             {
               heading: 'Outstanding Parcels',
               headers: [
-                'Tracking',
                 'Booking',
                 'Status',
                 'Source',
@@ -1885,7 +1879,6 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
               ],
               rows:
                 toBePaidOutstandingReport?.rows.map((row) => [
-                  row.trackingCode,
                   row.bookingCode,
                   PARCEL_STATUS_LABELS[row.status] ?? String(row.status),
                   row.sourceBranchName ?? '-',
@@ -1950,7 +1943,6 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
             {
               heading: 'Reconciliation Detail',
               headers: [
-                'Tracking',
                 'Booking',
                 'Status',
                 'Source',
@@ -1965,7 +1957,6 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
               ],
               rows:
                 toBePaidCollectionsReconciliationReport?.rows.map((row) => [
-                  row.trackingCode,
                   row.bookingCode,
                   PARCEL_STATUS_LABELS[row.status] ?? String(row.status),
                   row.sourceBranchName ?? '-',
@@ -2015,7 +2006,6 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
               heading: 'Storage Waiver Entries',
               headers: [
                 'Waived At',
-                'Tracking',
                 'Booking',
                 'Destination',
                 'Waived By',
@@ -2027,7 +2017,6 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
               rows:
                 storageWaiverFinancialReport?.rows.map((row) => [
                   formatDateTime(row.waivedAt),
-                  row.trackingCode,
                   row.bookingCode,
                   row.destinationBranchName ?? '-',
                   row.waivedByName ?? '-',
