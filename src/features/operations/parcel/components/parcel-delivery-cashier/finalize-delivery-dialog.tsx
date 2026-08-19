@@ -181,7 +181,7 @@ export function FinalizeDeliveryDialog({
             <AlertDialogHeader>
               <AlertDialogTitle>Finalize delivery?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will mark {parcel?.trackingCode ?? 'this parcel'} as delivered at home with the
+                This will mark {parcel?.bookingCode ?? 'this parcel'} as delivered at home with the
                 entered payment values.
               </AlertDialogDescription>
             </AlertDialogHeader>

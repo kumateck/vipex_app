@@ -10,6 +10,8 @@ export function inferReadPermissionByPath(pathname?: string): PermissionKey | un
   if (pathname.startsWith('/parcels/in-transit/incoming'))
     return PermissionKeys.CanReadParcelIncoming;
   if (pathname.startsWith('/parcels/receive')) return PermissionKeys.CanReadParcelScan;
+  if (pathname.startsWith('/parcels/consignments/') && pathname.endsWith('/receive'))
+    return PermissionKeys.CanReadParcelScan;
   if (pathname === '/parcels' || pathname.startsWith('/parcels/'))
     return PermissionKeys.CanReadParcels;
   if (pathname === '/customers' || pathname.startsWith('/customers/'))

@@ -49,18 +49,19 @@ export function ReceiverPaymentDeliveryDialog({
           <div className="space-y-4">
             <ReceiverPaymentPrimarySections context={context} dialog={dialog} parcel={parcel} />
 
-            <ReceiverOtpSection dialog={dialog} />
-
             <div className="space-y-2 rounded-md border p-3">
               <Label>Main Receiver ID Card (optional)</Label>
               <Select
                 value={dialog.mainCardMode}
-                onValueChange={(value) => dialog.setMainCardMode(value as 'existing' | 'new')}
+                onValueChange={(value) =>
+                  dialog.setMainCardMode(value as 'none' | 'existing' | 'new')
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">No card</SelectItem>
                   <SelectItem value="existing" disabled={dialog.mainReceiverCards.length === 0}>
                     Use existing card
                   </SelectItem>
@@ -83,7 +84,7 @@ export function ReceiverPaymentDeliveryDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              ) : (
+              ) : dialog.mainCardMode === 'new' ? (
                 <div className="grid gap-2 md:grid-cols-2">
                   <Select
                     value={dialog.mainNewCardTypeId}
@@ -106,10 +107,15 @@ export function ReceiverPaymentDeliveryDialog({
                     placeholder="Card number"
                   />
                 </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No ID card will be recorded for this handover.
+                </p>
               )}
             </div>
 
             <ReceiverPaymentSecondarySections context={context} dialog={dialog} />
+            <ReceiverOtpSection dialog={dialog} />
           </div>
         )}
         <DialogFooter>

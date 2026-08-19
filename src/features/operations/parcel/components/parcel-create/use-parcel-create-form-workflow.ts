@@ -197,6 +197,7 @@ export function useParcelCreateFormWorkflow() {
                 : PaymentMethod.CASH,
             parcelValueCedis: amounts[index]?.value,
             chargeCedis: amounts[index]?.charge,
+            callSender: parcel.callSender,
             senderPaymentCedis: 0,
             plannedToBePaidCedis:
               parcel.paymentResponsibility === 'RECEIVER'
@@ -220,10 +221,13 @@ export function useParcelCreateFormWorkflow() {
         amounts,
         branchOptions,
       });
-      const openedPaymentDialog =
-        shouldPrintOnSubmit && printPreference.canPrintAfterSubmit
-          ? await senderPayment.openPaymentDialog(receipt)
-          : false;
+      // A cashier who can collect sender payments is always offered the chance to
+      // complete payment now, regardless of whether they also want to print a receipt.
+      // Parcels with nothing owed by the sender never reach this dialog — the backend
+      // already creates those directly as PROCESSED, with no further step needed.
+      const openedPaymentDialog = printPreference.canPrintAfterSubmit
+        ? await senderPayment.openPaymentDialog(receipt)
+        : false;
       const autoPrintReceipt = shouldPrintOnSubmit && printPreference.canPrintAfterSubmit;
       resetCreateForm({ closePaymentDialog: !openedPaymentDialog });
       if (!openedPaymentDialog) {

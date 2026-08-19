@@ -155,6 +155,7 @@ export type RiderDeliveryRow = {
   receiverName: string | null;
   receiverPhone: string | null;
   secondReceiverId: string | null;
+  callSender: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -193,6 +194,7 @@ export async function listDoorstepByRiderRepo(input: {
       receiverName: r.fullname,
       receiverPhone: r.telephone,
       secondReceiverId: parcels.secondReceiverId,
+      callSender: parcels.callSender,
       createdAt: deliveries.createdAt,
       updatedAt: deliveries.updatedAt,
     })
@@ -242,6 +244,7 @@ export async function listDoorstepByBranchRepo(input: {
       receiverName: r.fullname,
       receiverPhone: r.telephone,
       secondReceiverId: parcels.secondReceiverId,
+      callSender: parcels.callSender,
       createdAt: deliveries.createdAt,
       updatedAt: deliveries.updatedAt,
     })

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { RiderDoorstepRecord } from '../../api/parcel.api';
+import { CallSenderBadge } from '../call-sender-badge';
 
 type RiderCurrentTableProps = {
   data:
@@ -33,7 +34,6 @@ export function RiderCurrentTable({
 }: RiderCurrentTableProps) {
   const columns = useMemo<ColumnDef<RiderDoorstepRecord>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       {
@@ -41,6 +41,19 @@ export function RiderCurrentTable({
         header: 'Receiver',
         accessorFn: (row) =>
           `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <div className="flex items-center gap-1.5">
+              <p>{row.original.receiverName ?? '-'}</p>
+              {row.original.callSender ? (
+                <CallSenderBadge className="h-5 px-1.5 text-[10px]" />
+              ) : null}
+            </div>
+            {row.original.receiverPhone ? (
+              <p className="text-xs text-muted-foreground">{row.original.receiverPhone}</p>
+            ) : null}
+          </div>
+        ),
       },
       {
         id: 'action',

@@ -16,6 +16,7 @@ import { BranchType } from '@/db/schemas/enums';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   CustomerLookupSection,
+  ExistingCustomerEditAction,
   ParcelCard,
   ParcelCreateSenderPaymentDialog,
   ParcelReceipts,
@@ -90,6 +91,13 @@ export function ParcelCreateForm() {
                     <CardDescription>
                       Search by phone to reuse existing customer records.
                     </CardDescription>
+                    <ExistingCustomerEditAction
+                      label="Sender"
+                      phoneName="sender.telephone"
+                      customerIdName="sender.customerId"
+                      fullnameName="sender.fullname"
+                      secondaryPhoneName="sender.telephone2"
+                    />
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -159,8 +167,9 @@ export function ParcelCreateForm() {
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    All parcels will be saved under a single booking. Sender payments are collected
-                    later from the Sender Payments page.
+                    {canPrintAfterSubmit
+                      ? 'All parcels will be saved under a single booking. You will be asked to collect any sender payment as part of saving this booking.'
+                      : 'All parcels will be saved under a single booking. Sender payments are collected later from the Sender Payments page.'}
                   </p>
                   {userBranchType === BranchType.HEADOFFICE ? (
                     <p className="text-xs text-destructive">

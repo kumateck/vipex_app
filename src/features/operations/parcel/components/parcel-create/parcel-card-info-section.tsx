@@ -1,5 +1,6 @@
-import type { Control, FieldPathByValue } from 'react-hook-form';
+import { Controller, type Control, type FieldPathByValue } from 'react-hook-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { sanitizeNumber, sanitizeString } from '@/lib/utils';
 import { BufferedParcelField } from './buffered-parcel-field';
 import type { ParcelBookingFormValues } from './parcel-form.types';
@@ -9,6 +10,7 @@ type ParcelCardInfoSectionProps = {
   parcelDetailsName: FieldPathByValue<ParcelBookingFormValues, string>;
   parcelContentName: FieldPathByValue<ParcelBookingFormValues, string>;
   parcelValueName: FieldPathByValue<ParcelBookingFormValues, string>;
+  callSenderName: FieldPathByValue<ParcelBookingFormValues, boolean>;
 };
 
 export function ParcelCardInfoSection({
@@ -16,6 +18,7 @@ export function ParcelCardInfoSection({
   parcelDetailsName,
   parcelContentName,
   parcelValueName,
+  callSenderName,
 }: ParcelCardInfoSectionProps) {
   return (
     <Card size="sm" className="border-muted/50 bg-muted/20 shadow-none">
@@ -69,6 +72,29 @@ export function ParcelCardInfoSection({
             },
           }}
         />
+
+        <label
+          htmlFor={`${callSenderName}-checkbox`}
+          className="flex items-start gap-3 rounded-md border p-3"
+        >
+          <Controller
+            control={control}
+            name={callSenderName}
+            render={({ field }) => (
+              <Checkbox
+                id={`${callSenderName}-checkbox`}
+                checked={field.value}
+                onCheckedChange={(value) => field.onChange(value === true)}
+              />
+            )}
+          />
+          <span className="text-sm">
+            <span className="block font-medium">Call sender before delivery</span>
+            <span className="text-muted-foreground">
+              Require staff to call the sender first before this parcel is given to the receiver.
+            </span>
+          </span>
+        </label>
       </CardContent>
     </Card>
   );

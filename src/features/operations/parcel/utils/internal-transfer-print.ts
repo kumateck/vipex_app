@@ -43,7 +43,6 @@ export async function printParcelInternalTransferSlip(details: ParcelInternalTra
       (item, index) => `
         <tr>
           <td>${index + 1}</td>
-          <td>${item.trackingCode}</td>
           <td>${item.bookingCode}</td>
           <td>${item.receiverName ?? '-'}</td>
           <td>${item.receiverPhone ?? '-'}</td>
@@ -152,7 +151,6 @@ export async function printParcelInternalTransferSlip(details: ParcelInternalTra
           <thead>
             <tr>
               <th>#</th>
-              <th>Tracking</th>
               <th>Booking</th>
               <th>Receiver</th>
               <th>Telephone</th>

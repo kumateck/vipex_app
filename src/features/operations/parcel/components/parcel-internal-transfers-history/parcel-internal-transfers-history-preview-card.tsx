@@ -68,9 +68,9 @@ export function ParcelInternalTransfersHistoryPreviewCard({
             <div className="space-y-3">
               {details.items.map((item) => (
                 <div key={item.parcelId} className="rounded-lg border p-3 text-sm">
-                  <p className="font-medium">{item.trackingCode}</p>
+                  <p className="font-medium">{item.bookingCode}</p>
                   <p className="text-muted-foreground">
-                    {item.bookingCode} • {item.receiverName ?? '-'} • {item.parcelDetails}
+                    {item.receiverName ?? '-'} • {item.parcelDetails}
                   </p>
                 </div>
               ))}

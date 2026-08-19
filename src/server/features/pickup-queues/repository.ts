@@ -114,6 +114,7 @@ export async function listActivePickupQueuesForBranchRepo(
       parcelDetails: parcels.parcelDetails,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       chargePsw: parcels.chargePsw,
+      callSender: parcels.callSender,
       receiverName: receiver.fullname,
       receiverPhone: receiver.telephone,
     })

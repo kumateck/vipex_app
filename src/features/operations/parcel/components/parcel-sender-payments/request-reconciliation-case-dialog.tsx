@@ -74,7 +74,7 @@ export function RequestReconciliationCaseDialog({
         </DialogHeader>
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Tracking: <strong>{parcel?.trackingCode ?? '-'}</strong>
+            Booking: <strong>{parcel?.bookingCode ?? '-'}</strong>
           </p>
           <div className="space-y-2">
             <Label htmlFor="recon-case-type">Case Type</Label>

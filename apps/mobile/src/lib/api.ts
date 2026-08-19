@@ -127,14 +127,19 @@ type RequestOptions = {
   timeoutMs?: number;
 };
 
-class ApiRequestError extends Error {
+export class ApiRequestError extends Error {
   status: number | null;
   url: string;
-  constructor(message: string, input: { status: number | null; url: string }) {
+  details?: Record<string, unknown>;
+  constructor(
+    message: string,
+    input: { status: number | null; url: string; details?: Record<string, unknown> },
+  ) {
     super(message);
     this.name = 'ApiRequestError';
     this.status = input.status;
     this.url = input.url;
+    this.details = input.details;
   }
 }
 
@@ -207,7 +212,7 @@ async function request<T>(options: RequestOptions): Promise<T> {
       clearTimeout(timeout);
 
       const json = (await response.json().catch(() => null)) as {
-        error?: { message?: string };
+        error?: { message?: string; details?: Record<string, unknown> };
       } | null;
 
       if (!response.ok) {
@@ -226,6 +231,7 @@ async function request<T>(options: RequestOptions): Promise<T> {
         throw new ApiRequestError(`${serverMessage || 'Request failed'} (${response.status})`, {
           status: response.status,
           url: targetUrl,
+          details: json?.error?.details,
         });
       }
 
@@ -434,6 +440,129 @@ export async function updateParcelStatus(
     method: 'PATCH',
     token: accessToken,
     body: { status },
+  });
+}
+
+export type IncomingConsignment = {
+  id: string;
+  code: string;
+  sourceId: string;
+  sourceName: string;
+  destinationId: string;
+  consignmentDate: string;
+  serialForDay: number;
+  status: number;
+  closedBy: string | null;
+  closedAt: string | null;
+  closedWithExceptions: boolean;
+  closeExceptionReason: string | null;
+  arrived: number;
+  total: number;
+};
+
+export type ConsignmentDetail = Omit<IncomingConsignment, 'sourceName'> & { companyId: string };
+
+export type ConsignmentItem = {
+  parcelId: string;
+  trackingCode: string;
+  bookingCode: string;
+  parcelDetails: string;
+  senderName: string;
+  receiverName: string;
+  addedAt: string;
+  arrivedAt: string | null;
+  arrivedBy: string | null;
+  arrivedByName: string | null;
+};
+
+export type ReceiveConsignmentItemResult =
+  | { outcome: 'RECEIVED'; parcelId: string; trackingCode: string; arrived: number; total: number }
+  | {
+      outcome: 'ALREADY_RECEIVED';
+      parcelId: string;
+      trackingCode: string;
+      arrivedAt: string;
+      arrivedByName: string | null;
+    }
+  | {
+      outcome: 'WRONG_CONSIGNMENT';
+      parcelId: string;
+      trackingCode: string;
+      belongsToConsignmentId: string | null;
+      belongsToConsignmentCode: string | null;
+    }
+  | {
+      outcome: 'NOT_DISPATCHED';
+      parcelId: string;
+      trackingCode: string;
+      sourceBranchId: string;
+      sourceBranchName: string | null;
+    };
+
+export type CloseConsignmentResult = {
+  status: number;
+  arrived: number;
+  total: number;
+  missingParcelIds: string[];
+};
+
+export async function listIncomingConsignments(
+  accessToken: string,
+  input: { companyId: string; destinationId: string },
+): Promise<IncomingConsignment[]> {
+  return request<IncomingConsignment[]>({
+    path: '/shipments/consignments/incoming',
+    token: accessToken,
+    query: { companyId: input.companyId, destinationId: input.destinationId },
+  });
+}
+
+export async function getConsignmentDetail(
+  accessToken: string,
+  consignmentId: string,
+): Promise<ConsignmentDetail> {
+  return request<ConsignmentDetail>({
+    path: `/shipments/consignments/${consignmentId}`,
+    token: accessToken,
+  });
+}
+
+export async function listConsignmentItems(
+  accessToken: string,
+  consignmentId: string,
+): Promise<ConsignmentItem[]> {
+  return request<ConsignmentItem[]>({
+    path: `/shipments/consignments/${consignmentId}/items`,
+    token: accessToken,
+  });
+}
+
+export async function receiveConsignmentItem(
+  accessToken: string,
+  consignmentId: string,
+  code: string,
+): Promise<ReceiveConsignmentItemResult> {
+  return request<ReceiveConsignmentItemResult>({
+    path: `/shipments/consignments/${consignmentId}/receive`,
+    method: 'POST',
+    token: accessToken,
+    body: { code },
+  });
+}
+
+export async function closeConsignment(
+  accessToken: string,
+  consignmentId: string,
+  input?: { forceWithExceptions?: boolean; exceptionReason?: string },
+): Promise<CloseConsignmentResult> {
+  return request<CloseConsignmentResult>({
+    path: `/shipments/consignments/${consignmentId}/close`,
+    method: 'POST',
+    token: accessToken,
+    body: {
+      forceWithExceptions: input?.forceWithExceptions,
+      exceptionReason: input?.exceptionReason,
+    },
   });
 }
 
