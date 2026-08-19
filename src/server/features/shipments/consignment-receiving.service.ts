@@ -15,11 +15,19 @@ import { getConsignmentRepo, listConsignmentsForParcelRepo } from './consignment
 import { getParcelByCodeRepo, updateParcelRepo } from './parcels.repository';
 
 type ReceiveConsignmentItemOutcome =
-  | { outcome: 'RECEIVED'; parcelId: string; trackingCode: string; arrived: number; total: number }
+  | {
+      outcome: 'RECEIVED';
+      parcelId: string;
+      trackingCode: string;
+      bookingCode: string;
+      arrived: number;
+      total: number;
+    }
   | {
       outcome: 'ALREADY_RECEIVED';
       parcelId: string;
       trackingCode: string;
+      bookingCode: string;
       arrivedAt: Date;
       arrivedByName: string | null;
     }
@@ -27,6 +35,7 @@ type ReceiveConsignmentItemOutcome =
       outcome: 'WRONG_CONSIGNMENT';
       parcelId: string;
       trackingCode: string;
+      bookingCode: string;
       belongsToConsignmentId: string | null;
       belongsToConsignmentCode: string | null;
     }
@@ -34,6 +43,7 @@ type ReceiveConsignmentItemOutcome =
       outcome: 'NOT_DISPATCHED';
       parcelId: string;
       trackingCode: string;
+      bookingCode: string;
       sourceBranchId: string;
       sourceBranchName: string | null;
     };
@@ -96,6 +106,7 @@ export async function receiveConsignmentItemSvc(input: {
       outcome: 'RECEIVED',
       parcelId: parcel.id,
       trackingCode: parcel.trackingCode,
+      bookingCode: parcel.bookingCode,
       ...counts,
     };
   }
@@ -106,6 +117,7 @@ export async function receiveConsignmentItemSvc(input: {
       outcome: 'ALREADY_RECEIVED',
       parcelId: parcel.id,
       trackingCode: parcel.trackingCode,
+      bookingCode: parcel.bookingCode,
       arrivedAt: item.arrivedAt,
       arrivedByName: item.arrivedByName,
     };
@@ -129,6 +141,7 @@ export async function receiveConsignmentItemSvc(input: {
       outcome: 'NOT_DISPATCHED',
       parcelId: parcel.id,
       trackingCode: parcel.trackingCode,
+      bookingCode: parcel.bookingCode,
       sourceBranchId: parcel.sourceId,
       sourceBranchName: sourceBranch?.name ?? null,
     };
@@ -150,6 +163,7 @@ export async function receiveConsignmentItemSvc(input: {
     outcome: 'WRONG_CONSIGNMENT',
     parcelId: parcel.id,
     trackingCode: parcel.trackingCode,
+    bookingCode: parcel.bookingCode,
     belongsToConsignmentId: active.consignmentId,
     belongsToConsignmentCode: active.code,
   };

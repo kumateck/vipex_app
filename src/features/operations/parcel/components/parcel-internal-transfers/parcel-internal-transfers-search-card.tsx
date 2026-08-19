@@ -45,7 +45,7 @@ export function ParcelInternalTransfersSearchCard({
           <Input
             value={searchTerm}
             onChange={(event) => onSearchTermChange(event.target.value)}
-            placeholder="Tracking code, booking code, receiver name, or phone"
+            placeholder="Booking code, receiver name, or phone"
           />
           <Button onClick={onSearch} disabled={isSearching}>
             Search

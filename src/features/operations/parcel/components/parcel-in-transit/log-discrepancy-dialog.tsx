@@ -65,12 +65,12 @@ export function LogDiscrepancyDialog({
           ) : (
             <>
               <div className="space-y-2">
-                <Label htmlFor="missing-tracking-code">Tracking Code</Label>
+                <Label htmlFor="missing-tracking-code">QR Code</Label>
                 <Input
                   id="missing-tracking-code"
                   value={missingTrackingCode}
                   onChange={(event) => onMissingTrackingCodeChange(event.target.value)}
-                  placeholder="Enter scanned or printed tracking code"
+                  placeholder="Scan or enter the QR code value"
                 />
               </div>
               <div className="space-y-2">

@@ -476,11 +476,19 @@ export type ConsignmentItem = {
 };
 
 export type ReceiveConsignmentItemResult =
-  | { outcome: 'RECEIVED'; parcelId: string; trackingCode: string; arrived: number; total: number }
+  | {
+      outcome: 'RECEIVED';
+      parcelId: string;
+      trackingCode: string;
+      bookingCode: string;
+      arrived: number;
+      total: number;
+    }
   | {
       outcome: 'ALREADY_RECEIVED';
       parcelId: string;
       trackingCode: string;
+      bookingCode: string;
       arrivedAt: string;
       arrivedByName: string | null;
     }
@@ -488,6 +496,7 @@ export type ReceiveConsignmentItemResult =
       outcome: 'WRONG_CONSIGNMENT';
       parcelId: string;
       trackingCode: string;
+      bookingCode: string;
       belongsToConsignmentId: string | null;
       belongsToConsignmentCode: string | null;
     }
@@ -495,6 +504,7 @@ export type ReceiveConsignmentItemResult =
       outcome: 'NOT_DISPATCHED';
       parcelId: string;
       trackingCode: string;
+      bookingCode: string;
       sourceBranchId: string;
       sourceBranchName: string | null;
     };
