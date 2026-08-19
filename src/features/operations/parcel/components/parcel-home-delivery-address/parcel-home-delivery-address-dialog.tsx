@@ -41,7 +41,7 @@ export function ParcelHomeDeliveryAddressDialog({
         </DialogHeader>
         <div className="space-y-3">
           <p className="text-sm">
-            <strong>Tracking:</strong> {parcel?.trackingCode}
+            <strong>Booking:</strong> {parcel?.bookingCode}
           </p>
           <p className="text-sm">
             <strong>To Be Paid:</strong> {parcel ? formatCurrency(parcel.plannedToBePaidPsw) : '-'}

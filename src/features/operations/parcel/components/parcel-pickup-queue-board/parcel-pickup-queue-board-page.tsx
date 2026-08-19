@@ -117,9 +117,6 @@ export function ParcelPickupQueueBoardPage({
                     <strong>Telephone:</strong> {card.receiverPhone ?? '-'}
                   </p>
                   <p>
-                    <strong>Tracking:</strong> {card.trackingCode}
-                  </p>
-                  <p>
                     <strong>Booking:</strong> {card.bookingCode}
                   </p>
                   <p>

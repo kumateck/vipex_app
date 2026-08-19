@@ -172,7 +172,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         receivedBy: user.id,
         status: ParcelStatus.ARRIVED_AT_DESTINATION,
       }).unwrap();
-      toast.success(`Received ${parcel.trackingCode}`);
+      toast.success(`Received ${parcel.bookingCode}`);
     },
     [markParcelReceived, user?.id],
   );
@@ -487,7 +487,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         discrepancyType: 'record_not_physical',
         notes: notes.length > 0 ? notes : null,
       }).unwrap();
-      toast.success(`Logged discrepancy for ${discrepancyParcel.trackingCode}`);
+      toast.success(`Logged discrepancy for ${discrepancyParcel.bookingCode}`);
     } else {
       const trackingCode = missingTrackingCode.trim();
       const bookingCode = missingBookingCode.trim();

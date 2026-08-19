@@ -317,8 +317,8 @@ export function ParcelReceivePage() {
 
       toast.success(
         mode === 'scan'
-          ? `Parcel ${parcel.trackingCode} marked as ARRIVED_AT_DESTINATION`
-          : `Received ${parcel.trackingCode}`,
+          ? `Parcel ${parcel.bookingCode} marked as ARRIVED_AT_DESTINATION`
+          : `Received ${parcel.bookingCode}`,
       );
 
       if (manualQuery.search && manualQuery.search.trim().length > 0) {
