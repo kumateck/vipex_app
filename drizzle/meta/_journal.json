@@ -281,6 +281,90 @@
       "when": 1776270000000,
       "tag": "0047_momo_transactions",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1776355200000,
+      "tag": "0048_parcel_call_sender",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1776441700000,
+      "tag": "0007_parcels_source_location_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1776441710000,
+      "tag": "0008_parcel_discrepancies",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1776441600000,
+      "tag": "0049_consignment_receiving_completeness",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1776441800000,
+      "tag": "0014_daily_cash_payment_mode_breakdown",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1776441810000,
+      "tag": "0015_fleet_vehicle_registry_children",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1776441820000,
+      "tag": "0016_parcel_aging_disposition",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1776441830000,
+      "tag": "0017_fleet_driver_compliance_records",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1776441840000,
+      "tag": "0017_parcel_storage_waivers",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1776441850000,
+      "tag": "0018_parcel_storage_waivers_accounting",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1776441860000,
+      "tag": "0019_fleet_fuel_analytics_baseline",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1776441870000,
+      "tag": "0050_pickup_queue_daily_sequence_fix",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,10 @@
-import { BadRequest } from '../../utils/http-error';
+import { BadRequest, NotFound } from '../../utils/http-error';
 import { ParcelStatus } from '@/db/schemas';
+import {
+  getConsignmentReceivingCountsRepo,
+  listConsignmentItemsRepo,
+  listIncomingConsignmentsRepo,
+} from './consignments-receiving.repository';
 import {
   addConsignmentItemsRepo,
   createConsignmentRepo,
@@ -9,6 +14,8 @@ import {
 } from './consignments.repository';
 import { updateParcelsStatusRepo } from './parcels.repository';
 import { getParcelSvc } from './parcels.service';
+
+export { closeConsignmentSvc, receiveConsignmentItemSvc } from './consignment-receiving.service';
 
 function makeCode(consignmentDate: Date, serial: number): string {
   const y = consignmentDate.getFullYear();
@@ -86,4 +93,25 @@ export async function removeItemFromConsignmentSvc(input: {
 }) {
   const removed = await removeConsignmentItemRepo(input.consignmentId, input.parcelId, new Date());
   return { removed };
+}
+
+export async function getConsignmentDetailSvc(consignmentId: string) {
+  const consignment = await getConsignmentRepo(consignmentId);
+  if (!consignment) throw NotFound('Consignment not found');
+  const counts = await getConsignmentReceivingCountsRepo(consignmentId);
+  return { ...consignment, ...counts };
+}
+
+export async function listConsignmentItemsSvc(consignmentId: string) {
+  const consignment = await getConsignmentRepo(consignmentId);
+  if (!consignment) throw NotFound('Consignment not found');
+  return listConsignmentItemsRepo(consignmentId);
+}
+
+export async function listIncomingConsignmentsSvc(input: {
+  companyId: string;
+  destinationId: string;
+  statuses?: number[];
+}) {
+  return listIncomingConsignmentsRepo(input);
 }

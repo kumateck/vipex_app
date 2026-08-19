@@ -48,7 +48,7 @@ export function CustomerTransactionsTab({
                 ) ?? '-'}
               </p>
               <div className="flex items-center justify-between gap-2">
-                <p className="font-medium">{row.trackingCode}</p>
+                <p className="font-medium">{row.bookingCode}</p>
                 <div className="flex items-center gap-2">
                   <Badge variant={row.transactionRole === 'SENDER' ? 'default' : 'secondary'}>
                     {row.transactionRole === 'SENDER' ? 'Sender' : 'Receiver'}

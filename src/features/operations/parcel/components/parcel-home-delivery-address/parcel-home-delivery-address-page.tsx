@@ -70,7 +70,6 @@ export function ParcelHomeDeliveryAddressPage() {
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       {

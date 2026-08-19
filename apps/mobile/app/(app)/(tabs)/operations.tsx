@@ -82,6 +82,13 @@ export default function OperationsTabScreen() {
         href="/(app)/receive"
         linkLabel="Open Receive"
       />
+      <ModuleCard
+        icon="cube-outline"
+        title="Receive Consignments"
+        description="Open an incoming consignment and scan every parcel against its checklist before closing it."
+        href="/(app)/receive-consignments"
+        linkLabel="Open Consignments"
+      />
     </AppScreen>
   );
 }

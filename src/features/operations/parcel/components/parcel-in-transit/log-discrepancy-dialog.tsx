@@ -55,9 +55,6 @@ export function LogDiscrepancyDialog({
           {discrepancyParcel ? (
             <div className="space-y-2 text-sm">
               <p>
-                <strong>Tracking:</strong> {discrepancyParcel.trackingCode}
-              </p>
-              <p>
                 <strong>Booking:</strong> {discrepancyParcel.bookingCode}
               </p>
               <p className="text-muted-foreground">

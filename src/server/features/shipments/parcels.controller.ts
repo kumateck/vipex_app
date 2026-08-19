@@ -65,6 +65,7 @@ export async function listParcelsCtrl(
       confirmedAt: p.confirmedAt ? p.confirmedAt.toISOString() : null,
       deletedAt: p.deletedAt ? p.deletedAt.toISOString() : null,
       bookingCreatedAt: p.bookingCreatedAt ? p.bookingCreatedAt.toISOString() : null,
+      consignmentCreatedAt: p.consignmentCreatedAt ? p.consignmentCreatedAt.toISOString() : null,
       pickupQueuedAt: p.pickupQueuedAt ? p.pickupQueuedAt.toISOString() : null,
       pickupQueueEndedAt: p.pickupQueueEndedAt ? p.pickupQueueEndedAt.toISOString() : null,
     })),

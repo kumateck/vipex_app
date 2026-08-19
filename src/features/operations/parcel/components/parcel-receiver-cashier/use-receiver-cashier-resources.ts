@@ -3,7 +3,7 @@ import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api'
 import { useListCardOptionsQuery, useListCustomerCardsQuery } from '@/features/customers/api';
 import { useGetLocationQuery } from '@/features/locations/api/locations.api';
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
-import { CashierType } from '@/db/schemas/enums';
+import { CashierType, UserStatus } from '@/db/schemas/enums';
 import type { ServerListQuery } from '@/services/rtk-query';
 import {
   type ParcelSearchRow,
@@ -22,6 +22,7 @@ export type ParcelReceiverQuery = ServerListQuery<{
 type ReceiverCashierResourcesInput = {
   companyId: string | null;
   branchId: string | null;
+  cashierLocationId: string | null;
   selectedParcel: ParcelSearchRow | null;
   query: ParcelReceiverQuery;
   isPickupQueueEnabled: boolean;
@@ -30,16 +31,17 @@ type ReceiverCashierResourcesInput = {
 export function useReceiverCashierResources({
   companyId,
   branchId,
+  cashierLocationId,
   selectedParcel,
   query,
   isPickupQueueEnabled,
 }: ReceiverCashierResourcesInput) {
   const { data: cardOptions = [] } = useListCardOptionsQuery();
   const { data: staffOptions = [] } = useListUserOptionsQuery(
-    companyId && branchId
-      ? { companyId, branchId, locationId: selectedParcel?.pickupLocationId ?? undefined }
+    companyId && branchId && cashierLocationId
+      ? { companyId, branchId, locationId: cashierLocationId, status: UserStatus.ACTIVE }
       : undefined,
-    { skip: !companyId || !branchId || !selectedParcel },
+    { skip: !companyId || !branchId || !cashierLocationId || !selectedParcel },
   );
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
     { companyId },

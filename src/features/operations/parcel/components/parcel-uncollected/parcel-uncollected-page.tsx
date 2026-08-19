@@ -14,6 +14,7 @@ import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { type ParcelSearchRow, useSearchParcelsQuery } from '../../api/parcel.api';
+import { CallSenderBadge } from '../call-sender-badge';
 
 const EMPTY_META: PaginationMeta = {
   totalRecords: 0,
@@ -62,9 +63,19 @@ export function ParcelUncollectedPage() {
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
-      { accessorKey: 'receiverName', header: 'Receiver' },
+      {
+        id: 'receiver',
+        header: 'Receiver',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1.5 leading-tight">
+            <p>{row.original.receiverName ?? '-'}</p>
+            {row.original.callSender ? (
+              <CallSenderBadge className="h-5 px-1.5 text-[10px]" />
+            ) : null}
+          </div>
+        ),
+      },
       { accessorKey: 'receiverPhone', header: 'Phone' },
       {
         id: 'age',

@@ -1,4 +1,7 @@
-import type { ProcessedParcel } from '../../api/parcel.api';
+type PaymentStatusParcel = {
+  chargePsw: number;
+  plannedToBePaidPsw: number;
+};
 
 export const CONSIGNMENT_PAYMENT_STATUS_LEGEND = [
   { label: 'Paid', dotClassName: 'bg-emerald-500' },
@@ -6,7 +9,7 @@ export const CONSIGNMENT_PAYMENT_STATUS_LEGEND = [
   { label: 'Partial', dotClassName: 'bg-sky-500' },
 ];
 
-export function getConsignmentPaymentStatus(parcel: ProcessedParcel) {
+export function getConsignmentPaymentStatus(parcel: PaymentStatusParcel) {
   const charge = Number(parcel.chargePsw ?? 0);
   const receiverDue = Math.max(Number(parcel.plannedToBePaidPsw ?? 0), 0);
 

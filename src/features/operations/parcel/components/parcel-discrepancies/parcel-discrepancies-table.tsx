@@ -40,7 +40,6 @@ export function ParcelDiscrepanciesTable({
 }: ParcelDiscrepanciesTableProps) {
   const columns = useMemo<ColumnDef<ParcelDiscrepancyRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       {
         id: 'type',
