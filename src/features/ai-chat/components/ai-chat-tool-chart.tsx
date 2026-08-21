@@ -13,37 +13,49 @@ function toolTitle(toolName: string): string {
     .join(' ');
 }
 
+function formatArgs(args: Record<string, unknown>): string {
+  const entries = Object.entries(args).filter(([, value]) => value != null && value !== '');
+  if (!entries.length) return '';
+  return entries.map(([key, value]) => `${key}: ${value}`).join(', ');
+}
+
 export function AiChatToolChart({ invocation }: { invocation: AiChatToolInvocation }) {
-  if (invocation.chartType === 'none' || !invocation.chartPoints.length) return null;
-
   const title = toolTitle(invocation.toolName);
-  const description = 'From live data, verified against the source report.';
+  const argsLabel = formatArgs(invocation.args);
+  const hasChart = invocation.chartType !== 'none' && invocation.chartPoints.length > 0;
 
-  if (invocation.chartType === 'bar') {
-    return (
-      <DashboardBarChartCard
-        title={title}
-        description={description}
-        seriesName={title}
-        data={invocation.chartPoints}
-      />
-    );
-  }
-  if (invocation.chartType === 'donut') {
-    return (
-      <DashboardDonutChartCard
-        title={title}
-        description={description}
-        data={invocation.chartPoints}
-      />
-    );
-  }
   return (
-    <DashboardLineChartCard
-      title={title}
-      description={description}
-      seriesName={title}
-      data={invocation.chartPoints}
-    />
+    <div className="space-y-2">
+      <div className="flex items-baseline gap-1.5 font-mono text-xs text-muted-foreground">
+        <span className="text-primary">●</span>
+        <span className="text-foreground/80">{invocation.toolName}</span>
+        {argsLabel ? <span>({argsLabel})</span> : null}
+      </div>
+      {hasChart ? (
+        <div className="ml-3 border-l-2 border-muted pl-3">
+          {invocation.chartType === 'bar' ? (
+            <DashboardBarChartCard
+              title={title}
+              description="Live data, verified against the source report."
+              seriesName={title}
+              data={invocation.chartPoints}
+            />
+          ) : invocation.chartType === 'donut' ? (
+            <DashboardDonutChartCard
+              title={title}
+              description="Live data, verified against the source report."
+              data={invocation.chartPoints}
+            />
+          ) : (
+            <DashboardLineChartCard
+              title={title}
+              description="Live data, verified against the source report."
+              seriesName={title}
+              data={invocation.chartPoints}
+            />
+          )}
+        </div>
+      ) : null}
+    </div>
   );
 }

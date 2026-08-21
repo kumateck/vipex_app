@@ -1,8 +1,12 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupTextarea,
+} from '@/components/ui/input-group';
 import { Spinner } from '@/components/ui/spinner';
-import { Textarea } from '@/components/ui/textarea';
 
 type Props = {
   onSend: (message: string) => void;
@@ -12,8 +16,7 @@ type Props = {
 export function AiChatComposer({ onSend, disabled }: Props) {
   const [message, setMessage] = useState('');
 
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  function submit() {
     const trimmed = message.trim();
     if (!trimmed || disabled) return;
     onSend(trimmed);
@@ -21,24 +24,34 @@ export function AiChatComposer({ onSend, disabled }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-end gap-2">
-      <Textarea
+    <InputGroup className="rounded-3xl border-0 bg-muted/40 px-1 shadow-sm">
+      <InputGroupTextarea
         value={message}
         onChange={(event) => setMessage(event.target.value)}
         placeholder="Ask about profitability, cash, branch performance, credit risk..."
         maxLength={1000}
-        className="min-h-11 flex-1"
+        rows={13}
+        className="max-h-72 min-h-14 overflow-y-auto px-3 text-sm"
         onKeyDown={(event) => {
           if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
-            handleSubmit(event);
+            submit();
           }
         }}
       />
-      <Button type="submit" disabled={disabled || message.trim().length === 0}>
-        {disabled ? <Spinner /> : <Icon name="Send" className="h-4 w-4" />}
-        Send
-      </Button>
-    </form>
+      <InputGroupAddon align="block-end" className="justify-end px-3 pb-2.5">
+        <InputGroupButton
+          type="button"
+          size="icon-sm"
+          variant="default"
+          className="rounded-full"
+          disabled={disabled || message.trim().length === 0}
+          onClick={submit}
+          aria-label="Send"
+        >
+          {disabled ? <Spinner /> : <Icon name="ArrowUp" className="h-4 w-4" />}
+        </InputGroupButton>
+      </InputGroupAddon>
+    </InputGroup>
   );
 }

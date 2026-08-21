@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
-import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import {
   useGetLatestAiChatConversationQuery,
   useSendAiChatMessageMutation,
@@ -68,42 +66,40 @@ export function AiChatPage() {
   const displayMessages = sendState.isLoading ? [...messages, THINKING_MESSAGE] : messages;
 
   return (
-    <ScrollableWrapper>
-      <div className="mx-auto flex h-full w-full max-w-4xl flex-col p-4 md:p-6">
-        <Card className="flex min-h-[70vh] flex-1 flex-col">
-          <CardHeader className="flex flex-row items-start justify-between gap-4">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Icon name="Sparkles" className="h-5 w-5 text-primary" /> AI Insights Chat
-              </CardTitle>
-              <CardDescription>
-                Ask about profitability, cash, branch performance, or credit risk. Answers are
-                grounded in live data — verify against the charts shown before acting on them.
-              </CardDescription>
-            </div>
-            <Button variant="outline" size="sm" onClick={handleNewChat}>
-              <Icon name="Plus" className="h-4 w-4" /> New Chat
-            </Button>
-          </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
-            {sendState.error ? (
-              <p className="text-sm text-muted-foreground">
-                The AI chat isn&apos;t available right now — please try again shortly.
-              </p>
-            ) : null}
+    <div className="w-full p-3">
+      <div className="flex h-[calc(100vh-7rem)] flex-col overflow-hidden rounded-2xl border bg-background shadow">
+        <div className="z-20 flex shrink-0 items-start justify-between gap-4 border-b bg-background/95 px-4 py-3 backdrop-blur">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <Icon name="Sparkles" className="h-4 w-4 text-primary" /> AI Insights Chat
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Ask about profitability, cash, branch performance, or credit risk. Answers are
+              grounded in live data — verify against the charts shown before acting on them.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" className="shrink-0" onClick={handleNewChat}>
+            <Icon name="Plus" className="h-4 w-4" /> New Chat
+          </Button>
+        </div>
 
-            {displayMessages.length === 0 ? (
-              <div className="flex flex-1 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
-                Ask your first question to get started.
-              </div>
-            ) : (
-              <AiChatMessageList messages={displayMessages} />
-            )}
+        {displayMessages.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+            Ask your first question to get started.
+          </div>
+        ) : (
+          <AiChatMessageList messages={displayMessages} />
+        )}
 
-            <AiChatComposer onSend={handleSend} disabled={sendState.isLoading} />
-          </CardContent>
-        </Card>
+        <div className="shrink-0 border-t bg-background/95 px-4 py-3 backdrop-blur">
+          {sendState.error ? (
+            <p className="mb-2 text-sm text-muted-foreground">
+              The AI chat isn&apos;t available right now — please try again shortly.
+            </p>
+          ) : null}
+          <AiChatComposer onSend={handleSend} disabled={sendState.isLoading} />
+        </div>
       </div>
-    </ScrollableWrapper>
+    </div>
   );
 }
