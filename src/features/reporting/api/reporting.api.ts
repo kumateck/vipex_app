@@ -526,7 +526,10 @@ export interface DailyCashierSalesTransactionRow {
   parcelId: string;
   bookingCode: string;
   trackingCode: string;
+  parcelDetails: string;
+  parcelContent: string;
   payerName: string;
+  payerTelephone?: string | null;
   whoPaid: string;
   cashierId?: string | null;
   cashierName: string;
@@ -549,8 +552,12 @@ export interface DailyCashierSalesToBePaidRow {
   parcelId: string;
   sessionId?: string | null;
   bookingCode: string;
+  parcelDetails: string;
+  parcelContent: string;
   senderName?: string | null;
+  senderTelephone?: string | null;
   receiverName?: string | null;
+  receiverTelephone?: string | null;
   plannedToBePaidPsw: number;
   createdAt: string;
 }

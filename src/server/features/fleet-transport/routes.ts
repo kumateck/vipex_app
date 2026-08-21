@@ -133,7 +133,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetVehicleOptions),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet vehicle options' },
@@ -162,7 +162,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetVehicles),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet vehicles' },
@@ -219,7 +219,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanCreateFleetVehicles),
+        requirePermissions(PermissionKeys.CanCreateFleetVehicle),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create fleet vehicle' },
@@ -240,7 +240,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetVehicleComplianceAlerts),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet vehicle compliance alerts' },
@@ -259,7 +259,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetDriverOptions),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet driver options' },
@@ -280,7 +280,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetDriverComplianceAlerts),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet driver compliance alerts' },
@@ -313,7 +313,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetComplianceDashboard),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Fleet compliance dashboard alerts' },
@@ -332,7 +332,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetComplianceKpis),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -364,7 +364,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetOpsQueue),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Fleet operations action queue and KPIs' },
@@ -390,7 +390,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanRunFleetAnalyticsSnapshot),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Run daily fleet analytics snapshot hook' },
@@ -414,7 +414,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanRunFleetComplianceAlerts),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Run daily fleet compliance alert job hook' },
@@ -442,7 +442,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanRunFleetComplianceEscalations),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -460,7 +460,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
     {
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetEscalationPolicy),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -495,7 +495,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanUpdateFleetEscalationPolicy),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -534,7 +534,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetComplianceIncidents),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -578,7 +578,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanCreateFleetComplianceIncident),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create fleet compliance incident' },
@@ -604,7 +604,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanUpdateFleetComplianceIncident),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Update compliance incident lifecycle/action' },
@@ -630,7 +630,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanTransitionFleetComplianceIncident),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -665,7 +665,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetPolicyAcknowledgments),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet policy acknowledgments' },
@@ -700,7 +700,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanCreateFleetPolicyAcknowledgment),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create/update fleet policy acknowledgment' },
@@ -722,7 +722,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanRunFleetPolicyReminders),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -742,7 +742,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       params: t.Object({ employeeId: UUID }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetDriverComplianceRecords),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List driver compliance records' },
@@ -779,7 +779,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanCreateFleetDriverComplianceRecord),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create driver compliance record' },
@@ -798,7 +798,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetMaintenanceDashboard),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Get fleet maintenance dashboard' },
@@ -819,7 +819,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetMaintenancePlans),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet maintenance plans' },
@@ -860,7 +860,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanCreateFleetMaintenancePlan),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create fleet maintenance plan' },
@@ -900,7 +900,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanUpdateFleetMaintenancePlan),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Update fleet maintenance plan' },
@@ -921,7 +921,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetWorkOrders),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet maintenance work orders' },
@@ -952,7 +952,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanCreateFleetWorkOrder),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create fleet maintenance work order' },
@@ -986,7 +986,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanUpdateFleetWorkOrder),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Update fleet maintenance work order' },
@@ -1007,7 +1007,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetDowntime),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet downtime events' },
@@ -1038,7 +1038,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanCreateFleetDowntime),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create fleet downtime event' },
@@ -1062,7 +1062,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanCloseFleetDowntime),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Close fleet downtime event' },
@@ -1084,7 +1084,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanReopenFleetDowntime),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Reopen closed downtime event' },
@@ -1107,7 +1107,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetDowntimeWorkflows),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List downtime RCA workflows' },
@@ -1139,7 +1139,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanUpdateFleetDowntimeWorkflow),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Update downtime RCA workflow' },
@@ -1158,7 +1158,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetReliability),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet reliability metrics (MTBF/MTTR)' },
@@ -1177,7 +1177,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetReliabilityTrends),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -1201,7 +1201,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetMaintenanceKpis),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Maintenance KPI dashboard metrics' },
@@ -1232,7 +1232,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetMaintenanceParts),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List maintenance parts inventory' },
@@ -1271,7 +1271,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanCreateFleetMaintenancePart),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create maintenance part inventory item' },
@@ -1301,7 +1301,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanCreateFleetPartStockMovement),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create maintenance part stock movement' },
@@ -1329,7 +1329,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetPartStockMovements),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List maintenance part stock movement history' },
@@ -1350,7 +1350,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetWorkOrderPartMovements),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -1377,7 +1377,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanRunFleetPartsAlerts),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Run daily low-stock parts alert hook' },
@@ -1400,7 +1400,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetProcurementCandidates),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List low-stock procurement candidates' },
@@ -1421,7 +1421,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetProcurementTraceability),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -1448,7 +1448,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanRunFleetProcurementReorder),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Run maintenance reorder demand creation job' },
@@ -1478,7 +1478,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanRunFleetMaintenanceAutomation),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -1521,7 +1521,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanRunFleetAutomationOrchestration),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -1584,7 +1584,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanUpdateFleetVehicle),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Update fleet vehicle' },
@@ -1601,7 +1601,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       params: t.Object({ id: UUID }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetVehicle),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Get fleet vehicle' },
@@ -1625,7 +1625,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanUpdateFleetVehicleLifecycle),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Transition fleet vehicle lifecycle status' },
@@ -1645,7 +1645,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanRunFleetVehicleLifecycleAutomation),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Run vehicle lifecycle auto-transition hook' },
@@ -1662,7 +1662,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       params: t.Object({ id: UUID }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetVehicleDocuments),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet vehicle documents' },
@@ -1699,7 +1699,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanUpdateFleetVehicles),
+        requirePermissions(PermissionKeys.CanCreateFleetVehicleDocument),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create fleet vehicle document' },
@@ -1720,7 +1720,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetRoutePlans),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet route plans' },
@@ -1779,7 +1779,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanCreateFleetTrips),
+        requirePermissions(PermissionKeys.CanCreateFleetRoutePlan),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create fleet route plan' },
@@ -1796,7 +1796,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       params: t.Object({ id: UUID }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetRoutePlan),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Get fleet route plan with stops' },
@@ -1829,7 +1829,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetTripsPage),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet trips' },
@@ -1866,7 +1866,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanCreateFleetTrips),
+        requirePermissions(PermissionKeys.CanCreateFleetTrip),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create fleet trip' },
@@ -1888,7 +1888,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanAssignFleetCrew),
+        requirePermissions(PermissionKeys.CanAssignFleetTripRoute),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Assign or clear route plan for trip' },
@@ -1910,7 +1910,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanAssignFleetCrew),
+        requirePermissions(PermissionKeys.CanAssignFleetTripCrew),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Assign fleet trip crew' },
@@ -1927,7 +1927,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       params: t.Object({ id: UUID }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetTrip),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Get fleet trip' },
@@ -1944,7 +1944,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       params: t.Object({ id: UUID }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetTripCrew),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet trip crew' },
@@ -1961,7 +1961,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       params: t.Object({ id: UUID }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetTripEvents),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet trip check-in/check-out events' },
@@ -1978,7 +1978,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       params: t.Object({ id: UUID }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetTripLoads),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List trip load matches' },
@@ -1999,7 +1999,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetTripLoads),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List trip load matching audit trail' },
@@ -2026,7 +2026,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanAssignFleetCrew),
+        requirePermissions(PermissionKeys.CanAssignFleetTripLoad),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Assign parcel load to trip' },
@@ -2050,7 +2050,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanAssignFleetCrew),
+        requirePermissions(PermissionKeys.CanUpdateFleetTripLoadMatch),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Update trip load match status' },
@@ -2071,7 +2071,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetTripTelemetry),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List trip telemetry points' },
@@ -2110,7 +2110,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanStartFleetTrips),
+        requirePermissions(PermissionKeys.CanRecordFleetTripTelemetry),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Record trip telemetry point' },
@@ -2127,7 +2127,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       params: t.Object({ id: UUID }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetTripStatusUpdates),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List trip status updates' },
@@ -2158,7 +2158,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanStartFleetTrips),
+        requirePermissions(PermissionKeys.CanRecordFleetTripStatusUpdate),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Record trip status update' },
@@ -2175,7 +2175,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       params: t.Object({ id: UUID }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetTripTimeline),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Get unified trip timeline' },
@@ -2211,7 +2211,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanStartFleetTrips),
+        requirePermissions(PermissionKeys.CanCheckInFleetTrip),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Record fleet trip check-in event' },
@@ -2247,7 +2247,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanCloseFleetTrips),
+        requirePermissions(PermissionKeys.CanCheckOutFleetTrip),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Record fleet trip check-out event' },
@@ -2283,7 +2283,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetRosters),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fleet shift rosters' },
@@ -2300,7 +2300,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       params: t.Object({ id: UUID }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetRoster),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Get fleet shift roster by id' },
@@ -2335,7 +2335,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanAssignFleetCrew),
+        requirePermissions(PermissionKeys.CanCreateFleetRoster),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create fleet shift roster' },
@@ -2365,7 +2365,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanAssignFleetCrew),
+        requirePermissions(PermissionKeys.CanUpdateFleetRoster),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Update fleet shift roster' },
@@ -2389,7 +2389,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanStartFleetTrips),
+        requirePermissions(PermissionKeys.CanStartFleetTrip),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Start fleet trip' },
@@ -2413,7 +2413,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanCloseFleetTrips),
+        requirePermissions(PermissionKeys.CanCloseFleetTrip),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Close fleet trip' },
@@ -2442,7 +2442,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetFuelAnalytics),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -2482,7 +2482,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetFuelFraudSignals),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Fuel fraud/anomaly risk signals' },
@@ -2497,7 +2497,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
     {
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetDispatchBoard),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Dispatch board summary metrics' },
@@ -2516,7 +2516,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetDispatchPerformance),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Dispatch operational performance metrics' },
@@ -2537,7 +2537,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetDispatchExceptions),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -2561,7 +2561,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetDispatchRouteQueue),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -2587,7 +2587,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTrips),
+        requirePermissions(PermissionKeys.CanReadFleetDispatchLoadCandidates),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -2615,7 +2615,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetDecisionSupport),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -2651,7 +2651,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetExecutiveScorecard),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -2679,7 +2679,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetUnitEconomics),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: {
@@ -2715,7 +2715,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanReadFleetTransport),
+        requirePermissions(PermissionKeys.CanReadFleetFuelLogs),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'List fuel logs' },
@@ -2750,7 +2750,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanCreateFleetFuelLogs),
+        requirePermissions(PermissionKeys.CanCreateFleetFuelLog),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Create fuel log' },
@@ -2768,7 +2768,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       params: t.Object({ id: UUID }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanApproveFleetFuelLogs),
+        requirePermissions(PermissionKeys.CanApproveFleetFuelLog),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Approve fuel log' },
@@ -2788,7 +2788,7 @@ export const fleetTransportRoutes = new Elysia({ name: 'fleet-transport' })
       body: t.Object({ rejectionReason: NonEmpty255 }),
       beforeHandle: [
         requireAuth(),
-        requirePermissions(PermissionKeys.CanApproveFleetFuelLogs),
+        requirePermissions(PermissionKeys.CanRejectFleetFuelLog),
         requireModuleEnabled('fleet_transport'),
       ],
       detail: { tags: ['FleetTransport'], summary: 'Reject fuel log' },

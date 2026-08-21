@@ -45,6 +45,12 @@ import { moduleWorkspaceRoutes } from './features/module-workspace/routes';
 import { communicationRoutes } from './features/communication/routes';
 import { customerServiceRoutes } from './features/customer-service/routes';
 import { itSupportRoutes } from './features/it-support/routes';
+import { helpAssistantRoutes } from './features/help-assistant/routes';
+import { executiveInsightsRoutes } from './features/executive-insights/routes';
+import { aiChatRoutes } from './features/ai-chat/routes';
+import { fleetAnomalyBriefRoutes } from './features/fleet-anomaly-brief/routes';
+import { operationsExceptionsBriefRoutes } from './features/operations-exceptions-brief/routes';
+import { managementDailyBriefRoutes } from './features/management-daily-brief/routes';
 import { procurementRoutes } from './features/procurement/routes';
 import { fleetTransportRoutes } from './features/fleet-transport/routes';
 import { customerWalletCreditRoutes } from './features/customer-wallet-credit/routes';
@@ -108,6 +114,12 @@ export const app = new Elysia()
       .group('/mobile-updates', (r) => r.use(mobileUpdatesRoutes))
       .group('/communication', (r) => r.use(communicationRoutes))
       .group('/customer-service', (r) => r.use(customerServiceRoutes))
+      .group('/help-assistant', (r) => r.use(helpAssistantRoutes))
+      .group('/executive-insights', (r) => r.use(executiveInsightsRoutes))
+      .group('/fleet-anomaly-brief', (r) => r.use(fleetAnomalyBriefRoutes))
+      .group('/operations-exceptions-brief', (r) => r.use(operationsExceptionsBriefRoutes))
+      .group('/management-daily-brief', (r) => r.use(managementDailyBriefRoutes))
+      .group('/ai-chat', (r) => r.use(aiChatRoutes))
       .group('/it-support', (r) => r.use(itSupportRoutes))
       .group('/reports', (r) => r.use(reportingRoutes))
       .group('/audit', (r) => r.use(auditRoutes))

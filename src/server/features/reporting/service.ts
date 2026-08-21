@@ -252,10 +252,16 @@ export async function getDailyCashierSalesReportSvc(input: {
         parcelId: transaction.parcelId,
         bookingCode: transaction.bookingCode,
         trackingCode: transaction.trackingCode,
+        parcelDetails: transaction.parcelDetails,
+        parcelContent: transaction.parcelContent,
         payerName:
           transaction.payer === Payer.SENDER
             ? (transaction.senderName ?? '-')
             : (transaction.receiverName ?? '-'),
+        payerTelephone:
+          transaction.payer === Payer.SENDER
+            ? (transaction.senderTelephone ?? null)
+            : (transaction.receiverTelephone ?? null),
         whoPaid: getDailyCashierSalesWhoPaid(transaction.cashierType, transaction.payer),
         cashierId: session?.cashierId ?? null,
         cashierName: session?.cashierName ?? '-',
@@ -343,8 +349,12 @@ export async function getDailyCashierSalesReportSvc(input: {
       parcelId: row.parcelId,
       sessionId: row.sessionId,
       bookingCode: row.bookingCode,
+      parcelDetails: row.parcelDetails,
+      parcelContent: row.parcelContent,
       senderName: row.senderName,
+      senderTelephone: row.senderTelephone,
       receiverName: row.receiverName,
+      receiverTelephone: row.receiverTelephone,
       plannedToBePaidPsw: Number(row.plannedToBePaidPsw ?? 0),
       createdAt: row.createdAt.toISOString(),
     })),

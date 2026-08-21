@@ -10,6 +10,7 @@ import {
   isNull,
   isNotNull,
   lte,
+  notInArray,
   or,
   sql,
 } from 'drizzle-orm';
@@ -31,6 +32,7 @@ import {
   parcelDispositionActions,
   parcelStorageWaivers,
 } from '@/db/schemas';
+import { ParcelStatus } from '@/db/schemas/enums';
 import type { SortField } from '@/server/types/pagination.types';
 import { extractScannedCode } from '@/server/utils/scan-code';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
@@ -565,6 +567,73 @@ export async function sumParcelStorageWaiversPswRepo(
     .where(eq(parcelStorageWaivers.parcelId, parcelId));
 
   return rows.reduce((sum, row) => sum + Number(row.waivedAmountPsw ?? 0), 0);
+}
+
+const STUCK_PARCEL_EXCLUDED_STATUSES = [
+  ParcelStatus.DELIVERED_BY_OFFICE,
+  ParcelStatus.DELIVERED_AT_HOME,
+  ParcelStatus.RETURNED_TO_SENDER,
+  ParcelStatus.CANCELLED,
+  ParcelStatus.DISPOSED_BY_SALE,
+  ParcelStatus.DISPOSED_BY_DESTRUCTION,
+  ParcelStatus.DISPOSED_BY_DONATION,
+];
+
+export type ListStuckParcelsParams = {
+  companyId: string;
+  branchId?: string | null;
+  stuckAfterDays: number;
+  limit: number;
+  offset: number;
+};
+
+/**
+ * Parcels sitting in a non-terminal status with no status update in
+ * `stuckAfterDays` days — used by the Operations Exceptions Brief to ground
+ * an LLM narrative. No dedicated "stuck" detection existed before this;
+ * intentionally a lean count-oriented query (no joins) since the brief only
+ * needs totals + a small sample, not full parcel detail rows.
+ */
+export async function listStuckParcelsRepo(p: ListStuckParcelsParams): Promise<{
+  data: {
+    id: string;
+    trackingCode: string;
+    bookingCode: string;
+    status: number;
+    updatedAt: Date;
+    destinationId: string | null;
+  }[];
+  totalRecords: number;
+}> {
+  const cutoff = new Date(Date.now() - p.stuckAfterDays * 24 * 60 * 60 * 1000);
+  const whereParts = [
+    eq(parcels.isDeleted, false),
+    eq(parcels.companyId, p.companyId),
+    notInArray(parcels.status, STUCK_PARCEL_EXCLUDED_STATUSES),
+    lte(parcels.updatedAt, cutoff),
+  ];
+  if (p.branchId) whereParts.push(eq(parcels.destinationId, p.branchId));
+
+  const where = and(...whereParts);
+
+  const [countRow] = await db.select({ c: count() }).from(parcels).where(where);
+
+  const rows = await db
+    .select({
+      id: parcels.id,
+      trackingCode: parcels.trackingCode,
+      bookingCode: parcels.bookingCode,
+      status: parcels.status,
+      updatedAt: parcels.updatedAt,
+      destinationId: parcels.destinationId,
+    })
+    .from(parcels)
+    .where(where)
+    .orderBy(asc(parcels.updatedAt))
+    .limit(p.limit)
+    .offset(p.offset);
+
+  return { data: rows, totalRecords: Number(countRow?.c ?? 0) };
 }
 
 export async function getParcelByCodeRepo(

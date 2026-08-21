@@ -29,6 +29,7 @@ import {
 const TAB_ICON_MAP: Record<string, LucideIconProps> = {
   Workspace: 'LayoutGrid',
   Operations: 'Package',
+  'Fleet Transport': 'Truck',
   Commercial: 'Megaphone',
   Finance: 'Wallet',
   'Supply Chain': 'Boxes',

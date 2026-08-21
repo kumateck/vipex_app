@@ -122,7 +122,7 @@ export function FleetFuelLogsApprovalsPage() {
                         />
                       </TableCell>
                       <TableCell className="text-right">
-                        <PermissionGuard permissionKey={PermissionKeys.CanApproveFleetFuelLogs}>
+                        <PermissionGuard permissionKey={PermissionKeys.CanApproveFleetFuelLog}>
                           <div className="flex justify-end gap-2">
                             <Button
                               variant="outline"

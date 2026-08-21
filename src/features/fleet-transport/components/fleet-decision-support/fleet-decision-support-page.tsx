@@ -9,6 +9,7 @@ import {
   useGetFleetDecisionSupportOverviewQuery,
   useRunFleetAnalyticsSnapshotJobMutation,
 } from '../../api/fleet-transport.api';
+import { FleetAnomalyBriefPanel } from './fleet-anomaly-brief-panel';
 
 function fmt(value: number, digits = 2) {
   return value.toLocaleString(undefined, { maximumFractionDigits: digits });
@@ -32,6 +33,11 @@ export function FleetDecisionSupportPage() {
 
   const { data, isLoading, refetch } = useGetFleetDecisionSupportOverviewQuery(query);
   const [runSnapshot, { isLoading: runningSnapshot }] = useRunFleetAnalyticsSnapshotJobMutation();
+
+  const briefTo = dateTo ? new Date(dateTo).toISOString() : new Date().toISOString();
+  const briefFrom = dateFrom
+    ? new Date(dateFrom).toISOString()
+    : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const onRunSnapshot = async () => {
     try {
@@ -237,6 +243,8 @@ export function FleetDecisionSupportPage() {
             ))}
           </CardContent>
         </Card>
+
+        <FleetAnomalyBriefPanel from={briefFrom} to={briefTo} />
       </div>
     </ScrollableWrapper>
   );

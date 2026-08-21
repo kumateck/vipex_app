@@ -19,6 +19,7 @@ import { DashboardExportActions } from '../dashboard-export-actions';
 import { DashboardScopeFilterBar, type DashboardScope } from '../dashboard-scope-filter-bar';
 import { RoleDashboardGuard } from '../role-dashboard-guard';
 import { formatMoneyPsw, formatPercent, isoDate } from '../../utils/formatters';
+import { OperationsExceptionsBriefPanel } from './operations-exceptions-brief-panel';
 
 export function AdminDashboardV1Page() {
   const user = useAuthStore((state) => state.user);
@@ -321,6 +322,8 @@ export function AdminDashboardV1Page() {
                       </CardContent>
                     </Card>
                   </div>
+
+                  <OperationsExceptionsBriefPanel from={from} to={to} branchId={branchId} />
                 </>
               )}
             </CardContent>

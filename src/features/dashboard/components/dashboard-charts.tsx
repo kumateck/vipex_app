@@ -7,9 +7,9 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
-import { Bar, BarChart, Cell, Pie, PieChart, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, Cell, Line, LineChart, Pie, PieChart, XAxis, YAxis } from 'recharts';
 
-type Point = {
+export type Point = {
   label: string;
   value: number;
 };
@@ -56,6 +56,47 @@ export function DashboardBarChartCard({
               <ChartTooltip content={<ChartTooltipContent />} />
               <Bar dataKey="value" radius={6} fill="var(--color-value)" />
             </BarChart>
+          </ChartContainer>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function DashboardLineChartCard({
+  title,
+  description,
+  seriesName,
+  data,
+}: {
+  title: string;
+  description: string;
+  seriesName: string;
+  data: Point[];
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {!data.length ? (
+          <div className="text-sm text-muted-foreground">No chart data for current scope.</div>
+        ) : (
+          <ChartContainer config={buildConfig(seriesName)} className="h-[260px] w-full">
+            <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+              <XAxis dataKey="label" tickLine={false} axisLine={false} />
+              <YAxis tickLine={false} axisLine={false} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke="var(--color-value)"
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
           </ChartContainer>
         )}
       </CardContent>

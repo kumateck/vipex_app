@@ -1,6 +1,6 @@
 import logoPng from '@/assets/logo.png';
 import { PAYMENT_DUE_NOTE } from './thermal-sticker-copy';
-import { portraitDestinationFontSize } from './thermal-sticker-font-size.utils';
+import { portraitReceiverNameFontSize } from './thermal-sticker-font-size.utils';
 import { DestinationRow } from './thermal-sticker-portrait-sections';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
 import { StickerRow } from './thermal-sticker-template-utils';
@@ -20,7 +20,7 @@ export function ThermalStickerPortraitTemplate({
   qrSvg,
 }: PreparedThermalStickerTemplateProps) {
   const statusRowHeight = hasToBePaid ? '14mm' : '11mm';
-  const receiverFontSize = portraitDestinationFontSize(destinationBranchName);
+  const receiverNameFontSize = portraitReceiverNameFontSize(receiverName);
 
   return (
     <div
@@ -105,45 +105,48 @@ export function ThermalStickerPortraitTemplate({
         style={{
           border: '0.35mm solid #111',
           display: 'grid',
+          gridTemplateRows: 'auto minmax(0, 1fr) auto',
           minWidth: 0,
           overflow: 'hidden',
-          placeItems: 'center',
           textAlign: 'center',
           padding: '0.3mm 1mm',
         }}
       >
-        <div style={{ minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: '1.8mm',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              lineHeight: 1,
-            }}
-          >
-            Receiver
-          </div>
-          <div
-            style={{
-              marginTop: '0.25mm',
-              fontSize: receiverFontSize,
-              fontWeight: 900,
-              lineHeight: 0.95,
-              overflowWrap: 'anywhere',
-            }}
-          >
-            {receiverName}
-          </div>
-          <div
-            style={{
-              marginTop: '0.3mm',
-              fontSize: receiverFontSize,
-              fontWeight: 900,
-              lineHeight: 1,
-            }}
-          >
-            {receiverTelephones}
-          </div>
+        <div
+          style={{
+            fontSize: '1.8mm',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            lineHeight: 1,
+          }}
+        >
+          Receiver
+        </div>
+        <div
+          style={{
+            minWidth: 0,
+            minHeight: 0,
+            marginTop: '0.25mm',
+            display: 'grid',
+            placeItems: 'center',
+            overflow: 'hidden',
+            fontSize: receiverNameFontSize,
+            fontWeight: 900,
+            lineHeight: 0.95,
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {receiverName}
+        </div>
+        <div
+          style={{
+            marginTop: '0.3mm',
+            fontSize: '4.2mm',
+            fontWeight: 900,
+            lineHeight: 1,
+          }}
+        >
+          {receiverTelephones}
         </div>
       </section>
 
