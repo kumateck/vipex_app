@@ -305,8 +305,12 @@ export type DailyCashierSalesTransactionRow = {
   parcelId: string;
   bookingCode: string;
   trackingCode: string;
+  parcelDetails: string;
+  parcelContent: string;
   senderName: string | null;
+  senderTelephone: string | null;
   receiverName: string | null;
+  receiverTelephone: string | null;
   cashierType: number;
   method: number;
   component: number;
@@ -322,8 +326,12 @@ export type DailyCashierSalesToBePaidRow = {
   parcelId: string;
   sessionId: string | null;
   bookingCode: string;
+  parcelDetails: string;
+  parcelContent: string;
   senderName: string | null;
+  senderTelephone: string | null;
   receiverName: string | null;
+  receiverTelephone: string | null;
   plannedToBePaidPsw: number;
   createdAt: Date;
 };
@@ -470,8 +478,12 @@ export async function listDailyCashierSalesTransactionsRepo(input: {
       parcelId: payments.parcelId,
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
+      parcelDetails: parcels.parcelDetails,
+      parcelContent: parcels.parcelContent,
       senderName: sender.fullname,
+      senderTelephone: sender.telephone,
       receiverName: receiver.fullname,
+      receiverTelephone: receiver.telephone,
       cashierType: payments.cashierType,
       method: payments.method,
       component: payments.component,
@@ -526,8 +538,12 @@ export async function listDailyCashierSalesToBePaidRowsRepo(input: {
       parcelId: parcels.id,
       sessionId: parcels.cashierSessionId,
       bookingCode: parcels.bookingCode,
+      parcelDetails: parcels.parcelDetails,
+      parcelContent: parcels.parcelContent,
       senderName: sender.fullname,
+      senderTelephone: sender.telephone,
       receiverName: receiver.fullname,
+      receiverTelephone: receiver.telephone,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       createdAt: parcels.createdAt,
     })

@@ -96,44 +96,106 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
     return PermissionKeys.CanCreateInventoryCorrection;
   if (pathname.startsWith('/inventory/reports/enterprise-kpis'))
     return PermissionKeys.CanReadInventoryEnterpriseKpis;
-  if (pathname === '/fleet-transport/trips/new') return PermissionKeys.CanCreateFleetTrips;
-  if (pathname.startsWith('/fleet-transport/trips/view/')) return PermissionKeys.CanReadFleetTrips;
-  if (pathname.startsWith('/fleet-transport/routes/plans')) return PermissionKeys.CanReadFleetTrips;
-  if (pathname.startsWith('/fleet-transport/trips/crew/')) return PermissionKeys.CanAssignFleetCrew;
-  if (pathname.startsWith('/fleet-transport/trips/start/'))
-    return PermissionKeys.CanStartFleetTrips;
-  if (pathname.startsWith('/fleet-transport/trips/close/'))
-    return PermissionKeys.CanCloseFleetTrips;
-  if (pathname.startsWith('/fleet-transport/trips/')) return PermissionKeys.CanReadFleetTrips;
+  if (pathname === '/fleet-transport/trips/new') return PermissionKeys.CanCreateFleetTrip;
+  if (pathname.startsWith('/fleet-transport/trips/view/')) return PermissionKeys.CanReadFleetTrip;
+  if (pathname.startsWith('/fleet-transport/routes/plans/new'))
+    return PermissionKeys.CanCreateFleetRoutePlan;
+  if (pathname.startsWith('/fleet-transport/routes/plans/'))
+    return PermissionKeys.CanReadFleetRoutePlan;
+  if (pathname.startsWith('/fleet-transport/routes/plans'))
+    return PermissionKeys.CanReadFleetRoutePlans;
+  if (pathname.startsWith('/fleet-transport/trips/crew/'))
+    return PermissionKeys.CanAssignFleetTripCrew;
+  if (pathname.startsWith('/fleet-transport/trips/start/')) return PermissionKeys.CanStartFleetTrip;
+  if (pathname.startsWith('/fleet-transport/trips/close/')) return PermissionKeys.CanCloseFleetTrip;
+  if (pathname.startsWith('/fleet-transport/trips/')) return PermissionKeys.CanReadFleetTrip;
   if (pathname.startsWith('/fleet-transport/vehicles/edit/'))
-    return PermissionKeys.CanUpdateFleetVehicles;
+    return PermissionKeys.CanUpdateFleetVehicle;
   if (pathname.startsWith('/fleet-transport/vehicles/view/') && pathname.includes('/documents/new'))
-    return PermissionKeys.CanUpdateFleetVehicles;
+    return PermissionKeys.CanCreateFleetVehicleDocument;
+  if (pathname.startsWith('/fleet-transport/vehicles/view/') && pathname.includes('/documents'))
+    return PermissionKeys.CanReadFleetVehicleDocuments;
   if (pathname.startsWith('/fleet-transport/vehicles/view/'))
-    return PermissionKeys.CanReadFleetTransport;
+    return PermissionKeys.CanReadFleetVehicle;
+  if (pathname.startsWith('/fleet-transport/vehicles')) return PermissionKeys.CanReadFleetVehicles;
   if (pathname.startsWith('/fleet-transport/fuel-analytics'))
-    return PermissionKeys.CanReadFleetTransport;
+    return pathname.includes('/fraud-signals')
+      ? PermissionKeys.CanReadFleetFuelFraudSignals
+      : PermissionKeys.CanReadFleetFuelAnalytics;
   if (pathname.startsWith('/fleet-transport/fuel-logs/edit/'))
-    return PermissionKeys.CanCreateFleetFuelLogs;
-  if (pathname.startsWith('/fleet-transport/drivers/')) return PermissionKeys.CanReadFleetTransport;
+    return PermissionKeys.CanCreateFleetFuelLog;
+  if (pathname.startsWith('/fleet-transport/fuel-logs/approvals'))
+    return PermissionKeys.CanReadFleetFuelApprovals;
+  if (pathname.startsWith('/fleet-transport/fuel-logs')) return PermissionKeys.CanReadFleetFuelLogs;
+  if (pathname.startsWith('/fleet-transport/drivers/compliance/new'))
+    return PermissionKeys.CanCreateFleetDriverComplianceRecord;
+  if (pathname.startsWith('/fleet-transport/drivers/compliance'))
+    return PermissionKeys.CanReadFleetDriverComplianceRecords;
+  if (pathname.startsWith('/fleet-transport/drivers/'))
+    return PermissionKeys.CanReadFleetDriverOptions;
   if (pathname.startsWith('/fleet-transport/rosters/edit/'))
-    return PermissionKeys.CanAssignFleetCrew;
-  if (pathname.startsWith('/fleet-transport/rosters')) return PermissionKeys.CanReadFleetTransport;
+    return PermissionKeys.CanUpdateFleetRoster;
+  if (pathname.startsWith('/fleet-transport/rosters/new'))
+    return PermissionKeys.CanCreateFleetRoster;
+  if (pathname.startsWith('/fleet-transport/rosters/')) return PermissionKeys.CanReadFleetRoster;
+  if (pathname.startsWith('/fleet-transport/rosters')) return PermissionKeys.CanReadFleetRosters;
+  if (pathname.startsWith('/fleet-transport/compliance/ops/incidents/new'))
+    return PermissionKeys.CanCreateFleetComplianceIncident;
+  if (pathname.startsWith('/fleet-transport/compliance/ops/policy-acks/new'))
+    return PermissionKeys.CanCreateFleetPolicyAcknowledgment;
+  if (pathname.startsWith('/fleet-transport/compliance/escalation-policy'))
+    return PermissionKeys.CanReadFleetEscalationPolicy;
+  if (pathname.startsWith('/fleet-transport/compliance/kpis'))
+    return PermissionKeys.CanReadFleetComplianceKpis;
+  if (pathname.startsWith('/fleet-transport/compliance/ops'))
+    return PermissionKeys.CanReadFleetOpsQueue;
   if (pathname.startsWith('/fleet-transport/compliance'))
-    return PermissionKeys.CanReadFleetTransport;
+    return PermissionKeys.CanReadFleetComplianceDashboard;
+  if (
+    pathname.startsWith('/fleet-transport/maintenance/downtime/workflows/') &&
+    pathname.endsWith('/edit')
+  )
+    return PermissionKeys.CanUpdateFleetDowntimeWorkflow;
+  if (pathname.startsWith('/fleet-transport/maintenance/downtime/workflows'))
+    return PermissionKeys.CanReadFleetDowntimeWorkflows;
+  if (pathname.startsWith('/fleet-transport/maintenance/downtime'))
+    return PermissionKeys.CanReadFleetDowntime;
+  if (pathname.startsWith('/fleet-transport/maintenance/work-orders/part-movements'))
+    return PermissionKeys.CanReadFleetWorkOrderPartMovements;
+  if (pathname.startsWith('/fleet-transport/maintenance/work-orders'))
+    return PermissionKeys.CanReadFleetWorkOrders;
+  if (pathname.startsWith('/fleet-transport/maintenance/reliability/trends'))
+    return PermissionKeys.CanReadFleetReliabilityTrends;
+  if (pathname.startsWith('/fleet-transport/maintenance/kpis'))
+    return PermissionKeys.CanReadFleetMaintenanceKpis;
+  if (pathname.startsWith('/fleet-transport/maintenance/parts/movements'))
+    return PermissionKeys.CanReadFleetPartStockMovements;
+  if (pathname.startsWith('/fleet-transport/maintenance/parts'))
+    return PermissionKeys.CanReadFleetMaintenanceParts;
+  if (pathname.startsWith('/fleet-transport/maintenance/procurement/traceability'))
+    return PermissionKeys.CanReadFleetProcurementTraceability;
   if (pathname.startsWith('/fleet-transport/maintenance'))
-    return PermissionKeys.CanReadFleetTransport;
+    return PermissionKeys.CanReadFleetMaintenanceDashboard;
   if (pathname.startsWith('/fleet-transport/dispatch/route-assignments'))
-    return PermissionKeys.CanAssignFleetCrew;
+    return PermissionKeys.CanReadFleetDispatchRouteQueue;
   if (pathname.startsWith('/fleet-transport/dispatch/load-matching'))
-    return PermissionKeys.CanAssignFleetCrew;
+    return PermissionKeys.CanReadFleetDispatchLoadCandidates;
   if (pathname.startsWith('/fleet-transport/dispatch/check-in'))
-    return PermissionKeys.CanStartFleetTrips;
+    return PermissionKeys.CanCheckInFleetTrip;
   if (pathname.startsWith('/fleet-transport/dispatch/check-out'))
-    return PermissionKeys.CanCloseFleetTrips;
-  if (pathname.startsWith('/fleet-transport/dispatch')) return PermissionKeys.CanReadFleetTransport;
+    return PermissionKeys.CanCheckOutFleetTrip;
+  if (pathname.startsWith('/fleet-transport/dispatch/ops-performance'))
+    return PermissionKeys.CanReadFleetDispatchPerformance;
+  if (pathname.startsWith('/fleet-transport/dispatch/exception-queue'))
+    return PermissionKeys.CanReadFleetDispatchExceptions;
+  if (pathname.startsWith('/fleet-transport/dispatch'))
+    return PermissionKeys.CanReadFleetDispatchBoard;
+  if (pathname.startsWith('/fleet-transport/decision-support/executive-scorecard'))
+    return PermissionKeys.CanReadFleetExecutiveScorecard;
+  if (pathname.startsWith('/fleet-transport/decision-support/unit-economics'))
+    return PermissionKeys.CanReadFleetUnitEconomics;
   if (pathname.startsWith('/fleet-transport/decision-support'))
-    return PermissionKeys.CanReadFleetTransport;
+    return PermissionKeys.CanReadFleetDecisionSupport;
   if (pathname.startsWith('/procurement/fleet-policies/edit/'))
     return PermissionKeys.CanCreateProcurementPurchaseRequests;
   if (pathname.startsWith('/procurement/fleet-policies/new'))

@@ -64,10 +64,12 @@ import {
   listParcelDispositionActionsRepo,
   listParcelStorageWaiversRepo,
   listParcelsRepo,
+  listStuckParcelsRepo,
   sumParcelStorageWaiversPswRepo,
   updateParcelStorageWaiverAccountingPostingRepo,
   updateParcelRepo,
   type ListParcelsParams,
+  type ListStuckParcelsParams,
   type ParcelRow,
 } from './parcels.repository';
 import { assertParcelFullyPaid } from './parcel-payment-settlement';
@@ -293,6 +295,10 @@ export async function listParcelsSvc(p: ListParcelsParams) {
     totalRecords,
   };
 }
+export async function listStuckParcelsSvc(p: ListStuckParcelsParams) {
+  return listStuckParcelsRepo(p);
+}
+
 export async function getParcelSvc(id: string, executor: DbExecutor = db): Promise<ParcelRow> {
   const row = await getParcelRepo(id, executor);
   if (!row) throw NotFound('Parcel not found');
