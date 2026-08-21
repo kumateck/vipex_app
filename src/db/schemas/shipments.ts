@@ -13,6 +13,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { companies, branches, users, locations, warehouses } from './core';
 import { customers, cards } from './customers';
+import { cashierSessions } from './shifts';
 import { sql } from 'drizzle-orm';
 import {
   ConsignmentReceivingStatus,
@@ -185,6 +186,14 @@ export const parcelReconciliationCases = pgTable(
       .notNull()
       .references(() => parcels.id),
     linkedParcelId: varchar('linked_parcel_id', { length: 25 }).references(() => parcels.id),
+    cashierSessionId: varchar('cashier_session_id', { length: 25 }).references(
+      () => cashierSessions.id,
+    ),
+    effectiveAt: timestamp('effective_at', { withTimezone: false }),
+    originalChargePsw: bigint('original_charge_psw', { mode: 'number' }),
+    proposedChargePsw: bigint('proposed_charge_psw', { mode: 'number' }),
+    originalPlannedToBePaidPsw: bigint('original_planned_to_be_paid_psw', { mode: 'number' }),
+    proposedPlannedToBePaidPsw: bigint('proposed_planned_to_be_paid_psw', { mode: 'number' }),
     caseType: smallint('case_type').notNull().default(ParcelReconciliationCaseType.SHORTAGE),
     actionType: smallint('action_type').default(ParcelReconciliationActionType.VOID_AND_REFUND),
     status: smallint('status').notNull().default(ParcelReconciliationCaseStatus.REQUESTED),
@@ -208,6 +217,7 @@ export const parcelReconciliationCases = pgTable(
     byCompanyStatus: index('parcel_recon_cases_company_status_idx').on(t.companyId, t.status),
     byParcel: index('parcel_recon_cases_parcel_idx').on(t.parcelId),
     byLinkedParcel: index('parcel_recon_cases_linked_parcel_idx').on(t.linkedParcelId),
+    byCashierSession: index('parcel_recon_cases_cashier_session_idx').on(t.cashierSessionId),
     byRequestedAt: index('parcel_recon_cases_requested_idx').on(t.requestedAt),
     uqOpenByParcel: uniqueIndex('parcel_recon_cases_open_parcel_uq')
       .on(t.parcelId)

@@ -166,8 +166,11 @@ export async function confirmReceiverDelivery({
     secondReceiverId: secondReceiverId ?? null,
     secondCardId: secondCard?.cardId ?? null,
     secondCardNumber: secondCard?.cardNumber ?? null,
+    // Must match the fixed 'main' target the OTP was requested/verified
+    // against (see use-receiver-otp-actions.ts) — not handoverTarget, which
+    // only records who physically collected the parcel.
     receiverOtpVerificationToken,
-    receiverOtpTarget: handoverTarget,
+    receiverOtpTarget: 'main',
     momoTransactionId: momoTransactionId ?? null,
   });
 

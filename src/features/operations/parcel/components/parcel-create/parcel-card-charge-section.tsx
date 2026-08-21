@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { sanitizeNumber, sanitizeString } from '@/lib/utils';
+import { getParcelChargeValidationError } from '@/shared/shipments/parcel-charge-policy';
 import { BufferedParcelField } from './buffered-parcel-field';
 import type { ParcelBookingFormValues } from './parcel-form.types';
 
@@ -67,7 +68,11 @@ export function ParcelCardChargeSection({
             validate: (value) => {
               const normalized = sanitizeString(value).replace(/,/g, '').trim();
               if (!normalized) return 'Charge is required';
-              return Number.isNaN(sanitizeNumber(normalized)) ? 'Enter a valid charge' : true;
+              const chargeCedis = sanitizeNumber(normalized);
+              if (Number.isNaN(chargeCedis)) return 'Enter a valid charge';
+              return (
+                getParcelChargeValidationError({ chargeCedis, plannedToBePaidCedis: 0 }) ?? true
+              );
             },
           }}
         />

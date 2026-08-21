@@ -29,6 +29,11 @@ export function useReceiverCashierDialogState() {
 
   const [momoTransactionId, setMomoTransactionId] = useState('');
 
+  // Which of the main receiver's two phone numbers the collection OTP should
+  // be texted to — lets staff switch numbers if the first one is
+  // unreachable. Defaults to the primary; only shown/used when a second
+  // number exists.
+  const [phoneSlot, setPhoneSlotState] = useState<'primary' | 'secondary'>('primary');
   const [otpSentAt, setOtpSentAt] = useState<string | null>(null);
   const [otpExpiresAt, setOtpExpiresAt] = useState<string | null>(null);
   const [otpCode, setOtpCode] = useState('');
@@ -67,11 +72,17 @@ export function useReceiverCashierDialogState() {
     setSecondNewName('');
     setSecondNewPhone('');
     setMomoTransactionId('');
+    setPhoneSlotState('primary');
     resetOtpState();
   };
 
   const setHandoverTargetAndResetOtp = (target: HandoverTarget) => {
     setHandoverTarget(target);
+    resetOtpState();
+  };
+
+  const setPhoneSlot = (slot: 'primary' | 'secondary') => {
+    setPhoneSlotState(slot);
     resetOtpState();
   };
 
@@ -122,6 +133,8 @@ export function useReceiverCashierDialogState() {
     setSecondNewName,
     secondNewPhone,
     setSecondNewPhone,
+    phoneSlot,
+    setPhoneSlot,
     otpSentAt,
     otpExpiresAt,
     otpCode,
