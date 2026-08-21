@@ -87,7 +87,7 @@ export function FleetTripsListPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>Trips</CardTitle>
-            <PermissionGuard permissionKey={PermissionKeys.CanCreateFleetTrips}>
+            <PermissionGuard permissionKey={PermissionKeys.CanCreateFleetTrip}>
               <Button asChild>
                 <Link to="/fleet-transport/trips/new">Create trip</Link>
               </Button>
@@ -175,12 +175,12 @@ export function FleetTripsListPage() {
                           <Button asChild size="sm" variant="outline">
                             <Link to={`/fleet-transport/trips/view/${row.id}`}>View</Link>
                           </Button>
-                          <PermissionGuard permissionKey={PermissionKeys.CanAssignFleetCrew}>
+                          <PermissionGuard permissionKey={PermissionKeys.CanAssignFleetTripCrew}>
                             <Button asChild size="sm" variant="outline">
                               <Link to={`/fleet-transport/trips/crew/${row.id}`}>Crew</Link>
                             </Button>
                           </PermissionGuard>
-                          <PermissionGuard permissionKey={PermissionKeys.CanStartFleetTrips}>
+                          <PermissionGuard permissionKey={PermissionKeys.CanStartFleetTrip}>
                             {isStartAllowed(row) ? (
                               <Button asChild size="sm" variant="outline">
                                 <Link to={`/fleet-transport/trips/start/${row.id}`}>Start</Link>
@@ -191,7 +191,7 @@ export function FleetTripsListPage() {
                               </Button>
                             )}
                           </PermissionGuard>
-                          <PermissionGuard permissionKey={PermissionKeys.CanCloseFleetTrips}>
+                          <PermissionGuard permissionKey={PermissionKeys.CanCloseFleetTrip}>
                             {isCloseAllowed(row) ? (
                               <Button asChild size="sm" variant="outline">
                                 <Link to={`/fleet-transport/trips/close/${row.id}`}>Close</Link>

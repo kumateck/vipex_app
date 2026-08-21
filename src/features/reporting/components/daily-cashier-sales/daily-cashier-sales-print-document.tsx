@@ -70,12 +70,23 @@ function buildPaymentSections(report?: DailyCashierSalesReport) {
     },
     {
       heading: 'Payments',
-      headers: ['Payment Time', 'Booking', 'Name', 'Who Paid', 'Method', 'Amount Paid'],
+      headers: [
+        '#',
+        'Payment Time',
+        'Booking',
+        'Parcel',
+        'Customer',
+        'Who Paid',
+        'Method',
+        'Amount Paid',
+      ],
       rows:
-        report?.transactions.map((row) => [
+        report?.transactions.map((row, index) => [
+          String(index + 1),
           formatDateTime(row.receivedAt),
           row.bookingCode,
-          row.payerName,
+          [row.parcelDetails, row.parcelContent].filter(Boolean).join(' - ') || '-',
+          [row.payerName, row.payerTelephone].filter(Boolean).join(' - '),
           row.whoPaid,
           PAYMENT_METHOD_LABELS[row.method] ?? String(row.method),
           formatMoneyPsw(row.grossAmountPsw),
@@ -93,13 +104,15 @@ function buildToBePaidSections(report?: DailyCashierSalesReport) {
     },
     {
       heading: 'To Be Paid Parcels',
-      headers: ['Created Time', 'Booking', 'Sender', 'Receiver', 'To Be Paid'],
+      headers: ['#', 'Created Time', 'Booking', 'Parcel', 'Sender', 'Receiver', 'To Be Paid'],
       rows:
-        report?.toBePaidRows.map((row) => [
+        report?.toBePaidRows.map((row, index) => [
+          String(index + 1),
           formatDateTime(row.createdAt),
           row.bookingCode,
-          row.senderName ?? '-',
-          row.receiverName ?? '-',
+          [row.parcelDetails, row.parcelContent].filter(Boolean).join(' - ') || '-',
+          [row.senderName, row.senderTelephone].filter(Boolean).join(' - ') || '-',
+          [row.receiverName, row.receiverTelephone].filter(Boolean).join(' - ') || '-',
           formatMoneyPsw(row.plannedToBePaidPsw),
         ]) ?? [],
     },

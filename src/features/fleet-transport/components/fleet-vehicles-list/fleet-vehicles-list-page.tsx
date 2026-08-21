@@ -104,7 +104,7 @@ export function FleetVehiclesListPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>Vehicles</CardTitle>
-            <PermissionGuard permissionKey={PermissionKeys.CanCreateFleetVehicles}>
+            <PermissionGuard permissionKey={PermissionKeys.CanCreateFleetVehicle}>
               <Button asChild>
                 <Link to="/fleet-transport/vehicles/new">Create vehicle</Link>
               </Button>
@@ -160,7 +160,7 @@ export function FleetVehiclesListPage() {
                       <TableCell>{row.assignedDriverName ?? '-'}</TableCell>
                       <TableCell>{row.isActive ? 'Active' : 'Inactive'}</TableCell>
                       <TableCell className="text-right">
-                        <PermissionGuard permissionKey={PermissionKeys.CanUpdateFleetVehicles}>
+                        <PermissionGuard permissionKey={PermissionKeys.CanUpdateFleetVehicle}>
                           <div className="flex justify-end gap-2">
                             <Button asChild variant="outline" size="sm">
                               <Link to={`/fleet-transport/vehicles/view/${row.id}`}>View</Link>

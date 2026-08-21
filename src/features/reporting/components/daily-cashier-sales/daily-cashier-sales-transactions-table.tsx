@@ -32,9 +32,11 @@ export function DailyCashierSalesTransactionsTable({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>#</TableHead>
               <TableHead>Payment Time</TableHead>
               <TableHead>Booking</TableHead>
-              <TableHead>Name</TableHead>
+              <TableHead>Parcel</TableHead>
+              <TableHead>Customer</TableHead>
               <TableHead>Who Paid</TableHead>
               <TableHead>Method</TableHead>
               <TableHead className="text-right">Amount Paid</TableHead>
@@ -64,11 +66,19 @@ function renderRows({
     return <EmptyRow>No sales found for the selected filters.</EmptyRow>;
   }
 
-  return report?.transactions.map((row) => (
+  return report?.transactions.map((row, index) => (
     <TableRow key={row.paymentId}>
+      <TableCell>{index + 1}</TableCell>
       <TableCell>{formatDateTime(row.receivedAt)}</TableCell>
       <TableCell>{row.bookingCode}</TableCell>
-      <TableCell>{row.payerName}</TableCell>
+      <TableCell>
+        <p className="font-medium">{row.parcelDetails || '-'}</p>
+        <p className="text-muted-foreground text-xs">{row.parcelContent || '-'}</p>
+      </TableCell>
+      <TableCell>
+        <p className="font-medium">{row.payerName}</p>
+        <p className="text-muted-foreground text-xs">{row.payerTelephone || '-'}</p>
+      </TableCell>
       <TableCell>{row.whoPaid}</TableCell>
       <TableCell>{PAYMENT_METHOD_LABELS[row.method] ?? String(row.method)}</TableCell>
       <TableCell className="text-right">{formatMoneyPsw(row.grossAmountPsw)}</TableCell>
@@ -79,7 +89,7 @@ function renderRows({
 function EmptyRow({ children }: { children: string }) {
   return (
     <TableRow>
-      <TableCell colSpan={6} className="text-center text-muted-foreground">
+      <TableCell colSpan={8} className="text-center text-muted-foreground">
         {children}
       </TableCell>
     </TableRow>

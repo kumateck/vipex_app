@@ -104,11 +104,18 @@ describe('Fleet compliance dashboard + alert job', () => {
       .returning({ id: roles.id });
     roleId = role!.id;
 
-    await db.insert(rolePermissions).values({
-      companyId,
-      roleId,
-      permission: PermissionKeys.CanReadFleetTransport,
-    });
+    await db.insert(rolePermissions).values([
+      {
+        companyId,
+        roleId,
+        permission: PermissionKeys.CanReadFleetComplianceDashboard,
+      },
+      {
+        companyId,
+        roleId,
+        permission: PermissionKeys.CanRunFleetComplianceAlerts,
+      },
+    ]);
 
     actorEmail = `fleet-actor-${now}@example.com`;
     const [actor, recipientTwo] = await db
@@ -256,7 +263,10 @@ describe('Fleet compliance dashboard + alert job', () => {
     accessToken = await createTestAccessToken({
       userId: actorUserId,
       email: actorEmail,
-      permissions: [PermissionKeys.CanReadFleetTransport],
+      permissions: [
+        PermissionKeys.CanReadFleetComplianceDashboard,
+        PermissionKeys.CanRunFleetComplianceAlerts,
+      ],
       roleId,
       companyId,
       branchId: branchAId,
