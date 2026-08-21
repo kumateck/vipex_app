@@ -3,6 +3,7 @@ import { db } from '@/db/config';
 import { parcelReceiverOtps } from '@/db/schemas';
 
 export type TargetReceiver = 'main' | 'second';
+export type PhoneSlot = 'primary' | 'secondary';
 
 export async function createParcelReceiverOtpRepo(values: typeof parcelReceiverOtps.$inferInsert) {
   const [row] = await db.insert(parcelReceiverOtps).values(values).returning();

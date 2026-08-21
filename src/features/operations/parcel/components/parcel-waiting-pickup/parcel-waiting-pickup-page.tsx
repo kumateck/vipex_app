@@ -133,6 +133,8 @@ export function ParcelWaitingPickupPage() {
         mainReceiverCards={dialog.mainReceiverCards}
         handoverTarget={dialog.handoverTarget}
         onHandoverTargetChange={(value) => dialog.setHandoverTarget(value as HandoverTarget)}
+        phoneSlot={dialog.phoneSlot}
+        onPhoneSlotChange={dialog.setPhoneSlot}
         secondNewName={dialog.secondNewName}
         onSecondNewNameChange={dialog.setSecondNewName}
         secondNewPhone={dialog.secondNewPhone}

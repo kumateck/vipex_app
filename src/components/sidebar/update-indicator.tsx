@@ -79,7 +79,10 @@ export function UpdateIndicator() {
           ring: 'border-green-500/60',
         }
       : {
-          label: status.state === 'downloading' ? 'Downloading update...' : 'Update available',
+          label:
+            status.state === 'downloading'
+              ? `Downloading update – ${Math.round(Math.max(0, Math.min(100, status.progress ?? 0)))}%`
+              : 'Update available',
           Icon: status.state === 'downloading' ? RefreshCcw : ArrowDownCircle,
           dot: 'bg-amber-500',
           icon: 'text-amber-600',
@@ -96,13 +99,21 @@ export function UpdateIndicator() {
       title={status.message ?? meta.label}
       aria-label={meta.label}
     >
-      <meta.Icon className={cn('size-4', meta.icon)} />
-      <span className="absolute -top-1 -right-1 flex h-3 w-3">
-        <span
-          className={cn('absolute inline-flex h-full w-full animate-ping rounded-full', meta.dot)}
-        />
-        <span className={cn('relative inline-flex h-3 w-3 rounded-full', meta.dot)} />
-      </span>
+      <meta.Icon
+        className={cn('size-4', meta.icon, status.state === 'downloading' && 'animate-spin')}
+      />
+      {status.state === 'downloading' ? (
+        <span className="absolute -top-2 -right-3 min-w-6 rounded-full bg-primary px-1 text-[9px] leading-4 font-semibold tabular-nums text-primary-foreground">
+          {Math.round(Math.max(0, Math.min(100, status.progress ?? 0)))}%
+        </span>
+      ) : (
+        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+          <span
+            className={cn('absolute inline-flex h-full w-full animate-ping rounded-full', meta.dot)}
+          />
+          <span className={cn('relative inline-flex h-3 w-3 rounded-full', meta.dot)} />
+        </span>
+      )}
       <span className="sr-only">{meta.label}</span>
     </Button>
   );

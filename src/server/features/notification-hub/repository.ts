@@ -589,6 +589,7 @@ export async function getParcelRecipientsRepo(companyId: string, parcelId: strin
       primaryReceiverId: customers.id,
       primaryReceiverName: customers.fullname,
       primaryReceiverPhone: customers.telephone,
+      primaryReceiverPhone2: customers.telephone2,
       primaryReceiverEmail: customers.email,
     })
     .from(parcels)
@@ -633,6 +634,7 @@ export async function getParcelRecipientsRepo(companyId: string, parcelId: strin
       id: parcel.primaryReceiverId,
       name: parcel.primaryReceiverName,
       phone: parcel.primaryReceiverPhone,
+      phone2: parcel.primaryReceiverPhone2,
       email: parcel.primaryReceiverEmail,
       type: 'receiver',
     },

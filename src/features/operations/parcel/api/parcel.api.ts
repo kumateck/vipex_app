@@ -216,6 +216,12 @@ export type ParcelReconciliationCaseRow = {
   companyId: string;
   parcelId: string;
   linkedParcelId: string | null;
+  cashierSessionId: string | null;
+  effectiveAt: string | null;
+  originalChargePsw: number | null;
+  proposedChargePsw: number | null;
+  originalPlannedToBePaidPsw: number | null;
+  proposedPlannedToBePaidPsw: number | null;
   caseType: number;
   actionType: number | null;
   status: number;
@@ -238,8 +244,26 @@ export type ParcelReconciliationCaseRow = {
   parcelStatus: number;
   sourceId: string;
   destinationId: string;
+  currentChargePsw: number;
+  currentPlannedToBePaidPsw: number;
+  sessionCashierName: string | null;
+  sessionScheduledStartTime: string | null;
+  sessionScheduledEndTime: string | null;
+  sessionStatus: string | null;
   linkedTrackingCode: string | null;
   linkedBookingCode: string | null;
+};
+
+export type ParcelCorrectionSession = {
+  id: string;
+  cashierId: string;
+  cashierName: string | null;
+  branchId: string;
+  scheduledStartTime: string;
+  scheduledEndTime: string;
+  actualStartTime: string | null;
+  actualEndTime: string | null;
+  status: string;
 };
 
 export type ParcelInternalHolderSnapshot = {
@@ -830,7 +854,12 @@ export const parcelApi = api.injectEndpoints({
     }),
     requestReceiverOtp: builder.mutation<
       { expiresAt: string },
-      { parcelId: string; targetReceiver: 'main' | 'second'; force?: boolean }
+      {
+        parcelId: string;
+        targetReceiver: 'main' | 'second';
+        force?: boolean;
+        phoneSlot?: 'primary' | 'secondary';
+      }
     >({
       query: (body) => ({
         url: '/payments/receiver-otp/request',
@@ -1082,6 +1111,9 @@ export const parcelApi = api.injectEndpoints({
         actionType?: number | null;
         notes: string;
         evidenceUrl?: string | null;
+        cashierSessionId?: string | null;
+        correctedChargeCedis?: number | string | null;
+        correctedPlannedToBePaidCedis?: number | string | null;
       }
     >({
       query: (body) => ({
@@ -1090,6 +1122,11 @@ export const parcelApi = api.injectEndpoints({
         body,
       }),
       invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    getEligibleParcelCorrectionSessions: builder.query<ParcelCorrectionSession[], string>({
+      query: (parcelId) => ({
+        url: `/shipments/parcels/reconciliation-cases/eligible-sessions/${parcelId}`,
+      }),
     }),
     approveParcelReconciliationCase: builder.mutation<
       { id: string },
@@ -1340,6 +1377,7 @@ export const {
   useListOpenParcelDiscrepanciesQuery,
   useResolveParcelDiscrepancyMutation,
   useListParcelReconciliationCasesQuery,
+  useGetEligibleParcelCorrectionSessionsQuery,
   useRequestParcelReconciliationCaseMutation,
   useApproveParcelReconciliationCaseMutation,
   useExecuteParcelReconciliationCaseMutation,

@@ -15,6 +15,7 @@ import {
   executeParcelReconciliationCaseCtrl,
   getParcelByIdCtrl,
   getParcelDetailsCtrl,
+  listEligibleParcelCorrectionSessionsCtrl,
   listParcelReconciliationCasesCtrl,
   listParcelDispositionActionsCtrl,
   listOpenParcelDiscrepanciesCtrl,
@@ -133,6 +134,22 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelReconciliation)],
       detail: { tags: ['Shipments'], summary: 'List parcel reconciliation cases' },
+    },
+  )
+  .get(
+    '/reconciliation-cases/eligible-sessions/:parcelId',
+    async ({ params, user }) =>
+      listEligibleParcelCorrectionSessionsCtrl({
+        companyId: (user as AuthUser).companyId ?? '',
+        parcelId: params.parcelId,
+      }),
+    {
+      params: t.Object({ parcelId: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanRequestParcelReconciliation),
+      ],
+      detail: { tags: ['Shipments'], summary: 'List eligible original cashier sessions' },
     },
   )
   .get('/:id', async ({ params }) => getParcelByIdCtrl(params.id), {
@@ -340,6 +357,15 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         notes: (body as { notes: string }).notes,
         evidenceUrl: (body as { evidenceUrl?: string | null }).evidenceUrl ?? null,
         actionType: (body as { actionType?: number | null }).actionType ?? null,
+        cashierSessionId: (body as { cashierSessionId?: string | null }).cashierSessionId ?? null,
+        correctedChargeCedis:
+          (body as { correctedChargeCedis?: number | string | null }).correctedChargeCedis ?? null,
+        correctedPlannedToBePaidCedis:
+          (
+            body as {
+              correctedPlannedToBePaidCedis?: number | string | null;
+            }
+          ).correctedPlannedToBePaidCedis ?? null,
       });
     },
     {
@@ -348,6 +374,9 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         linkedParcelId: t.Optional(t.Union([UUID, t.Null()])),
         caseType: t.Number(),
         actionType: t.Optional(t.Union([t.Number(), t.Null()])),
+        cashierSessionId: t.Optional(t.Union([UUID, t.Null()])),
+        correctedChargeCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
+        correctedPlannedToBePaidCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
         notes: t.String({ minLength: 3, maxLength: 1000 }),
         evidenceUrl: t.Optional(t.Union([t.String({ maxLength: 1000 }), t.Null()])),
       }),

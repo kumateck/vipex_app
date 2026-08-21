@@ -4,7 +4,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { PickupOtpVerification } from './use-pickup-otp-verification';
+
+type PhoneSlot = 'primary' | 'secondary';
 
 function useCountdownSeconds(expiresAt: string | null) {
   const [remaining, setRemaining] = useState(0);
@@ -24,11 +27,27 @@ function useCountdownSeconds(expiresAt: string | null) {
   return remaining;
 }
 
-export function PickupOtpVerificationSection({ otp }: { otp: PickupOtpVerification }) {
+type Props = {
+  otp: PickupOtpVerification;
+  receiverPhone?: string | null;
+  receiverPhone2?: string | null;
+  phoneSlot: PhoneSlot;
+  onPhoneSlotChange: (slot: PhoneSlot) => void;
+};
+
+export function PickupOtpVerificationSection({
+  otp,
+  receiverPhone,
+  receiverPhone2,
+  phoneSlot,
+  onPhoneSlotChange,
+}: Props) {
   const remainingSeconds = useCountdownSeconds(otp.otpVerified ? null : otp.otpExpiresAt);
   const isExpired = Boolean(otp.otpSentAt) && remainingSeconds <= 0;
   const minutes = Math.floor(remainingSeconds / 60);
   const seconds = remainingSeconds % 60;
+  const hasSecondPhone = Boolean(receiverPhone2);
+  const activePhone = phoneSlot === 'secondary' ? receiverPhone2 : receiverPhone;
 
   const handleSend = async () => {
     try {
@@ -70,6 +89,26 @@ export function PickupOtpVerificationSection({ otp }: { otp: PickupOtpVerificati
         </p>
       ) : (
         <>
+          {hasSecondPhone ? (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">
+                Send to which number? (main receiver has two on file)
+              </Label>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                size="sm"
+                value={phoneSlot}
+                onValueChange={(value) => {
+                  if (value) onPhoneSlotChange(value as PhoneSlot);
+                }}
+              >
+                <ToggleGroupItem value="primary">{receiverPhone || 'Phone 1'}</ToggleGroupItem>
+                <ToggleGroupItem value="secondary">{receiverPhone2 || 'Phone 2'}</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -94,7 +133,8 @@ export function PickupOtpVerificationSection({ otp }: { otp: PickupOtpVerificati
               </span>
             ) : (
               <span className="text-xs text-muted-foreground">
-                A 6-digit code will be sent to the selected receiver.
+                A 6-digit code will be sent to the main receiver
+                {activePhone ? ` (${activePhone})` : ''}.
               </span>
             )}
           </div>

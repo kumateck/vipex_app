@@ -8,7 +8,7 @@ import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagina
 import type { ParcelReconciliationCaseRow } from '../../api/parcel.api';
 import { ACTION_OPTIONS, CASE_STATUS_LABEL, CASE_TYPE_OPTIONS } from './constants';
 import type { ParcelReconciliationFilters } from './types';
-import { formatReconciliationDate } from './utils';
+import { formatMoneyPsw, formatReconciliationDate } from './utils';
 
 type ParcelReconciliationTableProps = {
   data: ParcelReconciliationCaseRow[];
@@ -63,6 +63,27 @@ export function ParcelReconciliationTable({
           CASE_STATUS_LABEL[row.original.status] ?? `Unknown (${row.original.status})`,
       },
       {
+        id: 'correction',
+        header: 'Correction / Effective Shift',
+        cell: ({ row }) =>
+          row.original.proposedChargePsw == null ? (
+            '-'
+          ) : (
+            <div className="min-w-52 text-xs">
+              <p>
+                Charge: {formatMoneyPsw(row.original.originalChargePsw)} →{' '}
+                <strong>{formatMoneyPsw(row.original.proposedChargePsw)}</strong>
+              </p>
+              <p className="text-muted-foreground">
+                {row.original.sessionCashierName ?? 'Cashier'} ·{' '}
+                {formatReconciliationDate(
+                  row.original.effectiveAt ?? row.original.sessionScheduledStartTime,
+                )}
+              </p>
+            </div>
+          ),
+      },
+      {
         accessorKey: 'requestedByName',
         header: 'Requested By',
         cell: ({ row }) => row.original.requestedByName ?? row.original.requestedBy,
@@ -103,8 +124,8 @@ export function ParcelReconciliationTable({
             <div>
               <CardTitle>Parcel Reconciliation Cases</CardTitle>
               <CardDescription>
-                Controlled workflow for shortages, overs, wrong entries, and duplicate parcel
-                records.
+                Investigate by booking or telephone, then request, independently approve, and apply
+                corrections to the transaction&apos;s original shift.
               </CardDescription>
             </div>
             {canRequest ? <Button onClick={onCreateCase}>New Case</Button> : null}
@@ -119,7 +140,7 @@ export function ParcelReconciliationTable({
             loading={loading}
             serverFilters={serverFilters}
             onRequestChange={onRequestChange}
-            searchPlaceholder="Search by tracking, booking, case type"
+            searchPlaceholder="Search by booking, tracking, telephone, or note"
             enableVirtualization={false}
           />
         </CardContent>

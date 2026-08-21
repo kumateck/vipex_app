@@ -17,6 +17,7 @@ import { useParcelCreateCustomerResolver } from './use-parcel-create-customer-re
 import { useParcelCreatePrintPreference } from './use-parcel-create-print-preference';
 import { useParcelCreateSenderPayment } from './use-parcel-create-sender-payment';
 import { sanitizeNumber } from '@/lib/utils';
+import { getParcelChargeValidationError } from '@/shared/shipments/parcel-charge-policy';
 
 export function useParcelCreateFormWorkflow() {
   const user = useAuthStore((state) => state.user);
@@ -162,6 +163,20 @@ export function useParcelCreateFormWorkflow() {
         if (!parcel) continue;
         const charge = amounts[index]?.charge ?? 0;
         const partial = amounts[index]?.partial ?? 0;
+        const plannedToBePaid =
+          parcel.paymentResponsibility === 'RECEIVER'
+            ? charge
+            : parcel.paymentResponsibility === 'SPLIT'
+              ? Math.max(charge - partial, 0)
+              : 0;
+        const chargeValidationError = getParcelChargeValidationError({
+          chargeCedis: charge,
+          plannedToBePaidCedis: plannedToBePaid,
+        });
+        if (chargeValidationError) {
+          toast.error(`Parcel ${index + 1}: ${chargeValidationError}`);
+          return;
+        }
 
         if (parcel.paymentResponsibility === 'SPLIT') {
           if (partial <= 0) {

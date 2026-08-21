@@ -6,6 +6,7 @@ import {
   executeParcelReconciliationCaseSvc,
   getParcelFullDetailsSvc,
   getParcelSvc,
+  listEligibleParcelCorrectionSessionsSvc,
   listParcelReconciliationCasesSvc,
   listParcelDispositionActionsSvc,
   waiveParcelStorageAccrualSvc,
@@ -192,8 +193,25 @@ export async function requestParcelReconciliationCaseCtrl(input: {
   notes: string;
   evidenceUrl?: string | null;
   actionType?: number | null;
+  cashierSessionId?: string | null;
+  correctedChargeCedis?: number | string | null;
+  correctedPlannedToBePaidCedis?: number | string | null;
 }) {
   return requestParcelReconciliationCaseSvc(input);
+}
+
+export async function listEligibleParcelCorrectionSessionsCtrl(input: {
+  companyId: string;
+  parcelId: string;
+}) {
+  const sessions = await listEligibleParcelCorrectionSessionsSvc(input);
+  return sessions.map((session) => ({
+    ...session,
+    scheduledStartTime: session.scheduledStartTime.toISOString(),
+    scheduledEndTime: session.scheduledEndTime.toISOString(),
+    actualStartTime: session.actualStartTime?.toISOString() ?? null,
+    actualEndTime: session.actualEndTime?.toISOString() ?? null,
+  }));
 }
 
 export async function approveParcelReconciliationCaseCtrl(input: {
@@ -238,6 +256,9 @@ export async function listParcelReconciliationCasesCtrl(input: {
     data: data.map((row) => ({
       ...row,
       requestedAt: row.requestedAt.toISOString(),
+      effectiveAt: row.effectiveAt?.toISOString() ?? null,
+      sessionScheduledStartTime: row.sessionScheduledStartTime?.toISOString() ?? null,
+      sessionScheduledEndTime: row.sessionScheduledEndTime?.toISOString() ?? null,
       approvedAt: row.approvedAt ? row.approvedAt.toISOString() : null,
       executedAt: row.executedAt ? row.executedAt.toISOString() : null,
     })),
