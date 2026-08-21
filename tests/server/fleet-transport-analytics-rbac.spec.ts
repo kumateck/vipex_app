@@ -81,7 +81,22 @@ describe('Fleet analytics routes RBAC', () => {
       {
         companyId,
         roleId: allowedRoleId,
-        permission: PermissionKeys.CanReadFleetTransport,
+        permission: PermissionKeys.CanReadFleetComplianceKpis,
+      },
+      {
+        companyId,
+        roleId: allowedRoleId,
+        permission: PermissionKeys.CanReadFleetFuelFraudSignals,
+      },
+      {
+        companyId,
+        roleId: allowedRoleId,
+        permission: PermissionKeys.CanReadFleetUnitEconomics,
+      },
+      {
+        companyId,
+        roleId: allowedRoleId,
+        permission: PermissionKeys.CanRunFleetAnalyticsSnapshot,
       },
       {
         // Ensure blocked role has at least one permission so auth fallback
@@ -148,7 +163,12 @@ describe('Fleet analytics routes RBAC', () => {
     allowedToken = await createTestAccessToken({
       userId: allowedUserId,
       email: allowedEmail,
-      permissions: [PermissionKeys.CanReadFleetTransport],
+      permissions: [
+        PermissionKeys.CanReadFleetComplianceKpis,
+        PermissionKeys.CanReadFleetFuelFraudSignals,
+        PermissionKeys.CanReadFleetUnitEconomics,
+        PermissionKeys.CanRunFleetAnalyticsSnapshot,
+      ],
       roleId: allowedRoleId,
       companyId,
       branchId,
