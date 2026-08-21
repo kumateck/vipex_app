@@ -857,6 +857,11 @@ function registerIpcHandlers() {
 
     try {
       applyUpdaterAuthHeader(auth.accessToken);
+      setUpdateStatus({
+        state: 'downloading',
+        progress: 0,
+        message: 'Starting update download (0%).',
+      });
       await autoUpdater.downloadUpdate();
       return { ok: true, status: updateStatus };
     } catch (error) {

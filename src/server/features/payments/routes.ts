@@ -158,7 +158,12 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
     async ({ body, user }) => {
       const authUser = user as AuthUser;
       return requestReceiverOtpCtrl({
-        ...(body as { parcelId: string; targetReceiver: 'main' | 'second'; force?: boolean }),
+        ...(body as {
+          parcelId: string;
+          targetReceiver: 'main' | 'second';
+          force?: boolean;
+          phoneSlot?: 'primary' | 'secondary';
+        }),
         companyId: authUser.companyId ?? '',
         branchId: authUser.branchId ?? '',
         requestedBy: authUser.sub,
@@ -169,6 +174,7 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
         parcelId: UUID,
         targetReceiver: t.Union([t.Literal('main'), t.Literal('second')]),
         force: t.Optional(t.Boolean()),
+        phoneSlot: t.Optional(t.Union([t.Literal('primary'), t.Literal('secondary')])),
       }),
       detail: {
         tags: ['Payments'],

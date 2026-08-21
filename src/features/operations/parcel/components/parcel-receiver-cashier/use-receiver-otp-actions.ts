@@ -18,10 +18,15 @@ export function useReceiverOtpActions({
     if (!dialog.selectedParcel) return;
     dialog.setOtpRequestPending(true);
     try {
+      // OTP verification always targets the main receiver's phone — it's
+      // unrelated to "Who Collected Parcel" (handoverTarget), which only
+      // records who physically took the parcel and may not have a saved
+      // phone on file, breaking OTP delivery entirely if used here.
       const result = await requestReceiverOtp({
         parcelId: dialog.selectedParcel.id,
-        targetReceiver: dialog.handoverTarget,
+        targetReceiver: 'main',
         force,
+        phoneSlot: dialog.phoneSlot,
       }).unwrap();
       dialog.setOtpSentAt(new Date().toISOString());
       dialog.setOtpExpiresAt(result.expiresAt);
@@ -39,7 +44,7 @@ export function useReceiverOtpActions({
     try {
       const result = await verifyReceiverOtp({
         parcelId: dialog.selectedParcel.id,
-        targetReceiver: dialog.handoverTarget,
+        targetReceiver: 'main',
         otp: dialog.otpCode,
       }).unwrap();
       dialog.setOtpVerified(true);

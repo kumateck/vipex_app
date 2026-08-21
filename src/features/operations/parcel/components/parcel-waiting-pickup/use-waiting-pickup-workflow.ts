@@ -170,8 +170,11 @@ export function useWaitingPickupWorkflow() {
       secondReceiverId: secondReceiverId ?? null,
       secondCardId: secondCard?.cardId ?? null,
       secondCardNumber: secondCard?.cardNumber ?? null,
+      // Must match the fixed 'main' target the OTP was requested/verified
+      // against (see use-waiting-pickup-dialog-state.ts) — not handoverTarget,
+      // which only records who physically collected the parcel.
       receiverOtpVerificationToken: dialog.otp.verificationToken,
-      receiverOtpTarget: dialog.handoverTarget,
+      receiverOtpTarget: 'main',
     }).unwrap();
 
     toast.success('Parcel marked as DELIVERED_BY_OFFICE');

@@ -1,4 +1,4 @@
-import { toPesewas } from '@/server/utils/gh-money';
+import { fromPesewas, toPesewas } from '@/server/utils/gh-money';
 import {
   ParcelHolderType,
   ParcelDispositionActionType,
@@ -52,6 +52,7 @@ import {
   createParcelReconciliationCaseRepo,
   getOpenParcelReconciliationCaseByParcelRepo,
   getParcelReconciliationCaseRepo,
+  listEligibleParcelCorrectionSessionsRepo,
   listParcelReconciliationCasesRepo,
   updateParcelReconciliationCaseRepo,
 } from './parcel-reconciliation-cases.repository';
@@ -78,6 +79,7 @@ import {
   resolveAndValidateStorageWaiverAmountPsw,
   validateStorageWaiverReason,
 } from './storage-accrual-guards';
+import { getParcelChargeValidationError } from '@/shared/shipments/parcel-charge-policy';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 function getErrorCode(error: unknown): string | undefined {
@@ -122,6 +124,17 @@ function assertActionType(value: number): ParcelReconciliationActionType {
 
 function isReversalAllowedParcelStatus(status: number) {
   return status !== ParcelStatus.DELIVERED_AT_HOME && status !== ParcelStatus.DELIVERED_BY_OFFICE;
+}
+
+function isAmountCorrectionCaseType(caseType: ParcelReconciliationCaseType) {
+  return (
+    caseType === ParcelReconciliationCaseType.WRONG_AMOUNT ||
+    caseType === ParcelReconciliationCaseType.DATA_ENTRY_ERROR
+  );
+}
+
+function isOriginalSessionAmountCorrection(actionType: number | null | undefined) {
+  return actionType === ParcelReconciliationActionType.CORRECT_AMOUNT_IN_ORIGINAL_SESSION;
 }
 
 const STORAGE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -337,6 +350,11 @@ export async function createParcelSvc(input: {
   const plannedToBePaidPsw =
     input.plannedToBePaidCedis != null ? toPesewas(input.plannedToBePaidCedis) : 0n;
   const chargePsw = input.chargeCedis != null ? toPesewas(input.chargeCedis) : plannedToBePaidPsw;
+  const chargeValidationError = getParcelChargeValidationError({
+    chargeCedis: fromPesewas(chargePsw),
+    plannedToBePaidCedis: fromPesewas(plannedToBePaidPsw),
+  });
+  if (chargeValidationError) throw BadRequest(chargeValidationError);
   const created = await createParcelRepo({
     companyId: input.companyId,
     sourceId: input.sourceId,
@@ -420,8 +438,16 @@ export async function updateParcelSvc(
   if (patch.parcelValueCedis !== undefined)
     setPatch.parcelValuePsw =
       patch.parcelValueCedis != null ? Number(toPesewas(patch.parcelValueCedis)) : 0;
-  if (patch.chargeCedis !== undefined)
+  if (patch.chargeCedis !== undefined) {
+    if (patch.chargeCedis != null) {
+      const chargeValidationError = getParcelChargeValidationError({
+        chargeCedis: Number(patch.chargeCedis),
+        plannedToBePaidCedis: fromPesewas(BigInt(cur.plannedToBePaidPsw)),
+      });
+      if (chargeValidationError) throw BadRequest(chargeValidationError);
+    }
     setPatch.chargePsw = patch.chargeCedis != null ? Number(toPesewas(patch.chargeCedis)) : 0;
+  }
   if (patch.pickupLocationId !== undefined) setPatch.pickupLocationId = patch.pickupLocationId;
   if (patch.method !== undefined) setPatch.method = patch.method;
   if (patch.taxReportConfirmation !== undefined)
@@ -483,6 +509,11 @@ export async function markParcelReceivedSvc(
 export async function setPlannedToBePaidSvc(id: string, plannedCedis: number | string) {
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
+  const validationError = getParcelChargeValidationError({
+    chargeCedis: fromPesewas(BigInt(cur.chargePsw)),
+    plannedToBePaidCedis: Number(plannedCedis),
+  });
+  if (validationError) throw BadRequest(validationError);
   const plannedToBePaidPsw = toPesewas(plannedCedis);
   const updated = await updateParcelRepo(id, { plannedToBePaidPsw: Number(plannedToBePaidPsw) });
   if (!updated) throw NotFound('Parcel not found');
@@ -590,6 +621,9 @@ export async function requestParcelReconciliationCaseSvc(input: {
   notes: string;
   evidenceUrl?: string | null;
   actionType?: number | null;
+  cashierSessionId?: string | null;
+  correctedChargeCedis?: number | string | null;
+  correctedPlannedToBePaidCedis?: number | string | null;
 }) {
   const caseType = assertCaseType(input.caseType);
   const note = input.notes.trim();
@@ -623,6 +657,11 @@ export async function requestParcelReconciliationCaseSvc(input: {
   }
 
   const actionType = input.actionType != null ? assertActionType(input.actionType) : null;
+  if (isOriginalSessionAmountCorrection(actionType) && !isAmountCorrectionCaseType(caseType)) {
+    throw BadRequest(
+      'Original-session amount correction requires a wrong amount or data entry case',
+    );
+  }
   if (
     caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY &&
     actionType != null &&
@@ -632,10 +671,68 @@ export async function requestParcelReconciliationCaseSvc(input: {
     throw BadRequest('Duplicate entry supports only duplicate-resolution actions');
   }
 
+  let correction:
+    | {
+        cashierSessionId: string;
+        effectiveAt: Date;
+        proposedChargePsw: number;
+        proposedPlannedToBePaidPsw: number;
+        sessionStatus: string;
+      }
+    | undefined;
+
+  if (isOriginalSessionAmountCorrection(actionType)) {
+    if (!input.cashierSessionId) throw BadRequest('Original cashier session is required');
+    if (!parcel.createdBy) throw BadRequest('Parcel has no originating cashier to reconcile');
+
+    const proposedChargeCedis = Number(input.correctedChargeCedis);
+    const proposedPlannedToBePaidCedis = Number(input.correctedPlannedToBePaidCedis ?? 0);
+    const validationError = getParcelChargeValidationError({
+      chargeCedis: proposedChargeCedis,
+      plannedToBePaidCedis: proposedPlannedToBePaidCedis,
+    });
+    if (validationError) throw BadRequest(validationError);
+
+    const eligibleSessions = await listEligibleParcelCorrectionSessionsRepo({
+      cashierId: parcel.createdBy,
+      branchId: parcel.sourceId,
+      occurredAt: parcel.createdAt,
+      preferredSessionId: parcel.cashierSessionId,
+    });
+    const selectedSession = eligibleSessions.find(
+      (session) => session.id === input.cashierSessionId,
+    );
+    if (!selectedSession) {
+      throw BadRequest(
+        'Selected session does not match the parcel cashier, branch, and transaction time',
+      );
+    }
+
+    correction = {
+      cashierSessionId: selectedSession.id,
+      effectiveAt: parcel.createdAt,
+      proposedChargePsw: Number(toPesewas(proposedChargeCedis)),
+      proposedPlannedToBePaidPsw: Number(toPesewas(proposedPlannedToBePaidCedis)),
+      sessionStatus: selectedSession.status,
+    };
+    if (
+      correction.proposedChargePsw === parcel.chargePsw &&
+      correction.proposedPlannedToBePaidPsw === parcel.plannedToBePaidPsw
+    ) {
+      throw BadRequest('Corrected amounts must be different from the current parcel amounts');
+    }
+  }
+
   const created = await createParcelReconciliationCaseRepo({
     companyId: input.companyId,
     parcelId: parcel.id,
     linkedParcelId: linkedParcel?.id ?? null,
+    cashierSessionId: correction?.cashierSessionId ?? parcel.cashierSessionId ?? null,
+    effectiveAt: correction?.effectiveAt ?? parcel.createdAt,
+    originalChargePsw: parcel.chargePsw,
+    proposedChargePsw: correction?.proposedChargePsw ?? null,
+    originalPlannedToBePaidPsw: parcel.plannedToBePaidPsw,
+    proposedPlannedToBePaidPsw: correction?.proposedPlannedToBePaidPsw ?? null,
     caseType,
     actionType,
     status: ParcelReconciliationCaseStatus.REQUESTED,
@@ -661,10 +758,37 @@ export async function requestParcelReconciliationCaseSvc(input: {
       actionType,
       notes: note,
       evidenceUrl: input.evidenceUrl?.trim() || null,
+      correction: correction
+        ? {
+            cashierSessionId: correction.cashierSessionId,
+            effectiveAt: correction.effectiveAt.toISOString(),
+            sessionStatus: correction.sessionStatus,
+            originalChargePsw: parcel.chargePsw,
+            proposedChargePsw: correction.proposedChargePsw,
+            originalPlannedToBePaidPsw: parcel.plannedToBePaidPsw,
+            proposedPlannedToBePaidPsw: correction.proposedPlannedToBePaidPsw,
+          }
+        : null,
     },
   });
 
   return { id: created.id };
+}
+
+export async function listEligibleParcelCorrectionSessionsSvc(input: {
+  companyId: string;
+  parcelId: string;
+}) {
+  const parcel = await getParcelSvc(input.parcelId);
+  if (parcel.companyId !== input.companyId) throw NotFound('Parcel not found in company');
+  if (!parcel.createdBy) return [];
+
+  return listEligibleParcelCorrectionSessionsRepo({
+    cashierId: parcel.createdBy,
+    branchId: parcel.sourceId,
+    occurredAt: parcel.createdAt,
+    preferredSessionId: parcel.cashierSessionId,
+  });
 }
 
 export async function approveParcelReconciliationCaseSvc(input: {
@@ -696,6 +820,15 @@ export async function approveParcelReconciliationCaseSvc(input: {
       actionType === ParcelReconciliationActionType.MERGE_TO_SINGLE)
   ) {
     throw BadRequest('Selected action is only valid for duplicate entry');
+  }
+  if (
+    isOriginalSessionAmountCorrection(actionType) &&
+    (!isAmountCorrectionCaseType(existing.caseType) ||
+      existing.cashierSessionId == null ||
+      existing.proposedChargePsw == null ||
+      existing.proposedPlannedToBePaidPsw == null)
+  ) {
+    throw BadRequest('Case is missing a valid original-session amount correction proposal');
   }
 
   const note = input.resolutionNote?.trim() || null;
@@ -743,6 +876,103 @@ export async function executeParcelReconciliationCaseSvc(input: {
       ? await getParcelSvc(existing.linkedParcelId, tx)
       : null;
     const targetParcels: ParcelRow[] = [];
+
+    if (isOriginalSessionAmountCorrection(actionType)) {
+      if (
+        existing.originalChargePsw == null ||
+        existing.proposedChargePsw == null ||
+        existing.originalPlannedToBePaidPsw == null ||
+        existing.proposedPlannedToBePaidPsw == null ||
+        existing.cashierSessionId == null
+      ) {
+        throw BadRequest('Correction proposal is incomplete');
+      }
+      if (
+        primaryParcel.chargePsw !== existing.originalChargePsw ||
+        primaryParcel.plannedToBePaidPsw !== existing.originalPlannedToBePaidPsw
+      ) {
+        throw Conflict('Parcel amounts changed after this case was requested; open a new case');
+      }
+
+      const activePayments = await listPaymentsForParcelRepo(primaryParcel.id, tx);
+      if (activePayments.length > 0) {
+        throw BadRequest(
+          'Paid parcels require the void, refund, or rebook workflow; direct amount correction is not allowed',
+        );
+      }
+
+      await updateParcelRepo(
+        primaryParcel.id,
+        {
+          chargePsw: existing.proposedChargePsw,
+          plannedToBePaidPsw: existing.proposedPlannedToBePaidPsw,
+        },
+        tx,
+      );
+
+      const executionNote = input.executionNote?.trim() || existing.resolutionNote;
+      await updateParcelReconciliationCaseRepo(
+        existing.id,
+        {
+          status: ParcelReconciliationCaseStatus.EXECUTED,
+          executedBy: input.actorUserId,
+          executedAt: new Date(),
+          resolutionNote: executionNote,
+          metadata: {
+            ...(existing.metadata as Record<string, unknown> | null),
+            execution: {
+              actionType,
+              effectiveCashierSessionId: existing.cashierSessionId,
+              effectiveAt:
+                existing.effectiveAt?.toISOString() ?? primaryParcel.createdAt.toISOString(),
+              recordedAt: new Date().toISOString(),
+              before: {
+                chargePsw: existing.originalChargePsw,
+                plannedToBePaidPsw: existing.originalPlannedToBePaidPsw,
+              },
+              after: {
+                chargePsw: existing.proposedChargePsw,
+                plannedToBePaidPsw: existing.proposedPlannedToBePaidPsw,
+              },
+            },
+          },
+        },
+        tx,
+      );
+
+      await recordAuditLog({
+        companyId: input.companyId,
+        actorUserId: input.actorUserId,
+        entityType: 'parcel_reconciliation_case',
+        entityId: existing.id,
+        action: 'PARCEL_AMOUNT_CORRECTION_EXECUTED',
+        message: `Parcel ${primaryParcel.trackingCode} amount corrected in its original cashier session`,
+        metadata: {
+          parcelId: primaryParcel.id,
+          bookingCode: primaryParcel.bookingCode,
+          trackingCode: primaryParcel.trackingCode,
+          effectiveCashierSessionId: existing.cashierSessionId,
+          effectiveAt: existing.effectiveAt?.toISOString() ?? primaryParcel.createdAt.toISOString(),
+          before: {
+            chargePsw: existing.originalChargePsw,
+            plannedToBePaidPsw: existing.originalPlannedToBePaidPsw,
+          },
+          after: {
+            chargePsw: existing.proposedChargePsw,
+            plannedToBePaidPsw: existing.proposedPlannedToBePaidPsw,
+          },
+          executionNote,
+        },
+      });
+
+      return {
+        id: existing.id,
+        actionType,
+        touchedParcelIds: [primaryParcel.id],
+        voidedPayments: 0,
+        consignmentItemsUnlinked: 0,
+      };
+    }
 
     if (existing.caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY) {
       if (!linkedParcel) throw BadRequest('Duplicate case missing linked parcel');
