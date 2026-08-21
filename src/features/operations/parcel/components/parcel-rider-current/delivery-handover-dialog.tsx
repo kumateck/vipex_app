@@ -97,7 +97,7 @@ export function DeliveryHandoverDialog({
           <div className="space-y-4">
             <div className="grid gap-2 text-sm">
               <p>
-                <strong>Tracking:</strong> {selected.trackingCode}
+                <strong>Booking:</strong> {selected.bookingCode}
               </p>
               <p>
                 <strong>Address:</strong> {selected.dropoffAddress ?? '-'}
@@ -114,7 +114,7 @@ export function DeliveryHandoverDialog({
             </div>
 
             <div className="space-y-2 rounded-md border p-3">
-              <Label>Main Receiver ID Card (required)</Label>
+              <Label>Main Receiver ID Card (optional)</Label>
               <Select
                 value={mainCardMode}
                 onValueChange={(v) => onMainCardModeChange(v as CardMode)}
@@ -123,6 +123,7 @@ export function DeliveryHandoverDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">No card</SelectItem>
                   <SelectItem value="existing" disabled={mainReceiverCards.length === 0}>
                     Use existing card
                   </SelectItem>
@@ -145,7 +146,7 @@ export function DeliveryHandoverDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              ) : (
+              ) : mainCardMode === 'new' ? (
                 <div className="grid gap-2 md:grid-cols-2">
                   <Select value={mainNewCardTypeId} onValueChange={onMainNewCardTypeIdChange}>
                     <SelectTrigger>
@@ -165,6 +166,10 @@ export function DeliveryHandoverDialog({
                     placeholder="Card number"
                   />
                 </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No ID card will be recorded for this handover.
+                </p>
               )}
             </div>
 
@@ -211,6 +216,7 @@ export function DeliveryHandoverDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">No card</SelectItem>
                       <SelectItem value="existing" disabled={secondReceiverCards.length === 0}>
                         Use existing card
                       </SelectItem>
@@ -233,7 +239,7 @@ export function DeliveryHandoverDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                  ) : (
+                  ) : secondCardMode === 'new' ? (
                     <div className="grid gap-2 md:grid-cols-2">
                       <Select
                         value={secondNewCardTypeId}
@@ -256,6 +262,10 @@ export function DeliveryHandoverDialog({
                         placeholder="Second receiver card number"
                       />
                     </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No ID card will be recorded for the second receiver.
+                    </p>
                   )}
                 </div>
               ) : null}

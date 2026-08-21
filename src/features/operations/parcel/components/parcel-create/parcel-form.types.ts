@@ -19,6 +19,7 @@ export type ParcelFormValues = {
   paymentResponsibility: PaymentResponsibility;
   senderSettlementMode: SenderSettlementMode;
   senderPartialPayment: string;
+  callSender: boolean;
   receiver: CustomerFormValues;
 };
 

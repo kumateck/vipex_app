@@ -15,12 +15,12 @@ export function useReceiverCashierDialogState() {
   const [waiveStorageAmount, setWaiveStorageAmount] = useState('');
   const [lastPrintedReceipt, setLastPrintedReceipt] = useState<ReceiptPrintData | null>(null);
 
-  const [mainCardMode, setMainCardMode] = useState<CardMode>('existing');
+  const [mainCardMode, setMainCardMode] = useState<CardMode>('none');
   const [mainExistingCardRecordId, setMainExistingCardRecordId] = useState('');
   const [mainNewCardTypeId, setMainNewCardTypeId] = useState('');
   const [mainNewCardNumber, setMainNewCardNumber] = useState('');
 
-  const [secondCardMode, setSecondCardMode] = useState<CardMode>('new');
+  const [secondCardMode, setSecondCardMode] = useState<CardMode>('none');
   const [secondExistingCardRecordId, setSecondExistingCardRecordId] = useState('');
   const [secondNewCardTypeId, setSecondNewCardTypeId] = useState('');
   const [secondNewCardNumber, setSecondNewCardNumber] = useState('');
@@ -56,11 +56,11 @@ export function useReceiverCashierDialogState() {
     setStoragePaymentAmount('0.00');
     setWaiveStorageAmount('0.00');
     setWaiveStorageReason('');
-    setMainCardMode('existing');
+    setMainCardMode('none');
     setMainExistingCardRecordId('');
     setMainNewCardTypeId('');
     setMainNewCardNumber('');
-    setSecondCardMode('new');
+    setSecondCardMode('none');
     setSecondExistingCardRecordId('');
     setSecondNewCardTypeId('');
     setSecondNewCardNumber('');

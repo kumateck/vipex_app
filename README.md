@@ -78,9 +78,9 @@ Recommended values:
   - `RESET_LINK_BASE_URL=https://staging.app.vipexparcel.com`
   - `INVITE_LINK_BASE_URL=https://staging.app.vipexparcel.com`
 - Production:
-  - `APP_BASE_URL=https://app.vipexparcel.com`
-  - `RESET_LINK_BASE_URL=https://app.vipexparcel.com`
-  - `INVITE_LINK_BASE_URL=https://app.vipexparcel.com`
+  - `APP_BASE_URL=https://app.vipexparcels.com`
+  - `RESET_LINK_BASE_URL=https://app.vipexparcels.com`
+  - `INVITE_LINK_BASE_URL=https://app.vipexparcels.com`
 
 ## Accounting Enablement
 

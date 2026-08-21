@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import {
@@ -27,12 +27,12 @@ export function ParcelRiderCurrentPage() {
   const [signatureImage, setSignatureImage] = useState<string | undefined>(undefined);
   const [handoverTarget, setHandoverTarget] = useState<HandoverTarget>('main');
 
-  const [mainCardMode, setMainCardMode] = useState<CardMode>('existing');
+  const [mainCardMode, setMainCardMode] = useState<CardMode>('none');
   const [mainExistingCardRecordId, setMainExistingCardRecordId] = useState('');
   const [mainNewCardTypeId, setMainNewCardTypeId] = useState('');
   const [mainNewCardNumber, setMainNewCardNumber] = useState('');
 
-  const [secondCardMode, setSecondCardMode] = useState<CardMode>('new');
+  const [secondCardMode, setSecondCardMode] = useState<CardMode>('none');
   const [secondExistingCardRecordId, setSecondExistingCardRecordId] = useState('');
   const [secondNewCardTypeId, setSecondNewCardTypeId] = useState('');
   const [secondNewCardNumber, setSecondNewCardNumber] = useState('');
@@ -59,23 +59,15 @@ export function ParcelRiderCurrentPage() {
   const [riderGiven, { isLoading: isConfirming }] = useRiderGivenParcelToCustomerMutation();
   const [riderReturned, { isLoading: isReturning }] = useRiderReturnParcelToOfficeMutation();
 
-  useEffect(() => {
-    if (!selected) return;
-    if (mainReceiverCards.length === 0) {
-      setMainCardMode('new');
-      setMainExistingCardRecordId('');
-    }
-  }, [selected, mainReceiverCards.length]);
-
   const openDeliveryDetails = (row: RiderDoorstepRecord) => {
     setSelected(row);
     setSignatureImage(undefined);
     setHandoverTarget(row.secondReceiverId ? 'second' : 'main');
-    setMainCardMode('existing');
+    setMainCardMode('none');
     setMainExistingCardRecordId('');
     setMainNewCardTypeId('');
     setMainNewCardNumber('');
-    setSecondCardMode('new');
+    setSecondCardMode('none');
     setSecondExistingCardRecordId('');
     setSecondNewCardTypeId('');
     setSecondNewCardNumber('');
@@ -99,7 +91,9 @@ export function ParcelRiderCurrentPage() {
     existingCards: Array<{ id: string; cardId: string; cardNumber: string }>;
     newCardTypeId: string;
     newCardNumber: string;
-  }): Promise<{ cardId: string; cardNumber: string }> {
+  }): Promise<{ cardId: string; cardNumber: string } | null> {
+    if (input.mode === 'none') return null;
+
     if (input.mode === 'existing') {
       const found = input.existingCards.find((card) => card.id === input.existingRecordId);
       if (!found) throw new Error('Select an existing card');
@@ -176,8 +170,8 @@ export function ParcelRiderCurrentPage() {
         riderUserId,
         signatureImage: signatureUrl,
         secondReceiverId: secondReceiverId ?? null,
-        cardId: mainCard.cardId,
-        cardNumber: mainCard.cardNumber,
+        cardId: mainCard?.cardId ?? null,
+        cardNumber: mainCard?.cardNumber ?? null,
         secondCardId: secondCard?.cardId ?? null,
         secondCardNumber: secondCard?.cardNumber ?? null,
       }).unwrap();

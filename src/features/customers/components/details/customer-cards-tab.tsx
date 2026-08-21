@@ -90,7 +90,7 @@ export function CustomerCardsTab({
     <Card className="flex h-full flex-col">
       <CardHeader>
         <CardTitle>Customer Cards</CardTitle>
-        <CardDescription>Add and view cards for this customer.</CardDescription>
+        <CardDescription>Optionally add and view cards for this customer.</CardDescription>
       </CardHeader>
       <CardContent className="min-h-0 flex-1 space-y-3 overflow-y-auto">
         <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">

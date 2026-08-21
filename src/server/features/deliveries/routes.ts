@@ -1,6 +1,13 @@
 import { Elysia, t } from 'elysia';
 import { HttpStatus } from '../../utils/http-status';
 import { UUID } from '../../schemas/common';
+import {
+  authPlugin,
+  requireAuth,
+  requireAnyPermissions,
+  requirePermissions,
+} from '../../plugins/auth';
+import { PermissionKeys } from '@/shared/permissions/constants';
 
 import {
   createDeliveryCtrl,
@@ -19,6 +26,7 @@ import {
 } from './controller';
 
 export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
+  .use(authPlugin)
   .post(
     '/',
     async ({ body, set }) => {
@@ -46,6 +54,7 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
         createdBy: UUID,
         cashierSessionId: t.Optional(UUID),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateDeliveryOrder)],
       detail: { tags: ['Deliveries'], summary: 'Create delivery order (OFFICE or DOORSTEP)' },
     },
   )
@@ -63,6 +72,7 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
         frontDeskUserId: UUID,
         deliveryUserId: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCompleteOfficePickup)],
       detail: {
         tags: ['Deliveries'],
         summary: 'Complete OFFICE pickup (requires principal cleared)',
@@ -76,6 +86,10 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
     {
       params: t.Object({ parcelId: UUID }),
       body: t.Object({ userId: UUID }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadCallCenterParcelStatus),
+      ],
       detail: { tags: ['Deliveries'], summary: 'Doorstep: mark called' },
     },
   )
@@ -89,11 +103,13 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
     {
       params: t.Object({ parcelId: UUID }),
       body: t.Object({ riderUserId: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanAssignDoorstepRider)],
       detail: { tags: ['Deliveries'], summary: 'Doorstep: assign rider' },
     },
   )
   .post('/dd/:parcelId/out', async ({ params }) => ddOutCtrl({ parcelId: params.parcelId }), {
     params: t.Object({ parcelId: UUID }),
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanMarkOutForDelivery)],
     detail: { tags: ['Deliveries'], summary: 'Doorstep: out for delivery' },
   })
   .post(
@@ -112,6 +128,7 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
         dropoffAddress: t.String({ minLength: 3, maxLength: 255 }),
         deliveryFeeCedis: t.Union([t.Number(), t.String()]),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanMarkDoorstepCalled)],
       detail: { tags: ['Deliveries'], summary: 'Doorstep: collect address and delivery fee' },
     },
   )
@@ -129,6 +146,7 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
         riderUserId: UUID,
         userId: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanDispatchForDelivery)],
       detail: { tags: ['Deliveries'], summary: 'Doorstep: dispatch/reassign parcels in bulk' },
     },
   )
@@ -144,6 +162,13 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
       query: t.Object({
         mode: t.Optional(t.Union([t.Literal('current'), t.Literal('history')])),
       }),
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanReadRiderCurrentParcels,
+          PermissionKeys.CanReadRiderHistory,
+        ),
+      ],
       detail: { tags: ['Deliveries'], summary: 'Doorstep: list rider assigned/current/history' },
     },
   )
@@ -157,6 +182,7 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
     {
       params: t.Object({ riderUserId: UUID }),
       query: t.Object({ branchId: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanDispatchForDelivery)],
       detail: {
         tags: ['Deliveries'],
         summary: 'Doorstep: rider analytics benchmark vs branch rider average',
@@ -187,6 +213,7 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
         secondCardId: t.Optional(t.Union([UUID, t.Null()])),
         secondCardNumber: t.Optional(t.Union([t.String(), t.Null()])),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadRiderCurrentParcels)],
       detail: { tags: ['Deliveries'], summary: 'Doorstep: rider confirms handover with signature' },
     },
   )
@@ -202,6 +229,7 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
       body: t.Object({
         riderUserId: UUID,
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadRiderCurrentParcels)],
       detail: { tags: ['Deliveries'], summary: 'Doorstep: rider returns parcel to office' },
     },
   )
@@ -229,6 +257,7 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
         deliveryFeeAmountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
         method: t.Number(),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCompleteDoorstepDelivery)],
       detail: {
         tags: ['Deliveries'],
         summary: 'Doorstep: cashier finalization after rider return',
@@ -259,6 +288,7 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
         deliveryFeeAmountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
         method: t.Number(),
       }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCompleteDoorstepDelivery)],
       detail: {
         tags: ['Deliveries'],
         summary: 'Doorstep: complete and optionally collect principal and delivery fee',

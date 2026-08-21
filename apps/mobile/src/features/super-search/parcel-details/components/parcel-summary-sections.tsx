@@ -51,7 +51,6 @@ export function ParcelSummarySections({
         <SectionHead title="Parcel" statusLabel={details.parcel.status} />
         <View style={styles.detailList}>
           <DetailRow first label="Booking" value={details.parcel.bookingCode} />
-          <DetailRow label="Tracking" value={details.parcel.trackingCode} />
           <DetailRow
             label="Source"
             value={branchLocationLabel(sourceBranchName, sourceLocationName)}

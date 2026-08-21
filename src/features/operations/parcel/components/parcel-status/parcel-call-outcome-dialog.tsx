@@ -58,7 +58,7 @@ export function ParcelCallOutcomeDialog({
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            {selectedParcel ? `Tracking: ${selectedParcel.trackingCode}` : ''}
+            {selectedParcel ? `Booking: ${selectedParcel.bookingCode}` : ''}
           </p>
 
           <div className="space-y-2">

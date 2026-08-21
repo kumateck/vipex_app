@@ -10,6 +10,8 @@ export function inferReadPermissionByPath(pathname?: string): PermissionKey | un
   if (pathname.startsWith('/parcels/in-transit/incoming'))
     return PermissionKeys.CanReadParcelIncoming;
   if (pathname.startsWith('/parcels/receive')) return PermissionKeys.CanReadParcelScan;
+  if (pathname.startsWith('/parcels/consignments/') && pathname.endsWith('/receive'))
+    return PermissionKeys.CanReadParcelScan;
   if (pathname === '/parcels' || pathname.startsWith('/parcels/'))
     return PermissionKeys.CanReadParcels;
   if (pathname === '/customers' || pathname.startsWith('/customers/'))
@@ -68,7 +70,28 @@ export function inferReadPermissionByPath(pathname?: string): PermissionKey | un
     return PermissionKeys.CanReadInventoryEnterpriseKpis;
   if (pathname.startsWith('/inventory')) return PermissionKeys.CanListProducts;
   if (pathname.startsWith('/procurement')) return PermissionKeys.CanReadProcurement;
-  if (pathname.startsWith('/fleet-transport/trips')) return PermissionKeys.CanReadFleetTrips;
+  if (pathname.startsWith('/fleet-transport/trips')) return PermissionKeys.CanReadFleetTripsPage;
+  if (pathname.startsWith('/fleet-transport/vehicles')) return PermissionKeys.CanReadFleetVehicles;
+  if (pathname.startsWith('/fleet-transport/fuel-analytics/fraud-signals'))
+    return PermissionKeys.CanReadFleetFuelFraudSignals;
+  if (pathname.startsWith('/fleet-transport/fuel-analytics'))
+    return PermissionKeys.CanReadFleetFuelAnalytics;
+  if (pathname.startsWith('/fleet-transport/fuel-logs/approvals'))
+    return PermissionKeys.CanReadFleetFuelApprovals;
+  if (pathname.startsWith('/fleet-transport/fuel-logs')) return PermissionKeys.CanReadFleetFuelLogs;
+  if (pathname.startsWith('/fleet-transport/rosters')) return PermissionKeys.CanReadFleetRosters;
+  if (pathname.startsWith('/fleet-transport/compliance/kpis'))
+    return PermissionKeys.CanReadFleetComplianceKpis;
+  if (pathname.startsWith('/fleet-transport/compliance/ops'))
+    return PermissionKeys.CanReadFleetOpsQueue;
+  if (pathname.startsWith('/fleet-transport/compliance'))
+    return PermissionKeys.CanReadFleetComplianceDashboard;
+  if (pathname.startsWith('/fleet-transport/maintenance'))
+    return PermissionKeys.CanReadFleetMaintenanceDashboard;
+  if (pathname.startsWith('/fleet-transport/dispatch'))
+    return PermissionKeys.CanReadFleetDispatchBoard;
+  if (pathname.startsWith('/fleet-transport/decision-support'))
+    return PermissionKeys.CanReadFleetDecisionSupport;
   if (pathname.startsWith('/fleet-transport')) return PermissionKeys.CanReadFleetTransport;
   if (pathname.startsWith('/customer-wallet-credit'))
     return PermissionKeys.CanReadCustomerWalletCredit;

@@ -95,7 +95,7 @@ export function CustomerPaymentsTab({
                 <p className="font-medium">{formatMoney(row.amountPsw)}</p>
               </div>
               <p className="text-muted-foreground">
-                {row.trackingCode ? `Tracking: ${row.trackingCode}` : 'No tracking'}{' '}
+                {row.bookingCode ? `Booking: ${row.bookingCode}` : 'No booking code'}{' '}
                 {row.method != null ? `• ${paymentMethodLabel(row.method)}` : ''}
               </p>
               <p className="text-muted-foreground">{formatDateTimeShared(row.createdAt)}</p>

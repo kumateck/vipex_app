@@ -477,6 +477,13 @@ export enum ParcelReconciliationActionType {
   KEEP_ORIGINAL_VOID_DUPLICATE = 3,
   MERGE_TO_SINGLE = 4,
 }
+
+export enum ConsignmentReceivingStatus {
+  OPEN = 0, // created, receiving in progress or not yet started
+  CLOSED = 1, // closed, all active items confirmed arrived
+  CLOSED_WITH_EXCEPTIONS = 2, // closed with sign-off despite missing items
+}
+
 export enum DeliveryFeeBasis {
   DISTANCE = 0,
   WEIGHT = 1,

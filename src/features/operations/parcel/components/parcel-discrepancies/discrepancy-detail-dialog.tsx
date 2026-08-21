@@ -29,9 +29,6 @@ export function DiscrepancyDetailDialog({
 
         <div className="space-y-2 text-sm">
           <p>
-            <strong>Tracking:</strong> {row?.trackingCode ?? '-'}
-          </p>
-          <p>
             <strong>Booking:</strong> {row?.bookingCode ?? '-'}
           </p>
           <p>

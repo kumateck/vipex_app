@@ -331,6 +331,9 @@ export function ParcelProcessedConsignmentPage() {
   const allEligibleSelected =
     eligibleRows.length > 0 && selectedEligibleCount === eligibleRows.length;
   const someEligibleSelected = selectedEligibleCount > 0 && !allEligibleSelected;
+  const rowNumberOffset =
+    ((data?.meta.page ?? query.page ?? 1) - 1) *
+    (data?.meta.pageSize ?? query.pageSize ?? EMPTY_META.pageSize);
 
   const columns = useMemo<ColumnDef<ProcessedParcel>[]>(
     () => [
@@ -355,20 +358,38 @@ export function ParcelProcessedConsignmentPage() {
             <Checkbox
               checked={isChecked}
               onCheckedChange={(checked) => toggleRowSelection(parcel, Boolean(checked))}
-              aria-label={`Select parcel ${parcel.trackingCode}`}
+              aria-label={`Select parcel ${parcel.bookingCode}`}
               disabled={!isChecked && isDifferentDestination}
             />
           );
         },
       },
-
+      {
+        id: 'rowNumber',
+        header: 'No.',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="tabular-nums text-muted-foreground">
+            {rowNumberOffset + row.index + 1}
+          </span>
+        ),
+      },
       {
         accessorKey: 'bookingCode',
         header: 'Booking',
         cell: ({ row }) => <PaymentStatusBookingCell parcel={row.original} />,
       },
-      { accessorKey: 'parcelDetails', header: 'Parcel Details' },
-      { accessorKey: 'parcelContent', header: 'Parcel Content' },
+      {
+        id: 'parcel',
+        header: 'Parcel',
+        accessorFn: (row) => `${row.parcelDetails ?? ''} ${row.parcelContent ?? ''}`,
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.parcelDetails || '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.parcelContent || '-'}</p>
+          </div>
+        ),
+      },
       {
         id: 'sender',
         header: 'Sender',
@@ -434,6 +455,7 @@ export function ParcelProcessedConsignmentPage() {
       lockedDestinationId,
       branchNameById,
       queueReprint,
+      rowNumberOffset,
       startEditingParcel,
       toggleRowSelection,
       toggleSelectAllEligible,

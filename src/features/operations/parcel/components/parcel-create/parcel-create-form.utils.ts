@@ -13,6 +13,7 @@ export const createEmptyParcel = (): ParcelFormValues => ({
   paymentResponsibility: 'SENDER',
   senderSettlementMode: 'PAY_NOW',
   senderPartialPayment: '',
+  callSender: false,
   receiver: {
     telephone: '',
     telephone2: '',

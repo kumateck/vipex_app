@@ -20,6 +20,8 @@ import { DashboardExportActions } from '../dashboard-export-actions';
 import { DashboardScopeFilterBar, type DashboardScope } from '../dashboard-scope-filter-bar';
 import { RoleDashboardGuard } from '../role-dashboard-guard';
 import { formatMoneyPsw, formatPercent, isoDate } from '../../utils/formatters';
+import { ExecutiveInsightsPanel } from './executive-insights-panel';
+import { ManagementDailyBriefPanel } from './management-daily-brief-panel';
 
 export function CEODashboardV1Page() {
   const user = useAuthStore((state) => state.user);
@@ -344,6 +346,9 @@ export function CEODashboardV1Page() {
                       </CardContent>
                     </Card>
                   </div>
+
+                  <ExecutiveInsightsPanel from={from} to={to} branchId={branchId} />
+                  <ManagementDailyBriefPanel />
                 </>
               )}
             </CardContent>

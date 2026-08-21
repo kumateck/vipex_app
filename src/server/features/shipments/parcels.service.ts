@@ -39,6 +39,10 @@ import { postJournalEntrySvc } from '../accounting/posting.service';
 import { getAccountByCodeRepo } from '../accounting/repository';
 import { isAccountingEnabledForCompanySvc } from '../accounting/service';
 import {
+  assertReceiverOtpVerifiedSvc,
+  consumeReceiverOtpTokenSvc,
+} from '../parcel-receiver-otp/service';
+import {
   createParcelDiscrepancyRepo,
   getOpenDiscrepancyByParcelRepo,
   listOpenParcelDiscrepanciesRepo,
@@ -60,10 +64,12 @@ import {
   listParcelDispositionActionsRepo,
   listParcelStorageWaiversRepo,
   listParcelsRepo,
+  listStuckParcelsRepo,
   sumParcelStorageWaiversPswRepo,
   updateParcelStorageWaiverAccountingPostingRepo,
   updateParcelRepo,
   type ListParcelsParams,
+  type ListStuckParcelsParams,
   type ParcelRow,
 } from './parcels.repository';
 import { assertParcelFullyPaid } from './parcel-payment-settlement';
@@ -289,6 +295,10 @@ export async function listParcelsSvc(p: ListParcelsParams) {
     totalRecords,
   };
 }
+export async function listStuckParcelsSvc(p: ListStuckParcelsParams) {
+  return listStuckParcelsRepo(p);
+}
+
 export async function getParcelSvc(id: string, executor: DbExecutor = db): Promise<ParcelRow> {
   const row = await getParcelRepo(id, executor);
   if (!row) throw NotFound('Parcel not found');
@@ -369,12 +379,23 @@ export async function updateParcelSvc(
     pickupLocationId?: string | null;
     method?: number;
     taxReportConfirmation?: boolean;
+    receiverOtpVerificationToken?: string;
+    receiverOtpTarget?: 'main' | 'second';
   },
   actorUserId?: string | null,
 ): Promise<{ id: string }> {
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
+  let verifiedReceiverOtp: Awaited<ReturnType<typeof assertReceiverOtpVerifiedSvc>> | null = null;
   if (patch.status === ParcelStatus.DELIVERED_BY_OFFICE) {
+    if (!patch.receiverOtpVerificationToken || !patch.receiverOtpTarget) {
+      throw BadRequest('Receiver OTP verification is required before office pickup');
+    }
+    verifiedReceiverOtp = await assertReceiverOtpVerifiedSvc({
+      parcelId: id,
+      targetReceiver: patch.receiverOtpTarget,
+      verificationToken: patch.receiverOtpVerificationToken,
+    });
     await assertParcelFullyPaid(id);
     const storageSettlement = await getParcelStorageSettlementSvc(id);
     assertNoOutstandingStorageForHandover(storageSettlement.outstandingPsw);
@@ -417,7 +438,10 @@ export async function updateParcelSvc(
     action: 'PARCEL_UPDATED',
     message: `Parcel ${cur.trackingCode} updated`,
     metadata: {
-      patch,
+      patch: {
+        ...patch,
+        receiverOtpVerificationToken: patch.receiverOtpVerificationToken ? '[REDACTED]' : undefined,
+      },
       previous: {
         destinationId: cur.destinationId,
         pickupLocationId: cur.pickupLocationId,
@@ -432,6 +456,9 @@ export async function updateParcelSvc(
     patch.status !== ParcelStatus.AWAITING_PICKUP;
   if (shouldEndPickupQueue) {
     await endPickupQueueForParcelSvc({ parcelId: id, endedBy: patch.confirmedBy ?? null });
+  }
+  if (verifiedReceiverOtp) {
+    await consumeReceiverOtpTokenSvc(verifiedReceiverOtp.id);
   }
   return { id: updated.id };
 }

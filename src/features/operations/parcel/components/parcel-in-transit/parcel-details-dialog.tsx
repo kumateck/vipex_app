@@ -53,9 +53,6 @@ export function ParcelDetailsDialog({
             return (
               <div className="space-y-2 text-sm">
                 <p>
-                  <strong>Tracking:</strong> {details.parcel.trackingCode}
-                </p>
-                <p>
                   <strong>Booking:</strong> {details.parcel.bookingCode}
                 </p>
                 <p>

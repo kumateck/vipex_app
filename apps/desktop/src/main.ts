@@ -48,6 +48,16 @@ let updateStatus: {
   message?: string;
 } = { state: 'idle', version: app.getVersion(), currentVersion: app.getVersion() };
 
+function ignoreBrokenTerminalPipe(stream: NodeJS.WriteStream) {
+  stream.on('error', (error: NodeJS.ErrnoException) => {
+    if (error.code === 'EPIPE') return;
+    throw error;
+  });
+}
+
+ignoreBrokenTerminalPipe(process.stdout);
+ignoreBrokenTerminalPipe(process.stderr);
+
 type PrintLayout = 'thermal-sticker' | 'invoice-a5' | 'invoice-a5-receipt' | 'report-a4';
 
 type PrintHtmlRequest = {
@@ -1048,7 +1058,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (process.platform !== 'darwin' || !app.isPackaged) {
     app.quit();
   }
 });

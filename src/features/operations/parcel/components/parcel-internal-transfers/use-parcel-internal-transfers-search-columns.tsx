@@ -23,7 +23,6 @@ export function useParcelInternalTransfersSearchColumns({
 }: UseParcelInternalTransfersSearchColumnsOptions) {
   return useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'bookingCode', header: 'Booking' },
       { accessorKey: 'receiverName', header: 'Receiver' },
       { accessorKey: 'parcelDetails', header: 'Parcel' },

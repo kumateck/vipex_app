@@ -104,7 +104,6 @@ export function ParcelSuperSearchDetailsDialog({
                     })()}
                   </div>
                 ) : null}
-                {detailRow('Tracking', parcelDetails.parcel.trackingCode)}
                 {detailRow('Booking', parcelDetails.parcel.bookingCode)}
                 {detailRow(
                   'Status',

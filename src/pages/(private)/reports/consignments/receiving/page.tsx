@@ -1,5 +1,3 @@
-import { ComingSoonPage } from '@/components/coming-soon-page';
+import { IncomingConsignmentsPage } from '@/features/operations/parcel';
 
-export default function ReportsPlaceholderPage() {
-  return <ComingSoonPage title="Branch Receiving Manifest" />;
-}
+export default IncomingConsignmentsPage;

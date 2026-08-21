@@ -107,7 +107,6 @@ export function ParcelHistorySections({
             >
               <View style={styles.detailList}>
                 <DetailRow first label="Booking" value={entry.bookingCode} />
-                <DetailRow label="Tracking" value={entry.trackingCode} />
                 <DetailRow label="Status" value={String(entry.status)} />
               </View>
             </View>

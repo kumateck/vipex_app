@@ -58,9 +58,6 @@ export function PickupQueueTicketDialog({
           <div className="space-y-4">
             <div className="grid gap-2 text-sm">
               <p>
-                <strong>Tracking:</strong> {parcel.trackingCode}
-              </p>
-              <p>
                 <strong>Booking:</strong> {parcel.bookingCode}
               </p>
               <p>

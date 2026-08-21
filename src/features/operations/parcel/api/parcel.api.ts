@@ -23,6 +23,7 @@ export type CreateBookingWithParcelsInput = {
     senderPaymentCedis?: number;
     senderPaymentMethod?: number;
     paymentResponsibility?: number;
+    callSender?: boolean;
   }>;
 };
 
@@ -81,6 +82,7 @@ export type ParcelSearchRow = {
   consignmentId?: string | null;
   consignmentCode?: string | null;
   consignmentSerialForDay?: number | null;
+  consignmentCreatedAt?: string | null;
   bookingId: string;
   bookingCode: string;
   trackingCode: string;
@@ -101,6 +103,7 @@ export type ParcelSearchRow = {
   plannedToBePaidPsw: number;
   method: number;
   taxReportConfirmation: boolean;
+  callSender: boolean;
   isDeleted: boolean;
   deletedBy: string | null;
   deletedAt: string | null;
@@ -276,6 +279,7 @@ export type ParcelFullDetails = {
     plannedToBePaidPsw: number;
     method: number;
     taxReportConfirmation: boolean;
+    callSender: boolean;
     isDeleted: boolean;
     deletedBy: string | null;
     deletedAt: string | null;
@@ -400,6 +404,7 @@ export type PickupQueueCard = PickupQueueRecord & {
   parcelDetails: string;
   plannedToBePaidPsw: number;
   chargePsw: number;
+  callSender: boolean;
   receiverName: string | null;
   receiverPhone: string | null;
 };
@@ -426,6 +431,7 @@ export type RiderDoorstepRecord = {
   receiverName: string | null;
   receiverPhone: string | null;
   secondReceiverId: string | null;
+  callSender: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -508,6 +514,83 @@ export type ParcelSearchFilters = {
   agedOnly?: boolean | null;
   storageChargeAccruing?: boolean | null;
   includeDeleted?: boolean | null;
+};
+
+export type IncomingConsignmentRow = {
+  id: string;
+  code: string;
+  sourceId: string;
+  sourceName: string;
+  destinationId: string;
+  consignmentDate: string;
+  serialForDay: number;
+  status: number;
+  closedBy: string | null;
+  closedAt: string | null;
+  closedWithExceptions: boolean;
+  closeExceptionReason: string | null;
+  arrived: number;
+  total: number;
+};
+
+export type ConsignmentDetail = Omit<IncomingConsignmentRow, 'sourceName' | 'arrived' | 'total'> & {
+  companyId: string;
+  arrived: number;
+  total: number;
+};
+
+export type ConsignmentItemRow = {
+  parcelId: string;
+  trackingCode: string;
+  bookingCode: string;
+  parcelDetails: string;
+  senderName: string;
+  receiverName: string;
+  addedAt: string;
+  arrivedAt: string | null;
+  arrivedBy: string | null;
+  arrivedByName: string | null;
+};
+
+export type ReceiveConsignmentItemResult =
+  | {
+      outcome: 'RECEIVED';
+      parcelId: string;
+      trackingCode: string;
+      bookingCode: string;
+      arrived: number;
+      total: number;
+    }
+  | {
+      outcome: 'ALREADY_RECEIVED';
+      parcelId: string;
+      trackingCode: string;
+      bookingCode: string;
+      arrivedAt: string;
+      arrivedByName: string | null;
+    }
+  | {
+      outcome: 'WRONG_CONSIGNMENT';
+      parcelId: string;
+      trackingCode: string;
+      bookingCode: string;
+      belongsToConsignmentId: string | null;
+      belongsToConsignmentCode: string | null;
+    }
+  | {
+      outcome: 'NOT_DISPATCHED';
+      parcelId: string;
+      trackingCode: string;
+      bookingCode: string;
+      sourceBranchId: string;
+      sourceBranchName: string | null;
+    };
+
+export type CloseConsignmentResult = {
+  status: number;
+  arrived: number;
+  total: number;
+  missingParcelIds: string[];
 };
 
 export const parcelApi = api.injectEndpoints({
@@ -796,11 +879,74 @@ export const parcelApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    listIncomingConsignments: builder.query<
+      IncomingConsignmentRow[],
+      { companyId?: string | null; destinationId?: string | null; statuses?: number[] }
+    >({
+      query: ({ companyId, destinationId, statuses }) => ({
+        url: '/shipments/consignments/incoming',
+        params: {
+          ...(companyId ? { companyId } : {}),
+          ...(destinationId ? { destinationId } : {}),
+          ...(statuses ? { statuses } : {}),
+        },
+      }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    getConsignmentDetail: builder.query<ConsignmentDetail, string>({
+      query: (id) => ({ url: `/shipments/consignments/${id}` }),
+      providesTags: (_result, _error, id) => [{ type: 'Bookings', id: `CONSIGNMENT_${id}` }],
+    }),
+    listConsignmentItems: builder.query<ConsignmentItemRow[], string>({
+      query: (id) => ({ url: `/shipments/consignments/${id}/items` }),
+      providesTags: (_result, _error, id) => [{ type: 'Bookings', id: `CONSIGNMENT_ITEMS_${id}` }],
+    }),
+    receiveConsignmentItem: builder.mutation<
+      ReceiveConsignmentItemResult,
+      { consignmentId: string; code: string }
+    >({
+      query: ({ consignmentId, code }) => ({
+        url: `/shipments/consignments/${consignmentId}/receive`,
+        method: 'POST',
+        body: { code },
+      }),
+      invalidatesTags: (_result, _error, { consignmentId }) => [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Bookings', id: `CONSIGNMENT_${consignmentId}` },
+        { type: 'Bookings', id: `CONSIGNMENT_ITEMS_${consignmentId}` },
+      ],
+    }),
+    closeConsignment: builder.mutation<
+      CloseConsignmentResult,
+      { consignmentId: string; forceWithExceptions?: boolean; exceptionReason?: string }
+    >({
+      query: ({ consignmentId, forceWithExceptions, exceptionReason }) => ({
+        url: `/shipments/consignments/${consignmentId}/close`,
+        method: 'POST',
+        body: { forceWithExceptions, exceptionReason },
+      }),
+      invalidatesTags: (_result, _error, { consignmentId }) => [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Bookings', id: `CONSIGNMENT_${consignmentId}` },
+        { type: 'Bookings', id: `CONSIGNMENT_ITEMS_${consignmentId}` },
+      ],
+    }),
     updateParcelStatus: builder.mutation<{ id: string }, { id: string; status: number }>({
       query: ({ id, status }) => ({
         url: `/shipments/parcels/${id}`,
         method: 'PATCH',
         body: { status },
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    markParcelReceived: builder.mutation<
+      { id: string; receivedAt: string },
+      { id: string; receivedBy: string; status: number }
+    >({
+      query: ({ id, receivedBy, status }) => ({
+        url: `/shipments/parcels/${id}/mark-received`,
+        method: 'POST',
+        body: { receivedBy, status },
       }),
       invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
@@ -821,6 +967,8 @@ export const parcelApi = api.injectEndpoints({
         secondCardNumber?: string | null;
         confirmedBy?: string | null;
         confirmedAt?: string | null;
+        receiverOtpVerificationToken?: string;
+        receiverOtpTarget?: 'main' | 'second';
       }
     >({
       query: ({ id, ...body }) => ({
@@ -1176,7 +1324,13 @@ export const {
   useVerifyReceiverOtpMutation,
   useCreateConsignmentMutation,
   useAddConsignmentItemsMutation,
+  useListIncomingConsignmentsQuery,
+  useGetConsignmentDetailQuery,
+  useListConsignmentItemsQuery,
+  useReceiveConsignmentItemMutation,
+  useCloseConsignmentMutation,
   useUpdateParcelStatusMutation,
+  useMarkParcelReceivedMutation,
   useUpdateParcelMutation,
   useSendParcelStatusCallNotificationMutation,
   useRecordParcelDispositionActionMutation,

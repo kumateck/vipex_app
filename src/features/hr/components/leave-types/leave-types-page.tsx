@@ -1,15 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -18,84 +10,24 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useCreateLeaveTypeMutation, useListLeaveTypesQuery } from '../../api/hr.api';
+import { useListLeaveTypesQuery } from '../../api/hr.api';
+import { AddLeaveTypeDialog } from './add-leave-type-dialog';
 
 export function LeaveTypesPage() {
-  const [leaveTypeCode, setLeaveTypeCode] = useState('');
-  const [leaveTypeName, setLeaveTypeName] = useState('');
-  const [leaveTypePaid, setLeaveTypePaid] = useState('true');
-  const [minAdvanceDays, setMinAdvanceDays] = useState('0');
-  const [allowEmergencySameDay, setAllowEmergencySameDay] = useState('true');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const { data: leaveTypesData } = useListLeaveTypesQuery({ pageSize: 100 });
   const leaveTypes = leaveTypesData?.data ?? [];
-  const [createLeaveType, { isLoading: isCreatingLeaveType }] = useCreateLeaveTypeMutation();
 
   return (
     <ScrollableWrapper>
       <div className="w-full space-y-4 p-4">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Leave Types</CardTitle>
+            <Button onClick={() => setIsDialogOpen(true)}>Add leave type</Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-2 md:grid-cols-6">
-              <Input
-                placeholder="Code"
-                value={leaveTypeCode}
-                onChange={(e) => setLeaveTypeCode(e.target.value)}
-              />
-              <Input
-                placeholder="Name"
-                value={leaveTypeName}
-                onChange={(e) => setLeaveTypeName(e.target.value)}
-              />
-              <Select value={leaveTypePaid} onValueChange={setLeaveTypePaid}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Paid?" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Paid</SelectItem>
-                  <SelectItem value="false">Unpaid</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                type="number"
-                min={0}
-                placeholder="Min advance days"
-                value={minAdvanceDays}
-                onChange={(e) => setMinAdvanceDays(e.target.value)}
-              />
-              <Select value={allowEmergencySameDay} onValueChange={setAllowEmergencySameDay}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Same-day emergency?" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Emergency same-day allowed</SelectItem>
-                  <SelectItem value="false">Emergency same-day blocked</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                disabled={!leaveTypeName.trim() || isCreatingLeaveType}
-                onClick={async () => {
-                  await createLeaveType({
-                    code: leaveTypeCode.trim() || null,
-                    name: leaveTypeName.trim(),
-                    isPaid: leaveTypePaid === 'true',
-                    minAdvanceDays: Math.max(0, Number(minAdvanceDays) || 0),
-                    allowEmergencySameDay: allowEmergencySameDay === 'true',
-                  }).unwrap();
-                  setLeaveTypeCode('');
-                  setLeaveTypeName('');
-                  setLeaveTypePaid('true');
-                  setMinAdvanceDays('0');
-                  setAllowEmergencySameDay('true');
-                }}
-              >
-                Add type
-              </Button>
-            </div>
-
             <Table>
               <TableHeader>
                 <TableRow>
@@ -127,6 +59,7 @@ export function LeaveTypesPage() {
           </CardContent>
         </Card>
       </div>
+      <AddLeaveTypeDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
     </ScrollableWrapper>
   );
 }

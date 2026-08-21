@@ -55,7 +55,6 @@ export function ParcelHomeDeliveryRiderAssignedPage() {
   const columns = useMemo<ColumnDef<RiderDoorstepRecord>[]>(
     () => [
       { accessorKey: 'bookingCode', header: 'Booking' },
-      { accessorKey: 'trackingCode', header: 'Tracking' },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       {
         id: 'receiver',

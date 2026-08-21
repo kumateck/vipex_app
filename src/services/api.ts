@@ -221,6 +221,11 @@ export const api = createApi({
     'NotificationHub',
     'ItSupport',
     'Communication',
+    'ExecutiveInsights',
+    'AiChatConversation',
+    'FleetAnomalyBrief',
+    'OperationsExceptionsBrief',
+    'ManagementDailyBrief',
   ],
   endpoints: () => ({}),
 });
