@@ -11,6 +11,7 @@ import {
   getVerifiedOtpByTokenRepo,
   incrementOtpAttemptsRepo,
   markOtpVerifiedRepo,
+  type PhoneSlot,
   type TargetReceiver,
 } from './repository';
 
@@ -29,20 +30,30 @@ async function resolveTargetPhone(
   companyId: string,
   parcelId: string,
   targetReceiver: TargetReceiver,
+  phoneSlot: PhoneSlot = 'primary',
 ) {
   const recipients = await getParcelRecipientsRepo(companyId, parcelId);
   if (!recipients) throw NotFound('Parcel not found');
 
   const target = targetReceiver === 'second' ? recipients.secondary : recipients.primary;
-  if (!target?.phone) {
+  // The secondary-phone choice only applies to the main receiver — the
+  // second receiver's own record doesn't offer a phone-slot choice here.
+  const phone =
+    targetReceiver === 'main' && phoneSlot === 'secondary'
+      ? recipients.primary?.phone2
+      : target?.phone;
+
+  if (!phone) {
     throw Conflict(
       targetReceiver === 'second'
         ? 'Second receiver has no phone on file'
-        : 'Receiver has no phone on file',
+        : phoneSlot === 'secondary'
+          ? 'Receiver has no second phone on file'
+          : 'Receiver has no phone on file',
     );
   }
 
-  return { phone: target.phone, name: target.name ?? 'Customer' };
+  return { phone, name: target?.name ?? 'Customer' };
 }
 
 export async function requestReceiverOtpSvc(input: {
@@ -52,12 +63,14 @@ export async function requestReceiverOtpSvc(input: {
   targetReceiver: TargetReceiver;
   requestedBy: string;
   force?: boolean;
+  phoneSlot?: PhoneSlot;
 }) {
   await assertOfficePickupParcel(input.parcelId);
   const { phone, name } = await resolveTargetPhone(
     input.companyId,
     input.parcelId,
     input.targetReceiver,
+    input.phoneSlot,
   );
 
   const existing = await getActiveParcelReceiverOtpRepo(input.parcelId, input.targetReceiver);
@@ -98,6 +111,7 @@ export async function requestReceiverOtpSvc(input: {
     metadataJson: {
       parcelId: input.parcelId,
       targetReceiver: input.targetReceiver,
+      phoneSlot: input.phoneSlot ?? 'primary',
     },
   });
 

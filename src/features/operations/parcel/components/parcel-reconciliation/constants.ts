@@ -28,6 +28,10 @@ export const ACTION_OPTIONS = [
   { value: ParcelReconciliationActionType.VOID_AND_REBOOK, label: 'Void and Rebook' },
   { value: ParcelReconciliationActionType.VOID_TO_SUSPENSE, label: 'Void to Suspense' },
   {
+    value: ParcelReconciliationActionType.CORRECT_AMOUNT_IN_ORIGINAL_SESSION,
+    label: 'Correct Amount in Original Shift',
+  },
+  {
     value: ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE,
     label: 'Keep Original, Void Duplicate',
   },

@@ -13,7 +13,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
+import { Spinner } from '@/components/ui/spinner';
 import { useAuthStore } from '@/stores/auth-store';
+import { AppUpdateProgress } from './app-update-progress';
 
 type DesktopUpdateStatus = NonNullable<Window['api']>['updates'] extends {
   getStatus: () => Promise<infer T>;
@@ -150,6 +152,7 @@ export function AppUpdatesPage() {
 
   const canDownload = isDesktop && (status.state === 'available' || status.state === 'downloading');
   const canInstall = isDesktop && status.state === 'downloaded';
+  const roundedDownloadProgress = Math.round(Math.max(0, Math.min(100, status.progress ?? 0)));
 
   return (
     <div className="space-y-6 px-4">
@@ -203,20 +206,11 @@ export function AppUpdatesPage() {
               <p className="text-sm text-muted-foreground">
                 {status.message ?? 'No update activity yet.'}
               </p>
-              {typeof status.progress === 'number' ? (
-                <div className="mt-3 space-y-2">
-                  <div className="h-2 w-full rounded-full bg-muted">
-                    <div
-                      className="h-2 rounded-full bg-primary transition-all"
-                      style={{ width: `${Math.max(0, Math.min(100, status.progress))}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Download progress: {Math.round(status.progress)}%
-                  </p>
-                </div>
-              ) : null}
             </div>
+
+            {status.state === 'downloading' ? (
+              <AppUpdateProgress progress={status.progress} />
+            ) : null}
 
             <div className="flex flex-wrap gap-2">
               <Button
@@ -234,8 +228,14 @@ export function AppUpdatesPage() {
                 onClick={() => void handleDownload()}
                 disabled={!canDownload || isBusy}
               >
-                <Download className="mr-2 h-4 w-4" />
-                Download Update
+                {status.state === 'downloading' ? (
+                  <Spinner className="mr-2" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {status.state === 'downloading'
+                  ? `Downloading ${roundedDownloadProgress}%`
+                  : 'Download Update'}
               </Button>
 
               <Button

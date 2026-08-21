@@ -24,6 +24,7 @@ import {
 import { toPesewas } from '@/server/utils/gh-money';
 import { updateParcelRepo } from '../shipments/parcels.repository';
 import { postCustomerCreditChargeSvc } from '../customers/service';
+import { getParcelChargeValidationError } from '@/shared/shipments/parcel-charge-policy';
 
 export async function createDeliverySvc(input: {
   parcelId: string;
@@ -42,6 +43,13 @@ export async function createDeliverySvc(input: {
   if (input.mode === DeliveryMode.DOORSTEP && !input.dropoffAddress)
     throw BadRequest('dropoffAddress required for DOORSTEP');
 
+  if (input.chargeCedis != null) {
+    const chargeValidationError = getParcelChargeValidationError({
+      chargeCedis: Number(input.chargeCedis),
+      plannedToBePaidCedis: 0,
+    });
+    if (chargeValidationError) throw BadRequest(chargeValidationError);
+  }
   const chargePsw = input.chargeCedis != null ? toPesewas(input.chargeCedis) : 0n;
   const chargePswNumber = Number(chargePsw);
 
@@ -253,6 +261,11 @@ export async function doorToDoorAddressCollectedSvc(input: {
     parcelId: input.parcelId,
     createdBy: input.userId,
   });
+  const doorstepFeeValidationError = getParcelChargeValidationError({
+    chargeCedis: Number(input.deliveryFeeCedis),
+    plannedToBePaidCedis: 0,
+  });
+  if (doorstepFeeValidationError) throw BadRequest(doorstepFeeValidationError);
   const chargePsw = Number(toPesewas(input.deliveryFeeCedis));
   await updateDeliveryRepo(delivery.id, {
     mode: DeliveryMode.DOORSTEP,

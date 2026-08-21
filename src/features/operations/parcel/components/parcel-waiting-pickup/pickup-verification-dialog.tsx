@@ -56,6 +56,8 @@ type PickupVerificationDialogProps = {
   mainReceiverCards: CustomerCard[];
   handoverTarget: string;
   onHandoverTargetChange: (value: string) => void;
+  phoneSlot: 'primary' | 'secondary';
+  onPhoneSlotChange: (value: 'primary' | 'secondary') => void;
   secondNewName: string;
   onSecondNewNameChange: (value: string) => void;
   secondNewPhone: string;
@@ -98,6 +100,8 @@ export function PickupVerificationDialog({
   mainReceiverCards,
   handoverTarget,
   onHandoverTargetChange,
+  phoneSlot,
+  onPhoneSlotChange,
   secondNewName,
   onSecondNewNameChange,
   secondNewPhone,
@@ -220,7 +224,13 @@ export function PickupVerificationDialog({
               secondReceiverCards={secondReceiverCards}
               cardOptions={cardOptions}
             />
-            <PickupOtpVerificationSection otp={otp} />
+            <PickupOtpVerificationSection
+              otp={otp}
+              receiverPhone={parcel.receiverPhone}
+              receiverPhone2={parcel.receiverPhone2}
+              phoneSlot={phoneSlot}
+              onPhoneSlotChange={onPhoneSlotChange}
+            />
             {parcelDetails ? (
               <div className="rounded-md border p-3 text-sm">
                 <p>

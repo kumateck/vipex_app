@@ -476,6 +476,7 @@ export enum ParcelReconciliationActionType {
   VOID_TO_SUSPENSE = 2,
   KEEP_ORIGINAL_VOID_DUPLICATE = 3,
   MERGE_TO_SINGLE = 4,
+  CORRECT_AMOUNT_IN_ORIGINAL_SESSION = 5,
 }
 
 export enum ConsignmentReceivingStatus {

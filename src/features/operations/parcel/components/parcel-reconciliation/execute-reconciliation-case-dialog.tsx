@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,11 +10,13 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ParcelReconciliationActionType } from '@/db/schemas/enums';
 import ThrowErrorMessage from '@/lib/throw-error';
 import {
   type ParcelReconciliationCaseRow,
   useExecuteParcelReconciliationCaseMutation,
 } from '../../api/parcel.api';
+import { AmountCorrectionSummary } from './amount-correction-summary';
 
 type ExecuteReconciliationCaseDialogProps = {
   reconciliationCase: ParcelReconciliationCaseRow | null;
@@ -29,11 +31,9 @@ export function ExecuteReconciliationCaseDialog({
 }: ExecuteReconciliationCaseDialogProps) {
   const [executeCase, { isLoading: isExecuting }] = useExecuteParcelReconciliationCaseMutation();
   const [executeNote, setExecuteNote] = useState('');
-
-  useEffect(() => {
-    if (!reconciliationCase) return;
-    setExecuteNote('');
-  }, [reconciliationCase]);
+  const isAmountCorrection =
+    reconciliationCase?.actionType ===
+    ParcelReconciliationActionType.CORRECT_AMOUNT_IN_ORIGINAL_SESSION;
 
   const handleExecute = async () => {
     if (!reconciliationCase) return;
@@ -60,11 +60,17 @@ export function ExecuteReconciliationCaseDialog({
 
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            This action will void active payments and cancel/archive affected parcel records.
+            {isAmountCorrection
+              ? 'This updates only the approved parcel amounts and preserves both the original shift date and today’s audit date.'
+              : 'This action will void active payments and cancel/archive affected parcel records.'}
           </p>
           <p className="text-sm text-muted-foreground">
             Booking: <strong>{reconciliationCase?.bookingCode ?? '-'}</strong>
           </p>
+
+          {isAmountCorrection && reconciliationCase ? (
+            <AmountCorrectionSummary reconciliationCase={reconciliationCase} />
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="execute-note">Execution Note (optional)</Label>
@@ -82,8 +88,12 @@ export function ExecuteReconciliationCaseDialog({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={handleExecute} disabled={isExecuting}>
-            {isExecuting ? 'Executing...' : 'Execute'}
+          <Button
+            variant={isAmountCorrection ? 'default' : 'destructive'}
+            onClick={handleExecute}
+            disabled={isExecuting}
+          >
+            {isExecuting ? 'Executing...' : isAmountCorrection ? 'Apply Correction' : 'Execute'}
           </Button>
         </DialogFooter>
       </DialogContent>

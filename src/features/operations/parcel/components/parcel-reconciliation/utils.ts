@@ -8,6 +8,15 @@ const DUPLICATE_ENTRY_ACTION_TYPES = new Set<number>([
   ParcelReconciliationActionType.MERGE_TO_SINGLE,
 ]);
 
+const MONEY_FORMATTER = new Intl.NumberFormat('en-GH', {
+  style: 'currency',
+  currency: 'GHS',
+});
+
+export function formatMoneyPsw(amountPsw: number | null | undefined) {
+  return MONEY_FORMATTER.format(Number(amountPsw ?? 0) / 100);
+}
+
 export function formatReconciliationDate(value: string | null | undefined) {
   if (!value) return '-';
   const date = new Date(value);
@@ -35,13 +44,22 @@ export function getActionOptionsForCaseType(caseType: number) {
   return ACTION_OPTIONS.filter((option) =>
     caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY
       ? DUPLICATE_ENTRY_ACTION_TYPES.has(option.value)
-      : !DUPLICATE_ENTRY_ACTION_TYPES.has(option.value),
+      : !DUPLICATE_ENTRY_ACTION_TYPES.has(option.value) &&
+        (option.value !== ParcelReconciliationActionType.CORRECT_AMOUNT_IN_ORIGINAL_SESSION ||
+          caseType === ParcelReconciliationCaseType.WRONG_AMOUNT ||
+          caseType === ParcelReconciliationCaseType.DATA_ENTRY_ERROR),
   );
 }
 
 export function getDefaultActionTypeForCaseType(caseType: number) {
   if (caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY) {
     return ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE;
+  }
+  if (
+    caseType === ParcelReconciliationCaseType.WRONG_AMOUNT ||
+    caseType === ParcelReconciliationCaseType.DATA_ENTRY_ERROR
+  ) {
+    return ParcelReconciliationActionType.CORRECT_AMOUNT_IN_ORIGINAL_SESSION;
   }
   return ParcelReconciliationActionType.VOID_AND_REFUND;
 }

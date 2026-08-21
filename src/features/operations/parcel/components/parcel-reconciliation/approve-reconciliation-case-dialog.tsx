@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +16,7 @@ import {
   type ParcelReconciliationCaseRow,
   useApproveParcelReconciliationCaseMutation,
 } from '../../api/parcel.api';
+import { AmountCorrectionSummary } from './amount-correction-summary';
 import { ReconciliationActionSelect } from './reconciliation-action-select';
 import { getDefaultActionTypeForCaseType } from './utils';
 
@@ -31,16 +32,13 @@ export function ApproveReconciliationCaseDialog({
   onApproved,
 }: ApproveReconciliationCaseDialogProps) {
   const [approveCase, { isLoading: isApproving }] = useApproveParcelReconciliationCaseMutation();
-  const [approveActionType, setApproveActionType] = useState<number>(
-    ParcelReconciliationActionType.VOID_AND_REFUND,
+  const [approveActionType, setApproveActionType] = useState<number>(() =>
+    reconciliationCase
+      ? (reconciliationCase.actionType ??
+        getDefaultActionTypeForCaseType(reconciliationCase.caseType))
+      : ParcelReconciliationActionType.VOID_AND_REFUND,
   );
   const [approveNote, setApproveNote] = useState('');
-
-  useEffect(() => {
-    if (!reconciliationCase) return;
-    setApproveActionType(getDefaultActionTypeForCaseType(reconciliationCase.caseType));
-    setApproveNote('');
-  }, [reconciliationCase]);
 
   const handleApprove = async () => {
     if (!reconciliationCase) return;
@@ -70,6 +68,10 @@ export function ApproveReconciliationCaseDialog({
           <p className="text-sm text-muted-foreground">
             Booking: <strong>{reconciliationCase?.bookingCode ?? '-'}</strong>
           </p>
+
+          {reconciliationCase?.proposedChargePsw != null ? (
+            <AmountCorrectionSummary reconciliationCase={reconciliationCase} />
+          ) : null}
 
           <ReconciliationActionSelect
             id="approve-action-type"
