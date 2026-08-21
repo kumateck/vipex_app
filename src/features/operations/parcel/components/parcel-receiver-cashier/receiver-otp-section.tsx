@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { useParcelReceiverCashierWorkflow } from './use-parcel-receiver-cashier-workflow';
 
 type WorkflowDialog = ReturnType<typeof useParcelReceiverCashierWorkflow>['dialog'];
@@ -35,6 +36,10 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
   const isExpired = Boolean(dialog.otpSentAt) && remainingSeconds <= 0;
   const minutes = Math.floor(remainingSeconds / 60);
   const seconds = remainingSeconds % 60;
+  const receiverPhone = dialog.selectedParcel?.receiverPhone;
+  const receiverPhone2 = dialog.selectedParcel?.receiverPhone2;
+  const hasSecondPhone = Boolean(receiverPhone2);
+  const activePhone = dialog.phoneSlot === 'secondary' ? receiverPhone2 : receiverPhone;
 
   const handleSend = async () => {
     try {
@@ -76,6 +81,26 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
         </p>
       ) : (
         <>
+          {hasSecondPhone ? (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">
+                Send to which number? (main receiver has two on file)
+              </Label>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                size="sm"
+                value={dialog.phoneSlot}
+                onValueChange={(value) => {
+                  if (value) dialog.setPhoneSlot(value as 'primary' | 'secondary');
+                }}
+              >
+                <ToggleGroupItem value="primary">{receiverPhone || 'Phone 1'}</ToggleGroupItem>
+                <ToggleGroupItem value="secondary">{receiverPhone2 || 'Phone 2'}</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          ) : null}
+
           <div className="flex items-center gap-2">
             <Button
               type="button"
@@ -100,7 +125,8 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
               )
             ) : (
               <span className="text-xs text-muted-foreground">
-                A 6-digit code will be sent to the selected receiver.
+                A 6-digit code will be sent to the main receiver
+                {activePhone ? ` (${activePhone})` : ''}.
               </span>
             )}
           </div>

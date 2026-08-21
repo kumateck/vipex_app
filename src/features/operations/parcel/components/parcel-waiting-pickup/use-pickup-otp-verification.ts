@@ -2,13 +2,16 @@ import { useCallback, useState } from 'react';
 import { useRequestReceiverOtpMutation, useVerifyReceiverOtpMutation } from '../../api/parcel.api';
 
 type HandoverTarget = 'main' | 'second';
+type PhoneSlot = 'primary' | 'secondary';
 
 export function usePickupOtpVerification({
   parcelId,
   targetReceiver,
+  phoneSlot = 'primary',
 }: {
   parcelId: string | null;
   targetReceiver: HandoverTarget;
+  phoneSlot?: PhoneSlot;
 }) {
   const [otpSentAt, setOtpSentAt] = useState<string | null>(null);
   const [otpExpiresAt, setOtpExpiresAt] = useState<string | null>(null);
@@ -29,14 +32,14 @@ export function usePickupOtpVerification({
   const request = useCallback(
     async (force = false) => {
       if (!parcelId) return;
-      const result = await requestOtp({ parcelId, targetReceiver, force }).unwrap();
+      const result = await requestOtp({ parcelId, targetReceiver, force, phoneSlot }).unwrap();
       setOtpSentAt(new Date().toISOString());
       setOtpExpiresAt(result.expiresAt);
       setOtpCode('');
       setOtpVerified(false);
       setVerificationToken('');
     },
-    [parcelId, requestOtp, targetReceiver],
+    [parcelId, requestOtp, targetReceiver, phoneSlot],
   );
 
   const verify = useCallback(async () => {

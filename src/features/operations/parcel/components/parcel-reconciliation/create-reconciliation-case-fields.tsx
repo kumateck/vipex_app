@@ -9,8 +9,10 @@ import {
 } from '@/components/ui/select-searchable';
 import { Textarea } from '@/components/ui/textarea';
 import { ParcelReconciliationCaseType } from '@/db/schemas/enums';
+import { ParcelReconciliationActionType } from '@/db/schemas/enums';
 import { FileUploadField } from '@/features/uploads/components/file-upload-field';
-import type { ParcelSearchRow } from '../../api/parcel.api';
+import type { ParcelCorrectionSession, ParcelSearchRow } from '../../api/parcel.api';
+import { AmountCorrectionFields } from './amount-correction-fields';
 import { CASE_TYPE_OPTIONS } from './constants';
 import { ParcelBookingSearchField } from './parcel-booking-search-field';
 import { ParcelSelectionField } from './parcel-selection-field';
@@ -43,6 +45,14 @@ type CreateReconciliationCaseFieldsProps = {
   onEvidenceUrlChange: (value: string) => void;
   notes: string;
   onNotesChange: (value: string) => void;
+  correctionSessions: ParcelCorrectionSession[];
+  selectedSessionId: string;
+  onSelectedSessionIdChange: (value: string) => void;
+  correctedChargeCedis: string;
+  onCorrectedChargeCedisChange: (value: string) => void;
+  correctedPlannedToBePaidCedis: string;
+  onCorrectedPlannedToBePaidCedisChange: (value: string) => void;
+  isLoadingCorrectionSessions: boolean;
 };
 
 export function CreateReconciliationCaseFields({
@@ -72,13 +82,21 @@ export function CreateReconciliationCaseFields({
   onEvidenceUrlChange,
   notes,
   onNotesChange,
+  correctionSessions,
+  selectedSessionId,
+  onSelectedSessionIdChange,
+  correctedChargeCedis,
+  onCorrectedChargeCedisChange,
+  correctedPlannedToBePaidCedis,
+  onCorrectedPlannedToBePaidCedisChange,
+  isLoadingCorrectionSessions,
 }: CreateReconciliationCaseFieldsProps) {
   return (
     <div className="space-y-3">
       <ParcelBookingSearchField
         id="create-case-booking-search"
-        label="Booking Code Search"
-        placeholder="Enter booking code"
+        label="Find Transaction"
+        placeholder="Booking code, tracking code, or telephone"
         value={bookingSearch}
         onValueChange={onBookingSearchChange}
         onSearch={onSearchBooking}
@@ -121,12 +139,26 @@ export function CreateReconciliationCaseFields({
         onValueChange={onActionTypeChange}
       />
 
+      {actionType === ParcelReconciliationActionType.CORRECT_AMOUNT_IN_ORIGINAL_SESSION ? (
+        <AmountCorrectionFields
+          selectedParcel={selectedParcel}
+          sessions={correctionSessions}
+          selectedSessionId={selectedSessionId}
+          onSelectedSessionIdChange={onSelectedSessionIdChange}
+          correctedChargeCedis={correctedChargeCedis}
+          onCorrectedChargeCedisChange={onCorrectedChargeCedisChange}
+          correctedPlannedToBePaidCedis={correctedPlannedToBePaidCedis}
+          onCorrectedPlannedToBePaidCedisChange={onCorrectedPlannedToBePaidCedisChange}
+          isLoadingSessions={isLoadingCorrectionSessions}
+        />
+      ) : null}
+
       {caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY ? (
         <>
           <ParcelBookingSearchField
             id="create-case-linked-booking-search"
-            label="Linked Duplicate Booking Code Search"
-            placeholder="Enter duplicate booking code"
+            label="Find Linked Duplicate"
+            placeholder="Booking code, tracking code, or telephone"
             value={linkedBookingSearch}
             onValueChange={onLinkedBookingSearchChange}
             onSearch={onSearchLinkedBooking}

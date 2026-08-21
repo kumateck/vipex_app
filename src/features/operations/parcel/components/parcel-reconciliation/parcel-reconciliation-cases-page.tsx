@@ -71,12 +71,14 @@ export function ParcelReconciliationCasesPage() {
       />
 
       <ApproveReconciliationCaseDialog
+        key={approvingCase?.id ?? 'no-approval'}
         reconciliationCase={approvingCase}
         onClose={() => setApprovingCase(null)}
         onApproved={refetch}
       />
 
       <ExecuteReconciliationCaseDialog
+        key={executingCase?.id ?? 'no-execution'}
         reconciliationCase={executingCase}
         onClose={() => setExecutingCase(null)}
         onExecuted={refetch}

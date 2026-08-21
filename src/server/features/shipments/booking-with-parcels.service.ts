@@ -11,6 +11,7 @@ import { ParcelStatus, PaymentMethod, PaymentResponsibility } from '@/db/schemas
 import { assertActiveSessionSvc } from '../cashiers/service';
 import { recordAuditLog } from '../audit/logger';
 import { getCustomerCreditSummarySvc, getCustomerSvc } from '../customers/service';
+import { getParcelChargeValidationError } from '@/shared/shipments/parcel-charge-policy';
 
 export type CreateBookingWithParcelsBody = {
   senderId: string;
@@ -78,6 +79,28 @@ export async function createBookingWithParcelsSvc(
   }
 
   const normalizedParcels = normalizeParcels(body);
+
+  normalizedParcels.forEach((parcel, index) => {
+    const chargeCedis = Number(parcel.chargeCedis ?? 0);
+    const plannedToBePaidCedis = Number(parcel.plannedToBePaidCedis ?? 0);
+    const validationError = getParcelChargeValidationError({
+      chargeCedis,
+      plannedToBePaidCedis,
+    });
+    if (validationError) {
+      throw BadRequest(`Parcel ${index + 1}: ${validationError}`);
+    }
+
+    const senderPaymentCedis = Number(parcel.senderPaymentCedis ?? 0);
+    if (!Number.isFinite(senderPaymentCedis) || senderPaymentCedis < 0) {
+      throw BadRequest(`Parcel ${index + 1}: Enter a valid sender payment amount`);
+    }
+    if (senderPaymentCedis + plannedToBePaidCedis > chargeCedis) {
+      throw BadRequest(
+        `Parcel ${index + 1}: Sender payment and receiver to-be-paid cannot exceed the parcel charge`,
+      );
+    }
+  });
 
   const creditParcels = normalizedParcels.filter(
     (parcel) => parcel.method === PaymentMethod.CREDIT && Number(parcel.chargeCedis ?? 0) > 0,
