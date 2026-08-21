@@ -75,12 +75,22 @@ describe('Fleet vehicle detail flow', () => {
       {
         companyId,
         roleId,
-        permission: PermissionKeys.CanCreateFleetVehicles,
+        permission: PermissionKeys.CanCreateFleetVehicle,
       },
       {
         companyId,
         roleId,
-        permission: PermissionKeys.CanUpdateFleetVehicles,
+        permission: PermissionKeys.CanReadFleetVehicle,
+      },
+      {
+        companyId,
+        roleId,
+        permission: PermissionKeys.CanReadFleetVehicleDocuments,
+      },
+      {
+        companyId,
+        roleId,
+        permission: PermissionKeys.CanCreateFleetVehicleDocument,
       },
     ]);
 
@@ -126,8 +136,10 @@ describe('Fleet vehicle detail flow', () => {
       email: actorEmail,
       permissions: [
         PermissionKeys.CanReadFleetTransport,
-        PermissionKeys.CanCreateFleetVehicles,
-        PermissionKeys.CanUpdateFleetVehicles,
+        PermissionKeys.CanCreateFleetVehicle,
+        PermissionKeys.CanReadFleetVehicle,
+        PermissionKeys.CanReadFleetVehicleDocuments,
+        PermissionKeys.CanCreateFleetVehicleDocument,
       ],
       roleId,
       companyId,

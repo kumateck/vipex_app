@@ -108,6 +108,55 @@ const EnvSchema = z.object({
   MNOTIFY_API_URL: z.string().url().optional(),
   MNOTIFY_API_KEY: z.string().optional(),
   MNOTIFY_SENDER_ID: z.string().optional(),
+
+  // Help Assistant LLM providers (all optional — the assistant degrades
+  // gracefully and falls back to plain guide browsing if none are set).
+  // Each provider is tried in a per-tier priority order (see
+  // src/server/features/help-assistant/providers/router.ts), so more than
+  // one can be configured at once and different providers can answer
+  // simple vs. complex questions. Model defaults below are conservative,
+  // verified-available choices — review against each provider's current
+  // model list before relying on them long-term.
+  ANTHROPIC_API_KEY: z.string().optional(),
+  ANTHROPIC_SIMPLE_MODEL: z.string().default('claude-haiku-4-5-20251001'),
+  ANTHROPIC_COMPLEX_MODEL: z.string().default('claude-sonnet-5'),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_SIMPLE_MODEL: z.string().default('gpt-4o-mini'),
+  OPENAI_COMPLEX_MODEL: z.string().default('gpt-4o'),
+  GOOGLE_API_KEY: z.string().optional(),
+  GOOGLE_SIMPLE_MODEL: z.string().default('gemini-2.5-flash'),
+  GOOGLE_COMPLEX_MODEL: z.string().default('gemini-2.5-pro'),
+  HELP_ASSISTANT_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
+  HELP_ASSISTANT_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(10),
+  // Executive insights "Regenerate" is far more expensive per call (5 report
+  // aggregations + 1 LLM call), so its budget is tighter than the Help Assistant's.
+  EXECUTIVE_INSIGHTS_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(3600),
+  EXECUTIVE_INSIGHTS_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(5),
+  // AI chat "send message" can be up to 4 sequential LLM calls per turn (tool-calling agent loop).
+  AI_CHAT_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(3600),
+  AI_CHAT_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(15),
+  // Fleet Anomaly Brief "Regenerate" runs 5 fleet report aggregations + 1 LLM call.
+  FLEET_ANOMALY_BRIEF_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(3600),
+  FLEET_ANOMALY_BRIEF_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(5),
+  // Operations Exceptions Brief "Regenerate" runs 6 aggregations + 1 LLM call.
+  OPERATIONS_EXCEPTIONS_BRIEF_RATE_LIMIT_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(3600),
+  OPERATIONS_EXCEPTIONS_BRIEF_RATE_LIMIT_MAX_REQUESTS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5),
+  // Management Daily Brief "Regenerate" reads 3 persisted sub-briefs + 1 LLM call, so it's
+  // cheaper than the briefs it synthesizes and can afford a slightly higher budget.
+  MANAGEMENT_DAILY_BRIEF_RATE_LIMIT_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(3600),
+  MANAGEMENT_DAILY_BRIEF_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(10),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

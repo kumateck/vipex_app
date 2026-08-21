@@ -105,7 +105,7 @@ describe('Fleet fuel analytics (authenticated)', () => {
     await db.insert(rolePermissions).values({
       companyId,
       roleId,
-      permission: PermissionKeys.CanReadFleetTransport,
+      permission: PermissionKeys.CanReadFleetFuelAnalytics,
     });
 
     actorEmail = `fuel-actor-${now}@example.com`;
@@ -289,7 +289,7 @@ describe('Fleet fuel analytics (authenticated)', () => {
     accessToken = await createTestAccessToken({
       userId: actorUserId,
       email: actorEmail,
-      permissions: [PermissionKeys.CanReadFleetTransport],
+      permissions: [PermissionKeys.CanReadFleetFuelAnalytics],
       roleId,
       companyId,
       branchId,

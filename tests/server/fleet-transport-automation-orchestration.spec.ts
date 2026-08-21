@@ -81,12 +81,12 @@ describe('Fleet automation orchestration', () => {
       {
         companyId,
         roleId,
-        permission: PermissionKeys.CanReadFleetTransport,
+        permission: PermissionKeys.CanRunFleetAutomationOrchestration,
       },
       {
         companyId,
         roleId,
-        permission: PermissionKeys.CanUpdateFleetVehicles,
+        permission: PermissionKeys.CanReadFleetOpsQueue,
       },
     ]);
 
@@ -201,7 +201,10 @@ describe('Fleet automation orchestration', () => {
     accessToken = await createTestAccessToken({
       userId: actorUserId,
       email: actorEmail,
-      permissions: [PermissionKeys.CanReadFleetTransport, PermissionKeys.CanUpdateFleetVehicles],
+      permissions: [
+        PermissionKeys.CanRunFleetAutomationOrchestration,
+        PermissionKeys.CanReadFleetOpsQueue,
+      ],
       roleId,
       companyId,
       branchId,

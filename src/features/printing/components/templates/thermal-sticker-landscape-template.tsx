@@ -1,5 +1,5 @@
 import { ThermalStickerHeaderPanel } from './thermal-sticker-header-panel';
-import { landscapePrimaryFontSize } from './thermal-sticker-font-size.utils';
+import { landscapeReceiverNameFontSize } from './thermal-sticker-font-size.utils';
 import { InfoBlock, ParcelStack, SenderBlock } from './thermal-sticker-info-sections';
 import { PAYMENT_DUE_NOTE } from './thermal-sticker-copy';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
@@ -45,11 +45,7 @@ export function ThermalStickerLandscapeTemplate({
           borderRight: '0.25mm solid #111',
         }}
       >
-        <ReceiverHeader
-          destinationBranchName={destinationBranchName}
-          receiverName={receiverName}
-          receiverTelephones={receiverTelephones}
-        />
+        <ReceiverHeader receiverName={receiverName} receiverTelephones={receiverTelephones} />
 
         <div
           style={{
@@ -125,22 +121,19 @@ export function ThermalStickerLandscapeTemplate({
 }
 
 function ReceiverHeader({
-  destinationBranchName,
   receiverName,
   receiverTelephones,
 }: {
-  destinationBranchName: string;
   receiverName: string;
   receiverTelephones: string;
 }) {
-  const receiverFontSize = landscapePrimaryFontSize(destinationBranchName);
+  const receiverNameFontSize = landscapeReceiverNameFontSize(receiverName);
 
   return (
     <header
       style={{
         display: 'grid',
-        gridTemplateColumns: '1fr',
-        alignItems: 'center',
+        gridTemplateRows: 'auto minmax(0, 1fr) auto',
         padding: '0.6mm 2mm',
         textAlign: 'center',
         overflow: 'hidden',
@@ -151,7 +144,11 @@ function ReceiverHeader({
       </div>
       <div
         style={{
-          fontSize: receiverFontSize,
+          minHeight: 0,
+          display: 'grid',
+          placeItems: 'center',
+          overflow: 'hidden',
+          fontSize: receiverNameFontSize,
           fontWeight: 800,
           lineHeight: 0.95,
           overflowWrap: 'anywhere',
@@ -159,9 +156,7 @@ function ReceiverHeader({
       >
         {receiverName}
       </div>
-      <div
-        style={{ marginTop: '0.5mm', fontSize: receiverFontSize, fontWeight: 900, lineHeight: 1 }}
-      >
+      <div style={{ marginTop: '0.5mm', fontSize: '4.6mm', fontWeight: 900, lineHeight: 1 }}>
         {receiverTelephones}
       </div>
     </header>

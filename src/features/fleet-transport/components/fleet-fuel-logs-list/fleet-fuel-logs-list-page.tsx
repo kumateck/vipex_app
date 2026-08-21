@@ -77,17 +77,17 @@ export function FleetFuelLogsListPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>Fuel Logs</CardTitle>
             <div className="flex gap-2">
-              <PermissionGuard permissionKey={PermissionKeys.CanApproveFleetFuelLogs}>
+              <PermissionGuard permissionKey={PermissionKeys.CanApproveFleetFuelLog}>
                 <Button asChild variant="outline">
                   <Link to="/fleet-transport/fuel-logs/approvals">Approvals</Link>
                 </Button>
               </PermissionGuard>
-              <PermissionGuard permissionKey={PermissionKeys.CanReadFleetTransport}>
+              <PermissionGuard permissionKey={PermissionKeys.CanReadFleetFuelLogs}>
                 <Button asChild variant="outline">
                   <Link to="/fleet-transport/fuel-analytics">Analytics</Link>
                 </Button>
               </PermissionGuard>
-              <PermissionGuard permissionKey={PermissionKeys.CanCreateFleetFuelLogs}>
+              <PermissionGuard permissionKey={PermissionKeys.CanCreateFleetFuelLog}>
                 <Button asChild>
                   <Link to="/fleet-transport/fuel-logs/new">Create fuel log</Link>
                 </Button>

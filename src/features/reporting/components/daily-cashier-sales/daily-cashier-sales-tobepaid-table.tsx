@@ -31,8 +31,10 @@ export function DailyCashierSalesToBePaidTable({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>#</TableHead>
               <TableHead>Created Time</TableHead>
               <TableHead>Booking</TableHead>
+              <TableHead>Parcel</TableHead>
               <TableHead>Sender</TableHead>
               <TableHead>Receiver</TableHead>
               <TableHead className="text-right">To Be Paid</TableHead>
@@ -52,12 +54,23 @@ function renderRows({ report, isFetching, isUninitialized }: DailyCashierSalesTo
     return <EmptyRow>No to-be-paid parcels found for the selected session filters.</EmptyRow>;
   }
 
-  return report?.toBePaidRows.map((row) => (
+  return report?.toBePaidRows.map((row, index) => (
     <TableRow key={row.parcelId}>
+      <TableCell>{index + 1}</TableCell>
       <TableCell>{formatDateTime(row.createdAt)}</TableCell>
       <TableCell>{row.bookingCode}</TableCell>
-      <TableCell>{row.senderName ?? '-'}</TableCell>
-      <TableCell>{row.receiverName ?? '-'}</TableCell>
+      <TableCell>
+        <p className="font-medium">{row.parcelDetails || '-'}</p>
+        <p className="text-muted-foreground text-xs">{row.parcelContent || '-'}</p>
+      </TableCell>
+      <TableCell>
+        <p className="font-medium">{row.senderName ?? '-'}</p>
+        <p className="text-muted-foreground text-xs">{row.senderTelephone || '-'}</p>
+      </TableCell>
+      <TableCell>
+        <p className="font-medium">{row.receiverName ?? '-'}</p>
+        <p className="text-muted-foreground text-xs">{row.receiverTelephone || '-'}</p>
+      </TableCell>
       <TableCell className="text-right">{formatMoneyPsw(row.plannedToBePaidPsw)}</TableCell>
     </TableRow>
   ));
@@ -66,7 +79,7 @@ function renderRows({ report, isFetching, isUninitialized }: DailyCashierSalesTo
 function EmptyRow({ children }: { children: string }) {
   return (
     <TableRow>
-      <TableCell colSpan={5} className="text-center text-muted-foreground">
+      <TableCell colSpan={7} className="text-center text-muted-foreground">
         {children}
       </TableCell>
     </TableRow>

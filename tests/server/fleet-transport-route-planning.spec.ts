@@ -76,9 +76,10 @@ describe('Fleet route planning + trip assignment', () => {
     roleId = role!.id;
 
     await db.insert(rolePermissions).values([
-      { companyId, roleId, permission: PermissionKeys.CanReadFleetTrips },
-      { companyId, roleId, permission: PermissionKeys.CanCreateFleetTrips },
-      { companyId, roleId, permission: PermissionKeys.CanAssignFleetCrew },
+      { companyId, roleId, permission: PermissionKeys.CanCreateFleetRoutePlan },
+      { companyId, roleId, permission: PermissionKeys.CanCreateFleetTrip },
+      { companyId, roleId, permission: PermissionKeys.CanReadFleetTrip },
+      { companyId, roleId, permission: PermissionKeys.CanAssignFleetTripRoute },
     ]);
 
     actorEmail = `fleet-route-actor-${now}@example.com`;
@@ -164,9 +165,10 @@ describe('Fleet route planning + trip assignment', () => {
       userId: actorUserId,
       email: actorEmail,
       permissions: [
-        PermissionKeys.CanReadFleetTrips,
-        PermissionKeys.CanCreateFleetTrips,
-        PermissionKeys.CanAssignFleetCrew,
+        PermissionKeys.CanCreateFleetRoutePlan,
+        PermissionKeys.CanCreateFleetTrip,
+        PermissionKeys.CanReadFleetTrip,
+        PermissionKeys.CanAssignFleetTripRoute,
       ],
       roleId,
       companyId,
