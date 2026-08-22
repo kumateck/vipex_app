@@ -41,6 +41,10 @@ export function ParcelReceiptPrintContent({
   tax,
 }: ParcelReceiptPrintContentProps) {
   const copies = Math.max(Math.trunc(stickerCopies), 1);
+  const payerTelephone = formatTelephonePair(
+    data.payerTelephone ?? data.senderTelephone,
+    data.payerType ? data.payerTelephone2 : data.senderTelephone2,
+  );
   const stickerTemplateProps = {
     bookingCode: data.bookingCode,
     issuedAtLabel: formatDate(data.issuedAt),
@@ -94,6 +98,9 @@ export function ParcelReceiptPrintContent({
             receivedByName={data.receivedByName}
             destinationBranchName={data.destinationBranchName}
             destinationLocationName={data.destinationLocationName}
+            payerLabel={data.payerType === 'receiver' ? 'Receiver Info' : 'Sender Info'}
+            payerName={data.payerName ?? data.senderName}
+            payerTelephone={payerTelephone}
             senderName={data.senderName}
             senderTelephone={
               data.senderTelephone2
@@ -120,4 +127,8 @@ export function ParcelReceiptPrintContent({
       </div>
     </>
   );
+}
+
+function formatTelephonePair(primary: string, secondary?: string | null) {
+  return secondary ? `${primary}, ${secondary}` : primary;
 }
