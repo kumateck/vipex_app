@@ -13,8 +13,9 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     parcelValueCedis,
     destinationBranchName,
     destinationLocationName,
-    senderName,
-    senderTelephone,
+    payerLabel,
+    payerName,
+    payerTelephone,
     senderPaidCedis,
     receiverToPayCedis,
     amountPaidCedis,
@@ -85,11 +86,11 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
                 paddingRight: '1.6mm',
               }}
             >
-              <div style={{ fontWeight: 700 }}>Sender Info</div>
+              <div style={{ fontWeight: 700 }}>{payerLabel}</div>
               <div style={{ marginTop: '0.5mm', fontWeight: 700, fontSize: '5.1mm' }}>
-                {senderName}
+                {payerName}
               </div>
-              <div style={{ marginTop: '0.2mm', fontSize: '5.1mm' }}>{senderTelephone || '-'}</div>
+              <div style={{ marginTop: '0.2mm', fontSize: '5.1mm' }}>{payerTelephone || '-'}</div>
             </div>
             <div style={{ paddingLeft: '1.6mm', paddingBottom: '0.9mm' }}>
               <div style={{ fontWeight: 700 }}>Amount in Words</div>
