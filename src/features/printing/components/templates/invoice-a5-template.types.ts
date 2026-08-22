@@ -7,6 +7,9 @@ export type InvoiceA5TemplateProps = {
   receivedByName?: string | null;
   destinationBranchName: string;
   destinationLocationName: string;
+  payerLabel: string;
+  payerName: string;
+  payerTelephone: string;
   senderName: string;
   senderTelephone: string;
   receiverName: string;

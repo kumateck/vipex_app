@@ -66,10 +66,10 @@ export function ParcelCallOutcomeDialog({
             <div className="grid grid-cols-1 gap-2">
               <Button
                 type="button"
-                variant={outcome === 'contacted' ? 'default' : 'outline'}
-                onClick={() => onOutcomeChange('contacted')}
+                variant={outcome === 'follow_up' ? 'default' : 'outline'}
+                onClick={() => onOutcomeChange('follow_up')}
               >
-                Picked call / SMS sent (Contacted)
+                Customer will get back
               </Button>
               <Button
                 type="button"
@@ -84,13 +84,6 @@ export function ParcelCallOutcomeDialog({
                 onClick={() => onOutcomeChange('delivery')}
               >
                 Customer wants delivery
-              </Button>
-              <Button
-                type="button"
-                variant={outcome === 'follow_up' ? 'default' : 'outline'}
-                onClick={() => onOutcomeChange('follow_up')}
-              >
-                Customer will get back
               </Button>
             </div>
           </div>
