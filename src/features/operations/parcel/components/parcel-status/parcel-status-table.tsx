@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
+import { ParcelStatus } from '@/db/schemas/enums';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -133,6 +134,24 @@ export function ParcelStatusTable({
         id: 'status',
         header: 'Status',
         accessorFn: (row) => STATUS_LABELS[row.status] ?? String(row.status),
+        cell: ({ row }) => {
+          const contacted = row.original.status === ParcelStatus.CUSTOMER_CONTACTED;
+          return (
+            <div className="space-y-1">
+              <Badge
+                variant="outline"
+                className={
+                  contacted ? 'border-green-600 text-green-600' : 'border-amber-500 text-amber-600'
+                }
+              >
+                {contacted ? 'Contacted' : 'Not Contacted'}
+              </Badge>
+              <p className="text-xs text-muted-foreground">
+                {STATUS_LABELS[row.original.status] ?? String(row.original.status)}
+              </p>
+            </div>
+          );
+        },
       },
       {
         id: 'actions',
@@ -168,7 +187,8 @@ export function ParcelStatusTable({
         <CardHeader>
           <CardTitle>Parcel Status (Call Receivers)</CardTitle>
           <CardDescription>
-            Queue includes parcels at arrival and returned to office for receiver call handling.
+            Queue includes parcels at arrival, returned to office, and already-contacted parcels
+            still awaiting an outcome (pickup or delivery).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

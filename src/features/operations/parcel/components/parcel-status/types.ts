@@ -1,1 +1,1 @@
-export type ContactOutcome = 'contacted' | 'pickup' | 'delivery' | 'follow_up';
+export type ContactOutcome = 'pickup' | 'delivery' | 'follow_up';
