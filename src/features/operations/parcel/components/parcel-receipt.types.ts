@@ -5,6 +5,10 @@ export type ReceiptPrintData = {
   parcelContent?: string | null;
   parcelValueCedis?: number | null;
   receivedByName?: string | null;
+  payerType?: 'sender' | 'receiver';
+  payerName?: string;
+  payerTelephone?: string;
+  payerTelephone2?: string | null;
   senderName: string;
   senderTelephone: string;
   senderTelephone2?: string | null;

@@ -22,7 +22,7 @@ export function ParcelStatusPage() {
   const [searchInput, setSearchInput] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState('');
   const [selectedParcel, setSelectedParcel] = useState<ParcelSearchRow | null>(null);
-  const [outcome, setOutcome] = useState<ContactOutcome>('contacted');
+  const [outcome, setOutcome] = useState<ContactOutcome>('follow_up');
   const [useSecondReceiver, setUseSecondReceiver] = useState(false);
   const [secondReceiverName, setSecondReceiverName] = useState('');
   const [secondReceiverPhone, setSecondReceiverPhone] = useState('');
@@ -49,7 +49,14 @@ export function ParcelStatusPage() {
       filters: {
         companyId,
         destinationId: branchId,
-        statuses: [ParcelStatus.ARRIVED_AT_DESTINATION, ParcelStatus.RETURNED_TO_OFFICE],
+        // Keep already-contacted parcels in the queue too — until a real
+        // outcome (pickup/delivery) is chosen, staff still need to see and
+        // act on them here rather than have them silently disappear.
+        statuses: [
+          ParcelStatus.ARRIVED_AT_DESTINATION,
+          ParcelStatus.RETURNED_TO_OFFICE,
+          ParcelStatus.CUSTOMER_CONTACTED,
+        ],
       },
     },
     { skip: !companyId || !branchId },
@@ -73,7 +80,7 @@ export function ParcelStatusPage() {
 
   const openCallOutcome = (parcel: ParcelSearchRow) => {
     setSelectedParcel(parcel);
-    setOutcome('contacted');
+    setOutcome('follow_up');
     setUseSecondReceiver(false);
     setSecondReceiverName('');
     setSecondReceiverPhone('');
@@ -98,10 +105,11 @@ export function ParcelStatusPage() {
   async function handleSaveOutcome() {
     if (!selectedParcel) return;
 
+    // 'follow_up' has no explicit branch — it maps to the CUSTOMER_CONTACTED
+    // default below, same as before.
     let nextStatus: number = ParcelStatus.CUSTOMER_CONTACTED;
     if (outcome === 'pickup') nextStatus = ParcelStatus.AWAITING_PICKUP;
     if (outcome === 'delivery') nextStatus = ParcelStatus.HOME_DELIVERY_REQUESTED;
-    if (outcome === 'follow_up') nextStatus = ParcelStatus.CUSTOMER_CONTACTED;
 
     let secondReceiverId = selectedParcel.secondReceiverId ?? null;
 
