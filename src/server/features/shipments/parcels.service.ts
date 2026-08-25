@@ -24,6 +24,7 @@ import {
   softVoidPaymentsByIdsRepo,
 } from '../payments/repository';
 import { getDeliveryByParcelRepo } from '../deliveries/repository';
+import { getBranchRepo } from '../branches/repository';
 import { recordAuditLog } from '../audit/logger';
 import { listConsignmentsForParcelRepo } from './consignments.repository';
 import { removeActiveConsignmentItemsByParcelRepo } from './consignments.repository';
@@ -406,14 +407,18 @@ export async function updateParcelSvc(
   if (!cur) throw NotFound('Parcel not found');
   let verifiedReceiverOtp: Awaited<ReturnType<typeof assertReceiverOtpVerifiedSvc>> | null = null;
   if (patch.status === ParcelStatus.DELIVERED_BY_OFFICE) {
-    if (!patch.receiverOtpVerificationToken || !patch.receiverOtpTarget) {
-      throw BadRequest('Receiver OTP verification is required before office pickup');
+    const destinationBranch = await getBranchRepo(cur.destinationId);
+    if (!destinationBranch) throw NotFound('Destination branch not found');
+    if (destinationBranch.requirePickupOtp) {
+      if (!patch.receiverOtpVerificationToken || !patch.receiverOtpTarget) {
+        throw BadRequest('Receiver OTP verification is required before office pickup');
+      }
+      verifiedReceiverOtp = await assertReceiverOtpVerifiedSvc({
+        parcelId: id,
+        targetReceiver: patch.receiverOtpTarget,
+        verificationToken: patch.receiverOtpVerificationToken,
+      });
     }
-    verifiedReceiverOtp = await assertReceiverOtpVerifiedSvc({
-      parcelId: id,
-      targetReceiver: patch.receiverOtpTarget,
-      verificationToken: patch.receiverOtpVerificationToken,
-    });
     await assertParcelFullyPaid(id);
     const storageSettlement = await getParcelStorageSettlementSvc(id);
     assertNoOutstandingStorageForHandover(storageSettlement.outstandingPsw);

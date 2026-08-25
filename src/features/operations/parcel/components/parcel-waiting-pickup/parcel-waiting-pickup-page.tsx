@@ -119,6 +119,7 @@ export function ParcelWaitingPickupPage() {
         staffOptions={dialog.staffOptions}
         staffLocationName={context.cashierLocationName}
         isPickupQueueEnabled={context.isPickupQueueEnabled}
+        isPickupOtpRequired={context.isPickupOtpRequired}
         hasPickupQueue={dialog.hasPickupQueue}
         parcelDetails={dialog.parcelDetails}
         formatDateTime={formatDateTime}

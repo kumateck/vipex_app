@@ -31,6 +31,7 @@ export function useWaitingPickupWorkflow() {
     skip: !branchId,
   });
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
+  const isPickupOtpRequired = currentBranch?.requirePickupOtp ?? true;
   const [searchInput, setSearchInput] = useState('');
   const [query, setQuery] = useState<WaitingPickupQuery>({
     page: 1,
@@ -123,7 +124,7 @@ export function useWaitingPickupWorkflow() {
   const handleConfirmDelivered = async () => {
     if (!selectedParcel) return;
     if (!dialog.pickerStaffId) throw new Error('Select shelf picker staff');
-    if (!dialog.otp.otpVerified || !dialog.otp.verificationToken) {
+    if (isPickupOtpRequired && (!dialog.otp.otpVerified || !dialog.otp.verificationToken)) {
       throw new Error('Verify the customer collection OTP before confirming delivery');
     }
 
@@ -173,8 +174,8 @@ export function useWaitingPickupWorkflow() {
       // Must match the fixed 'main' target the OTP was requested/verified
       // against (see use-waiting-pickup-dialog-state.ts) — not handoverTarget,
       // which only records who physically collected the parcel.
-      receiverOtpVerificationToken: dialog.otp.verificationToken,
-      receiverOtpTarget: 'main',
+      receiverOtpVerificationToken: isPickupOtpRequired ? dialog.otp.verificationToken : undefined,
+      receiverOtpTarget: isPickupOtpRequired ? 'main' : undefined,
     }).unwrap();
 
     toast.success('Parcel marked as DELIVERED_BY_OFFICE');
@@ -183,7 +184,13 @@ export function useWaitingPickupWorkflow() {
   };
 
   return {
-    context: { companyId, branchId, cashierLocationName, isPickupQueueEnabled },
+    context: {
+      companyId,
+      branchId,
+      cashierLocationName,
+      isPickupQueueEnabled,
+      isPickupOtpRequired,
+    },
     table: {
       query,
       setQuery,

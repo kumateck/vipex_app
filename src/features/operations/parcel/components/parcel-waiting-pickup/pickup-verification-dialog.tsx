@@ -42,6 +42,7 @@ type PickupVerificationDialogProps = {
   staffOptions: StaffOption[];
   staffLocationName: string | null;
   isPickupQueueEnabled: boolean;
+  isPickupOtpRequired: boolean;
   hasPickupQueue: boolean;
   parcelDetails: ParcelFullDetails | undefined;
   formatDateTime: (value: string | null | undefined) => string;
@@ -86,6 +87,7 @@ export function PickupVerificationDialog({
   staffOptions,
   staffLocationName,
   isPickupQueueEnabled,
+  isPickupOtpRequired,
   hasPickupQueue,
   parcelDetails,
   formatDateTime,
@@ -224,13 +226,22 @@ export function PickupVerificationDialog({
               secondReceiverCards={secondReceiverCards}
               cardOptions={cardOptions}
             />
-            <PickupOtpVerificationSection
-              otp={otp}
-              receiverPhone={parcel.receiverPhone}
-              receiverPhone2={parcel.receiverPhone2}
-              phoneSlot={phoneSlot}
-              onPhoneSlotChange={onPhoneSlotChange}
-            />
+            {isPickupOtpRequired ? (
+              <PickupOtpVerificationSection
+                otp={otp}
+                receiverPhone={parcel.receiverPhone}
+                receiverPhone2={parcel.receiverPhone2}
+                phoneSlot={phoneSlot}
+                onPhoneSlotChange={onPhoneSlotChange}
+              />
+            ) : (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                <p className="font-medium">Pickup OTP is disabled for this branch</p>
+                <p className="text-muted-foreground">
+                  Continue without OTP only when processing an approved legacy record.
+                </p>
+              </div>
+            )}
             {parcelDetails ? (
               <div className="rounded-md border p-3 text-sm">
                 <p>
@@ -270,7 +281,11 @@ export function PickupVerificationDialog({
                 toast.error(error instanceof Error ? error.message : 'Failed to confirm delivery');
               }
             }}
-            disabled={isSaving || !otp.otpVerified || (isPickupQueueEnabled && !hasPickupQueue)}
+            disabled={
+              isSaving ||
+              (isPickupOtpRequired && !otp.otpVerified) ||
+              (isPickupQueueEnabled && !hasPickupQueue)
+            }
           >
             Confirm Delivered
           </Button>

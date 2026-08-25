@@ -9,6 +9,8 @@ export interface Branch {
   address: string | null;
   email: string | null;
   usePickupQueue: boolean;
+  requirePickupOtp: boolean;
+  requireReceiverOtp: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -26,6 +28,8 @@ export interface BranchMutationInput {
   address?: string | null;
   email?: string | null;
   usePickupQueue?: boolean;
+  requirePickupOtp?: boolean;
+  requireReceiverOtp?: boolean;
 }
 
 export interface BranchCreatePayload extends BranchMutationInput {
