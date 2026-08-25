@@ -59,6 +59,9 @@ import { notificationHubRoutes } from './features/notification-hub/routes';
 import { desktopUpdatesRoutes } from './features/desktop-updates/routes';
 import { mobileUpdatesRoutes } from './features/mobile-updates/routes';
 import { momoRoutes } from './features/momo/routes';
+import { selfServicePublicRoutes } from './features/self-service/public.routes';
+import { selfServiceAgentRoutes } from './features/self-service/agent.routes';
+import { startSelfServiceDraftExpirySweep } from './features/self-service/expiry-sweep';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -110,6 +113,7 @@ export const app = new Elysia()
       .group('/reconciliation', (r) => r.use(reconciliationRoutes))
       .group('/notification-hub', (r) => r.use(notificationHubRoutes))
       .group('/momo', (r) => r.use(momoRoutes))
+      .group('/self-service', (r) => r.use(selfServicePublicRoutes).use(selfServiceAgentRoutes))
       .group('/desktop-updates', (r) => r.use(desktopUpdatesRoutes))
       .group('/mobile-updates', (r) => r.use(mobileUpdatesRoutes))
       .group('/communication', (r) => r.use(communicationRoutes))
@@ -141,5 +145,7 @@ export const app = new Elysia()
       },
     };
   });
+
+startSelfServiceDraftExpirySweep();
 
 export const apiFetch = app.handle;

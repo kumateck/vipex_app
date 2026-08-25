@@ -43,6 +43,10 @@ export function Conflict(message = 'Conflict', details?: ErrorDetails) {
   return new HttpError(HttpStatus.CONFLICT, message, details);
 }
 
+export function Gone(message = 'Gone', details?: ErrorDetails) {
+  return new HttpError(HttpStatus.GONE, message, details);
+}
+
 export function UnprocessableEntity(message = 'Unprocessable Entity', details?: ErrorDetails) {
   return new HttpError(HttpStatus.UNPROCESSABLE_ENTITY, message, details);
 }

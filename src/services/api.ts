@@ -72,7 +72,8 @@ function buildRequestKey(args: string | FetchArgs): string {
   const url = args.url;
   const params = safeSerialize(args.params);
   const body = safeSerialize(args.body);
-  return `${method}|${url}|${params}|${body}|${userId}`;
+  const headers = safeSerialize(args.headers);
+  return `${method}|${url}|${params}|${body}|${headers}|${userId}`;
 }
 
 function shouldDedupeRequest(args: string | FetchArgs): boolean {

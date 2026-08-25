@@ -252,6 +252,43 @@ export async function findCustomersByTelephoneRepo(input: {
     .limit(limit);
 }
 
+// Minimal-field exact match for public/unauthenticated lookups (e.g. self-service
+// booking): unlike findCustomersByTelephoneRepo (fuzzy ilike, full row, staff-only),
+// this only matches an exact phone number and returns just enough to greet a
+// returning customer by name - no address/email/credit/etc.
+export async function findCustomerNameByExactTelephoneRepo(input: {
+  companyId: string;
+  telephone: string;
+}): Promise<{
+  id: string;
+  fullname: string;
+  telephone: string | null;
+  telephone2: string | null;
+} | null> {
+  const term = input.telephone.trim();
+  if (!term) return null;
+
+  const [row] = await db
+    .select({
+      id: customers.id,
+      fullname: customers.fullname,
+      telephone: customers.telephone,
+      telephone2: customers.telephone2,
+    })
+    .from(customers)
+    .where(
+      and(
+        eq(customers.companyId, input.companyId),
+        eq(customers.isDeleted, false),
+        or(eq(customers.telephone, term), eq(customers.telephone2, term)),
+      ),
+    )
+    .orderBy(asc(customers.id))
+    .limit(1);
+
+  return row ?? null;
+}
+
 export type CustomerCardRow = {
   id: string;
   customerId: string;

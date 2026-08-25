@@ -414,6 +414,27 @@
       "when": 1787300000000,
       "tag": "0057_parcel_reconciliation_session_corrections",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1787300100000,
+      "tag": "0058_self_service_booking_drafts",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1787300200000,
+      "tag": "0059_self_service_draft_customer_ids",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1787300300000,
+      "tag": "0060_self_service_draft_destination",
+      "breakpoints": true
     }
   ]
 }

@@ -62,6 +62,9 @@ export function createBranchColumns(): ColumnDef<Branch>[] {
               <DropdownMenuItem asChild>
                 <Link to={`/branches/edit/${row.original.id}`}>Edit</Link>
               </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to={`/branches/${row.original.id}/qr-print`}>Print Self-Service QR Code</Link>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </PermissionGuard>

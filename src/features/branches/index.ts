@@ -11,3 +11,4 @@ export * from './pages/branches-list-page';
 export * from './pages/branches-create-page';
 export * from './pages/branches-edit-page';
 export * from './pages/branches-create-edit-page';
+export * from './pages/branch-self-service-qr-page';
