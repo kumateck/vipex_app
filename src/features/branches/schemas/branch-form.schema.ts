@@ -23,6 +23,8 @@ export const branchFormSchema = z.object({
   address: optionalString255,
   email: z.union([z.string().email('Invalid email'), z.literal('')]).optional(),
   usePickupQueue: z.boolean().default(false),
+  requirePickupOtp: z.boolean().default(true),
+  requireReceiverOtp: z.boolean().default(true),
 });
 
 export type BranchFormInput = z.input<typeof branchFormSchema>;

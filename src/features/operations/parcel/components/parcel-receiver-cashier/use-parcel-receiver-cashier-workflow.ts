@@ -35,6 +35,7 @@ export function useParcelReceiverCashierWorkflow() {
     skip: !branchId,
   });
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
+  const isReceiverOtpRequired = currentBranch?.requireReceiverOtp ?? true;
 
   const [searchInput, setSearchInput] = useState('');
   const [query, setQuery] = useState<ParcelReceiverQuery>({
@@ -202,6 +203,7 @@ export function useParcelReceiverCashierWorkflow() {
       paymentMethod: dialog.paymentMethod,
       destinationBranchName,
       destinationLocationName,
+      isReceiverOtpRequired,
       receiverOtpVerificationToken: dialog.otpVerificationToken,
       momoTransactionId: dialog.momoTransactionId || null,
       addCustomerCard: (args) => addCustomerCard(args).unwrap(),
@@ -221,6 +223,7 @@ export function useParcelReceiverCashierWorkflow() {
       cashierLocationName,
       canWaiveStorageAccrual,
       isPickupQueueEnabled,
+      isReceiverOtpRequired,
     },
     table: {
       query,
