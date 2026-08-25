@@ -1,7 +1,9 @@
 export type AuthUser = {
-  sub: string;
+  id: string;
+  sub?: string;
   email: string;
   userType?: number | null;
+  cashierType?: number | null;
   fullname?: string | null;
   branchId?: string | null;
   companyId?: string | null;

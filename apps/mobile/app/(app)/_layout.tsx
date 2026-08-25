@@ -112,6 +112,7 @@ export default function AppLayout() {
         name="rider-assigned"
         options={{
           title: 'Assigned Deliveries',
+          headerShown: false,
           drawerItemStyle: { display: 'none' },
         }}
       />
@@ -152,34 +153,20 @@ export default function AppLayout() {
         })}
       />
       <Drawer.Screen
-        name="super-search/[parcelId]"
-        options={({ navigation, route }) => ({
-          // Drawer route params are loosely typed; read booking code defensively.
-          ...(function resolveTitle() {
-            const params =
-              route.params && typeof route.params === 'object'
-                ? (route.params as Record<string, unknown>)
-                : null;
-            const bookingCode = typeof params?.bookingCode === 'string' ? params.bookingCode : '';
-            return {
-              title:
-                bookingCode.trim().length > 0
-                  ? `Parcel Details for ${bookingCode}`
-                  : 'Parcel Details',
-            };
-          })(),
-          headerLeft: () => (
-            <Pressable
-              onPress={() => navigation.goBack()}
-              style={{ paddingHorizontal: 12, paddingVertical: 6 }}
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-            >
-              <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
-            </Pressable>
-          ),
+        name="cashier-sales-report"
+        options={{
+          title: 'Cashier Sales Report',
+          headerShown: false,
           drawerItemStyle: { display: 'none' },
-        })}
+        }}
+      />
+      <Drawer.Screen
+        name="super-search/[parcelId]"
+        options={{
+          title: 'Parcel Details',
+          headerShown: false,
+          drawerItemStyle: { display: 'none' },
+        }}
       />
       <Drawer.Screen
         name="receive-process/[parcelId]"

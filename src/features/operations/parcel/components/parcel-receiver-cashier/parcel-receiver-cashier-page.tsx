@@ -19,6 +19,8 @@ export function ParcelReceiverCashierPage() {
   const columns = useParcelReceiverCashierColumns({
     isPickupQueueEnabled: context.isPickupQueueEnabled,
     isSaving: table.isSaving,
+    page: table.query.page ?? 1,
+    pageSize: table.query.pageSize ?? 20,
     onOpenParcelDialog: table.openParcelDialog,
     onRequestDelivery: (parcel) => void table.handleRequestDelivery(parcel),
   });

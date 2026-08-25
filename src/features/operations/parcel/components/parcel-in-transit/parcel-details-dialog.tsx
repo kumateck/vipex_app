@@ -1,6 +1,11 @@
+import { lazy, Suspense } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { ParcelFullDetails, ParcelSearchRow } from '../../api/parcel.api';
 import { ParcelInternalHolderBadge } from '../parcel-internal-holder-badge';
+
+const ParcelQrCode = lazy(() =>
+  import('./parcel-qr-code').then((module) => ({ default: module.ParcelQrCode })),
+);
 
 type ParcelDetailsDialogProps = {
   open: boolean;
@@ -13,6 +18,7 @@ type ParcelDetailsDialogProps = {
   formatCurrency: (amountPsw: number) => string;
   formatDate: (value: string | null | undefined) => string;
   paymentMethodLabel: (method: number) => string;
+  showQrCode?: boolean;
 };
 
 export function ParcelDetailsDialog({
@@ -26,6 +32,7 @@ export function ParcelDetailsDialog({
   formatCurrency,
   formatDate,
   paymentMethodLabel,
+  showQrCode = false,
 }: ParcelDetailsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? onClose() : null)}>
@@ -49,9 +56,22 @@ export function ParcelDetailsDialog({
               new Set(details.payments.map((payment) => paymentMethodLabel(payment.method))),
             );
             const hasPaid = totalPaidPsw > 0;
-
             return (
               <div className="space-y-2 text-sm">
+                {showQrCode ? (
+                  <Suspense
+                    fallback={
+                      <div className="mb-5 grid min-h-64 place-items-center rounded-lg border bg-muted/30 text-muted-foreground">
+                        Loading QR code...
+                      </div>
+                    }
+                  >
+                    <ParcelQrCode
+                      bookingCode={details.parcel.bookingCode}
+                      trackingCode={details.parcel.trackingCode}
+                    />
+                  </Suspense>
+                ) : null}
                 <p>
                   <strong>Booking:</strong> {details.parcel.bookingCode}
                 </p>

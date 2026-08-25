@@ -995,6 +995,11 @@ const BASE_ROUTES: Route[] = [
             url: '/users/invites',
             permissionKey: PermissionKeys.CanResendSetupInvite,
           },
+          {
+            title: 'Set User Password',
+            url: '/users/password-management',
+            permissionKey: PermissionKeys.CanSetUserPassword,
+          },
         ],
       },
       {

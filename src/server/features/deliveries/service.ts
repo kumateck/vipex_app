@@ -9,10 +9,13 @@ import {
   CustomerCreditSourceType,
 } from '@/db/schemas';
 import { db } from '@/db/config';
-import { createPaymentWithExecutorSvc, sumPrincipalPaidForParcelSvc } from '../payments/service';
+import { createPaymentWithExecutorSvc } from '../payments/service';
 import { getParcelRepo } from '../shipments/parcels.repository';
 import { ParcelStatus } from '@/db/schemas/enums';
-import { assertParcelFullyPaid } from '../shipments/parcel-payment-settlement';
+import {
+  assertParcelFullyPaid,
+  getParcelPaymentSettlement,
+} from '../shipments/parcel-payment-settlement';
 import {
   createDeliveryRepo,
   getDeliveryByParcelRepo,
@@ -25,6 +28,7 @@ import { toPesewas } from '@/server/utils/gh-money';
 import { updateParcelRepo } from '../shipments/parcels.repository';
 import { postCustomerCreditChargeSvc } from '../customers/service';
 import { getParcelChargeValidationError } from '@/shared/shipments/parcel-charge-policy';
+import { emitRiderAssignmentsCreated } from '../communication/realtime';
 
 export async function createDeliverySvc(input: {
   parcelId: string;
@@ -95,9 +99,8 @@ export async function markOfficePickupCompleteSvc(input: {
   if (!parcel) throw NotFound('Parcel not found');
 
   // Ensure no outstanding principal dues before office handover
-  const principalPaid = await sumPrincipalPaidForParcelSvc(input.parcelId);
-  const outstanding =
-    parcel.plannedToBePaidPsw > principalPaid ? parcel.plannedToBePaidPsw - principalPaid : 0;
+  const settlement = await getParcelPaymentSettlement(input.parcelId);
+  const outstanding = Math.max(parcel.plannedToBePaidPsw - settlement.paidPrincipalPsw, 0);
   if (outstanding > 0)
     throw Conflict('Outstanding to-be-paid principal exists; collect before release');
 
@@ -130,11 +133,19 @@ export async function doorToDoorAssignSvc(input: { parcelId: string; riderUserId
   const delivery = await getDeliveryByParcelRepo(input.parcelId);
   if (!delivery) throw NotFound('Delivery not found');
   if (delivery.mode !== DeliveryMode.DOORSTEP) throw Conflict('Not a DOORSTEP delivery');
+  const parcel = await getParcelRepo(input.parcelId);
+  if (!parcel) throw NotFound('Parcel not found');
   const updated = await updateDeliveryRepo(delivery.id, {
     riderUserId: input.riderUserId,
+    riderAssignedAt: new Date(),
     status: 'ASSIGNED',
   });
   if (!updated) throw NotFound('Delivery not found');
+  emitRiderAssignmentsCreated({
+    companyId: parcel.companyId,
+    riderUserId: input.riderUserId,
+    parcelIds: [input.parcelId],
+  });
   return { id: updated.id };
 }
 
@@ -290,6 +301,7 @@ export async function doorToDoorDispatchBulkSvc(input: {
 }) {
   if (!input.parcelIds.length) throw BadRequest('Select at least one parcel');
   let updated = 0;
+  const assignedParcelIdsByCompany = new Map<string, string[]>();
   for (const parcelId of input.parcelIds) {
     const parcel = await getParcelRepo(parcelId);
     if (!parcel) continue;
@@ -309,12 +321,19 @@ export async function doorToDoorDispatchBulkSvc(input: {
       mode: DeliveryMode.DOORSTEP,
       status: 'DISPATCHED',
       riderUserId: input.riderUserId,
+      riderAssignedAt: new Date(),
       updatedAt: new Date(),
     });
     await updateParcelRepo(parcelId, {
       status: ParcelStatus.DISPATCHED,
     });
+    const companyParcelIds = assignedParcelIdsByCompany.get(parcel.companyId) ?? [];
+    companyParcelIds.push(parcelId);
+    assignedParcelIdsByCompany.set(parcel.companyId, companyParcelIds);
     updated += 1;
+  }
+  for (const [companyId, parcelIds] of assignedParcelIdsByCompany) {
+    emitRiderAssignmentsCreated({ companyId, riderUserId: input.riderUserId, parcelIds });
   }
   return { updated };
 }
@@ -333,8 +352,8 @@ export async function listDoorstepByRiderSvc(input: {
   });
   const totals = rows.reduce(
     (acc, row) => {
-      acc.expectedDeliveryFeePsw += row.deliveryFeePsw ?? 0;
-      acc.expectedToBePaidPsw += row.plannedToBePaidPsw ?? 0;
+      acc.expectedDeliveryFeePsw += row.outstandingDeliveryFeePsw ?? 0;
+      acc.expectedToBePaidPsw += row.outstandingPrincipalPsw ?? 0;
       return acc;
     },
     { expectedDeliveryFeePsw: 0, expectedToBePaidPsw: 0 },
@@ -475,52 +494,6 @@ export async function riderBranchBenchmarkSvc(input: { riderUserId: string; bran
   };
 }
 
-export async function doorToDoorRiderGivenToCustomerSvc(input: {
-  parcelId: string;
-  riderUserId: string;
-  signatureImage: string;
-  secondReceiverId?: string | null;
-  cardId?: string | null;
-  cardNumber?: string | null;
-  secondCardId?: string | null;
-  secondCardNumber?: string | null;
-}) {
-  const parcel = await getParcelRepo(input.parcelId);
-  if (!parcel) throw NotFound('Parcel not found');
-  if (parcel.status !== ParcelStatus.DISPATCHED) {
-    throw Conflict('Parcel is not dispatched');
-  }
-  const delivery = await getDeliveryByParcelRepo(input.parcelId);
-  if (!delivery) throw NotFound('Delivery not found');
-  if (delivery.riderUserId !== input.riderUserId) {
-    throw Conflict('Parcel is not assigned to this rider');
-  }
-
-  const signatureImage = input.signatureImage.trim();
-  if (!signatureImage) throw BadRequest('Signature is required');
-
-  await updateParcelRepo(input.parcelId, {
-    status: ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER,
-    secondReceiverId: input.secondReceiverId ?? parcel.secondReceiverId,
-    cardId: input.cardId ?? parcel.cardId,
-    cardNumber: input.cardNumber ?? parcel.cardNumber,
-    secondCardId: input.secondCardId ?? parcel.secondCardId,
-    secondCardNumber: input.secondCardNumber ?? parcel.secondCardNumber,
-    confirmedBy: input.riderUserId,
-    confirmedAt: new Date(),
-  });
-
-  await updateDeliveryRepo(delivery.id, {
-    status: 'RIDER_GIVEN_PARCEL_TO_CUSTOMER',
-    signatureImage,
-    confirmedBy: input.riderUserId,
-    confirmedAt: new Date(),
-    updatedAt: new Date(),
-  });
-
-  return { id: delivery.id };
-}
-
 export async function doorToDoorReturnToOfficeSvc(input: {
   parcelId: string;
   riderUserId: string;
@@ -542,6 +515,7 @@ export async function doorToDoorReturnToOfficeSvc(input: {
   await updateDeliveryRepo(delivery.id, {
     status: 'RETURNED_TO_OFFICE',
     chargePsw: 0,
+    returnedAt: new Date(),
     updatedAt: new Date(),
   });
   return { id: delivery.id };

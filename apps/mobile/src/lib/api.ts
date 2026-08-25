@@ -166,7 +166,11 @@ function logMobileApiError(input: {
     attempt: input.attempt,
     at: new Date().toISOString(),
   };
-  console.error('[mobile-api] request failed', payload);
+  if (input.status && input.status >= 400 && input.status < 500) {
+    console.info('[mobile-api] request rejected', payload);
+  } else {
+    console.error('[mobile-api] request failed', payload);
+  }
   reportMobileErrorToDiscord({
     source: 'mobile-api',
     message: input.message,
@@ -267,6 +271,31 @@ async function request<T>(options: RequestOptions): Promise<T> {
   }
 
   throw lastError ?? new Error('Network request failed');
+}
+
+export function mobileApiGet<T>(input: {
+  path: string;
+  token: string;
+  query?: RequestOptions['query'];
+}): Promise<T> {
+  return request<T>({
+    path: input.path,
+    token: input.token,
+    query: input.query,
+  });
+}
+
+export function mobileApiPost<T>(input: {
+  path: string;
+  token: string;
+  body: unknown;
+}): Promise<T> {
+  return request<T>({
+    path: input.path,
+    method: 'POST',
+    token: input.token,
+    body: input.body,
+  });
 }
 
 export async function login(email: string, password: string): Promise<SessionState> {
@@ -723,7 +752,13 @@ export async function getRiderBranchBenchmark(
 
 export async function riderGivenToCustomer(
   accessToken: string,
-  input: { parcelId: string; riderUserId: string; signatureImage: string },
+  input: {
+    parcelId: string;
+    riderUserId: string;
+    signatureImage: string;
+    principalAmountCedis?: number;
+    deliveryFeeAmountCedis?: number;
+  },
 ): Promise<{ id: string }> {
   return request<{ id: string }>({
     path: `/deliveries/dd/${input.parcelId}/rider-given`,
@@ -732,6 +767,8 @@ export async function riderGivenToCustomer(
     body: {
       riderUserId: input.riderUserId,
       signatureImage: input.signatureImage,
+      principalAmountCedis: input.principalAmountCedis,
+      deliveryFeeAmountCedis: input.deliveryFeeAmountCedis,
     },
   });
 }

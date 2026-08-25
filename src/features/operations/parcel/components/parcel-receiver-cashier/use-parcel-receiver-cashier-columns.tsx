@@ -20,6 +20,8 @@ import {
 type UseParcelReceiverCashierColumnsOptions = {
   isPickupQueueEnabled: boolean;
   isSaving: boolean;
+  page: number;
+  pageSize: number;
   onOpenParcelDialog: (parcel: ParcelSearchRow) => void;
   onRequestDelivery: (parcel: ParcelSearchRow) => void;
 };
@@ -27,11 +29,19 @@ type UseParcelReceiverCashierColumnsOptions = {
 export function useParcelReceiverCashierColumns({
   isPickupQueueEnabled,
   isSaving,
+  page,
+  pageSize,
   onOpenParcelDialog,
   onRequestDelivery,
 }: UseParcelReceiverCashierColumnsOptions) {
   return useMemo<ColumnDef<ParcelSearchRow>[]>(() => {
     const columns: ColumnDef<ParcelSearchRow>[] = [
+      {
+        id: 'rowNumber',
+        header: 'No.',
+        enableSorting: false,
+        cell: ({ row }) => (page - 1) * pageSize + row.index + 1,
+      },
       {
         accessorKey: 'bookingCode',
         header: 'Booking',
@@ -45,8 +55,16 @@ export function useParcelReceiverCashierColumns({
           );
         },
       },
-      { accessorKey: 'parcelDetails', header: 'Parcel Details' },
-      { accessorKey: 'parcelContent', header: 'Parcel Content' },
+      {
+        id: 'parcel',
+        header: 'Parcel',
+        cell: ({ row }) => (
+          <div className="leading-tight">
+            <p className="font-medium">{row.original.parcelDetails || '-'}</p>
+            <p className="text-muted-foreground text-xs">{row.original.parcelContent || '-'}</p>
+          </div>
+        ),
+      },
       {
         id: 'sender',
         header: 'Sender',
@@ -97,19 +115,25 @@ export function useParcelReceiverCashierColumns({
         ),
       },
       {
-        id: 'charge',
-        header: 'Charge',
-        accessorFn: (row) => formatCurrency(row.chargePsw),
-      },
-      {
-        id: 'receiverDue',
-        header: 'Receiver Due',
-        accessorFn: (row) => formatCurrency(row.plannedToBePaidPsw),
-      },
-      {
-        id: 'storageAccrued',
-        header: 'Storage Accrued',
-        accessorFn: (row) => formatStorageCharge(row),
+        id: 'amounts',
+        header: 'Amounts',
+        cell: ({ row }) => (
+          <div className="whitespace-nowrap leading-tight">
+            <p>
+              <span className="text-muted-foreground text-xs">Charge:</span>{' '}
+              {formatCurrency(row.original.chargePsw)}
+              <span className="text-muted-foreground mx-1.5">·</span>
+              <span className="text-muted-foreground text-xs">Due:</span>{' '}
+              {formatCurrency(
+                row.original.outstandingPrincipalPsw ?? row.original.plannedToBePaidPsw,
+              )}
+            </p>
+            <p className="mt-1">
+              <span className="text-muted-foreground text-xs">Accrued:</span>{' '}
+              {formatStorageCharge(row.original)}
+            </p>
+          </div>
+        ),
       },
     ];
 
@@ -145,5 +169,5 @@ export function useParcelReceiverCashierColumns({
     });
 
     return columns;
-  }, [isPickupQueueEnabled, isSaving, onOpenParcelDialog, onRequestDelivery]);
+  }, [isPickupQueueEnabled, isSaving, onOpenParcelDialog, onRequestDelivery, page, pageSize]);
 }

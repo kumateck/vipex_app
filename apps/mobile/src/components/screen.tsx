@@ -1,5 +1,12 @@
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RefreshControl, ScrollView, StyleSheet, View, type ViewProps } from 'react-native';
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+  type ScrollViewProps,
+  type ViewProps,
+} from 'react-native';
 import type { PropsWithChildren } from 'react';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileSpacing } from '@mobile/theme/layout';
@@ -8,6 +15,7 @@ type AppScreenProps = PropsWithChildren<ViewProps> & {
   scrollable?: boolean;
   refreshing?: boolean;
   onRefresh?: () => void;
+  keyboardShouldPersistTaps?: ScrollViewProps['keyboardShouldPersistTaps'];
 };
 
 export function AppScreen({
@@ -16,6 +24,7 @@ export function AppScreen({
   scrollable = true,
   refreshing,
   onRefresh,
+  keyboardShouldPersistTaps,
   ...rest
 }: AppScreenProps) {
   const { theme } = useAppearance();
@@ -40,6 +49,7 @@ export function AppScreen({
       {scrollable ? (
         <ScrollView
           contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps={keyboardShouldPersistTaps}
           refreshControl={
             onRefresh ? (
               <RefreshControl
