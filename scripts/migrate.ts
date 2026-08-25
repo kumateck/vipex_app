@@ -9,11 +9,8 @@ loadEnv({ path: '.env.test', override: false });
 function resolveDatabaseUrl() {
   const migrateTarget = (process.env.MIGRATE_TARGET || '').trim().toLowerCase();
   const useTestDb = migrateTarget === 'test' || process.env.NODE_ENV === 'test';
-  return (
-    process.env.MIGRATE_DATABASE_URL ||
-    (useTestDb ? process.env.TEST_DATABASE_URL : undefined) ||
-    process.env.DATABASE_URL
-  );
+  if (useTestDb) return process.env.TEST_DATABASE_URL;
+  return process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL;
 }
 
 function resolveTargetLabel() {
