@@ -2,6 +2,7 @@ import type { CacheSetOptions, CacheStore } from './cache.types';
 
 type RedisLike = {
   get(key: string): Promise<string | null>;
+  getdel(key: string): Promise<string | null>;
   set(
     key: string,
     value: string,
@@ -18,6 +19,10 @@ export class RedisCacheStore implements CacheStore {
 
   async get(key: string): Promise<string | null> {
     return this.redis.get(key);
+  }
+
+  async take(key: string): Promise<string | null> {
+    return this.redis.getdel(key);
   }
 
   async set(key: string, value: string, options?: CacheSetOptions): Promise<void> {

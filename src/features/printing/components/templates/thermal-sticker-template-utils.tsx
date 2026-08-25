@@ -1,19 +1,8 @@
-import qrcode from 'qrcode-generator';
-
 export function formatTelephones(primary?: string | null, secondary?: string | null) {
   return [primary, secondary]
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value))
     .join(' / ');
-}
-
-export function createQrSvg(value: string) {
-  const qr = qrcode(0, 'M');
-  qr.addData(value);
-  qr.make();
-  return qr
-    .createSvgTag({ cellSize: 3, margin: 1, scalable: true })
-    .replace('<svg ', '<svg style="width:100%;height:100%;display:block;" ');
 }
 
 type StickerRowProps = {

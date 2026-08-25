@@ -1,4 +1,5 @@
 import logoPng from '@/assets/logo.png';
+import { BrandedQrCode } from '@/components/ui/branded-qr-code';
 import { PAYMENT_DUE_NOTE } from './thermal-sticker-copy';
 import { portraitReceiverNameFontSize } from './thermal-sticker-font-size.utils';
 import { DestinationRow } from './thermal-sticker-portrait-sections';
@@ -17,7 +18,7 @@ export function ThermalStickerPortraitTemplate({
   statusLabel,
   statusAmountLabel,
   hasToBePaid,
-  qrSvg,
+  qrValue,
 }: PreparedThermalStickerTemplateProps) {
   const statusRowHeight = hasToBePaid ? '14mm' : '11mm';
   const receiverNameFontSize = portraitReceiverNameFontSize(receiverName);
@@ -57,16 +58,15 @@ export function ThermalStickerPortraitTemplate({
           }}
         />
         <ThermalStickerWordmark />
-        <div
-          aria-label="Parcel tracking QR code"
+        <BrandedQrCode
+          value={qrValue}
+          size={160}
+          ariaLabel="Parcel tracking QR code"
           style={{
             width: '16mm',
             height: '16mm',
-            justifySelf: 'end',
-            alignSelf: 'start',
-            overflow: 'hidden',
           }}
-          dangerouslySetInnerHTML={{ __html: qrSvg }}
+          className="self-start justify-self-end overflow-hidden"
         />
       </header>
 

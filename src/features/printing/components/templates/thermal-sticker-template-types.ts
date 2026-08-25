@@ -39,5 +39,5 @@ export type PreparedThermalStickerTemplateProps = {
   statusLabel: string;
   statusAmountLabel?: string;
   hasToBePaid: boolean;
-  qrSvg: string;
+  qrValue: string;
 };
