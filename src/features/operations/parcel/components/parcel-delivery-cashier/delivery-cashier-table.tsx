@@ -98,13 +98,15 @@ export function DeliveryCashierTable({
       {
         id: 'deliveryFee',
         header: 'Delivery Fee',
-        accessorFn: (row) => formatMoney(row.deliveryFeePsw ?? 0),
+        accessorFn: (row) => formatMoney(row.outstandingDeliveryFeePsw ?? row.deliveryFeePsw ?? 0),
       },
       {
         id: 'toBePaid',
         header: 'To Be Paid',
-        accessorFn: (row) =>
-          row.plannedToBePaidPsw > 0 ? formatMoney(row.plannedToBePaidPsw) : '-',
+        accessorFn: (row) => {
+          const outstandingPsw = row.outstandingPrincipalPsw ?? row.plannedToBePaidPsw;
+          return outstandingPsw > 0 ? formatMoney(outstandingPsw) : '-';
+        },
       },
       {
         id: 'deliveryAt',

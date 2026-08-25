@@ -7,6 +7,7 @@ import { BranchType, UserType, type CashierType } from '@/db/schemas/enums';
 import { Forbidden } from '@/server/utils/http-error';
 
 import { createUserSvc, getUserSvc, updateUserSvc } from './service';
+import { listUserPasswordTargetsSvc, setUserPasswordSvc } from './password-management.service';
 import { listUserOptionsCtrl, listUsersCtrl } from './controller';
 import { PaginationRequestQueryProps, NonEmpty255, UUID } from '@/server/schemas/common';
 
@@ -18,6 +19,50 @@ function parseOptionalUserType(value: string | number | null | undefined) {
 
 export const usersRoutes = new Elysia({ name: 'users' })
   .use(authPlugin)
+  .get(
+    '/password-management/options',
+    async ({ user }) => {
+      const authUser = user as AuthUser;
+      if (!authUser.companyId || !authUser.sub) {
+        throw Forbidden('Authenticated actor context is incomplete');
+      }
+      return listUserPasswordTargetsSvc({
+        companyId: authUser.companyId,
+        actorUserId: authUser.sub,
+        actorRoleId: authUser.roleId,
+      });
+    },
+    {
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanSetUserPassword)],
+      detail: {
+        tags: ['Users'],
+        summary: 'List password management targets',
+        operationId: 'listUserPasswordTargets',
+      },
+    },
+  )
+  .put(
+    '/:id/password',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      if (!authUser.companyId || !authUser.sub) {
+        throw Forbidden('Authenticated actor context is incomplete');
+      }
+      return setUserPasswordSvc({
+        targetUserId: params.id,
+        newPassword: body.password,
+        actorUserId: authUser.sub,
+        actorCompanyId: authUser.companyId,
+        actorRoleId: authUser.roleId,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({ password: t.String({ minLength: 8, maxLength: 128 }) }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanSetUserPassword)],
+      detail: { tags: ['Users'], summary: 'Set user password', operationId: 'setUserPassword' },
+    },
+  )
   .get(
     '/options',
     async ({ query, user }) => {

@@ -40,6 +40,8 @@ const catalog = [
   ['CanUpdateShipments', 'Update shipments', 'Shipments'],
   ['CanDeleteShipments', 'Delete shipments', 'Shipments'],
   ['CanCreateBookingWithParcels', 'Create booking with parcels', 'Shipments'],
+  ['CanReadSelfServiceBookings', 'View self-service booking drafts', 'Shipments'],
+  ['CanCompleteSelfServiceBookings', 'Complete self-service booking drafts', 'Shipments'],
   ['CanReadParcels', 'List and view parcels', 'Shipments'],
   ['CanReadParcelSendingModule', 'View parcel sending module', 'Shipments'],
   ['CanReadParcelReceivingModule', 'View parcel receiving module', 'Shipments'],
@@ -647,6 +649,7 @@ const catalog = [
 
   // Auth / account setup
   ['CanChangePassword', 'Change password', 'Auth'],
+  ['CanSetUserPassword', 'Set another user password', 'Auth'],
   ['CanResendSetupInvite', 'Resend setup invite', 'Auth'],
   ['CanReadActiveUsers', 'View active users page', 'Users'],
   ['CanReadInactiveUsers', 'View inactive users page', 'Users'],
@@ -671,7 +674,7 @@ export const PermissionCatalog: ReadonlyArray<{
   group: string;
 }> = catalog.map(([key, description, group]) => ({ key, description, group }));
 
-export const HiddenPermissionKeysInUi = new Set<PermissionKey>([]);
+export const HiddenPermissionKeysInUi = new Set<PermissionKey>([PermissionKeys.CanSetUserPassword]);
 
 export const PermissionCatalogUi = PermissionCatalog.filter(
   (permission) => !HiddenPermissionKeysInUi.has(permission.key),
@@ -770,6 +773,7 @@ export const AccountingSetupPermissionKeys = Object.freeze({
 });
 
 export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> = Object.freeze({
+  '/users/password-management': PermissionKeys.CanSetUserPassword,
   '/parcels/sender-payments': PermissionKeys.CanCreateSenderPayments,
   '/parcels/processed': PermissionKeys.CanReadConsignments,
   '/parcels/pickup-queue': PermissionKeys.CanCreatePickupQueue,
@@ -791,6 +795,8 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/parcels/rider/current': PermissionKeys.CanReadRiderCurrentParcels,
   '/parcels/rider/history': PermissionKeys.CanReadRiderHistory,
   '/parcels/edit/:id': PermissionKeys.CanCreateBookingWithParcels,
+  '/parcels/self-service': PermissionKeys.CanReadSelfServiceBookings,
+  '/parcels/self-service/:id': PermissionKeys.CanCompleteSelfServiceBookings,
   '/accounting/daily-cash': PermissionKeys.CanCreateDailyCashConfirmation,
   '/accounting/daily-cash/drafts': PermissionKeys.CanConfirmDailyCashConfirmation,
   '/accounting/daily-cash/approvals': PermissionKeys.CanConfirmDailyCashConfirmation,

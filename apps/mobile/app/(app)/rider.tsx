@@ -14,18 +14,8 @@ import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
 export default function RiderScreen() {
   const { theme } = useAppearance();
-  const [selectedDate, setSelectedDate] = useState(todayDateKey());
-  const {
-    canView,
-    refreshing,
-    load,
-    assignedForDay,
-    completedForDay,
-    returnedForDay,
-    totalAmountReceivedPsw,
-    totalDeliveryFeePsw,
-    totalToBePaidPsw,
-  } = useRiderBoardData(selectedDate);
+  const [selectedDate, setSelectedDate] = useState(todayDateKey);
+  const { canView, refreshing, load, dailyAnalytics } = useRiderBoardData(selectedDate);
 
   if (!canView) {
     return (
@@ -71,18 +61,21 @@ export default function RiderScreen() {
 
       <View style={styles.grid}>
         <View style={styles.kpiRow}>
-          <StatCard label="Total Assigned" value={assignedForDay.length} />
-          <StatCard label="Total Completed" value={completedForDay.length} />
+          <StatCard label="Total Assigned" value={dailyAnalytics.assignedCount} />
+          <StatCard label="Total Completed" value={dailyAnalytics.completedCount} />
         </View>
         <View style={styles.kpiRow}>
-          <StatCard label="Total Returned" value={returnedForDay.length} />
-          <StatCard label="Total Amount" value={formatCedisFromPsw(totalAmountReceivedPsw)} />
+          <StatCard label="Total Returned" value={dailyAnalytics.returnedCount} />
+          <StatCard
+            label="Total Amount"
+            value={formatCedisFromPsw(dailyAnalytics.totalAmountReceivedPsw)}
+          />
         </View>
       </View>
 
       <PaymentBreakdownCard
-        deliveryFeePsw={totalDeliveryFeePsw}
-        transitFeePsw={totalToBePaidPsw}
+        deliveryFeePsw={dailyAnalytics.deliveryFeeReceivedPsw}
+        transitFeePsw={dailyAnalytics.toBePaidReceivedPsw}
         senderPaidTransit={false}
       />
     </AppScreen>

@@ -16,4 +16,12 @@ describe('Memory cache store', () => {
     expect(await cache.incr('counter', 5)).toBe(2);
     expect(await cache.incr('counter', 5)).toBe(3);
   });
+
+  test('take returns and atomically removes a value', async () => {
+    const cache = new MemoryCacheStore();
+    await cache.set('single-use', 'payload');
+
+    expect(await cache.take('single-use')).toBe('payload');
+    expect(await cache.take('single-use')).toBeNull();
+  });
 });

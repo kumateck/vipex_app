@@ -8,11 +8,12 @@ import {
   doorToDoorFinalizeAtOfficeSvc,
   doorToDoorOutForDeliverySvc,
   doorToDoorReturnToOfficeSvc,
-  doorToDoorRiderGivenToCustomerSvc,
   listDoorstepByRiderSvc,
   markOfficePickupCompleteSvc,
   riderBranchBenchmarkSvc,
 } from './service';
+import { doorToDoorRiderGivenToCustomerSvc } from './rider-handover.service';
+import { getRiderDailyAnalyticsSvc } from './rider-daily-analytics.service';
 
 export const createDeliveryCtrl = createDeliverySvc;
 export const markOfficePickupCompleteCtrl = markOfficePickupCompleteSvc;
@@ -27,3 +28,4 @@ export const ddRiderGivenCtrl = doorToDoorRiderGivenToCustomerSvc;
 export const ddReturnToOfficeCtrl = doorToDoorReturnToOfficeSvc;
 export const ddFinalizeAtOfficeCtrl = doorToDoorFinalizeAtOfficeSvc;
 export const ddRiderBranchBenchmarkCtrl = riderBranchBenchmarkSvc;
+export const ddRiderDailyAnalyticsCtrl = getRiderDailyAnalyticsSvc;

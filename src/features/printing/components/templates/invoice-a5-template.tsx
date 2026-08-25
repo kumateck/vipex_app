@@ -1,8 +1,8 @@
+import { BrandedQrCode } from '@/components/ui/branded-qr-code';
 import { InvoiceA5Header } from './invoice-a5-header';
 import type { InvoiceA5TemplateProps } from './invoice-a5-template.types';
 import { isToBePaidDeliveryReceipt } from './invoice-a5-template.utils';
 import { InvoiceTaxSummary } from './invoice-tax-summary';
-import { createQrSvg } from './thermal-sticker-template-utils';
 import { ToBePaidReceiptA5Template } from './to-be-paid-receipt-a5-template';
 
 export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
@@ -13,8 +13,9 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     parcelValueCedis,
     destinationBranchName,
     destinationLocationName,
-    senderName,
-    senderTelephone,
+    payerLabel,
+    payerName,
+    payerTelephone,
     senderPaidCedis,
     receiverToPayCedis,
     amountPaidCedis,
@@ -41,7 +42,6 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     { label: 'NHIL', value: tax.nhil },
     { label: 'VAT', value: tax.vat },
   ];
-  const qrSvg = createQrSvg(qrValue);
 
   return (
     <div
@@ -85,11 +85,11 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
                 paddingRight: '1.6mm',
               }}
             >
-              <div style={{ fontWeight: 700 }}>Sender Info</div>
+              <div style={{ fontWeight: 700 }}>{payerLabel}</div>
               <div style={{ marginTop: '0.5mm', fontWeight: 700, fontSize: '5.1mm' }}>
-                {senderName}
+                {payerName}
               </div>
-              <div style={{ marginTop: '0.2mm', fontSize: '5.1mm' }}>{senderTelephone || '-'}</div>
+              <div style={{ marginTop: '0.2mm', fontSize: '5.1mm' }}>{payerTelephone || '-'}</div>
             </div>
             <div style={{ paddingLeft: '1.6mm', paddingBottom: '0.9mm' }}>
               <div style={{ fontWeight: 700 }}>Amount in Words</div>
@@ -153,10 +153,12 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.4mm' }}>
-          <div
-            aria-label="Parcel tracking QR code"
+          <BrandedQrCode
+            value={qrValue}
+            size={300}
+            ariaLabel="Parcel tracking QR code"
+            className="self-center overflow-hidden"
             style={{ alignSelf: 'center', width: '34mm', height: '34mm', overflow: 'hidden' }}
-            dangerouslySetInnerHTML={{ __html: qrSvg }}
           />
         </div>
       </div>

@@ -31,6 +31,7 @@ import RiderScreen from '../app/(app)/rider';
 import RiderAssignedScreen from '../app/(app)/rider-assigned';
 import RiderHistoryScreen from '../app/(app)/rider-history';
 import ChangePasswordScreen from '../app/(app)/change-password';
+import CashierSalesReportScreen from '../app/(app)/cashier-sales-report';
 import SuperSearchRecordDetailsScreen from '../app/(app)/super-search/[parcelId]';
 import ReceiveProcessParcelScreen from '../app/(app)/receive-process/[parcelId]';
 import MobileCommunicationThreadPage from '../app/(app)/communication/thread/[threadId]';
@@ -177,7 +178,7 @@ function AppDrawer() {
       <Drawer.Screen
         name="RiderAssigned"
         component={RiderAssignedScreen}
-        options={{ title: 'Assigned Deliveries' }}
+        options={{ title: 'Assigned Deliveries', headerShown: false }}
       />
       <Drawer.Screen
         name="RiderHistory"
@@ -190,9 +191,18 @@ function AppDrawer() {
         options={{ title: 'Change Password' }}
       />
       <Drawer.Screen
+        name="CashierSalesReport"
+        component={CashierSalesReportScreen}
+        options={{
+          title: 'Cashier Sales Report',
+          headerShown: false,
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+      <Drawer.Screen
         name="SuperSearchRecord"
         component={SuperSearchRecordDetailsScreen}
-        options={{ title: 'Parcel Details' }}
+        options={{ title: 'Parcel Details', headerShown: false }}
       />
       <Drawer.Screen
         name="ReceiveProcess"

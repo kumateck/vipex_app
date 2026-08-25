@@ -10,6 +10,10 @@ import {
 import { useUploadImageMutation } from '@/features/uploads/api/uploads.api';
 import { useAuthStore } from '@/stores/auth-store';
 import {
+  DeliveryChangeRequestDialog,
+  useRiderDeliveryChangeRequest,
+} from '@/features/operations/delivery-change-requests';
+import {
   type RiderDoorstepRecord,
   useListRiderDoorstepParcelsQuery,
   useRiderGivenParcelToCustomerMutation,
@@ -58,6 +62,7 @@ export function ParcelRiderCurrentPage() {
   const [uploadImage, { isLoading: isUploadingSignature }] = useUploadImageMutation();
   const [riderGiven, { isLoading: isConfirming }] = useRiderGivenParcelToCustomerMutation();
   const [riderReturned, { isLoading: isReturning }] = useRiderReturnParcelToOfficeMutation();
+  const changeRequest = useRiderDeliveryChangeRequest();
 
   const openDeliveryDetails = (row: RiderDoorstepRecord) => {
     setSelected(row);
@@ -187,8 +192,24 @@ export function ParcelRiderCurrentPage() {
       <RiderCurrentTable
         data={data}
         isReturning={isReturning}
+        pendingParcelIds={changeRequest.pendingParcelIds}
         onOpenDeliveryDetails={openDeliveryDetails}
+        onRequestChange={(row) =>
+          changeRequest.open({
+            parcelId: row.parcelId,
+            bookingCode: row.bookingCode,
+            currentDropoffAddress: row.dropoffAddress,
+            currentChargePsw: row.deliveryFeePsw,
+          })
+        }
         onReturn={handleReturn}
+      />
+
+      <DeliveryChangeRequestDialog
+        target={changeRequest.selected}
+        isSubmitting={changeRequest.isSubmitting}
+        onClose={changeRequest.close}
+        onSubmit={changeRequest.submit}
       />
 
       <DeliveryHandoverDialog

@@ -1,3 +1,4 @@
+import { BrandedQrCode } from '@/components/ui/branded-qr-code';
 import { ThermalStickerHeaderPanel } from './thermal-sticker-header-panel';
 import { landscapeReceiverNameFontSize } from './thermal-sticker-font-size.utils';
 import { InfoBlock, ParcelStack, SenderBlock } from './thermal-sticker-info-sections';
@@ -16,7 +17,7 @@ export function ThermalStickerLandscapeTemplate({
   statusLabel,
   statusAmountLabel,
   hasToBePaid,
-  qrSvg,
+  qrValue,
 }: PreparedThermalStickerTemplateProps) {
   return (
     <div
@@ -109,10 +110,12 @@ export function ThermalStickerLandscapeTemplate({
             width: '100%',
           }}
         >
-          <div
-            aria-label="Parcel tracking QR code"
-            style={{ width: '24mm', height: '24mm', justifySelf: 'end' }}
-            dangerouslySetInnerHTML={{ __html: qrSvg }}
+          <BrandedQrCode
+            value={qrValue}
+            size={220}
+            ariaLabel="Parcel tracking QR code"
+            className="justify-self-end"
+            style={{ width: '24mm', height: '24mm' }}
           />
         </div>
       </aside>

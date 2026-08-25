@@ -82,10 +82,6 @@ export function ParcelDeliveryCashierPage() {
 
   const hasToBePaidOutstanding = outstanding.principalPsw > 0;
   const outstandingTotalPsw = outstanding.principalPsw + outstanding.deliveryFeePsw;
-  const toBePaidAmountPsw = Math.max(
-    details?.parcel?.plannedToBePaidPsw ?? selectedParcel?.plannedToBePaidPsw ?? 0,
-    0,
-  );
   const assignedRiderLabel = selectedParcel?.riderName ?? 'Unassigned';
 
   useEffect(() => {
@@ -165,7 +161,6 @@ export function ParcelDeliveryCashierPage() {
           assignedRiderLabel={assignedRiderLabel}
           deliveryAtLabel={deliveryAtLabel}
           configuredDeliveryFeePsw={configuredDeliveryFeePsw}
-          toBePaidAmountPsw={toBePaidAmountPsw}
           outstanding={outstanding}
           hasToBePaidOutstanding={hasToBePaidOutstanding}
           outstandingTotalPsw={outstandingTotalPsw}

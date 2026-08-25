@@ -19,14 +19,18 @@ import {
   ddFinalizeAtOfficeCtrl,
   ddListByRiderCtrl,
   ddOutCtrl,
-  ddReturnToOfficeCtrl,
-  ddRiderGivenCtrl,
   ddRiderBranchBenchmarkCtrl,
   markOfficePickupCompleteCtrl,
 } from './controller';
+import { riderDailyAnalyticsRoutes } from './rider-daily-analytics.routes';
+import { riderHandoverRoutes } from './rider-handover.routes';
+import { deliveryChangeRequestRoutes } from './delivery-change-request.routes';
 
 export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
   .use(authPlugin)
+  .use(riderDailyAnalyticsRoutes)
+  .use(riderHandoverRoutes)
+  .use(deliveryChangeRequestRoutes)
   .post(
     '/',
     async ({ body, set }) => {
@@ -187,50 +191,6 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
         tags: ['Deliveries'],
         summary: 'Doorstep: rider analytics benchmark vs branch rider average',
       },
-    },
-  )
-  .post(
-    '/dd/:parcelId/rider-given',
-    async ({ params, body }) =>
-      ddRiderGivenCtrl({
-        parcelId: params.parcelId,
-        riderUserId: (body as { riderUserId: string }).riderUserId,
-        signatureImage: (body as { signatureImage: string }).signatureImage,
-        secondReceiverId: (body as { secondReceiverId?: string | null }).secondReceiverId,
-        cardId: (body as { cardId?: string | null }).cardId,
-        cardNumber: (body as { cardNumber?: string | null }).cardNumber,
-        secondCardId: (body as { secondCardId?: string | null }).secondCardId,
-        secondCardNumber: (body as { secondCardNumber?: string | null }).secondCardNumber,
-      }),
-    {
-      params: t.Object({ parcelId: UUID }),
-      body: t.Object({
-        riderUserId: UUID,
-        signatureImage: t.String({ minLength: 10 }),
-        secondReceiverId: t.Optional(t.Union([UUID, t.Null()])),
-        cardId: t.Optional(t.Union([UUID, t.Null()])),
-        cardNumber: t.Optional(t.Union([t.String(), t.Null()])),
-        secondCardId: t.Optional(t.Union([UUID, t.Null()])),
-        secondCardNumber: t.Optional(t.Union([t.String(), t.Null()])),
-      }),
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadRiderCurrentParcels)],
-      detail: { tags: ['Deliveries'], summary: 'Doorstep: rider confirms handover with signature' },
-    },
-  )
-  .post(
-    '/dd/:parcelId/returned',
-    async ({ params, body }) =>
-      ddReturnToOfficeCtrl({
-        parcelId: params.parcelId,
-        riderUserId: (body as { riderUserId: string }).riderUserId,
-      }),
-    {
-      params: t.Object({ parcelId: UUID }),
-      body: t.Object({
-        riderUserId: UUID,
-      }),
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadRiderCurrentParcels)],
-      detail: { tags: ['Deliveries'], summary: 'Doorstep: rider returns parcel to office' },
     },
   )
   .post(

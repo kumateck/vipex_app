@@ -28,6 +28,10 @@ export type CommunicationSocketEvent =
       type: 'communication.typing.updated';
       payload: { threadId: string; userId: string; isTyping: boolean; at: string };
     }
+  | {
+      type: 'delivery.rider.assigned';
+      payload: { riderUserId: string; parcelIds: string[]; assignedAt: string };
+    }
   | { type: 'communication.pong'; payload: { at: string } };
 
 export type UseCommunicationSocketOptions = {
@@ -50,6 +54,11 @@ export type UseCommunicationSocketOptions = {
     userId: string;
     isTyping: boolean;
     at: string;
+  }) => void;
+  onRiderAssigned?: (payload: {
+    riderUserId: string;
+    parcelIds: string[];
+    assignedAt: string;
   }) => void;
 };
 
@@ -166,6 +175,8 @@ export function handleSocketMessage(
       );
     if (parsed.type === 'communication.typing.updated')
       return safeInvoke(endpointUrl, parsed.type, () => options.onTypingUpdated?.(parsed.payload));
+    if (parsed.type === 'delivery.rider.assigned')
+      return safeInvoke(endpointUrl, parsed.type, () => options.onRiderAssigned?.(parsed.payload));
     if (parsed.type === 'communication.pong') return;
     logMobileSocketError('Unhandled socket event type', {
       endpointUrl,

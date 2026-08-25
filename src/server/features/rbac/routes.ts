@@ -84,6 +84,7 @@ export const rbacRoutes = new Elysia({ name: 'rbac' })
         name: body.name,
         permissionKeys: (body.permissionKeys ?? []) as PermissionKey[],
         actorPermissions: user!.permissions ?? [],
+        actorRoleId: user!.roleId,
       });
       set.status = HttpStatus.CREATED;
       return res;
@@ -172,6 +173,7 @@ export const rbacRoutes = new Elysia({ name: 'rbac' })
         createdBy: user!.sub,
         permissionKeys: body.permissionKeys as PermissionKey[],
         actorPermissions: user!.permissions ?? [],
+        actorRoleId: user!.roleId,
       });
     },
     {

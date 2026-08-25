@@ -1,0 +1,1 @@
+export { AssignedDeliveriesScreen } from './components';
