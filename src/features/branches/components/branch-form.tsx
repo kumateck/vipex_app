@@ -15,7 +15,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui';
-import { Checkbox } from '@/components/ui/checkbox';
 import { BRANCH_TYPE_LABELS, BRANCH_TYPES } from '@/shared/access/constants';
 import { BranchType } from '@/db/schemas/enums';
 import { normalizeOptionalFields } from '@/lib/optional-fields';
@@ -25,6 +24,7 @@ import {
   type BranchFormValues,
 } from '../schemas/branch-form.schema';
 import type { Branch } from '../types/branch.types';
+import { BranchOperationsFields } from './branch-operations-fields';
 
 interface BranchFormProps {
   mode: 'create' | 'edit';
@@ -60,6 +60,8 @@ export function BranchForm({
       address: '',
       email: '',
       usePickupQueue: false,
+      requirePickupOtp: true,
+      requireReceiverOtp: true,
     },
     mode: 'onSubmit',
   });
@@ -73,6 +75,8 @@ export function BranchForm({
         address: initialData.address ?? '',
         email: initialData.email ?? '',
         usePickupQueue: initialData.usePickupQueue ?? false,
+        requirePickupOtp: initialData.requirePickupOtp ?? true,
+        requireReceiverOtp: initialData.requireReceiverOtp ?? true,
       });
       return;
     }
@@ -84,6 +88,8 @@ export function BranchForm({
       address: '',
       email: '',
       usePickupQueue: false,
+      requirePickupOtp: true,
+      requireReceiverOtp: true,
     });
   }, [initialData, mode, reset]);
 
@@ -183,30 +189,7 @@ export function BranchForm({
                   <p className="text-sm text-destructive">{errors.email.message}</p>
                 ) : null}
               </Field>
-              <Field>
-                <label
-                  htmlFor="use-pickup-queue"
-                  className="flex items-start gap-3 rounded-md border p-3"
-                >
-                  <Controller
-                    control={control}
-                    name="usePickupQueue"
-                    render={({ field }) => (
-                      <Checkbox
-                        id="use-pickup-queue"
-                        checked={field.value}
-                        onCheckedChange={(value) => field.onChange(value === true)}
-                      />
-                    )}
-                  />
-                  <span className="text-sm">
-                    <span className="block font-medium">Use pickup queue</span>
-                    <span className="text-muted-foreground">
-                      Require queue ticket generation before parcel handover at this branch.
-                    </span>
-                  </span>
-                </label>
-              </Field>
+              <BranchOperationsFields control={control} />
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? <Spinner /> : null}

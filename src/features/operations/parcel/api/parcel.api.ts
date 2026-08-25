@@ -845,8 +845,8 @@ export const parcelApi = api.injectEndpoints({
         cardNumber?: string | null;
         secondCardId?: string | null;
         secondCardNumber?: string | null;
-        receiverOtpVerificationToken: string;
-        receiverOtpTarget: 'main' | 'second';
+        receiverOtpVerificationToken?: string;
+        receiverOtpTarget?: 'main' | 'second';
         momoTransactionId?: string | null;
       }
     >({

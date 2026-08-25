@@ -2,6 +2,7 @@ export * from './api/branches.api';
 export * from './types/branch.types';
 export * from './schemas/branch-form.schema';
 export * from './components/branch-form';
+export * from './components/branch-operations-fields';
 export * from './components/branch-form-skeleton';
 export * from './components/branch-load-error';
 export * from './components/branches-table';

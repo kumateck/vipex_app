@@ -25,6 +25,8 @@ export interface BranchOption {
 export type BranchOperationsSettings = {
   id: string;
   usePickupQueue: boolean;
+  requirePickupOtp: boolean;
+  requireReceiverOtp: boolean;
 };
 
 export const branchesApi = api.injectEndpoints({

@@ -15,6 +15,8 @@ export function sanitizeBranchMutationInput(input: BranchMutationInput): BranchM
     address: toNullable(input.address),
     email: toNullable(input.email),
     usePickupQueue: Boolean(input.usePickupQueue),
+    requirePickupOtp: input.requirePickupOtp !== false,
+    requireReceiverOtp: input.requireReceiverOtp !== false,
   };
 }
 
@@ -41,6 +43,8 @@ export function toCreateBranchPayload(
     ...(address ? { address } : {}),
     ...(email ? { email } : {}),
     usePickupQueue: Boolean(input.usePickupQueue),
+    requirePickupOtp: input.requirePickupOtp !== false,
+    requireReceiverOtp: input.requireReceiverOtp !== false,
     companyId: context.companyId,
     createdBy: context.createdBy,
   };
