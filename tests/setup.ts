@@ -9,6 +9,7 @@ const testDatabaseUrlOverride = process.env.TEST_DATABASE_URL?.trim();
 
 loadEnv({ path: '.env' });
 loadEnv({ path: '.env.test', override: true });
+loadEnv({ path: '.env.test.local', override: true });
 
 if (testDatabaseUrlOverride) {
   process.env.TEST_DATABASE_URL = testDatabaseUrlOverride;

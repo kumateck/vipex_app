@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 
 loadEnv({ path: '.env' });
 loadEnv({ path: '.env.test', override: false });
+loadEnv({ path: '.env.test.local', override: false });
 
 function resolveDatabaseUrl() {
   const migrateTarget = (process.env.MIGRATE_TARGET || '').trim().toLowerCase();
@@ -24,7 +25,9 @@ function resolveTargetLabel() {
 async function ensureDatabase() {
   const databaseUrl = resolveDatabaseUrl();
   if (!databaseUrl) {
-    throw new Error('DATABASE_URL is not set (or TEST_DATABASE_URL for NODE_ENV=test)');
+    throw new Error(
+      resolveTargetLabel() === 'test' ? 'TEST_DATABASE_URL is not set' : 'DATABASE_URL is not set',
+    );
   }
 
   const url = new URL(databaseUrl);
@@ -62,7 +65,11 @@ async function runMigrations() {
     // We re-import or re-create the connection here to ensure it connects to the now-existing DB
     const databaseUrl = resolveDatabaseUrl();
     if (!databaseUrl) {
-      throw new Error('DATABASE_URL is not set (or TEST_DATABASE_URL for NODE_ENV=test)');
+      throw new Error(
+        resolveTargetLabel() === 'test'
+          ? 'TEST_DATABASE_URL is not set'
+          : 'DATABASE_URL is not set',
+      );
     }
     const sql = postgres(databaseUrl, { max: 1 });
     const db = drizzle(sql);
