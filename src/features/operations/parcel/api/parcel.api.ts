@@ -101,6 +101,8 @@ export type ParcelSearchRow = {
   pickupLocationId: string | null;
   pickupLocationName?: string | null;
   plannedToBePaidPsw: number;
+  outstandingPrincipalPsw?: number;
+  outstandingDeliveryFeePsw?: number;
   method: number;
   taxReportConfirmation: boolean;
   callSender: boolean;
@@ -442,12 +444,19 @@ export type RiderDoorstepRecord = {
   dropoffAddress: string | null;
   deliveryFeePsw: number;
   amountPaidPsw: number;
+  riderCollectedPrincipalPsw: number;
+  riderCollectedDeliveryFeePsw: number;
+  riderCollectionRecordedAt: string | null;
+  principalCollectableAtCompletionPsw: number;
+  deliveryFeeCollectableAtCompletionPsw: number;
   trackingCode: string;
   bookingCode: string;
   parcelStatus: number;
   parcelDetails: string;
   parcelContent: string;
   plannedToBePaidPsw: number;
+  outstandingPrincipalPsw?: number;
+  outstandingDeliveryFeePsw?: number;
   chargePsw: number;
   destinationId: string;
   destinationName: string | null;

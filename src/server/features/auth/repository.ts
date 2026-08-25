@@ -190,6 +190,16 @@ export async function updateUserPasswordRepo(userId: string, passwordHash: strin
   await db.update(users).set({ password: passwordHash }).where(eq(users.id, userId));
 }
 
+export async function setUserPasswordAndRevokeSessionsRepo(userId: string, passwordHash: string) {
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ password: passwordHash }).where(eq(users.id, userId));
+    await tx
+      .update(refreshTokens)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(refreshTokens.userId, userId), isNull(refreshTokens.revokedAt)));
+  });
+}
+
 export async function updateCurrentUserProfileRepo(
   userId: string,
   patch: { fullname?: string; telephone?: string },

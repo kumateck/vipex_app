@@ -5,6 +5,19 @@ import { useAuth } from '@mobile/providers/auth-provider';
 import { canCompleteRiderDeliveryActions, canViewRiderScreen } from '@mobile/lib/permissions';
 import { hapticError } from '@mobile/lib/haptics';
 import type { RiderDoorstepRecord } from '@mobile/types/parcels';
+import { getRiderDailyAnalytics } from '@mobile/features/dashboard/services';
+import type { RiderDailyAnalytics } from '@mobile/features/dashboard/types';
+import { subscribeToRiderAssignmentSignals } from '@mobile/features/rider/assignment-realtime';
+
+const EMPTY_ANALYTICS: RiderDailyAnalytics = {
+  date: '',
+  assignedCount: 0,
+  completedCount: 0,
+  returnedCount: 0,
+  totalAmountReceivedPsw: 0,
+  toBePaidReceivedPsw: 0,
+  deliveryFeeReceivedPsw: 0,
+};
 
 export function formatCedisFromPsw(amountPsw?: number) {
   const cedis = (amountPsw ?? 0) / 100;
@@ -66,24 +79,27 @@ export function useRiderBoardData(selectedDate: string) {
   const permissions = session.user?.permissions ?? [];
   const canView = canViewRiderScreen(permissions);
   const canCompleteDelivery = canCompleteRiderDeliveryActions(permissions);
-  const riderUserId = session.user?.sub;
+  const riderUserId = session.user?.id ?? session.user?.sub;
 
   const [currentRows, setCurrentRows] = useState<RiderDoorstepRecord[]>([]);
   const [historyRows, setHistoryRows] = useState<RiderDoorstepRecord[]>([]);
+  const [dailyAnalytics, setDailyAnalytics] = useState(EMPTY_ANALYTICS);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     if (!riderUserId) return;
     setRefreshing(true);
     try {
-      const [current, history] = await withAuth((token) =>
+      const [current, history, analytics] = await withAuth((token) =>
         Promise.all([
           listRiderParcels(token, riderUserId, 'current'),
           listRiderParcels(token, riderUserId, 'history'),
+          getRiderDailyAnalytics(token, selectedDate || todayDateKey()),
         ]),
       );
       setCurrentRows(current.rows ?? []);
       setHistoryRows(history.rows ?? []);
+      setDailyAnalytics(analytics);
     } catch (err) {
       notifyError(
         'Load failed',
@@ -93,50 +109,17 @@ export function useRiderBoardData(selectedDate: string) {
     } finally {
       setRefreshing(false);
     }
-  }, [riderUserId, withAuth]);
+  }, [riderUserId, selectedDate, withAuth]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  useEffect(() => subscribeToRiderAssignmentSignals(() => void load()), [load]);
+
   const currentParcelIdSet = useMemo(
     () => new Set(currentRows.map((row) => row.parcelId)),
     [currentRows],
-  );
-
-  const assignedForDay = useMemo(
-    () => currentRows.filter((row) => toDateKey(row.createdAt ?? row.updatedAt) === selectedDate),
-    [currentRows, selectedDate],
-  );
-
-  const historyForDay = useMemo(
-    () => historyRows.filter((row) => toDateKey(row.updatedAt ?? row.createdAt) === selectedDate),
-    [historyRows, selectedDate],
-  );
-
-  const completedForDay = useMemo(
-    () => historyForDay.filter((row) => isCompletedStatus(row.deliveryStatus)),
-    [historyForDay],
-  );
-
-  const returnedForDay = useMemo(
-    () => historyForDay.filter((row) => isReturnedStatus(row.deliveryStatus)),
-    [historyForDay],
-  );
-
-  const totalAmountReceivedPsw = useMemo(
-    () => completedForDay.reduce((sum, row) => sum + (row.amountPaidPsw ?? 0), 0),
-    [completedForDay],
-  );
-
-  const totalDeliveryFeePsw = useMemo(
-    () => completedForDay.reduce((sum, row) => sum + (row.deliveryFeePsw ?? 0), 0),
-    [completedForDay],
-  );
-
-  const totalToBePaidPsw = useMemo(
-    () => completedForDay.reduce((sum, row) => sum + (row.plannedToBePaidPsw ?? 0), 0),
-    [completedForDay],
   );
 
   return {
@@ -148,12 +131,6 @@ export function useRiderBoardData(selectedDate: string) {
     refreshing,
     load,
     currentParcelIdSet,
-    assignedForDay,
-    historyForDay,
-    completedForDay,
-    returnedForDay,
-    totalAmountReceivedPsw,
-    totalDeliveryFeePsw,
-    totalToBePaidPsw,
+    dailyAnalytics,
   };
 }

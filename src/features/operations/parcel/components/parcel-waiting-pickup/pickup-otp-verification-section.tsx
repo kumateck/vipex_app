@@ -50,9 +50,10 @@ export function PickupOtpVerificationSection({
   const activePhone = phoneSlot === 'secondary' ? receiverPhone2 : receiverPhone;
 
   const handleSend = async () => {
+    const isResend = Boolean(otp.otpSentAt);
     try {
-      await otp.request(Boolean(otp.otpSentAt));
-      toast.success('Collection OTP sent to the customer');
+      await otp.request(isResend);
+      toast.success(isResend ? 'Collection OTP resent to the customer' : 'Collection OTP sent');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to send collection OTP');
     }
@@ -115,7 +116,7 @@ export function PickupOtpVerificationSection({
               variant="outline"
               size="sm"
               onClick={() => void handleSend()}
-              disabled={otp.otpRequestPending || (Boolean(otp.otpSentAt) && !isExpired)}
+              disabled={otp.otpRequestPending || otp.otpVerifyPending}
             >
               {otp.otpRequestPending
                 ? 'Sending...'

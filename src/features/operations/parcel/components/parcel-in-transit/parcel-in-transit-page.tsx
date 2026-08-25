@@ -356,7 +356,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setSelectedParcelId(parcel.id)}>
-                  View Details
+                  {view === 'incoming' ? 'View Details & QR Code' : 'View Details'}
                 </DropdownMenuItem>
                 {view === 'incoming' ? (
                   <DropdownMenuItem
@@ -609,6 +609,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         formatCurrency={formatCurrency}
         formatDate={formatDate}
         paymentMethodLabel={paymentMethodLabel}
+        showQrCode={view === 'incoming'}
       />
 
       <ConfirmMarkArrivedDialog

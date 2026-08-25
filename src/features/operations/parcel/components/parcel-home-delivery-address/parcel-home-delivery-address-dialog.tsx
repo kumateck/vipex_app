@@ -44,7 +44,10 @@ export function ParcelHomeDeliveryAddressDialog({
             <strong>Booking:</strong> {parcel?.bookingCode}
           </p>
           <p className="text-sm">
-            <strong>To Be Paid:</strong> {parcel ? formatCurrency(parcel.plannedToBePaidPsw) : '-'}
+            <strong>To Be Paid:</strong>{' '}
+            {parcel
+              ? formatCurrency(parcel.outstandingPrincipalPsw ?? parcel.plannedToBePaidPsw)
+              : '-'}
           </p>
           <div className="space-y-2">
             <Label htmlFor="dropoff-address">Home Address</Label>

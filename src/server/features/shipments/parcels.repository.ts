@@ -31,8 +31,9 @@ import {
   warehouses,
   parcelDispositionActions,
   parcelStorageWaivers,
+  payments,
 } from '@/db/schemas';
-import { ParcelStatus } from '@/db/schemas/enums';
+import { ParcelStatus, PaymentComponent } from '@/db/schemas/enums';
 import type { SortField } from '@/server/types/pagination.types';
 import { extractScannedCode } from '@/server/utils/scan-code';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
@@ -131,6 +132,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     currentHolderLocationName: string | null;
     currentHolderWarehouseId: string | null;
     currentHolderWarehouseName: string | null;
+    outstandingPrincipalPsw: number;
+    outstandingDeliveryFeePsw: number;
   })[];
   totalRecords: number;
 }> {
@@ -167,6 +170,20 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   const pl = alias(locations, 'pl');
   const hl = alias(locations, 'hl');
   const hw = alias(warehouses, 'hw');
+  const paidPrincipalPsw = sql<number>`coalesce((
+    select sum(${payments.grossAmountPsw})
+    from ${payments}
+    where ${payments.parcelId} = ${parcels.id}
+      and ${payments.component} = ${PaymentComponent.PRINCIPAL}
+      and ${payments.voidedAt} is null
+  ), 0)`;
+  const paidDeliveryFeePsw = sql<number>`coalesce((
+    select sum(${payments.grossAmountPsw})
+    from ${payments}
+    where ${payments.parcelId} = ${parcels.id}
+      and ${payments.component} = ${PaymentComponent.DELIVERY_FEE}
+      and ${payments.voidedAt} is null
+  ), 0)`;
 
   if (p.locationId) whereParts.push(eq(parcels.pickupLocationId, p.locationId));
   if (p.hasPickupQueue === true) whereParts.push(isNotNull(pickupQueues.id));
@@ -269,6 +286,14 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       secondCardNumber: parcels.secondCardNumber,
       pickupLocationId: parcels.pickupLocationId,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
+      outstandingPrincipalPsw:
+        sql<number>`greatest(${parcels.plannedToBePaidPsw} - ${paidPrincipalPsw}, 0)`.mapWith(
+          Number,
+        ),
+      outstandingDeliveryFeePsw:
+        sql<number>`greatest(coalesce(${deliveries.chargePsw}, 0) - ${paidDeliveryFeePsw}, 0)`.mapWith(
+          Number,
+        ),
       method: parcels.method,
       taxReportConfirmation: parcels.taxReportConfirmation,
       callSender: parcels.callSender,

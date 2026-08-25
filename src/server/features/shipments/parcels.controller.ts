@@ -38,7 +38,7 @@ export async function listParcelsCtrl(
     includeDeleted?: boolean | null;
   }>,
 ): Promise<PaginatedResponseDto<unknown>> {
-  const pagination = normalizePagination(q, { pageSize: 20 });
+  const pagination = normalizePagination(q, { pageSize: 20, maxPageSize: 200 });
   const { data, totalRecords } = await listParcelsSvc({
     limit: pagination.pageSize,
     offset: pagination.offset,

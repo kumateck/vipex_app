@@ -18,6 +18,11 @@ import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
 import {
+  PendingDeliveryChangeRequestsCard,
+  ReviewDeliveryChangeRequestDialog,
+  useDeliveryChangeReview,
+} from '@/features/operations/delivery-change-requests';
+import {
   type ParcelSearchRow,
   useCollectDoorstepAddressMutation,
   useSearchParcelsQuery,
@@ -59,6 +64,7 @@ export function ParcelHomeDeliveryAddressPage() {
   const [collectAddress, { isLoading: isSaving }] = useCollectDoorstepAddressMutation();
   const [updateParcel, { isLoading: isReturningToPickup }] = useUpdateParcelMutation();
   const listQuery = useSearchParcelsQuery(query, { skip: !companyId || !branchId });
+  const changeReview = useDeliveryChangeReview();
 
   useEffect(() => {
     setQuery((prev) => ({
@@ -81,7 +87,7 @@ export function ParcelHomeDeliveryAddressPage() {
       {
         id: 'toBePaid',
         header: 'To Be Paid',
-        accessorFn: (row) => formatCurrency(row.plannedToBePaidPsw),
+        accessorFn: (row) => formatCurrency(row.outstandingPrincipalPsw ?? row.plannedToBePaidPsw),
       },
       {
         id: 'action',
@@ -153,6 +159,12 @@ export function ParcelHomeDeliveryAddressPage() {
 
   return (
     <div className="w-full p-4 space-y-4">
+      <PendingDeliveryChangeRequestsCard
+        requests={changeReview.requests}
+        isLoading={changeReview.isLoading}
+        onReview={changeReview.open}
+      />
+
       <ScrollableWrapper>
         <Card>
           <CardHeader>
@@ -216,6 +228,12 @@ export function ParcelHomeDeliveryAddressPage() {
         isSaving={isSaving}
         onClose={() => setSelectedParcel(null)}
         onSubmit={onSubmit}
+      />
+      <ReviewDeliveryChangeRequestDialog
+        request={changeReview.selected}
+        isSubmitting={changeReview.isSubmitting}
+        onClose={changeReview.close}
+        onSubmit={changeReview.submit}
       />
     </div>
   );

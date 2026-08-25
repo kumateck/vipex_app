@@ -66,6 +66,14 @@ type CommunicationRealtimeEvent =
   | {
       type: 'communication.pong';
       payload: { at: string };
+    }
+  | {
+      type: 'delivery.rider.assigned';
+      payload: {
+        riderUserId: string;
+        parcelIds: string[];
+        assignedAt: string;
+      };
     };
 
 type IncomingSocketMessage =
@@ -627,4 +635,21 @@ export function emitCommunicationTypingUpdated(
       payload,
     });
   })();
+}
+
+export function emitRiderAssignmentsCreated(params: {
+  companyId: string;
+  riderUserId: string;
+  parcelIds: string[];
+}) {
+  const parcelIds = [...new Set(params.parcelIds.map((id) => id.trim()).filter(Boolean))];
+  if (!parcelIds.length || !params.riderUserId.trim()) return;
+  broadcastToUserIds(params.companyId, [params.riderUserId], {
+    type: 'delivery.rider.assigned',
+    payload: {
+      riderUserId: params.riderUserId,
+      parcelIds,
+      assignedAt: new Date().toISOString(),
+    },
+  });
 }

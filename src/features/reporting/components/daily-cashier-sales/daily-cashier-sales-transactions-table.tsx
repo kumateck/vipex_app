@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { DailyCashierSalesReport } from '@/features/reporting/api/reporting.api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -9,7 +10,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PAYMENT_METHOD_LABELS } from './daily-cashier-sales-constants';
-import { formatDateTime, formatMoneyPsw } from './daily-cashier-sales-utils';
+import type { DailyCashierSalesDisplayTransaction } from './daily-cashier-sales-types';
+import {
+  formatDateTime,
+  formatMoneyPsw,
+  groupDeliveryCashierTransactions,
+} from './daily-cashier-sales-utils';
 
 type DailyCashierSalesTransactionsTableProps = {
   report?: DailyCashierSalesReport;
@@ -22,6 +28,11 @@ export function DailyCashierSalesTransactionsTable({
   isFetching,
   isUninitialized,
 }: DailyCashierSalesTransactionsTableProps) {
+  const transactions = useMemo(
+    () => groupDeliveryCashierTransactions(report?.transactions ?? []),
+    [report?.transactions],
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -42,7 +53,7 @@ export function DailyCashierSalesTransactionsTable({
               <TableHead className="text-right">Amount Paid</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>{renderRows({ report, isFetching, isUninitialized })}</TableBody>
+          <TableBody>{renderRows({ transactions, isFetching, isUninitialized })}</TableBody>
         </Table>
       </CardContent>
     </Card>
@@ -50,10 +61,12 @@ export function DailyCashierSalesTransactionsTable({
 }
 
 function renderRows({
-  report,
+  transactions,
   isFetching,
   isUninitialized,
-}: DailyCashierSalesTransactionsTableProps) {
+}: Omit<DailyCashierSalesTransactionsTableProps, 'report'> & {
+  transactions: DailyCashierSalesDisplayTransaction[];
+}) {
   if (isFetching) {
     return <EmptyRow>Loading...</EmptyRow>;
   }
@@ -62,12 +75,12 @@ function renderRows({
     return <EmptyRow>Select filters and click Load report.</EmptyRow>;
   }
 
-  if ((report?.transactions.length ?? 0) === 0) {
+  if (transactions.length === 0) {
     return <EmptyRow>No sales found for the selected filters.</EmptyRow>;
   }
 
-  return report?.transactions.map((row, index) => (
-    <TableRow key={row.paymentId}>
+  return transactions.map((row, index) => (
+    <TableRow key={row.paymentIds.join(':')}>
       <TableCell>{index + 1}</TableCell>
       <TableCell>{formatDateTime(row.receivedAt)}</TableCell>
       <TableCell>{row.bookingCode}</TableCell>
@@ -81,9 +94,25 @@ function renderRows({
       </TableCell>
       <TableCell>{row.whoPaid}</TableCell>
       <TableCell>{PAYMENT_METHOD_LABELS[row.method] ?? String(row.method)}</TableCell>
-      <TableCell className="text-right">{formatMoneyPsw(row.grossAmountPsw)}</TableCell>
+      <TableCell className="text-right">
+        <AmountPaidCell transaction={row} />
+      </TableCell>
     </TableRow>
   ));
+}
+
+function AmountPaidCell({ transaction }: { transaction: DailyCashierSalesDisplayTransaction }) {
+  return (
+    <div className="space-y-1">
+      <p className="font-semibold">{formatMoneyPsw(transaction.grossAmountPsw)}</p>
+      {transaction.isDeliveryCashierGroup ? (
+        <div className="text-muted-foreground text-xs leading-4">
+          <p>To Be Paid: {formatMoneyPsw(transaction.toBePaidAmountPsw)}</p>
+          <p>Delivery Fee: {formatMoneyPsw(transaction.deliveryFeeAmountPsw)}</p>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function EmptyRow({ children }: { children: string }) {

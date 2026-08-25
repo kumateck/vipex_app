@@ -3,7 +3,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { router } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
-import { searchParcels, updateParcelStatus } from '@mobile/lib/api';
+import { searchParcels } from '@mobile/lib/api';
 import { extractScannedCode } from '@mobile/lib/scan-code';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
 import type { ParcelSearchRow } from '@mobile/types/parcels';
@@ -78,11 +78,6 @@ export default function ReceiveScanScreen() {
         return;
       }
       if (scanInFlightRef.current) return;
-      if (!canMarkArrived) {
-        notifyError('Permission denied', 'You do not have permission to mark parcels arrived.');
-        void hapticWarning();
-        return;
-      }
       scanInFlightRef.current = true;
       setScanBusy(true);
       setLastCode(code);
@@ -108,12 +103,9 @@ export default function ReceiveScanScreen() {
           return;
         }
 
-        await withAuth((token) =>
-          updateParcelStatus(token, parcel.id, ParcelStatus.ARRIVED_AT_DESTINATION),
-        );
-        notifySuccess(`Parcel ${parcel.bookingCode} marked ARRIVED_AT_DESTINATION.`);
+        notifySuccess(`Parcel ${parcel.bookingCode} ready for review.`);
         void hapticSuccess();
-        await loadIncomingList();
+        router.push(`/(app)/receive-process/${parcel.id}`);
       } catch (err) {
         notifyError(
           'Receive failed',
@@ -125,7 +117,7 @@ export default function ReceiveScanScreen() {
         setScanBusy(false);
       }
     },
-    [branchId, canMarkArrived, companyId, loadIncomingList, withAuth],
+    [branchId, companyId, withAuth],
   );
 
   if (!canView) {
@@ -178,7 +170,7 @@ export default function ReceiveScanScreen() {
           ) : null}
           {!canMarkArrived ? (
             <Text style={[styles.helperText, { color: theme.colors.textSubtle }]}>
-              You can scan and view parcels, but cannot mark arrival.
+              You can scan and review parcels, but cannot edit or confirm arrival.
             </Text>
           ) : null}
         </AppCard>
@@ -222,7 +214,7 @@ export default function ReceiveScanScreen() {
                     router.push(`/(app)/receive-process/${item.id}`);
                     void hapticTap();
                   }}
-                  actionLabel="View Details"
+                  actionLabel="Review & Edit"
                 />
               ))}
             </View>

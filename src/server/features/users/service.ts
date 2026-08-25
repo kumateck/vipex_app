@@ -52,6 +52,7 @@ export async function getUserSvc(id: string) {
   if (!u) throw NotFound('User not found');
   return u;
 }
+
 export async function createUserSvc(input: {
   fullname: string;
   telephone: string;

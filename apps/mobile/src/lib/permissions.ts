@@ -10,6 +10,12 @@ const PermissionKeys = {
   CanReadParcelIncoming: 'CanReadParcelIncoming',
   CanUpdateParcels: 'CanUpdateParcels',
   CanCreateBookingWithParcels: 'CanCreateBookingWithParcels',
+  CanReadCashierSessions: 'CanReadCashierSessions',
+  CanReadCashierSessionTypes: 'CanReadCashierSessionTypes',
+  CanOpenCashierSessions: 'CanOpenCashierSessions',
+  CanCloseCashierSessions: 'CanCloseCashierSessions',
+  CanViewReportCashierShifts: 'CanViewReportCashierShifts',
+  CanReadAccounting: 'CanReadAccounting',
 } as const;
 
 export function hasPermission(permissions: string[] | undefined, key: string): boolean {
@@ -81,4 +87,27 @@ export function canUseTransitReceiveScan(permissions: string[] | undefined): boo
 
 export function canCreateParcelBooking(permissions: string[] | undefined): boolean {
   return hasPermission(permissions, PermissionKeys.CanCreateBookingWithParcels);
+}
+
+export function canViewCashierSessions(permissions: string[] | undefined): boolean {
+  return hasPermission(permissions, PermissionKeys.CanReadCashierSessions);
+}
+
+export function canReadCashierSessionTypes(permissions: string[] | undefined): boolean {
+  return hasPermission(permissions, PermissionKeys.CanReadCashierSessionTypes);
+}
+
+export function canOpenCashierSessions(permissions: string[] | undefined): boolean {
+  return hasPermission(permissions, PermissionKeys.CanOpenCashierSessions);
+}
+
+export function canCloseCashierSessions(permissions: string[] | undefined): boolean {
+  return hasPermission(permissions, PermissionKeys.CanCloseCashierSessions);
+}
+
+export function canViewCashierSalesReport(permissions: string[] | undefined): boolean {
+  return (
+    hasPermission(permissions, PermissionKeys.CanViewReportCashierShifts) ||
+    hasPermission(permissions, PermissionKeys.CanReadAccounting)
+  );
 }

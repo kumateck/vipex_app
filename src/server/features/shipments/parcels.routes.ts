@@ -79,7 +79,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
     {
       query: t.Object({
         page: t.Optional(t.Number({ minimum: 1 })),
-        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 200 })),
         search: t.Optional(t.String()),
         sort: t.Optional(
           t.Array(
