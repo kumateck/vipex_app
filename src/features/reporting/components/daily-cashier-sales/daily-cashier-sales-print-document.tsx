@@ -6,7 +6,11 @@ import type {
   DailyCashierSalesFilterLabel,
   DailyCashierSalesReportTab,
 } from './daily-cashier-sales-types';
-import { formatDateTime, formatMoneyPsw } from './daily-cashier-sales-utils';
+import {
+  formatDateTime,
+  formatMoneyPsw,
+  groupDeliveryCashierTransactions,
+} from './daily-cashier-sales-utils';
 
 type DailyCashierSalesPrintDocumentProps = {
   printRef: RefObject<HTMLDivElement | null>;
@@ -47,6 +51,8 @@ export function DailyCashierSalesPrintDocument({
 }
 
 function buildPaymentSections(report?: DailyCashierSalesReport) {
+  const transactions = groupDeliveryCashierTransactions(report?.transactions ?? []);
+
   return [
     {
       heading: 'Payment Mode Summary',
@@ -80,17 +86,22 @@ function buildPaymentSections(report?: DailyCashierSalesReport) {
         'Method',
         'Amount Paid',
       ],
-      rows:
-        report?.transactions.map((row, index) => [
-          String(index + 1),
-          formatDateTime(row.receivedAt),
-          row.bookingCode,
-          [row.parcelDetails, row.parcelContent].filter(Boolean).join(' - ') || '-',
-          [row.payerName, row.payerTelephone].filter(Boolean).join(' - '),
-          row.whoPaid,
-          PAYMENT_METHOD_LABELS[row.method] ?? String(row.method),
-          formatMoneyPsw(row.grossAmountPsw),
-        ]) ?? [],
+      rows: transactions.map((row, index) => [
+        String(index + 1),
+        formatDateTime(row.receivedAt),
+        row.bookingCode,
+        [row.parcelDetails, row.parcelContent].filter(Boolean).join(' - ') || '-',
+        [row.payerName, row.payerTelephone].filter(Boolean).join(' - '),
+        row.whoPaid,
+        PAYMENT_METHOD_LABELS[row.method] ?? String(row.method),
+        row.isDeliveryCashierGroup
+          ? [
+              formatMoneyPsw(row.grossAmountPsw),
+              `To Be Paid: ${formatMoneyPsw(row.toBePaidAmountPsw)}`,
+              `Delivery Fee: ${formatMoneyPsw(row.deliveryFeeAmountPsw)}`,
+            ].join(' | ')
+          : formatMoneyPsw(row.grossAmountPsw),
+      ]),
     },
   ];
 }

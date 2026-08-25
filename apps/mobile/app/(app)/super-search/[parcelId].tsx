@@ -5,6 +5,7 @@ import { AppCard } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { useAuth } from '@mobile/providers/auth-provider';
 import {
+  ParcelDetailsHeader,
   ParcelFinancialSections,
   ParcelHistorySections,
   ParcelSummarySections,
@@ -16,7 +17,10 @@ export default function SuperSearchRecordDetailsScreen() {
   const { theme } = useAppearance();
   const { session, withAuth } = useAuth();
   const companyId = session.user?.company?.id ?? session.user?.companyId;
-  const { parcelId } = useLocalSearchParams<{ parcelId: string }>();
+  const { parcelId, bookingCode } = useLocalSearchParams<{
+    parcelId: string;
+    bookingCode?: string;
+  }>();
   const { loading, details, row, relatedRows, loadError, load } = useParcelRecordDetails({
     parcelId,
     companyId,
@@ -26,6 +30,7 @@ export default function SuperSearchRecordDetailsScreen() {
   if (loading) {
     return (
       <AppScreen>
+        <ParcelDetailsHeader bookingCode={bookingCode} />
         <AppCard>
           <View style={styles.loadingRow}>
             <ActivityIndicator />
@@ -39,6 +44,7 @@ export default function SuperSearchRecordDetailsScreen() {
   if (!details) {
     return (
       <AppScreen>
+        <ParcelDetailsHeader bookingCode={bookingCode} />
         <Text style={[styles.empty, { color: theme.colors.textSubtle }]}>
           {loadError ? `Unable to load details: ${loadError}` : 'Record not found.'}
         </Text>
@@ -56,6 +62,7 @@ export default function SuperSearchRecordDetailsScreen() {
 
   return (
     <AppScreen refreshing={loading} onRefresh={() => void load()}>
+      <ParcelDetailsHeader bookingCode={bookingCode ?? row?.bookingCode} />
       <ParcelSummarySections details={details} row={row} />
       <ParcelFinancialSections details={details} />
       <ParcelHistorySections

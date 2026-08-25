@@ -649,6 +649,7 @@ const catalog = [
 
   // Auth / account setup
   ['CanChangePassword', 'Change password', 'Auth'],
+  ['CanSetUserPassword', 'Set another user password', 'Auth'],
   ['CanResendSetupInvite', 'Resend setup invite', 'Auth'],
   ['CanReadActiveUsers', 'View active users page', 'Users'],
   ['CanReadInactiveUsers', 'View inactive users page', 'Users'],
@@ -673,7 +674,7 @@ export const PermissionCatalog: ReadonlyArray<{
   group: string;
 }> = catalog.map(([key, description, group]) => ({ key, description, group }));
 
-export const HiddenPermissionKeysInUi = new Set<PermissionKey>([]);
+export const HiddenPermissionKeysInUi = new Set<PermissionKey>([PermissionKeys.CanSetUserPassword]);
 
 export const PermissionCatalogUi = PermissionCatalog.filter(
   (permission) => !HiddenPermissionKeysInUi.has(permission.key),
@@ -772,6 +773,7 @@ export const AccountingSetupPermissionKeys = Object.freeze({
 });
 
 export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> = Object.freeze({
+  '/users/password-management': PermissionKeys.CanSetUserPassword,
   '/parcels/sender-payments': PermissionKeys.CanCreateSenderPayments,
   '/parcels/processed': PermissionKeys.CanReadConsignments,
   '/parcels/pickup-queue': PermissionKeys.CanCreatePickupQueue,

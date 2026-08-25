@@ -51,10 +51,11 @@ const EMPTY_META: PaginationMeta = {
   totalRecords: 0,
   totalPages: 1,
   page: 1,
-  pageSize: 20,
+  pageSize: 50,
   hasNextPage: false,
   hasPreviousPage: false,
 };
+const CONSIGNMENT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200];
 const ALL_VALUE = '__all__';
 const EMPTY_ROWS: ProcessedParcel[] = [];
 const NEWEST_FIRST_SORT: SortField[] = [{ field: 'createdAt', direction: 'desc' }];
@@ -157,7 +158,7 @@ export function ParcelProcessedConsignmentPage() {
     }>
   >({
     page: 1,
-    pageSize: 20,
+    pageSize: 50,
     sort: NEWEST_FIRST_SORT,
     filters: serverFilters,
   });
@@ -804,6 +805,7 @@ export function ParcelProcessedConsignmentPage() {
                 }))
               }
               searchPlaceholder="Search by tracking, booking, sender or receiver"
+              pageSizeOptions={CONSIGNMENT_PAGE_SIZE_OPTIONS}
               enableVirtualization={false}
             />
           </CardContent>

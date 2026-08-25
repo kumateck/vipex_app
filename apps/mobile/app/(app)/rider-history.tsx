@@ -21,6 +21,10 @@ import {
   useRiderBoardData,
 } from '@mobile/features/rider/hooks/use-rider-board-data';
 import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
+import {
+  getRiderCollectedDeliveryFeePsw,
+  getRiderCollectedPrincipalPsw,
+} from '@mobile/features/rider/assigned-deliveries/utils';
 
 function DetailRow({ label, value, first }: { label: string; value: string; first?: boolean }) {
   const { theme } = useAppearance();
@@ -132,11 +136,17 @@ export default function RiderHistoryScreen() {
             <DetailRow label="Receiver" value={selectedRow.receiverName ?? '-'} />
             <DetailRow label="Phone" value={selectedRow.receiverPhone ?? '-'} />
             <DetailRow label="Address" value={selectedRow.dropoffAddress ?? '-'} />
-            <DetailRow label="Amount Paid" value={formatCedisFromPsw(selectedRow.amountPaidPsw)} />
+            <DetailRow
+              label="Total Collected"
+              value={formatCedisFromPsw(
+                getRiderCollectedPrincipalPsw(selectedRow) +
+                  getRiderCollectedDeliveryFeePsw(selectedRow),
+              )}
+            />
           </View>
           <PaymentBreakdownCard
-            deliveryFeePsw={selectedRow.deliveryFeePsw ?? 0}
-            transitFeePsw={selectedRow.plannedToBePaidPsw ?? 0}
+            deliveryFeePsw={getRiderCollectedDeliveryFeePsw(selectedRow)}
+            transitFeePsw={getRiderCollectedPrincipalPsw(selectedRow)}
             senderPaidTransit={false}
           />
         </AppCard>

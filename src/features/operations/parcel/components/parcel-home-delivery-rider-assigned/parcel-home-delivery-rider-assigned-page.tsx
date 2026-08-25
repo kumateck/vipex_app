@@ -65,7 +65,7 @@ export function ParcelHomeDeliveryRiderAssignedPage() {
       {
         id: 'toBePaid',
         header: 'To Be Paid',
-        accessorFn: (row) => formatCurrency(row.plannedToBePaidPsw),
+        accessorFn: (row) => formatCurrency(row.outstandingPrincipalPsw ?? row.plannedToBePaidPsw),
       },
       {
         id: 'deliveryFee',

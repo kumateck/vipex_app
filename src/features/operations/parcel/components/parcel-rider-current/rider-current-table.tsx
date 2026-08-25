@@ -22,14 +22,18 @@ type RiderCurrentTableProps = {
       }
     | undefined;
   isReturning: boolean;
+  pendingParcelIds: Set<string>;
   onOpenDeliveryDetails: (row: RiderDoorstepRecord) => void;
+  onRequestChange: (row: RiderDoorstepRecord) => void;
   onReturn: (row: RiderDoorstepRecord) => Promise<void>;
 };
 
 export function RiderCurrentTable({
   data,
   isReturning,
+  pendingParcelIds,
   onOpenDeliveryDetails,
+  onRequestChange,
   onReturn,
 }: RiderCurrentTableProps) {
   const columns = useMemo<ColumnDef<RiderDoorstepRecord>[]>(
@@ -56,6 +60,11 @@ export function RiderCurrentTable({
         ),
       },
       {
+        id: 'changeRequest',
+        header: 'Change Request',
+        accessorFn: (row) => (pendingParcelIds.has(row.parcelId) ? 'Pending review' : '-'),
+      },
+      {
         id: 'action',
         header: 'Action',
         cell: ({ row }) => (
@@ -66,8 +75,19 @@ export function RiderCurrentTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onOpenDeliveryDetails(row.original)}>
-                Delivery Details
+              <DropdownMenuItem
+                disabled={pendingParcelIds.has(row.original.parcelId)}
+                onClick={() => onOpenDeliveryDetails(row.original)}
+              >
+                {pendingParcelIds.has(row.original.parcelId)
+                  ? 'Awaiting change review'
+                  : 'Delivery Details'}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={pendingParcelIds.has(row.original.parcelId)}
+                onClick={() => onRequestChange(row.original)}
+              >
+                Request Address/Fee Change
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => void onReturn(row.original)}>
                 Return
@@ -77,7 +97,7 @@ export function RiderCurrentTable({
         ),
       },
     ],
-    [isReturning, onOpenDeliveryDetails, onReturn],
+    [isReturning, onOpenDeliveryDetails, onRequestChange, onReturn, pendingParcelIds],
   );
 
   return (

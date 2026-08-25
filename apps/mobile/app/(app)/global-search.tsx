@@ -161,7 +161,7 @@ export default function GlobalSearchScreen() {
       subtitle: item.parcelDetails,
       onPress: () =>
         router.push({
-          pathname: '/super-search/[parcelId]' as never,
+          pathname: '/(app)/super-search/[parcelId]' as never,
           params: { parcelId: item.id },
         }),
     })),
