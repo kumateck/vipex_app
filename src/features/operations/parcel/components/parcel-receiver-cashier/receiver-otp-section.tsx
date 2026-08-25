@@ -42,9 +42,10 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
   const activePhone = dialog.phoneSlot === 'secondary' ? receiverPhone2 : receiverPhone;
 
   const handleSend = async () => {
+    const isResend = Boolean(dialog.otpSentAt);
     try {
-      await dialog.handleRequestOtp(Boolean(dialog.otpSentAt));
-      toast.success('Collection OTP sent to the customer');
+      await dialog.handleRequestOtp(isResend);
+      toast.success(isResend ? 'Collection OTP resent to the customer' : 'Collection OTP sent');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to send OTP');
     }
@@ -107,13 +108,13 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
               variant="outline"
               size="sm"
               onClick={() => void handleSend()}
-              disabled={dialog.otpRequestPending || (Boolean(dialog.otpSentAt) && !isExpired)}
+              disabled={dialog.otpRequestPending || dialog.otpVerifyPending}
             >
               {dialog.otpRequestPending
                 ? 'Sending...'
                 : dialog.otpSentAt
-                  ? 'Resend Code'
-                  : 'Send Code'}
+                  ? 'Resend OTP'
+                  : 'Send OTP'}
             </Button>
             {dialog.otpSentAt ? (
               isExpired ? (

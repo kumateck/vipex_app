@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { and, asc, desc, inArray, isNotNull } from 'drizzle-orm';
-import { deliveries, parcels, customers, branches } from '@/db/schemas';
-import { alias } from 'drizzle-orm/pg-core';
+import { deliveries } from '@/db/schemas';
+
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 export type DeliveryRow = {
@@ -15,6 +14,9 @@ export type DeliveryRow = {
   frontDeskUserId: string | null;
   deliveryUserId: string | null;
   riderUserId: string | null;
+  riderAssignedAt: Date | null;
+  riderCompletedAt: Date | null;
+  returnedAt: Date | null;
   signatureImage: string | null;
   receiverCalledConfirmedBy: string | null;
   receiverCalledConfirmedAt: Date | null;
@@ -30,14 +32,40 @@ export type DeliveryRow = {
   cashierSessionId: string | null;
 };
 
+const deliverySelection = {
+  id: deliveries.id,
+  parcelId: deliveries.parcelId,
+  mode: deliveries.mode,
+  status: deliveries.status,
+  officeLocationId: deliveries.officeLocationId,
+  dropoffAddress: deliveries.dropoffAddress,
+  frontDeskUserId: deliveries.frontDeskUserId,
+  deliveryUserId: deliveries.deliveryUserId,
+  riderUserId: deliveries.riderUserId,
+  riderAssignedAt: deliveries.riderAssignedAt,
+  riderCompletedAt: deliveries.riderCompletedAt,
+  returnedAt: deliveries.returnedAt,
+  signatureImage: deliveries.signatureImage,
+  receiverCalledConfirmedBy: deliveries.receiverCalledConfirmedBy,
+  receiverCalledConfirmedAt: deliveries.receiverCalledConfirmedAt,
+  chargePsw: deliveries.chargePsw,
+  amountPaidPsw: deliveries.amountPaidPsw,
+  isDeleted: deliveries.isDeleted,
+  deliveredAt: deliveries.deliveredAt,
+  confirmedBy: deliveries.confirmedBy,
+  confirmedAt: deliveries.confirmedAt,
+  createdBy: deliveries.createdBy,
+  createdAt: deliveries.createdAt,
+  updatedAt: deliveries.updatedAt,
+  cashierSessionId: deliveries.cashierSessionId,
+};
+
 export async function createDeliveryRepo(
   values: typeof deliveries.$inferInsert,
   executor: DbExecutor = db,
 ): Promise<{ id: string }> {
   const [row] = await executor.insert(deliveries).values(values).returning({ id: deliveries.id });
-  if (!row) {
-    throw new Error('Failed to create delivery');
-  }
+  if (!row) throw new Error('Failed to create delivery');
   return row;
 }
 
@@ -47,30 +75,7 @@ export async function getDeliveryByParcelRepo(
 ): Promise<DeliveryRow | null> {
   try {
     const [row] = await executor
-      .select({
-        id: deliveries.id,
-        parcelId: deliveries.parcelId,
-        mode: deliveries.mode,
-        status: deliveries.status,
-        officeLocationId: deliveries.officeLocationId,
-        dropoffAddress: deliveries.dropoffAddress,
-        frontDeskUserId: deliveries.frontDeskUserId,
-        deliveryUserId: deliveries.deliveryUserId,
-        riderUserId: deliveries.riderUserId,
-        signatureImage: deliveries.signatureImage,
-        receiverCalledConfirmedBy: deliveries.receiverCalledConfirmedBy,
-        receiverCalledConfirmedAt: deliveries.receiverCalledConfirmedAt,
-        chargePsw: deliveries.chargePsw,
-        amountPaidPsw: deliveries.amountPaidPsw,
-        isDeleted: deliveries.isDeleted,
-        deliveredAt: deliveries.deliveredAt,
-        confirmedBy: deliveries.confirmedBy,
-        confirmedAt: deliveries.confirmedAt,
-        createdBy: deliveries.createdBy,
-        createdAt: deliveries.createdAt,
-        updatedAt: deliveries.updatedAt,
-        cashierSessionId: deliveries.cashierSessionId,
-      })
+      .select(deliverySelection)
       .from(deliveries)
       .where(eq(deliveries.parcelId, parcelId))
       .limit(1);
@@ -87,36 +92,13 @@ export async function getDeliveryByParcelRepo(
     const isMissingSignatureColumn = code === '42703' && message.includes('signature_image');
     if (!isMissingSignatureColumn) throw error;
 
+    const { signatureImage: _signatureImage, ...legacySelection } = deliverySelection;
     const [row] = await executor
-      .select({
-        id: deliveries.id,
-        parcelId: deliveries.parcelId,
-        mode: deliveries.mode,
-        status: deliveries.status,
-        officeLocationId: deliveries.officeLocationId,
-        dropoffAddress: deliveries.dropoffAddress,
-        frontDeskUserId: deliveries.frontDeskUserId,
-        deliveryUserId: deliveries.deliveryUserId,
-        riderUserId: deliveries.riderUserId,
-        receiverCalledConfirmedBy: deliveries.receiverCalledConfirmedBy,
-        receiverCalledConfirmedAt: deliveries.receiverCalledConfirmedAt,
-        chargePsw: deliveries.chargePsw,
-        amountPaidPsw: deliveries.amountPaidPsw,
-        isDeleted: deliveries.isDeleted,
-        deliveredAt: deliveries.deliveredAt,
-        confirmedBy: deliveries.confirmedBy,
-        confirmedAt: deliveries.confirmedAt,
-        createdBy: deliveries.createdBy,
-        createdAt: deliveries.createdAt,
-        updatedAt: deliveries.updatedAt,
-        cashierSessionId: deliveries.cashierSessionId,
-      })
+      .select(legacySelection)
       .from(deliveries)
       .where(eq(deliveries.parcelId, parcelId))
       .limit(1);
-
-    if (!row) return null;
-    return { ...row, signatureImage: null };
+    return row ? { ...row, signatureImage: null } : null;
   }
 }
 
@@ -133,125 +115,5 @@ export async function updateDeliveryRepo(
   return row ?? null;
 }
 
-export type RiderDeliveryRow = {
-  deliveryId: string;
-  parcelId: string;
-  riderUserId: string | null;
-  deliveryStatus: string;
-  signatureImage: string | null;
-  dropoffAddress: string | null;
-  deliveryFeePsw: number;
-  amountPaidPsw: number;
-  trackingCode: string;
-  bookingCode: string;
-  parcelStatus: number;
-  parcelDetails: string;
-  parcelContent: string;
-  plannedToBePaidPsw: number;
-  chargePsw: number;
-  destinationId: string;
-  destinationName: string | null;
-  receiverId: string;
-  receiverName: string | null;
-  receiverPhone: string | null;
-  secondReceiverId: string | null;
-  callSender: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export async function listDoorstepByRiderRepo(input: {
-  riderUserId: string;
-  parcelStatuses?: number[] | null;
-}): Promise<RiderDeliveryRow[]> {
-  const r = alias(customers, 'r');
-  const d = alias(branches, 'd');
-  const where = [eq(deliveries.riderUserId, input.riderUserId), eq(deliveries.isDeleted, false)];
-  if (input.parcelStatuses && input.parcelStatuses.length > 0) {
-    where.push(inArray(parcels.status, input.parcelStatuses));
-  }
-
-  return db
-    .select({
-      deliveryId: deliveries.id,
-      parcelId: deliveries.parcelId,
-      riderUserId: deliveries.riderUserId,
-      deliveryStatus: deliveries.status,
-      signatureImage: deliveries.signatureImage,
-      dropoffAddress: deliveries.dropoffAddress,
-      deliveryFeePsw: deliveries.chargePsw,
-      amountPaidPsw: deliveries.amountPaidPsw,
-      trackingCode: parcels.trackingCode,
-      bookingCode: parcels.bookingCode,
-      parcelStatus: parcels.status,
-      parcelDetails: parcels.parcelDetails,
-      parcelContent: parcels.parcelContent,
-      plannedToBePaidPsw: parcels.plannedToBePaidPsw,
-      chargePsw: parcels.chargePsw,
-      destinationId: parcels.destinationId,
-      destinationName: d.name,
-      receiverId: parcels.receiverId,
-      receiverName: r.fullname,
-      receiverPhone: r.telephone,
-      secondReceiverId: parcels.secondReceiverId,
-      callSender: parcels.callSender,
-      createdAt: deliveries.createdAt,
-      updatedAt: deliveries.updatedAt,
-    })
-    .from(deliveries)
-    .innerJoin(parcels, eq(parcels.id, deliveries.parcelId))
-    .leftJoin(r, eq(r.id, parcels.receiverId))
-    .leftJoin(d, eq(d.id, parcels.destinationId))
-    .where(and(...where))
-    .orderBy(desc(deliveries.updatedAt), asc(deliveries.id));
-}
-
-export async function listDoorstepByBranchRepo(input: {
-  branchId: string;
-  parcelStatuses?: number[] | null;
-}): Promise<RiderDeliveryRow[]> {
-  const r = alias(customers, 'r');
-  const d = alias(branches, 'd');
-  const where = [
-    eq(parcels.destinationId, input.branchId),
-    eq(deliveries.isDeleted, false),
-    isNotNull(deliveries.riderUserId),
-  ];
-  if (input.parcelStatuses && input.parcelStatuses.length > 0) {
-    where.push(inArray(parcels.status, input.parcelStatuses));
-  }
-
-  return db
-    .select({
-      deliveryId: deliveries.id,
-      parcelId: deliveries.parcelId,
-      riderUserId: deliveries.riderUserId,
-      deliveryStatus: deliveries.status,
-      signatureImage: deliveries.signatureImage,
-      dropoffAddress: deliveries.dropoffAddress,
-      deliveryFeePsw: deliveries.chargePsw,
-      amountPaidPsw: deliveries.amountPaidPsw,
-      trackingCode: parcels.trackingCode,
-      bookingCode: parcels.bookingCode,
-      parcelStatus: parcels.status,
-      parcelDetails: parcels.parcelDetails,
-      parcelContent: parcels.parcelContent,
-      plannedToBePaidPsw: parcels.plannedToBePaidPsw,
-      chargePsw: parcels.chargePsw,
-      destinationId: parcels.destinationId,
-      destinationName: d.name,
-      receiverId: parcels.receiverId,
-      receiverName: r.fullname,
-      receiverPhone: r.telephone,
-      secondReceiverId: parcels.secondReceiverId,
-      callSender: parcels.callSender,
-      createdAt: deliveries.createdAt,
-      updatedAt: deliveries.updatedAt,
-    })
-    .from(deliveries)
-    .innerJoin(parcels, eq(parcels.id, deliveries.parcelId))
-    .leftJoin(r, eq(r.id, parcels.receiverId))
-    .leftJoin(d, eq(d.id, parcels.destinationId))
-    .where(and(...where))
-    .orderBy(desc(deliveries.updatedAt), asc(deliveries.id));
-}
+export { listDoorstepByBranchRepo, listDoorstepByRiderRepo } from './rider.repository';
+export type { RiderDeliveryRow } from './rider.repository';

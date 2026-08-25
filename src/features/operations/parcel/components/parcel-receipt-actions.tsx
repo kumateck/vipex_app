@@ -5,6 +5,7 @@ import { PAGE_STYLES } from '@/features/printing/constants/page-styles';
 import { useManagedReactPrint } from '@/features/printing/hooks/use-managed-react-print';
 import { useAuthStore } from '@/stores/auth-store';
 import { useStickerPrintModule } from '../hooks';
+import { buildParcelTrackingUrl } from '../utils/tracking-url';
 import { ParcelReceiptPrintControls } from './parcel-receipt-print-controls';
 import { ParcelReceiptPrintContent } from './parcel-receipt-print-content';
 import type { ReceiptPrintData } from './parcel-receipt.types';
@@ -47,10 +48,7 @@ export function ParcelReceiptActions({
   const canPrintStickerViaDesktop =
     typeof window !== 'undefined' && typeof window.api?.printHtml === 'function';
   const canPrintInvoiceViaDesktop = canPrintStickerViaDesktop;
-  const qrUrl = useMemo(
-    () => `https://vipexparcel.com/tracking/${encodeURIComponent(data.trackingCode)}`,
-    [data.trackingCode],
-  );
+  const qrUrl = buildParcelTrackingUrl(data.trackingCode);
   const hasPaidAmount = (data.amountPaidCedis ?? data.senderPaidCedis) > 0;
   const hasPrintableReceipt = hasPaidAmount || data.receiverToPayCedis > 0;
   const tax = useMemo(() => {

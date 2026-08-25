@@ -2,6 +2,7 @@ import { Conflict, Forbidden, NotFound } from '@/server/utils/http-error';
 import {
   normalizePermissionKeys,
   PermissionKeySet,
+  PermissionKeys,
   type PermissionKey,
 } from '@/shared/permissions/constants';
 import { recordAuditLog } from '../audit/logger';
@@ -28,6 +29,17 @@ function isSystemAdminRole(role: Awaited<ReturnType<typeof getRoleRepo>>, compan
     !role.isDeleted &&
     role.name.trim().toLowerCase() === SYSTEM_ADMIN_ROLE_NAME
   );
+}
+
+export async function assertSystemAdminRoleSvc(input: {
+  companyId: string;
+  roleId?: string | null;
+}) {
+  if (!input.roleId) throw Forbidden('Only a System Admin can perform this action');
+  const role = await getRoleRepo(input.roleId);
+  if (!isSystemAdminRole(role, input.companyId)) {
+    throw Forbidden('Only a System Admin can perform this action');
+  }
 }
 
 export async function listRolesSvc(p: ListRolesParams) {
@@ -190,6 +202,13 @@ export async function setRolePermissionsSvc(input: {
   if (unknownKeys.length > 0) throw Conflict('Unknown permission key(s)');
 
   const normalizedKeys = normalizePermissionKeys(input.permissionKeys);
+  const targetIsSystemAdmin = isSystemAdminRole(role, input.companyId);
+  if (!targetIsSystemAdmin && normalizedKeys.includes(PermissionKeys.CanSetUserPassword)) {
+    throw Forbidden('Set user password permission is reserved for the System Admin role');
+  }
+  const effectiveKeys = targetIsSystemAdmin
+    ? [...new Set([...normalizedKeys, PermissionKeys.CanSetUserPassword])]
+    : normalizedKeys;
 
   // Permission managers remain bounded by their own grants. The canonical System Admin
   // role is the trusted bootstrap authority for catalog permissions introduced by a
@@ -203,12 +222,12 @@ export async function setRolePermissionsSvc(input: {
   const canBootstrapPermissions = isSystemAdminRole(actorRole, input.companyId);
   const escalatedKeys = canBootstrapPermissions
     ? []
-    : normalizedKeys.filter((key) => !existingKeys.has(key) && !actorGranted.has(key));
+    : effectiveKeys.filter((key) => !existingKeys.has(key) && !actorGranted.has(key));
   if (escalatedKeys.length > 0) {
     throw Forbidden(`Cannot grant permission(s) you do not hold: ${escalatedKeys.join(', ')}`);
   }
 
-  await setRolePermissionsRepo(input.roleId, input.companyId, normalizedKeys);
+  await setRolePermissionsRepo(input.roleId, input.companyId, effectiveKeys);
   await recordAuditLog({
     companyId: input.companyId,
     actorUserId: input.createdBy,
@@ -217,8 +236,8 @@ export async function setRolePermissionsSvc(input: {
     action: 'ROLE_PERMISSIONS_UPDATED',
     message: 'Role permissions updated',
     metadata: {
-      permissionCount: normalizedKeys.length,
-      permissionKeys: normalizedKeys,
+      permissionCount: effectiveKeys.length,
+      permissionKeys: effectiveKeys,
       bootstrappedBySystemAdmin: canBootstrapPermissions,
     },
   });

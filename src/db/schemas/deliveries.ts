@@ -35,7 +35,28 @@ export const deliveries = pgTable(
     deliveryUserId: varchar('delivery_user_id', { length: 25 }).references(() => users.id),
 
     riderUserId: varchar('rider_user_id', { length: 25 }).references(() => users.id),
+    riderAssignedAt: timestamp('rider_assigned_at', { withTimezone: false }),
+    riderCompletedAt: timestamp('rider_completed_at', { withTimezone: false }),
+    returnedAt: timestamp('returned_at', { withTimezone: false }),
     signatureImage: text('signature_image'),
+    riderCollectedPrincipalPsw: bigint('rider_collected_principal_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    riderCollectedDeliveryFeePsw: bigint('rider_collected_delivery_fee_psw', { mode: 'number' })
+      .notNull()
+      .default(sql`0`),
+    riderCollectionRecordedAt: timestamp('rider_collection_recorded_at', {
+      withTimezone: false,
+    }),
+    changeRequestStatus: varchar('change_request_status', { length: 20 }),
+    requestedDropoffAddress: varchar('requested_dropoff_address', { length: 255 }),
+    requestedChargePsw: bigint('requested_charge_psw', { mode: 'number' }),
+    changeRequestReason: text('change_request_reason'),
+    changeRequestedBy: varchar('change_requested_by', { length: 25 }).references(() => users.id),
+    changeRequestedAt: timestamp('change_requested_at', { withTimezone: false }),
+    changeReviewedBy: varchar('change_reviewed_by', { length: 25 }).references(() => users.id),
+    changeReviewedAt: timestamp('change_reviewed_at', { withTimezone: false }),
+    changeReviewNote: text('change_review_note'),
 
     receiverCalledConfirmedBy: varchar('receiver_called_confirmed_by', { length: 25 }).references(
       () => users.id,
@@ -68,5 +89,18 @@ export const deliveries = pgTable(
     byParcel: index('deliveries_parcel_idx').on(t.parcelId),
     byMode: index('deliveries_mode_idx').on(t.mode),
     byStatus: index('deliveries_status_idx').on(t.status),
+    byRiderAssignedAt: index('deliveries_rider_assigned_at_idx').on(
+      t.riderUserId,
+      t.riderAssignedAt,
+    ),
+    byRiderCompletedAt: index('deliveries_rider_completed_at_idx').on(
+      t.riderUserId,
+      t.riderCompletedAt,
+    ),
+    byRiderReturnedAt: index('deliveries_rider_returned_at_idx').on(t.riderUserId, t.returnedAt),
+    byChangeRequestStatus: index('deliveries_change_request_status_idx').on(
+      t.changeRequestStatus,
+      t.changeRequestedAt,
+    ),
   }),
 );

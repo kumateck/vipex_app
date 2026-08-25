@@ -3,7 +3,7 @@ import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api'
 import { useListCardOptionsQuery, useListCustomerCardsQuery } from '@/features/customers/api';
 import { useGetLocationQuery } from '@/features/locations/api/locations.api';
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
-import { CashierType, UserStatus } from '@/db/schemas/enums';
+import { UserStatus } from '@/db/schemas/enums';
 import type { ServerListQuery } from '@/services/rtk-query';
 import {
   type ParcelSearchRow,
@@ -65,10 +65,10 @@ export function useReceiverCashierResources({
     { customerId: selectedParcel?.secondReceiverId ?? '' },
     { skip: !selectedParcel?.secondReceiverId },
   );
-  const receiverPaidPsw = useMemo(
+  const principalPaidPsw = useMemo(
     () =>
       (parcelDetails?.payments ?? [])
-        .filter((payment) => payment.cashierType === CashierType.TOBEPAID)
+        .filter((payment) => payment.component === 0)
         .reduce((sum, payment) => sum + payment.grossAmountPsw, 0),
     [parcelDetails?.payments],
   );
@@ -83,7 +83,7 @@ export function useReceiverCashierResources({
     pickupLocation,
     mainReceiverCards,
     secondReceiverCards,
-    receiverDuePsw: Math.max((selectedParcel?.plannedToBePaidPsw ?? 0) - receiverPaidPsw, 0),
+    receiverDuePsw: Math.max((selectedParcel?.plannedToBePaidPsw ?? 0) - principalPaidPsw, 0),
     storageOutstandingPsw: parcelDetails?.storageSettlement?.outstandingPsw ?? 0,
     hasPickupQueue: Boolean(parcelDetails?.pickupQueue),
   };

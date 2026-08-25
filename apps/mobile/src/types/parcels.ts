@@ -163,6 +163,13 @@ export type RiderDoorstepRecord = {
   deliveryFeePsw?: number;
   amountPaidPsw?: number;
   plannedToBePaidPsw?: number;
+  outstandingPrincipalPsw?: number;
+  outstandingDeliveryFeePsw?: number;
+  riderCollectedPrincipalPsw?: number;
+  riderCollectedDeliveryFeePsw?: number;
+  riderCollectionRecordedAt?: string | null;
+  principalCollectableAtCompletionPsw?: number;
+  deliveryFeeCollectableAtCompletionPsw?: number;
   createdAt?: string;
   updatedAt?: string;
 };

@@ -53,7 +53,6 @@ type DeliveryHandoverDialogProps = {
   onClose: () => void;
   onConfirm: () => Promise<void>;
 };
-
 export function DeliveryHandoverDialog({
   selected,
   onSignatureImageChange,
@@ -103,13 +102,16 @@ export function DeliveryHandoverDialog({
                 <strong>Address:</strong> {selected.dropoffAddress ?? '-'}
               </p>
             </div>
-
             <div className="rounded-md border p-3 text-center">
               <p className="text-2xl font-bold">
-                Delivery Fee: GHS {(selected.deliveryFeePsw / 100).toFixed(2)}
+                Delivery Fee: GHS{' '}
+                {((selected.outstandingDeliveryFeePsw ?? selected.deliveryFeePsw) / 100).toFixed(2)}
               </p>
               <p className="text-2xl font-bold">
-                To Be Paid: GHS {(selected.plannedToBePaidPsw / 100).toFixed(2)}
+                To Be Paid: GHS{' '}
+                {((selected.outstandingPrincipalPsw ?? selected.plannedToBePaidPsw) / 100).toFixed(
+                  2,
+                )}
               </p>
             </div>
 

@@ -35,7 +35,6 @@ type FinalizeDeliveryDialogProps = {
   assignedRiderLabel: string;
   deliveryAtLabel: string;
   configuredDeliveryFeePsw: number;
-  toBePaidAmountPsw: number;
   outstanding: { principalPsw: number; deliveryFeePsw: number };
   hasToBePaidOutstanding: boolean;
   outstandingTotalPsw: number;
@@ -58,7 +57,6 @@ export function FinalizeDeliveryDialog({
   assignedRiderLabel,
   deliveryAtLabel,
   configuredDeliveryFeePsw,
-  toBePaidAmountPsw,
   outstanding,
   hasToBePaidOutstanding,
   outstandingTotalPsw,
@@ -120,11 +118,6 @@ export function FinalizeDeliveryDialog({
           <p className="text-sm">
             <strong>Delivery Fee:</strong> {formatMoney(configuredDeliveryFeePsw)}
           </p>
-          {toBePaidAmountPsw > 0 ? (
-            <p className="text-sm">
-              <strong>To Be Paid Amount:</strong> {formatMoney(toBePaidAmountPsw)}
-            </p>
-          ) : null}
           <p className="text-sm">
             <strong>Outstanding To Be Paid:</strong> {formatMoney(outstanding.principalPsw)}
           </p>
