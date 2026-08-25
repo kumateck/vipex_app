@@ -2,6 +2,10 @@ import 'dotenv/config';
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 
+if (process.env.NODE_ENV === 'test' && !process.env.TEST_DATABASE_URL?.trim()) {
+  throw new Error('TEST_DATABASE_URL is not set; refusing to use DATABASE_URL during tests');
+}
+
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
   throw new Error('DATABASE_URL is not set');
