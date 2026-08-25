@@ -13,6 +13,7 @@ function createRedisClient(url: string): {
     modeOrOptions?: 'EX' | { ex: number },
     seconds?: number,
   ): Promise<unknown>;
+  getdel(key: string): Promise<string | null>;
   del(key: string): Promise<number>;
   incr(key: string): Promise<number>;
   expire(key: string, seconds: number): Promise<number>;
@@ -27,6 +28,7 @@ function createRedisClient(url: string): {
         modeOrOptions?: 'EX' | { ex: number },
         seconds?: number,
       ): Promise<unknown>;
+      getdel(key: string): Promise<string | null>;
       del(key: string): Promise<number>;
       incr(key: string): Promise<number>;
       expire(key: string, seconds: number): Promise<number>;
