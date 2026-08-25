@@ -4,14 +4,17 @@ set -e
 export PATH="$HOME/.bun/bin:$PATH"
 
 echo "Running pre-push quality gate..."
-echo "Step 1/4: Full lint"
+echo "Step 1/5: Full lint"
 bun run lint
 
-echo "Step 2/4: Unit tests (CI mode)"
+echo "Step 2/5: Apply test database migrations"
+bun run migrate:test
+
+echo "Step 3/5: Unit tests (CI mode)"
 bun run test:prepush
 
-echo "Step 3/4: Typecheck"
+echo "Step 4/5: Typecheck"
 bun run typecheck
 
-echo "Step 4/4: Build"
+echo "Step 5/5: Build"
 bun run build

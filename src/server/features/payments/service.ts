@@ -29,6 +29,7 @@ import { updateParcelRepo } from '../shipments/parcels.repository';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
 import { recordPaymentTaxJournalItemSvc } from '../accounting/service';
 import { getActiveTaxProfileWithComponentsRepo } from '../accounting/repository';
+import { getBranchRepo } from '../branches/repository';
 import {
   assertReceiverOtpVerifiedSvc,
   consumeReceiverOtpTokenSvc,
@@ -545,16 +546,25 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
   secondCardNumber?: string | null;
   amountCedis?: number | string | null;
   storageAmountCedis?: number | string | null;
-  receiverOtpVerificationToken: string;
-  receiverOtpTarget: 'main' | 'second';
+  receiverOtpVerificationToken?: string;
+  receiverOtpTarget?: 'main' | 'second';
   momoTransactionId?: string | null;
 }) {
   try {
-    const verifiedOtp = await assertReceiverOtpVerifiedSvc({
-      parcelId: input.parcelId,
-      targetReceiver: input.receiverOtpTarget,
-      verificationToken: input.receiverOtpVerificationToken,
-    });
+    const parcel = await getParcelSvc(input.parcelId);
+    const destinationBranch = await getBranchRepo(parcel.destinationId);
+    if (!destinationBranch) throw BadRequest('Destination branch not found');
+    let verifiedOtp: Awaited<ReturnType<typeof assertReceiverOtpVerifiedSvc>> | null = null;
+    if (destinationBranch.requireReceiverOtp) {
+      if (!input.receiverOtpVerificationToken || !input.receiverOtpTarget) {
+        throw BadRequest('Receiver OTP verification is required before handover');
+      }
+      verifiedOtp = await assertReceiverOtpVerifiedSvc({
+        parcelId: input.parcelId,
+        targetReceiver: input.receiverOtpTarget,
+        verificationToken: input.receiverOtpVerificationToken,
+      });
+    }
 
     const hasAmount =
       input.amountCedis !== undefined &&
@@ -642,7 +652,7 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
       return { payment, storagePayment, storageBefore, storageAfter };
     });
 
-    await consumeReceiverOtpTokenSvc(verifiedOtp.id);
+    if (verifiedOtp) await consumeReceiverOtpTokenSvc(verifiedOtp.id);
 
     if (result.payment && !result.payment.id.startsWith('auto-processed:')) {
       await auditPaymentCreated(

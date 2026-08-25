@@ -44,6 +44,8 @@ export const branches = pgTable(
     address: varchar('address', { length: 255 }),
     email: varchar('email', { length: 255 }),
     usePickupQueue: boolean('use_pickup_queue').notNull().default(false),
+    requirePickupOtp: boolean('require_pickup_otp').notNull().default(true),
+    requireReceiverOtp: boolean('require_receiver_otp').notNull().default(true),
     latitude: doublePrecision('latitude'),
     longitude: doublePrecision('longitude'),
     isDeleted: boolean('is_deleted').notNull().default(false),

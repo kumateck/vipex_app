@@ -19,6 +19,8 @@ function toBranchDto(b: {
   address: string | null;
   email: string | null;
   usePickupQueue: boolean;
+  requirePickupOtp: boolean;
+  requireReceiverOtp: boolean;
   isDeleted: boolean;
   createdBy: string;
   createdAt: Date | string | null;
@@ -33,6 +35,8 @@ function toBranchDto(b: {
     address: b.address ?? null,
     email: b.email ?? null,
     usePickupQueue: !!b.usePickupQueue,
+    requirePickupOtp: b.requirePickupOtp,
+    requireReceiverOtp: b.requireReceiverOtp,
     isDeleted: !!b.isDeleted,
     createdBy: b.createdBy,
     createdAt:
@@ -94,6 +98,8 @@ export async function createBranchCtrl(input: {
   address?: string | null;
   email?: string | null;
   usePickupQueue?: boolean;
+  requirePickupOtp?: boolean;
+  requireReceiverOtp?: boolean;
   createdBy: string;
 }) {
   return createBranchSvc(input);
@@ -108,6 +114,8 @@ export async function updateBranchCtrl(
     address?: string | null;
     email?: string | null;
     usePickupQueue?: boolean;
+    requirePickupOtp?: boolean;
+    requireReceiverOtp?: boolean;
   },
 ) {
   return updateBranchSvc(id, patch);

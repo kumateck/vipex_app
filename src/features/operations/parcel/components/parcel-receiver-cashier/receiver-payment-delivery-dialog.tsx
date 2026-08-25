@@ -115,7 +115,16 @@ export function ReceiverPaymentDeliveryDialog({
             </div>
 
             <ReceiverPaymentSecondarySections context={context} dialog={dialog} />
-            <ReceiverOtpSection dialog={dialog} />
+            {context.isReceiverOtpRequired ? (
+              <ReceiverOtpSection dialog={dialog} />
+            ) : (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                <p className="font-medium">Receiver OTP is disabled for this branch</p>
+                <p className="text-muted-foreground">
+                  Continue without OTP only when processing an approved legacy record.
+                </p>
+              </div>
+            )}
           </div>
         )}
         <DialogFooter>
@@ -138,7 +147,7 @@ export function ReceiverPaymentDeliveryDialog({
             }}
             disabled={
               dialog.isSaving ||
-              !dialog.otpVerified ||
+              (context.isReceiverOtpRequired && !dialog.otpVerified) ||
               (dialog.paymentMethod === String(PaymentMethod.MTN) && !dialog.momoTransactionId) ||
               (context.isPickupQueueEnabled && !dialog.hasPickupQueue)
             }

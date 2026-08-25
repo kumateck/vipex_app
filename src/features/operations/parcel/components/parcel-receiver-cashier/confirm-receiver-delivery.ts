@@ -30,6 +30,7 @@ type ConfirmReceiverDeliveryArgs = {
   paymentMethod: string;
   destinationBranchName: string;
   destinationLocationName: string;
+  isReceiverOtpRequired: boolean;
   receiverOtpVerificationToken: string;
   momoTransactionId?: string | null;
   addCustomerCard: (args: {
@@ -49,8 +50,8 @@ type ConfirmReceiverDeliveryArgs = {
     secondReceiverId: string | null;
     secondCardId: string | null;
     secondCardNumber: string | null;
-    receiverOtpVerificationToken: string;
-    receiverOtpTarget: HandoverTarget;
+    receiverOtpVerificationToken?: string;
+    receiverOtpTarget?: HandoverTarget;
     momoTransactionId?: string | null;
   }) => Promise<{
     payment: {
@@ -89,6 +90,7 @@ export async function confirmReceiverDelivery({
   paymentMethod,
   destinationBranchName,
   destinationLocationName,
+  isReceiverOtpRequired,
   receiverOtpVerificationToken,
   momoTransactionId,
   addCustomerCard,
@@ -96,7 +98,7 @@ export async function confirmReceiverDelivery({
   collectReceiverAndDeliver,
 }: ConfirmReceiverDeliveryArgs) {
   if (!pickerStaffId) throw new Error('Select shelf picker staff');
-  if (!receiverOtpVerificationToken) {
+  if (isReceiverOtpRequired && !receiverOtpVerificationToken) {
     throw new Error('Verify the receiver OTP before completing handover');
   }
 
@@ -169,8 +171,8 @@ export async function confirmReceiverDelivery({
     // Must match the fixed 'main' target the OTP was requested/verified
     // against (see use-receiver-otp-actions.ts) — not handoverTarget, which
     // only records who physically collected the parcel.
-    receiverOtpVerificationToken,
-    receiverOtpTarget: 'main',
+    receiverOtpVerificationToken: isReceiverOtpRequired ? receiverOtpVerificationToken : undefined,
+    receiverOtpTarget: isReceiverOtpRequired ? 'main' : undefined,
     momoTransactionId: momoTransactionId ?? null,
   });
 
