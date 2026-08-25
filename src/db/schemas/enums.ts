@@ -327,6 +327,14 @@ export enum PendingBookingStatus {
   EXPIRED = 3,
 }
 
+export enum SelfServiceDraftStatus {
+  PENDING = 0, // submitted by customer, awaiting an agent
+  CLAIMED = 1, // an agent opened it to complete (soft lock)
+  COMPLETED = 2, // turned into a real booking/parcel
+  CANCELLED = 3, // agent/system cancelled (spam, duplicate, invalid)
+  EXPIRED = 4, // TTL passed, never completed
+}
+
 export enum ReceiptType {
   PAYMENT = 0,
   TRACKING_STICKER = 1,

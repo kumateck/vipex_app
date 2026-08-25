@@ -1,6 +1,6 @@
+import { BrandedQrCode } from '@/components/ui/branded-qr-code';
 import { InvoiceA5Header } from './invoice-a5-header';
 import type { InvoiceA5TemplateProps } from './invoice-a5-template.types';
-import { createQrSvg } from './thermal-sticker-template-utils';
 
 export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
   const {
@@ -24,7 +24,6 @@ export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
     .join(' — ');
   const amountDue = `GHS ${receiverToPayCedis.toFixed(2)}`;
   const parcelCode = `#${bookingCode.trim().replace(/^#+/, '')}`;
-  const qrSvg = createQrSvg(qrValue);
 
   return (
     <div
@@ -91,10 +90,12 @@ export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
           <ReceiptField label="Amount Due for payment" value={amountDue} emphasis />
         </div>
 
-        <div
-          aria-label="Parcel tracking QR code"
+        <BrandedQrCode
+          value={qrValue}
+          size={320}
+          ariaLabel="Parcel tracking QR code"
+          className="self-start justify-self-center"
           style={{ width: '36mm', height: '36mm', justifySelf: 'center', alignSelf: 'start' }}
-          dangerouslySetInnerHTML={{ __html: qrSvg }}
         />
       </div>
     </div>

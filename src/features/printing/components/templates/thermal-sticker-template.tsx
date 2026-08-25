@@ -1,7 +1,7 @@
 import { ThermalStickerLandscapeTemplate } from './thermal-sticker-landscape-template';
 import { ThermalStickerPortraitTemplate } from './thermal-sticker-portrait-template';
 import type { ThermalStickerTemplateProps } from './thermal-sticker-template-types';
-import { createQrSvg, formatTelephones } from './thermal-sticker-template-utils';
+import { formatTelephones } from './thermal-sticker-template-utils';
 
 export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
   const {
@@ -28,7 +28,6 @@ export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
   const hasToBePaid = typeof toBePaidCedis === 'number' && toBePaidCedis > 0;
   const statusLabel = hasToBePaid ? 'TO BE PAID' : 'PAID';
   const statusAmountLabel = hasToBePaid ? formatMoney(toBePaidCedis) : undefined;
-  const qrSvg = createQrSvg(qrValue);
   const senderTelephones = formatTelephones(senderTelephone, senderTelephone2);
   const receiverTelephones = formatTelephones(receiverTelephone, receiverTelephone2);
   const templateProps = {
@@ -48,7 +47,7 @@ export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
     statusLabel,
     statusAmountLabel,
     hasToBePaid,
-    qrSvg,
+    qrValue,
   };
 
   if (orientation === 'portrait') {

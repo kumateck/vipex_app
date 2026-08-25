@@ -20,6 +20,16 @@ import {
   type ListRolesParams,
 } from './repository';
 
+const SYSTEM_ADMIN_ROLE_NAME = 'system admin';
+
+function isSystemAdminRole(role: Awaited<ReturnType<typeof getRoleRepo>>, companyId: string) {
+  return (
+    role?.companyId === companyId &&
+    !role.isDeleted &&
+    role.name.trim().toLowerCase() === SYSTEM_ADMIN_ROLE_NAME
+  );
+}
+
 export async function listRolesSvc(p: ListRolesParams) {
   const result = await listRolesRepo(p);
   const normalizedPermissionsByRole = new Map<string, string[]>();
@@ -49,6 +59,7 @@ export async function createRoleSvc(input: {
   createdBy: string;
   permissionKeys: PermissionKey[];
   actorPermissions: string[];
+  actorRoleId?: string | null;
 }) {
   const existing = await findRoleByNameRepo(input.companyId, input.name);
   if (existing && !existing.isDeleted) throw Conflict('Role name already exists');
@@ -66,6 +77,7 @@ export async function createRoleSvc(input: {
       createdBy: input.createdBy,
       permissionKeys: input.permissionKeys,
       actorPermissions: input.actorPermissions,
+      actorRoleId: input.actorRoleId,
     });
 
     await recordAuditLog({
@@ -96,6 +108,7 @@ export async function createRoleSvc(input: {
     createdBy: input.createdBy,
     permissionKeys: input.permissionKeys,
     actorPermissions: input.actorPermissions,
+    actorRoleId: input.actorRoleId,
   });
 
   await recordAuditLog({
@@ -166,6 +179,7 @@ export async function setRolePermissionsSvc(input: {
   createdBy: string;
   permissionKeys: PermissionKey[];
   actorPermissions: string[];
+  actorRoleId?: string | null;
 }) {
   const role = await getRoleSvc(input.roleId);
   if (role.companyId !== input.companyId) throw NotFound('Role not found');
@@ -177,14 +191,19 @@ export async function setRolePermissionsSvc(input: {
 
   const normalizedKeys = normalizePermissionKeys(input.permissionKeys);
 
-  // A caller may only grant permissions they themselves already hold — never more.
-  // Without this bound, anyone with CanSetRolePermissions could hand their own role
-  // (or a new one) every permission in the catalog regardless of what they actually have.
-  const existingKeys = new Set(await listRolePermissionKeysRepo(input.roleId, input.companyId));
+  // Permission managers remain bounded by their own grants. The canonical System Admin
+  // role is the trusted bootstrap authority for catalog permissions introduced by a
+  // production deployment, when no role can hold the new permission yet.
+  const [existingPermissionKeys, actorRole] = await Promise.all([
+    listRolePermissionKeysRepo(input.roleId, input.companyId),
+    input.actorRoleId ? getRoleRepo(input.actorRoleId) : Promise.resolve(null),
+  ]);
+  const existingKeys = new Set(existingPermissionKeys);
   const actorGranted = new Set(normalizePermissionKeys(input.actorPermissions));
-  const escalatedKeys = normalizedKeys.filter(
-    (key) => !existingKeys.has(key) && !actorGranted.has(key),
-  );
+  const canBootstrapPermissions = isSystemAdminRole(actorRole, input.companyId);
+  const escalatedKeys = canBootstrapPermissions
+    ? []
+    : normalizedKeys.filter((key) => !existingKeys.has(key) && !actorGranted.has(key));
   if (escalatedKeys.length > 0) {
     throw Forbidden(`Cannot grant permission(s) you do not hold: ${escalatedKeys.join(', ')}`);
   }
@@ -197,7 +216,11 @@ export async function setRolePermissionsSvc(input: {
     entityId: input.roleId,
     action: 'ROLE_PERMISSIONS_UPDATED',
     message: 'Role permissions updated',
-    metadata: { permissionCount: normalizedKeys.length, permissionKeys: normalizedKeys },
+    metadata: {
+      permissionCount: normalizedKeys.length,
+      permissionKeys: normalizedKeys,
+      bootstrappedBySystemAdmin: canBootstrapPermissions,
+    },
   });
   return { success: true };
 }

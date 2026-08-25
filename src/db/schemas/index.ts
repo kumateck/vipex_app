@@ -23,6 +23,7 @@ export * from './reconciliation';
 export * from './it-support';
 export * from './notification-hub';
 export * from './parcel-receiver-otps';
+export * from './self-service';
 export * from './momo-transactions';
 export * from './help-assistant';
 export * from './executive-insights';

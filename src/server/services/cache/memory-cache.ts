@@ -27,6 +27,13 @@ export class MemoryCacheStore implements CacheStore {
     return entry.value;
   }
 
+  async take(key: string): Promise<string | null> {
+    const entry = this.map.get(key);
+    if (!entry) return null;
+    this.map.delete(key);
+    return this.isExpired(entry) ? null : entry.value;
+  }
+
   async set(key: string, value: string, options?: CacheSetOptions): Promise<void> {
     this.map.set(key, {
       value,

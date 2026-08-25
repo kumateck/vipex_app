@@ -175,6 +175,35 @@ export async function createCustomerSvc(input: {
   return { id: created.id };
 }
 
+// Server-side resolve-or-create for flows with no interactive lookup UI (e.g.
+// agent completion of a self-service booking draft): unlike createCustomerSvc,
+// which throws Conflict on a duplicate phone (the interactive form searches
+// first), this returns the existing customer instead of failing.
+export async function findOrCreateCustomerSvc(input: {
+  companyId: string;
+  fullname: string;
+  telephone?: string | null;
+  telephone2?: string | null;
+  createdBy: string;
+}): Promise<{ id: string }> {
+  const telephone = normalizeCustomerTelephone(input.telephone);
+  const telephone2 = normalizeCustomerTelephone(input.telephone2);
+
+  const existing = await findCustomerByCompanyTelephonesRepo({
+    companyId: input.companyId,
+    telephones: [telephone, telephone2].filter((value): value is string => !!value),
+  });
+  if (existing) return { id: existing.id };
+
+  return createCustomerSvc({
+    companyId: input.companyId,
+    fullname: input.fullname,
+    telephone,
+    telephone2,
+    createdBy: input.createdBy,
+  });
+}
+
 export async function updateCustomerSvc(
   id: string,
   companyId: string,
