@@ -9,10 +9,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import {
+  canChangeOwnPassword,
   canCreateParcelBooking,
+  canUseTransitReceiveScan,
+  canViewOperationsHub,
   canViewQueueScreen,
-  canViewReceiveScreen,
-  canViewRiderScreen,
+  canViewRiderCurrent,
+  canViewRiderHistory,
 } from '@mobile/lib/permissions';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
@@ -26,9 +29,12 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
   const locationName = user?.location?.name || user?.branch?.location || 'No location';
   const permissions = user?.permissions ?? [];
   const canUseQueue = canViewQueueScreen(permissions);
-  const canUseReceive = canViewReceiveScreen(permissions);
-  const canUseRider = canViewRiderScreen(permissions);
+  const canUseOperations = canViewOperationsHub(permissions);
+  const canUseReceive = canUseTransitReceiveScan(permissions);
+  const canUseRiderCurrent = canViewRiderCurrent(permissions);
+  const canUseRiderHistory = canViewRiderHistory(permissions);
   const canCreateBooking = canCreateParcelBooking(permissions);
+  const canChangePassword = canChangeOwnPassword(permissions);
   const initials =
     (user?.fullname || user?.email || 'U')
       .split(/\s+/)
@@ -83,13 +89,15 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.colors.textSubtle }]}>Operations</Text>
-          <DrawerItem
-            label="Operations Hub"
-            labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
-            icon={({ size, color }) => <Ionicons name="apps-outline" size={size} color={color} />}
-            onPress={() => props.navigation.navigate('Operations')}
-            inactiveTintColor={theme.colors.text}
-          />
+          {canUseOperations ? (
+            <DrawerItem
+              label="Operations Hub"
+              labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+              icon={({ size, color }) => <Ionicons name="apps-outline" size={size} color={color} />}
+              onPress={() => props.navigation.navigate('Operations')}
+              inactiveTintColor={theme.colors.text}
+            />
+          ) : null}
           {canCreateBooking ? (
             <>
               <DrawerItem
@@ -134,7 +142,7 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
               inactiveTintColor={theme.colors.text}
             />
           ) : null}
-          {canUseRider ? (
+          {canUseRiderCurrent ? (
             <>
               <DrawerItem
                 label="Rider Operations"
@@ -154,28 +162,30 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
                 onPress={() => props.navigation.navigate('RiderAssigned')}
                 inactiveTintColor={theme.colors.text}
               />
-              <DrawerItem
-                label="Delivery History"
-                labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
-                icon={({ size, color }) => (
-                  <Ionicons name="time-outline" size={size} color={color} />
-                )}
-                onPress={() => props.navigation.navigate('RiderHistory')}
-                inactiveTintColor={theme.colors.text}
-              />
             </>
+          ) : null}
+          {canUseRiderHistory ? (
+            <DrawerItem
+              label="Delivery History"
+              labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+              icon={({ size, color }) => <Ionicons name="time-outline" size={size} color={color} />}
+              onPress={() => props.navigation.navigate('RiderHistory')}
+              inactiveTintColor={theme.colors.text}
+            />
           ) : null}
         </View>
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.colors.textSubtle }]}>Account</Text>
-          <DrawerItem
-            label="Change Password"
-            labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
-            icon={({ size, color }) => <Ionicons name="key-outline" size={size} color={color} />}
-            onPress={() => props.navigation.navigate('ChangePassword')}
-            inactiveTintColor={theme.colors.text}
-          />
+          {canChangePassword ? (
+            <DrawerItem
+              label="Change Password"
+              labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+              icon={({ size, color }) => <Ionicons name="key-outline" size={size} color={color} />}
+              onPress={() => props.navigation.navigate('ChangePassword')}
+              inactiveTintColor={theme.colors.text}
+            />
+          ) : null}
         </View>
       </DrawerContentScrollView>
 

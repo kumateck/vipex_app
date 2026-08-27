@@ -25,6 +25,15 @@ export async function getOpenDiscrepancyByParcelRepo(parcelId: string, executor:
   return row ?? null;
 }
 
+export async function getParcelDiscrepancyRepo(id: string, companyId: string) {
+  const [row] = await db
+    .select({ id: parcelDiscrepancies.id })
+    .from(parcelDiscrepancies)
+    .where(and(eq(parcelDiscrepancies.id, id), eq(parcelDiscrepancies.companyId, companyId)))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function resolveParcelDiscrepancyRepo(
   id: string,
   companyId: string,
