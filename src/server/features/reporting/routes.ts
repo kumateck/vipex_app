@@ -29,6 +29,7 @@ import {
   getPayrollOvertimeReportSvc,
   getPayrollRegisterReportSvc,
   getShiftRevenueReportSvc,
+  getStickerPrintUsageReportSvc,
   getStorageWaiverFinancialReportSvc,
   listDailyCashierSalesCashiersSvc,
   getToBePaidCollectionsReconciliationReportSvc,
@@ -643,6 +644,32 @@ export const reportingRoutes = new Elysia({ name: 'reporting' })
         tags: ['Reporting'],
         summary: 'Parcel status summary report',
         operationId: 'getParcelStatusSummaryReport',
+      },
+    },
+  )
+  .get(
+    '/sticker-print-usage',
+    async ({ user, query }) =>
+      getStickerPrintUsageReportSvc({
+        companyId: user!.companyId!,
+        branchId: query.branchId ?? null,
+        from: query.from ?? null,
+        to: query.to ?? null,
+      }),
+    {
+      query: t.Object({
+        branchId: t.Optional(UUID),
+        from: t.Optional(t.String({ format: 'date' })),
+        to: t.Optional(t.String({ format: 'date' })),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanViewReportStickerPrintUsage),
+      ],
+      detail: {
+        tags: ['Reporting'],
+        summary: 'Sticker print usage report',
+        operationId: 'getStickerPrintUsageReport',
       },
     },
   );

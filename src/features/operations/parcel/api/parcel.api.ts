@@ -695,6 +695,16 @@ export const parcelApi = api.injectEndpoints({
         { type: 'Bookings', id: arg.id },
       ],
     }),
+    logParcelStickerPrint: builder.mutation<
+      { id: string } | null,
+      { bookingCode: string; trackingCode: string; copies?: number }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcels/sticker-prints',
+        method: 'POST',
+        body,
+      }),
+    }),
     waiveParcelStorageAccrual: builder.mutation<
       { id: string },
       { id: string; reason: string; waivedAmountCedis?: number | string | null }
@@ -1380,6 +1390,7 @@ export const {
   useUpdateParcelMutation,
   useSendParcelStatusCallNotificationMutation,
   useRecordParcelDispositionActionMutation,
+  useLogParcelStickerPrintMutation,
   useWaiveParcelStorageAccrualMutation,
   useSoftDeleteParcelMutation,
   useLogParcelDiscrepancyMutation,

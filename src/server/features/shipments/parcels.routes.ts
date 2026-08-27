@@ -21,6 +21,7 @@ import {
   listOpenParcelDiscrepanciesCtrl,
   listParcelsCtrl,
   logParcelDiscrepancyCtrl,
+  logParcelStickerPrintCtrl,
   markParcelReceivedCtrl,
   recordParcelDispositionActionCtrl,
   waiveParcelStorageAccrualCtrl,
@@ -466,6 +467,29 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
       detail: { tags: ['Shipments'], summary: 'Log parcel discrepancy for incoming transit' },
+    },
+  )
+  .post(
+    '/sticker-prints',
+    async ({ body, user }) => {
+      const authUser = user as AuthUser;
+      return logParcelStickerPrintCtrl({
+        companyId: authUser.companyId ?? '',
+        branchId: authUser.branchId ?? null,
+        printedBy: authUser.sub,
+        bookingCode: body.bookingCode,
+        trackingCode: body.trackingCode,
+        copies: body.copies,
+      });
+    },
+    {
+      body: t.Object({
+        bookingCode: t.String(),
+        trackingCode: t.String(),
+        copies: t.Optional(t.Number()),
+      }),
+      beforeHandle: [requireAuth()],
+      detail: { tags: ['Shipments'], summary: 'Log a parcel sticker print event' },
     },
   )
   .get(

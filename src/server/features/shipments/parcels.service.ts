@@ -49,6 +49,7 @@ import {
   listOpenParcelDiscrepanciesRepo,
   resolveParcelDiscrepancyRepo,
 } from './parcel-discrepancies.repository';
+import { createParcelStickerPrintRepo } from './parcel-sticker-prints.repository';
 import {
   createParcelReconciliationCaseRepo,
   getOpenParcelReconciliationCaseByParcelRepo,
@@ -1400,6 +1401,25 @@ export async function recordParcelDispositionActionSvc(input: {
   });
 
   return { id: input.parcelId };
+}
+
+export async function logParcelStickerPrintSvc(input: {
+  companyId: string;
+  branchId?: string | null;
+  printedBy?: string | null;
+  bookingCode: string;
+  trackingCode: string;
+  copies?: number | null;
+}) {
+  const copies = Math.max(Math.trunc(input.copies ?? 1), 1);
+  return createParcelStickerPrintRepo({
+    companyId: input.companyId,
+    branchId: input.branchId ?? null,
+    bookingCode: input.bookingCode,
+    trackingCode: input.trackingCode,
+    copies,
+    printedBy: input.printedBy ?? null,
+  });
 }
 
 export async function logParcelDiscrepancySvc(input: {

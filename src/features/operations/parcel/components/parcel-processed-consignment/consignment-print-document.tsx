@@ -24,9 +24,16 @@ function getPaidAmountPsw(parcel: ProcessedParcel) {
 export function ConsignmentPrintDocument({ payload }: ConsignmentPrintDocumentProps) {
   if (!payload) return null;
 
+  const destinationBranchName = payload.items[0]?.destinationName?.trim() || '-';
+
   return (
     <div className="consignment-print-sheet">
-      <h1>Consignment No: {payload.consignmentCode}</h1>
+      <div className="consignment-print-header">
+        <h1>Consignment No: {payload.consignmentCode}</h1>
+        <p>
+          <strong>Destination Branch:</strong> {destinationBranchName}
+        </p>
+      </div>
       <table>
         <thead>
           <tr>

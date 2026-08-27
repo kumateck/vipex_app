@@ -1,19 +1,23 @@
 import { useCallback, type RefObject } from 'react';
 import { toast } from 'sonner';
 import { getPrinterPreferenceMapping, printViaDesktop } from '@/features/printing';
+import { useLogParcelStickerPrintMutation } from '../api/parcel.api';
 import { createDesktopStickerHtml } from './parcel-desktop-sticker-print';
 
 type UseParcelDesktopStickerPrintParams = {
   bookingCode: string;
+  trackingCode: string;
   canPrintStickerViaDesktop: boolean;
   stickerRef: RefObject<HTMLDivElement | null>;
 };
 
 export function useParcelDesktopStickerPrint({
   bookingCode,
+  trackingCode,
   canPrintStickerViaDesktop,
   stickerRef,
 }: UseParcelDesktopStickerPrintParams) {
+  const [logStickerPrint] = useLogParcelStickerPrintMutation();
   return useCallback(
     async (copies: number) => {
       if (!canPrintStickerViaDesktop) return false;
@@ -51,10 +55,14 @@ export function useParcelDesktopStickerPrint({
       if (!result.ok) {
         console.error('[parcel-sticker-print] desktop-failed', result);
         toast.error(result.reason ?? 'Failed to print parcel sticker');
+      } else {
+        void logStickerPrint({ bookingCode, trackingCode, copies: request.copies }).catch((error) =>
+          console.error('[parcel-sticker-print] log-failed', error),
+        );
       }
 
       return result.ok;
     },
-    [bookingCode, canPrintStickerViaDesktop, stickerRef],
+    [bookingCode, canPrintStickerViaDesktop, logStickerPrint, stickerRef, trackingCode],
   );
 }
