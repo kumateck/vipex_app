@@ -31,6 +31,7 @@ import {
   listDeliveryPerformanceReportRowsRepo,
   listJournalLinesForBatchDetailedRepo,
   listParcelStatusReportRowsRepo,
+  listStickerPrintUsageReportRowsRepo,
   listPayrollAdjustmentReportRowsRepo,
   listPayrollOvertimeReportRowsRepo,
   listPayrollRegisterRowsRepo,
@@ -964,6 +965,77 @@ export async function getParcelStatusSummaryReportSvc(input: {
       ...row,
       createdAt: row.createdAt?.toISOString() ?? null,
       receivedAt: row.receivedAt?.toISOString() ?? null,
+    })),
+  };
+}
+
+function toDayKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export async function getStickerPrintUsageReportSvc(input: {
+  companyId: string;
+  branchId?: string | null;
+  from?: string | null;
+  to?: string | null;
+}) {
+  const from = input.from ? parseDateInput(input.from) : null;
+  const to = input.to ? parseDateInput(input.to, true) : null;
+  if (from && to && to < from) {
+    throw BadRequest('Invalid date range');
+  }
+
+  const rows = await listStickerPrintUsageReportRowsRepo({
+    companyId: input.companyId,
+    branchId: input.branchId ?? null,
+    from,
+    to,
+  });
+
+  const byDay = new Map<string, { day: string; prints: number; stickers: number }>();
+  const byBranch = new Map<
+    string,
+    { branchId: string | null; branchName: string | null; prints: number; stickers: number }
+  >();
+
+  for (const row of rows) {
+    const dayKey = toDayKey(row.printedAt);
+    const dayEntry = byDay.get(dayKey) ?? { day: dayKey, prints: 0, stickers: 0 };
+    dayEntry.prints += 1;
+    dayEntry.stickers += Number(row.copies ?? 1);
+    byDay.set(dayKey, dayEntry);
+
+    const branchKey = row.branchId ?? 'unassigned';
+    const branchEntry = byBranch.get(branchKey) ?? {
+      branchId: row.branchId,
+      branchName: row.branchName,
+      prints: 0,
+      stickers: 0,
+    };
+    branchEntry.prints += 1;
+    branchEntry.stickers += Number(row.copies ?? 1);
+    byBranch.set(branchKey, branchEntry);
+  }
+
+  return {
+    filters: {
+      ...input,
+      from: from?.toISOString() ?? null,
+      to: to?.toISOString() ?? null,
+    },
+    generatedAt: new Date().toISOString(),
+    totals: {
+      prints: rows.length,
+      stickers: rows.reduce((sum, row) => sum + Number(row.copies ?? 1), 0),
+    },
+    byDay: Array.from(byDay.values()).sort((a, b) => a.day.localeCompare(b.day)),
+    byBranch: Array.from(byBranch.values()).sort((a, b) => b.prints - a.prints),
+    rows: rows.map((row) => ({
+      ...row,
+      printedAt: row.printedAt.toISOString(),
     })),
   };
 }

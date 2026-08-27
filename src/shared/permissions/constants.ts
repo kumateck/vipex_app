@@ -330,6 +330,7 @@ const catalog = [
   ['CanViewReportParcelsAging', 'View report: Parcel Aging', 'Reports'],
   ['CanViewReportParcelsUncollected', 'View report: Uncollected Parcels', 'Reports'],
   ['CanViewReportParcelsStatusSummary', 'View report: Parcel Status Summary', 'Reports'],
+  ['CanViewReportStickerPrintUsage', 'View report: Sticker Print Usage', 'Reports'],
   ['CanViewReportParcelsDeliveryPerformance', 'View report: Delivery Performance', 'Reports'],
   ['CanViewReportConsignmentsManifest', 'View report: Consignment Manifest', 'Reports'],
   ['CanViewReportConsignmentsSummary', 'View report: Consignment Summary', 'Reports'],

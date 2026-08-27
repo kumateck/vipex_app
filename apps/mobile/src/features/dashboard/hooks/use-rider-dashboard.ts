@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { canViewRiderScreen } from '@mobile/lib/permissions';
+import { canViewRiderCurrent } from '@mobile/lib/permissions';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { getRiderDailyAnalytics } from '../services';
 import type { RiderDailyAnalytics, RiderDashboardState } from '../types';
@@ -27,7 +27,7 @@ function dashboardErrorMessage(error: unknown) {
 
 export function useRiderDashboard(): RiderDashboardState {
   const { session, withAuth } = useAuth();
-  const canView = canViewRiderScreen(session.user?.permissions);
+  const canView = canViewRiderCurrent(session.user?.permissions);
   const riderId = session.user?.id ?? session.user?.sub ?? '';
   const [data, setData] = useState(EMPTY_ANALYTICS);
   const [error, setError] = useState<string | null>(null);

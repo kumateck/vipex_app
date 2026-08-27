@@ -452,6 +452,42 @@ export interface ParcelStatusSummaryReport {
   rows: ParcelStatusSummaryRow[];
 }
 
+export interface StickerPrintUsageReportRow {
+  id: string;
+  bookingCode: string;
+  trackingCode: string;
+  copies: number;
+  branchId?: string | null;
+  branchName?: string | null;
+  printedByName?: string | null;
+  printedAt: string;
+}
+
+export interface StickerPrintUsageDailyTotal {
+  day: string;
+  prints: number;
+  stickers: number;
+}
+
+export interface StickerPrintUsageBranchTotal {
+  branchId: string | null;
+  branchName: string | null;
+  prints: number;
+  stickers: number;
+}
+
+export interface StickerPrintUsageReport {
+  filters: Record<string, unknown>;
+  generatedAt: string;
+  totals: {
+    prints: number;
+    stickers: number;
+  };
+  byDay: StickerPrintUsageDailyTotal[];
+  byBranch: StickerPrintUsageBranchTotal[];
+  rows: StickerPrintUsageReportRow[];
+}
+
 export interface ShiftRevenueReportRow {
   id: string;
   cashierId: string;
@@ -896,6 +932,19 @@ export const reportingApi = api.injectEndpoints({
         params,
       }),
     }),
+    getStickerPrintUsageReport: builder.query<
+      StickerPrintUsageReport,
+      {
+        branchId?: string | null;
+        from?: string | null;
+        to?: string | null;
+      }
+    >({
+      query: (params) => ({
+        url: '/reports/sticker-print-usage',
+        params,
+      }),
+    }),
     getShiftRevenueReport: builder.query<
       ShiftRevenueReport,
       {
@@ -1035,6 +1084,7 @@ export const {
   useGetExpenseByCategoryReportQuery,
   useGetDeliveryPerformanceReportQuery,
   useGetParcelStatusSummaryReportQuery,
+  useGetStickerPrintUsageReportQuery,
   useGetShiftRevenueReportQuery,
   useGetDailyCashierSalesReportQuery,
   useListDailyCashierSalesCashiersQuery,

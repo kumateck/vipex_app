@@ -21,6 +21,7 @@ import {
   listOpenParcelDiscrepanciesCtrl,
   listParcelsCtrl,
   logParcelDiscrepancyCtrl,
+  logParcelStickerPrintCtrl,
   markParcelReceivedCtrl,
   recordParcelDispositionActionCtrl,
   waiveParcelStorageAccrualCtrl,
@@ -31,6 +32,7 @@ import {
   updateParcelCtrl,
 } from './parcels.controller';
 import { resolveParcelSort } from './parcel-sort';
+import { uploadParcelDiscrepancyEvidenceSvc } from './parcel-discrepancy-evidence.service';
 
 function parseStatuses(value: string | number[] | undefined): number[] | null {
   if (Array.isArray(value)) {
@@ -468,6 +470,29 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       detail: { tags: ['Shipments'], summary: 'Log parcel discrepancy for incoming transit' },
     },
   )
+  .post(
+    '/sticker-prints',
+    async ({ body, user }) => {
+      const authUser = user as AuthUser;
+      return logParcelStickerPrintCtrl({
+        companyId: authUser.companyId ?? '',
+        branchId: authUser.branchId ?? null,
+        printedBy: authUser.sub,
+        bookingCode: body.bookingCode,
+        trackingCode: body.trackingCode,
+        copies: body.copies,
+      });
+    },
+    {
+      body: t.Object({
+        bookingCode: t.String(),
+        trackingCode: t.String(),
+        copies: t.Optional(t.Number()),
+      }),
+      beforeHandle: [requireAuth()],
+      detail: { tags: ['Shipments'], summary: 'Log a parcel sticker print event' },
+    },
+  )
   .get(
     '/discrepancies/open',
     async ({ query, user }) => {
@@ -490,6 +515,28 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
       detail: { tags: ['Shipments'], summary: 'List open parcel discrepancies' },
+    },
+  )
+  .post(
+    '/discrepancies/:id/evidence',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return uploadParcelDiscrepancyEvidenceSvc({
+        discrepancyId: params.id,
+        companyId: authUser.companyId ?? '',
+        actorUserId: authUser.sub,
+        fileName: body.fileName,
+        dataUrl: body.dataUrl,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        fileName: t.String({ minLength: 1, maxLength: 255 }),
+        dataUrl: t.String({ minLength: 20 }),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
+      detail: { tags: ['Shipments'], summary: 'Upload photo evidence for a parcel discrepancy' },
     },
   )
   .post(

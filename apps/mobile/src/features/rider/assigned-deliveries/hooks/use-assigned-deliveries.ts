@@ -19,7 +19,7 @@ export function useAssignedDeliveries() {
   const [activeAction, setActiveAction] = useState<ActiveDeliveryAction>(null);
   const { withAuth } = useAuth();
   const board = useRiderBoardData(selectedDate);
-  const changeRequests = useRiderDeliveryChangeRequests(board.load);
+  const changeRequests = useRiderDeliveryChangeRequests(board.load, board.canCompleteDelivery);
 
   const assignedRows = useMemo(
     () => filterAssignedDeliveries(board.currentRows, search),
@@ -41,6 +41,10 @@ export function useAssignedDeliveries() {
     async (parcelId: string, type: AssignedDeliveryAction, handover?: DeliveryHandoverInput) => {
       const riderUserId = board.riderUserId;
       if (!riderUserId) return;
+      if (!board.canCompleteDelivery) {
+        notifyError('Permission denied', 'You do not have permission to complete deliveries.');
+        return false;
+      }
       if (type === 'delivered' && !handover?.signatureImage.trim()) {
         notifyError('Signature required', 'Ask the receiver to sign before confirming delivery.');
         return;
@@ -94,7 +98,13 @@ export function useAssignedDeliveries() {
         setActiveAction(null);
       }
     },
-    [board.load, board.riderUserId, changeRequests.pendingChangeParcelIds, withAuth],
+    [
+      board.canCompleteDelivery,
+      board.load,
+      board.riderUserId,
+      changeRequests.pendingChangeParcelIds,
+      withAuth,
+    ],
   );
 
   const openSignature = useCallback((parcelId: string) => setSignatureParcelId(parcelId), []);

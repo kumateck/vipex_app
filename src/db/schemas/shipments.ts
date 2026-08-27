@@ -173,6 +173,36 @@ export const parcelDiscrepancies = pgTable(
   }),
 );
 
+export const parcelStickerPrints = pgTable(
+  'parcel_sticker_prints',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id),
+    branchId: varchar('branch_id', { length: 25 }).references(() => branches.id),
+    parcelId: varchar('parcel_id', { length: 25 }).references(() => parcels.id),
+    bookingCode: varchar('booking_code', { length: 255 }).notNull(),
+    trackingCode: varchar('tracking_code', { length: 255 }).notNull(),
+    copies: integer('copies').notNull().default(1),
+    printedBy: varchar('printed_by', { length: 25 }).references(() => users.id),
+    printedAt: timestamp('printed_at', { withTimezone: false }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byCompanyPrintedAt: index('parcel_sticker_prints_company_printed_at_idx').on(
+      t.companyId,
+      t.printedAt,
+    ),
+    byBranchPrintedAt: index('parcel_sticker_prints_branch_printed_at_idx').on(
+      t.branchId,
+      t.printedAt,
+    ),
+    byParcel: index('parcel_sticker_prints_parcel_idx').on(t.parcelId),
+  }),
+);
+
 export const parcelReconciliationCases = pgTable(
   'parcel_reconciliation_cases',
   {
