@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { hapticTap } from '@mobile/lib/haptics';
-import { canViewReceiveScreen } from '@mobile/lib/permissions';
+import { canViewIncomingConsignments } from '@mobile/lib/permissions';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { AppButton, MobileNoAccess } from '@/components/ui/mobile';
@@ -18,7 +18,7 @@ export function ReceiveConsignmentSession() {
   const { theme } = useAppearance();
   const { session } = useAuth();
   const router = useRouter();
-  const canView = canViewReceiveScreen(session.user?.permissions ?? []);
+  const canView = canViewIncomingConsignments(session.user?.permissions ?? []);
   const sessionState = useReceiveConsignmentSession();
   const isOpen = sessionState.consignment?.status === OPEN_CONSIGNMENT_STATUS;
   const arrived = sessionState.consignment?.arrived ?? 0;

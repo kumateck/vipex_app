@@ -109,6 +109,30 @@ Refactoring MUST NOT:
 
 "If a file is hard to read, it is already too big."
 
+### 15. Documentation Rule (MANDATORY)
+
+Every feature or behavior change MUST update the repository documentation in the same change.
+
+Documentation is required for:
+
+- user-visible workflows and business rules
+- API endpoints and response behavior
+- database schemas and migrations
+- permissions, role behavior, and module gates
+- web, mobile, and desktop differences
+- printing, integrations, background jobs, and operational settings
+- important fixes that change expected behavior or resolve a known limitation
+
+At minimum, agents MUST:
+
+1. Update the relevant canonical module document under `docs/`.
+2. Update `docs/README.md` when a new document or module is introduced.
+3. Update `docs/API.md`, `docs/ROUTE_PERMISSION_MATRIX.md`, or a QA checklist when affected.
+4. Record current behavior, validation rules, failure cases, and affected clients.
+5. Add or update test scenarios for the documented behavior.
+
+Commit messages and daily implementation logs are historical evidence, not a substitute for current-state documentation. If implementation and documentation disagree, agents MUST mark the mismatch explicitly and must not present planned behavior as already implemented.
+
 ---
 
 # React Best Practices

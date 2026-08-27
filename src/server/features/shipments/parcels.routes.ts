@@ -32,6 +32,7 @@ import {
   updateParcelCtrl,
 } from './parcels.controller';
 import { resolveParcelSort } from './parcel-sort';
+import { uploadParcelDiscrepancyEvidenceSvc } from './parcel-discrepancy-evidence.service';
 
 function parseStatuses(value: string | number[] | undefined): number[] | null {
   if (Array.isArray(value)) {
@@ -514,6 +515,28 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
       detail: { tags: ['Shipments'], summary: 'List open parcel discrepancies' },
+    },
+  )
+  .post(
+    '/discrepancies/:id/evidence',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return uploadParcelDiscrepancyEvidenceSvc({
+        discrepancyId: params.id,
+        companyId: authUser.companyId ?? '',
+        actorUserId: authUser.sub,
+        fileName: body.fileName,
+        dataUrl: body.dataUrl,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        fileName: t.String({ minLength: 1, maxLength: 255 }),
+        dataUrl: t.String({ minLength: 20 }),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
+      detail: { tags: ['Shipments'], summary: 'Upload photo evidence for a parcel discrepancy' },
     },
   )
   .post(

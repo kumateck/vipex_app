@@ -1,29 +1,25 @@
-import { UserType } from '@mobile/constants/user-types';
-import { canViewRiderScreen } from '@mobile/lib/permissions';
+import { canViewDashboard, resolveMobileDashboardKind } from '@mobile/lib/permissions';
 import { useAuth } from '@mobile/providers/auth-provider';
+import { AppScreen } from '@mobile/components/screen';
+import { MobileNoAccess } from '@mobile/components/ui';
 import { CashierDashboard } from '../cashier-dashboard';
 import { RiderDashboard } from '../rider-dashboard';
 import { StandardDashboard } from '../standard-dashboard';
 
-function normalizedUserType(value?: number | null): number | null {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') return Number.parseInt(value, 10);
-  return null;
-}
-
 export function DashboardScreen() {
   const { session } = useAuth();
   const user = session.user;
-  const userType = normalizedUserType(user?.userType);
-  const roleName = user?.role?.name?.toLowerCase() ?? '';
-  const isCashier =
-    userType === UserType.CASHIER || roleName.includes('cashier') || roleName.includes('frontline');
-  const isRider =
-    userType === UserType.RIDER ||
-    roleName.includes('rider') ||
-    canViewRiderScreen(user?.permissions);
+  const dashboardKind = resolveMobileDashboardKind(user?.userType);
 
-  if (isCashier) return <CashierDashboard />;
-  if (isRider) return <RiderDashboard />;
+  if (!canViewDashboard(user?.permissions)) {
+    return (
+      <AppScreen scrollable={false}>
+        <MobileNoAccess message="You do not have permission to view the dashboard." />
+      </AppScreen>
+    );
+  }
+
+  if (dashboardKind === 'cashier') return <CashierDashboard />;
+  if (dashboardKind === 'rider') return <RiderDashboard />;
   return <StandardDashboard />;
 }

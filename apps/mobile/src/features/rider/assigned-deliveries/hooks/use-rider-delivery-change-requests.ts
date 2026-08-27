@@ -9,13 +9,20 @@ import type {
   RiderDeliveryChangeTarget,
 } from '../types/delivery-change-request.types';
 
-export function useRiderDeliveryChangeRequests(onChanged: () => void | Promise<void>) {
+export function useRiderDeliveryChangeRequests(
+  onChanged: () => void | Promise<void>,
+  canManage: boolean,
+) {
   const { withAuth } = useAuth();
   const [requests, setRequests] = useState<RiderDeliveryChangeRequest[]>([]);
   const [target, setTarget] = useState<RiderDeliveryChangeTarget | null>(null);
   const [isSubmittingChange, setIsSubmittingChange] = useState(false);
 
   const loadChangeRequests = useCallback(async () => {
+    if (!canManage) {
+      setRequests([]);
+      return;
+    }
     try {
       const rows = await withAuth(listMyPendingDeliveryChanges);
       setRequests(rows);
@@ -25,7 +32,7 @@ export function useRiderDeliveryChangeRequests(onChanged: () => void | Promise<v
         error instanceof Error ? error.message : 'Could not load delivery change requests.',
       );
     }
-  }, [withAuth]);
+  }, [canManage, withAuth]);
 
   useEffect(() => {
     void loadChangeRequests();
@@ -39,6 +46,10 @@ export function useRiderDeliveryChangeRequests(onChanged: () => void | Promise<v
   const submitChangeRequest = useCallback(
     async (input: RiderDeliveryChangeInput) => {
       if (!target) return false;
+      if (!canManage) {
+        notifyError('Permission denied', 'You do not have permission to request delivery changes.');
+        return false;
+      }
       setIsSubmittingChange(true);
       try {
         await withAuth((token) => submitRiderDeliveryChange(token, target.parcelId, input));
@@ -58,7 +69,7 @@ export function useRiderDeliveryChangeRequests(onChanged: () => void | Promise<v
         setIsSubmittingChange(false);
       }
     },
-    [loadChangeRequests, onChanged, target, withAuth],
+    [canManage, loadChangeRequests, onChanged, target, withAuth],
   );
 
   return {
