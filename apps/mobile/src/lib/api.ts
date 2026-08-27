@@ -629,6 +629,9 @@ export async function updateCustomer(
     id: string;
     fullname?: string;
     telephone?: string | null;
+    telephone2?: string | null;
+    address?: string | null;
+    email?: string | null;
   },
 ): Promise<{ id: string }> {
   const { id, ...body } = input;

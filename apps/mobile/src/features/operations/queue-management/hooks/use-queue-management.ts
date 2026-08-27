@@ -60,12 +60,21 @@ export function useQueueManagement() {
     canReadReceiverBoard: canViewReceiverQueueBoard(permissions),
     canReadSenderBoard: canViewSenderQueueBoard(permissions),
   };
+  const canReadReceiverBoard = access.canReadReceiverBoard;
+  const canReadSenderBoard = access.canReadSenderBoard;
+  const canReadParcels = access.canReadParcels;
+  const canIssueTicket = access.canIssueTicket;
 
   const refreshBoards = useCallback(async () => {
-    if (!branchId) return;
+    if (!branchId || (!canReadReceiverBoard && !canReadSenderBoard)) return;
     setLoadingBoards(true);
     try {
-      const [receiver, waiting] = await withAuth((token) => loadQueueBoards(token, branchId));
+      const [receiver, waiting] = await withAuth((token) =>
+        loadQueueBoards(token, branchId, {
+          receiver: canReadReceiverBoard,
+          sender: canReadSenderBoard,
+        }),
+      );
       setReceiverQueueCards(receiver);
       setWaitingPickupQueueCards(waiting);
     } catch (error) {
@@ -77,7 +86,7 @@ export function useQueueManagement() {
     } finally {
       setLoadingBoards(false);
     }
-  }, [branchId, withAuth]);
+  }, [branchId, canReadReceiverBoard, canReadSenderBoard, withAuth]);
 
   useEffect(() => {
     void refreshBoards();
@@ -86,6 +95,10 @@ export function useQueueManagement() {
   const runSearch = useCallback(async () => {
     const term = search.trim();
     if (!term) return;
+    if (!canReadParcels) {
+      notifyError('Permission denied', 'You do not have permission to search parcel records.');
+      return;
+    }
     if (!companyId) {
       Alert.alert('Missing context', 'Your company or branch could not be determined.');
       void hapticWarning();
@@ -107,10 +120,14 @@ export function useQueueManagement() {
     } finally {
       setLoading(false);
     }
-  }, [branchId, companyId, search, withAuth]);
+  }, [branchId, canReadParcels, companyId, search, withAuth]);
 
   const selectParcel = useCallback(
     async (parcel: ParcelSearchRow) => {
+      if (!canReadParcels) {
+        notifyError('Permission denied', 'You do not have permission to view parcel records.');
+        return;
+      }
       setSelectedParcel(parcel);
       try {
         setSelectedDetails(await withAuth((token) => loadQueueParcelDetails(token, parcel.id)));
@@ -123,7 +140,7 @@ export function useQueueManagement() {
         void hapticError();
       }
     },
-    [withAuth],
+    [canReadParcels, withAuth],
   );
 
   const canIssueSelectedQueue = useMemo(() => {
@@ -138,6 +155,10 @@ export function useQueueManagement() {
 
   const issueSelectedTicket = useCallback(async () => {
     if (!selectedParcel) return;
+    if (!canIssueTicket) {
+      notifyError('Permission denied', 'You do not have permission to issue queue tickets.');
+      return;
+    }
     const parcelId = selectedParcel.id;
     setQueueingParcelId(parcelId);
     try {
@@ -178,6 +199,7 @@ export function useQueueManagement() {
     branchContact,
     branchLocation,
     branchName,
+    canIssueTicket,
     companyName,
     refreshBoards,
     runSearch,

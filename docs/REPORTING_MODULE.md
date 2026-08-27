@@ -36,6 +36,8 @@ The shared reports page at `/reports` currently supports:
 - Expense by category report
 - Payroll journal reconciliation report
 - Delivery performance report
+- Daily Cashier Sales report
+- Sticker Print Usage report
 
 Accounting-specific financial statements remain under `/accounting/reports`.
 
@@ -77,6 +79,10 @@ Implemented:
 - `GET /v1/reports/tobepaid-collections-reconciliation`
 - `GET /v1/reports/parcel-status-summary`
 - `GET /v1/reports/delivery-performance`
+- `GET /v1/reports/daily-cashier-sales`
+- `GET /v1/reports/daily-cashier-sales/cashiers`
+- `GET /v1/reports/accounting/storage-waivers`
+- `GET /v1/reports/sticker-print-usage`
 
 Report notes:
 
@@ -84,6 +90,12 @@ Report notes:
 - Customer credit aging detail expands that into open charge-level items with allocation progress and age bucket.
 - To-be-paid outstanding shows unpaid receiver principal after direct principal payments.
 - To-be-paid collections reconciliation extends that view by combining direct principal payments with delivery-posted customer credit charges to show recognized collections versus remaining exposure.
+- Daily Cashier Sales summarizes sessions, gross and responsibility-specific sales, payment methods, transactions, and to-be-paid items for the selected date and authorized branch/cashier scope.
+- Sticker Print Usage reports successful sticker-print events and copy totals by date, branch, actor, booking, tracking number, and parcel.
+
+## Known Cashier Filter Defect
+
+Daily Cashier Sales report access and cashier-option access currently use different permissions. A Delivery Supervisor who can view the report but cannot read the cashier directory may be incorrectly treated as a self-scoped cashier. The required behavior is documented in [Cashier Payments and Shifts](CASHIER_PAYMENTS_AND_SHIFTS.md): authorized supervisors must select allowed cashier types and cashiers, and a role must not be inferred to be a cashier assignment.
 
 ## Permissions and Module Gating
 
@@ -97,6 +109,8 @@ Examples:
 - payroll register requires `CanReadPayrollRun`
 - payroll overtime and adjustments require `CanReadPayrollInputs`
 - parcel status summary requires `CanViewReportParcelsStatusSummary`
+- daily cashier sales requires `CanViewReportCashierShifts`; cashier-option loading must use a compatible report-scoped authorization model
+- sticker print usage requires `CanViewReportStickerPrintUsage`
 
 Where the report depends on a company-scoped module, module gating also applies:
 
@@ -113,5 +127,6 @@ When adding a new report:
 4. add the client query to `src/features/reporting/api/reporting.api.ts`
 5. add a new tab/section in `src/features/reporting/pages/reports-page.tsx`
 6. reuse the shared print and CSV export model instead of creating a one-off print page unless the report is a formal document
+7. update `API.md`, this document, the route-permission matrix, and a report QA scenario in the same change
 
 Formal documents like payslips can still keep dedicated print views when the layout is materially different.

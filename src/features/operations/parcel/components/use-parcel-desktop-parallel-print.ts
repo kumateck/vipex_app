@@ -6,10 +6,12 @@ import {
   PAGE_STYLES,
   printParallelViaDesktop,
 } from '@/features/printing';
+import { useLogParcelStickerPrintMutation } from '../api/parcel.api';
 import { createDesktopStickerHtml } from './parcel-desktop-sticker-print';
 
 type UseParcelDesktopParallelPrintParams = {
   bookingCode: string;
+  trackingCode: string;
   canPrintForSession: boolean;
   invoiceRef: RefObject<HTMLDivElement | null>;
   hasPrintableReceipt: boolean;
@@ -21,6 +23,7 @@ type UseParcelDesktopParallelPrintParams = {
 
 export function useParcelDesktopParallelPrint({
   bookingCode,
+  trackingCode,
   canPrintForSession,
   invoiceRef,
   hasPrintableReceipt,
@@ -29,6 +32,7 @@ export function useParcelDesktopParallelPrint({
   onAutoPrintComplete,
   stickerRef,
 }: UseParcelDesktopParallelPrintParams) {
+  const [logStickerPrint] = useLogParcelStickerPrintMutation();
   return useCallback(async () => {
     if (
       mode !== 'sender-payment' ||
@@ -75,6 +79,13 @@ export function useParcelDesktopParallelPrint({
       ],
     });
 
+    const stickerJobOk = result.jobs.some((job) => job.layout === 'thermal-sticker' && job.ok);
+    if (stickerJobOk) {
+      void logStickerPrint({ bookingCode, trackingCode, copies: 1 }).catch((error) =>
+        console.error('[parcel-sticker-print] log-failed', error),
+      );
+    }
+
     if (!result.ok) {
       const failed = result.jobs.filter((job) => !job.ok);
       const reason = failed.map((job) => `${job.layout}: ${job.reason ?? 'failed'}`).join(' | ');
@@ -88,10 +99,12 @@ export function useParcelDesktopParallelPrint({
     return true;
   }, [
     bookingCode,
+    trackingCode,
     canPrintForSession,
     invoiceRef,
     hasPrintableReceipt,
     isStickerPrintEnabled,
+    logStickerPrint,
     mode,
     onAutoPrintComplete,
     stickerRef,

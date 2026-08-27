@@ -35,6 +35,7 @@ import {
   leaveTypes,
   locations,
   parcels,
+  parcelStickerPrints,
   payrollManualAdjustments,
   payrollOvertimeEntries,
   payrollPeriods,
@@ -1063,6 +1064,37 @@ export async function listParcelStatusReportRowsRepo(input: {
       ),
     )
     .orderBy(desc(parcels.createdAt), desc(parcels.id));
+}
+
+export async function listStickerPrintUsageReportRowsRepo(input: {
+  companyId: string;
+  from?: Date | null;
+  to?: Date | null;
+  branchId?: string | null;
+}) {
+  return db
+    .select({
+      id: parcelStickerPrints.id,
+      bookingCode: parcelStickerPrints.bookingCode,
+      trackingCode: parcelStickerPrints.trackingCode,
+      copies: parcelStickerPrints.copies,
+      branchId: parcelStickerPrints.branchId,
+      branchName: branches.name,
+      printedByName: users.fullname,
+      printedAt: parcelStickerPrints.printedAt,
+    })
+    .from(parcelStickerPrints)
+    .leftJoin(branches, eq(branches.id, parcelStickerPrints.branchId))
+    .leftJoin(users, eq(users.id, parcelStickerPrints.printedBy))
+    .where(
+      and(
+        eq(parcelStickerPrints.companyId, input.companyId),
+        ...(input.from ? [gte(parcelStickerPrints.printedAt, input.from)] : []),
+        ...(input.to ? [lte(parcelStickerPrints.printedAt, input.to)] : []),
+        ...(input.branchId ? [eq(parcelStickerPrints.branchId, input.branchId)] : []),
+      ),
+    )
+    .orderBy(desc(parcelStickerPrints.printedAt));
 }
 
 export type StorageWaiverFinancialReportRow = {

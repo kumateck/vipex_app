@@ -12,6 +12,7 @@ import type { ReceiptPrintData } from './parcel-receipt.types';
 import { useParcelDesktopInvoicePrint } from './parcel-desktop-print';
 import { useParcelDesktopParallelPrint } from './use-parcel-desktop-parallel-print';
 import { useParcelDesktopStickerPrint } from './use-parcel-desktop-sticker-print';
+import { useLogParcelStickerPrintMutation } from '../api/parcel.api';
 
 type ParcelReceiptActionsProps = {
   data: ReceiptPrintData;
@@ -48,6 +49,7 @@ export function ParcelReceiptActions({
   const canPrintStickerViaDesktop =
     typeof window !== 'undefined' && typeof window.api?.printHtml === 'function';
   const canPrintInvoiceViaDesktop = canPrintStickerViaDesktop;
+  const [logStickerPrint] = useLogParcelStickerPrintMutation();
   const qrUrl = buildParcelTrackingUrl(data.trackingCode);
   const hasPaidAmount = (data.amountPaidCedis ?? data.senderPaidCedis) > 0;
   const hasPrintableReceipt = hasPaidAmount || data.receiverToPayCedis > 0;
@@ -87,6 +89,11 @@ export function ParcelReceiptActions({
     documentTitle: `sticker-${data.bookingCode}`,
     pageStyle: PAGE_STYLES['thermal-sticker'],
     onAfterPrint: () => {
+      void logStickerPrint({
+        bookingCode: data.bookingCode,
+        trackingCode: data.trackingCode,
+        copies: stickerCopies,
+      }).catch((error) => console.error('[parcel-sticker-print] log-failed', error));
       if (!queueInvoiceAfterSticker) {
         onAutoPrintComplete?.();
         return;
@@ -99,6 +106,7 @@ export function ParcelReceiptActions({
   });
   const printStickerViaDesktop = useParcelDesktopStickerPrint({
     bookingCode: data.bookingCode,
+    trackingCode: data.trackingCode,
     canPrintStickerViaDesktop,
     stickerRef: desktopStickerRef,
   });
@@ -180,6 +188,7 @@ export function ParcelReceiptActions({
   ]);
   const handlePrintBothParallelDesktop = useParcelDesktopParallelPrint({
     bookingCode: data.bookingCode,
+    trackingCode: data.trackingCode,
     canPrintForSession,
     invoiceRef,
     hasPrintableReceipt,

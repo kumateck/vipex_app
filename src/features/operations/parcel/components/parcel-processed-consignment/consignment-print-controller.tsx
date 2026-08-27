@@ -11,8 +11,16 @@ const CONSIGNMENT_PAGE_STYLE = `
   @page { size: A4 portrait; margin: 8mm; }
   @media print {
     body { margin: 0; color: #111; font-family: Arial, Helvetica, sans-serif; }
-    .consignment-print-sheet h1 {
+    .consignment-print-sheet .consignment-print-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
       margin: 0 0 8px;
+    }
+    .consignment-print-sheet h1,
+    .consignment-print-sheet .consignment-print-header p {
+      margin: 0;
       font-size: 15px;
       font-weight: 700;
     }
