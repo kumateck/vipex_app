@@ -6,10 +6,18 @@ import {
   searchParcels,
 } from '@mobile/lib/api';
 
-export function loadQueueBoards(token: string, branchId: string) {
+export function loadQueueBoards(
+  token: string,
+  branchId: string,
+  access: { receiver: boolean; sender: boolean },
+) {
   return Promise.all([
-    listPickupQueueCards(token, { branchId, paymentBucket: 'TP' }),
-    listPickupQueueCards(token, { branchId, paymentBucket: 'SP' }),
+    access.receiver
+      ? listPickupQueueCards(token, { branchId, paymentBucket: 'TP' })
+      : Promise.resolve([]),
+    access.sender
+      ? listPickupQueueCards(token, { branchId, paymentBucket: 'SP' })
+      : Promise.resolve([]),
   ]);
 }
 

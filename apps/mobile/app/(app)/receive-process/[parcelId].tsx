@@ -333,7 +333,7 @@ export default function ReceiveProcessParcelScreen() {
           <AppButton
             title="Back To Incoming List"
             onPress={() => {
-              router.back();
+              router.push('/(app)/receive');
               void hapticTap();
             }}
             variant="secondary"

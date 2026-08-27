@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listRiderParcels } from '@mobile/lib/api';
 import { notifyError } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
-import { canCompleteRiderDeliveryActions, canViewRiderScreen } from '@mobile/lib/permissions';
+import {
+  canCompleteRiderDeliveryActions,
+  canViewRiderCurrent,
+  canViewRiderHistory,
+} from '@mobile/lib/permissions';
 import { hapticError } from '@mobile/lib/haptics';
 import type { RiderDoorstepRecord } from '@mobile/types/parcels';
 import { getRiderDailyAnalytics } from '@mobile/features/dashboard/services';
@@ -74,10 +78,12 @@ export function doorstepToParcelRow(row: RiderDoorstepRecord) {
   };
 }
 
-export function useRiderBoardData(selectedDate: string) {
+export function useRiderBoardData(selectedDate: string, view: 'current' | 'history' = 'current') {
   const { session, withAuth } = useAuth();
   const permissions = session.user?.permissions ?? [];
-  const canView = canViewRiderScreen(permissions);
+  const canReadCurrent = canViewRiderCurrent(permissions);
+  const canReadHistory = canViewRiderHistory(permissions);
+  const canView = view === 'current' ? canReadCurrent : canReadHistory;
   const canCompleteDelivery = canCompleteRiderDeliveryActions(permissions);
   const riderUserId = session.user?.id ?? session.user?.sub;
 
@@ -87,14 +93,20 @@ export function useRiderBoardData(selectedDate: string) {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    if (!riderUserId) return;
+    if (!riderUserId || !canView) return;
     setRefreshing(true);
     try {
       const [current, history, analytics] = await withAuth((token) =>
         Promise.all([
-          listRiderParcels(token, riderUserId, 'current'),
-          listRiderParcels(token, riderUserId, 'history'),
-          getRiderDailyAnalytics(token, selectedDate || todayDateKey()),
+          canReadCurrent
+            ? listRiderParcels(token, riderUserId, 'current')
+            : Promise.resolve({ rows: [] as RiderDoorstepRecord[] }),
+          canReadHistory
+            ? listRiderParcels(token, riderUserId, 'history')
+            : Promise.resolve({ rows: [] as RiderDoorstepRecord[] }),
+          canReadCurrent
+            ? getRiderDailyAnalytics(token, selectedDate || todayDateKey())
+            : Promise.resolve(EMPTY_ANALYTICS),
         ]),
       );
       setCurrentRows(current.rows ?? []);
@@ -109,7 +121,7 @@ export function useRiderBoardData(selectedDate: string) {
     } finally {
       setRefreshing(false);
     }
-  }, [riderUserId, selectedDate, withAuth]);
+  }, [canReadCurrent, canReadHistory, canView, riderUserId, selectedDate, withAuth]);
 
   useEffect(() => {
     void load();

@@ -13,6 +13,7 @@ import {
   listOpenParcelDiscrepanciesSvc,
   listParcelsSvc,
   logParcelDiscrepancySvc,
+  logParcelStickerPrintSvc,
   markParcelReceivedSvc,
   recordParcelDispositionActionSvc,
   requestParcelReconciliationCaseSvc,
@@ -154,6 +155,7 @@ export const updateParcelCtrl = updateParcelSvc;
 export const markParcelReceivedCtrl = markParcelReceivedSvc;
 export const setPlannedToBePaidCtrl = setPlannedToBePaidSvc;
 export const logParcelDiscrepancyCtrl = logParcelDiscrepancySvc;
+export const logParcelStickerPrintCtrl = logParcelStickerPrintSvc;
 export const softDeleteParcelCtrl = softDeleteParcelSvc;
 export const listParcelDispositionActionsCtrl = listParcelDispositionActionsSvc;
 export const recordParcelDispositionActionCtrl = recordParcelDispositionActionSvc;

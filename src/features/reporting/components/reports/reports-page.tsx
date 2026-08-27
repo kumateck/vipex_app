@@ -55,6 +55,7 @@ import {
   useGetExpenseByCategoryReportQuery,
   useGetLeaveRequestsReportQuery,
   useGetParcelStatusSummaryReportQuery,
+  useGetStickerPrintUsageReportQuery,
   useGetPayrollAdjustmentsReportQuery,
   useGetPayrollJournalReconciliationReportQuery,
   useGetPayrollOvertimeReportQuery,
@@ -77,6 +78,7 @@ export type ReportKey =
   | 'payroll-journal-reconciliation'
   | 'customer-statement'
   | 'parcel-status'
+  | 'sticker-print-usage'
   | 'delivery-performance'
   | 'shift-revenue'
   | 'branch-profitability'
@@ -115,6 +117,7 @@ const REPORT_LABELS: Record<ReportKey, string> = {
   'payroll-journal-reconciliation': 'Payroll Journal Reconciliation',
   'customer-statement': 'Customer Statement',
   'parcel-status': 'Parcel Status Summary',
+  'sticker-print-usage': 'Sticker Print Usage',
   'delivery-performance': 'Delivery Performance',
   'shift-revenue': 'Shift Revenue',
   'branch-profitability': 'Branch Profitability',
@@ -389,6 +392,7 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
   const canParcelStatusSummary = permissions.includes(
     PermissionKeys.CanViewReportParcelsStatusSummary,
   );
+  const canStickerPrintUsage = permissions.includes(PermissionKeys.CanViewReportStickerPrintUsage);
   const canDeliveryPerformance = permissions.includes(
     PermissionKeys.CanViewReportParcelsDeliveryPerformance,
   );
@@ -422,6 +426,7 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
         canPayrollJournalReconciliation ? 'payroll-journal-reconciliation' : null,
         canCustomers ? 'customer-statement' : null,
         canParcelStatusSummary ? 'parcel-status' : null,
+        canStickerPrintUsage ? 'sticker-print-usage' : null,
         canDeliveryPerformance ? 'delivery-performance' : null,
         canShiftRevenue ? 'shift-revenue' : null,
         canBranchProfitability ? 'branch-profitability' : null,
@@ -444,6 +449,7 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
       canEmployees,
       canLeave,
       canParcelStatusSummary,
+      canStickerPrintUsage,
       canPayrollJournalReconciliation,
       canPayrollInputs,
       canPayrollRegister,
@@ -643,6 +649,18 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
         to: appliedFilters?.to ?? to,
       },
       { skip: activeReport !== 'parcel-status' || !canParcelStatusSummary || !appliedFilters },
+    );
+
+  const { data: stickerPrintUsageReport, isFetching: isStickerPrintUsageFetching } =
+    useGetStickerPrintUsageReportQuery(
+      {
+        branchId: appliedFilters?.branchId ?? null,
+        from: appliedFilters?.from ?? from,
+        to: appliedFilters?.to ?? to,
+      },
+      {
+        skip: activeReport !== 'sticker-print-usage' || !canStickerPrintUsage || !appliedFilters,
+      },
     );
 
   const { data: deliveryPerformanceReport, isFetching: isDeliveryPerformanceFetching } =
@@ -1498,6 +1516,64 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
           emptyMessage: 'No parcels matched the selected filters.',
           csvFilename: 'parcel-status-summary-report.csv',
         };
+      case 'sticker-print-usage':
+        return {
+          title: 'Sticker Print Usage',
+          description:
+            'Sticker labels printed per day, so branches can plan sticker roll/stock orders.',
+          generatedAt: stickerPrintUsageReport?.generatedAt,
+          filters: [
+            {
+              label: 'Branch',
+              value:
+                branchOptions.find((item) => item.id === selectedBranchId)?.name ?? 'All branches',
+            },
+            { label: 'From', value: from },
+            { label: 'To', value: to },
+          ],
+          summary: [
+            { label: 'Prints', value: String(stickerPrintUsageReport?.totals.prints ?? 0) },
+            { label: 'Stickers', value: String(stickerPrintUsageReport?.totals.stickers ?? 0) },
+          ],
+          sections: [
+            {
+              heading: 'Daily Totals',
+              headers: ['Day', 'Prints', 'Stickers'],
+              rows:
+                stickerPrintUsageReport?.byDay.map((row) => [
+                  row.day,
+                  String(row.prints),
+                  String(row.stickers),
+                ]) ?? [],
+            },
+            {
+              heading: 'By Branch',
+              headers: ['Branch', 'Prints', 'Stickers'],
+              rows:
+                stickerPrintUsageReport?.byBranch.map((row) => [
+                  row.branchName ?? 'Unassigned',
+                  String(row.prints),
+                  String(row.stickers),
+                ]) ?? [],
+            },
+            {
+              heading: 'Print Detail',
+              headers: ['Booking', 'Tracking', 'Branch', 'Copies', 'Printed by', 'Printed at'],
+              rows:
+                stickerPrintUsageReport?.rows.map((row) => [
+                  row.bookingCode,
+                  row.trackingCode,
+                  row.branchName ?? '-',
+                  String(row.copies),
+                  row.printedByName ?? '-',
+                  formatDateTime(row.printedAt),
+                ]) ?? [],
+            },
+          ],
+          loading: isStickerPrintUsageFetching,
+          emptyMessage: 'No sticker prints matched the selected filters.',
+          csvFilename: 'sticker-print-usage-report.csv',
+        };
       case 'delivery-performance':
         return {
           title: 'Delivery Performance Report',
@@ -2059,6 +2135,7 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
     isExpenseByCategoryFetching,
     isLeaveReportFetching,
     isParcelStatusFetching,
+    isStickerPrintUsageFetching,
     isPayrollAdjustmentsFetching,
     isPayrollJournalReconciliationFetching,
     isPayrollOvertimeFetching,
@@ -2069,6 +2146,7 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
     isToBePaidCollectionsReconciliationFetching,
     leaveReport,
     parcelStatusReport,
+    stickerPrintUsageReport,
     payrollAdjustmentsReport,
     payrollJournalReconciliationReport,
     payrollCycleOptions,
@@ -2402,7 +2480,7 @@ export function ReportsPage({ initialReport = 'employees', standalone = false }:
                 </div>
               ) : null}
 
-              {activeReport === 'parcel-status' ? (
+              {activeReport === 'parcel-status' || activeReport === 'sticker-print-usage' ? (
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="space-y-2">
                     <Label>Branch</Label>

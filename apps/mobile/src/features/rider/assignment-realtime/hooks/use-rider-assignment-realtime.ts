@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useCommunicationSocket } from '@mobile/features/communication/use-communication-socket';
-import { canViewRiderScreen } from '@mobile/lib/permissions';
+import { canViewRiderCurrent } from '@mobile/lib/permissions';
 import { hapticSuccess } from '@mobile/lib/haptics';
 import { notifySuccess } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
@@ -14,7 +14,7 @@ const ASSIGNMENT_POLL_INTERVAL_MS = 5 * 60 * 1000;
 export function useRiderAssignmentRealtime() {
   const { session, withAuth } = useAuth();
   const riderUserId = session.user?.id ?? session.user?.sub ?? '';
-  const canView = canViewRiderScreen(session.user?.permissions);
+  const canView = canViewRiderCurrent(session.user?.permissions);
   const knownParcelIds = useRef<Set<string> | null>(null);
 
   const announce = useCallback((count: number) => {

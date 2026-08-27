@@ -54,6 +54,10 @@ VITE_COMMUNICATION_WS_URL=wss://your-ws-capable-domain.com
 
 ## Documentation
 
+- Documentation hub: `docs/README.md`
+- Application overview: `docs/APPLICATION_OVERVIEW.md`
+- Feature catalog: `docs/FEATURE_CATALOG.md`
+- Documentation coverage: `docs/DOCUMENTATION_COVERAGE.md`
 - Architecture: `docs/ARCHITECTURE.md`
 - API index: `docs/API.md`
 - Accounting module: `docs/ACCOUNTING_MODULE.md`

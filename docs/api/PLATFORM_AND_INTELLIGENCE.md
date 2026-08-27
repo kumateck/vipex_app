@@ -1,0 +1,42 @@
+# API: Platform, Communication, and Intelligence
+
+All paths are relative to `/v1`.
+
+## Company Platform
+
+- `/company-modules`: read and update a company's enabled modules.
+- `/module-workspace`: module overview data.
+- `/audit`: audit search and entity history.
+- `/desktop-updates`: desktop release metadata and artifacts required by installed clients.
+- `/mobile-updates`: mobile release metadata and Android APK delivery.
+- `/geolocation`: distance and nearby-branch queries.
+- `/uploads`: shared model-linked object handling.
+
+Update download surfaces expose only required release data. Administrative release mutations remain protected.
+
+## Communication
+
+`/communication` includes threads, messages, channels, groups, engagement requests, approvals/declines, presence, and calls. Internal communication and LiveKit call capabilities have separate module gates.
+
+`/customer-service` includes conversations, tickets, feedback, and SLA records. It is gated by the customer-service communication module and relevant permissions.
+
+`/it-support` includes ticket list/create/detail, events, notes, attachments through uploads, and status updates. Read, create, and update permissions are separate.
+
+## Help and AI
+
+- `/help-assistant`: permission- and rate-limited help questions grounded in approved guides.
+- `/ai-chat`: latest conversation and message operations using controlled read-only tools.
+- `/executive-insights`: executive snapshot and narrative generation.
+- `/fleet-anomaly-brief`: persisted fleet exception brief and regeneration.
+- `/operations-exceptions-brief`: persisted operational exception brief and regeneration.
+- `/management-daily-brief`: combined management brief and regeneration.
+
+All business data is scoped before it is sent to an LLM provider. Tenant identifiers are not model-settable tool arguments. Provider failure degrades the AI feature without disabling the underlying deterministic report.
+
+## Governance
+
+`/rbac` is the role and permission administration surface. Permission managers cannot grant permissions beyond their own authorized set, and System-Admin-only capabilities remain reserved.
+
+`/audit` is the read surface for security and business audit events. Secrets, tokens, passwords, and OTPs must be redacted.
+
+See [Platform and Access Control](../PLATFORM_AND_ACCESS.md), [AI, Help, and Management Insights](../AI_HELP_AND_INSIGHTS.md), and [Communication Suite](../COMMUNICATION_SUITE_SPEC.md).

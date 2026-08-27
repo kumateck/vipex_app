@@ -9,9 +9,8 @@ import { useAuth } from '@mobile/providers/auth-provider';
 import {
   canViewQueueScreen,
   canViewReceiveScreen,
-  canViewRiderScreen,
+  resolveMobileDashboardKind,
 } from '@mobile/lib/permissions';
-import { UserType } from '@mobile/constants/user-types';
 import { mobileRadius, mobileShadow } from '@mobile/theme/layout';
 
 function DrawerMenuButton() {
@@ -95,23 +94,8 @@ export default function AppTabsLayout() {
   const { theme } = useAppearance();
   const { session } = useAuth();
   const insets = useSafeAreaInsets();
-  const userTypeRaw = session.user?.userType;
-  const normalizedUserType =
-    typeof userTypeRaw === 'number'
-      ? userTypeRaw
-      : typeof userTypeRaw === 'string'
-        ? Number.parseInt(userTypeRaw, 10)
-        : null;
-  const roleName = session.user?.role?.name?.toLowerCase() ?? '';
   const permissions = session.user?.permissions ?? [];
-  const isStaff = normalizedUserType === UserType.STAFF || roleName.includes('staff');
-  const isCashier = normalizedUserType === UserType.CASHIER || roleName.includes('cashier');
-  const isRider =
-    !isStaff &&
-    !isCashier &&
-    (normalizedUserType === UserType.RIDER ||
-      roleName.includes('rider') ||
-      canViewRiderScreen(permissions));
+  const isRider = resolveMobileDashboardKind(session.user?.userType) === 'rider';
 
   const canUseQueue = canViewQueueScreen(permissions);
   const canUseScan = canViewReceiveScreen(permissions);

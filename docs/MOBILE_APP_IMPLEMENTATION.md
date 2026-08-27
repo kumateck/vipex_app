@@ -1,184 +1,154 @@
-# Mobile App Implementation (Expo + React Native)
+# Mobile App Implementation
 
-Date: 2026-03-27
+Last audited: 2026-08-27
 
-## Overview
+## Runtime
 
-A new mobile workspace has been added at `apps/mobile` using the latest Expo SDK generated template baseline and upgraded to Expo Router architecture.
+The mobile workspace is `apps/mobile`. It is a bare React Native CLI application, not an Expo managed application.
 
-Primary capabilities implemented:
+Current foundation:
 
-- Auth lifecycle:
-  - Login
-  - Forgot password
-  - Reset password
-  - Set password (invite token flow)
-  - Change password
-- Role/permission-driven module access:
-  - Queue creation
-  - Rider operations
-  - In-transit scan-to-receive
-- QR scanning for transit receipt confirmation:
-  - Camera-based QR scan
-  - Manual fallback search + confirm receive
+- React Native 0.83 and React 19.
+- React Navigation for stacks, drawers, and tabs.
+- Native Android and iOS projects checked into the repository.
+- Native keychain storage for sensitive session material.
+- Vision Camera for scanning workflows.
+- LiveKit for voice communication.
+- Reanimated, gesture handler, safe-area, and native screens for interaction and navigation.
+- `react-native-config` for build-time environment values.
 
-## Folder
+The application starts in `apps/mobile/index.js`, registers `src/app`, and uses the native project build systems.
 
-- `apps/mobile`
-  - `app/(auth)` auth screens
-  - `app/(app)` protected operations screens
-  - `src/lib` API and auth/session utilities
-  - `src/providers` auth provider
-  - `src/types` mobile types
+## Current Feature Areas
 
-## API Reuse
+### Authentication and Profile
 
-Mobile uses existing backend APIs and current logic:
+- Login, forgot password, reset password, invitation password setup, and password change.
+- Secure session persistence and refresh.
+- Permission-, module-, company-, branch-, cashier-, and rider-aware navigation.
 
-- `POST /v1/auth/login`
-- `POST /v1/auth/forgot-password`
-- `POST /v1/auth/reset-password`
-- `POST /v1/auth/change-password`
-- `POST /v1/auth/refresh`
-- `GET /v1/shipments/parcels` (search/filter)
-- `PATCH /v1/shipments/parcels/:id` (status updates)
-- `POST /v1/pickup-queues`
-- `GET /v1/deliveries/dd/rider/:riderUserId`
-- `POST /v1/deliveries/dd/:parcelId/rider-given`
-- `POST /v1/deliveries/dd/:parcelId/returned`
+Current permission behavior and planned desktop-to-mobile capability work are maintained in [Mobile Permission Parity and Feature Roadmap](MOBILE_PERMISSION_PARITY_AND_ROADMAP.md).
 
-## Transit Scan-to-Receive Logic
+### Dashboard and Cashier
 
-Implemented in `apps/mobile/app/(app)/receive.tsx`.
+- Standard, cashier, and rider dashboard states.
+- Cashier active-session summary.
+- Open and close cashier-session dialogs.
+- Cashier sales and to-be-paid reporting.
 
-Behavior mirrors current web flow:
+### Parcels and Receiving
 
-1. Scan QR code from parcel sticker
-2. Search parcel within:
-   - `companyId = logged-in user company`
-   - `destinationId = logged-in user branch`
-   - `status = IN_TRANSIT (2)`
-3. If found, mark status to `ARRIVED_AT_DESTINATION (3)`
-4. Show success/failure feedback
-5. Manual fallback: search by tracking/booking and confirm
+- Parcel creation and customer lookup.
+- Sender-paid parcel plans.
+- Queue management and ticket details.
+- Parcel search and super search.
+- Consignment list, scan-based receiving session, completeness checklist, and exception closeout.
+- Receiver processing and OTP-enabled handover workflows.
+- Self-service draft claim and pay-now completion.
+- Call-center receiver follow-up and doorstep address/fee collection.
+- Receiving discrepancy capture with linked camera photo evidence.
+- Supervisor review of rider address and delivery-fee changes.
+- Permission-controlled customer lookup and limited contact editing.
 
-## Queue Creation Logic
+The implemented validation, failure behavior, and QA cases are documented in [Mobile Frontline Workflows](MOBILE_FRONTLINE_WORKFLOWS.md).
 
-Implemented in `apps/mobile/app/(app)/queue.tsx`.
+### Rider Operations
 
-Flow:
+- Assigned and current deliveries.
+- Delivery history.
+- Customer collection fields and signature capture.
+- Delivery change requests.
+- Real-time assignment and delivery updates.
 
-1. Search parcels at destination branch with status `AWAITING_PICKUP (5)`
-2. Create queue via `POST /pickup-queues`
-3. Show generated queue code (if returned)
+### Communication
 
-## Rider Logic
+- Chats, channels, groups, requests, threads, mentions, and presence.
+- LiveKit voice-channel participation.
+- Real-time synchronization with deduplication and reconnect behavior.
 
-Implemented in `apps/mobile/app/(app)/rider.tsx`.
+### Updates
 
-Flow:
+- Private Android APK version check, download, progress, and install flow.
+- Release endpoints are served through the application update API.
+- Release builds reject local API endpoints.
 
-- Load current/history assignments by rider user id (`session.user.sub`)
-- Actions for current items:
-  - mark given to customer
-  - mark returned to office
+## API and Domain Reuse
 
-## Permission-Based Module Access
+Mobile uses the same `/v1` server APIs as web and desktop. It must not reproduce pricing, authorization, OTP, payment, or parcel-transition authority locally.
 
-Implemented in `apps/mobile/src/lib/permissions.ts`.
+Core groups include:
 
-Home screen only exposes modules if permissions allow.
+- `/auth`
+- `/shipments`
+- `/payments`
+- `/cashiers` and `/shifts`
+- `/pickup-queues`
+- `/deliveries`
+- `/communication`
+- `/reports`
+- `/mobile-updates`
+- `/self-service`
+- `/customers`
+- `/uploads`
+
+Every request derives company and user scope from the authenticated session. Client-provided filters can only narrow an already-authorized result.
+
+Mobile navigation, destination screens, background loads, and mutations use the exact permission keys defined for the corresponding desktop capability. Screen access never implies action access. Company-module capabilities still require a client-bootstrap enhancement for complete proactive parity; the server module gates remain authoritative.
+
+## Navigation and Architecture
+
+New work follows the feature structure under `apps/mobile/src/features/<domain>/<feature>/`, separating components, dialogs, hooks, services, types, and utilities. Screen files are wrappers around feature components.
+
+Older route-compatible files under `apps/mobile/app` may remain during migration, but the active native entry point is `src/app`; the presence of those files does not make this an Expo managed app.
 
 ## Build and Run
 
-From root (Bun):
+From the repository root:
 
 - `bun run mobile:start`
 - `bun run mobile:android`
 - `bun run mobile:ios`
 
-From mobile workspace:
+From `apps/mobile`:
 
-- `bun run dev`
 - `bun run start`
+- `bun run android`
+- `bun run ios`
+- `bun run typecheck`
+- `bun run lint`
 
-EAS profiles configured in `apps/mobile/eas.json`:
+Android uses Gradle and iOS uses Xcode/CocoaPods. Release environment configuration is loaded through the native build configuration and `react-native-config`.
 
-- development
-- preview
-- production
+## Update Behavior
 
-## Mobile Runtime Updates (OTA)
+The current update mechanism is a private native APK pipeline, not Expo OTA Updates.
 
-Implemented with Expo Updates so mobile users can receive new releases without reinstalling the app.
+1. The app checks the mobile-update endpoint for a newer compatible Android release.
+2. It shows release and version information.
+3. The user downloads the APK with visible progress.
+4. Native installation is requested after download and verification.
+5. Failure leaves the installed version usable and offers retry.
 
-Files:
+iOS distribution uses the approved iOS release process; an Android APK update must not be presented on iOS.
 
-- `apps/mobile/app.json`
-- `apps/mobile/eas.json`
-- `apps/mobile/src/providers/app-update-provider.tsx`
-- `apps/mobile/app/_layout.tsx`
+## Security and Reliability
 
-Configuration:
+- Keep tokens in native keychain storage, not plain async storage or logs.
+- Request camera, microphone, and install permissions only when required.
+- Treat scan content and deep-link parameters as untrusted.
+- Prevent duplicate mutations during reconnect or user retry.
+- Revalidate permission and assignment changes after refresh or relogin.
+- Do not bundle production secrets into the client.
 
-- `runtimeVersion.policy = appVersion`
-- `updates.enabled = true`
-- `updates.checkAutomatically = ON_LOAD`
-- EAS update channels:
-  - `development`
-  - `preview`
-  - `production`
+## QA Baseline
 
-Runtime behavior:
+- Authentication, refresh, logout, revoked session, and password changes.
+- Permission and module combinations across standard, cashier, and rider accounts.
+- Parcel create, sender payment, queue, receiving, OTP, and exception flows.
+- Self-service completion, call-center follow-up, photo discrepancies, delivery-change review, and customer contact maintenance.
+- Rider assignment, signature, collection, change request, and real-time reconnect.
+- Communication messaging, mentions, calls, and reconnect.
+- Android APK update available, current, failed download, cancelled install, and retry.
+- Android and iOS native build and device smoke tests.
 
-- App checks for updates on launch and when app returns to foreground.
-- Check frequency is throttled to avoid excessive calls.
-- When an update is available, user is prompted to install now.
-- Install flow uses:
-  - `checkForUpdateAsync()`
-  - `fetchUpdateAsync()`
-  - `reloadAsync()`
-
-## GitHub Android APK Build
-
-Workflow added:
-
-- `.github/workflows/mobile-android-apk.yml`
-
-Trigger:
-
-- Pull request to `mobile` branch
-- Manual run (`workflow_dispatch`)
-
-Output:
-
-- Downloads APK from EAS and uploads to GitHub Artifacts
-- Artifact name pattern: `vipex-mobile-android-apk-*`
-
-Required GitHub secret:
-
-- `EXPO_TOKEN` (Expo access token with build permissions)
-
-Important:
-
-- Ensure `apps/mobile/app.json` has a valid EAS project ID under `expo.extra.eas.projectId`
-  before CI runs in non-interactive mode.
-
-## Environment
-
-Android release builds load their endpoints from `apps/mobile/.env.production`:
-
-- `https://testing.app.vipexparcel.com`
-
-Runtime uses `/v1` automatically in mobile API layer.
-
-Debug builds load `apps/mobile/.env`, where local development can override with:
-
-- `API_BASE_URL`
-- `COMMUNICATION_WS_URL`
-
-## Notes
-
-- iOS build output is `.ipa` (not APK).
-- Android internal install can use `.apk`; store upload uses `.aab`.
-- Signature collection in rider flow currently uses placeholder text (`MOBILE_CONFIRMATION`) and can be upgraded to a real signature canvas capture next.
+See [Mobile QA Smoke Checklist](MOBILE_QA_SMOKE_CHECKLIST.md) and [Client Applications](CLIENT_APPLICATIONS.md).

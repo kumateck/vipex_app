@@ -3,7 +3,7 @@ import { Text, type TextProps } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { router, routeFromHref } from './navigation-service';
+import { router } from './navigation-service';
 
 type LinkProps = TextProps & {
   href: string | { pathname?: string; params?: Record<string, unknown> };
@@ -35,8 +35,7 @@ export function Redirect({ href }: { href: LinkProps['href'] }) {
 export function Link({ href, asChild, children, onPress, ...props }: LinkProps) {
   const handlePress: NonNullable<TextProps['onPress']> = (event) => {
     onPress?.(event);
-    const route = routeFromHref(href);
-    router.push({ pathname: route.name, params: route.params });
+    router.push(href);
   };
 
   if (asChild && React.isValidElement(children)) {
