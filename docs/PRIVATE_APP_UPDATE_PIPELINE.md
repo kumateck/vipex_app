@@ -14,7 +14,7 @@ Date: 2026-03-29
 
 - Native Android APK built by Gradle
 - APK artifact uploaded to GitHub and published to private MinIO storage
-- Authenticated app endpoint returns release metadata and a short-lived signed APK URL
+- Authenticated app endpoint returns release metadata and a short-lived signed HTTPS app-proxy URL
 - Triggered by a push to the `mobile` branch
 
 ## Workflows
@@ -93,6 +93,9 @@ Optional build-time defaults:
 - Android releases use the same tracked signing key so installed private APKs can upgrade in place.
 - The app checks `/v1/mobile-updates/android/latest` after authentication and when returning to the
   foreground.
+- The metadata endpoint signs `/v1/mobile-updates/android/download` for 15 minutes using the app's
+  public `APP_BASE_URL`. The download gateway streams the one fixed latest APK from private MinIO,
+  so internal HTTP MinIO endpoints are never exposed to Android.
 - Android 8+ users must allow Vipex Mobile as an install source the first time they update.
 
 ## Update Detection Rules
@@ -107,8 +110,9 @@ Optional build-time defaults:
 
 - App compares its installed native `versionCode` with the private `latest.json` release metadata.
 - If a newer build exists, it prompts once per app session.
-- **Update now** downloads the signed MinIO APK through Android Download Manager and opens the
-  package installer when ready.
+- **Update now** downloads the APK through the signed HTTPS app gateway using Android Download
+  Manager and opens the package installer when ready. Missing, altered, or expired app download
+  signatures return 401; the user can request a fresh link by checking for the update again.
 
 ## Notes
 

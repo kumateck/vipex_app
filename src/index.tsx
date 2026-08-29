@@ -2,6 +2,7 @@ import { serve } from 'bun';
 import { apiFetch } from './server/app';
 import { logger as devLogger } from './server/utils/logger';
 import { join, resolve } from 'node:path';
+import { getWebCacheHeaders } from './server/utils/web-cache';
 import {
   communicationSocketHandlers,
   upgradeCommunicationSocket,
@@ -24,14 +25,27 @@ async function serveWebAsset(req: Request): Promise<Response> {
   if (isPathInside(filePath, webDistDir)) {
     const asset = Bun.file(filePath);
     if (await asset.exists()) {
-      return new Response(asset);
+      return new Response(asset, { headers: getWebCacheHeaders(pathname) });
     }
+  }
+
+  if (pathname.startsWith('/assets/')) {
+    return new Response('Build asset not found', {
+      status: 404,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-store',
+      },
+    });
   }
 
   const index = Bun.file(webIndexPath);
   if (await index.exists()) {
     return new Response(index, {
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        ...getWebCacheHeaders(pathname, true),
+      },
     });
   }
 

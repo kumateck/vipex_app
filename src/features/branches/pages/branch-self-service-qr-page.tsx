@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import logoPng from '@/assets/logo.png';
 import { useGetBranchQuery } from '../api/branches.api';
+import { buildSelfServiceUrl } from '../utils/self-service-url';
 
 const QR_SIZE = 280;
 
@@ -24,7 +25,12 @@ export function BranchSelfServiceQrPage() {
     return <p className="py-10 text-center text-sm text-muted-foreground">Branch not found.</p>;
   }
 
-  const selfServiceUrl = `${window.location.origin}/self-service/${branch.id}?scan=1`;
+  const selfServiceUrl = buildSelfServiceUrl({
+    branchId: branch.id,
+    currentOrigin: window.location.origin,
+    developmentHost: __DEV_LAN_HOST__,
+    isDevelopment: import.meta.env.DEV,
+  });
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-4">

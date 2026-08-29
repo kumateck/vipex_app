@@ -47,6 +47,7 @@ export const PARCEL_GUIDES: HelpGuide[] = [
         title: 'Confirm payment responsibility',
         description:
           'Choose whether the sender is paying now or the receiver will pay. Confirm the amount with the customer before continuing.',
+        note: 'The party you select here (sender, receiver, or a separate payer) is what prints as the payer on the A5 receipt, so choose it carefully.',
       },
       {
         title: 'Review and create',
@@ -187,6 +188,76 @@ export const PARCEL_GUIDES: HelpGuide[] = [
         solution: 'Stop the normal receipt and report it through the discrepancy process.',
       },
     ],
-    relatedGuideIds: ['find-a-parcel', 'create-support-ticket'],
+    relatedGuideIds: ['find-a-parcel', 'receive-a-consignment', 'create-support-ticket'],
+  },
+  {
+    id: 'receive-a-consignment',
+    categoryId: 'operations',
+    title: 'Receive a consignment of parcels',
+    summary:
+      'Open an incoming consignment, receive every parcel inside it, and close the session with or without exceptions.',
+    keywords: [
+      'consignment',
+      'receiving',
+      'batch receive',
+      'discrepancy',
+      'close with exceptions',
+      'call sender',
+    ],
+    estimatedMinutes: 8,
+    pageName: 'Consignments',
+    pageUrl: '/parcels/processed',
+    beforeYouStart: [
+      'The consignment must have physically arrived at your branch.',
+      'Have the consignment code or manifest available before you start the session.',
+    ],
+    steps: [
+      {
+        title: 'Open the incoming consignment',
+        description:
+          'Under Booking & Shipping, select Consignments and find the consignment that has arrived. Open it and select Receive to start the receiving session.',
+      },
+      {
+        title: 'Scan or check off every parcel',
+        description:
+          'Scan each parcel in the consignment one at a time. The session tracks how many of the manifested parcels have been received so far.',
+      },
+      {
+        title: 'Watch for the CS badge',
+        description:
+          'A parcel marked “CS” must have its sender called before it is handed to the receiver. This does not block receiving, but do not skip the call later at handover.',
+      },
+      {
+        title: 'Flag missing or damaged parcels',
+        description:
+          'If a manifested parcel is missing, damaged, or does not match its record, flag it as a discrepancy instead of forcing it through as received.',
+        note: 'Do not guess a parcel into the session to make the count match.',
+      },
+      {
+        title: 'Close the session',
+        description:
+          'When every parcel has been scanned or flagged, close the session. If every parcel matched cleanly, it closes as Closed; if any were flagged, it closes as Closed with exceptions.',
+      },
+    ],
+    expectedResult:
+      'The consignment shows as Closed or Closed with exceptions, and every parcel inside it is either received at your branch or recorded as a discrepancy.',
+    commonIssues: [
+      {
+        problem: 'A parcel scans but does not belong to this consignment.',
+        solution:
+          'Stop and flag it as a discrepancy rather than receiving it. Report the mismatch to a supervisor.',
+      },
+      {
+        problem: 'The consignment cannot be closed.',
+        solution:
+          'Check that every manifested parcel has either been scanned or explicitly flagged — a session with unresolved parcels cannot be closed.',
+      },
+      {
+        problem: 'I already closed the session but found a missed parcel.',
+        solution:
+          'Do not reopen it yourself. Report the parcel and the consignment code to a supervisor or IT support.',
+      },
+    ],
+    relatedGuideIds: ['receive-an-incoming-parcel', 'find-a-parcel', 'create-support-ticket'],
   },
 ];

@@ -12,6 +12,7 @@ import type {
   SelfServiceBookingFormValues,
   SelfServiceStage,
 } from '../types/self-service-form.types';
+import { SelfServiceTermsConsent } from './self-service-terms';
 
 type SelfServiceReviewStageProps = {
   control: Control<SelfServiceBookingFormValues>;
@@ -123,6 +124,8 @@ export function SelfServiceReviewStage({
           <ReviewRow label="Value" value={`GH₵${sanitizeString(values.parcelValue) || '0'}`} />
           <ReviewRow label="Call before delivery" value={values.callSender ? 'Yes' : 'No'} />
         </ReviewSection>
+
+        <SelfServiceTermsConsent control={control} />
       </div>
     </SelfServiceStageShell>
   );

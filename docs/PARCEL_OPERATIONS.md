@@ -68,7 +68,12 @@ Receiving supports scan-based parcel identification, completeness tracking, disc
 
 Mobile scan-to-receive accepts the current parcel tracking URL, a bare booking or tracking code, and legacy production payloads in the form `QR-<tracking-code>`. The client normalizes these formats before searching for an in-transit parcel at the authenticated user's destination branch. The overview count loads from the server when the screen gains focus and shows the server's total record count, not only the currently rendered page. An unreadable code or a code for another branch/status remains unmatched and does not change parcel state.
 
-The mobile camera displays a high-contrast moving scan band with a solid center line and an active-scanner status while it is looking for a QR code. Android production builds must set `VisionCamera_enableCodeScanner=true`; this bundles the ML Kit barcode model instead of relying on an on-demand model download. Changing this native property requires rebuilding and reinstalling the Android application.
+The mobile camera displays a high-contrast moving scan band with a solid center line and an active-scanner status while it is looking for a QR code. It starts on the device's neutral back-camera lens, supports pinch-to-zoom, and presents a Light toggle on devices with a torch. Staff should flatten reflective wrapping and change the camera angle to remove glare. Android production builds must set `VisionCamera_enableCodeScanner=true`; this bundles the ML Kit barcode model instead of relying on an on-demand model download. Changing this native property requires rebuilding and reinstalling the Android application.
+
+Scanner assistance does not make low-contrast stock compliant. New parcel QR codes require black
+modules on an opaque white area with a full quiet zone. Existing blue stickers require a white
+QR-only overlay label or manual code search; the camera must not be treated as a substitute for
+correct label stock.
 
 After detecting a QR code, mobile provides immediate haptic feedback, pauses further camera scanning, and covers the camera preview with a high-contrast progress overlay reading **QR detected — Finding incoming parcel…**. The overlay remains until the branch-scoped in-transit lookup succeeds or fails, preventing an ambiguous or apparently idle processing state.
 

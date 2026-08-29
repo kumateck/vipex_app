@@ -156,6 +156,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
           <BrandedQrCode
             value={qrValue}
             size={300}
+            variant="print"
             ariaLabel="Parcel tracking QR code"
             className="self-center overflow-hidden"
             style={{ alignSelf: 'center', width: '34mm', height: '34mm', overflow: 'hidden' }}

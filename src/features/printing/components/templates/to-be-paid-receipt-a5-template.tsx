@@ -93,6 +93,7 @@ export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
         <BrandedQrCode
           value={qrValue}
           size={320}
+          variant="print"
           ariaLabel="Parcel tracking QR code"
           className="self-start justify-self-center"
           style={{ width: '36mm', height: '36mm', justifySelf: 'center', alignSelf: 'start' }}
