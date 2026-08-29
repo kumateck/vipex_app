@@ -8,6 +8,8 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
 
   if (pathname === '/branches/new') return PermissionKeys.CanCreateBranches;
   if (pathname.startsWith('/branches/edit/')) return PermissionKeys.CanUpdateBranches;
+  if (pathname.startsWith('/branches/') && pathname.endsWith('/qr-print'))
+    return PermissionKeys.CanPrintSelfServiceQrCode;
   if (pathname === '/locations/new') return PermissionKeys.CanCreateLocations;
   if (pathname.startsWith('/locations/edit/')) return PermissionKeys.CanUpdateLocations;
   if (pathname === '/users/new') return PermissionKeys.CanCreateUsers;

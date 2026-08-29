@@ -79,6 +79,9 @@ Public, branch-bound temporary-session operations:
 - `POST /self-service/drafts`
 
 Public calls after session creation send `x-self-service-session`. Customer lookup is exact and returns a minimal result.
+`POST /self-service/drafts` requires `termsAccepted: true` and the current `termsVersion`. Missing,
+false, or outdated consent returns a validation/bad-request response. Successful draft creation
+records the accepted version and server acceptance time for audit.
 
 Authenticated agent operations:
 

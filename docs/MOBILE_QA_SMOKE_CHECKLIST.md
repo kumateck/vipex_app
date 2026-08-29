@@ -99,6 +99,10 @@ Last updated: 2026-08-27
    - Confirm the camera shows a clearly visible moving scan band with a solid center line and "Scanner active" status before detection.
    - After detection, confirm haptic feedback occurs and the camera is covered by the large **QR detected — Finding incoming parcel…** progress overlay until lookup completes.
    - Scan a current tracking-URL QR and a legacy production `QR-<tracking-code>` sticker.
+   - Confirm the scanner starts on the neutral back lens, pinch-to-zoom works, and the Light toggle
+     appears only when the device has a torch.
+   - Scan a compliant black-on-white print under normal and dim light. Verify blue/dark stock is
+     handled with a white 30 mm overlay label or manual search, not accepted as production stock.
    - Repeat scan → parcel review → **Back To Incoming List** at least three times; every return must show a live camera preview without refresh, a dark preview, or `session/invalid-output-configuration`.
    - Force or simulate a camera-session error and confirm the in-screen **Restart Camera** recovery appears instead of a console error or unexplained dark preview.
    - Confirm an unreadable, wrong-branch, or non-in-transit QR does not open an unrelated parcel.
@@ -126,5 +130,7 @@ Last updated: 2026-08-27
 
 1. `bun run --cwd apps/mobile typecheck` passes.
 2. Rebuild and install the Android app after native scanner configuration changes; confirm the release APK detects QR codes without a prior model download.
-3. Login, forgot, reset, and set password screens still render correctly.
-4. Home quick-access links only show modules user has permission for.
+3. Publish a newer Android build while production MinIO uses its internal HTTP endpoint; confirm **Update now** receives an `https://` app URL, downloads the APK, verifies its SHA-256, and opens the installer without the “update URL must use HTTPS” error.
+4. Confirm a missing, altered, or expired mobile-update download signature returns 401 and does not stream the APK.
+5. Login, forgot, reset, and set password screens still render correctly.
+6. Home quick-access links only show modules user has permission for.

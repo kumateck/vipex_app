@@ -9,8 +9,14 @@ type ErrorLike = {
 };
 
 let lastToast = { message: '', at: 0 };
-const STALE_BUILD_RELOAD_GUARD_KEY = 'vipex:stale-build-reload-at';
-const STALE_BUILD_RELOAD_GUARD_MS = 60_000;
+let staleBuildReloadPending = false;
+const STALE_BUILD_RELOAD_STATE_KEY = 'vipex:stale-build-reload-state';
+const STALE_BUILD_MAX_RELOAD_ATTEMPTS = 3;
+const STALE_BUILD_RELOAD_DELAY_MS = 1_500;
+
+type StaleBuildReloadState = {
+  attempts: number;
+};
 
 function errorToText(error: unknown): string {
   if (!error) return '';
@@ -25,7 +31,7 @@ function errorToText(error: unknown): string {
   return '';
 }
 
-function isLikelyStaleBuildError(error: unknown): boolean {
+export function isLikelyStaleBuildError(error: unknown): boolean {
   const text = errorToText(error).toLowerCase();
   if (!text) return false;
   return (
@@ -37,21 +43,70 @@ function isLikelyStaleBuildError(error: unknown): boolean {
   );
 }
 
+function readReloadState(): StaleBuildReloadState | null {
+  try {
+    const stored = window.sessionStorage.getItem(STALE_BUILD_RELOAD_STATE_KEY);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as Partial<StaleBuildReloadState>;
+    if (typeof parsed.attempts !== 'number') return null;
+    return { attempts: parsed.attempts };
+  } catch {
+    return null;
+  }
+}
+
+function writeReloadState(state: StaleBuildReloadState) {
+  try {
+    window.sessionStorage.setItem(STALE_BUILD_RELOAD_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // The URL attempt counter still prevents loops when session storage is unavailable.
+  }
+}
+
+export function createHardReloadUrl(currentUrl: string, now: number, attempt?: number): string {
+  const nextUrl = new URL(currentUrl);
+  nextUrl.searchParams.set('__hard_reload', String(now));
+  if (attempt !== undefined) nextUrl.searchParams.set('__reload_attempt', String(attempt));
+  return nextUrl.toString();
+}
+
+export function hardReloadApplication() {
+  if (typeof window === 'undefined') return;
+  window.location.replace(createHardReloadUrl(window.location.href, Date.now()));
+}
+
+export function getNextStaleBuildReloadAttempt(previousAttempts: number): number | null {
+  if (!Number.isFinite(previousAttempts) || previousAttempts < 0) return 1;
+  if (previousAttempts >= STALE_BUILD_MAX_RELOAD_ATTEMPTS) return null;
+  return previousAttempts + 1;
+}
+
 function tryReloadForStaleBuild(): boolean {
   if (typeof window === 'undefined') return false;
+  if (staleBuildReloadPending) return true;
+  const storedState = readReloadState();
+  const urlAttempt = Number(
+    new URL(window.location.href).searchParams.get('__reload_attempt') ?? 0,
+  );
+  const previousAttempts = Math.max(
+    storedState?.attempts ?? 0,
+    Number.isFinite(urlAttempt) ? urlAttempt : 0,
+  );
+
+  const attempt = getNextStaleBuildReloadAttempt(previousAttempts);
+  if (attempt === null) return false;
+
   const now = Date.now();
-  const previousRaw = window.sessionStorage.getItem(STALE_BUILD_RELOAD_GUARD_KEY);
-  const previous = previousRaw ? Number(previousRaw) : 0;
-
-  if (Number.isFinite(previous) && previous > 0 && now - previous < STALE_BUILD_RELOAD_GUARD_MS) {
-    return false;
-  }
-
-  window.sessionStorage.setItem(STALE_BUILD_RELOAD_GUARD_KEY, String(now));
-  const nextUrl = new URL(window.location.href);
-  nextUrl.searchParams.set('__hard_reload', String(now));
-  window.location.replace(nextUrl.toString());
+  staleBuildReloadPending = true;
+  writeReloadState({ attempts: attempt });
+  window.setTimeout(() => {
+    window.location.replace(createHardReloadUrl(window.location.href, now, attempt));
+  }, STALE_BUILD_RELOAD_DELAY_MS);
   return true;
+}
+
+export function tryRecoverFromStaleBuildError(error: unknown): boolean {
+  return isLikelyStaleBuildError(error) && tryReloadForStaleBuild();
 }
 
 function readMessage(error: unknown): string {
@@ -102,15 +157,18 @@ export function installTheAduseiGlobalErrorHandlers() {
   if (typeof window === 'undefined') return () => undefined;
 
   const onError = (event: ErrorEvent) => {
-    if (isLikelyStaleBuildError(event.error ?? event.message)) {
-      if (tryReloadForStaleBuild()) return;
+    const error = event.error ?? event.message;
+    if (isLikelyStaleBuildError(error)) {
+      tryRecoverFromStaleBuildError(error);
+      return;
     }
-    TheAduseiErrorResponse(event.error ?? event.message ?? 'Unexpected error');
+    TheAduseiErrorResponse(error ?? 'Unexpected error');
   };
 
   const onUnhandledRejection = (event: PromiseRejectionEvent) => {
     if (isLikelyStaleBuildError(event.reason)) {
-      if (tryReloadForStaleBuild()) return;
+      tryRecoverFromStaleBuildError(event.reason);
+      return;
     }
     TheAduseiErrorResponse(event.reason ?? 'Unhandled async error');
   };

@@ -12,6 +12,7 @@ type NavigationItem = {
 const CATEGORY_BY_GROUP: Record<string, HelpCategoryId> = {
   Workspace: 'workspace',
   Operations: 'operations',
+  'Fleet Transport': 'operations',
   Commercial: 'commercial',
   Finance: 'finance',
   'Human Capital': 'human-capital',
@@ -23,7 +24,7 @@ const CATEGORY_BY_GROUP: Record<string, HelpCategoryId> = {
 
 const MODULE_SUMMARIES: Record<string, string> = {
   Dashboard: 'See the information and shortcuts most relevant to your work.',
-  'Super Search': 'Find parcels quickly using a tracking number or other known details.',
+  'Super Search': 'Find parcels quickly using a booking code or other known details.',
   'Internal Communication': 'Chat, call, and coordinate events with colleagues inside Vipex.',
   Appearance: 'Choose how Vipex looks on your device.',
   'Help Center': 'Find plain-language instructions for every part of the application.',

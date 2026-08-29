@@ -28,6 +28,8 @@ export type SubmitSelfServiceDraftInput = {
   parcelContent: string;
   parcelValueCedis: number | string;
   callSender: boolean;
+  termsAccepted: true;
+  termsVersion: string;
 };
 
 export type SubmitSelfServiceDraftResponse = {

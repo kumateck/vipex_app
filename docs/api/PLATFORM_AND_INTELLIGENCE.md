@@ -8,7 +8,9 @@ All paths are relative to `/v1`.
 - `/module-workspace`: module overview data.
 - `/audit`: audit search and entity history.
 - `/desktop-updates`: desktop release metadata and artifacts required by installed clients.
-- `/mobile-updates`: mobile release metadata and Android APK delivery.
+- `/mobile-updates`: authenticated mobile release metadata plus a 15-minute signed HTTPS app-proxy
+  URL for Android APK delivery. The signed download route exposes only the fixed latest APK,
+  rejects invalid or expired signatures with 401, and keeps the MinIO origin private.
 - `/geolocation`: distance and nearby-branch queries.
 - `/uploads`: shared model-linked object handling.
 
