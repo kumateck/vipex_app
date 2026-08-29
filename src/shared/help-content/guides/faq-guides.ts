@@ -98,4 +98,82 @@ export const FAQ_GUIDES: HelpGuide[] = [
     commonIssues: [],
     relatedGuideIds: ['basic-troubleshooting', 'create-support-ticket'],
   },
+  {
+    id: 'faq-sticker-print-usage',
+    categoryId: 'faq',
+    title: 'Where can I see how many parcel stickers a branch has printed?',
+    summary:
+      'Go to the Reports page and open the Sticker Print Usage report for daily and per-branch print totals.',
+    keywords: ['sticker', 'sticker print', 'thermal sticker', 'reports', 'stock order'],
+    estimatedMinutes: 1,
+    pageName: 'Reports',
+    pageUrl: '/reports',
+    beforeYouStart: [],
+    steps: [
+      {
+        title: 'Open the Sticker Print Usage report',
+        description:
+          'On the Reports page, select the Sticker Print Usage report and choose your date range.',
+      },
+      {
+        title: 'Read the totals',
+        description:
+          'The report shows prints and stickers by day and by branch — use it to plan when a branch needs more sticker roll stock.',
+      },
+    ],
+    expectedResult:
+      'You can see how many sticker labels were printed per day and per branch for the selected period.',
+    commonIssues: [
+      {
+        problem: 'The Sticker Print Usage report is missing from Reports.',
+        solution:
+          'This report needs its own report-viewing permission. Ask a supervisor to confirm your role includes it.',
+      },
+    ],
+    relatedGuideIds: ['create-a-parcel'],
+  },
+  {
+    id: 'faq-qr-label-scanner-issues',
+    categoryId: 'faq',
+    title: 'The scanner won’t read a parcel’s QR label. What do I do?',
+    summary:
+      'Older blue stickers and non-standard stock often won’t scan reliably — apply a compliant white overlay label or search for the parcel manually instead of forcing it.',
+    keywords: [
+      'qr code',
+      'scanner not working',
+      'blue sticker',
+      'label stock',
+      'overlay label',
+      'scan to receive',
+    ],
+    estimatedMinutes: 2,
+    beforeYouStart: [],
+    steps: [
+      {
+        title: 'Try the scanner normally first',
+        description:
+          'Keep the label flat, avoid glare, and give the scanner a moment — dim lighting alone can cause a slow or failed read.',
+      },
+      {
+        title: 'Check the label stock',
+        description:
+          'New parcel QR labels must print black-on-opaque-white with a clear white border. Older blue or dark stock, or a label under glossy tape, will often fail to scan.',
+      },
+      {
+        title: 'Apply a compliant overlay or search manually',
+        description:
+          'For a parcel on old blue stock, apply a plain white QR-only overlay label over it if one is available. Otherwise, use Super Search with the parcel number instead of forcing a scan.',
+        note: 'The scanner is not a substitute for correct label stock — do not keep rescanning a label that is fundamentally non-compliant.',
+      },
+    ],
+    expectedResult:
+      'The parcel is identified either by a successful scan or by manual search, without repeated failed scan attempts.',
+    commonIssues: [
+      {
+        problem: 'Overlay labels are not available at my branch.',
+        solution: 'Use manual search by parcel number and report the shortage to a supervisor.',
+      },
+    ],
+    relatedGuideIds: ['receive-an-incoming-parcel', 'find-a-parcel'],
+  },
 ];

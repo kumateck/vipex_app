@@ -18,6 +18,22 @@ The web client contains the complete sidebar workspace and feature modules. It u
 
 Pages are thin route wrappers. Feature UI, hooks, services, types, and dialogs live in their domain feature folders according to `AGENTS.md`.
 
+Production HTML and SPA fallback responses use `no-store/no-cache`; content-hashed files under
+`/assets/` use a one-year immutable cache. If navigation hits the short deployment interval and a
+lazy import reports **Failed to fetch dynamically imported module**, both the global handler and the
+React Router error boundary show an **Updating application** recovery view and schedule a
+cache-busted reload after 1.5 seconds. Recovery is limited to three automatic attempts per browser
+session. After that limit, automatic refreshing stops and the recovery view keeps a manual Reload
+action available; stale assets never appear as a generic 500 page.
+
+A missing `/assets/` file returns a non-cacheable 404 instead of the SPA HTML fallback. This keeps
+module failures explicit and prevents an HTML response from masquerading as JavaScript.
+
+For production diagnosis, capture the exact asset URL from **Technical details** or browser DevTools
+Network, check its status and content type, compare the current `x-app-build` meta value in
+`index.html`, and review the web-server access log for that path and timestamp. This browser-side
+chunk error will not necessarily produce an API exception or database log.
+
 ## Desktop Application
 
 The Electron shell adds capabilities unavailable or inconsistent in a browser:
@@ -88,6 +104,12 @@ Desktop update feeds are public to installed clients but reveal only the release
 ## Release Verification
 
 - Web typecheck, tests, production build, responsive smoke test, and browser print test.
+- During a web deployment, keep an old tab open and navigate to an unloaded route. Confirm a failed
+  lazy chunk shows **Updating application** and performs a cache-busted reload into the current build
+  instead of showing a 500 page. Simulate repeated failures and confirm automatic reloads stop after
+  the third attempt.
+- Confirm HTML is served with `no-store/no-cache` and hashed `/assets/` files with
+  `max-age=31536000, immutable`.
 - Desktop packaging, preload isolation, native printer routing, parallel print, copy count, and update test.
 - Mobile typecheck, Android and iOS native builds, camera permissions, keychain, deep links, updates, and core workflow smoke tests.
 - Cross-client authorization and domain-result parity.

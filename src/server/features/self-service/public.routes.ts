@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { UUID, Telephone } from '../../schemas/common';
+import { SELF_SERVICE_TERMS_VERSION } from '@/shared/self-service/terms';
 import {
   getSelfServiceBranchInfoCtrl,
   issueSelfServiceSessionCtrl,
@@ -96,6 +97,8 @@ export const selfServicePublicRoutes = new Elysia({ name: 'self-service-public' 
         parcelContent: body.parcelContent,
         parcelValueCedis: body.parcelValueCedis,
         callSender: body.callSender ?? false,
+        termsAccepted: body.termsAccepted,
+        termsVersion: body.termsVersion,
         requestIp: clientIp(request),
         sessionToken: sessionToken(request),
       }),
@@ -119,6 +122,8 @@ export const selfServicePublicRoutes = new Elysia({ name: 'self-service-public' 
         parcelContent: t.String({ minLength: 1, maxLength: 255 }),
         parcelValueCedis: t.Union([t.Number({ minimum: 0 }), t.String()]),
         callSender: t.Optional(t.Boolean()),
+        termsAccepted: t.Literal(true),
+        termsVersion: t.Literal(SELF_SERVICE_TERMS_VERSION),
       }),
       detail: { tags: ['Self-Service'], summary: 'Submit a self-service booking draft' },
     },
