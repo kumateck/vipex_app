@@ -61,6 +61,8 @@ export const selfServiceBookingDrafts = pgTable(
       .notNull()
       .default(sql`0`),
     callSender: boolean('call_sender').notNull().default(false),
+    termsVersion: varchar('terms_version', { length: 32 }),
+    termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: false }),
 
     // Fixed 1-hour TTL from createdAt; unclaimed/incomplete drafts past this
     // are hard-deleted by the background sweep, not just hidden from queries.

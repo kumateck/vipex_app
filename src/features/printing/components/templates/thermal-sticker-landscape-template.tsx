@@ -113,9 +113,10 @@ export function ThermalStickerLandscapeTemplate({
           <BrandedQrCode
             value={qrValue}
             size={220}
+            variant="print"
             ariaLabel="Parcel tracking QR code"
             className="justify-self-end"
-            style={{ width: '24mm', height: '24mm' }}
+            style={{ width: '28mm', height: '28mm', backgroundColor: '#ffffff' }}
           />
         </div>
       </aside>

@@ -17,6 +17,7 @@ const catalog = [
   ['CanCreateBranches', 'Create branches', 'Branches'],
   ['CanUpdateBranches', 'Update branches', 'Branches'],
   ['CanDeleteBranches', 'Delete branches', 'Branches'],
+  ['CanPrintSelfServiceQrCode', 'Print branch self-service QR codes', 'Branches'],
   ['CanReadLocations', 'List and view locations', 'Locations'],
   ['CanCreateLocations', 'Create locations', 'Locations'],
   ['CanUpdateLocations', 'Update locations', 'Locations'],

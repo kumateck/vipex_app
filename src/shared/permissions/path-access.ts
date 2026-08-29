@@ -15,6 +15,12 @@ export function hasRequiredPermissionForPath(
   if (requiredPermission === PermissionKeys.CanReadReportsHub) {
     return ReportPermissionKeys.some((permissionKey) => granted.has(permissionKey));
   }
+  if (requiredPermission === PermissionKeys.CanPrintSelfServiceQrCode) {
+    return (
+      granted.has(PermissionKeys.CanPrintSelfServiceQrCode) ||
+      granted.has(PermissionKeys.CanUpdateBranches)
+    );
+  }
 
   return granted.has(requiredPermission);
 }

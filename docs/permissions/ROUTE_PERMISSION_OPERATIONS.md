@@ -29,6 +29,7 @@ Parcel, cashier, and human-capital route overrides.
 | `/parcels/edit/:id`                     | `CanCreateBookingWithParcels`     |
 | `/parcels/self-service`                 | `CanReadSelfServiceBookings`      |
 | `/parcels/self-service/:id`             | `CanCompleteSelfServiceBookings`  |
+| `/branches/:id/qr-print`                | `CanPrintSelfServiceQrCode`       |
 | `/cashiers`                             | `CanReadCashiers`                 |
 | `/cashier/sessions/active`              | `CanReadActiveCashierSessions`    |
 | `/cashier/sessions/history`             | `CanReadCashierSessionsHistory`   |

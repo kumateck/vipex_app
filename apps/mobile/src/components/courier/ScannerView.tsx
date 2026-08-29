@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -29,10 +30,12 @@ export function ScannerView({ onCodeScanned, processing = false }: ScannerViewPr
   const scanProgress = useSharedValue(0);
   const [cameraError, setCameraError] = useState(false);
   const [cameraRetryKey, setCameraRetryKey] = useState(0);
+  const [torchEnabled, setTorchEnabled] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       setCameraError(false);
+      setTorchEnabled(false);
     }, []),
   );
 
@@ -75,6 +78,9 @@ export function ScannerView({ onCodeScanned, processing = false }: ScannerViewPr
             device={device}
             isActive={!processing}
             codeScanner={codeScanner}
+            torch={torchEnabled ? 'on' : 'off'}
+            zoom={device.neutralZoom}
+            enableZoomGesture
             onError={() => setCameraError(true)}
           />
           {!cameraError ? (
@@ -89,6 +95,23 @@ export function ScannerView({ onCodeScanned, processing = false }: ScannerViewPr
               <Animated.View pointerEvents="none" style={[styles.scanBand, scanLineTransform]}>
                 <View style={[styles.scanLine, { backgroundColor: theme.colors.primary }]} />
               </Animated.View>
+              {device.hasTorch ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    torchEnabled ? 'Turn scanner light off' : 'Turn scanner light on'
+                  }
+                  onPress={() => setTorchEnabled((enabled) => !enabled)}
+                  style={({ pressed }) => [styles.torchButton, { opacity: pressed ? 0.72 : 1 }]}
+                >
+                  <Ionicons
+                    name={torchEnabled ? 'flash' : 'flash-outline'}
+                    size={18}
+                    color="#ffffff"
+                  />
+                  <Text style={styles.torchButtonText}>{torchEnabled ? 'Light on' : 'Light'}</Text>
+                </Pressable>
+              ) : null}
             </>
           ) : null}
           {processing && !cameraError ? (
@@ -119,7 +142,9 @@ export function ScannerView({ onCodeScanned, processing = false }: ScannerViewPr
           </Text>
         </View>
       ) : null}
-      <Text style={{ color: theme.colors.textSubtle }}>Align QR code inside the frame.</Text>
+      <Text style={{ color: theme.colors.textSubtle }}>
+        Align the QR inside the frame. For dark labels, avoid plastic glare and use Light if needed.
+      </Text>
     </View>
   );
 }
@@ -154,6 +179,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(124, 58, 237, 0.18)',
   },
   scanLine: { height: 5, borderRadius: 3 },
+  torchButton: {
+    position: 'absolute',
+    top: mobileSpacing.sm,
+    right: mobileSpacing.sm,
+    minHeight: 40,
+    paddingHorizontal: mobileSpacing.sm,
+    borderRadius: mobileRadius.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+  },
+  torchButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
   scannerStatus: {
     flexDirection: 'row',
     alignItems: 'center',

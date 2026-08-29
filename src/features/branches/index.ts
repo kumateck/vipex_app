@@ -8,6 +8,7 @@ export * from './components/branch-load-error';
 export * from './components/branches-table';
 export * from './components/branch-columns';
 export * from './hooks/use-branch-actions';
+export * from './utils/self-service-url';
 export * from './pages/branches-list-page';
 export * from './pages/branches-create-page';
 export * from './pages/branches-edit-page';

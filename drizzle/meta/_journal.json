@@ -477,6 +477,13 @@
       "when": 1787300900000,
       "tag": "0066_parcel_sticker_prints",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1787301000000,
+      "tag": "0067_self_service_terms_acceptance",
+      "breakpoints": true
     }
   ]
 }

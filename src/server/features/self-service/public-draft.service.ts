@@ -7,6 +7,10 @@ import { createSelfServiceDraftRepo } from './drafts.repository';
 import { validateSelfServiceCustomerHintSvc } from './customer-lookup.service';
 import { validateSelfServiceDestinationSvc } from './destination.service';
 import { consumeSelfServiceSessionSvc, validateSelfServiceSessionSvc } from './session.service';
+import {
+  SELF_SERVICE_TERMS_VERSION,
+  hasAcceptedCurrentSelfServiceTerms,
+} from '@/shared/self-service/terms';
 
 const DRAFT_TTL_MS = 60 * 60 * 1000; // 1 hour: unclaimed/incomplete drafts are hard-deleted after this
 const PHONE_DIGITS = 10;
@@ -60,9 +64,15 @@ export async function submitSelfServiceDraftSvc(input: {
   parcelContent: string;
   parcelValueCedis: number | string;
   callSender: boolean;
+  termsAccepted: boolean;
+  termsVersion: string;
   sessionToken: string;
   requestIp?: string | null;
 }) {
+  if (!hasAcceptedCurrentSelfServiceTerms(input)) {
+    throw BadRequest('You must accept the current Terms & Conditions before submitting');
+  }
+
   await validateSelfServiceSessionSvc({
     branchId: input.branchId,
     sessionToken: input.sessionToken,
@@ -146,6 +156,8 @@ export async function submitSelfServiceDraftSvc(input: {
     parcelContent,
     parcelValuePsw,
     callSender: Boolean(input.callSender),
+    termsVersion: SELF_SERVICE_TERMS_VERSION,
+    termsAcceptedAt: new Date(now),
     expiresAt: new Date(now + DRAFT_TTL_MS),
     requestIp: input.requestIp ?? null,
   });

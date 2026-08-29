@@ -14,6 +14,11 @@ import { BRANCH_TYPE_LABELS } from '@/shared/access/constants';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import type { Branch } from '../types/branch.types';
 
+const BRANCH_ACTION_PERMISSIONS = [
+  PermissionKeys.CanUpdateBranches,
+  PermissionKeys.CanPrintSelfServiceQrCode,
+];
+
 export function createBranchColumns(): ColumnDef<Branch>[] {
   return [
     {
@@ -51,7 +56,7 @@ export function createBranchColumns(): ColumnDef<Branch>[] {
       size: 70,
       enableSorting: false,
       cell: ({ row }) => (
-        <PermissionGuard permissionKey={PermissionKeys.CanUpdateBranches}>
+        <PermissionGuard permissionKey={BRANCH_ACTION_PERMISSIONS} mode="any">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon" className="h-8 w-8">
@@ -59,12 +64,18 @@ export function createBranchColumns(): ColumnDef<Branch>[] {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link to={`/branches/edit/${row.original.id}`}>Edit</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to={`/branches/${row.original.id}/qr-print`}>Print Self-Service QR Code</Link>
-              </DropdownMenuItem>
+              <PermissionGuard permissionKey={PermissionKeys.CanUpdateBranches}>
+                <DropdownMenuItem asChild>
+                  <Link to={`/branches/edit/${row.original.id}`}>Edit</Link>
+                </DropdownMenuItem>
+              </PermissionGuard>
+              <PermissionGuard permissionKey={BRANCH_ACTION_PERMISSIONS} mode="any">
+                <DropdownMenuItem asChild>
+                  <Link to={`/branches/${row.original.id}/qr-print`}>
+                    Print Self-Service QR Code
+                  </Link>
+                </DropdownMenuItem>
+              </PermissionGuard>
             </DropdownMenuContent>
           </DropdownMenu>
         </PermissionGuard>
