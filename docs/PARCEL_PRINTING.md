@@ -13,6 +13,18 @@ The application prints parcel stickers and A5 customer documents from the browse
 
 The A5 document includes payer details where a payer differs from the sender or receiver.
 
+## QR Print and Stock Standard
+
+Parcel QR codes require an opaque white background with an uninterrupted white quiet zone on all
+four sides. The printed QR uses solid black modules, no center logo, Q-level error correction, and a
+larger physical footprint on parcel stickers. Blue, dark, transparent, patterned, or reflective
+stock must not occupy the QR area: thermal printers cannot print white ink to correct dark stock.
+
+New parcel stickers must use white label stock or stationery with a factory-produced opaque white
+QR panel. For blue stickers already in circulation, staff must completely cover the old QR with a
+white QR-only overlay label of at least 30 mm square, or use manual code search. Do not place clear
+tape or glossy wrapping over the QR because glare can hide finder patterns.
+
 ## Intended Sticker Copy Rule
 
 This is the canonical requirement for every sticker-print entry point across the entire application:
@@ -127,6 +139,11 @@ Rules:
 
 ## Acceptance Scenarios
 
+- Print on approved opaque white stock and scan from several Android devices under normal and dim
+  branch lighting.
+- Confirm the QR has a white quiet zone, no logo over its modules, and no clipping at label edges.
+- Reject blue or dark stock without an opaque white QR panel; verify an existing blue label can be
+  recovered with a white 30 mm overlay label or manual code entry.
 - Print 1, 2, 20, 21, 100, and another user-entered positive whole number.
 - Reject 0, negative, decimal, blank, text, infinity, and unsafe numeric input.
 - Browser print produces exactly the requested sticker pages and one A5 page.

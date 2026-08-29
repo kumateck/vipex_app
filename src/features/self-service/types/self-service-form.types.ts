@@ -18,6 +18,7 @@ export type SelfServiceBookingFormValues = {
   parcelContent: string;
   parcelValue: string;
   callSender: boolean;
+  acceptedTerms: boolean;
 };
 
 export const createInitialSelfServiceFormValues = (): SelfServiceBookingFormValues => ({
@@ -28,6 +29,7 @@ export const createInitialSelfServiceFormValues = (): SelfServiceBookingFormValu
   parcelContent: '',
   parcelValue: '',
   callSender: false,
+  acceptedTerms: false,
 });
 
 export const SELF_SERVICE_STAGES = [
@@ -56,5 +58,5 @@ export const SELF_SERVICE_STAGE_FIELDS: Record<
   receiver: ['receiver.phone', 'receiver.fullname', 'receiver.phone2'],
   destination: ['destinationBranchId', 'destinationLocationId'],
   parcel: ['parcelContent', 'parcelValue'],
-  review: [],
+  review: ['acceptedTerms'],
 };

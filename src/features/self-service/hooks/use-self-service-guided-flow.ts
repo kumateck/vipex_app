@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { normalizePhoneDigits } from '@/lib/phone';
 import { sanitizeNumber, sanitizeString } from '@/lib/utils';
+import { SELF_SERVICE_TERMS_VERSION } from '@/shared/self-service/terms';
 import { useSubmitSelfServiceDraftMutation } from '../api/self-service-public.api';
 import {
   createInitialSelfServiceFormValues,
@@ -66,6 +67,8 @@ export function useSelfServiceGuidedFlow(
         parcelContent: values.parcelContent.trim(),
         parcelValueCedis,
         callSender: values.callSender,
+        termsAccepted: true,
+        termsVersion: SELF_SERVICE_TERMS_VERSION,
       }).unwrap();
       onSessionConsumed();
       setSubmittedDraftId(response.draftId);

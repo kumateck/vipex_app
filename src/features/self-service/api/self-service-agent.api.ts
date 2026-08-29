@@ -16,6 +16,8 @@ export type SelfServiceDraft = {
   parcelContent: string;
   parcelValuePsw: number;
   callSender: boolean;
+  termsVersion: string | null;
+  termsAcceptedAt: string | null;
   expiresAt: string;
   claimedBy: string | null;
   claimedAt: string | null;
