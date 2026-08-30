@@ -1,8 +1,10 @@
 import { and, count, desc, eq, ilike, isNotNull, ne, or, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
+  branches,
   customers,
   employees,
+  locations,
   notificationCampaigns,
   notificationDispatches,
   NotificationCampaignStatus,
@@ -483,7 +485,28 @@ type RecipientRow = {
   recipientId: string;
   recipientName: string | null;
   recipientAddress: string;
+  recipientPhone: string | null;
 };
+
+export async function getNotificationSenderContextRepo(input: {
+  companyId: string;
+  userId: string;
+}) {
+  const [row] = await db
+    .select({
+      senderName: users.fullname,
+      senderPhone: users.telephone,
+      branch: branches.name,
+      location: locations.name,
+    })
+    .from(users)
+    .leftJoin(branches, eq(branches.id, users.branchId))
+    .leftJoin(locations, eq(locations.id, users.locationId))
+    .where(and(eq(users.id, input.userId), eq(users.companyId, input.companyId)))
+    .limit(1);
+
+  return row ?? null;
+}
 
 export async function resolveAudienceRecipientsRepo(input: {
   companyId: string;
@@ -501,6 +524,7 @@ export async function resolveAudienceRecipientsRepo(input: {
         recipientId: customers.id,
         recipientName: customers.fullname,
         recipientAddress: isSms ? customers.telephone : customers.email,
+        recipientPhone: customers.telephone,
       })
       .from(customers)
       .where(
@@ -521,6 +545,7 @@ export async function resolveAudienceRecipientsRepo(input: {
         recipientId: users.id,
         recipientName: users.fullname,
         recipientAddress: isSms ? users.telephone : users.email,
+        recipientPhone: users.telephone,
       })
       .from(users)
       .where(
@@ -540,6 +565,7 @@ export async function resolveAudienceRecipientsRepo(input: {
         recipientId: employees.id,
         recipientName: employees.displayName,
         recipientAddress: isSms ? employees.telephone : employees.email,
+        recipientPhone: employees.telephone,
       })
       .from(employees)
       .where(
@@ -560,6 +586,7 @@ export async function resolveAudienceRecipientsRepo(input: {
         recipientId: employees.id,
         recipientName: employees.displayName,
         recipientAddress: isSms ? employees.telephone : employees.email,
+        recipientPhone: employees.telephone,
       })
       .from(employees)
       .where(
@@ -585,6 +612,8 @@ export async function getParcelRecipientsRepo(companyId: string, parcelId: strin
       parcelId: parcels.id,
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
+      branch: branches.name,
+      location: locations.name,
       secondReceiverId: parcels.secondReceiverId,
       primaryReceiverId: customers.id,
       primaryReceiverName: customers.fullname,
@@ -594,6 +623,8 @@ export async function getParcelRecipientsRepo(companyId: string, parcelId: strin
     })
     .from(parcels)
     .innerJoin(customers, eq(customers.id, parcels.receiverId))
+    .leftJoin(branches, eq(branches.id, parcels.destinationId))
+    .leftJoin(locations, eq(locations.id, parcels.pickupLocationId))
     .where(
       and(
         eq(parcels.id, parcelId),
@@ -630,6 +661,8 @@ export async function getParcelRecipientsRepo(companyId: string, parcelId: strin
     parcelId: parcel.parcelId,
     bookingCode: parcel.bookingCode,
     trackingCode: parcel.trackingCode,
+    branch: parcel.branch,
+    location: parcel.location,
     primary: {
       id: parcel.primaryReceiverId,
       name: parcel.primaryReceiverName,

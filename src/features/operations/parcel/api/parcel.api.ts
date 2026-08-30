@@ -585,6 +585,36 @@ export type ConsignmentItemRow = {
   arrivedByName: string | null;
 };
 
+export type PreviousConsignmentRow = {
+  id: string;
+  code: string;
+  sourceId: string;
+  sourceName: string;
+  destinationId: string;
+  destinationName: string;
+  consignmentDate: string;
+  createdAt: string;
+  status: number;
+  itemCount: number;
+};
+
+export type ConsignmentPrintItem = {
+  id: string;
+  senderName: string | null;
+  senderPhone: string | null;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  parcelDetails: string | null;
+  chargePsw: number;
+  plannedToBePaidPsw: number;
+};
+
+export type SavedConsignmentPrintPayload = {
+  consignmentCode: string;
+  destinationName: string;
+  items: ConsignmentPrintItem[];
+};
+
 export type ReceiveConsignmentItemResult =
   | {
       outcome: 'RECEIVED';
@@ -941,6 +971,19 @@ export const parcelApi = api.injectEndpoints({
       }),
       providesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    listPreviousConsignments: builder.query<
+      PreviousConsignmentRow[],
+      { dateFrom: string; dateTo: string; sourceId?: string | null }
+    >({
+      query: ({ dateFrom, dateTo, sourceId }) => ({
+        url: '/shipments/consignments/history',
+        params: { dateFrom, dateTo, ...(sourceId ? { sourceId } : {}) },
+      }),
+      providesTags: [{ type: 'Bookings', id: 'CONSIGNMENT_HISTORY' }],
+    }),
+    getSavedConsignmentPrintPayload: builder.query<SavedConsignmentPrintPayload, string>({
+      query: (id) => ({ url: `/shipments/consignments/${id}/print` }),
+    }),
     getConsignmentDetail: builder.query<ConsignmentDetail, string>({
       query: (id) => ({ url: `/shipments/consignments/${id}` }),
       providesTags: (_result, _error, id) => [{ type: 'Bookings', id: `CONSIGNMENT_${id}` }],
@@ -995,6 +1038,17 @@ export const parcelApi = api.injectEndpoints({
         url: `/shipments/parcels/${id}/mark-received`,
         method: 'POST',
         body: { receivedBy, status },
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    markParcelsReceived: builder.mutation<
+      { parcelIds: string[]; updatedCount: number; receivedAt: string },
+      { parcelIds: string[] }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcels/bulk-mark-received',
+        method: 'POST',
+        body,
       }),
       invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
@@ -1381,12 +1435,15 @@ export const {
   useCreateConsignmentMutation,
   useAddConsignmentItemsMutation,
   useListIncomingConsignmentsQuery,
+  useListPreviousConsignmentsQuery,
+  useLazyGetSavedConsignmentPrintPayloadQuery,
   useGetConsignmentDetailQuery,
   useListConsignmentItemsQuery,
   useReceiveConsignmentItemMutation,
   useCloseConsignmentMutation,
   useUpdateParcelStatusMutation,
   useMarkParcelReceivedMutation,
+  useMarkParcelsReceivedMutation,
   useUpdateParcelMutation,
   useSendParcelStatusCallNotificationMutation,
   useRecordParcelDispositionActionMutation,

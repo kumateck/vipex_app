@@ -2,6 +2,7 @@ export { ParcelPage } from './pages/parcel-page';
 export { ParcelCreatePage } from './pages/parcel-create-page';
 export { ParcelSenderPaymentsPage } from './pages/parcel-sender-payments-page';
 export { ParcelProcessedConsignmentPage } from './pages/parcel-processed-consignment-page';
+export { PreviousConsignmentsPage } from './pages/previous-consignments-page';
 export { ParcelInTransitPage } from './pages/parcel-in-transit-page';
 export { ParcelReceivePage } from './pages/parcel-receive-page';
 export { ParcelDiscrepanciesPage } from './pages/parcel-discrepancies-page';

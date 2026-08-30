@@ -23,8 +23,9 @@ This catalog maps the current application by business capability. Sidebar visibi
 | Sender payment               | `/parcels/sender-payments`                          | Sender due collection, cash/mobile money/credit rules, receipt and sticker printing                         |
 | Customer self-service drafts | Public branch QR and `/parcels/self-service`        | Short-lived customer draft, agent claim/complete/cancel, expiry sweep                                       |
 | Reconciliation cases         | `/parcels/reconciliation-cases`                     | Controlled amount/status/link corrections with approval and execution                                       |
-| Consignments                 | `/parcels/processed`                                | Select processed parcels, generate consignments, edit, reprint, dispatch                                    |
-| Incoming receiving           | `/parcels/in-transit/incoming`                      | Receive consignment, completeness checks, OTP where required, discrepancies                                 |
+| Consignments                 | `/parcels/processed`                                | Select processed parcels, generate consignments, edit, print, dispatch                                      |
+| Previous consignments        | `/parcels/consignments/history`                     | Retrieve by one date or inclusive range and reprint saved A4 manifests                                      |
+| Incoming receiving           | `/parcels/in-transit/incoming`                      | Single or atomic batch arrival, completeness checks, OTP where required, discrepancies                      |
 | Scan to receive              | `/parcels/receive`                                  | QR/manual parcel arrival confirmation                                                                       |
 | Call center                  | `/parcels/status`, `/parcels/home-delivery/address` | Outcomes, sender-contact flag, address collection                                                           |
 | Internal custody             | `/parcels/internal-transfers/*`                     | Branch/location/warehouse custody transfers and acknowledgement                                             |
