@@ -6,6 +6,7 @@ import {
   getParcelStatusSmsEventCode,
 } from '@/server/features/notification-hub/sms-event-definitions';
 import { updateCompanySmsEventSvc } from '@/server/features/notification-hub/sms-settings.service';
+import { buildCampaignTemplateValues } from '@/server/features/notification-hub/campaign-template-values';
 import { http } from '../utils/request';
 
 describe('Company SMS settings', () => {
@@ -24,11 +25,48 @@ describe('Company SMS settings', () => {
     }
   });
 
+  test('every parcel SMS event exposes branch and location variables', () => {
+    for (const definition of SMS_EVENT_DEFINITIONS) {
+      expect(definition.variables).toContain('branch');
+      expect(definition.variables).toContain('location');
+    }
+  });
+
   test('maps every parcel call outcome to a defined SMS action', () => {
     expect(getParcelStatusSmsEventCode('pickup')).toBe('parcel_status_call_pickup');
     expect(getParcelStatusSmsEventCode('delivery')).toBe('parcel_status_call_delivery');
     expect(getParcelStatusSmsEventCode('follow_up')).toBe('parcel_status_call_follow_up');
     expect(getParcelStatusSmsEventCode('contacted')).toBe('parcel_status_call_contacted');
+  });
+
+  test('resolves sender and recipient values for bulk SMS templates', () => {
+    expect(
+      buildCampaignTemplateValues({
+        senderName: 'Kwame Asante',
+        senderPhone: '0200000000',
+        recipientName: 'Ama Mensah',
+        recipientPhone: '0240000000',
+        branch: 'Accra Central',
+        location: 'Front Desk',
+        date: new Date('2026-08-29T12:00:00.000Z'),
+      }),
+    ).toEqual({
+      senderName: 'Kwame Asante',
+      senderPhone: '0200000000',
+      recipientName: 'Ama Mensah',
+      recipientPhone: '0240000000',
+      branch: 'Accra Central',
+      location: 'Front Desk',
+      date: '2026-08-29',
+    });
+
+    expect(buildCampaignTemplateValues({ recipientName: 'Customer' })).toMatchObject({
+      senderName: '',
+      senderPhone: '',
+      recipientPhone: '',
+      branch: '',
+      location: '',
+    });
   });
 
   test('rejects undeclared template variables before persistence', async () => {

@@ -1,8 +1,9 @@
-import type { ProcessedParcel } from '../../api/parcel.api';
+import type { ConsignmentPrintItem } from '../../api/parcel.api';
 
 export type ConsignmentPrintPayload = {
   consignmentCode: string;
-  items: ProcessedParcel[];
+  destinationName?: string;
+  items: ConsignmentPrintItem[];
 };
 
 type ConsignmentPrintDocumentProps = {
@@ -17,14 +18,14 @@ function formatMoney(amountPsw?: number | null) {
   });
 }
 
-function getPaidAmountPsw(parcel: ProcessedParcel) {
+function getPaidAmountPsw(parcel: ConsignmentPrintItem) {
   return Math.max(Number(parcel.chargePsw ?? 0) - Number(parcel.plannedToBePaidPsw ?? 0), 0);
 }
 
 export function ConsignmentPrintDocument({ payload }: ConsignmentPrintDocumentProps) {
   if (!payload) return null;
 
-  const destinationBranchName = payload.items[0]?.destinationName?.trim() || '-';
+  const destinationBranchName = payload.destinationName?.trim() || '-';
 
   return (
     <div className="consignment-print-sheet">

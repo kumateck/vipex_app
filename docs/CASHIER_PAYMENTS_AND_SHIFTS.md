@@ -72,6 +72,21 @@ The report at `/reports/cashier/shifts` summarizes sessions, amounts to be paid,
 
 Filters include session open date, branch, location, cashier type, and cashier. Branch users are scoped to their branch; broader consolidated access requires the relevant permission.
 
+After **Load report** succeeds, the web report shows a **Loaded Report Breakdown** control with
+`All cashier modules`, `Sender only`, `Receiver only`, and `Delivery cashier only`. This filter is
+applied to the already-loaded result and does not make another API request. It recalculates the
+visible session count, transaction and monetary totals, payment-mode totals, responsibility totals,
+payment rows, and printed report. Selecting a new pre-load scope and loading again resets the
+breakdown to all modules.
+
+Full Cashier report scope includes sender, receiver, and delivery collections. A Full Cashier
+transaction is classified as Sender or Receiver by its payer; transactions recorded through the
+Delivery Cashier module remain Delivery. Outstanding To Be Paid rows belong to the Sender module,
+so Receiver-only and Delivery-only views do not show them. A module with no matching transactions
+shows an empty result with zero recalculated totals. This behavior applies to the web and desktop
+report; mobile does not expose this report page. Permissions and server branch/cashier scope are
+unchanged by the post-load filter.
+
 ### Known Access and Selection Defect
 
 The current web page can be opened with the cashier-shift report permission, while reading the cashier directory is guarded by an accounting-read permission. When a Delivery Supervisor such as `vipexdelivery5@gmail.com` can view the report but cannot read selectable cashier assignments, the UI falls back to the signed-in account and displays it as the cashier. This makes the Cashier Type and Cashier controls appear locked or incorrectly selected even though the role itself is not a cashier.
@@ -102,3 +117,6 @@ Required correction:
 - Payment fails without changing parcel status.
 - Original-session correction and audit history.
 - Report totals match session transactions and method breakdowns.
+- A loaded Full Cashier report can switch between Sender-only, Receiver-only, Delivery-only, and
+  all-module results without another request; summaries, To Be Paid visibility, tables, and print
+  output follow the selected module, and a new load resets to all modules.

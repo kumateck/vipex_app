@@ -510,6 +510,8 @@ export function ParcelProcessedConsignmentPage() {
 
       setConsignmentPrintPayload({
         consignmentCode: created.code,
+        destinationName:
+          selectedParcels[0]?.destinationName ?? branchNameById.get(lockedDestinationId) ?? '-',
         items: selectedParcels,
       });
 

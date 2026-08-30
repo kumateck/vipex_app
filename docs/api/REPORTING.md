@@ -37,5 +37,9 @@ Accounting financial-statement endpoints remain under `/accounting/reports/*`.
 - Export and print are presentations of the returned report; they do not grant broader data access.
 - Sticker Print Usage reads successful events recorded by `/shipments/parcels/sticker-prints`.
 - Daily Cashier Sales cashier options must not infer a cashier assignment from an ordinary account role.
+- A Daily Cashier Sales request with cashier type `FULL` includes payment records from Sender,
+  Receiver, and Delivery cashier modules. The client may narrow the returned report after loading;
+  this presentation filter does not alter the endpoint's company, branch, location, or cashier
+  authorization scope.
 
 See [Reporting Module](../REPORTING_MODULE.md) and the [Report Route Permission Matrix](../permissions/ROUTE_PERMISSION_REPORTS.md).

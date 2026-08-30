@@ -26,7 +26,11 @@ describe('SMS template variables', () => {
   });
 
   test('rejects variables the bulk dispatcher cannot resolve', () => {
-    expect(getUnsupportedBulkSmsVariables('Hi {{recipientName}} on {{date}}')).toEqual([]);
-    expect(getUnsupportedBulkSmsVariables('Parcel {{bookingCode}}')).toEqual(['bookingCode']);
+    expect(
+      getUnsupportedBulkSmsVariables(
+        '{{senderName}} ({{senderPhone}}) to {{recipientName}} ({{recipientPhone}}) at {{branch}} / {{location}} on {{date}}',
+      ),
+    ).toEqual([]);
+    expect(getUnsupportedBulkSmsVariables('{{companyId}}')).toEqual(['companyId']);
   });
 });

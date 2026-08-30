@@ -5,6 +5,7 @@ import { EllipsisVertical } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,7 @@ import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useUpdateCustomerMutation } from '@/features/customers/api';
+import { useIncomingParcelBatchArrival } from '../../hooks/use-incoming-parcel-batch-arrival';
 import {
   type ParcelSearchRow,
   useGetParcelDetailsQuery,
@@ -33,6 +35,7 @@ import { CallSenderBadge } from '../call-sender-badge';
 import { PaymentStatusLegend } from '../parcel-processed-consignment/payment-status-legend';
 import { getConsignmentPaymentStatus } from '../parcel-processed-consignment/payment-status';
 import { ConfirmMarkArrivedDialog } from './confirm-mark-arrived-dialog';
+import { ConfirmBulkArrivalDialog } from './confirm-bulk-arrival-dialog';
 import { EditIncomingTransitParcelDialog } from './edit-incoming-transit-parcel-dialog';
 import { LogDiscrepancyDialog } from './log-discrepancy-dialog';
 import { ParcelDetailsDialog } from './parcel-details-dialog';
@@ -47,6 +50,7 @@ const EMPTY_META: PaginationMeta = {
   hasNextPage: false,
   hasPreviousPage: false,
 };
+const EMPTY_ROWS: ParcelSearchRow[] = [];
 
 function formatDate(value: string | null | undefined) {
   if (!value) return '-';
@@ -128,10 +132,33 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
     }));
   }, [serverFilters]);
 
+  const handleMarkAsArrived = useCallback(
+    async (parcel: ParcelSearchRow) => {
+      if (!user?.id) {
+        toast.error('Your user account could not be identified');
+        return;
+      }
+      await markParcelReceived({
+        id: parcel.id,
+        receivedBy: user.id,
+        status: ParcelStatus.ARRIVED_AT_DESTINATION,
+      }).unwrap();
+      toast.success(`Received ${parcel.bookingCode}`);
+    },
+    [markParcelReceived, user?.id],
+  );
+
+  const { data, isLoading, refetch } = useSearchParcelsQuery(query, {
+    skip: !companyId || !branchId,
+  });
+  const rows = data?.data ?? EMPTY_ROWS;
+  const batchArrival = useIncomingParcelBatchArrival({ rows, onArrived: refetch });
+
   const handleSearchSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       const term = searchInput.trim();
+      batchArrival.clearSelection();
       setQuery((prev) => ({
         ...prev,
         page: 1,
@@ -139,7 +166,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         filters: serverFilters,
       }));
     },
-    [searchInput, serverFilters],
+    [batchArrival, searchInput, serverFilters],
   );
 
   const handleRequestChange = useCallback(
@@ -160,26 +187,6 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
     },
     [serverFilters],
   );
-
-  const handleMarkAsArrived = useCallback(
-    async (parcel: ParcelSearchRow) => {
-      if (!user?.id) {
-        toast.error('Your user account could not be identified');
-        return;
-      }
-      await markParcelReceived({
-        id: parcel.id,
-        receivedBy: user.id,
-        status: ParcelStatus.ARRIVED_AT_DESTINATION,
-      }).unwrap();
-      toast.success(`Received ${parcel.bookingCode}`);
-    },
-    [markParcelReceived, user?.id],
-  );
-
-  const { data, isLoading, refetch } = useSearchParcelsQuery(query, {
-    skip: !companyId || !branchId,
-  });
   const { data: details, isFetching: isDetailsLoading } = useGetParcelDetailsQuery(
     selectedParcelId ?? '',
     {
@@ -195,12 +202,13 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
     if (!arrivalConfirmationParcel) return;
     try {
       await handleMarkAsArrived(arrivalConfirmationParcel);
+      batchArrival.removeSelection(arrivalConfirmationParcel.id);
       await refetch();
       setArrivalConfirmationParcel(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update parcel status');
     }
-  }, [arrivalConfirmationParcel, handleMarkAsArrived, refetch]);
+  }, [arrivalConfirmationParcel, batchArrival, handleMarkAsArrived, refetch]);
   const rowById = useMemo(
     () => new Map((data?.data ?? []).map((row) => [row.id, row])),
     [data?.data],
@@ -216,6 +224,38 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
+      ...(view === 'incoming'
+        ? ([
+            {
+              id: 'select',
+              header: () => (
+                <Checkbox
+                  checked={
+                    batchArrival.allOnPageSelected
+                      ? true
+                      : batchArrival.someOnPageSelected
+                        ? 'indeterminate'
+                        : false
+                  }
+                  onCheckedChange={(checked) => batchArrival.toggleCurrentPage(checked === true)}
+                  aria-label="Select all incoming parcels on this page"
+                  disabled={rows.length === 0 || batchArrival.isLoading}
+                />
+              ),
+              enableSorting: false,
+              cell: ({ row }: { row: { original: ParcelSearchRow } }) => (
+                <Checkbox
+                  checked={batchArrival.isSelected(row.original.id)}
+                  onCheckedChange={(checked) =>
+                    batchArrival.toggleParcel(row.original, checked === true)
+                  }
+                  aria-label={`Select parcel ${row.original.bookingCode}`}
+                  disabled={batchArrival.isLoading}
+                />
+              ),
+            },
+          ] satisfies ColumnDef<ParcelSearchRow>[])
+        : []),
       {
         id: 'rowNumber',
         header: 'No.',
@@ -394,7 +434,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         },
       },
     ],
-    [branchNameById, isUpdatingStatus, rowNumberOffset, view],
+    [batchArrival, branchNameById, isUpdatingStatus, rowNumberOffset, rows.length, view],
   );
 
   const handleSaveIncomingEdits = useCallback(async () => {
@@ -543,6 +583,13 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <Button
                   type="button"
+                  onClick={() => batchArrival.setIsConfirmationOpen(true)}
+                  disabled={batchArrival.selectedCount === 0 || batchArrival.isLoading}
+                >
+                  Mark Arrived ({batchArrival.selectedCount})
+                </Button>
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => {
                     setDiscrepancyParcel(null);
@@ -571,6 +618,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
                 variant="outline"
                 className="h-11 px-6"
                 onClick={() => {
+                  batchArrival.clearSelection();
                   setSearchInput('');
                   setQuery((prev) => ({
                     ...prev,
@@ -585,7 +633,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
             </form>
             <DataTable
               mode="server"
-              data={data?.data ?? []}
+              data={rows}
               columns={columns}
               meta={data?.meta ?? EMPTY_META}
               loading={isLoading}
@@ -617,6 +665,14 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         isConfirming={isUpdatingStatus}
         onCancel={() => setArrivalConfirmationParcel(null)}
         onConfirm={handleConfirmMarkAsArrived}
+      />
+
+      <ConfirmBulkArrivalDialog
+        open={view === 'incoming' && batchArrival.isConfirmationOpen}
+        parcels={batchArrival.selectedParcels}
+        isConfirming={batchArrival.isLoading}
+        onOpenChange={batchArrival.setIsConfirmationOpen}
+        onConfirm={batchArrival.confirmArrival}
       />
 
       <LogDiscrepancyDialog
