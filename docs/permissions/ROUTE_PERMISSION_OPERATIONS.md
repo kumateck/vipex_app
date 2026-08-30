@@ -8,6 +8,7 @@ Parcel, cashier, and human-capital route overrides.
 | --------------------------------------- | --------------------------------- |
 | `/parcels/sender-payments`              | `CanCreateSenderPayments`         |
 | `/parcels/processed`                    | `CanReadConsignments`             |
+| `/parcels/consignments/history`         | `CanReadConsignments`             |
 | `/parcels/pickup-queue`                 | `CanCreatePickupQueue`            |
 | `/parcels/pickup-queue/sender`          | `CanReadSenderPickupQueue`        |
 | `/parcels/waiting-pickup`               | `CanCompleteOfficePickup`         |

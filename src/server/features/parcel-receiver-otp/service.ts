@@ -53,7 +53,12 @@ async function resolveTargetPhone(
     );
   }
 
-  return { phone, name: target?.name ?? 'Customer' };
+  return {
+    phone,
+    name: target?.name ?? 'Customer',
+    branch: recipients.branch,
+    location: recipients.location,
+  };
 }
 
 export async function requestReceiverOtpSvc(input: {
@@ -66,7 +71,7 @@ export async function requestReceiverOtpSvc(input: {
   phoneSlot?: PhoneSlot;
 }) {
   await assertOfficePickupParcel(input.parcelId);
-  const { phone, name } = await resolveTargetPhone(
+  const { phone, name, branch, location } = await resolveTargetPhone(
     input.companyId,
     input.parcelId,
     input.targetReceiver,
@@ -107,6 +112,8 @@ export async function requestReceiverOtpSvc(input: {
       receiverName: name,
       otp,
       expiresInMinutes: 5,
+      branch,
+      location,
     },
     metadataJson: {
       parcelId: input.parcelId,

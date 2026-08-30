@@ -162,7 +162,27 @@ SMS Configuration displays the dispatch trigger, recipient, default/custom body,
 Every event dispatch creates a `notification_dispatches` record and resolves the authenticated
 company's active default SMS provider. These transactional SMS settings remain available even when
 the optional Notification Hub workspace module is disabled, because pickup and verification flows
-can still dispatch operational messages.
+can still dispatch operational messages. Every parcel event exposes `{{branch}}` and
+`{{location}}`; these resolve to the parcel's destination branch and pickup or queue location, with
+an empty location when the parcel has no assigned pickup location. Pickup queue tickets use the
+branch name as the queue location when no more specific location exists.
+
+Reusable templates and new bulk SMS messages support `{{senderName}}`, `{{senderPhone}}`,
+`{{recipientName}}`, `{{recipientPhone}}`, `{{branch}}`, `{{location}}`, and `{{date}}`.
+Sender, branch, and location values resolve from the user dispatching the campaign; recipient values
+resolve from each audience record. A missing value resolves to an empty string. `{{companyId}}` is
+not supported. Unknown variables are rejected when a template or campaign is saved, before any
+messages are dispatched. This behavior is shared by the web template editor and bulk SMS composer.
+
+QA scenarios:
+
+1. Create a bulk SMS containing all seven supported variables; verify sender details and operational
+   assignment come from the dispatching user and recipient details come from each audience record.
+2. Send the same template as a user without a location; verify the message is dispatched with an
+   empty location value.
+3. Enter `{{companyId}}` or another unsupported token; verify the editor rejects the message.
+4. Add `{{branch}}` and `{{location}}` to a transactional parcel definition; verify the dispatched
+   message contains the parcel's destination branch and pickup or queue location.
 
 Adding providers:
 

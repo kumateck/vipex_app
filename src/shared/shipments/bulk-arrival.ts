@@ -1,0 +1,1 @@
+export const MAX_BULK_ARRIVAL_PARCELS = 100;

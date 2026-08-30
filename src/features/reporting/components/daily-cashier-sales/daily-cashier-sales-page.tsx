@@ -3,6 +3,7 @@ import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DailyCashierSalesFilters } from './daily-cashier-sales-filters';
 import { DailyCashierSalesPrintDocument } from './daily-cashier-sales-print-document';
+import { DailyCashierSalesResultFilter } from './daily-cashier-sales-result-filter';
 import { DailyCashierSalesSummary } from './daily-cashier-sales-summary';
 import { DailyCashierSalesToBePaidTable } from './daily-cashier-sales-tobepaid-table';
 import { DailyCashierSalesTransactionsTable } from './daily-cashier-sales-transactions-table';
@@ -67,6 +68,12 @@ export function DailyCashierSalesPage() {
             cashierOptions={sales.cashierOptions}
             isCashierOptionsFetching={sales.isCashierOptionsFetching}
           />
+          {sales.report ? (
+            <DailyCashierSalesResultFilter
+              value={sales.moduleFilter}
+              onChange={sales.setModuleFilter}
+            />
+          ) : null}
           <DailyCashierSalesSummary report={sales.report} />
           <Tabs
             value={sales.activeReportTab}

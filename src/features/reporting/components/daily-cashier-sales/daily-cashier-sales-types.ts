@@ -13,6 +13,8 @@ export type DailyCashierSalesFilterLabel = {
 
 export type DailyCashierSalesReportTab = 'payments' | 'tobepaid';
 
+export type DailyCashierSalesModuleFilter = 'all' | 'sender' | 'receiver' | 'delivery';
+
 export type CashierSalesOption = {
   id: string;
   name: string;

@@ -62,9 +62,40 @@ Sticker quantity requirements and current implementation gaps are documented in 
 
 The server owns status transitions. Clients should request domain actions rather than update status fields directly.
 
+## Previous Consignment Reprinting
+
+The web **Previous Consignments** page at `/parcels/consignments/history` retrieves persisted
+consignments by one consignment date or an inclusive date range and rebuilds the A4 manifest for
+reprinting. A single selected date is submitted as the same start and end date. Results show the
+consignment number, source and destination branches, consignment date, active parcel count, and a
+Reprint action. Search within the retrieved results is by consignment number.
+
+Access requires `CanReadConsignments`. Agency users can retrieve and print only consignments whose
+source is their authenticated branch. Head-office users can retrieve all company consignments or
+filter by a source branch. Company and agency scope come from authentication rather than client
+ownership fields. The printable manifest is rebuilt from the saved consignment and its active
+items; removed items are not included. The system does not store a separate consignment-print flag,
+so every saved, in-scope consignment in the selected range is available to reprint.
+
+Dates must use `YYYY-MM-DD`, be valid calendar dates, and have an end date on or after the start
+date. Invalid ranges are rejected without returning data. An unknown, other-company, or
+out-of-scope consignment returns not found and does not open printing. Browser and desktop clients
+use the existing routed A4 print flow; mobile has no previous-consignment reprint page.
+
 ## Consignment Receiving
 
 Receiving supports scan-based parcel identification, completeness tracking, discrepancy recording, and confirmation. Staff can identify missing or unexpected parcels before completing the receipt.
+
+On the web Incoming (In Transit) page, users can select parcels individually or select every parcel
+on the current page, retain selections while paging, and mark up to 100 selected parcels as arrived
+in one action. The confirmation dialog lists the selected bookings before submission. The server
+uses the authenticated user's company, receiving branch, and user ID; client-supplied ownership or
+receiver identity is not accepted. Every parcel must still be undeleted, in transit, not previously
+received, and destined for the authenticated receiving branch. Validation and updates run in one
+database transaction, so an unavailable, out-of-scope, already-received, or concurrently changed
+parcel rejects the whole batch without partial status changes. Successful batches set one shared
+receipt time, move every parcel to `ARRIVED_AT_DESTINATION`, record the receiving user, and write a
+batch audit event. Mobile receiving remains scan-based and processes one reviewed parcel at a time.
 
 Mobile scan-to-receive accepts the current parcel tracking URL, a bare booking or tracking code, and legacy production payloads in the form `QR-<tracking-code>`. The client normalizes these formats before searching for an in-transit parcel at the authenticated user's destination branch. The overview count loads from the server when the screen gains focus and shows the server's total record count, not only the currently rendered page. An unreadable code or a code for another branch/status remains unmatched and does not change parcel state.
 
@@ -138,6 +169,12 @@ Recent correction support includes original-session amount corrections so adjust
 - Sender-paid, receiver-paid, split, zero-charge, and credit creation.
 - Single and multi-parcel creation with partial failure.
 - Consignment complete, missing, extra, and duplicate scans.
+- Previous-consignment retrieval for one date and a multi-day inclusive range, empty results,
+  reversed/invalid dates, agency branch isolation, head-office source filtering, an out-of-scope
+  print request, a consignment with no active items, and successful A4 reprint.
+- Web incoming batch selection across pages, select-all for the current page, successful bulk
+  arrival, more than 100 selections, wrong receiving branch, already-received parcel, and concurrent
+  status change with no partial updates.
 - Mobile scan-to-receive with current tracking URL, bare code, legacy `QR-` payload, unreadable code, wrong branch, and non-in-transit status.
 - OTP enabled, disabled, expired, incorrect, alternate recipient, and alternate phone.
 - Pickup with and without receiver payment.

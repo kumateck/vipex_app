@@ -16,6 +16,15 @@ All paths are relative to `/v1`.
 
 Update download surfaces expose only required release data. Administrative release mutations remain protected.
 
+## Notification Hub
+
+`/notification-hub` manages providers, templates, campaigns, dispatch logs, and company SMS
+configuration. Bulk SMS template and campaign bodies accept `{{senderName}}`, `{{senderPhone}}`,
+`{{recipientName}}`, `{{recipientPhone}}`, `{{branch}}`, `{{location}}`, and `{{date}}`; any other
+token, including `{{companyId}}`, is rejected with a bad-request response. Sender, branch, and
+location values are resolved from the dispatching user, while recipient values are resolved from
+each audience record. Missing values resolve to empty strings.
+
 ## Communication
 
 `/communication` includes threads, messages, channels, groups, engagement requests, approvals/declines, presence, and calls. Internal communication and LiveKit call capabilities have separate module gates.

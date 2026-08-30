@@ -10,6 +10,7 @@ The application prints parcel stickers and A5 customer documents from the browse
 | ------------------ | ------------------------------------------------------------------------ |
 | Parcel sticker     | Tracking and routing label attached to each physical parcel.             |
 | A5 receipt/invoice | Customer and transaction document containing parcel and payment details. |
+| A4 consignment     | Saved source-to-destination parcel manifest that can be printed again.   |
 
 The A5 document includes payer details where a payer differs from the sender or receiver.
 
@@ -116,6 +117,12 @@ Printer routing settings determine the destination printer, not the number of co
 After parcel creation, printing is available only when the workflow and account permit it. Sending and full cashiers collecting sender payment require the relevant payment permission and an active session. Reprinting remains a separate permission-controlled operation.
 
 Print permission must be enforced independently from parcel creation permission.
+
+Saved A4 consignments can be retrieved from `/parcels/consignments/history` using a single date or
+inclusive date range. Reprinting requires `CanReadConsignments`; agency users are limited to
+consignments created from their authenticated branch, while head-office users may filter across
+company branches. The document is reconstructed from active saved consignment items and uses the
+same routed browser/desktop A4 print path as the initial print.
 
 ## Audit Logging
 
