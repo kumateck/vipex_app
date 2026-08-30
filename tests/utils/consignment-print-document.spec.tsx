@@ -26,10 +26,27 @@ const PARCEL: ProcessedParcel = {
 describe('consignment print document', () => {
   test('prints the destination branch in the report header', () => {
     const html = renderToStaticMarkup(
-      <ConsignmentPrintDocument payload={{ consignmentCode: 'CON-001', items: [PARCEL] }} />,
+      <ConsignmentPrintDocument
+        payload={{
+          consignmentCode: 'CON-001',
+          destinationName: 'Kumasi Main',
+          items: [PARCEL],
+        }}
+      />,
     );
 
     expect(html).toContain('Destination Branch:');
     expect(html).toContain('Kumasi Main');
+  });
+
+  test('keeps the saved destination visible when a consignment has no active items', () => {
+    const html = renderToStaticMarkup(
+      <ConsignmentPrintDocument
+        payload={{ consignmentCode: 'CON-EMPTY', destinationName: 'Tamale Main', items: [] }}
+      />,
+    );
+
+    expect(html).toContain('CON-EMPTY');
+    expect(html).toContain('Tamale Main');
   });
 });

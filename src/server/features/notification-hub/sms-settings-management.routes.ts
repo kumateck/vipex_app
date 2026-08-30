@@ -10,6 +10,7 @@ import {
 import { BadRequest } from '@/server/utils/http-error';
 import { HttpStatus } from '@/server/utils/http-status';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { BULK_SMS_VARIABLES } from '@/shared/notification-hub/sms-template-variables';
 import {
   createNotificationCampaignCtrl,
   createNotificationTemplateCtrl,
@@ -30,7 +31,7 @@ const createBulkSms = requireAnyPermissions(
   PermissionKeys.CanManageCompanyModules,
 );
 
-const bulkSmsVariables = new Set(['recipientName', 'companyId', 'date']);
+const bulkSmsVariables = new Set<string>(BULK_SMS_VARIABLES);
 const smsVariablePattern = /{{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*}}/g;
 
 function validateBulkSmsBody(body: string) {

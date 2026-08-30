@@ -778,6 +778,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/users/password-management': PermissionKeys.CanSetUserPassword,
   '/parcels/sender-payments': PermissionKeys.CanCreateSenderPayments,
   '/parcels/processed': PermissionKeys.CanReadConsignments,
+  '/parcels/consignments/history': PermissionKeys.CanReadConsignments,
   '/parcels/pickup-queue': PermissionKeys.CanCreatePickupQueue,
   '/parcels/pickup-queue/sender': PermissionKeys.CanReadSenderPickupQueue,
   '/parcels/waiting-pickup': PermissionKeys.CanCompleteOfficePickup,

@@ -8,7 +8,14 @@ export type SmsEventDefinition = {
   variables: string[];
 };
 
-const PARCEL_STATUS_VARIABLES = ['receiverName', 'trackingCode', 'bookingCode', 'outcome'];
+const PARCEL_STATUS_VARIABLES = [
+  'receiverName',
+  'trackingCode',
+  'bookingCode',
+  'outcome',
+  'branch',
+  'location',
+];
 
 export const SMS_EVENT_DEFINITIONS = [
   {
@@ -24,6 +31,8 @@ export const SMS_EVENT_DEFINITIONS = [
       'queueNumber',
       'queueCode',
       'branchName',
+      'branch',
+      'location',
       'trackingCode',
       'bookingCode',
     ],
@@ -36,7 +45,7 @@ export const SMS_EVENT_DEFINITIONS = [
     recipient: 'Selected primary or second receiver',
     defaultBody:
       '{{receiverName}}, your parcel pickup verification code is {{otp}}. It expires in {{expiresInMinutes}} minutes. Do not share this code.',
-    variables: ['receiverName', 'otp', 'expiresInMinutes'],
+    variables: ['receiverName', 'otp', 'expiresInMinutes', 'branch', 'location'],
   },
   {
     code: 'parcel_status_call_pickup',

@@ -1,4 +1,6 @@
-export const BULK_SMS_VARIABLES = ['recipientName', 'companyId', 'date'] as const;
+import { BULK_SMS_VARIABLES } from '@/shared/notification-hub/sms-template-variables';
+
+export { BULK_SMS_VARIABLES };
 const BULK_SMS_VARIABLE_SET = new Set<string>(BULK_SMS_VARIABLES);
 
 const VARIABLE_PATTERN = /{{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*}}/g;

@@ -35,8 +35,18 @@ System Admin password assignment revokes the target user's active sessions and w
 
 - `/shipments/bookings`: booking creation and query, including booking-with-parcels operations.
 - `/shipments/parcels`: parcel search, detail, lifecycle actions, corrections, and receiver OTP-related operations.
+- `POST /shipments/parcels/bulk-mark-received`: atomically mark 1–100 authenticated-branch incoming
+  parcels as arrived. The body contains only unique `parcelIds`; company, branch, and receiving user
+  are taken from authentication. Any missing, out-of-scope, deleted, already-received, non-transit,
+  or concurrently changed parcel rejects the entire batch.
 - `/shipments/parcels/sticker-prints`: record a successful sticker print and its copy count.
 - `/shipments/consignments`: consignment creation, dispatch, receiving, completeness, and exceptions.
+- `GET /shipments/consignments/history`: list saved consignments for an inclusive `dateFrom` and
+  `dateTo` (`YYYY-MM-DD`) range. Agency scope is taken from the authenticated branch; head office
+  may supply an optional `sourceId` filter.
+- `GET /shipments/consignments/:id/print`: return the saved consignment number, destination, and
+  active parcel manifest needed for an A4 reprint. Company/source scope and
+  `CanReadConsignments` are enforced server-side.
 - `/shipments/parcel-internal-transfers`: internal custody create, detail, acknowledge, cancel, and history.
 - `/shipments/auto-grouping`: dispatch/consignment grouping assistance.
 - `/shipments/parcels/discrepancies`: create, list open, and resolve receiving discrepancies.

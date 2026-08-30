@@ -18,6 +18,7 @@ import {
   getNotificationCampaignByIdRepo,
   getNotificationDispatchByIdRepo,
   getNotificationProviderByIdRepo,
+  getNotificationSenderContextRepo,
   getNotificationTemplateByCodeRepo,
   getNotificationTemplateByIdRepo,
   getParcelRecipientsRepo,
@@ -42,6 +43,7 @@ import {
   getSmsEventDefinition,
   type SmsEventCode,
 } from './sms-event-definitions';
+import { buildCampaignTemplateValues } from './campaign-template-values';
 
 type ProviderRow = Awaited<ReturnType<typeof getDefaultProviderByChannelRepo>>;
 
@@ -786,6 +788,11 @@ async function resolveCampaignMessageContent(input: {
   companyId: string;
   campaign: Awaited<ReturnType<typeof getNotificationCampaignByIdRepo>>;
   recipientName?: string | null;
+  recipientPhone?: string | null;
+  senderName?: string | null;
+  senderPhone?: string | null;
+  branch?: string | null;
+  location?: string | null;
 }) {
   if (!input.campaign) throw NotFound('Campaign not found');
   const channel = normalizeChannel(input.campaign.channel);
@@ -799,11 +806,7 @@ async function resolveCampaignMessageContent(input: {
     throw Conflict('Campaign body is empty. Add a body override or a template body.');
   }
 
-  const values = {
-    recipientName: input.recipientName ?? '',
-    companyId: input.companyId,
-    date: new Date().toISOString().slice(0, 10),
-  };
+  const values = buildCampaignTemplateValues(input);
   const subject = channel === 'email' ? renderTemplate(subjectTemplate, values) : null;
   const body = renderTemplate(bodyTemplate, values);
   return { subject, body };
@@ -830,7 +833,13 @@ export async function sendNotificationCampaignSvc(input: {
     throw Conflict('No recipients matched the selected audience for this campaign');
   }
 
-  const provider = await getDefaultProviderByChannelRepo(input.companyId, channel);
+  const [provider, sender] = await Promise.all([
+    getDefaultProviderByChannelRepo(input.companyId, channel),
+    getNotificationSenderContextRepo({
+      companyId: input.companyId,
+      userId: input.actorUserId,
+    }),
+  ]);
   let sentCount = 0;
   let failedCount = 0;
 
@@ -839,6 +848,11 @@ export async function sendNotificationCampaignSvc(input: {
       companyId: input.companyId,
       campaign,
       recipientName: recipient.recipientName,
+      recipientPhone: recipient.recipientPhone,
+      senderName: sender?.senderName,
+      senderPhone: sender?.senderPhone,
+      branch: sender?.branch,
+      location: sender?.location,
     });
     const createdDispatch = await createNotificationDispatchRepo({
       companyId: input.companyId,
@@ -965,6 +979,7 @@ export async function sendPickupQueueNotificationSvc(input: {
   queueCode: string;
   queueNumber: number;
   branchName: string;
+  locationName: string;
 }): Promise<{ sent: boolean }> {
   try {
     const parcel = await getParcelRecipientsRepo(input.companyId, input.parcelId);
@@ -983,6 +998,8 @@ export async function sendPickupQueueNotificationSvc(input: {
         queueNumber: input.queueNumber,
         receiverName,
         branchName: input.branchName,
+        branch: input.branchName,
+        location: input.locationName,
         trackingCode: parcel.trackingCode,
         bookingCode: parcel.bookingCode,
       },
@@ -1037,6 +1054,8 @@ export async function sendParcelStatusNotificationSvc(input: {
           trackingCode: parcel.trackingCode,
           bookingCode: parcel.bookingCode,
           outcome: input.outcome,
+          branch: parcel.branch,
+          location: parcel.location,
         },
         metadataJson: {
           parcelId: parcel.parcelId,

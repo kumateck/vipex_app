@@ -22,6 +22,7 @@ import {
   softDeleteParcelSvc,
   updateParcelSvc,
 } from './parcels.service';
+import { markIncomingParcelsArrivedSvc } from './parcel-bulk-receiving.service';
 
 export async function listParcelsCtrl(
   q: PaginationRequestDto<{
@@ -153,6 +154,7 @@ export async function getParcelDetailsCtrl(id: string) {
 export const createParcelCtrl = createParcelSvc;
 export const updateParcelCtrl = updateParcelSvc;
 export const markParcelReceivedCtrl = markParcelReceivedSvc;
+export const markIncomingParcelsArrivedCtrl = markIncomingParcelsArrivedSvc;
 export const setPlannedToBePaidCtrl = setPlannedToBePaidSvc;
 export const logParcelDiscrepancyCtrl = logParcelDiscrepancySvc;
 export const logParcelStickerPrintCtrl = logParcelStickerPrintSvc;
