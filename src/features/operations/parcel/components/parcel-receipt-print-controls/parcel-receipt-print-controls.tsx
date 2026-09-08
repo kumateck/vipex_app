@@ -5,6 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { StickerCopiesInput } from './sticker-copies-input';
 
 type ParcelReceiptPrintControlsProps = {
   autoPrint: boolean;
@@ -14,6 +15,8 @@ type ParcelReceiptPrintControlsProps = {
   isStickerPrintEnabled: boolean;
   showSelectionMenu: boolean;
   triggerLabel: string;
+  stickerCopies: number;
+  onStickerCopiesChange: (copies: number) => void;
   onPrintBoth: () => void;
   onPrintInvoice: () => void;
   onPrintSticker: () => void;
@@ -27,6 +30,8 @@ export function ParcelReceiptPrintControls({
   isStickerPrintEnabled,
   showSelectionMenu,
   triggerLabel,
+  stickerCopies,
+  onStickerCopiesChange,
   onPrintBoth,
   onPrintInvoice,
   onPrintSticker,
@@ -36,6 +41,9 @@ export function ParcelReceiptPrintControls({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {isStickerPrintEnabled ? (
+        <StickerCopiesInput copies={stickerCopies} onChange={onStickerCopiesChange} />
+      ) : null}
       {showSelectionMenu ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
