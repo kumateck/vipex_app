@@ -30,7 +30,7 @@ export const PAGE_STYLES: Record<PrintLayout, string> = {
         display: grid;
         align-items: start;
         justify-items: center;
-        padding-top: 4.5mm;
+        padding-top: 2.5mm;
         box-sizing: border-box;
       }
     }

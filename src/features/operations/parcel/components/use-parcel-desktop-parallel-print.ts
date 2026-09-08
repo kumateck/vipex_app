@@ -17,6 +17,7 @@ type UseParcelDesktopParallelPrintParams = {
   hasPrintableReceipt: boolean;
   isStickerPrintEnabled: boolean;
   mode: 'sender-payment' | 'receiver-payment' | 'reprint' | 'default';
+  stickerCopies: number;
   onAutoPrintComplete?: () => void;
   stickerRef: RefObject<HTMLDivElement | null>;
 };
@@ -29,6 +30,7 @@ export function useParcelDesktopParallelPrint({
   hasPrintableReceipt,
   isStickerPrintEnabled,
   mode,
+  stickerCopies,
   onAutoPrintComplete,
   stickerRef,
 }: UseParcelDesktopParallelPrintParams) {
@@ -64,6 +66,7 @@ export function useParcelDesktopParallelPrint({
           title: `sticker-${bookingCode}`,
           silent: true,
           deviceName: stickerPrinter,
+          copies: stickerCopies,
         },
         {
           html: createPrintableHtmlDocument({
@@ -81,7 +84,7 @@ export function useParcelDesktopParallelPrint({
 
     const stickerJobOk = result.jobs.some((job) => job.layout === 'thermal-sticker' && job.ok);
     if (stickerJobOk) {
-      void logStickerPrint({ bookingCode, trackingCode, copies: 1 }).catch((error) =>
+      void logStickerPrint({ bookingCode, trackingCode, copies: stickerCopies }).catch((error) =>
         console.error('[parcel-sticker-print] log-failed', error),
       );
     }
@@ -108,5 +111,6 @@ export function useParcelDesktopParallelPrint({
     mode,
     onAutoPrintComplete,
     stickerRef,
+    stickerCopies,
   ]);
 }

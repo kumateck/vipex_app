@@ -77,13 +77,13 @@ The quantity control should be a numeric text or number field that permits direc
 
 The repository does not yet meet the intended rule everywhere.
 
-| Area                              | Current state                                    | Gap                                                                           |
-| --------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------- |
-| Processed-consignment reprint     | Provides a `1–20` quantity selector.             | Remove the maximum and replace the fixed options with positive-integer entry. |
-| Parcel creation                   | Print flow defaults to one sticker.              | Expose per-parcel quantity before print.                                      |
-| Sender payment                    | Sticker print defaults to one in relevant paths. | Expose and pass the selected quantity.                                        |
-| Desktop parallel sticker/A5 print | Some jobs omit copies or log one.                | Pass the selected sticker quantity end to end.                                |
-| Audit logging                     | Sticker usage endpoint accepts a copy count.     | Log the requested successful quantity consistently from every path.           |
+| Area                              | Current state                                  | Gap                                                                 |
+| --------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------- |
+| Processed-consignment reprint     | Accepts any positive whole-number quantity.    | Implemented on web and desktop.                                     |
+| Parcel creation                   | Manual print exposes per-parcel quantity.      | Automatic post-submit print still defaults to one.                  |
+| Sender payment                    | Manual print exposes and passes the quantity.  | Automatic post-payment print still defaults to one.                 |
+| Desktop parallel sticker/A5 print | Passes and logs the selected sticker quantity. | Implemented for the shared sender-payment print path.               |
+| Audit logging                     | Sticker usage endpoint accepts a copy count.   | Log the requested successful quantity consistently from every path. |
 
 This table is a documented implementation mismatch, not permission to retain the current cap.
 
@@ -160,3 +160,7 @@ Rules:
 - Cancelled print creates no successful usage entry.
 - Successful reprint creates one usage event with the correct copies.
 - Partial desktop success is reported and audited only for the successful sticker job.
+- A portrait to-be-paid sticker reserves at least 11 mm for Parcel Details, keeps the complete value
+  inside the outer border, and leaves bottom cut clearance on the 100 mm stock.
+- Test parcel-detail values at short, medium, and maximum supported lengths on both browser and
+  desktop printing; no label or value may be clipped by the next row or the paper cut boundary.
