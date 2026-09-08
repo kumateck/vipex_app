@@ -173,6 +173,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadConsignments,
           },
           {
+            title: 'Previous Consignments',
+            url: '/parcels/consignments/history',
+            permissionKey: PermissionKeys.CanReadConsignments,
+          },
+          {
             title: 'In Transit (Outgoing)',
             url: '/parcels/in-transit/outgoing',
             permissionKey: PermissionKeys.CanReadParcelOutgoing,

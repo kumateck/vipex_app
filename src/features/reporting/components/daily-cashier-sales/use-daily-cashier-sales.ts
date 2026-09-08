@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
 import {
@@ -18,9 +18,14 @@ import { useAuthStore } from '@/stores/auth-store';
 import { CASHIER_TYPE_LABELS } from './daily-cashier-sales-constants';
 import type {
   DailyCashierSalesFilterState,
+  DailyCashierSalesModuleFilter,
   DailyCashierSalesReportTab,
 } from './daily-cashier-sales-types';
 import { todayDateInputValue } from './daily-cashier-sales-utils';
+import {
+  CASHIER_MODULE_LABELS,
+  filterDailyCashierSalesReport,
+} from './daily-cashier-sales-module-filter';
 
 export function useDailyCashierSales() {
   const user = useAuthStore((state) => state.user);
@@ -33,6 +38,7 @@ export function useDailyCashierSales() {
   const [activeReportTab, setActiveReportTab] = useState<DailyCashierSalesReportTab>('payments');
   const [appliedReportTab, setAppliedReportTab] = useState<DailyCashierSalesReportTab | null>(null);
   const [appliedFilters, setAppliedFilters] = useState<DailyCashierSalesFilterState | null>(null);
+  const [moduleFilter, setModuleFilter] = useState<DailyCashierSalesModuleFilter>('all');
 
   const canSelectCashier = Boolean(user?.permissions.includes(PermissionKeys.CanReadAccounting));
   const isHeadOffice = user?.branch?.type === BranchType.HEADOFFICE;
@@ -98,12 +104,16 @@ export function useDailyCashierSales() {
   };
 
   const {
-    data: report,
+    data: loadedReport,
     isFetching,
     isUninitialized,
   } = useGetDailyCashierSalesReportQuery(appliedFilters ?? draftFilters, {
     skip: !companyId || !appliedFilters,
   });
+  const report = useMemo(
+    () => filterDailyCashierSalesReport(loadedReport, moduleFilter),
+    [loadedReport, moduleFilter],
+  );
 
   const { currentData: cashierOptions = [], isFetching: isCashierOptionsFetching } =
     useListDailyCashierSalesCashiersQuery(
@@ -184,6 +194,7 @@ export function useDailyCashierSales() {
           'All cashiers')
         : (user?.fullname ?? 'My sales'),
     },
+    { label: 'Cashier Module', value: CASHIER_MODULE_LABELS[moduleFilter] },
   ];
 
   const printReport = useManagedReactPrint({
@@ -224,6 +235,8 @@ export function useDailyCashierSales() {
     setCashierUserId,
     activeReportTab,
     setActiveReportTab,
+    moduleFilter,
+    setModuleFilter,
     canSelectCashier,
     isHeadOffice,
     effectiveBranchId,
@@ -242,6 +255,7 @@ export function useDailyCashierSales() {
       if (!hasRequiredFilters) return;
       setAppliedFilters(draftFilters);
       setAppliedReportTab(activeReportTab);
+      setModuleFilter('all');
     },
     handlePrintReport,
   };

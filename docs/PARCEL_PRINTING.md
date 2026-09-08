@@ -10,6 +10,7 @@ The application prints parcel stickers and A5 customer documents from the browse
 | ------------------ | ------------------------------------------------------------------------ |
 | Parcel sticker     | Tracking and routing label attached to each physical parcel.             |
 | A5 receipt/invoice | Customer and transaction document containing parcel and payment details. |
+| A4 consignment     | Saved source-to-destination parcel manifest that can be printed again.   |
 
 The A5 document includes payer details where a payer differs from the sender or receiver.
 
@@ -76,13 +77,13 @@ The quantity control should be a numeric text or number field that permits direc
 
 The repository does not yet meet the intended rule everywhere.
 
-| Area                              | Current state                                    | Gap                                                                           |
-| --------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------- |
-| Processed-consignment reprint     | Provides a `1–20` quantity selector.             | Remove the maximum and replace the fixed options with positive-integer entry. |
-| Parcel creation                   | Print flow defaults to one sticker.              | Expose per-parcel quantity before print.                                      |
-| Sender payment                    | Sticker print defaults to one in relevant paths. | Expose and pass the selected quantity.                                        |
-| Desktop parallel sticker/A5 print | Some jobs omit copies or log one.                | Pass the selected sticker quantity end to end.                                |
-| Audit logging                     | Sticker usage endpoint accepts a copy count.     | Log the requested successful quantity consistently from every path.           |
+| Area                              | Current state                                  | Gap                                                                 |
+| --------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------- |
+| Processed-consignment reprint     | Accepts any positive whole-number quantity.    | Implemented on web and desktop.                                     |
+| Parcel creation                   | Manual print exposes per-parcel quantity.      | Automatic post-submit print still defaults to one.                  |
+| Sender payment                    | Manual print exposes and passes the quantity.  | Automatic post-payment print still defaults to one.                 |
+| Desktop parallel sticker/A5 print | Passes and logs the selected sticker quantity. | Implemented for the shared sender-payment print path.               |
+| Audit logging                     | Sticker usage endpoint accepts a copy count.   | Log the requested successful quantity consistently from every path. |
 
 This table is a documented implementation mismatch, not permission to retain the current cap.
 
@@ -116,6 +117,12 @@ Printer routing settings determine the destination printer, not the number of co
 After parcel creation, printing is available only when the workflow and account permit it. Sending and full cashiers collecting sender payment require the relevant payment permission and an active session. Reprinting remains a separate permission-controlled operation.
 
 Print permission must be enforced independently from parcel creation permission.
+
+Saved A4 consignments can be retrieved from `/parcels/consignments/history` using a single date or
+inclusive date range. Reprinting requires `CanReadConsignments`; agency users are limited to
+consignments created from their authenticated branch, while head-office users may filter across
+company branches. The document is reconstructed from active saved consignment items and uses the
+same routed browser/desktop A4 print path as the initial print.
 
 ## Audit Logging
 
@@ -153,3 +160,7 @@ Rules:
 - Cancelled print creates no successful usage entry.
 - Successful reprint creates one usage event with the correct copies.
 - Partial desktop success is reported and audited only for the successful sticker job.
+- A portrait to-be-paid sticker reserves at least 11 mm for Parcel Details, keeps the complete value
+  inside the outer border, and leaves bottom cut clearance on the 100 mm stock.
+- Test parcel-detail values at short, medium, and maximum supported lengths on both browser and
+  desktop printing; no label or value may be clipped by the next row or the paper cut boundary.

@@ -1,6 +1,7 @@
 export * from './daily-cashier-sales-constants';
 export * from './daily-cashier-sales-filters';
 export * from './daily-cashier-sales-page';
+export * from './daily-cashier-sales-module-filter';
 export * from './daily-cashier-sales-print-document';
 export * from './daily-cashier-sales-summary';
 export * from './daily-cashier-sales-tobepaid-table';

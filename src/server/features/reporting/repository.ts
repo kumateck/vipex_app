@@ -49,11 +49,11 @@ import {
 import {
   CustomerCreditSourceType,
   CustomerCreditTransactionType,
-  CashierType,
   ParcelStatus,
   PaymentComponent,
   PaymentMethod,
 } from '@/db/schemas/enums';
+import { getDailyCashierSalesPaymentTypes } from './daily-cashier-sales-filter';
 
 export type CashierSessionReportRow = {
   id: string;
@@ -465,12 +465,8 @@ export async function listDailyCashierSalesTransactionsRepo(input: {
 
   const sender = alias(customers, 'daily_cashier_sales_sender');
   const receiver = alias(customers, 'daily_cashier_sales_receiver');
-  const cashierTypeFilter =
-    input.cashierType === CashierType.FULL
-      ? [inArray(payments.cashierType, [CashierType.SENDING, CashierType.TOBEPAID])]
-      : input.cashierType !== null && input.cashierType !== undefined
-        ? [eq(payments.cashierType, input.cashierType)]
-        : [];
+  const paymentTypes = getDailyCashierSalesPaymentTypes(input.cashierType);
+  const cashierTypeFilter = paymentTypes ? [inArray(payments.cashierType, paymentTypes)] : [];
 
   return db
     .select({

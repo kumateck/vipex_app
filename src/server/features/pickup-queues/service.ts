@@ -166,6 +166,7 @@ export async function createPickupQueueSvc(input: {
           queueCode,
           queueNumber,
           branchName: branch.name,
+          locationName: queueLocationName,
         });
         smsSent = result.sent;
       }

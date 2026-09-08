@@ -3,12 +3,16 @@ import { HttpStatus } from '../../utils/http-status';
 import { UUID } from '../../schemas/common';
 import { authPlugin, requireAuth, requirePermissions, type AuthUser } from '../../plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { BranchType } from '@/db/schemas/enums';
+import { Forbidden } from '@/server/utils/http-error';
 import {
   addItemsToConsignmentCtrl,
   closeConsignmentCtrl,
   createConsignmentCtrl,
   getConsignmentDetailCtrl,
+  getConsignmentPrintPayloadCtrl,
   listConsignmentItemsCtrl,
+  listConsignmentHistoryCtrl,
   listIncomingConsignmentsCtrl,
   receiveConsignmentItemCtrl,
   removeItemFromConsignmentCtrl,
@@ -37,6 +41,54 @@ export const consignmentsRoutes = new Elysia({ name: 'consignments' })
         tags: ['Shipments'],
         summary: 'List consignments incoming to a branch (Branch Receiving Manifest)',
       },
+    },
+  )
+  .get(
+    '/history',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      if (!authUser.companyId) throw Forbidden('Authenticated company context is missing');
+      const isHeadOffice = authUser.branchType === BranchType.HEADOFFICE;
+      const sourceId = isHeadOffice ? (query.sourceId ?? null) : (authUser.branchId ?? null);
+      if (!isHeadOffice && !sourceId) throw Forbidden('Authenticated branch context is missing');
+      return listConsignmentHistoryCtrl({
+        companyId: authUser.companyId,
+        sourceId,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+      });
+    },
+    {
+      query: t.Object({
+        dateFrom: t.String({ format: 'date' }),
+        dateTo: t.String({ format: 'date' }),
+        sourceId: t.Optional(UUID),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadConsignments)],
+      detail: {
+        tags: ['Shipments'],
+        summary: 'List saved consignments by inclusive date range for reprinting',
+      },
+    },
+  )
+  .get(
+    '/:id/print',
+    async ({ params, user }) => {
+      const authUser = user as AuthUser;
+      if (!authUser.companyId) throw Forbidden('Authenticated company context is missing');
+      const isHeadOffice = authUser.branchType === BranchType.HEADOFFICE;
+      const sourceId = isHeadOffice ? null : (authUser.branchId ?? null);
+      if (!isHeadOffice && !sourceId) throw Forbidden('Authenticated branch context is missing');
+      return getConsignmentPrintPayloadCtrl({
+        consignmentId: params.id,
+        companyId: authUser.companyId,
+        sourceId,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadConsignments)],
+      detail: { tags: ['Shipments'], summary: 'Build a saved consignment print document' },
     },
   )
   .get('/:id', async ({ params }) => getConsignmentDetailCtrl(params.id), {

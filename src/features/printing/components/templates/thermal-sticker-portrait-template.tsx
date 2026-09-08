@@ -20,7 +20,7 @@ export function ThermalStickerPortraitTemplate({
   hasToBePaid,
   qrValue,
 }: PreparedThermalStickerTemplateProps) {
-  const statusRowHeight = hasToBePaid ? '14mm' : '11mm';
+  const statusRowHeight = hasToBePaid ? '12.5mm' : '10.5mm';
   const receiverNameFontSize = portraitReceiverNameFontSize(receiverName);
 
   return (
@@ -28,14 +28,14 @@ export function ThermalStickerPortraitTemplate({
       className="bg-white text-black"
       style={{
         width: '90mm',
-        height: '91mm',
+        height: '92mm',
         boxSizing: 'border-box',
         border: '0.35mm solid #111',
         padding: '1.2mm',
         fontFamily: 'Arial, sans-serif',
         display: 'grid',
-        gridTemplateRows: `20mm ${statusRowHeight} 20mm 1fr`,
-        gap: '0.6mm',
+        gridTemplateRows: `18mm ${statusRowHeight} 18mm minmax(0, 1fr)`,
+        gap: '0.5mm',
         overflow: 'hidden',
       }}
     >
@@ -43,7 +43,7 @@ export function ThermalStickerPortraitTemplate({
         style={{
           minWidth: 0,
           display: 'grid',
-          gridTemplateColumns: '12mm 1fr 21mm',
+          gridTemplateColumns: '11mm 1fr 19mm',
           alignItems: 'center',
           columnGap: '2mm',
         }}
@@ -52,8 +52,8 @@ export function ThermalStickerPortraitTemplate({
           src={logoPng}
           alt="Vipex logo"
           style={{
-            width: '12mm',
-            height: '12mm',
+            width: '11mm',
+            height: '11mm',
             objectFit: 'contain',
           }}
         />
@@ -64,8 +64,8 @@ export function ThermalStickerPortraitTemplate({
           variant="print"
           ariaLabel="Parcel tracking QR code"
           style={{
-            width: '20mm',
-            height: '20mm',
+            width: '18mm',
+            height: '18mm',
             backgroundColor: '#ffffff',
           }}
           className="self-start justify-self-end"
@@ -84,19 +84,17 @@ export function ThermalStickerPortraitTemplate({
       >
         <div>
           <div
-            style={{ fontSize: hasToBePaid ? '4.8mm' : '5.7mm', fontWeight: 900, lineHeight: 1 }}
+            style={{ fontSize: hasToBePaid ? '4.4mm' : '5.4mm', fontWeight: 900, lineHeight: 1 }}
           >
             {statusLabel}
           </div>
           {statusAmountLabel ? (
-            <div style={{ marginTop: '0.15mm', fontSize: '4mm', fontWeight: 900, lineHeight: 1 }}>
+            <div style={{ marginTop: '0.1mm', fontSize: '3.7mm', fontWeight: 900, lineHeight: 1 }}>
               {statusAmountLabel}
             </div>
           ) : null}
           {hasToBePaid ? (
-            <div
-              style={{ marginTop: '0.5mm', fontSize: '2.1mm', fontWeight: 700, lineHeight: 1.05 }}
-            >
+            <div style={{ marginTop: '0.35mm', fontSize: '1.9mm', fontWeight: 700, lineHeight: 1 }}>
               {PAYMENT_DUE_NOTE}
             </div>
           ) : null}
@@ -143,7 +141,7 @@ export function ThermalStickerPortraitTemplate({
         <div
           style={{
             marginTop: '0.3mm',
-            fontSize: '4.2mm',
+            fontSize: '3.9mm',
             fontWeight: 900,
             lineHeight: 1,
           }}
@@ -156,7 +154,7 @@ export function ThermalStickerPortraitTemplate({
         style={{
           minHeight: 0,
           display: 'grid',
-          gridTemplateRows: '12mm 8mm 8mm 1fr',
+          gridTemplateRows: '10.5mm 6.5mm 6.5mm minmax(11mm, 1fr)',
           gap: 0,
           overflow: 'hidden',
         }}
