@@ -10,6 +10,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ProcessedParcel } from '../../api/parcel.api';
+import {
+  MIN_STICKER_COPIES,
+  normalizeStickerCopies,
+} from '../parcel-receipt-print-controls/sticker-copies';
 
 type ParcelReprintActionsProps = {
   parcel: ProcessedParcel;
@@ -17,14 +21,6 @@ type ParcelReprintActionsProps = {
   onReprintReceipt: (parcel: ProcessedParcel) => void;
   onReprintSticker: (parcel: ProcessedParcel, copies: number) => void;
 };
-
-const MIN_STICKER_COPIES = 1;
-const MAX_STICKER_COPIES = 20;
-
-function clampStickerCopies(value: number) {
-  if (!Number.isFinite(value)) return MIN_STICKER_COPIES;
-  return Math.min(Math.max(Math.trunc(value), MIN_STICKER_COPIES), MAX_STICKER_COPIES);
-}
 
 export function ParcelReprintActions({
   parcel,
@@ -50,9 +46,10 @@ export function ParcelReprintActions({
             id={`sticker-copies-${parcel.id}`}
             type="number"
             min={MIN_STICKER_COPIES}
-            max={MAX_STICKER_COPIES}
             value={stickerCopies}
-            onChange={(event) => setStickerCopies(clampStickerCopies(event.target.valueAsNumber))}
+            onChange={(event) =>
+              setStickerCopies(normalizeStickerCopies(event.target.valueAsNumber))
+            }
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
           />
