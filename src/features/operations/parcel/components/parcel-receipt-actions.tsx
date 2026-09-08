@@ -6,7 +6,10 @@ import { useManagedReactPrint } from '@/features/printing/hooks/use-managed-reac
 import { useAuthStore } from '@/stores/auth-store';
 import { useStickerPrintModule } from '../hooks';
 import { buildParcelTrackingUrl } from '../utils/tracking-url';
-import { ParcelReceiptPrintControls } from './parcel-receipt-print-controls';
+import {
+  normalizeStickerCopies,
+  ParcelReceiptPrintControls,
+} from './parcel-receipt-print-controls';
 import { ParcelReceiptPrintContent } from './parcel-receipt-print-content';
 import type { ReceiptPrintData } from './parcel-receipt.types';
 import { useParcelDesktopInvoicePrint } from './parcel-desktop-print';
@@ -46,6 +49,9 @@ export function ParcelReceiptActions({
   const invoiceRef = useRef<HTMLDivElement>(null);
   const hasAutoPrinted = useRef(false);
   const [queueInvoiceAfterSticker, setQueueInvoiceAfterSticker] = useState(false);
+  const [selectedStickerCopies, setSelectedStickerCopies] = useState(() =>
+    normalizeStickerCopies(stickerCopies),
+  );
   const canPrintStickerViaDesktop =
     typeof window !== 'undefined' && typeof window.api?.printHtml === 'function';
   const canPrintInvoiceViaDesktop = canPrintStickerViaDesktop;
@@ -92,7 +98,7 @@ export function ParcelReceiptActions({
       void logStickerPrint({
         bookingCode: data.bookingCode,
         trackingCode: data.trackingCode,
-        copies: stickerCopies,
+        copies: selectedStickerCopies,
       }).catch((error) => console.error('[parcel-sticker-print] log-failed', error));
       if (!queueInvoiceAfterSticker) {
         onAutoPrintComplete?.();
@@ -127,7 +133,7 @@ export function ParcelReceiptActions({
       return;
     }
     if (canPrintStickerViaDesktop) {
-      void printStickerViaDesktop(stickerCopies).then(() => {
+      void printStickerViaDesktop(selectedStickerCopies).then(() => {
         onAutoPrintComplete?.();
       });
       return;
@@ -140,7 +146,7 @@ export function ParcelReceiptActions({
     onAutoPrintComplete,
     printSticker,
     printStickerViaDesktop,
-    stickerCopies,
+    selectedStickerCopies,
   ]);
   const handlePrintBoth = useCallback(() => {
     if (!canPrintForSession) {
@@ -165,7 +171,7 @@ export function ParcelReceiptActions({
       return;
     }
     if (canPrintStickerViaDesktop) {
-      void printStickerViaDesktop(1).then(async (printed) => {
+      void printStickerViaDesktop(selectedStickerCopies).then(async (printed) => {
         if (printed) await printInvoiceViaDesktop();
         onAutoPrintComplete?.();
       });
@@ -185,6 +191,7 @@ export function ParcelReceiptActions({
     printInvoiceViaDesktop,
     printSticker,
     printStickerViaDesktop,
+    selectedStickerCopies,
   ]);
   const handlePrintBothParallelDesktop = useParcelDesktopParallelPrint({
     bookingCode: data.bookingCode,
@@ -196,6 +203,7 @@ export function ParcelReceiptActions({
     mode,
     onAutoPrintComplete,
     stickerRef: desktopStickerRef,
+    stickerCopies: selectedStickerCopies,
   });
   const handlePrintInvoiceOnly = useCallback(() => {
     if (!canPrintForSession) {
@@ -263,7 +271,7 @@ export function ParcelReceiptActions({
         printedByBranchName={user?.branch?.name ?? null}
         printedByLocationName={user?.location?.name ?? user?.locationName ?? null}
         amountPaidCedis={amountPaidCedis}
-        stickerCopies={canPrintStickerViaDesktop ? 1 : stickerCopies}
+        stickerCopies={canPrintStickerViaDesktop ? 1 : selectedStickerCopies}
         tax={{
           vat: tax.vat,
           getfund: tax.getfund,
@@ -280,6 +288,8 @@ export function ParcelReceiptActions({
         isStickerPrintEnabled={isStickerPrintEnabled}
         showSelectionMenu={showSelectionMenu}
         triggerLabel={triggerLabel}
+        stickerCopies={selectedStickerCopies}
+        onStickerCopiesChange={(copies) => setSelectedStickerCopies(normalizeStickerCopies(copies))}
         onPrintBoth={handlePrintBoth}
         onPrintInvoice={handlePrintInvoiceOnly}
         onPrintSticker={handlePrintStickerOnly}
