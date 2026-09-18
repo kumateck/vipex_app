@@ -5,7 +5,7 @@ export type ParcelAgeingPolicy = {
 };
 
 export const DEFAULT_PARCEL_AGEING_POLICY: ParcelAgeingPolicy = {
-  storageFeePerDayPsw: 500,
+  storageFeePerDayPsw: 200,
   gracePeriodDays: 14,
   agedThresholdMonths: 6,
 };

@@ -125,133 +125,138 @@ export function PickupVerificationDialog({
 }: PickupVerificationDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? onClose() : null)}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Pickup Verification</DialogTitle>
         </DialogHeader>
         {!parcel ? null : (
-          <div className="space-y-4">
-            <div className="grid gap-2 text-sm">
-              <p>
-                <strong>Booking:</strong> {parcel.bookingCode}
-              </p>
-              <p>
-                <strong>Receiver:</strong> {parcel.receiverName ?? '-'} (
-                {parcel.receiverPhone ?? '-'})
-              </p>
-              <p>
-                <strong>Parcel:</strong> {parcel.parcelDetails}
-              </p>
-              <p>
-                <strong>Content:</strong> {parcel.parcelContent}
-              </p>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-4">
+              <div className="grid gap-2 text-sm">
+                <p>
+                  <strong>Booking:</strong> {parcel.bookingCode}
+                </p>
+                <p>
+                  <strong>Receiver:</strong> {parcel.receiverName ?? '-'} (
+                  {parcel.receiverPhone ?? '-'})
+                </p>
+                <p>
+                  <strong>Parcel:</strong> {parcel.parcelDetails}
+                </p>
+                <p>
+                  <strong>Content:</strong> {parcel.parcelContent}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Shelf Picker Staff</Label>
+                <Select value={pickerStaffId} onValueChange={onPickerStaffIdChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select staff" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staffOptions.map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id}>
+                        {staff.fullname}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {staffLocationName
+                    ? `Only active staff assigned to ${staffLocationName} are shown.`
+                    : 'Your user account needs an assigned location before staff can be selected.'}
+                </p>
+              </div>
+              <PickupMainCardSection
+                mode={mainCardMode}
+                onModeChange={onMainCardModeChange}
+                existingCardRecordId={mainExistingCardRecordId}
+                onExistingCardRecordIdChange={onMainExistingCardRecordIdChange}
+                newCardTypeId={mainNewCardTypeId}
+                onNewCardTypeIdChange={onMainNewCardTypeIdChange}
+                newCardNumber={mainNewCardNumber}
+                onNewCardNumberChange={onMainNewCardNumberChange}
+                receiverCards={mainReceiverCards}
+                cardOptions={cardOptions}
+              />
             </div>
-            <div className="space-y-2">
-              <Label>Shelf Picker Staff</Label>
-              <Select value={pickerStaffId} onValueChange={onPickerStaffIdChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select staff" />
-                </SelectTrigger>
-                <SelectContent>
-                  {staffOptions.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.id}>
-                      {staff.fullname}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {staffLocationName
-                  ? `Only active staff assigned to ${staffLocationName} are shown.`
-                  : 'Your user account needs an assigned location before staff can be selected.'}
-              </p>
-            </div>
-            {isPickupQueueEnabled ? (
-              <div className="space-y-3 rounded-md border p-3">
-                <div>
-                  <Label>Pickup Queue</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Queue tickets are created from the Pickup Queue page before final handover.
+
+            <div className="space-y-4">
+              {isPickupQueueEnabled ? (
+                <div className="space-y-3 rounded-md border p-3">
+                  <div>
+                    <Label>Pickup Queue</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Queue tickets are created from the Pickup Queue page before final handover.
+                    </p>
+                  </div>
+                  {hasPickupQueue ? (
+                    <div className="rounded-md bg-muted/40 p-3 text-sm">
+                      <p>
+                        <strong>Queue Code:</strong> {parcelDetails?.pickupQueue?.queueCode}
+                      </p>
+                      <p>
+                        <strong>Queue Number:</strong> {parcelDetails?.pickupQueue?.queueNumber}
+                      </p>
+                      <p>
+                        <strong>Queued At:</strong>{' '}
+                        {formatDateTime(parcelDetails?.pickupQueue?.queuedAt ?? null)}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                      No queue ticket found yet. Create it from the shared Pickup Queue page, then
+                      return here to complete handover.
+                    </div>
+                  )}
+                </div>
+              ) : null}
+              <PickupVerificationHandoverSection
+                parcelSecondReceiverId={parcel.secondReceiverId}
+                handoverTarget={handoverTarget}
+                onHandoverTargetChange={onHandoverTargetChange}
+                secondNewName={secondNewName}
+                onSecondNewNameChange={onSecondNewNameChange}
+                secondNewPhone={secondNewPhone}
+                onSecondNewPhoneChange={onSecondNewPhoneChange}
+                secondCardMode={secondCardMode}
+                onSecondCardModeChange={onSecondCardModeChange}
+                secondExistingCardRecordId={secondExistingCardRecordId}
+                onSecondExistingCardRecordIdChange={onSecondExistingCardRecordIdChange}
+                secondNewCardTypeId={secondNewCardTypeId}
+                onSecondNewCardTypeIdChange={onSecondNewCardTypeIdChange}
+                secondNewCardNumber={secondNewCardNumber}
+                onSecondNewCardNumberChange={onSecondNewCardNumberChange}
+                secondReceiverCards={secondReceiverCards}
+                cardOptions={cardOptions}
+              />
+              {isPickupOtpRequired ? (
+                <PickupOtpVerificationSection
+                  otp={otp}
+                  receiverPhone={parcel.receiverPhone}
+                  receiverPhone2={parcel.receiverPhone2}
+                  phoneSlot={phoneSlot}
+                  onPhoneSlotChange={onPhoneSlotChange}
+                />
+              ) : (
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                  <p className="font-medium">Pickup OTP is disabled for this branch</p>
+                  <p className="text-muted-foreground">
+                    Continue without OTP only when processing an approved legacy record.
                   </p>
                 </div>
-                {hasPickupQueue ? (
-                  <div className="rounded-md bg-muted/40 p-3 text-sm">
-                    <p>
-                      <strong>Queue Code:</strong> {parcelDetails?.pickupQueue?.queueCode}
-                    </p>
-                    <p>
-                      <strong>Queue Number:</strong> {parcelDetails?.pickupQueue?.queueNumber}
-                    </p>
-                    <p>
-                      <strong>Queued At:</strong>{' '}
-                      {formatDateTime(parcelDetails?.pickupQueue?.queuedAt ?? null)}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-                    No queue ticket found yet. Create it from the shared Pickup Queue page, then
-                    return here to complete handover.
-                  </div>
-                )}
-              </div>
-            ) : null}
-            <PickupMainCardSection
-              mode={mainCardMode}
-              onModeChange={onMainCardModeChange}
-              existingCardRecordId={mainExistingCardRecordId}
-              onExistingCardRecordIdChange={onMainExistingCardRecordIdChange}
-              newCardTypeId={mainNewCardTypeId}
-              onNewCardTypeIdChange={onMainNewCardTypeIdChange}
-              newCardNumber={mainNewCardNumber}
-              onNewCardNumberChange={onMainNewCardNumberChange}
-              receiverCards={mainReceiverCards}
-              cardOptions={cardOptions}
-            />
-            <PickupVerificationHandoverSection
-              parcelSecondReceiverId={parcel.secondReceiverId}
-              handoverTarget={handoverTarget}
-              onHandoverTargetChange={onHandoverTargetChange}
-              secondNewName={secondNewName}
-              onSecondNewNameChange={onSecondNewNameChange}
-              secondNewPhone={secondNewPhone}
-              onSecondNewPhoneChange={onSecondNewPhoneChange}
-              secondCardMode={secondCardMode}
-              onSecondCardModeChange={onSecondCardModeChange}
-              secondExistingCardRecordId={secondExistingCardRecordId}
-              onSecondExistingCardRecordIdChange={onSecondExistingCardRecordIdChange}
-              secondNewCardTypeId={secondNewCardTypeId}
-              onSecondNewCardTypeIdChange={onSecondNewCardTypeIdChange}
-              secondNewCardNumber={secondNewCardNumber}
-              onSecondNewCardNumberChange={onSecondNewCardNumberChange}
-              secondReceiverCards={secondReceiverCards}
-              cardOptions={cardOptions}
-            />
-            {isPickupOtpRequired ? (
-              <PickupOtpVerificationSection
-                otp={otp}
-                receiverPhone={parcel.receiverPhone}
-                receiverPhone2={parcel.receiverPhone2}
-                phoneSlot={phoneSlot}
-                onPhoneSlotChange={onPhoneSlotChange}
-              />
-            ) : (
-              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-                <p className="font-medium">Pickup OTP is disabled for this branch</p>
-                <p className="text-muted-foreground">
-                  Continue without OTP only when processing an approved legacy record.
-                </p>
-              </div>
-            )}
-            {parcelDetails ? (
-              <div className="rounded-md border p-3 text-sm">
-                <p>
-                  <strong>Payments:</strong> {parcelDetails.payments.length}
-                </p>
-                <p>
-                  <strong>Consignments:</strong> {parcelDetails.consignments.length}
-                </p>
-              </div>
-            ) : null}
+              )}
+              {parcelDetails ? (
+                <div className="rounded-md border p-3 text-sm">
+                  <p>
+                    <strong>Payments:</strong> {parcelDetails.payments.length}
+                  </p>
+                  <p>
+                    <strong>Consignments:</strong> {parcelDetails.consignments.length}
+                  </p>
+                </div>
+              ) : null}
+            </div>
           </div>
         )}
         <DialogFooter>

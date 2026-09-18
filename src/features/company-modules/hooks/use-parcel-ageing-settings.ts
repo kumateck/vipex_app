@@ -14,7 +14,7 @@ type ParcelAgeingFormState = {
 
 const DEFAULT_FORM_STATE: ParcelAgeingFormState = {
   agedThresholdMonths: '6',
-  storageFeePerDayCedis: '5',
+  storageFeePerDayCedis: '2',
   storageGracePeriodDays: '14',
 };
 

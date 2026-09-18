@@ -41,90 +41,95 @@ export function ReceiverPaymentDeliveryDialog({
       open={Boolean(parcel)}
       onOpenChange={(open) => (!open ? dialog.setSelectedParcel(null) : null)}
     >
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Receiver Payment + Pickup Verification</DialogTitle>
         </DialogHeader>
         {!parcel ? null : (
-          <div className="space-y-4">
-            <ReceiverPaymentPrimarySections context={context} dialog={dialog} parcel={parcel} />
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-4">
+              <ReceiverPaymentPrimarySections context={context} dialog={dialog} parcel={parcel} />
+            </div>
 
-            <div className="space-y-2 rounded-md border p-3">
-              <Label>Main Receiver ID Card (optional)</Label>
-              <Select
-                value={dialog.mainCardMode}
-                onValueChange={(value) =>
-                  dialog.setMainCardMode(value as 'none' | 'existing' | 'new')
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No card</SelectItem>
-                  <SelectItem value="existing" disabled={dialog.mainReceiverCards.length === 0}>
-                    Use existing card
-                  </SelectItem>
-                  <SelectItem value="new">Add new card</SelectItem>
-                </SelectContent>
-              </Select>
-              {dialog.mainCardMode === 'existing' ? (
+            <div className="space-y-4">
+              <div className="space-y-2 rounded-md border p-3">
+                <Label>Main Receiver ID Card (optional)</Label>
                 <Select
-                  value={dialog.mainExistingCardRecordId}
-                  onValueChange={dialog.setMainExistingCardRecordId}
+                  value={dialog.mainCardMode}
+                  onValueChange={(value) =>
+                    dialog.setMainCardMode(value as 'none' | 'existing' | 'new')
+                  }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select existing card" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {dialog.mainReceiverCards.map((card) => (
-                      <SelectItem key={card.id} value={card.id}>
-                        {card.cardName} - {card.cardNumber}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="none">No card</SelectItem>
+                    <SelectItem value="existing" disabled={dialog.mainReceiverCards.length === 0}>
+                      Use existing card
+                    </SelectItem>
+                    <SelectItem value="new">Add new card</SelectItem>
                   </SelectContent>
                 </Select>
-              ) : dialog.mainCardMode === 'new' ? (
-                <div className="grid gap-2 md:grid-cols-2">
+                {dialog.mainCardMode === 'existing' ? (
                   <Select
-                    value={dialog.mainNewCardTypeId}
-                    onValueChange={dialog.setMainNewCardTypeId}
+                    value={dialog.mainExistingCardRecordId}
+                    onValueChange={dialog.setMainExistingCardRecordId}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select card type" />
+                      <SelectValue placeholder="Select existing card" />
                     </SelectTrigger>
                     <SelectContent>
-                      {dialog.cardOptions.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.name}
+                      {dialog.mainReceiverCards.map((card) => (
+                        <SelectItem key={card.id} value={card.id}>
+                          {card.cardName} - {card.cardNumber}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Input
-                    value={dialog.mainNewCardNumber}
-                    onChange={(event) => dialog.setMainNewCardNumber(event.target.value)}
-                    placeholder="Card number"
-                  />
-                </div>
+                ) : dialog.mainCardMode === 'new' ? (
+                  <div className="grid gap-2">
+                    <Select
+                      value={dialog.mainNewCardTypeId}
+                      onValueChange={dialog.setMainNewCardTypeId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select card type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dialog.cardOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      value={dialog.mainNewCardNumber}
+                      onChange={(event) => dialog.setMainNewCardNumber(event.target.value)}
+                      placeholder="Card number"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No ID card will be recorded for this handover.
+                  </p>
+                )}
+              </div>
+
+              <ReceiverPaymentSecondarySections context={context} dialog={dialog} />
+
+              {context.isReceiverOtpRequired ? (
+                <ReceiverOtpSection dialog={dialog} />
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  No ID card will be recorded for this handover.
-                </p>
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                  <p className="font-medium">Receiver OTP is disabled for this branch</p>
+                  <p className="text-muted-foreground">
+                    Continue without OTP only when processing an approved legacy record.
+                  </p>
+                </div>
               )}
             </div>
-
-            <ReceiverPaymentSecondarySections context={context} dialog={dialog} />
-            {context.isReceiverOtpRequired ? (
-              <ReceiverOtpSection dialog={dialog} />
-            ) : (
-              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-                <p className="font-medium">Receiver OTP is disabled for this branch</p>
-                <p className="text-muted-foreground">
-                  Continue without OTP only when processing an approved legacy record.
-                </p>
-              </div>
-            )}
           </div>
         )}
         <DialogFooter>
