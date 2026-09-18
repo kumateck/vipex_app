@@ -4,9 +4,9 @@ import { PermissionKeys, RoutePermissionOverrides } from '@/shared/permissions/c
 import { http } from '../utils/request';
 
 describe('previous consignment reprint routes', () => {
-  test('page uses the consignment read permission', () => {
+  test('page uses the consignment history read permission', () => {
     expect(RoutePermissionOverrides['/parcels/consignments/history']).toBe(
-      PermissionKeys.CanReadConsignments,
+      PermissionKeys.CanReadConsignmentsHistory,
     );
   });
 
