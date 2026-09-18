@@ -1669,3 +1669,21 @@ export async function resolveParcelDiscrepancySvc(input: {
 
   return { id: resolved.id, parcelId: resolved.parcelId };
 }
+
+export async function assignParcelToCallCenterSvc(input: { parcelId: string; userId: string }) {
+  const parcel = await getParcelByIdRepo(input.parcelId);
+  if (!parcel) throw new NotFound('Parcel not found');
+
+  await updateParcelRepo(input.parcelId, { callCenterAssignedToUserId: input.userId }, db);
+
+  return { success: true, parcelId: input.parcelId };
+}
+
+export async function updateParcelShelfPickerSvc(input: { parcelId: string; userId: string }) {
+  const parcel = await getParcelByIdRepo(input.parcelId);
+  if (!parcel) throw new NotFound('Parcel not found');
+
+  await updateParcelRepo(input.parcelId, { shelfPickerUserId: input.userId }, db);
+
+  return { success: true, parcelId: input.parcelId };
+}
