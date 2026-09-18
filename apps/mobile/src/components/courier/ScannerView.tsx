@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
-import { AppButton } from '@mobile/components/ui';
+import { AppButton, AppInput } from '@mobile/components/ui';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileSpacing } from '@mobile/theme/layout';
 import { useLockedCodeScanner } from './use-locked-code-scanner';
@@ -31,6 +31,7 @@ export function ScannerView({ onCodeScanned, processing = false }: ScannerViewPr
   const [cameraError, setCameraError] = useState(false);
   const [cameraRetryKey, setCameraRetryKey] = useState(0);
   const [torchEnabled, setTorchEnabled] = useState(false);
+  const [manualCode, setManualCode] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -43,6 +44,14 @@ export function ScannerView({ onCodeScanned, processing = false }: ScannerViewPr
     setCameraError(false);
     setCameraRetryKey((current) => current + 1);
   }, []);
+
+  const submitManualCode = useCallback(() => {
+    const code = manualCode.trim();
+    if (!code || processing) return;
+
+    setManualCode('');
+    void onCodeScanned(code);
+  }, [manualCode, onCodeScanned, processing]);
 
   useEffect(() => {
     if (!hasPermission || !device || !isFocused || processing || cameraError) {
@@ -145,6 +154,30 @@ export function ScannerView({ onCodeScanned, processing = false }: ScannerViewPr
       <Text style={{ color: theme.colors.textSubtle }}>
         Align the QR inside the frame. For dark labels, avoid plastic glare and use Light if needed.
       </Text>
+      <View style={styles.manualEntry}>
+        <Text style={[styles.manualEntryTitle, { color: theme.colors.text }]}>
+          Camera not reading?
+        </Text>
+        <Text style={[styles.manualEntryHint, { color: theme.colors.textSubtle }]}>
+          Enter the booking or tracking code printed below the QR.
+        </Text>
+        <AppInput
+          value={manualCode}
+          onChangeText={setManualCode}
+          onSubmitEditing={submitManualCode}
+          placeholder="Booking or tracking code"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          returnKeyType="done"
+          editable={!processing}
+        />
+        <AppButton
+          title="Use Code"
+          onPress={submitManualCode}
+          disabled={processing || manualCode.trim().length === 0}
+          variant="secondary"
+        />
+      </View>
     </View>
   );
 }
@@ -208,4 +241,7 @@ const styles = StyleSheet.create({
   },
   processingTitle: { color: '#ffffff', fontSize: 22, fontWeight: '800' },
   processingText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
+  manualEntry: { gap: mobileSpacing.xs, marginTop: mobileSpacing.md },
+  manualEntryTitle: { fontSize: 16, fontWeight: '800' },
+  manualEntryHint: { fontSize: 14, lineHeight: 19 },
 });

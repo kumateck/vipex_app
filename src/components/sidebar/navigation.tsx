@@ -175,7 +175,7 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Previous Consignments',
             url: '/parcels/consignments/history',
-            permissionKey: PermissionKeys.CanReadConsignments,
+            permissionKey: PermissionKeys.CanReadConsignmentsHistory,
           },
           {
             title: 'In Transit (Outgoing)',
@@ -211,6 +211,11 @@ const BASE_ROUTES: Route[] = [
         icon: 'Search',
         items: [
           {
+            title: 'Parcel Assignment',
+            url: '/parcels/call-center-assignment',
+            permissionKey: PermissionKeys.CanReadCallCenterAssignment,
+          },
+          {
             title: 'Call Outcomes',
             url: '/parcels/status',
             permissionKey: PermissionKeys.CanReadCallCenterParcelStatus,
@@ -219,6 +224,11 @@ const BASE_ROUTES: Route[] = [
             title: 'Address Collection',
             url: '/parcels/home-delivery/address',
             permissionKey: PermissionKeys.CanMarkDoorstepCalled,
+          },
+          {
+            title: 'Shelf Picker Update',
+            url: '/parcels/shelf-picker-update',
+            permissionKey: PermissionKeys.CanReadShelfPickerUpdate,
           },
         ],
       },

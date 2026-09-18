@@ -1,5 +1,6 @@
 import { BrandedQrCode } from '@/components/ui/branded-qr-code';
 import { InvoiceA5Header } from './invoice-a5-header';
+import { InvoiceA5Terms } from './invoice-a5-terms';
 import type { InvoiceA5TemplateProps } from './invoice-a5-template.types';
 
 export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
@@ -99,6 +100,7 @@ export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
           style={{ width: '36mm', height: '36mm', justifySelf: 'center', alignSelf: 'start' }}
         />
       </div>
+      <InvoiceA5Terms />
     </div>
   );
 }

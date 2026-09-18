@@ -3,6 +3,7 @@ import { InvoiceA5Header } from './invoice-a5-header';
 import type { InvoiceA5TemplateProps } from './invoice-a5-template.types';
 import { isToBePaidDeliveryReceipt } from './invoice-a5-template.utils';
 import { InvoiceTaxSummary } from './invoice-tax-summary';
+import { InvoiceA5Terms } from './invoice-a5-terms';
 import { ToBePaidReceiptA5Template } from './to-be-paid-receipt-a5-template';
 
 export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
@@ -207,6 +208,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
           </div>
         </div>
       </div>
+      <InvoiceA5Terms />
     </div>
   );
 }

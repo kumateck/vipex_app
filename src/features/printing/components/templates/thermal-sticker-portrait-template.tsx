@@ -8,6 +8,7 @@ import { StickerRow } from './thermal-sticker-template-utils';
 import { ThermalStickerWordmark } from './thermal-sticker-wordmark';
 
 export function ThermalStickerPortraitTemplate({
+  bookingCode,
   senderName,
   senderTelephones,
   receiverName,
@@ -34,7 +35,7 @@ export function ThermalStickerPortraitTemplate({
         padding: '1.2mm',
         fontFamily: 'Arial, sans-serif',
         display: 'grid',
-        gridTemplateRows: `18mm ${statusRowHeight} 18mm minmax(0, 1fr)`,
+        gridTemplateRows: `21mm ${statusRowHeight} 18mm minmax(0, 1fr)`,
         gap: '0.5mm',
         overflow: 'hidden',
       }}
@@ -58,18 +59,25 @@ export function ThermalStickerPortraitTemplate({
           }}
         />
         <ThermalStickerWordmark />
-        <BrandedQrCode
-          value={qrValue}
-          size={160}
-          variant="print"
-          ariaLabel="Parcel tracking QR code"
-          style={{
-            width: '18mm',
-            height: '18mm',
-            backgroundColor: '#ffffff',
-          }}
+        <div
           className="self-start justify-self-end"
-        />
+          style={{ display: 'grid', justifyItems: 'center', rowGap: '0.25mm' }}
+        >
+          <BrandedQrCode
+            value={qrValue}
+            size={160}
+            variant="print"
+            ariaLabel="Parcel tracking QR code"
+            style={{
+              width: '18mm',
+              height: '18mm',
+              backgroundColor: '#ffffff',
+            }}
+          />
+          <div style={{ fontSize: '1.45mm', fontWeight: 800, lineHeight: 1, whiteSpace: 'nowrap' }}>
+            {bookingCode}
+          </div>
+        </div>
       </header>
 
       <section

@@ -53,8 +53,8 @@ must explicitly tick the checkbox before **Confirm Parcel** can submit the draft
 The server rejects omitted, false, or outdated consent even if browser validation is bypassed. Every
 accepted draft records terms version `2026-08-29` and a server-generated acceptance timestamp. The
 terms cover mandatory inspection, prohibited items, declared-value liability, storage charges,
-courier charges and fragile handling, sender-only claims, force majeure, sender declaration, and
-identification requirements for collection by receivers or third parties.
+courier charges and fragile handling, sender-only claims, force majeure, data protection, sender
+declaration, and identification requirements for collection by receivers or third parties.
 
 ## Agent Workflow
 

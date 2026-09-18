@@ -12,6 +12,7 @@ import { HttpStatus } from '../../utils/http-status';
 import { UUID } from '../../schemas/common';
 import {
   approveParcelReconciliationCaseCtrl,
+  assignParcelToCallCenterCtrl,
   createParcelCtrl,
   executeParcelReconciliationCaseCtrl,
   getParcelByIdCtrl,
@@ -26,6 +27,7 @@ import {
   markParcelReceivedCtrl,
   markIncomingParcelsArrivedCtrl,
   recordParcelDispositionActionCtrl,
+  updateParcelShelfPickerCtrl,
   waiveParcelStorageAccrualCtrl,
   requestParcelReconciliationCaseCtrl,
   resolveParcelDiscrepancyCtrl,
@@ -645,5 +647,36 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         tags: ['Shipments'],
         summary: 'Soft delete parcel and soft-delete (void) associated payments with reason',
       },
+    },
+  )
+  .post(
+    '/:id/assign-call-center',
+    async ({ params, body }) =>
+      assignParcelToCallCenterCtrl({
+        parcelId: params.id,
+        userId: (body as { userId: string }).userId,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({ userId: t.String() }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanAssignCallCenterParcels)],
+      detail: {
+        tags: ['Shipments'],
+        summary: 'Assign parcel to call center representative',
+      },
+    },
+  )
+  .post(
+    '/:id/update-shelf-picker',
+    async ({ params, body }) =>
+      updateParcelShelfPickerCtrl({
+        parcelId: params.id,
+        userId: (body as { userId: string }).userId,
+      }),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({ userId: t.String() }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateParcelShelfPicker)],
+      detail: { tags: ['Shipments'], summary: 'Update shelf picker for parcel' },
     },
   );
