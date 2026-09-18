@@ -71,6 +71,7 @@ const catalog = [
   ['CanUpdateConsignments', 'Update consignments', 'Shipments'],
   ['CanDeleteConsignments', 'Delete consignments', 'Shipments'],
   ['CanAutoGroupConsignments', 'Auto group consignments', 'Shipments'],
+  ['CanReadConsignmentsHistory', 'View saved consignment history for reprinting', 'Shipments'],
 
   // Cashiers / Shifts
   ['CanReadCashierSessionTypes', 'List cashier session types', 'Cashiers'],
@@ -778,7 +779,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/users/password-management': PermissionKeys.CanSetUserPassword,
   '/parcels/sender-payments': PermissionKeys.CanCreateSenderPayments,
   '/parcels/processed': PermissionKeys.CanReadConsignments,
-  '/parcels/consignments/history': PermissionKeys.CanReadConsignments,
+  '/parcels/consignments/history': PermissionKeys.CanReadConsignmentsHistory,
   '/parcels/pickup-queue': PermissionKeys.CanCreatePickupQueue,
   '/parcels/pickup-queue/sender': PermissionKeys.CanReadSenderPickupQueue,
   '/parcels/waiting-pickup': PermissionKeys.CanCompleteOfficePickup,

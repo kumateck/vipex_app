@@ -27,7 +27,7 @@ export const SELF_SERVICE_TERMS_SECTIONS = [
   {
     title: '4. Non-Collection & Storage Charges',
     items: [
-      'Parcels not collected within two (2) weeks attract storage charges of GHS 5 per day, accruing until collection.',
+      'Parcels not collected within two (2) weeks attract storage charges of GHS 2 per day, accruing until collection.',
       'VIPex reserves the right to dispose of uncollected parcels after reasonable notice in order to recover outstanding charges.',
     ],
   },
@@ -49,6 +49,12 @@ export const SELF_SERVICE_TERMS_SECTIONS = [
     title: '7. Force Majeure',
     items: [
       'VIPex shall not be liable for loss, damage, or delay caused by events beyond its reasonable control, including accidents, road conditions, fire, flood, strikes, or acts of God.',
+    ],
+  },
+  {
+    title: '8. Data Protection',
+    items: [
+      'Information collected will be used only for the intended purpose and handled in accordance with applicable data protection requirements.',
     ],
   },
 ] as const;

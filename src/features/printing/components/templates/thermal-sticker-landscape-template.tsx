@@ -6,6 +6,7 @@ import { PAYMENT_DUE_NOTE } from './thermal-sticker-copy';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
 
 export function ThermalStickerLandscapeTemplate({
+  bookingCode,
   senderName,
   senderTelephones,
   receiverName,
@@ -110,14 +111,21 @@ export function ThermalStickerLandscapeTemplate({
             width: '100%',
           }}
         >
-          <BrandedQrCode
-            value={qrValue}
-            size={220}
-            variant="print"
-            ariaLabel="Parcel tracking QR code"
-            className="justify-self-end"
-            style={{ width: '28mm', height: '28mm', backgroundColor: '#ffffff' }}
-          />
+          <div style={{ display: 'grid', justifyItems: 'center', rowGap: '0.4mm' }}>
+            <BrandedQrCode
+              value={qrValue}
+              size={220}
+              variant="print"
+              ariaLabel="Parcel tracking QR code"
+              className="justify-self-end"
+              style={{ width: '28mm', height: '28mm', backgroundColor: '#ffffff' }}
+            />
+            <div
+              style={{ fontSize: '1.8mm', fontWeight: 800, lineHeight: 1, whiteSpace: 'nowrap' }}
+            >
+              {bookingCode}
+            </div>
+          </div>
         </div>
       </aside>
     </div>

@@ -69,7 +69,7 @@ function StorageChargeSummary({
           <strong>Grace Period:</strong> {parcel.storageChargeGraceDays ?? 14} days
         </p>
         <p>
-          <strong>Rate:</strong> {formatCurrency(parcel.storageFeePerDayPsw ?? 500)} / day
+          <strong>Rate:</strong> {formatCurrency(parcel.storageFeePerDayPsw ?? 200)} / day
         </p>
         <p>
           <strong>Accrued Days:</strong> {parcel.storageChargeDays ?? 0}

@@ -14,6 +14,13 @@ The application prints parcel stickers and A5 customer documents from the browse
 
 The A5 document includes payer details where a payer differs from the sender or receiver.
 
+Both sender payment receipts and receiver acknowledgement notes include these terms:
+
+- Parcels not collected within two weeks will incur a daily storage fee of GH₵2.
+- Information collected will be used only for the intended purpose and handled in accordance with applicable data protection requirements.
+
+The shared A5 receipt header also lists Techiman (`0559085369`) and Tamale (`0502638678`) contact numbers.
+
 ## QR Print and Stock Standard
 
 Parcel QR codes require an opaque white background with an uninterrupted white quiet zone on all

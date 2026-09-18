@@ -32,6 +32,8 @@ describe('A5 acknowledgement note', () => {
     );
 
     expect(html).toContain('ACKNOWLEDGEMENT NOTE');
+    expect(html).toContain('Techiman: 0559085369');
+    expect(html).toContain('Tamale: 0502638678');
     expect(html).toContain('The sender has made <strong>NO PAYMENT</strong>');
     expect(html).toContain('Parcel Code');
     expect(html).toContain('#KA123');
@@ -45,6 +47,12 @@ describe('A5 acknowledgement note', () => {
     expect(html).toContain('PAYMENT STATUS: TO BE PAID');
     expect(html).toContain('Amount Due for payment');
     expect(html).toContain('GHS 30.00');
+    expect(html).toContain(
+      'Parcels not collected within two weeks will incur a daily storage fee of GH₵2.',
+    );
+    expect(html).toContain(
+      'Information collected will be used only for the intended purpose and handled in accordance with applicable data protection requirements.',
+    );
     expect(html).not.toContain('PARCEL DELIVERY RECEIPT');
     expect(html).not.toContain('Receipt Number');
   });
