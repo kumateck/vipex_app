@@ -19,6 +19,8 @@ export { ParcelHomeDeliveryRiderAssignedPage } from './pages/parcel-home-deliver
 export { ParcelRiderCurrentPage } from './pages/parcel-rider-current-page';
 export { ParcelRiderHistoryPage } from './pages/parcel-rider-history-page';
 export { ParcelDeliveryCashierPage } from './pages/parcel-delivery-cashier-page';
+export { ParcelCallCenterAssignmentPage } from './components/parcel-call-center-assignment';
+export { ParcelShelfPickerUpdatePage } from './components/parcel-shelf-picker-update';
 export {
   IncomingConsignmentsPage,
   ConsignmentReceivingSessionPage,

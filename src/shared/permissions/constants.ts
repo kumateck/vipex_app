@@ -104,6 +104,10 @@ const catalog = [
   ['CanCreateParcelInternalTransfers', 'Create parcel internal transfers', 'Deliveries'],
   ['CanAcknowledgeParcelInternalTransfers', 'Acknowledge parcel internal transfers', 'Deliveries'],
   ['CanCancelParcelInternalTransfers', 'Cancel parcel internal transfers', 'Deliveries'],
+  ['CanReadCallCenterAssignment', 'View call center assignment page', 'Deliveries'],
+  ['CanAssignCallCenterParcels', 'Assign parcels to call center representatives', 'Deliveries'],
+  ['CanReadShelfPickerUpdate', 'View shelf picker update page', 'Deliveries'],
+  ['CanUpdateParcelShelfPicker', 'Update parcel shelf picker assignments', 'Deliveries'],
 
   // Payments / Accounting
   ['CanCreatePayments', 'Create payments', 'Payments'],
@@ -795,6 +799,8 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/parcels/home-delivery/rider-assigned': PermissionKeys.CanDispatchForDelivery,
   '/parcels/delivery-cashier': PermissionKeys.CanCompleteDoorstepDelivery,
   '/parcels/status': PermissionKeys.CanReadCallCenterParcelStatus,
+  '/parcels/call-center-assignment': PermissionKeys.CanReadCallCenterAssignment,
+  '/parcels/shelf-picker-update': PermissionKeys.CanReadShelfPickerUpdate,
   '/parcels/home-delivery/address': PermissionKeys.CanMarkDoorstepCalled,
   '/parcels/rider/current': PermissionKeys.CanReadRiderCurrentParcels,
   '/parcels/rider/history': PermissionKeys.CanReadRiderHistory,

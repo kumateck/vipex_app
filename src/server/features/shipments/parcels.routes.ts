@@ -659,8 +659,11 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
     {
       params: t.Object({ id: UUID }),
       body: t.Object({ userId: t.String() }),
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateParcels)],
-      detail: { tags: ['Shipments'], summary: 'Assign parcel to call center representative' },
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanAssignCallCenterParcels)],
+      detail: {
+        tags: ['Shipments'],
+        summary: 'Assign parcel to call center representative',
+      },
     },
   )
   .post(
@@ -673,7 +676,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
     {
       params: t.Object({ id: UUID }),
       body: t.Object({ userId: t.String() }),
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateParcels)],
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateParcelShelfPicker)],
       detail: { tags: ['Shipments'], summary: 'Update shelf picker for parcel' },
     },
   );

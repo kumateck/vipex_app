@@ -1671,8 +1671,8 @@ export async function resolveParcelDiscrepancySvc(input: {
 }
 
 export async function assignParcelToCallCenterSvc(input: { parcelId: string; userId: string }) {
-  const parcel = await getParcelByIdRepo(input.parcelId);
-  if (!parcel) throw new NotFound('Parcel not found');
+  const parcel = await getParcelRepo(input.parcelId);
+  if (!parcel) throw NotFound('Parcel not found');
 
   await updateParcelRepo(input.parcelId, { callCenterAssignedToUserId: input.userId }, db);
 
@@ -1680,8 +1680,8 @@ export async function assignParcelToCallCenterSvc(input: { parcelId: string; use
 }
 
 export async function updateParcelShelfPickerSvc(input: { parcelId: string; userId: string }) {
-  const parcel = await getParcelByIdRepo(input.parcelId);
-  if (!parcel) throw new NotFound('Parcel not found');
+  const parcel = await getParcelRepo(input.parcelId);
+  if (!parcel) throw NotFound('Parcel not found');
 
   await updateParcelRepo(input.parcelId, { shelfPickerUserId: input.userId }, db);
 

@@ -4,6 +4,11 @@
 
 Parcel operations cover booking, parcel creation, payment responsibility, physical movement, custody transfer, receiving, pickup, delivery, and exception handling. The main implementation areas are:
 
+Call-center assignment and shelf-picker updates are separate permission-gated workflows. Their pages
+require `CanReadCallCenterAssignment` and `CanReadShelfPickerUpdate`; mutations require
+`CanAssignCallCenterParcels` and `CanUpdateParcelShelfPicker`. The server enforces these permissions
+independently of sidebar visibility.
+
 - Web: `src/features/operations/parcel`, `src/features/bookings`, and related operations features.
 - Server: `src/server/features/shipments`, `consignments`, `deliveries`, `pickup-queues`, `parcel-internal-transfers`, and `parcel-receiver-otp`.
 - Mobile: `mobile/src/features/parcel-create`, `receive`, `operations`, and `rider`.

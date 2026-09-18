@@ -87,7 +87,7 @@ export function AssignParcelDialog({
           <Button variant="outline" type="button" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={onAssign} disabled={isSaving || !selectedStaffId} loading={isSaving}>
+          <Button onClick={onAssign} disabled={isSaving || !selectedStaffId}>
             {isSaving ? 'Assigning...' : 'Assign'}
           </Button>
         </DialogFooter>

@@ -107,7 +107,7 @@ export function UpdateShelfPickerDialog({
           <Button variant="outline" type="button" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={onUpdate} disabled={isSaving || !selectedStaffId} loading={isSaving}>
+          <Button onClick={onUpdate} disabled={isSaving || !selectedStaffId}>
             {isSaving ? 'Updating...' : 'Update'}
           </Button>
         </DialogFooter>
