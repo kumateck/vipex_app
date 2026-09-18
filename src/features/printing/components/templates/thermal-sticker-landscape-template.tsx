@@ -144,6 +144,7 @@ function ReceiverHeader({
   return (
     <header
       style={{
+        minWidth: 0,
         display: 'grid',
         gridTemplateRows: 'auto minmax(0, 1fr) auto',
         padding: '0.6mm 2mm',
@@ -157,6 +158,7 @@ function ReceiverHeader({
       <div
         style={{
           minHeight: 0,
+          minWidth: 0,
           display: 'grid',
           placeItems: 'center',
           overflow: 'hidden',
@@ -168,7 +170,16 @@ function ReceiverHeader({
       >
         {receiverName}
       </div>
-      <div style={{ marginTop: '0.5mm', fontSize: '4.6mm', fontWeight: 900, lineHeight: 1 }}>
+      <div
+        style={{
+          minWidth: 0,
+          marginTop: '0.5mm',
+          fontSize: '4.6mm',
+          fontWeight: 900,
+          lineHeight: 1,
+          overflowWrap: 'anywhere',
+        }}
+      >
         {receiverTelephones}
       </div>
     </header>
