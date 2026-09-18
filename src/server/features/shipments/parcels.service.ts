@@ -28,7 +28,7 @@ import { getBranchRepo } from '../branches/repository';
 import { recordAuditLog } from '../audit/logger';
 import { listConsignmentsForParcelRepo } from './consignments.repository';
 import { removeActiveConsignmentItemsByParcelRepo } from './consignments.repository';
-import { getPickupQueueByParcelRepo } from '../pickup-queues/repository';
+import { getPickupQueueByParcelRepo, updatePickupQueueRepo } from '../pickup-queues/repository';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
 import {
   getParcelInternalHolderByParcelRepo,
@@ -1680,10 +1680,10 @@ export async function assignParcelToCallCenterSvc(input: { parcelId: string; use
 }
 
 export async function updateParcelShelfPickerSvc(input: { parcelId: string; userId: string }) {
-  const parcel = await getParcelRepo(input.parcelId);
-  if (!parcel) throw NotFound('Parcel not found');
+  const queue = await getPickupQueueByParcelRepo(input.parcelId);
+  if (!queue) throw NotFound('Active pickup queue not found for parcel');
 
-  await updateParcelRepo(input.parcelId, { shelfPickerUserId: input.userId }, db);
+  await updatePickupQueueRepo(queue.id, { pickerStaffId: input.userId }, db);
 
   return { success: true, parcelId: input.parcelId };
 }

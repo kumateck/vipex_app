@@ -107,7 +107,7 @@ export function useShelfPickerUpdateWorkflow() {
       listQuery,
       openUpdateDialog: (parcel: ParcelRow) => {
         setSelectedParcel(parcel);
-        setSelectedStaffId(parcel.shelfPickerUserId || '');
+        setSelectedStaffId(parcel.pickerStaffId || '');
       },
       handleSearchSubmit,
     },

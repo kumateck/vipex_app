@@ -41,7 +41,7 @@ export function ReceiverPaymentDeliveryDialog({
       open={Boolean(parcel)}
       onOpenChange={(open) => (!open ? dialog.setSelectedParcel(null) : null)}
     >
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-7xl sm:max-w-7xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Receiver Payment + Pickup Verification</DialogTitle>
         </DialogHeader>

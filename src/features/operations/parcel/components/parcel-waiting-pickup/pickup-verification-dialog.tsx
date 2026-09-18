@@ -125,7 +125,7 @@ export function PickupVerificationDialog({
 }: PickupVerificationDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? onClose() : null)}>
-      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-7xl sm:max-w-7xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Pickup Verification</DialogTitle>
         </DialogHeader>
