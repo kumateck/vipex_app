@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
+import { useCallback, useEffect, useState } from 'react';
+import { useAuthStore } from '@/stores/auth-store';
+import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ParcelRow, StaffOption } from './call-center-assignment-types';
+
+type ParcelListResponse = { data: ParcelRow[]; meta: PaginationMeta };
 
 type TableQuery = {
   page?: number;
@@ -11,20 +13,33 @@ type TableQuery = {
 };
 
 export function useCallCenterAssignmentWorkflow() {
-  const { data: session } = useSession();
+  const user = useAuthStore((state) => state.user);
   const [query, setQuery] = useState<TableQuery>({ page: 1, pageSize: 20 });
   const [searchInput, setSearchInput] = useState('');
   const [selectedParcel, setSelectedParcel] = useState<ParcelRow | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  const companyId = (session?.user as unknown as { companyId?: string })?.companyId || '';
-  const branchId = (session?.user as unknown as { branchId?: string })?.branchId || '';
-  const userId = session?.user?.id || '';
-
-  const listQuery = useQuery({
-    queryKey: ['call-center-parcels', query, searchInput, companyId, branchId],
-    queryFn: async () => {
+  const companyId = user?.company?.id || '';
+  const branchId = user?.branch?.id || '';
+  const userId = user?.id || '';
+  const [listData, setListData] = useState<ParcelListResponse>({
+    data: [],
+    meta: {
+      totalRecords: 0,
+      totalPages: 0,
+      page: 1,
+      pageSize: 20,
+      hasNextPage: false,
+      hasPreviousPage: false,
+    },
+  });
+  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const fetchData = useCallback(async () => {
+    if (!companyId || !branchId) return;
+    setIsLoading(true);
+    try {
       const params = new URLSearchParams({
         page: String(query.page ?? 1),
         pageSize: String(query.pageSize ?? 20),
@@ -33,23 +48,22 @@ export function useCallCenterAssignmentWorkflow() {
         senderPaid: 'true',
         ...(searchInput && { search: searchInput }),
       });
+      const [parcelsRes, staffRes] = await Promise.all([
+        fetch(`/api/parcels/call-center?${params}`),
+        fetch(`/api/branches/${branchId}/call-center-staff`),
+      ]);
+      if (!parcelsRes.ok || !staffRes.ok) throw new Error('Failed to fetch call center data');
+      setListData(await parcelsRes.json());
+      setStaffOptions(await staffRes.json());
+    } finally {
+      setIsLoading(false);
+    }
+  }, [branchId, companyId, query.page, query.pageSize, searchInput]);
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
-      const res = await fetch(`/api/parcels/call-center?${params}`);
-      if (!res.ok) throw new Error('Failed to fetch parcels');
-      return res.json();
-    },
-    enabled: !!companyId && !!branchId,
-  });
-
-  const staffQuery = useQuery({
-    queryKey: ['call-center-staff', branchId],
-    queryFn: async () => {
-      const res = await fetch(`/api/branches/${branchId}/call-center-staff`);
-      if (!res.ok) throw new Error('Failed to fetch staff');
-      return res.json() as Promise<StaffOption[]>;
-    },
-    enabled: !!branchId,
-  });
+  const listQuery = { data: listData, isLoading, isFetching: isLoading, refetch: fetchData };
 
   const handleSearchSubmit = (value: string) => {
     setSearchInput(value);
@@ -92,7 +106,7 @@ export function useCallCenterAssignmentWorkflow() {
       setQuery,
       searchInput,
       setSearchInput,
-      rows: listQuery.data?.data ?? [],
+      rows: listData.data,
       listQuery,
       openAssignDialog: (parcel: ParcelRow) => {
         setSelectedParcel(parcel);
@@ -105,7 +119,7 @@ export function useCallCenterAssignmentWorkflow() {
       setSelectedParcel,
       selectedStaffId,
       setSelectedStaffId,
-      staffOptions: staffQuery.data ?? [],
+      staffOptions,
       isSaving,
       handleAssignParcel,
     },
