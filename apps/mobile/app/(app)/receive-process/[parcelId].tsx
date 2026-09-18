@@ -207,7 +207,7 @@ export default function ReceiveProcessParcelScreen() {
       );
       notifySuccess(`Parcel ${parcel.bookingCode} marked ARRIVED_AT_DESTINATION.`);
       void hapticSuccess();
-      await loadParcel();
+      router.replace('/(app)/receive');
     } catch (err) {
       notifyError(
         'Mark arrived failed',

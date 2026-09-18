@@ -9,6 +9,7 @@ export * from './services/browser-print';
 export * from './services/printer-preferences';
 export * from './components/templates/invoice-a5-template';
 export * from './components/templates/to-be-paid-receipt-a5-template';
+export * from './components/templates/invoice-a5-terms';
 export * from './components/templates/thermal-sticker-header-panel';
 export * from './components/templates/thermal-sticker-info-sections';
 export * from './components/templates/thermal-sticker-landscape-template';

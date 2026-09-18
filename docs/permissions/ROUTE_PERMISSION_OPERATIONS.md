@@ -24,6 +24,8 @@ Parcel, cashier, and human-capital route overrides.
 | `/parcels/home-delivery/rider-assigned` | `CanDispatchForDelivery`          |
 | `/parcels/delivery-cashier`             | `CanCompleteDoorstepDelivery`     |
 | `/parcels/status`                       | `CanReadCallCenterParcelStatus`   |
+| `/parcels/call-center-assignment`       | `CanReadCallCenterAssignment`     |
+| `/parcels/shelf-picker-update`          | `CanReadShelfPickerUpdate`        |
 | `/parcels/home-delivery/address`        | `CanMarkDoorstepCalled`           |
 | `/parcels/rider/current`                | `CanReadRiderCurrentParcels`      |
 | `/parcels/rider/history`                | `CanReadRiderHistory`             |

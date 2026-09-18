@@ -64,7 +64,7 @@ export const consignmentsRoutes = new Elysia({ name: 'consignments' })
         dateTo: t.String({ format: 'date' }),
         sourceId: t.Optional(UUID),
       }),
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadConsignments)],
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadConsignmentsHistory)],
       detail: {
         tags: ['Shipments'],
         summary: 'List saved consignments by inclusive date range for reprinting',

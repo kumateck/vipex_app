@@ -131,6 +131,7 @@ export const KEY_OVERRIDES: Partial<Record<PermissionKey, Partial<GroupDefault>>
   CanUpdateConsignments: { module: 'Consignment Processing' },
   CanDeleteConsignments: { module: 'Consignment Processing' },
   CanAutoGroupConsignments: { module: 'Consignment Processing' },
+  CanReadConsignmentsHistory: { module: 'Consignment Processing' },
   CanReadParcelReceivingModule: { module: 'Parcel Receiving' },
   CanReadParcelIncoming: { module: 'Parcel Receiving' },
   CanReadParcelScan: { module: 'Parcel Receiving' },

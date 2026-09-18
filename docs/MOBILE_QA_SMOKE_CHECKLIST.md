@@ -103,6 +103,7 @@ Last updated: 2026-08-27
      appears only when the device has a torch.
    - Scan a compliant black-on-white print under normal and dim light. Verify blue/dark stock is
      handled with a white 30 mm overlay label or manual search, not accepted as production stock.
+   - Cover the QR or introduce glare, then use the scanner card's **Camera not reading?** booking/tracking-code fallback with the code printed beneath the QR. Confirm it opens the same branch-scoped parcel review flow.
    - Repeat scan → parcel review → **Back To Incoming List** at least three times; every return must show a live camera preview without refresh, a dark preview, or `session/invalid-output-configuration`.
    - Force or simulate a camera-session error and confirm the in-screen **Restart Camera** recovery appears instead of a console error or unexplained dark preview.
    - Confirm an unreadable, wrong-branch, or non-in-transit QR does not open an unrelated parcel.
@@ -112,6 +113,7 @@ Last updated: 2026-08-27
    - Edit fields
    - Save edits
    - Confirm arrived
+   - After confirming an arrived parcel from both scan and manual search, return to the receive screen with a cleared flow ready for the next parcel.
    - Tap **Back To Incoming List** after opening a parcel from scanning, manual search, and a direct route; each case must open the native parcel scanner screen, never the desktop incoming page.
 5. Self-service:
    - List, inspect, claim, and complete sender/receiver/split pay-now drafts.
