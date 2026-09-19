@@ -12,8 +12,8 @@ export type ParcelRow = {
   parcelDetails: string;
   parcelContent: string;
   status: number;
-  shelfPickerUserId: string | null;
-  shelfPickerUserName: string | null;
+  pickerStaffId: string | null;
+  pickerStaffName: string | null;
   createdAt: string;
   senderPaid: boolean;
 };

@@ -62,12 +62,12 @@ export function useShelfPickerUpdateColumns({
       ),
     },
     {
-      accessorKey: 'shelfPickerUserName',
+      accessorKey: 'pickerStaffName',
       header: 'Shelf Picker',
       cell: ({ row }) => (
         <>
-          {row.original.shelfPickerUserName ? (
-            <Badge variant="outline">{row.original.shelfPickerUserName}</Badge>
+          {row.original.pickerStaffName ? (
+            <Badge variant="outline">{row.original.pickerStaffName}</Badge>
           ) : (
             <Badge variant="secondary">Not Assigned</Badge>
           )}
