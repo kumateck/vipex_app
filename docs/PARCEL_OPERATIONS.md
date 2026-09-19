@@ -6,7 +6,8 @@ Parcel operations cover booking, parcel creation, payment responsibility, physic
 
 Call-center assignment and shelf-picker updates are separate permission-gated workflows. Their pages
 require `CanReadCallCenterAssignment` and `CanReadShelfPickerUpdate`; mutations require
-`CanAssignCallCenterParcels` and `CanUpdateParcelShelfPicker`. The server enforces these permissions
+`CanAssignCallCenterParcels` and `CanUpdateParcelShelfPicker`. Shelf-picker assignment is stored on
+the active pickup queue in `pickup_queues.picker_staff_id`; the server enforces these permissions
 independently of sidebar visibility.
 
 - Web: `src/features/operations/parcel`, `src/features/bookings`, and related operations features.
