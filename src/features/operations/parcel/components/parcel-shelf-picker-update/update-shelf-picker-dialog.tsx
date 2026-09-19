@@ -97,7 +97,7 @@ export function UpdateShelfPickerDialog({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Currently assigned: {parcel.shelfPickerUserName || 'Not assigned'}
+                Currently assigned: {parcel.pickerStaffName || 'Not assigned'}
               </p>
             </div>
           </div>
