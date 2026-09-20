@@ -31,6 +31,17 @@ export function ParcelCallCenterAssignmentPage() {
         else next.add(parcelId);
         return next;
       }),
+    rows: table.rows,
+    onToggleAll: (checked) => {
+      setSelectedParcelIds((current) => {
+        const next = new Set(current);
+        for (const row of table.rows) {
+          if (checked) next.add(row.id);
+          else next.delete(row.id);
+        }
+        return next;
+      });
+    },
   });
 
   const assignSelected = async () => {

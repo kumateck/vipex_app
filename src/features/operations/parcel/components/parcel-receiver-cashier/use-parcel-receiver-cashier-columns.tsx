@@ -23,6 +23,7 @@ type UseParcelReceiverCashierColumnsOptions = {
   page: number;
   pageSize: number;
   onOpenParcelDialog: (parcel: ParcelSearchRow) => void;
+  onEdit: (parcel: ParcelSearchRow) => void;
   onRequestDelivery: (parcel: ParcelSearchRow) => void;
 };
 
@@ -32,6 +33,7 @@ export function useParcelReceiverCashierColumns({
   page,
   pageSize,
   onOpenParcelDialog,
+  onEdit,
   onRequestDelivery,
 }: UseParcelReceiverCashierColumnsOptions) {
   return useMemo<ColumnDef<ParcelSearchRow>[]>(() => {
@@ -160,6 +162,7 @@ export function useParcelReceiverCashierColumns({
             <DropdownMenuItem onClick={() => onOpenParcelDialog(row.original)}>
               Receive + Deliver
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
             <DropdownMenuItem onClick={() => onRequestDelivery(row.original)}>
               Request Delivery
             </DropdownMenuItem>
@@ -169,5 +172,13 @@ export function useParcelReceiverCashierColumns({
     });
 
     return columns;
-  }, [isPickupQueueEnabled, isSaving, onOpenParcelDialog, onRequestDelivery, page, pageSize]);
+  }, [
+    isPickupQueueEnabled,
+    isSaving,
+    onOpenParcelDialog,
+    onEdit,
+    onRequestDelivery,
+    page,
+    pageSize,
+  ]);
 }

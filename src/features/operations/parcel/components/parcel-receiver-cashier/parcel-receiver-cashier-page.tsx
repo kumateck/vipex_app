@@ -11,10 +11,11 @@ import { ReceiverPaymentDeliveryDialog } from './receiver-payment-delivery-dialo
 import { EMPTY_META } from './receiver-cashier-types';
 import { useParcelReceiverCashierColumns } from './use-parcel-receiver-cashier-columns';
 import { useParcelReceiverCashierWorkflow } from './use-parcel-receiver-cashier-workflow';
+import { EditIncomingTransitParcelDialog } from '../parcel-in-transit/edit-incoming-transit-parcel-dialog';
 
 export function ParcelReceiverCashierPage() {
   const workflow = useParcelReceiverCashierWorkflow();
-  const { context, table, dialog, receipt } = workflow;
+  const { context, table, dialog, receipt, edit } = workflow;
 
   const columns = useParcelReceiverCashierColumns({
     isPickupQueueEnabled: context.isPickupQueueEnabled,
@@ -22,6 +23,7 @@ export function ParcelReceiverCashierPage() {
     page: table.query.page ?? 1,
     pageSize: table.query.pageSize ?? 20,
     onOpenParcelDialog: table.openParcelDialog,
+    onEdit: table.openEditDialog,
     onRequestDelivery: (parcel) => void table.handleRequestDelivery(parcel),
   });
 
@@ -112,6 +114,19 @@ export function ParcelReceiverCashierPage() {
         </ScrollableWrapper>
 
         <ReceiverPaymentDeliveryDialog context={context} dialog={dialog} />
+
+        <EditIncomingTransitParcelDialog
+          open={Boolean(edit.editingParcel)}
+          onClose={() => edit.setEditingParcel(null)}
+          editParcelDetails={edit.editParcelDetails}
+          onEditParcelDetailsChange={edit.setEditParcelDetails}
+          editReceiverName={edit.editReceiverName}
+          onEditReceiverNameChange={edit.setEditReceiverName}
+          editReceiverPhone={edit.editReceiverPhone}
+          onEditReceiverPhoneChange={edit.setEditReceiverPhone}
+          isSaving={edit.isSaving}
+          onSave={edit.handleSaveEdit}
+        />
 
         {receipt.lastPrintedReceipt ? (
           <ParcelReceiptActions

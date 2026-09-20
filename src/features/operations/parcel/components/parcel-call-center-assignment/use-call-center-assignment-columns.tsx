@@ -8,15 +8,28 @@ export function useCallCenterAssignmentColumns({
   onOpenAssignDialog,
   selectedParcelIds,
   onToggleParcel,
+  rows,
+  onToggleAll,
 }: {
   onOpenAssignDialog: (parcel: ParcelRow) => void;
   selectedParcelIds: Set<string>;
   onToggleParcel: (parcelId: string) => void;
+  rows: ParcelRow[];
+  onToggleAll: (checked: boolean) => void;
 }): ColumnDef<ParcelRow>[] {
+  const allSelected = rows.length > 0 && rows.every((row) => selectedParcelIds.has(row.id));
+  const someSelected = rows.some((row) => selectedParcelIds.has(row.id)) && !allSelected;
+
   return [
     {
       id: 'select',
-      header: 'Select',
+      header: () => (
+        <Checkbox
+          checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+          onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
+          aria-label="Select all parcels"
+        />
+      ),
       cell: ({ row }) => (
         <Checkbox
           checked={selectedParcelIds.has(row.original.id)}
