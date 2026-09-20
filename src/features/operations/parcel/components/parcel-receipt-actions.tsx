@@ -68,9 +68,17 @@ export function ParcelReceiptActions({
         vat: data.taxBreakdown.vatCedis,
         getfund: data.taxBreakdown.getfundCedis,
         nhil: data.taxBreakdown.nhilCedis,
+        covid: data.taxBreakdown.covidCedis ?? 0,
         totalTax: data.taxBreakdown.taxTotalCedis,
+        taxComponentKeys: data.taxBreakdown.taxComponentKeys,
         residual: 0,
       };
+    }
+    // A paid receipt must never silently present missing tax data as zero.
+    // Payment flows validate this before creating the receipt; this guard also
+    // protects reprint callers that provide incomplete receipt data.
+    if (amountPaid > 0) {
+      throw new Error('Tax breakdown is unavailable for this paid receipt');
     }
     return {
       principal: amountPaid,
@@ -78,6 +86,7 @@ export function ParcelReceiptActions({
       vat: 0,
       getfund: 0,
       nhil: 0,
+      covid: 0,
       totalTax: 0,
       residual: 0,
     };
@@ -276,7 +285,9 @@ export function ParcelReceiptActions({
           vat: tax.vat,
           getfund: tax.getfund,
           nhil: tax.nhil,
+          covid: tax.covid,
           totalTax: tax.totalTax,
+          taxComponentKeys: tax.taxComponentKeys,
         }}
       />
 

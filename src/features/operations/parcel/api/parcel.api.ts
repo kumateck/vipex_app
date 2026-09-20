@@ -336,6 +336,7 @@ export type ParcelFullDetails = {
     nhilPsw: number;
     covidPsw: number;
     taxTotalPsw: number;
+    taxComponentKeys: string[];
     receivedAt: string;
     notes: string | null;
     receiptNo: string | null;
@@ -774,6 +775,7 @@ export const parcelApi = api.injectEndpoints({
           nhilPsw: number;
           covidPsw: number;
           taxTotalPsw: number;
+          taxComponentKeys: string[];
           grossCedis: number;
           netCedis: number;
           vatCedis: number;
@@ -819,6 +821,7 @@ export const parcelApi = api.injectEndpoints({
             nhilPsw: number;
             covidPsw: number;
             taxTotalPsw: number;
+            taxComponentKeys: string[];
             grossCedis: number;
             netCedis: number;
             vatCedis: number;
@@ -864,6 +867,7 @@ export const parcelApi = api.injectEndpoints({
             nhilPsw: number;
             covidPsw: number;
             taxTotalPsw: number;
+            taxComponentKeys: string[];
             grossCedis: number;
             netCedis: number;
             vatCedis: number;

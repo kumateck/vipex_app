@@ -7,6 +7,7 @@ type ReceiverTaxBreakdown = {
   nhilCedis: number;
   covidCedis: number;
   taxTotalCedis: number;
+  taxComponentKeys?: string[];
 };
 
 type BuildReceiverReceiptDataArgs = {
