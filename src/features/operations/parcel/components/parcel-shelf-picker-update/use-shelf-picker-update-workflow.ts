@@ -14,6 +14,7 @@ type TableQuery = {
 
 export function useShelfPickerUpdateWorkflow() {
   const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const [query, setQuery] = useState<TableQuery>({ page: 1, pageSize: 20 });
   const [searchInput, setSearchInput] = useState('');
   const [selectedParcel, setSelectedParcel] = useState<ParcelRow | null>(null);
@@ -43,13 +44,15 @@ export function useShelfPickerUpdateWorkflow() {
       const params = new URLSearchParams({
         page: String(query.page ?? 1),
         pageSize: String(query.pageSize ?? 20),
-        companyId,
-        destinationId: branchId,
         ...(searchInput && { search: searchInput }),
       });
       const [parcelsRes, staffRes] = await Promise.all([
-        fetch(`/api/parcels/shelf-picker?${params}`),
-        fetch(`/api/branches/${branchId}/shelf-picker-staff`),
+        fetch(`/v1/shipments/parcels/shelf-picker?${params}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch('/v1/shipments/parcels/shelf-picker-staff', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
       ]);
       if (!parcelsRes.ok || !staffRes.ok) throw new Error('Failed to fetch shelf picker data');
       setListData(await parcelsRes.json());
@@ -57,7 +60,7 @@ export function useShelfPickerUpdateWorkflow() {
     } finally {
       setIsLoading(false);
     }
-  }, [branchId, companyId, query.page, query.pageSize, searchInput]);
+  }, [accessToken, branchId, companyId, query.page, query.pageSize, searchInput]);
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
@@ -73,9 +76,9 @@ export function useShelfPickerUpdateWorkflow() {
 
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/parcels/${selectedParcel.id}/update-shelf-picker`, {
+      const res = await fetch(`/v1/shipments/parcels/${selectedParcel.id}/update-shelf-picker`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ userId: selectedStaffId }),
       });
 

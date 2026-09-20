@@ -1,14 +1,30 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { ParcelRow } from './call-center-assignment-types';
 
 export function useCallCenterAssignmentColumns({
   onOpenAssignDialog,
+  selectedParcelIds,
+  onToggleParcel,
 }: {
   onOpenAssignDialog: (parcel: ParcelRow) => void;
+  selectedParcelIds: Set<string>;
+  onToggleParcel: (parcelId: string) => void;
 }): ColumnDef<ParcelRow>[] {
   return [
+    {
+      id: 'select',
+      header: 'Select',
+      cell: ({ row }) => (
+        <Checkbox
+          checked={selectedParcelIds.has(row.original.id)}
+          onCheckedChange={() => onToggleParcel(row.original.id)}
+          aria-label={`Select ${row.original.bookingCode}`}
+        />
+      ),
+    },
     {
       accessorKey: 'bookingCode',
       header: 'Booking Code',

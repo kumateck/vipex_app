@@ -89,6 +89,11 @@ export function useWaitingPickupWorkflow() {
     }));
   }, [branchId, companyId, isPickupQueueEnabled]);
 
+  useEffect(() => {
+    if (!selectedParcel || !parcelDetails) return;
+    dialog.setPickerStaffId(parcelDetails.pickupQueue?.pickerStaffId ?? '');
+  }, [dialog, parcelDetails, selectedParcel]);
+
   const isSaving = isUpdatingParcel || isAddingCard || isCreatingCustomer;
 
   const handleSearchSubmit = () => {

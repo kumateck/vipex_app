@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
+import { toast } from 'sonner';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ParcelRow, StaffOption } from './call-center-assignment-types';
 
@@ -14,6 +15,7 @@ type TableQuery = {
 
 export function useCallCenterAssignmentWorkflow() {
   const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const [query, setQuery] = useState<TableQuery>({ page: 1, pageSize: 20 });
   const [searchInput, setSearchInput] = useState('');
   const [selectedParcel, setSelectedParcel] = useState<ParcelRow | null>(null);
@@ -45,12 +47,16 @@ export function useCallCenterAssignmentWorkflow() {
         pageSize: String(query.pageSize ?? 20),
         companyId,
         destinationId: branchId,
-        senderPaid: 'true',
+        statuses: '3,12,4',
         ...(searchInput && { search: searchInput }),
       });
       const [parcelsRes, staffRes] = await Promise.all([
-        fetch(`/api/parcels/call-center?${params}`),
-        fetch(`/api/branches/${branchId}/call-center-staff`),
+        fetch(`/v1/shipments/parcels?${params}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch('/v1/shipments/parcels/assignment-staff', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
       ]);
       if (!parcelsRes.ok || !staffRes.ok) throw new Error('Failed to fetch call center data');
       setListData(await parcelsRes.json());
@@ -58,7 +64,7 @@ export function useCallCenterAssignmentWorkflow() {
     } finally {
       setIsLoading(false);
     }
-  }, [branchId, companyId, query.page, query.pageSize, searchInput]);
+  }, [accessToken, branchId, companyId, query.page, query.pageSize, searchInput]);
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
@@ -75,9 +81,9 @@ export function useCallCenterAssignmentWorkflow() {
 
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/parcels/${selectedParcel.id}/assign-call-center`, {
+      const res = await fetch(`/v1/shipments/parcels/${selectedParcel.id}/assign-call-center`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ userId: selectedStaffId }),
       });
 
@@ -89,6 +95,10 @@ export function useCallCenterAssignmentWorkflow() {
       setSelectedParcel(null);
       setSelectedStaffId('');
       await listQuery.refetch();
+      toast.success('Parcel assigned successfully');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to assign parcel');
+      throw error;
     } finally {
       setIsSaving(false);
     }

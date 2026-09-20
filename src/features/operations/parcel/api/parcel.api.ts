@@ -547,6 +547,7 @@ export type ParcelSearchFilters = {
   agedOnly?: boolean | null;
   storageChargeAccruing?: boolean | null;
   includeDeleted?: boolean | null;
+  assignedToCurrentUser?: boolean | null;
 };
 
 export type IncomingConsignmentRow = {
