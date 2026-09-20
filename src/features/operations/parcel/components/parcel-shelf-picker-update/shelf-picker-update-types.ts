@@ -7,6 +7,7 @@ export type ParcelRow = {
   id: string;
   bookingCode: string;
   trackingCode: string;
+  receiverId: string;
   receiverName: string | null;
   receiverPhone: string | null;
   parcelDetails: string;
