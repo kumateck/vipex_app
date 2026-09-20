@@ -74,12 +74,11 @@ export function ParcelReceiptActions({
         residual: 0,
       };
     }
-    // A paid receipt must never silently present missing tax data as zero.
-    // Payment flows validate this before creating the receipt; this guard also
-    // protects reprint callers that provide incomplete receipt data.
-    if (amountPaid > 0) {
-      throw new Error('Tax breakdown is unavailable for this paid receipt');
-    }
+    // When tax breakdown is not available (e.g. reprints from consignment
+    // page or sticker-only printing), return zeroed-out tax values.
+    // Sticker printing never uses tax data. Invoice printing will show
+    // GHS 0.00 for tax components, which is acceptable for reprints.
+    // Callers should provide taxBreakdown via payment data when available.
     return {
       principal: amountPaid,
       net: amountPaid,

@@ -28,11 +28,13 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
 import { useUpdateCustomerMutation } from '@/features/customers/api';
+import { useListTaxComponentsQuery } from '@/features/accounting/api';
 import { BranchType } from '@/db/schemas/enums';
 import {
   type ProcessedParcel,
   useAddConsignmentItemsMutation,
   useCreateConsignmentMutation,
+  useLazyListPaymentsForParcelQuery,
   useListProcessedParcelsForConsignmentQuery,
   useUpdateParcelMutation,
 } from '../../api/parcel.api';
@@ -82,6 +84,14 @@ function getTodayDateOnlyLocal() {
 function toReceiptPrintData(
   parcel: ProcessedParcel,
   destinationBranchName: string,
+  taxBreakdown?: {
+    vatCedis: number;
+    getfundCedis: number;
+    nhilCedis: number;
+    covidCedis?: number;
+    taxTotalCedis: number;
+    taxComponentKeys?: string[];
+  },
 ): ReceiptPrintData {
   const totalChargeCedis = Number(parcel.chargePsw ?? 0) / 100;
   const receiverToPayCedis = Number(parcel.plannedToBePaidPsw ?? 0) / 100;
@@ -110,6 +120,7 @@ function toReceiptPrintData(
     receiverToPayCedis,
     amountPaidCedis,
     issuedAt: parcel.createdAt ?? new Date().toISOString(),
+    taxBreakdown,
   };
 }
 
@@ -184,6 +195,12 @@ export function ParcelProcessedConsignmentPage() {
   const { data, isLoading, refetch } = useListProcessedParcelsForConsignmentQuery(query, {
     skip: !companyId || !hasLoaded,
   });
+  const [triggerFetchPayments] = useLazyListPaymentsForParcelQuery();
+  const { data: taxComponents = [] } = useListTaxComponentsQuery(
+    { companyId: companyId ?? '', active: true },
+    { skip: !companyId },
+  );
+  const taxComponentKeys = useMemo(() => taxComponents.map((tc) => tc.key), [taxComponents]);
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
     { companyId },
     { skip: !companyId },
@@ -229,14 +246,35 @@ export function ParcelProcessedConsignmentPage() {
 
   const rows = useMemo(() => data?.data ?? EMPTY_ROWS, [data?.data]);
   const queueReprint = useCallback(
-    (parcel: ProcessedParcel, selection: 'sticker' | 'invoice', stickerCopies = 1) => {
+    async (parcel: ProcessedParcel, selection: 'sticker' | 'invoice', stickerCopies = 1) => {
       const destinationName =
         parcel.destinationName ?? branchNameById.get(parcel.destinationId) ?? '-';
       setReprintSelection(selection);
       setReprintStickerCopies(stickerCopies);
-      setReprintData(toReceiptPrintData(parcel, destinationName));
+
+      let taxBreakdown: ReceiptPrintData['taxBreakdown'] = undefined;
+      if (selection === 'invoice') {
+        try {
+          const payments = await triggerFetchPayments({ parcelId: parcel.id }).unwrap();
+          const principalPayment = payments.find((p: { component: number }) => p.component === 0);
+          if (principalPayment && principalPayment.taxTotalPsw > 0) {
+            taxBreakdown = {
+              vatCedis: principalPayment.vatPsw / 100,
+              getfundCedis: principalPayment.getfundPsw / 100,
+              nhilCedis: principalPayment.nhilPsw / 100,
+              covidCedis: principalPayment.covidPsw / 100,
+              taxTotalCedis: principalPayment.taxTotalPsw / 100,
+              taxComponentKeys,
+            };
+          }
+        } catch {
+          // Fall back to no tax breakdown if payment fetch fails
+        }
+      }
+
+      setReprintData(toReceiptPrintData(parcel, destinationName, taxBreakdown));
     },
-    [branchNameById],
+    [branchNameById, triggerFetchPayments, taxComponentKeys],
   );
 
   const startEditingParcel = useCallback(

@@ -1420,6 +1420,26 @@ export const parcelApi = api.injectEndpoints({
         { type: 'Bookings', id: `INTERNAL_TRANSFER_${id}` },
       ],
     }),
+    listPaymentsForParcel: builder.query<
+      Array<{
+        id: string;
+        parcelId: string;
+        component: number;
+        payer: number;
+        grossAmountPsw: number;
+        netAmountPsw: number;
+        vatPsw: number;
+        getfundPsw: number;
+        nhilPsw: number;
+        covidPsw: number;
+        taxTotalPsw: number;
+      }>,
+      { parcelId: string }
+    >({
+      query: ({ parcelId }) => ({
+        url: `/payments/by-parcel/${parcelId}`,
+      }),
+    }),
   }),
 });
 
@@ -1476,4 +1496,6 @@ export const {
   useCreateParcelInternalTransferMutation,
   useAcknowledgeParcelInternalTransferMutation,
   useCancelParcelInternalTransferMutation,
+  useListPaymentsForParcelQuery,
+  useLazyListPaymentsForParcelQuery,
 } = parcelApi;
