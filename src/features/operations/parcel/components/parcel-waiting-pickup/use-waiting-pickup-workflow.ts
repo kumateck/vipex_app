@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
+import { normalizePhoneDigits, isTenDigitPhone, phoneLengthMessage } from '@/lib/phone';
 import { ParcelStatus, UserStatus } from '@/db/schemas/enums';
 import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
 import {
@@ -19,6 +19,7 @@ import {
 } from '../../api/parcel.api';
 import { resolveCustomerCard } from '../parcel-receiver-cashier/resolve-customer-card';
 import { useWaitingPickupDialogState } from './use-waiting-pickup-dialog-state';
+import { useWaitingPickUpEdit } from './use-waiting-pickup-edit';
 import { getQueueFilterBySearch, type WaitingPickupQuery } from './waiting-pickup-types';
 
 export function useWaitingPickupWorkflow() {
@@ -73,6 +74,7 @@ export function useWaitingPickupWorkflow() {
     { customerId: selectedParcel?.secondReceiverId ?? '' },
     { skip: !selectedParcel?.secondReceiverId },
   );
+  const edit = useWaitingPickUpEdit();
 
   useEffect(() => {
     setQuery((previous) => ({
@@ -94,7 +96,7 @@ export function useWaitingPickupWorkflow() {
     dialog.setPickerStaffId(parcelDetails.pickupQueue?.pickerStaffId ?? '');
   }, [dialog, parcelDetails, selectedParcel]);
 
-  const isSaving = isUpdatingParcel || isAddingCard || isCreatingCustomer;
+  const isSaving = isUpdatingParcel || isAddingCard || isCreatingCustomer || edit.isSaving;
 
   const handleSearchSubmit = () => {
     const term = searchInput.trim();
@@ -176,9 +178,6 @@ export function useWaitingPickupWorkflow() {
       secondReceiverId: secondReceiverId ?? null,
       secondCardId: secondCard?.cardId ?? null,
       secondCardNumber: secondCard?.cardNumber ?? null,
-      // Must match the fixed 'main' target the OTP was requested/verified
-      // against (see use-waiting-pickup-dialog-state.ts) — not handoverTarget,
-      // which only records who physically collected the parcel.
       receiverOtpVerificationToken: isPickupOtpRequired ? dialog.otp.verificationToken : undefined,
       receiverOtpTarget: isPickupOtpRequired ? 'main' : undefined,
     }).unwrap();
@@ -206,6 +205,9 @@ export function useWaitingPickupWorkflow() {
       handleSearchSubmit,
       handleRequestDelivery,
       openParcelDialog: dialog.openParcelDialog,
+      openEditDialog: (parcel: ParcelSearchRow) => {
+        edit.openEditDialog(parcel, () => listQuery.refetch());
+      },
       isSaving,
     },
     dialog: {
@@ -221,6 +223,13 @@ export function useWaitingPickupWorkflow() {
       handleRequestHomeDelivery: async () => {
         if (selectedParcel) await handleRequestDelivery(selectedParcel);
       },
+    },
+    edit: {
+      ...edit,
+      setEditingParcel: edit.setEditingParcel,
+      setEditParcelDetails: edit.setEditParcelDetails,
+      setEditReceiverName: edit.setEditReceiverName,
+      setEditReceiverPhone: edit.setEditReceiverPhone,
     },
   };
 }

@@ -15,6 +15,7 @@ import {
 } from '../../api/parcel.api';
 import { confirmReceiverDelivery } from './confirm-receiver-delivery';
 import { useReceiverCashierDialogState } from './use-receiver-cashier-dialog-state';
+import { useReceiverCashierEdit } from './use-receiver-cashier-edit';
 import {
   type ParcelReceiverQuery,
   useReceiverCashierResources,
@@ -63,6 +64,7 @@ export function useParcelReceiverCashierWorkflow() {
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [requestReceiverOtp] = useRequestReceiverOtpMutation();
   const [verifyReceiverOtp] = useVerifyReceiverOtpMutation();
+  const edit = useReceiverCashierEdit();
   const { handleRequestOtp, handleVerifyOtp } = useReceiverOtpActions({
     dialog,
     requestReceiverOtp,
@@ -128,7 +130,8 @@ export function useParcelReceiverCashierWorkflow() {
     isCreatingCustomer ||
     isCollectingPayment ||
     isUpdatingParcel ||
-    isWaivingStorage;
+    isWaivingStorage ||
+    edit.isSaving;
 
   const handleSearchSubmit = () => {
     const term = searchInput.trim();
@@ -179,6 +182,7 @@ export function useParcelReceiverCashierWorkflow() {
 
   const handleConfirmDelivered = async () => {
     if (!selectedParcel) return;
+
     const destinationBranchName =
       branchOptions.find((branch) => branch.id === selectedParcel.destinationId)?.name ??
       selectedParcel.destinationId;
@@ -240,6 +244,9 @@ export function useParcelReceiverCashierWorkflow() {
       handleSearchSubmit,
       handleRequestDelivery,
       openParcelDialog: dialog.openParcelDialog,
+      openEditDialog: (parcel: ParcelSearchRow) => {
+        edit.openEditDialog(parcel, () => listQuery.refetch());
+      },
       isSaving,
     },
     dialog: {
@@ -257,6 +264,13 @@ export function useParcelReceiverCashierWorkflow() {
       handleRequestOtp,
       handleVerifyOtp,
       isSaving,
+    },
+    edit: {
+      ...edit,
+      setEditingParcel: edit.setEditingParcel,
+      setEditParcelDetails: edit.setEditParcelDetails,
+      setEditReceiverName: edit.setEditReceiverName,
+      setEditReceiverPhone: edit.setEditReceiverPhone,
     },
     receipt: {
       lastPrintedReceipt: dialog.lastPrintedReceipt,
