@@ -37,6 +37,8 @@ import {
 } from './parcels.controller';
 import { resolveParcelSort } from './parcel-sort';
 import { uploadParcelDiscrepancyEvidenceSvc } from './parcel-discrepancy-evidence.service';
+import { listUserOptionsRepo } from '../users/repository';
+import { UserStatus } from '@/db/schemas/enums';
 
 function parseStatuses(value: string | number[] | undefined): number[] | null {
   if (Array.isArray(value)) {
@@ -57,6 +59,87 @@ function parseStatuses(value: string | number[] | undefined): number[] | null {
 
 export const parcelsRoutes = new Elysia({ name: 'parcels' })
   .use(authPlugin)
+  .get(
+    '/call-center',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      return listParcelsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        filters: {
+          companyId: authUser.companyId ?? null,
+          destinationId: authUser.branchId ?? null,
+          senderPaid: true,
+        },
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 200 })),
+        search: t.Optional(t.String()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCallCenterAssignment)],
+      detail: { tags: ['Shipments'], summary: 'List parcels for call center assignment' },
+    },
+  )
+  .get(
+    '/shelf-picker',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      return listParcelsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        filters: {
+          companyId: authUser.companyId ?? null,
+          destinationId: authUser.branchId ?? null,
+          statuses: [1, 7],
+          hasPickupQueue: true,
+        },
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 200 })),
+        search: t.Optional(t.String()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadShelfPickerUpdate)],
+      detail: { tags: ['Shipments'], summary: 'List parcels for shelf picker updates' },
+    },
+  )
+  .get(
+    '/assignment-staff',
+    async ({ user }) => {
+      const authUser = user as AuthUser;
+      return listUserOptionsRepo({
+        companyId: authUser.companyId ?? null,
+        branchId: authUser.branchId ?? null,
+        status: UserStatus.ACTIVE,
+      });
+    },
+    {
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCallCenterAssignment)],
+      detail: { tags: ['Shipments'], summary: 'List active parcel assignment staff' },
+    },
+  )
+  .get(
+    '/shelf-picker-staff',
+    async ({ user }) => {
+      const authUser = user as AuthUser;
+      return listUserOptionsRepo({
+        companyId: authUser.companyId ?? null,
+        branchId: authUser.branchId ?? null,
+        status: UserStatus.ACTIVE,
+      });
+    },
+    {
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadShelfPickerUpdate)],
+      detail: { tags: ['Shipments'], summary: 'List active shelf picker staff' },
+    },
+  )
   .get(
     '/',
     async ({ query }) =>
