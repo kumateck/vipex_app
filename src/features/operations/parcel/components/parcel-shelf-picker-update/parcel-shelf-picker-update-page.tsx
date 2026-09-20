@@ -9,13 +9,15 @@ import { toast } from 'sonner';
 import { useShelfPickerUpdateColumns } from './use-shelf-picker-update-columns';
 import { EMPTY_META } from './shelf-picker-update-types';
 import { UpdateShelfPickerDialog } from './update-shelf-picker-dialog';
+import { EditIncomingTransitParcelDialog } from '../parcel-in-transit/edit-incoming-transit-parcel-dialog';
 
 export function ParcelShelfPickerUpdatePage() {
   const workflow = useShelfPickerUpdateWorkflow();
-  const { context, table, dialog } = workflow;
+  const { context, table, dialog, edit } = workflow;
 
   const columns = useShelfPickerUpdateColumns({
     onOpenUpdateDialog: table.openUpdateDialog,
+    onEdit: table.openEditDialog,
   });
 
   return (
@@ -91,6 +93,19 @@ export function ParcelShelfPickerUpdatePage() {
               );
             }
           }}
+        />
+
+        <EditIncomingTransitParcelDialog
+          open={Boolean(edit.editingParcel)}
+          onClose={() => edit.setEditingParcel(null)}
+          editParcelDetails={edit.editParcelDetails}
+          onEditParcelDetailsChange={edit.setEditParcelDetails}
+          editReceiverName={edit.editReceiverName}
+          onEditReceiverNameChange={edit.setEditReceiverName}
+          editReceiverPhone={edit.editReceiverPhone}
+          onEditReceiverPhoneChange={edit.setEditReceiverPhone}
+          isSaving={edit.isSaving}
+          onSave={edit.handleSaveEdit}
         />
       </ScrollableWrapper>
     </div>

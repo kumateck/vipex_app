@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';
+import { isOptionalTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
+import { useUpdateCustomerMutation } from '@/features/customers/api';
+import { useUpdateParcelMutation } from '../../api/parcel.api';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ParcelRow, StaffOption } from './shelf-picker-update-types';
 
@@ -37,6 +41,12 @@ export function useShelfPickerUpdateWorkflow() {
   });
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [editingParcel, setEditingParcel] = useState<ParcelRow | null>(null);
+  const [editParcelDetails, setEditParcelDetails] = useState('');
+  const [editReceiverName, setEditReceiverName] = useState('');
+  const [editReceiverPhone, setEditReceiverPhone] = useState('');
+  const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
+  const [updateCustomer, { isLoading: isUpdatingCustomer }] = useUpdateCustomerMutation();
   const fetchData = useCallback(async () => {
     if (!companyId || !branchId) return;
     setIsLoading(true);
@@ -95,6 +105,70 @@ export function useShelfPickerUpdateWorkflow() {
     }
   };
 
+  const handleSaveEdit = useCallback(async () => {
+    if (!editingParcel) return;
+
+    const nextParcelDetails = editParcelDetails.trim();
+    const nextReceiverName = editReceiverName.trim();
+    const nextReceiverPhone = normalizePhoneDigits(editReceiverPhone);
+
+    if (nextParcelDetails.length === 0) {
+      toast.error('Parcel details is required');
+      return;
+    }
+    if (nextReceiverName.length === 0) {
+      toast.error('Receiver name is required');
+      return;
+    }
+    if (!isOptionalTenDigitPhone(nextReceiverPhone)) {
+      toast.error(phoneLengthMessage('Receiver telephone'));
+      return;
+    }
+
+    const updates: Promise<unknown>[] = [];
+
+    if (nextParcelDetails !== (editingParcel.parcelDetails ?? '').trim()) {
+      updates.push(
+        updateParcel({
+          id: editingParcel.id,
+          parcelDetails: nextParcelDetails,
+        }).unwrap(),
+      );
+    }
+
+    if (
+      nextReceiverName !== (editingParcel.receiverName ?? '').trim() ||
+      nextReceiverPhone !== (editingParcel.receiverPhone ?? '').trim()
+    ) {
+      updates.push(
+        updateCustomer({
+          id: editingParcel.receiverId,
+          fullname: nextReceiverName,
+          telephone: nextReceiverPhone.length > 0 ? nextReceiverPhone : null,
+        }).unwrap(),
+      );
+    }
+
+    if (updates.length === 0) {
+      toast.message('No changes to save');
+      setEditingParcel(null);
+      return;
+    }
+
+    await Promise.all(updates);
+    toast.success('Parcel updated');
+    setEditingParcel(null);
+    await listQuery.refetch();
+  }, [
+    editParcelDetails,
+    editReceiverName,
+    editReceiverPhone,
+    editingParcel,
+    listQuery,
+    updateCustomer,
+    updateParcel,
+  ]);
+
   return {
     context: {
       companyId,
@@ -112,6 +186,12 @@ export function useShelfPickerUpdateWorkflow() {
         setSelectedParcel(parcel);
         setSelectedStaffId(parcel.pickerStaffId || '');
       },
+      openEditDialog: (parcel: ParcelRow) => {
+        setEditingParcel(parcel);
+        setEditParcelDetails(parcel.parcelDetails ?? '');
+        setEditReceiverName(parcel.receiverName ?? '');
+        setEditReceiverPhone(parcel.receiverPhone ?? '');
+      },
       handleSearchSubmit,
     },
     dialog: {
@@ -122,6 +202,18 @@ export function useShelfPickerUpdateWorkflow() {
       staffOptions,
       isSaving,
       handleUpdateShelfPicker,
+    },
+    edit: {
+      editingParcel,
+      setEditingParcel,
+      editParcelDetails,
+      setEditParcelDetails,
+      editReceiverName,
+      setEditReceiverName,
+      editReceiverPhone,
+      setEditReceiverPhone,
+      isSaving: isUpdatingParcel || isUpdatingCustomer,
+      handleSaveEdit,
     },
   };
 }
