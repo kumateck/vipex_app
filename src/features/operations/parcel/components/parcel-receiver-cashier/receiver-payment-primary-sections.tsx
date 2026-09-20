@@ -204,18 +204,25 @@ function PickerAndMomo({
   return (
     <div className="space-y-2">
       <Label>Shelf Picker Staff</Label>
-      <Select value={dialog.pickerStaffId} onValueChange={dialog.setPickerStaffId}>
-        <SelectTrigger>
-          <SelectValue placeholder="Select staff" />
-        </SelectTrigger>
-        <SelectContent>
-          {dialog.staffOptions.map((staff) => (
-            <SelectItem key={staff.id} value={staff.id}>
-              {staff.fullname}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {dialog.pickerStaffId ? (
+        <div className="rounded-md border px-3 py-2 text-sm">
+          {dialog.staffOptions.find((staff) => staff.id === dialog.pickerStaffId)?.fullname ??
+            'Assigned shelf picker'}
+        </div>
+      ) : (
+        <Select value={dialog.pickerStaffId} onValueChange={dialog.setPickerStaffId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select staff" />
+          </SelectTrigger>
+          <SelectContent>
+            {dialog.staffOptions.map((staff) => (
+              <SelectItem key={staff.id} value={staff.id}>
+                {staff.fullname}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       <p className="text-xs text-muted-foreground">
         {context.cashierLocationName
           ? `Only active staff assigned to ${context.cashierLocationName} are shown.`

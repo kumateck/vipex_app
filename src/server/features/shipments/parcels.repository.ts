@@ -95,6 +95,7 @@ export type ListParcelsParams = {
   search?: string | null; // bookingCode/trackingCode/sender/receiver names/phones
   received?: boolean | null;
   includeDeleted?: boolean | null;
+  assignedToUserId?: string | null;
   sort?: SortField[] | null;
 };
 
@@ -123,6 +124,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     pickupQueueId: string | null;
     pickupQueueCode: string | null;
     pickupQueueNumber: number | null;
+    pickerStaffId: string | null;
+    pickerStaffName: string | null;
+    callCenterAssignedToUserId: string | null;
+    callCenterAssignedToUserName: string | null;
     pickupQueuedAt: Date | null;
     pickupQueueEndedAt: Date | null;
     currentHolderType: number | null;
@@ -148,6 +153,9 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   if (p.companyId) whereParts.push(eq(parcels.companyId, p.companyId));
   if (p.sourceId) whereParts.push(eq(parcels.sourceId, p.sourceId));
   if (p.destinationId) whereParts.push(eq(parcels.destinationId, p.destinationId));
+  if (p.assignedToUserId) {
+    whereParts.push(eq(parcels.callCenterAssignedToUserId, p.assignedToUserId));
+  }
   if (p.statuses && p.statuses.length > 0) {
     whereParts.push(inArray(parcels.status, p.statuses));
   } else if (p.status != null) {
@@ -161,6 +169,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   const r = alias(customers, 'r');
   const sr = alias(customers, 'sr');
   const rider = alias(users, 'rider');
+  const picker = alias(users, 'picker');
+  const callCenterAssignee = alias(users, 'call_center_assignee');
   const d = alias(branches, 'd');
   const sb = alias(branches, 'sb');
   const sl = alias(locations, 'sl');
@@ -344,6 +354,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       pickupQueueId: pickupQueues.id,
       pickupQueueCode: pickupQueues.queueCode,
       pickupQueueNumber: pickupQueues.queueNumber,
+      pickerStaffId: pickupQueues.pickerStaffId,
+      pickerStaffName: picker.fullname,
+      callCenterAssignedToUserId: parcels.callCenterAssignedToUserId,
+      callCenterAssignedToUserName: callCenterAssignee.fullname,
       pickupQueuedAt: pickupQueues.queuedAt,
       pickupQueueEndedAt: pickupQueues.endedAt,
       currentHolderType: parcelInternalHolders.holderType,
@@ -368,6 +382,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
     .leftJoin(rider, eq(rider.id, deliveries.riderUserId))
     .leftJoin(pickupQueues, eq(pickupQueues.parcelId, parcels.id))
+    .leftJoin(picker, eq(picker.id, pickupQueues.pickerStaffId))
+    .leftJoin(callCenterAssignee, eq(callCenterAssignee.id, parcels.callCenterAssignedToUserId))
     .leftJoin(parcelInternalHolders, eq(parcelInternalHolders.parcelId, parcels.id))
     .leftJoin(hb, eq(hb.id, parcelInternalHolders.branchId))
     .leftJoin(hl, eq(hl.id, parcelInternalHolders.locationId))

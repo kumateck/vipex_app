@@ -1679,6 +1679,17 @@ export async function assignParcelToCallCenterSvc(input: { parcelId: string; use
   return { success: true, parcelId: input.parcelId };
 }
 
+export async function bulkAssignParcelsToCallCenterSvc(input: {
+  parcelIds: string[];
+  userId: string;
+}) {
+  if (input.parcelIds.length === 0) throw BadRequest('Select at least one parcel');
+  for (const parcelId of input.parcelIds) {
+    await assignParcelToCallCenterSvc({ parcelId, userId: input.userId });
+  }
+  return { success: true, assignedCount: input.parcelIds.length };
+}
+
 export async function updateParcelShelfPickerSvc(input: { parcelId: string; userId: string }) {
   const queue = await getPickupQueueByParcelRepo(input.parcelId);
   if (!queue) throw NotFound('Active pickup queue not found for parcel');

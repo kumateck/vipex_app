@@ -57,6 +57,7 @@ export function ParcelStatusPage() {
           ParcelStatus.RETURNED_TO_OFFICE,
           ParcelStatus.CUSTOMER_CONTACTED,
         ],
+        assignedToCurrentUser: true,
       },
     },
     { skip: !companyId || !branchId },

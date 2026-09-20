@@ -118,6 +118,11 @@ export function useParcelReceiverCashierWorkflow() {
     dialog.setWaiveStorageAmount((storageOutstandingPsw / 100).toFixed(2));
   }, [dialog, selectedParcel, storageOutstandingPsw]);
 
+  useEffect(() => {
+    if (!selectedParcel || !parcelDetails) return;
+    dialog.setPickerStaffId(parcelDetails.pickupQueue?.pickerStaffId ?? '');
+  }, [dialog, parcelDetails, selectedParcel]);
+
   const isSaving =
     isAddingCard ||
     isCreatingCustomer ||
