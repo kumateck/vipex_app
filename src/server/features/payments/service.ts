@@ -14,6 +14,7 @@ import {
   computeTaxFromProfilePrincipalPsw,
   sumComponentByKey,
 } from '@/server/utils/tax/profile-engine';
+import { computeGhanaTaxesFromPesewas } from '@/server/utils/tax/ghana';
 import { assertActiveSessionSvc } from '../cashiers/service';
 import { recordAuditLog } from '../audit/logger';
 import { getParcelStorageSettlementSvc, getParcelSvc } from '../shipments/parcels.service';
@@ -68,6 +69,7 @@ type PaymentAmounts = {
   nhilCedis: number;
   covidCedis: number;
   taxTotalCedis: number;
+  taxComponentKeys: string[];
 };
 
 export type PaymentCreateResponse = {
@@ -144,6 +146,7 @@ function toPaymentAmounts(tax: {
   nhil: bigint;
   covid: bigint;
   totalTax: bigint;
+  taxComponentKeys: string[];
 }): PaymentAmounts {
   return {
     grossPsw: Number(tax.principal),
@@ -160,6 +163,7 @@ function toPaymentAmounts(tax: {
     nhilCedis: Number(tax.nhil) / 100,
     covidCedis: Number(tax.covid) / 100,
     taxTotalCedis: Number(tax.totalTax) / 100,
+    taxComponentKeys: tax.taxComponentKeys,
   };
 }
 
@@ -182,16 +186,15 @@ async function computeProfileTaxBreakdown(input: {
   );
 
   if (!activeProfile || activeProfile.components.length === 0) {
+    // Parcel principal is taxable even before a company-specific tax profile
+    // has been configured. Keep the configured profile path authoritative, but
+    // do not silently issue zero-tax receipts for the default Ghana scheme.
+    const fallback = computeGhanaTaxesFromPesewas(input.principalPsw);
     return {
-      principal: input.principalPsw,
-      net: input.principalPsw,
-      vat: 0n,
-      getfund: 0n,
-      nhil: 0n,
-      covid: 0n,
-      totalTax: 0n,
-      profileId: activeProfile?.profileId ?? null,
-      profileName: activeProfile?.profileName ?? null,
+      ...fallback,
+      profileId: null,
+      profileName: null,
+      taxComponentKeys: ['VAT', 'GETFUND', 'NHIL', 'COVID'],
     };
   }
 
@@ -227,6 +230,7 @@ async function computeProfileTaxBreakdown(input: {
     totalTax: breakdown.totalTax,
     profileId: activeProfile.profileId,
     profileName: activeProfile.profileName,
+    taxComponentKeys: activeProfile.components.map((component) => component.key),
   };
 }
 
@@ -329,6 +333,7 @@ async function createPaymentCore(input: PaymentCreateInput, executor: DbExecutor
           covid: 0n,
           totalTax: 0n,
           residual: 0n,
+          taxComponentKeys: [],
         };
 
   const created = await createPaymentRepo(

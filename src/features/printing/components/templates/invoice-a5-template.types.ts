@@ -24,7 +24,9 @@ export type InvoiceA5TemplateProps = {
     vat: number;
     getfund: number;
     nhil: number;
+    covid?: number;
     totalTax: number;
+    taxComponentKeys?: string[];
   };
   qrValue: string;
   formatMoney: (amount: number) => string;

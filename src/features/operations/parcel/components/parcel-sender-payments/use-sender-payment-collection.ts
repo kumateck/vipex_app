@@ -81,6 +81,9 @@ export function useSenderPaymentCollection({ companyId, refetch }: UseSenderPaym
             ? resolveMomoTransactionId(paymentMethod, mtnPaymentFlow, momoTransactionId)
             : null,
       }).unwrap();
+      if (senderDueCedis > 0 && !result.payment) {
+        throw new Error('Payment completed without a tax breakdown; receipt was not generated');
+      }
       const destinationBranchName =
         branchOptions.find((branch) => branch.id === selectedParcel.destinationId)?.name ??
         selectedParcel.destinationId;

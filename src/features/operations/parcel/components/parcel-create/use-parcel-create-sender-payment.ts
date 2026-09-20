@@ -74,6 +74,10 @@ export function useParcelCreateSenderPayment({
             momoTransactionId: momoTransactionId || null,
           }).unwrap();
 
+          if (parcel.senderDueCedis > 0 && !result.payment) {
+            throw new Error('Payment completed without a tax breakdown; receipt was not generated');
+          }
+
           return {
             ...parcel,
             amountPaidCedis: parcel.senderDueCedis,

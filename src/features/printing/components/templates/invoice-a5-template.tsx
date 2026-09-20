@@ -38,11 +38,24 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
       ? formatMoney(parcelValueCedis)
       : '-';
   const destinationLabel = formatDestinationLabel(destinationBranchName, destinationLocationName);
+  const configuredTaxKeys = new Set(
+    (tax.taxComponentKeys ?? []).map((key) => key.replace(/[\s_-]+/g, '').toLowerCase()),
+  );
+  const isConfigured = (label: string) => {
+    const aliases: Record<string, string[]> = {
+      GETFUND: ['getfund', 'getfl', 'getfundlevy'],
+      NHIL: ['nhil', 'nhillevy'],
+      VAT: ['vat'],
+      COVID: ['covid', 'covid19levy', 'covidlevy'],
+    };
+    return (aliases[label] ?? []).some((key) => configuredTaxKeys.has(key));
+  };
   const taxRows = [
     { label: 'GETFUND', value: tax.getfund },
     { label: 'NHIL', value: tax.nhil },
     { label: 'VAT', value: tax.vat },
-  ];
+    { label: 'COVID', value: tax.covid ?? 0 },
+  ].filter((row) => isConfigured(row.label));
 
   return (
     <div
