@@ -1,6 +1,13 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import { EllipsisVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ParcelStatus } from '@/db/schemas/enums';
 import type { ParcelRow } from './shelf-picker-update-types';
 
@@ -28,8 +35,10 @@ const getStatusVariant = (status: number) => {
 
 export function useShelfPickerUpdateColumns({
   onOpenUpdateDialog,
+  onEdit,
 }: {
   onOpenUpdateDialog: (parcel: ParcelRow) => void;
+  onEdit: (parcel: ParcelRow) => void;
 }): ColumnDef<ParcelRow>[] {
   return [
     {
@@ -78,9 +87,19 @@ export function useShelfPickerUpdateColumns({
       id: 'actions',
       header: 'Action',
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" onClick={() => onOpenUpdateDialog(row.original)}>
-          Update
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="outline" className="h-8 w-8">
+              <EllipsisVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onOpenUpdateDialog(row.original)}>
+              Update
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];
