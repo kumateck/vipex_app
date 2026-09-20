@@ -149,18 +149,25 @@ export function PickupVerificationDialog({
               </div>
               <div className="space-y-2">
                 <Label>Shelf Picker Staff</Label>
-                <Select value={pickerStaffId} onValueChange={onPickerStaffIdChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select staff" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staffOptions.map((staff) => (
-                      <SelectItem key={staff.id} value={staff.id}>
-                        {staff.fullname}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {pickerStaffId ? (
+                  <div className="rounded-md border px-3 py-2 text-sm">
+                    {staffOptions.find((staff) => staff.id === pickerStaffId)?.fullname ??
+                      'Assigned shelf picker'}
+                  </div>
+                ) : (
+                  <Select value={pickerStaffId} onValueChange={onPickerStaffIdChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select staff" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staffOptions.map((staff) => (
+                        <SelectItem key={staff.id} value={staff.id}>
+                          {staff.fullname}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <p className="text-xs text-muted-foreground">
                   {staffLocationName
                     ? `Only active staff assigned to ${staffLocationName} are shown.`

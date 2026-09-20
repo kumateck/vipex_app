@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
+import { toast } from 'sonner';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ParcelRow, StaffOption } from './call-center-assignment-types';
 
@@ -44,10 +45,13 @@ export function useCallCenterAssignmentWorkflow() {
       const params = new URLSearchParams({
         page: String(query.page ?? 1),
         pageSize: String(query.pageSize ?? 20),
+        companyId,
+        destinationId: branchId,
+        statuses: '3,12,4',
         ...(searchInput && { search: searchInput }),
       });
       const [parcelsRes, staffRes] = await Promise.all([
-        fetch(`/v1/shipments/parcels/call-center?${params}`, {
+        fetch(`/v1/shipments/parcels?${params}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
         fetch('/v1/shipments/parcels/assignment-staff', {
@@ -91,6 +95,10 @@ export function useCallCenterAssignmentWorkflow() {
       setSelectedParcel(null);
       setSelectedStaffId('');
       await listQuery.refetch();
+      toast.success('Parcel assigned successfully');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to assign parcel');
+      throw error;
     } finally {
       setIsSaving(false);
     }
