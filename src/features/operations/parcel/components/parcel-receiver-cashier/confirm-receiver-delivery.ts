@@ -176,6 +176,10 @@ export async function confirmReceiverDelivery({
     momoTransactionId: momoTransactionId ?? null,
   });
 
+  if (receiverDuePsw > 0 && !result.payment) {
+    throw new Error('Payment completed without a tax breakdown; receipt was not generated');
+  }
+
   const linkedSecondReceiverName =
     (selectedParcel as { secondReceiverName?: string | null }).secondReceiverName ?? null;
   const receivedByName =

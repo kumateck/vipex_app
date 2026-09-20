@@ -13,6 +13,14 @@ The application prints parcel stickers and A5 customer documents from the browse
 | A4 consignment     | Saved source-to-destination parcel manifest that can be printed again.   |
 
 The A5 document includes payer details where a payer differs from the sender or receiver.
+For taxable principal payments, the A5 tax summary prints only the configured tax components from
+the payment response. The payment response carries the configured component keys, so an unset
+VAT, GETFUND, NHIL, or COVID component is not printed as a zero row.
+If no company tax profile is configured, the payment service applies the default Ghana tax
+calculator.
+Paid sender and receiver receipt flows now require the payment response to include its tax
+breakdown before creating the receipt; they fail visibly instead of printing a paid receipt with
+silently substituted zero tax values.
 
 Both sender payment receipts and receiver acknowledgement notes include these terms:
 

@@ -23,7 +23,9 @@ type ParcelReceiptPrintContentProps = {
     vat: number;
     getfund: number;
     nhil: number;
+    covid: number;
     totalTax: number;
+    taxComponentKeys?: string[];
   };
 };
 
