@@ -12,6 +12,7 @@ import { useCallCenterAssignmentColumns } from './use-call-center-assignment-col
 import { EMPTY_META } from './call-center-assignment-types';
 import { AssignParcelDialog } from './assign-parcel-dialog';
 import { BulkAssignParcelsDialog } from './bulk-assign-parcels-dialog';
+import { PaymentStatusLegend } from '../parcel-processed-consignment';
 
 export function ParcelCallCenterAssignmentPage() {
   const workflow = useCallCenterAssignmentWorkflow();
@@ -81,6 +82,7 @@ export function ParcelCallCenterAssignmentPage() {
                   Assign parcels to call center representatives for outbound calling and follow-ups.
                 </CardDescription>
               </div>
+              <PaymentStatusLegend />
             </div>
           </CardHeader>
           <CardContent className="space-y-4">

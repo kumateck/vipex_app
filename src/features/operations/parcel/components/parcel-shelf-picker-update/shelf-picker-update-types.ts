@@ -12,11 +12,12 @@ export type ParcelRow = {
   receiverPhone: string | null;
   parcelDetails: string;
   parcelContent: string;
+  chargePsw: number;
+  plannedToBePaidPsw: number;
   status: number;
   pickerStaffId: string | null;
   pickerStaffName: string | null;
   createdAt: string;
-  senderPaid: boolean;
 };
 
 export const EMPTY_META = {

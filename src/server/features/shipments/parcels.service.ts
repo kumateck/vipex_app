@@ -208,7 +208,7 @@ function computeParcelAgeingSnapshot(input: {
   };
 }
 
-function computeStorageAccrualPsw(input: {
+export function computeStorageAccrualPsw(input: {
   status: number;
   receivedAt: Date | null;
   policy: ParcelAgeingPolicy;
@@ -1691,20 +1691,14 @@ export async function bulkAssignParcelsToCallCenterSvc(input: {
 }
 
 export async function updateParcelShelfPickerSvc(input: { parcelId: string; userId: string }) {
-  const queue = await getPickupQueueByParcelRepo(input.parcelId);
-  if (!queue) {
-    // When the branch does not use pickup queue, silently succeed since
-    // there is no queue record to update. The shelf picker assignment is
-    // only stored on the pickup_queues table.
-    const parcel = await getParcelSvc(input.parcelId);
-    const branch = await getBranchRepo(parcel.destinationId);
-    if (!branch?.usePickupQueue) {
-      return { success: true, parcelId: input.parcelId };
-    }
-    throw NotFound('Active pickup queue not found for parcel');
-  }
+  const parcel = await getParcelRepo(input.parcelId);
+  if (!parcel) throw NotFound('Parcel not found');
 
-  await updatePickupQueueRepo(queue.id, { pickerStaffId: input.userId }, db);
+  const queue = await getPickupQueueByParcelRepo(input.parcelId);
+  await db.transaction(async (tx) => {
+    await updateParcelRepo(input.parcelId, { shelfPickerStaffId: input.userId }, tx);
+    if (queue) await updatePickupQueueRepo(queue.id, { pickerStaffId: input.userId }, tx);
+  });
 
   return { success: true, parcelId: input.parcelId };
 }
