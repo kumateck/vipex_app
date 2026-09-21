@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -31,7 +32,7 @@ export function FleetMaintenanceProcurementReorderRunPage() {
         `Reorder run completed. Candidates ${result.lowStockCandidates}, demands created ${result.procurementDemandsCreated}.`,
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to run reorder demand job');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to run reorder demand job');
     }
   };
 

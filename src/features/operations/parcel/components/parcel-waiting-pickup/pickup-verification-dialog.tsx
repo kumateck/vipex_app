@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -231,7 +232,7 @@ export function PickupVerificationDialog({
                 await onRequestHomeDelivery();
               } catch (error) {
                 toast.error(
-                  error instanceof Error ? error.message : 'Failed to move parcel to home delivery',
+                  getApplicationErrorMessage(error, '') || 'Failed to move parcel to home delivery',
                 );
               }
             }}
@@ -244,7 +245,7 @@ export function PickupVerificationDialog({
               try {
                 await onConfirmDelivered();
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : 'Failed to confirm delivery');
+                toast.error(getApplicationErrorMessage(error, '') || 'Failed to confirm delivery');
               }
             }}
             disabled={

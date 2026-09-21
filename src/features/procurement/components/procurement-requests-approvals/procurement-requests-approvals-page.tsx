@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -55,7 +56,7 @@ export function ProcurementRequestsApprovalsPage() {
       await approveRequest({ id }).unwrap();
       toast.success('Request approved');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to approve request');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to approve request');
     }
   };
 
@@ -70,7 +71,7 @@ export function ProcurementRequestsApprovalsPage() {
       toast.success('Request rejected');
       setReasons((prev) => ({ ...prev, [id]: '' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to reject request');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to reject request');
     }
   };
 

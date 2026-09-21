@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import {
   canCloseCashierSessions,
   canOpenCashierSessions,
@@ -18,12 +19,11 @@ const EMPTY_DATA: CashierDashboardData = {
 };
 
 function errorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.toLowerCase().includes('network')) {
+  const message = getMobileErrorMessage(error, 'Dashboard data could not be loaded.');
+  if (message.toLowerCase().includes('network')) {
     return 'Could not reach VIPEx. Check your connection and try again.';
   }
-  return error instanceof Error
-    ? error.message.replace(/\s*\(\d{3}\)$/, '')
-    : 'Dashboard data could not be loaded.';
+  return message.replace(/\s*\(\d{3}\)$/, '');
 }
 
 export function useCashierDashboard(): CashierDashboardState {

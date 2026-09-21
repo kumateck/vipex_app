@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -55,7 +56,7 @@ export function PickupOtpVerificationSection({
       await otp.request(isResend);
       toast.success(isResend ? 'Collection OTP resent to the customer' : 'Collection OTP sent');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send collection OTP');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to send collection OTP');
     }
   };
 
@@ -64,7 +65,7 @@ export function PickupOtpVerificationSection({
       await otp.verify();
       toast.success('Customer presence confirmed');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Invalid collection OTP');
+      toast.error(getApplicationErrorMessage(error, '') || 'Invalid collection OTP');
     }
   };
 

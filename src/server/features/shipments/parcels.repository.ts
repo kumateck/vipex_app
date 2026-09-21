@@ -106,8 +106,10 @@ export type ListParcelsParams = {
   hasPickupQueue?: boolean | null;
   agedOnly?: boolean | null;
   storageChargeAccruing?: boolean | null;
+  cashierCollectionRequired?: boolean | null;
   ageThresholdMonths?: number | null;
   storageGraceDays?: number | null;
+  storageFeePerDayPsw?: number | null;
   search?: string | null; // bookingCode/trackingCode/sender/receiver names/phones
   received?: boolean | null;
   includeDeleted?: boolean | null;
@@ -164,6 +166,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     | ReturnType<typeof or>
     | ReturnType<typeof isNull>
     | ReturnType<typeof isNotNull>
+    | ReturnType<typeof sql>
   )[] = [];
   if (!p.includeDeleted) whereParts.push(eq(parcels.isDeleted, false));
   if (p.companyId) whereParts.push(eq(parcels.companyId, p.companyId));
@@ -210,6 +213,41 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       and ${payments.component} = ${PaymentComponent.DELIVERY_FEE}
       and ${payments.voidedAt} is null
   ), 0)`;
+  const outstandingPrincipalPsw = sql<number>`greatest(
+    ${parcels.chargePsw} - ${paidPrincipalPsw},
+    0
+  )`;
+  const paidStoragePsw = sql<number>`coalesce((
+    select sum(storage_payment.gross_amount_psw)
+    from payments storage_payment
+    where storage_payment.parcel_id = ${parcels.id}
+      and storage_payment.component = ${PaymentComponent.OTHER}
+      and storage_payment.voided_at is null
+      and storage_payment.notes like 'STORAGE_CHARGE%'
+  ), 0)`;
+  const waivedStoragePsw = sql<number>`coalesce((
+    select sum(storage_waiver.waived_amount_psw)
+    from parcel_storage_waivers storage_waiver
+    where storage_waiver.parcel_id = ${parcels.id}
+  ), 0)`;
+  const storageAccruedPsw = sql<number>`greatest(
+    floor(
+      extract(epoch from (now() - (${effectiveParcelReceivedAt()} +
+        (${Math.max(1, Number(p.storageGraceDays ?? 14))} * interval '1 day')))) / 86400
+    ),
+    0
+  ) * ${Math.max(0, Number(p.storageFeePerDayPsw ?? 0))}`;
+  const outstandingStoragePsw = sql<number>`greatest(
+    ${storageAccruedPsw} - ${paidStoragePsw} - ${waivedStoragePsw},
+    0
+  )`;
+
+  if (p.cashierCollectionRequired === true) {
+    whereParts.push(sql`(${outstandingPrincipalPsw} > 0 or ${outstandingStoragePsw} > 0)`);
+  }
+  if (p.cashierCollectionRequired === false) {
+    whereParts.push(sql`(${outstandingPrincipalPsw} <= 0 and ${outstandingStoragePsw} <= 0)`);
+  }
 
   if (p.locationId) whereParts.push(eq(parcels.pickupLocationId, p.locationId));
   if (p.hasPickupQueue === true) whereParts.push(isNotNull(pickupQueues.id));
@@ -312,8 +350,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       secondCardNumber: parcels.secondCardNumber,
       pickupLocationId: parcels.pickupLocationId,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
-      outstandingPrincipalPsw:
-        sql<number>`greatest(${parcels.chargePsw} - ${paidPrincipalPsw}, 0)`.mapWith(Number),
+      outstandingPrincipalPsw: outstandingPrincipalPsw.mapWith(Number),
       outstandingDeliveryFeePsw:
         sql<number>`greatest(coalesce(${deliveries.chargePsw}, 0) - ${paidDeliveryFeePsw}, 0)`.mapWith(
           Number,

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { PaymentMethod } from '@/db/schemas/enums';
@@ -108,7 +109,7 @@ export function useSenderPaymentCollection({ companyId, refetch }: UseSenderPaym
       setSelectedParcel(null);
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to process parcel');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to process parcel');
     }
   };
 

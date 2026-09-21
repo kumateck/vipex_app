@@ -36,6 +36,7 @@ export async function listParcelsCtrl(
     hasPickupQueue?: boolean | null;
     agedOnly?: boolean | null;
     storageChargeAccruing?: boolean | null;
+    cashierCollectionRequired?: boolean | null;
     received?: boolean | null;
     includeDeleted?: boolean | null;
     assignedToUserId?: string | null;
@@ -55,6 +56,7 @@ export async function listParcelsCtrl(
     hasPickupQueue: q.filters?.hasPickupQueue ?? null,
     agedOnly: q.filters?.agedOnly ?? null,
     storageChargeAccruing: q.filters?.storageChargeAccruing ?? null,
+    cashierCollectionRequired: q.filters?.cashierCollectionRequired ?? null,
     search: pagination.search ?? null,
     received: q.filters?.received ?? null,
     includeDeleted: q.filters?.includeDeleted ?? null,

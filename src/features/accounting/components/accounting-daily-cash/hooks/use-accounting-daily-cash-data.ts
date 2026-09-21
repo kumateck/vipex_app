@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { BranchType, CashConfirmationStatus, UserStatus, UserType } from '@/db/schemas/enums';
@@ -186,7 +187,7 @@ export function useAccountingDailyCashData({
       await refetch();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to create daily cash confirmation',
+        getApplicationErrorMessage(error, '') || 'Failed to create daily cash confirmation',
       );
     }
   }
@@ -197,7 +198,7 @@ export function useAccountingDailyCashData({
       toast.success('Daily cash confirmation marked as confirmed');
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to confirm daily cash');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to confirm daily cash');
     }
   }
   async function handlePost(row: DailyCashConfirmationRow) {
@@ -207,7 +208,7 @@ export function useAccountingDailyCashData({
       toast.success('Daily cash confirmation posted to ledger');
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to post daily cash');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to post daily cash');
     }
   }
   function applyExpectedCashFromOperations() {

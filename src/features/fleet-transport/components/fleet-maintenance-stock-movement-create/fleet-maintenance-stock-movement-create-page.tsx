@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -50,7 +51,7 @@ export function FleetMaintenanceStockMovementCreatePage() {
       setNote('');
       await refetchParts();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update part stock');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update part stock');
     }
   };
 

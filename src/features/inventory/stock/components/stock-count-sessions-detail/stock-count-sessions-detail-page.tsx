@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link, useParams } from 'react-router-dom';
@@ -67,7 +68,7 @@ export function StockCountSessionsDetailPage() {
       toast.success('Line updated');
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update line');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update line');
     }
   };
 
@@ -94,7 +95,7 @@ export function StockCountSessionsDetailPage() {
       toast.success('Line updated');
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update line');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update line');
     }
   };
 
@@ -104,7 +105,7 @@ export function StockCountSessionsDetailPage() {
       toast.success('Session submitted');
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to submit session');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to submit session');
     }
   };
 
@@ -114,7 +115,7 @@ export function StockCountSessionsDetailPage() {
       toast.success('Session approved and reconciled');
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to approve session');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to approve session');
     }
   };
 

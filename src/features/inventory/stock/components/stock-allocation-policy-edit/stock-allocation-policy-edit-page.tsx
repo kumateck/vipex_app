@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -55,7 +56,7 @@ export function StockAllocationPolicyEditPage() {
       toast.success('Allocation policy saved');
       navigate('/inventory/stock-allocation-policy');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save policy');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save policy');
     }
   };
 

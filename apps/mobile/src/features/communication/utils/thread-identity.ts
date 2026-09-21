@@ -1,9 +1,10 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 export function normalizeIdentity(value?: string | null) {
   return (value ?? '').trim().toLowerCase();
 }
 
 export function extractHttpStatus(error: unknown): number | null {
-  const source = error instanceof Error ? error.message : String(error);
+  const source = getMobileErrorMessage(error, '') || String(error);
   const match = source.match(/\((\d{3})\)/);
   const parsed = match ? Number(match[1]) : Number.NaN;
   return Number.isFinite(parsed) ? parsed : null;

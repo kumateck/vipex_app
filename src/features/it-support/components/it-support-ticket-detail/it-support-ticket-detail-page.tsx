@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link, useParams } from 'react-router-dom';
@@ -90,7 +91,7 @@ export function ItSupportTicketDetailPage() {
       toast.success('Internal note added');
       await Promise.all([refetchEvents(), refetchTicket()]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add internal note');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to add internal note');
     }
   };
 

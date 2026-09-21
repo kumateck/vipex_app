@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useMemo, useReducer } from 'react';
 import { toast } from 'sonner';
 import { useCreateBulkSmsCampaignMutation } from '../services';
@@ -64,7 +65,7 @@ export function useBulkSmsComposer(templates: CompanySmsTemplate[], onCreated: (
         );
         onCreated();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to create bulk SMS');
+        toast.error(getApplicationErrorMessage(error, '') || 'Failed to create bulk SMS');
       }
     },
     [createCampaign, draft, onCreated, selectedTemplate?.body],

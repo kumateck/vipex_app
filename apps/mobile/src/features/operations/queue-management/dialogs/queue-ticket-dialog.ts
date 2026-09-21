@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { Alert, Share } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
@@ -12,7 +13,7 @@ export function showQueueTicketDialog(input: {
       Clipboard.setString(input.queueCode);
       notifySuccess('Queue code copied.');
     } catch (error) {
-      notifyError('Copy failed', error instanceof Error ? error.message : 'Unable to copy code');
+      notifyError('Copy failed', getMobileErrorMessage(error, '') || 'Unable to copy code');
     }
   };
 
@@ -20,10 +21,7 @@ export function showQueueTicketDialog(input: {
     try {
       await Share.share({ message });
     } catch (error) {
-      notifyError(
-        'Share failed',
-        error instanceof Error ? error.message : 'Unable to share ticket',
-      );
+      notifyError('Share failed', getMobileErrorMessage(error, '') || 'Unable to share ticket');
     }
   };
 

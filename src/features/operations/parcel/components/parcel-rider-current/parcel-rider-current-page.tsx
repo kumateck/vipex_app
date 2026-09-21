@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
@@ -85,7 +86,7 @@ export function ParcelRiderCurrentPage() {
       await riderReturned({ parcelId: row.parcelId, riderUserId }).unwrap();
       toast.success('Parcel returned to branch pickup');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to return parcel');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to return parcel');
     }
   };
 
@@ -183,7 +184,7 @@ export function ParcelRiderCurrentPage() {
       toast.success('Handover confirmed');
       setSelected(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to confirm handover');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to confirm handover');
     }
   };
 

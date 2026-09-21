@@ -1,17 +1,76 @@
-import { mobileApiPost, searchParcels } from '@mobile/lib/api';
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
+import { createCustomer, mobileApiGet, mobileApiPost, updateParcel } from '@mobile/lib/api';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
+import type { ParcelSearchRow } from '@mobile/types/parcels';
+import type { ContactOutcome, SaveCallOutcomeInput } from '../types';
 
-export function listAddressCollectionParcels(
-  token: string,
-  input: { companyId: string; branchId: string; search: string },
-) {
-  return searchParcels(token, {
-    search: input.search,
-    companyId: input.companyId,
-    destinationId: input.branchId,
-    status: ParcelStatus.HOME_DELIVERY_REQUESTED,
-    pageSize: 50,
+type ParcelListResponse = {
+  data: ParcelSearchRow[];
+  meta?: { totalRecords?: number; totalPages?: number };
+};
+
+export function listAssignedCallParcels(token: string, search: string) {
+  return mobileApiGet<ParcelListResponse>({
+    path: '/shipments/parcels/call-center/assigned',
+    token,
+    query: { page: 1, pageSize: 100, search },
   });
+}
+
+export function listAddressCollectionParcels(token: string, input: { search: string }) {
+  return mobileApiGet<ParcelListResponse>({
+    path: '/shipments/parcels/call-center/address-collection',
+    token,
+    query: { page: 1, pageSize: 50, search: input.search },
+  });
+}
+
+export async function saveCallOutcome(token: string, input: SaveCallOutcomeInput) {
+  let secondReceiverId = input.existingSecondReceiverId;
+  if (input.secondReceiver) {
+    const customer = await createCustomer(token, input.secondReceiver);
+    secondReceiverId = customer.id;
+  }
+
+  await updateParcel(token, {
+    id: input.parcelId,
+    status: input.status,
+    secondReceiverId,
+  });
+
+  if (!input.sendSms && !input.sendEmail) {
+    return { sentCount: 0, failedCount: 0, notificationError: null };
+  }
+
+  try {
+    const result = await mobileApiPost<{
+      sentCount: number;
+      failedCount: number;
+    }>({
+      path: '/notification-hub/events/parcel-status-call',
+      token,
+      body: {
+        parcelId: input.parcelId,
+        outcome: input.outcome,
+        sendSms: input.sendSms,
+        sendEmail: input.sendEmail,
+        includeSecondReceiver: Boolean(secondReceiverId),
+      },
+    });
+    return { ...result, notificationError: null };
+  } catch (error) {
+    return {
+      sentCount: 0,
+      failedCount: 0,
+      notificationError: getMobileErrorMessage(error, '') || 'Notification failed.',
+    };
+  }
+}
+
+export function outcomeStatus(outcome: ContactOutcome) {
+  if (outcome === 'pickup') return ParcelStatus.AWAITING_PICKUP;
+  if (outcome === 'delivery') return ParcelStatus.HOME_DELIVERY_REQUESTED;
+  return ParcelStatus.CUSTOMER_CONTACTED;
 }
 
 export const markReceiverCalled = (token: string, parcelId: string, userId: string) =>

@@ -1,6 +1,7 @@
 import type { RefObject } from 'react';
 import { InvoiceA5Template, ThermalStickerTemplate } from '@/features/printing';
 import type { ReceiptPrintData } from './parcel-receipt.types';
+import { buildParcelStickerQrValue } from '../utils/tracking-url';
 import {
   formatDate,
   formatMoney,
@@ -64,7 +65,7 @@ export function ParcelReceiptPrintContent({
     destinationBranchName: data.destinationBranchName,
     destinationLocationName: data.destinationLocationName,
     toBePaidCedis: data.receiverToPayCedis > 0 ? data.receiverToPayCedis : undefined,
-    qrValue: qrUrl,
+    qrValue: buildParcelStickerQrValue(data.trackingCode),
     formatMoney,
   };
 

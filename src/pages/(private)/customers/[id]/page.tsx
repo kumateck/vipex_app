@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { endOfDay, startOfDay, subDays } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
@@ -212,7 +213,7 @@ export default function CustomerDetailsPage() {
       setPaymentAmount('');
       setPaymentNotes('');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to record payment');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to record payment');
     }
   };
 
@@ -277,7 +278,7 @@ export default function CustomerDetailsPage() {
       setCardFrontImageUrl(null);
       setCardBackImageUrl(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add card');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to add card');
     }
   };
 
@@ -335,7 +336,7 @@ export default function CustomerDetailsPage() {
 
       toast.success('Card updated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update card');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update card');
     }
   };
 

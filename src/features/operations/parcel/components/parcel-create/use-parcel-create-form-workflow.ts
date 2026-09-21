@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -256,7 +257,7 @@ export function useParcelCreateFormWorkflow() {
       );
     } catch (error) {
       if (isApiRejectionError(error)) return;
-      toast.error(error instanceof Error ? error.message : 'Failed to create parcel transaction');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create parcel transaction');
     }
   };
 

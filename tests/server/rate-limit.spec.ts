@@ -14,12 +14,13 @@ const app = new Elysia()
   )
   .get('/limited', () => ({ ok: true }));
 
-async function call(ip: string): Promise<Response> {
+async function call(ip: string, token?: string): Promise<Response> {
   return app.handle(
     new Request('http://localhost/limited', {
       method: 'GET',
       headers: {
         'x-forwarded-for': ip,
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
       },
     }),
   );
@@ -54,5 +55,15 @@ describe('Rate limit middleware', () => {
 
     const otherIp = await call('10.0.0.3');
     expect(otherIp.status).toBe(HttpStatus.OK);
+  });
+
+  test('isolates authenticated users sharing one public ip', async () => {
+    const sharedIp = '10.0.0.4';
+    await call(sharedIp, 'user-a-token');
+    await call(sharedIp, 'user-a-token');
+    await call(sharedIp, 'user-a-token');
+
+    expect((await call(sharedIp, 'user-a-token')).status).toBe(HttpStatus.TOO_MANY_REQUESTS);
+    expect((await call(sharedIp, 'user-b-token')).status).toBe(HttpStatus.OK);
   });
 });

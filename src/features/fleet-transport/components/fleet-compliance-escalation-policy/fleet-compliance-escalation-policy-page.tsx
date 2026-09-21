@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -44,7 +45,7 @@ export function FleetComplianceEscalationPolicyPage() {
       toast.success('Compliance escalation policy updated');
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update policy');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update policy');
     }
   };
 

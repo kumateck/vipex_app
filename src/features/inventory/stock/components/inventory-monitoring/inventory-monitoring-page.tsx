@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -24,7 +25,7 @@ export function InventoryMonitoringPage() {
       toast.success('Inventory daily automation executed');
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to run automation');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to run automation');
     }
   };
 

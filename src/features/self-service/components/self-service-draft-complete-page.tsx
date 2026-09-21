@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -83,7 +84,7 @@ export function SelfServiceDraftCompletePage() {
       toast.success(`Booking created: ${response.parcels[0]?.trackingCode ?? response.bookingId}`);
       navigate('/parcels/self-service');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to complete this booking');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to complete this booking');
     }
   };
 

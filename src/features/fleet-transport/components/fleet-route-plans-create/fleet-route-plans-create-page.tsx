@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -75,7 +76,7 @@ export function FleetRoutePlansCreatePage() {
       toast.success('Route plan created');
       navigate('/fleet-transport/routes/plans');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create route plan');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create route plan');
     }
   };
 

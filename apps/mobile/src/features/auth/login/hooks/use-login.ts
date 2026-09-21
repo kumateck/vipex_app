@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { router } from '@mobile/navigation/router-compat';
 import { useAuth } from '@mobile/providers/auth-provider';
 
@@ -28,7 +29,7 @@ export function useLogin() {
       await login(email.trim(), password);
       router.replace('/(app)/(tabs)');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      setError(getMobileErrorMessage(err, 'Login failed. Please try again.'));
     } finally {
       setLoading(false);
     }
