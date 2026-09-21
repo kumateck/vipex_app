@@ -35,6 +35,12 @@ System Admin password assignment revokes the target user's active sessions and w
 
 - `/shipments/bookings`: booking creation and query, including booking-with-parcels operations.
 - `/shipments/parcels`: parcel search, detail, lifecycle actions, corrections, and receiver OTP-related operations.
+- `GET /shipments/parcels/:id/details`: return parcel relations and storage settlement. Remaining
+  principal is based on charge minus non-voided principal payments. For legacy rows with no
+  `receivedAt`, the response and storage settlement use the earliest audited arrival transition.
+- `POST /shipments/parcels/:id/update-shelf-picker`: persist the selected shelf-picker staff on the
+  parcel and, when present, mirror it to the active pickup queue. This endpoint works independently
+  of the branch `usePickupQueue` setting and requires `CanUpdateParcelShelfPicker`.
 - `POST /shipments/parcels/bulk-mark-received`: atomically mark 1–100 authenticated-branch incoming
   parcels as arrived. The body contains only unique `parcelIds`; company, branch, and receiving user
   are taken from authentication. Any missing, out-of-scope, deleted, already-received, non-transit,

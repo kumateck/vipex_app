@@ -128,6 +128,7 @@ function createReceiverParcel(): ParcelSearchRow {
     secondCardId: null,
     secondCardNumber: null,
     method: 1,
+    shelfPickerStaffId: null,
     taxReportConfirmation: false,
     callSender: false,
     isDeleted: false,
