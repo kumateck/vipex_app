@@ -37,6 +37,21 @@ import { ParcelStatus, PaymentComponent } from '@/db/schemas/enums';
 import type { SortField } from '@/server/types/pagination.types';
 import { extractScannedCode } from '@/server/utils/scan-code';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
+
+function effectiveParcelReceivedAt() {
+  return sql<Date | null>`coalesce(
+    "parcels"."received_at",
+    (
+      select min(receive_audit.created_at)
+      from audit_logs receive_audit
+      where receive_audit.entity_type = 'parcel'
+        and receive_audit.entity_id = "parcels"."id"
+        and receive_audit.action = 'PARCEL_UPDATED'
+        and receive_audit.metadata->'patch'->>'status' = '3'
+    )
+  )`.mapWith((value) => (value == null ? null : new Date(String(value))));
+}
+
 export type ParcelRow = {
   id: string;
   companyId: string;
@@ -61,6 +76,7 @@ export type ParcelRow = {
   pickupLocationId: string | null;
   plannedToBePaidPsw: number;
   method: number;
+  shelfPickerStaffId: string | null;
   taxReportConfirmation: boolean;
   callSender: boolean;
   isDeleted: boolean;
@@ -297,9 +313,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       pickupLocationId: parcels.pickupLocationId,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       outstandingPrincipalPsw:
-        sql<number>`greatest(${parcels.plannedToBePaidPsw} - ${paidPrincipalPsw}, 0)`.mapWith(
-          Number,
-        ),
+        sql<number>`greatest(${parcels.chargePsw} - ${paidPrincipalPsw}, 0)`.mapWith(Number),
       outstandingDeliveryFeePsw:
         sql<number>`greatest(coalesce(${deliveries.chargePsw}, 0) - ${paidDeliveryFeePsw}, 0)`.mapWith(
           Number,
@@ -314,17 +328,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       createdBy: parcels.createdBy,
       createdAt: parcels.createdAt,
       receivedBy: parcels.receivedBy,
-      receivedAt: sql<Date | null>`coalesce(
-          ${parcels.receivedAt},
-          (
-            select min(receive_audit.created_at)
-            from audit_logs receive_audit
-            where receive_audit.entity_type = 'parcel'
-              and receive_audit.entity_id = ${parcels.id}
-              and receive_audit.action = 'PARCEL_UPDATED'
-              and receive_audit.metadata->'patch'->>'status' = '3'
-          )
-        )`.mapWith((value) => (value == null ? null : new Date(String(value)))),
+      receivedAt: effectiveParcelReceivedAt(),
       confirmedBy: parcels.confirmedBy,
       confirmedAt: parcels.confirmedAt,
       updatedAt: parcels.updatedAt,
@@ -354,7 +358,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       pickupQueueId: pickupQueues.id,
       pickupQueueCode: pickupQueues.queueCode,
       pickupQueueNumber: pickupQueues.queueNumber,
-      pickerStaffId: pickupQueues.pickerStaffId,
+      shelfPickerStaffId: parcels.shelfPickerStaffId,
+      pickerStaffId: sql<
+        string | null
+      >`coalesce(${parcels.shelfPickerStaffId}, ${pickupQueues.pickerStaffId})`,
       pickerStaffName: picker.fullname,
       callCenterAssignedToUserId: parcels.callCenterAssignedToUserId,
       callCenterAssignedToUserName: callCenterAssignee.fullname,
@@ -382,7 +389,13 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
     .leftJoin(rider, eq(rider.id, deliveries.riderUserId))
     .leftJoin(pickupQueues, eq(pickupQueues.parcelId, parcels.id))
-    .leftJoin(picker, eq(picker.id, pickupQueues.pickerStaffId))
+    .leftJoin(
+      picker,
+      eq(
+        picker.id,
+        sql<string>`coalesce(${parcels.shelfPickerStaffId}, ${pickupQueues.pickerStaffId})`,
+      ),
+    )
     .leftJoin(callCenterAssignee, eq(callCenterAssignee.id, parcels.callCenterAssignedToUserId))
     .leftJoin(parcelInternalHolders, eq(parcelInternalHolders.parcelId, parcels.id))
     .leftJoin(hb, eq(hb.id, parcelInternalHolders.branchId))
@@ -445,6 +458,7 @@ export async function getParcelRepo(
       pickupLocationId: parcels.pickupLocationId,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       method: parcels.method,
+      shelfPickerStaffId: parcels.shelfPickerStaffId,
       taxReportConfirmation: parcels.taxReportConfirmation,
       callSender: parcels.callSender,
       isDeleted: parcels.isDeleted,
@@ -454,7 +468,7 @@ export async function getParcelRepo(
       createdBy: parcels.createdBy,
       createdAt: parcels.createdAt,
       receivedBy: parcels.receivedBy,
-      receivedAt: parcels.receivedAt,
+      receivedAt: effectiveParcelReceivedAt(),
       confirmedBy: parcels.confirmedBy,
       confirmedAt: parcels.confirmedAt,
       updatedAt: parcels.updatedAt,

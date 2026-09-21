@@ -2,6 +2,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { PaymentStatusBookingCell } from '../parcel-processed-consignment';
 import type { ParcelRow } from './call-center-assignment-types';
 
 export function useCallCenterAssignmentColumns({
@@ -41,7 +42,11 @@ export function useCallCenterAssignmentColumns({
     {
       accessorKey: 'bookingCode',
       header: 'Booking Code',
-      cell: ({ row }) => <span className="font-mono font-medium">{row.original.bookingCode}</span>,
+      cell: ({ row }) => (
+        <div className="font-mono font-medium">
+          <PaymentStatusBookingCell parcel={row.original} />
+        </div>
+      ),
     },
     {
       accessorKey: 'receiverName',

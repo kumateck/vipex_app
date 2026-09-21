@@ -9,6 +9,7 @@ import {
   useGetParcelDetailsQuery,
   useSearchParcelsQuery,
 } from '../../api/parcel.api';
+import { getOutstandingPrincipalPsw } from '../../utils';
 import { ParcelSessionGuard } from '../parcel-session-guard';
 import { DeliveryCashierTable } from './delivery-cashier-table';
 import { FinalizeDeliveryDialog } from './finalize-delivery-dialog';
@@ -68,14 +69,11 @@ export function ParcelDeliveryCashierPage() {
 
   const outstanding = useMemo(() => {
     if (!details) return { principalPsw: 0, deliveryFeePsw: 0 };
-    const principalPaid = details.payments
-      .filter((payment) => payment.component === 0)
-      .reduce((sum, payment) => sum + payment.grossAmountPsw, 0);
     const deliveryFeePaid = details.payments
       .filter((payment) => payment.component === 1)
       .reduce((sum, payment) => sum + payment.grossAmountPsw, 0);
     return {
-      principalPsw: Math.max(details.parcel.plannedToBePaidPsw - principalPaid, 0),
+      principalPsw: getOutstandingPrincipalPsw(details.parcel.chargePsw, details.payments),
       deliveryFeePsw: Math.max((details.delivery?.chargePsw ?? 0) - deliveryFeePaid, 0),
     };
   }, [details]);

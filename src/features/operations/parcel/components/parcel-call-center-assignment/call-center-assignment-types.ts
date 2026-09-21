@@ -11,6 +11,8 @@ export type ParcelRow = {
   receiverPhone: string | null;
   parcelDetails: string;
   parcelContent: string;
+  chargePsw: number;
+  plannedToBePaidPsw: number;
   callCenterAssignedToUserId: string | null;
   callCenterAssignedToUserName: string | null;
   createdAt: string;

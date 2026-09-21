@@ -16,12 +16,14 @@ import {
 import { confirmReceiverDelivery } from './confirm-receiver-delivery';
 import { useReceiverCashierDialogState } from './use-receiver-cashier-dialog-state';
 import { useReceiverCashierEdit } from './use-receiver-cashier-edit';
+import { useReceiverCashierInitialization } from './use-receiver-cashier-initialization';
 import {
   type ParcelReceiverQuery,
   useReceiverCashierResources,
 } from './use-receiver-cashier-resources';
 import { useReceiverOtpActions } from './use-receiver-otp-actions';
 import { getQueueFilterBySearch } from './receiver-cashier-utils';
+import { getDialogLoadState, getDialogResourceState } from '../../utils';
 
 export function useParcelReceiverCashierWorkflow() {
   const user = useAuthStore((state) => state.user);
@@ -32,9 +34,10 @@ export function useParcelReceiverCashierWorkflow() {
   const canWaiveStorageAccrual = (user?.permissions ?? []).includes(
     PermissionKeys.CanWaiveParcelStorageAccrual,
   );
-  const { data: currentBranch } = useGetBranchOperationsSettingsQuery(branchId ?? '', {
+  const currentBranchQuery = useGetBranchOperationsSettingsQuery(branchId ?? '', {
     skip: !branchId,
   });
+  const currentBranch = currentBranchQuery.data;
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
   const isReceiverOtpRequired = currentBranch?.requireReceiverOtp ?? true;
 
@@ -92,7 +95,26 @@ export function useParcelReceiverCashierWorkflow() {
     receiverDuePsw,
     storageOutstandingPsw,
     hasPickupQueue,
+    isDialogDataLoading,
+    hasDialogLoadError,
   } = resources;
+  const branchSettingsLoadState = getDialogLoadState([
+    getDialogResourceState(currentBranchQuery, Boolean(selectedParcel && branchId)),
+  ]);
+  const isDialogLoading = isDialogDataLoading || branchSettingsLoadState.isLoading;
+  const hasDialogError = hasDialogLoadError || branchSettingsLoadState.hasError;
+  const isDialogInitialized = useReceiverCashierInitialization({
+    selectedParcelId: selectedParcel?.id ?? null,
+    parcelDetails,
+    receiverDuePsw,
+    storageOutstandingPsw,
+    isLoading: isDialogLoading,
+    hasError: hasDialogError,
+    setPaymentAmount: dialog.setPaymentAmount,
+    setStoragePaymentAmount: dialog.setStoragePaymentAmount,
+    setWaiveStorageAmount: dialog.setWaiveStorageAmount,
+    setPickerStaffId: dialog.setPickerStaffId,
+  });
 
   useEffect(() => {
     setQuery((prev) => ({
@@ -108,22 +130,6 @@ export function useParcelReceiverCashierWorkflow() {
       },
     }));
   }, [branchId, companyId, isPickupQueueEnabled]);
-
-  useEffect(() => {
-    if (!selectedParcel) return;
-    dialog.setPaymentAmount((receiverDuePsw / 100).toFixed(2));
-  }, [dialog, receiverDuePsw, selectedParcel]);
-
-  useEffect(() => {
-    if (!selectedParcel) return;
-    dialog.setStoragePaymentAmount((storageOutstandingPsw / 100).toFixed(2));
-    dialog.setWaiveStorageAmount((storageOutstandingPsw / 100).toFixed(2));
-  }, [dialog, selectedParcel, storageOutstandingPsw]);
-
-  useEffect(() => {
-    if (!selectedParcel || !parcelDetails) return;
-    dialog.setPickerStaffId(parcelDetails.pickupQueue?.pickerStaffId ?? '');
-  }, [dialog, parcelDetails, selectedParcel]);
 
   const isSaving =
     isAddingCard ||
@@ -264,6 +270,9 @@ export function useParcelReceiverCashierWorkflow() {
       handleRequestOtp,
       handleVerifyOtp,
       isSaving,
+      isLoading:
+        Boolean(selectedParcel) && !hasDialogError && (isDialogLoading || !isDialogInitialized),
+      hasLoadError: hasDialogError,
     },
     edit: {
       ...edit,

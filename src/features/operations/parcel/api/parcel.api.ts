@@ -104,6 +104,7 @@ export type ParcelSearchRow = {
   outstandingPrincipalPsw?: number;
   outstandingDeliveryFeePsw?: number;
   method: number;
+  shelfPickerStaffId: string | null;
   taxReportConfirmation: boolean;
   callSender: boolean;
   isDeleted: boolean;
@@ -304,6 +305,7 @@ export type ParcelFullDetails = {
     pickupLocationId: string | null;
     plannedToBePaidPsw: number;
     method: number;
+    shelfPickerStaffId: string | null;
     taxReportConfirmation: boolean;
     callSender: boolean;
     isDeleted: boolean;
