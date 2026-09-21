@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { toast } from 'sonner';
 import type { CommunicationChannel } from '../../../api/communication.api';
 import type { PresenceStatus } from '../types/communication-chat.types';
@@ -35,7 +36,7 @@ export async function joinVoiceChannelAndNavigate(params: {
     await params.markChannelRead({ id: params.channel.id }).unwrap();
     params.navigate(`/communication/calls/${joined.call.id}`);
   } catch (error) {
-    toast.error(error instanceof Error ? error.message : 'Failed to join voice channel.');
+    toast.error(getApplicationErrorMessage(error, '') || 'Failed to join voice channel.');
   } finally {
     params.setJoiningVoiceChannelId(null);
   }
@@ -70,6 +71,6 @@ export async function saveChannelMembers(params: {
     toast.success('Channel members updated');
     params.onSuccess();
   } catch (error) {
-    toast.error(error instanceof Error ? error.message : 'Failed to update channel members');
+    toast.error(getApplicationErrorMessage(error, '') || 'Failed to update channel members');
   }
 }

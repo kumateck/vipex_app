@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
@@ -110,7 +111,7 @@ export function ParcelDeliveryCashierPage() {
       setSelectedParcel(null);
       await listQuery.refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to finalize');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to finalize');
     }
   };
 

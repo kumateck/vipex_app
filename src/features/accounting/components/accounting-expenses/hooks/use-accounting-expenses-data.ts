@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { BranchType, ExpenseFundingSource, ExpenseRequestStatus } from '@/db/schemas/enums';
@@ -127,7 +128,7 @@ export function useAccountingExpensesData({
       setCompanyBankAccountId('');
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create expense request');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create expense request');
     }
   }
 
@@ -141,7 +142,7 @@ export function useAccountingExpensesData({
       toast.success(successMessage);
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : failureMessage);
+      toast.error(getApplicationErrorMessage(error, '') || failureMessage);
     }
   }
 

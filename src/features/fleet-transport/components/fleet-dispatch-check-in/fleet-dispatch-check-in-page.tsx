@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -76,7 +77,7 @@ export function FleetDispatchCheckInPage() {
       setLocationLabel('');
       setNote('');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to record check-in');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to record check-in');
     }
   };
 

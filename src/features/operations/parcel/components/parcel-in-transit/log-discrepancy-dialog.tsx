@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -114,7 +115,7 @@ export function LogDiscrepancyDialog({
               try {
                 await onSave();
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : 'Failed to log discrepancy');
+                toast.error(getApplicationErrorMessage(error, '') || 'Failed to log discrepancy');
               }
             }}
             disabled={isLoggingDiscrepancy}

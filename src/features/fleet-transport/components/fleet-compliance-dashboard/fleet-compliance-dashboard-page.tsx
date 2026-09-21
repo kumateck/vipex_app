@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { toast } from 'sonner';
@@ -112,7 +113,7 @@ export function FleetComplianceDashboardPage() {
       );
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to run compliance alert job');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to run compliance alert job');
     }
   };
 
@@ -124,7 +125,7 @@ export function FleetComplianceDashboardPage() {
       );
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to run lifecycle automation');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to run lifecycle automation');
     }
   };
 

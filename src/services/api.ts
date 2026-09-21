@@ -167,8 +167,12 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
       }
     }
 
-    // Non-401 API errors are handled by feature-level mutation/query consumers.
-    // Avoid global duplicate toasts (feature toast + global toast).
+    // Query screens do not all own a toast boundary. Surface the normalized server
+    // message here so an inline fallback never hides the actionable API response.
+    // Mutation consumers show their own contextual toast with the same shared parser.
+    if (result.error && result.error.status !== 401 && apiContext.type === 'query') {
+      TheAduseiErrorResponse(result.error, 'Failed to load data');
+    }
 
     return result as QueryReturnValue<unknown, FetchBaseQueryError, QueryMeta>;
   };

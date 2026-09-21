@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { type FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -56,7 +57,7 @@ export function FleetMaintenanceDowntimeWorkflowEditPage() {
       toast.success('Downtime workflow updated');
       navigate('/fleet-transport/maintenance/downtime/workflows');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update downtime workflow');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update downtime workflow');
     }
   };
 

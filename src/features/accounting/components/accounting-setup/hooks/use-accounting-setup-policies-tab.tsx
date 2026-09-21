@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
@@ -120,7 +121,7 @@ export function useAccountingSetupPoliciesTab({
       resetApprovalPolicyForm();
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save approval policy');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save approval policy');
     }
   }
 
@@ -143,7 +144,7 @@ export function useAccountingSetupPoliciesTab({
       resetApprovalPolicyForm();
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete approval policy');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to delete approval policy');
     }
   }
 

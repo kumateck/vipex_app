@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -116,7 +117,7 @@ export function StockLotsCreatePage() {
       toast.success('Stock lot saved');
       navigate(`/inventory/stock-lots/view/${result.id}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save stock lot');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save stock lot');
     }
   };
 

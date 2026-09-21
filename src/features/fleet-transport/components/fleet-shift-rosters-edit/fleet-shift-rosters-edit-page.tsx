@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -55,7 +56,7 @@ export function FleetShiftRostersEditPage() {
       toast.success('Roster updated');
       navigate('/fleet-transport/rosters');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update roster');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update roster');
     }
   };
 

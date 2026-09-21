@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,7 +62,7 @@ function AccountingJournalApprovalsContent({
       }).unwrap();
       toast.success(`Entry approved and posted (${result.postedEntryId})`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to approve pending entry');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to approve pending entry');
     }
   }
 
@@ -77,7 +78,7 @@ function AccountingJournalApprovalsContent({
       }).unwrap();
       toast.success('Entry rejected');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to reject pending entry');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to reject pending entry');
     }
   }
 

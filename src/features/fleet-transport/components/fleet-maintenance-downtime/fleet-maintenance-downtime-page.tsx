@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -31,7 +32,7 @@ export function FleetMaintenanceDowntimePage() {
       await closeDowntime({ id }).unwrap();
       toast.success('Downtime closed');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to close downtime');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to close downtime');
     }
   };
 

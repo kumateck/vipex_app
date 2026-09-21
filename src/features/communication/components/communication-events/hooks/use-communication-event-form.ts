@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -106,7 +107,7 @@ export function useCommunicationEventForm({
       toast.success('Event deleted');
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete event.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to delete event.');
     }
   };
 

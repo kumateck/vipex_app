@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
@@ -76,7 +77,7 @@ export function FleetDispatchCheckOutPage() {
       setLocationLabel('');
       setNote('');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to record check-out');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to record check-out');
     }
   };
 

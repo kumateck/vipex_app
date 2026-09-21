@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
@@ -180,7 +181,7 @@ export function ParcelHomeDeliveryDispatchPage() {
                     await listQuery.refetch();
                   } catch (error) {
                     toast.error(
-                      error instanceof Error ? error.message : 'Failed to move parcel to pickup',
+                      getApplicationErrorMessage(error, '') || 'Failed to move parcel to pickup',
                     );
                   }
                 }}
@@ -214,7 +215,7 @@ export function ParcelHomeDeliveryDispatchPage() {
       setSelectedIds([]);
       await listQuery.refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to dispatch');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to dispatch');
     }
   };
 
