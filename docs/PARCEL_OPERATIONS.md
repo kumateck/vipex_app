@@ -17,6 +17,12 @@ its booking code and show a legend: green is **Paid**, amber is **To Be Paid**, 
 **Partial**. The indicator is informational and does not change call-center or shelf-picker
 assignment behavior.
 
+Call-center assignment list and mutation failures display the message returned by the API, including
+validation, permission, and rate-limit messages. If the response cannot be decoded, the web client
+uses an operation-specific fallback. Authenticated rate limits are isolated by bearer credential,
+so staff sharing a branch network do not consume one another's request allowance; unauthenticated
+traffic remains isolated by client IP. A failed list request leaves the current table state intact.
+
 - Web: `src/features/operations/parcel`, `src/features/bookings`, and related operations features.
 - Server: `src/server/features/shipments`, `consignments`, `deliveries`, `pickup-queues`, `parcel-internal-transfers`, and `parcel-receiver-otp`.
 - Mobile: `mobile/src/features/parcel-create`, `receive`, `operations`, and `rider`.
@@ -119,6 +125,12 @@ modules on an opaque white area with a full quiet zone. Existing blue stickers r
 QR-only overlay label or manual code search; the camera must not be treated as a substitute for
 correct label stock.
 
+Thermal parcel stickers encode the compact `QR-<tracking-code>` payload rather than the longer
+public tracking URL. The mobile scanner normalizes this payload before branch-scoped lookup. The
+portrait sticker reserves a 22 mm black-on-white QR area, preserves square pixels during desktop
+and browser printing, and prints the booking code underneath as the manual fallback. Older or
+blurred stickers must be reprinted; updating the mobile app does not alter an existing physical QR.
+
 After detecting a QR code, mobile provides immediate haptic feedback, pauses further camera scanning, and covers the camera preview with a high-contrast progress overlay reading **QR detected — Finding incoming parcel…**. The overlay remains until the branch-scoped in-transit lookup succeeds or fails, preventing an ambiguous or apparently idle processing state.
 
 From mobile parcel review, **Back To Incoming List** always navigates to the existing native scan-to-receive screen (`/(app)/receive`). It must not depend on browser or navigation history, reset the navigator, create a second camera screen, or open the desktop incoming-parcels page.
@@ -126,6 +138,10 @@ From mobile parcel review, **Back To Incoming List** always navigates to the exi
 The native camera and code-scanner output exist only while the scan-to-receive screen is focused. Navigating to parcel review unmounts the camera and releases its session; returning mounts a fresh camera while preserving a stable `codeScanner` output configuration. Focus also clears stale scan-processing state. This prevents a dark preview and Vision Camera's `session/invalid-output-configuration` error on repeat visits.
 
 If a native camera session still fails, mobile handles the camera error in-screen and presents **Restart Camera**. It must not expose the developer console error screen or leave staff with an unexplained dark preview.
+The scanner also shows the native camera error message for support diagnosis, directs permanently
+denied users to system camera settings, and recommends updating or reinstalling when the native
+scanner runtime is missing. Android QR support is bundled in Vipex Mobile `1.0.18` and later; an
+older installed APK must be replaced because JavaScript updates cannot add the native ML Kit model.
 
 Branch controls can require:
 
@@ -183,6 +199,17 @@ Last-mile delivery includes dispatch, rider assignment, current deliveries, deli
 
 Mobile call-center staff can call receivers, record call contact when authorized, and save confirmed doorstep addresses and delivery fees. Branch supervisors can approve or reject pending rider address/fee changes from mobile; branch and pending-state validation remain server-side.
 
+The mobile assigned-call queue provides separate **Call receiver** and **Call sender** actions. Each
+action opens the device dial pad with the corresponding primary telephone prefilled; an unavailable
+telephone disables only its matching action.
+
+A parcel awaiting pickup is routed to Receiver Cashier whenever either its principal amount or its
+storage accrual remains outstanding. This includes a fully paid parcel that accumulated unpaid
+storage charges. The ordinary Waiting Pickup workflow excludes that parcel until storage is paid or
+waived by the cashier workflow. This eligibility is calculated by the API from the current company
+ageing policy, non-voided storage payments, and recorded storage waivers, so web clients cannot
+bypass the routing rule with local filters.
+
 ## Internal Transfers
 
 Internal transfers provide a custody trail when a parcel moves between internal actors or locations. Creation and acknowledgement are distinct operations. History must preserve the sender, receiver, time, parcel, and resulting state.
@@ -211,6 +238,12 @@ Recent correction support includes original-session amount corrections so adjust
 ## Verification Scenarios
 
 - Sender-paid, receiver-paid, split, zero-charge, and credit creation.
+- Call-center list, single assignment, and bulk assignment failures display the nested API message;
+  two authenticated staff behind one public IP have independent rate-limit quotas.
+- Mobile call-center receiver and sender call actions open the appropriate primary number, disable
+  cleanly when absent, and do not substitute one party's number for the other.
+- A paid parcel with outstanding storage appears in Receiver Cashier and not Waiting Pickup; after
+  full storage payment or waiver it leaves Receiver Cashier and becomes eligible for Waiting Pickup.
 - Single and multi-parcel creation with partial failure.
 - Consignment complete, missing, extra, and duplicate scans.
 - Previous-consignment retrieval for one date and a multi-day inclusive range, empty results,

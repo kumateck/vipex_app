@@ -35,6 +35,17 @@ System Admin password assignment revokes the target user's active sessions and w
 
 - `/shipments/bookings`: booking creation and query, including booking-with-parcels operations.
 - `/shipments/parcels`: parcel search, detail, lifecycle actions, corrections, and receiver OTP-related operations.
+  The optional `cashierCollectionRequired` list filter is mutually exclusive routing support for
+  pickup workflows. `true` returns parcels with outstanding principal or storage; `false` returns
+  parcels with neither. Storage is computed from the company ageing policy, effective received
+  time, non-voided storage payments, and waivers. The response remains paginated after filtering.
+- `GET /shipments/parcels/call-center/assigned`: require `CanReadCallCenterParcelStatus` and return
+  only Arrived, Customer Contacted, or Returned to Office parcels assigned to the authenticated
+  user at their company and destination branch. Callers can provide pagination and search only;
+  they cannot broaden identity scope.
+- `GET /shipments/parcels/call-center/address-collection`: require `CanMarkDoorstepCalled` and
+  return only Home Delivery Requested parcels for the authenticated company and destination branch.
+  Missing company or branch identity returns an empty paginated response.
 - `GET /shipments/parcels/:id/details`: return parcel relations and storage settlement. Remaining
   principal is based on charge minus non-voided principal payments. For legacy rows with no
   `receivedAt`, the response and storage settlement use the earliest audited arrival transition.
