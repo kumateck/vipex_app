@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia';
+import { createHash } from 'node:crypto';
 import { HttpStatus } from '../utils/http-status';
 import { env } from '../utils/env';
 import { getCacheStore } from '../services/cache';
@@ -10,9 +11,13 @@ type RateLimitOptions = {
   cache?: CacheStore;
 };
 
-function toClientKey(ipHeader: string | null, path: string): string {
+function toClientKey(ipHeader: string | null, authorization: string | null, path: string): string {
+  if (authorization?.toLowerCase().startsWith('bearer ')) {
+    const fingerprint = createHash('sha256').update(authorization).digest('hex').slice(0, 24);
+    return `rl:auth:${fingerprint}:${path}`;
+  }
   const ip = (ipHeader || 'unknown').split(',')[0]?.trim() || 'unknown';
-  return `rl:${ip}:${path}`;
+  return `rl:ip:${ip}:${path}`;
 }
 
 export function createRateLimitPlugin(options: RateLimitOptions) {
@@ -20,7 +25,11 @@ export function createRateLimitPlugin(options: RateLimitOptions) {
     const path = new URL(request.url).pathname;
     if (path === '/health' || path.startsWith('/docs')) return;
 
-    const key = toClientKey(request.headers.get('x-forwarded-for'), path);
+    const key = toClientKey(
+      request.headers.get('x-forwarded-for'),
+      request.headers.get('authorization'),
+      path,
+    );
     const cache = options.cache ?? getCacheStore();
     const count = await cache.incr(key, options.windowSeconds);
 

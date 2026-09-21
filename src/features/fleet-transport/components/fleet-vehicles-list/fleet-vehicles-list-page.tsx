@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Link } from 'react-router-dom';
@@ -94,7 +95,7 @@ export function FleetVehiclesListPage() {
       }).unwrap();
       toast.success(vehicle.isActive ? 'Vehicle deactivated' : 'Vehicle activated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update vehicle status');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update vehicle status');
     }
   };
 

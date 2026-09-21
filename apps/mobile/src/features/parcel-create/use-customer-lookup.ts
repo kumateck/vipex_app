@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useState } from 'react';
 import { findCustomersByTelephone } from '@mobile/lib/api';
 import { notifyError } from '@mobile/lib/notify';
@@ -65,7 +66,7 @@ export function useCustomerLookup(withAuth: WithAuth) {
     } catch (error) {
       notifyError(
         'Lookup failed',
-        error instanceof Error ? error.message : 'Unable to look up customer',
+        getMobileErrorMessage(error, '') || 'Unable to look up customer',
       );
     } finally {
       setIsLookingUp(false);

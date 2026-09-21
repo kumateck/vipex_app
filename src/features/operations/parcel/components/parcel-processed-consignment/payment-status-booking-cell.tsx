@@ -1,8 +1,7 @@
-import type { ProcessedParcel } from '../../api/parcel.api';
-import { getConsignmentPaymentStatus } from './payment-status';
+import { getConsignmentPaymentStatus, type PaymentStatusParcel } from './payment-status';
 
 type PaymentStatusBookingCellProps = {
-  parcel: ProcessedParcel;
+  parcel: PaymentStatusParcel & { bookingCode: string };
 };
 
 export function PaymentStatusBookingCell({ parcel }: PaymentStatusBookingCellProps) {

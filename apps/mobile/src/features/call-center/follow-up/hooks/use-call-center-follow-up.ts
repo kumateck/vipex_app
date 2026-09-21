@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useState } from 'react';
 import { Linking } from 'react-native';
 import { useAuth } from '@mobile/providers/auth-provider';
@@ -13,6 +14,7 @@ export function useCallCenterFollowUp(
   canRead: boolean,
   canRecordCall: boolean,
   canCollect: boolean,
+  enabled = true,
 ) {
   const { session, withAuth } = useAuth();
   const [search, setSearch] = useState('');
@@ -21,24 +23,22 @@ export function useCallCenterFollowUp(
   const [selected, setSelected] = useState<ParcelSearchRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const companyId = session.user?.company?.id ?? session.user?.companyId ?? '';
-  const branchId = session.user?.branch?.id ?? session.user?.branchId ?? '';
   const userId = session.user?.id ?? session.user?.sub ?? '';
 
   const load = useCallback(async () => {
-    if (!canRead || !companyId || !branchId) return;
+    if (!canRead || !enabled) return;
     setLoading(true);
     try {
       const result = await withAuth((token) =>
-        listAddressCollectionParcels(token, { companyId, branchId, search: submittedSearch }),
+        listAddressCollectionParcels(token, { search: submittedSearch }),
       );
       setParcels(result.data);
     } catch (error) {
-      notifyError('Follow-up unavailable', error instanceof Error ? error.message : 'Try again.');
+      notifyError('Follow-up unavailable', getMobileErrorMessage(error, '') || 'Try again.');
     } finally {
       setLoading(false);
     }
-  }, [branchId, canRead, companyId, submittedSearch, withAuth]);
+  }, [canRead, enabled, submittedSearch, withAuth]);
 
   useEffect(() => void load(), [load]);
 
@@ -51,7 +51,7 @@ export function useCallCenterFollowUp(
           await withAuth((token) => markReceiverCalled(token, parcel.id, userId));
         }
       } catch (error) {
-        notifyError('Call could not start', error instanceof Error ? error.message : 'Try again.');
+        notifyError('Call could not start', getMobileErrorMessage(error, '') || 'Try again.');
       }
     },
     [canRecordCall, userId, withAuth],
@@ -74,7 +74,7 @@ export function useCallCenterFollowUp(
         setSelected(null);
         await load();
       } catch (error) {
-        notifyError('Address not saved', error instanceof Error ? error.message : 'Try again.');
+        notifyError('Address not saved', getMobileErrorMessage(error, '') || 'Try again.');
       } finally {
         setSaving(false);
       }

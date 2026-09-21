@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -46,7 +47,7 @@ export function ProcurementSuppliersCreatePage() {
       toast.success('Supplier created');
       navigate('/procurement/suppliers');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create supplier');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create supplier');
     }
   };
 

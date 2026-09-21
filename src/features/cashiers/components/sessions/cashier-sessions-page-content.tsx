@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';
@@ -133,7 +134,7 @@ export function CashierSessionsPageContent({ view = 'all' }: CashierSessionsPage
       setOpeningBalance('');
       setSessionTypeId('');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open session');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to open session');
     }
   };
 
@@ -157,7 +158,7 @@ export function CashierSessionsPageContent({ view = 'all' }: CashierSessionsPage
       setSessionIdToClose(null);
       setClosingBalance('0');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to close session');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to close session');
     }
   }, [closeSession, closingBalance, sessionIdToClose]);
 

@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { ENV } from '@mobile/lib/env';
 import { getApiDebugInfo, runApiDiagnostics, type ApiProbeResult } from '@mobile/lib/api';
 
@@ -160,7 +161,7 @@ async function probeHttpUrl(url: string): Promise<HttpProbeResult> {
       ok: false,
       status: null,
       latencyMs: Date.now() - started,
-      error: isAbort ? 'timeout' : error instanceof Error ? error.message : 'network_error',
+      error: isAbort ? 'timeout' : getMobileErrorMessage(error, '') || 'network_error',
     };
   }
 }

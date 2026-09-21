@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
@@ -15,12 +16,15 @@ import {
 } from '../../api/parcel.api';
 import { confirmReceiverDelivery } from './confirm-receiver-delivery';
 import { useReceiverCashierDialogState } from './use-receiver-cashier-dialog-state';
+import { useReceiverCashierEdit } from './use-receiver-cashier-edit';
+import { useReceiverCashierInitialization } from './use-receiver-cashier-initialization';
 import {
   type ParcelReceiverQuery,
   useReceiverCashierResources,
 } from './use-receiver-cashier-resources';
 import { useReceiverOtpActions } from './use-receiver-otp-actions';
 import { getQueueFilterBySearch } from './receiver-cashier-utils';
+import { getDialogLoadState, getDialogResourceState } from '../../utils';
 
 export function useParcelReceiverCashierWorkflow() {
   const user = useAuthStore((state) => state.user);
@@ -31,9 +35,10 @@ export function useParcelReceiverCashierWorkflow() {
   const canWaiveStorageAccrual = (user?.permissions ?? []).includes(
     PermissionKeys.CanWaiveParcelStorageAccrual,
   );
-  const { data: currentBranch } = useGetBranchOperationsSettingsQuery(branchId ?? '', {
+  const currentBranchQuery = useGetBranchOperationsSettingsQuery(branchId ?? '', {
     skip: !branchId,
   });
+  const currentBranch = currentBranchQuery.data;
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
   const isReceiverOtpRequired = currentBranch?.requireReceiverOtp ?? true;
 
@@ -46,7 +51,7 @@ export function useParcelReceiverCashierWorkflow() {
       companyId,
       destinationId: branchId,
       status: ParcelStatus.AWAITING_PICKUP,
-      senderPaid: false,
+      cashierCollectionRequired: true,
       hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled),
     },
   });
@@ -63,6 +68,7 @@ export function useParcelReceiverCashierWorkflow() {
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [requestReceiverOtp] = useRequestReceiverOtpMutation();
   const [verifyReceiverOtp] = useVerifyReceiverOtpMutation();
+  const edit = useReceiverCashierEdit();
   const { handleRequestOtp, handleVerifyOtp } = useReceiverOtpActions({
     dialog,
     requestReceiverOtp,
@@ -90,7 +96,26 @@ export function useParcelReceiverCashierWorkflow() {
     receiverDuePsw,
     storageOutstandingPsw,
     hasPickupQueue,
+    isDialogDataLoading,
+    hasDialogLoadError,
   } = resources;
+  const branchSettingsLoadState = getDialogLoadState([
+    getDialogResourceState(currentBranchQuery, Boolean(selectedParcel && branchId)),
+  ]);
+  const isDialogLoading = isDialogDataLoading || branchSettingsLoadState.isLoading;
+  const hasDialogError = hasDialogLoadError || branchSettingsLoadState.hasError;
+  const isDialogInitialized = useReceiverCashierInitialization({
+    selectedParcelId: selectedParcel?.id ?? null,
+    parcelDetails,
+    receiverDuePsw,
+    storageOutstandingPsw,
+    isLoading: isDialogLoading,
+    hasError: hasDialogError,
+    setPaymentAmount: dialog.setPaymentAmount,
+    setStoragePaymentAmount: dialog.setStoragePaymentAmount,
+    setWaiveStorageAmount: dialog.setWaiveStorageAmount,
+    setPickerStaffId: dialog.setPickerStaffId,
+  });
 
   useEffect(() => {
     setQuery((prev) => ({
@@ -101,29 +126,19 @@ export function useParcelReceiverCashierWorkflow() {
         companyId,
         destinationId: branchId,
         status: ParcelStatus.AWAITING_PICKUP,
-        senderPaid: false,
+        cashierCollectionRequired: true,
         hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, prev.search),
       },
     }));
   }, [branchId, companyId, isPickupQueueEnabled]);
-
-  useEffect(() => {
-    if (!selectedParcel) return;
-    dialog.setPaymentAmount((receiverDuePsw / 100).toFixed(2));
-  }, [dialog, receiverDuePsw, selectedParcel]);
-
-  useEffect(() => {
-    if (!selectedParcel) return;
-    dialog.setStoragePaymentAmount((storageOutstandingPsw / 100).toFixed(2));
-    dialog.setWaiveStorageAmount((storageOutstandingPsw / 100).toFixed(2));
-  }, [dialog, selectedParcel, storageOutstandingPsw]);
 
   const isSaving =
     isAddingCard ||
     isCreatingCustomer ||
     isCollectingPayment ||
     isUpdatingParcel ||
-    isWaivingStorage;
+    isWaivingStorage ||
+    edit.isSaving;
 
   const handleSearchSubmit = () => {
     const term = searchInput.trim();
@@ -136,7 +151,7 @@ export function useParcelReceiverCashierWorkflow() {
         companyId,
         destinationId: branchId,
         status: ParcelStatus.AWAITING_PICKUP,
-        senderPaid: false,
+        cashierCollectionRequired: true,
         hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, term),
       },
     }));
@@ -149,7 +164,7 @@ export function useParcelReceiverCashierWorkflow() {
       await listQuery.refetch();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to move parcel to home delivery',
+        getApplicationErrorMessage(error, '') || 'Failed to move parcel to home delivery',
       );
     }
   };
@@ -174,6 +189,7 @@ export function useParcelReceiverCashierWorkflow() {
 
   const handleConfirmDelivered = async () => {
     if (!selectedParcel) return;
+
     const destinationBranchName =
       branchOptions.find((branch) => branch.id === selectedParcel.destinationId)?.name ??
       selectedParcel.destinationId;
@@ -235,6 +251,9 @@ export function useParcelReceiverCashierWorkflow() {
       handleSearchSubmit,
       handleRequestDelivery,
       openParcelDialog: dialog.openParcelDialog,
+      openEditDialog: (parcel: ParcelSearchRow) => {
+        edit.openEditDialog(parcel, () => listQuery.refetch());
+      },
       isSaving,
     },
     dialog: {
@@ -252,6 +271,16 @@ export function useParcelReceiverCashierWorkflow() {
       handleRequestOtp,
       handleVerifyOtp,
       isSaving,
+      isLoading:
+        Boolean(selectedParcel) && !hasDialogError && (isDialogLoading || !isDialogInitialized),
+      hasLoadError: hasDialogError,
+    },
+    edit: {
+      ...edit,
+      setEditingParcel: edit.setEditingParcel,
+      setEditParcelDetails: edit.setEditParcelDetails,
+      setEditReceiverName: edit.setEditReceiverName,
+      setEditReceiverPhone: edit.setEditReceiverPhone,
     },
     receipt: {
       lastPrintedReceipt: dialog.lastPrintedReceipt,

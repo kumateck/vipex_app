@@ -7,15 +7,17 @@ export type ParcelRow = {
   id: string;
   bookingCode: string;
   trackingCode: string;
+  receiverId: string;
   receiverName: string | null;
   receiverPhone: string | null;
   parcelDetails: string;
   parcelContent: string;
+  chargePsw: number;
+  plannedToBePaidPsw: number;
   status: number;
-  shelfPickerUserId: string | null;
-  shelfPickerUserName: string | null;
+  pickerStaffId: string | null;
+  pickerStaffName: string | null;
   createdAt: string;
-  senderPaid: boolean;
 };
 
 export const EMPTY_META = {

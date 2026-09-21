@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { useLocalSearchParams } from '@mobile/navigation/router-compat';
@@ -180,7 +181,7 @@ export function useVoiceChannel() {
     } catch (error) {
       notifyError(
         'Join failed',
-        error instanceof Error ? error.message : 'Unable to join voice channel',
+        getMobileErrorMessage(error, '') || 'Unable to join voice channel',
       );
     } finally {
       setJoining(false);

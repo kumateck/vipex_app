@@ -1,7 +1,15 @@
 import type { ColumnDef } from '@tanstack/react-table';
+import { EllipsisVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ParcelStatus } from '@/db/schemas/enums';
+import { PaymentStatusBookingCell } from '../parcel-processed-consignment';
 import type { ParcelRow } from './shelf-picker-update-types';
 
 const getStatusLabel = (status: number) => {
@@ -28,14 +36,20 @@ const getStatusVariant = (status: number) => {
 
 export function useShelfPickerUpdateColumns({
   onOpenUpdateDialog,
+  onEdit,
 }: {
   onOpenUpdateDialog: (parcel: ParcelRow) => void;
+  onEdit: (parcel: ParcelRow) => void;
 }): ColumnDef<ParcelRow>[] {
   return [
     {
       accessorKey: 'bookingCode',
       header: 'Booking Code',
-      cell: ({ row }) => <span className="font-mono font-medium">{row.original.bookingCode}</span>,
+      cell: ({ row }) => (
+        <div className="font-mono font-medium">
+          <PaymentStatusBookingCell parcel={row.original} />
+        </div>
+      ),
     },
     {
       accessorKey: 'receiverName',
@@ -62,12 +76,12 @@ export function useShelfPickerUpdateColumns({
       ),
     },
     {
-      accessorKey: 'shelfPickerUserName',
+      accessorKey: 'pickerStaffName',
       header: 'Shelf Picker',
       cell: ({ row }) => (
         <>
-          {row.original.shelfPickerUserName ? (
-            <Badge variant="outline">{row.original.shelfPickerUserName}</Badge>
+          {row.original.pickerStaffName ? (
+            <Badge variant="outline">{row.original.pickerStaffName}</Badge>
           ) : (
             <Badge variant="secondary">Not Assigned</Badge>
           )}
@@ -78,9 +92,19 @@ export function useShelfPickerUpdateColumns({
       id: 'actions',
       header: 'Action',
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" onClick={() => onOpenUpdateDialog(row.original)}>
-          Update
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="outline" className="h-8 w-8">
+              <EllipsisVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onOpenUpdateDialog(row.original)}>
+              Update
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];

@@ -1,6 +1,7 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
+import { normalizePhoneDigits, isTenDigitPhone, phoneLengthMessage } from '@/lib/phone';
 import { ParcelStatus, UserStatus } from '@/db/schemas/enums';
 import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
 import {
@@ -18,7 +19,9 @@ import {
   useUpdateParcelMutation,
 } from '../../api/parcel.api';
 import { resolveCustomerCard } from '../parcel-receiver-cashier/resolve-customer-card';
+import { getDialogLoadState, getDialogResourceState, resolveShelfPickerStaffId } from '../../utils';
 import { useWaitingPickupDialogState } from './use-waiting-pickup-dialog-state';
+import { useWaitingPickUpEdit } from './use-waiting-pickup-edit';
 import { getQueueFilterBySearch, type WaitingPickupQuery } from './waiting-pickup-types';
 
 export function useWaitingPickupWorkflow() {
@@ -27,12 +30,14 @@ export function useWaitingPickupWorkflow() {
   const branchId = user?.branch?.id ?? null;
   const cashierLocationId = user?.location?.id ?? user?.locationId ?? null;
   const cashierLocationName = user?.location?.name ?? user?.locationName ?? null;
-  const { data: currentBranch } = useGetBranchOperationsSettingsQuery(branchId ?? '', {
+  const currentBranchQuery = useGetBranchOperationsSettingsQuery(branchId ?? '', {
     skip: !branchId,
   });
+  const currentBranch = currentBranchQuery.data;
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
   const isPickupOtpRequired = currentBranch?.requirePickupOtp ?? true;
   const [searchInput, setSearchInput] = useState('');
+  const [initializedParcelId, setInitializedParcelId] = useState<string | null>(null);
   const [query, setQuery] = useState<WaitingPickupQuery>({
     page: 1,
     pageSize: 20,
@@ -41,7 +46,7 @@ export function useWaitingPickupWorkflow() {
       companyId,
       destinationId: branchId,
       status: ParcelStatus.AWAITING_PICKUP,
-      senderPaid: true,
+      cashierCollectionRequired: false,
       hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled),
     },
   });
@@ -51,8 +56,8 @@ export function useWaitingPickupWorkflow() {
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [addCustomerCard, { isLoading: isAddingCard }] = useAddCustomerCardMutation();
   const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
-  const { data: cardOptions = [] } = useListCardOptionsQuery();
-  const { data: staffOptions = [] } = useListUserOptionsQuery(
+  const cardOptionsQuery = useListCardOptionsQuery();
+  const staffOptionsQuery = useListUserOptionsQuery(
     companyId && branchId && cashierLocationId
       ? { companyId, branchId, locationId: cashierLocationId, status: UserStatus.ACTIVE }
       : undefined,
@@ -62,17 +67,34 @@ export function useWaitingPickupWorkflow() {
   const listQuery = useSearchParcelsQuery(query, {
     skip: !companyId || !branchId || (!isPickupQueueEnabled && !hasSearchTerm),
   });
-  const { data: parcelDetails } = useGetParcelDetailsQuery(selectedParcel?.id ?? '', {
+  const parcelDetailsQuery = useGetParcelDetailsQuery(selectedParcel?.id ?? '', {
     skip: !selectedParcel?.id,
   });
-  const { data: mainReceiverCards = [] } = useListCustomerCardsQuery(
+  const mainReceiverCardsQuery = useListCustomerCardsQuery(
     { customerId: selectedParcel?.receiverId ?? '' },
     { skip: !selectedParcel?.receiverId },
   );
-  const { data: secondReceiverCards = [] } = useListCustomerCardsQuery(
+  const secondReceiverCardsQuery = useListCustomerCardsQuery(
     { customerId: selectedParcel?.secondReceiverId ?? '' },
     { skip: !selectedParcel?.secondReceiverId },
   );
+  const cardOptions = cardOptionsQuery.data ?? [];
+  const staffOptions = staffOptionsQuery.data ?? [];
+  const parcelDetails = parcelDetailsQuery.data;
+  const mainReceiverCards = mainReceiverCardsQuery.data ?? [];
+  const secondReceiverCards = secondReceiverCardsQuery.data ?? [];
+  const dialogLoadState = getDialogLoadState([
+    getDialogResourceState(currentBranchQuery, Boolean(selectedParcel && branchId)),
+    getDialogResourceState(cardOptionsQuery, Boolean(selectedParcel)),
+    getDialogResourceState(
+      staffOptionsQuery,
+      Boolean(selectedParcel && companyId && branchId && cashierLocationId),
+    ),
+    getDialogResourceState(parcelDetailsQuery, Boolean(selectedParcel)),
+    getDialogResourceState(mainReceiverCardsQuery, Boolean(selectedParcel?.receiverId)),
+    getDialogResourceState(secondReceiverCardsQuery, Boolean(selectedParcel?.secondReceiverId)),
+  ]);
+  const edit = useWaitingPickUpEdit();
 
   useEffect(() => {
     setQuery((previous) => ({
@@ -83,13 +105,30 @@ export function useWaitingPickupWorkflow() {
         companyId,
         destinationId: branchId,
         status: ParcelStatus.AWAITING_PICKUP,
-        senderPaid: true,
+        cashierCollectionRequired: false,
         hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, previous.search),
       },
     }));
   }, [branchId, companyId, isPickupQueueEnabled]);
 
-  const isSaving = isUpdatingParcel || isAddingCard || isCreatingCustomer;
+  useEffect(() => {
+    if (!selectedParcel || !parcelDetails) return;
+    dialog.setPickerStaffId(resolveShelfPickerStaffId(parcelDetails));
+  }, [dialog.setPickerStaffId, parcelDetails, selectedParcel]);
+
+  useEffect(() => {
+    if (
+      !selectedParcel ||
+      !parcelDetails ||
+      dialogLoadState.isLoading ||
+      dialogLoadState.hasError
+    ) {
+      return;
+    }
+    setInitializedParcelId(selectedParcel.id);
+  }, [dialogLoadState.hasError, dialogLoadState.isLoading, parcelDetails, selectedParcel]);
+
+  const isSaving = isUpdatingParcel || isAddingCard || isCreatingCustomer || edit.isSaving;
 
   const handleSearchSubmit = () => {
     const term = searchInput.trim();
@@ -102,7 +141,7 @@ export function useWaitingPickupWorkflow() {
         companyId,
         destinationId: branchId,
         status: ParcelStatus.AWAITING_PICKUP,
-        senderPaid: true,
+        cashierCollectionRequired: false,
         hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, term),
       },
     }));
@@ -116,7 +155,7 @@ export function useWaitingPickupWorkflow() {
       await listQuery.refetch();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to move parcel to home delivery',
+        getApplicationErrorMessage(error, '') || 'Failed to move parcel to home delivery',
       );
     }
   };
@@ -171,9 +210,6 @@ export function useWaitingPickupWorkflow() {
       secondReceiverId: secondReceiverId ?? null,
       secondCardId: secondCard?.cardId ?? null,
       secondCardNumber: secondCard?.cardNumber ?? null,
-      // Must match the fixed 'main' target the OTP was requested/verified
-      // against (see use-waiting-pickup-dialog-state.ts) — not handoverTarget,
-      // which only records who physically collected the parcel.
       receiverOtpVerificationToken: isPickupOtpRequired ? dialog.otp.verificationToken : undefined,
       receiverOtpTarget: isPickupOtpRequired ? 'main' : undefined,
     }).unwrap();
@@ -201,6 +237,9 @@ export function useWaitingPickupWorkflow() {
       handleSearchSubmit,
       handleRequestDelivery,
       openParcelDialog: dialog.openParcelDialog,
+      openEditDialog: (parcel: ParcelSearchRow) => {
+        edit.openEditDialog(parcel, () => listQuery.refetch());
+      },
       isSaving,
     },
     dialog: {
@@ -212,10 +251,22 @@ export function useWaitingPickupWorkflow() {
       secondReceiverCards,
       hasPickupQueue: Boolean(parcelDetails?.pickupQueue),
       isSaving,
+      isLoading:
+        Boolean(selectedParcel) &&
+        !dialogLoadState.hasError &&
+        (dialogLoadState.isLoading || initializedParcelId !== selectedParcel?.id),
+      hasLoadError: dialogLoadState.hasError,
       handleConfirmDelivered,
       handleRequestHomeDelivery: async () => {
         if (selectedParcel) await handleRequestDelivery(selectedParcel);
       },
+    },
+    edit: {
+      ...edit,
+      setEditingParcel: edit.setEditingParcel,
+      setEditParcelDetails: edit.setEditParcelDetails,
+      setEditReceiverName: edit.setEditReceiverName,
+      setEditReceiverPhone: edit.setEditReceiverPhone,
     },
   };
 }

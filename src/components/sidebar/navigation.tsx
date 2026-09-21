@@ -225,11 +225,6 @@ const BASE_ROUTES: Route[] = [
             url: '/parcels/home-delivery/address',
             permissionKey: PermissionKeys.CanMarkDoorstepCalled,
           },
-          {
-            title: 'Shelf Picker Update',
-            url: '/parcels/shelf-picker-update',
-            permissionKey: PermissionKeys.CanReadShelfPickerUpdate,
-          },
         ],
       },
       {
@@ -257,8 +252,12 @@ const BASE_ROUTES: Route[] = [
       {
         title: 'Pickup & Collection',
         icon: 'ListChecks',
-        permissionKey: PermissionKeys.CanCreatePickupQueue,
         items: [
+          {
+            title: 'Shelf Picker Update',
+            url: '/parcels/shelf-picker-update',
+            permissionKey: PermissionKeys.CanReadShelfPickerUpdate,
+          },
           {
             title: 'Pickup Queue',
             url: '/parcels/pickup-queue',

@@ -28,5 +28,6 @@ export type ReceiptPrintData = {
     nhilCedis: number;
     covidCedis?: number;
     taxTotalCedis: number;
+    taxComponentKeys?: string[];
   };
 };

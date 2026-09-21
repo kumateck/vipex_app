@@ -8,6 +8,7 @@ export type WaitingPickupQuery = ServerListQuery<{
   destinationId?: string | null;
   status?: number | null;
   senderPaid?: boolean | null;
+  cashierCollectionRequired?: boolean | null;
   hasPickupQueue?: boolean | null;
 }>;
 

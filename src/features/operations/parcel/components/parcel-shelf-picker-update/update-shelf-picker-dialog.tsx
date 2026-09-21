@@ -78,7 +78,9 @@ export function UpdateShelfPickerDialog({
               <div className="flex items-center gap-2 pt-1">
                 <strong>Status:</strong>
                 <Badge variant="outline">{getStatusLabel(parcel.status)}</Badge>
-                {!parcel.senderPaid && <Badge variant="destructive">To Be Paid</Badge>}
+                {parcel.plannedToBePaidPsw > 0 ? (
+                  <Badge variant="destructive">To Be Paid</Badge>
+                ) : null}
               </div>
             </div>
 
@@ -97,7 +99,7 @@ export function UpdateShelfPickerDialog({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Currently assigned: {parcel.shelfPickerUserName || 'Not assigned'}
+                Currently assigned: {parcel.pickerStaffName || 'Not assigned'}
               </p>
             </div>
           </div>

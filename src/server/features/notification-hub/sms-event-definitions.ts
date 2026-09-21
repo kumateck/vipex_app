@@ -6,6 +6,7 @@ export type SmsEventDefinition = {
   recipient: string;
   defaultBody: string;
   variables: string[];
+  smsType?: 'otp';
 };
 
 const PARCEL_STATUS_VARIABLES = [
@@ -46,6 +47,7 @@ export const SMS_EVENT_DEFINITIONS = [
     defaultBody:
       '{{receiverName}}, your parcel pickup verification code is {{otp}}. It expires in {{expiresInMinutes}} minutes. Do not share this code.',
     variables: ['receiverName', 'otp', 'expiresInMinutes', 'branch', 'location'],
+    smsType: 'otp',
   },
   {
     code: 'parcel_status_call_pickup',

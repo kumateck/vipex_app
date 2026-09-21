@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -71,7 +72,7 @@ export function ParcelPickupQueuePage() {
           },
         }).unwrap();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Search failed');
+        toast.error(getApplicationErrorMessage(error, '') || 'Search failed');
       }
     },
     [branchId, companyId, searchInput, searchParcels],

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
@@ -125,7 +126,7 @@ export function useAccountingSetupCategoriesTab({
       resetExpenseCategoryForm();
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save expense category');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save expense category');
     }
   }
 
@@ -148,7 +149,7 @@ export function useAccountingSetupCategoriesTab({
       resetExpenseCategoryForm();
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete expense category');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to delete expense category');
     }
   }
 

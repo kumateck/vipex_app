@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -47,7 +48,7 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
       await dialog.handleRequestOtp(isResend);
       toast.success(isResend ? 'Collection OTP resent to the customer' : 'Collection OTP sent');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send OTP');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to send OTP');
     }
   };
 
@@ -56,7 +57,7 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
       await dialog.handleVerifyOtp();
       toast.success('Customer presence confirmed');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Invalid OTP');
+      toast.error(getApplicationErrorMessage(error, '') || 'Invalid OTP');
     }
   };
 

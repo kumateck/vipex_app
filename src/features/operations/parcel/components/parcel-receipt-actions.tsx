@@ -68,16 +68,24 @@ export function ParcelReceiptActions({
         vat: data.taxBreakdown.vatCedis,
         getfund: data.taxBreakdown.getfundCedis,
         nhil: data.taxBreakdown.nhilCedis,
+        covid: data.taxBreakdown.covidCedis ?? 0,
         totalTax: data.taxBreakdown.taxTotalCedis,
+        taxComponentKeys: data.taxBreakdown.taxComponentKeys,
         residual: 0,
       };
     }
+    // When tax breakdown is not available (e.g. reprints from consignment
+    // page or sticker-only printing), return zeroed-out tax values.
+    // Sticker printing never uses tax data. Invoice printing will show
+    // GHS 0.00 for tax components, which is acceptable for reprints.
+    // Callers should provide taxBreakdown via payment data when available.
     return {
       principal: amountPaid,
       net: amountPaid,
       vat: 0,
       getfund: 0,
       nhil: 0,
+      covid: 0,
       totalTax: 0,
       residual: 0,
     };
@@ -276,7 +284,9 @@ export function ParcelReceiptActions({
           vat: tax.vat,
           getfund: tax.getfund,
           nhil: tax.nhil,
+          covid: tax.covid,
           totalTax: tax.totalTax,
+          taxComponentKeys: tax.taxComponentKeys,
         }}
       />
 

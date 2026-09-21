@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +31,7 @@ export function SelfServiceQueuePage() {
       }
       navigate(`/parcels/self-service/${draftId}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open this booking draft');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to open this booking draft');
     }
   };
 

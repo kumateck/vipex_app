@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -84,7 +85,7 @@ export function EditIncomingTransitParcelDialog({
               try {
                 await onSave();
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : 'Failed to update parcel');
+                toast.error(getApplicationErrorMessage(error, '') || 'Failed to update parcel');
               }
             }}
             disabled={isSaving}

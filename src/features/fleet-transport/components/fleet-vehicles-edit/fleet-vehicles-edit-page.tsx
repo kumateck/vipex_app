@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -112,7 +113,7 @@ export function FleetVehiclesEditPage() {
       toast.success('Vehicle updated');
       navigate('/fleet-transport/vehicles');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update vehicle');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update vehicle');
     }
   };
 

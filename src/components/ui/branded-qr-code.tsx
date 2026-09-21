@@ -45,7 +45,7 @@ export function BrandedQrCode({
         logoPadding={logoPadding}
         logoPaddingStyle="square"
         removeQrCodeBehindLogo={!isPrintVariant}
-        style={{ display: 'block', width: '100%', height: '100%' }}
+        style={{ display: 'block', width: '100%', height: '100%', imageRendering: 'pixelated' }}
       />
     </div>
   );

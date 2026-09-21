@@ -1,4 +1,4 @@
-type PaymentStatusParcel = {
+export type PaymentStatusParcel = {
   chargePsw: number;
   plannedToBePaidPsw: number;
 };

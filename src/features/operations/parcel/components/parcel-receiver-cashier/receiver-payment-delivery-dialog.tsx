@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,6 +21,7 @@ import { PaymentMethod } from '@/db/schemas/enums';
 import { ReceiverOtpSection } from './receiver-otp-section';
 import { ReceiverPaymentSecondarySections } from './receiver-payment-secondary-sections';
 import { ReceiverPaymentPrimarySections } from './receiver-payment-primary-sections';
+import { ReceiverPaymentDialogSkeleton } from './receiver-payment-dialog-skeleton';
 import type { useParcelReceiverCashierWorkflow } from './use-parcel-receiver-cashier-workflow';
 
 type WorkflowContext = ReturnType<typeof useParcelReceiverCashierWorkflow>['context'];
@@ -41,11 +43,21 @@ export function ReceiverPaymentDeliveryDialog({
       open={Boolean(parcel)}
       onOpenChange={(open) => (!open ? dialog.setSelectedParcel(null) : null)}
     >
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-7xl sm:max-w-7xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Receiver Payment + Pickup Verification</DialogTitle>
         </DialogHeader>
-        {!parcel ? null : (
+        {parcel && dialog.isLoading ? <ReceiverPaymentDialogSkeleton /> : null}
+        {parcel && dialog.hasLoadError ? (
+          <div
+            className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm"
+            role="alert"
+          >
+            <p className="font-medium">Unable to load receiver payment details</p>
+            <p className="text-muted-foreground">Close this dialog and try opening it again.</p>
+          </div>
+        ) : null}
+        {parcel && !dialog.isLoading && !dialog.hasLoadError ? (
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-4">
               <ReceiverPaymentPrimarySections context={context} dialog={dialog} parcel={parcel} />
@@ -131,7 +143,7 @@ export function ReceiverPaymentDeliveryDialog({
               )}
             </div>
           </div>
-        )}
+        ) : null}
         <DialogFooter>
           <Button
             variant="outline"
@@ -147,17 +159,23 @@ export function ReceiverPaymentDeliveryDialog({
                 await dialog.handleConfirmDelivered();
                 toast.success('Payment received and parcel marked as DELIVERED_BY_OFFICE');
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : 'Failed to confirm delivery');
+                toast.error(getApplicationErrorMessage(error, '') || 'Failed to confirm delivery');
               }
             }}
             disabled={
+              dialog.isLoading ||
+              dialog.hasLoadError ||
               dialog.isSaving ||
               (context.isReceiverOtpRequired && !dialog.otpVerified) ||
               (dialog.paymentMethod === String(PaymentMethod.MTN) && !dialog.momoTransactionId) ||
               (context.isPickupQueueEnabled && !dialog.hasPickupQueue)
             }
           >
-            {dialog.isSaving ? 'Processing...' : 'Receive Payment + Deliver'}
+            {dialog.isLoading
+              ? 'Loading...'
+              : dialog.isSaving
+                ? 'Processing...'
+                : 'Receive Payment + Deliver'}
           </Button>
         </DialogFooter>
       </DialogContent>

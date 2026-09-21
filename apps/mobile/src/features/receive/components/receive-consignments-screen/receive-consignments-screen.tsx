@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { listIncomingConsignments, type IncomingConsignment } from '@mobile/lib/api';
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { notifyError } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { useAppearance } from '@mobile/providers/appearance-provider';
@@ -60,7 +61,7 @@ export function ReceiveConsignmentsScreen() {
     } catch (err) {
       notifyError(
         'Load failed',
-        err instanceof Error ? err.message : 'Unable to load incoming consignments',
+        getMobileErrorMessage(err, 'Unable to load incoming consignments'),
       );
     } finally {
       setLoading(false);

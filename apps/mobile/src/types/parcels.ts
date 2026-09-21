@@ -14,11 +14,17 @@ export type ParcelSearchRow = {
   senderPhone?: string | null;
   receiverName?: string | null;
   receiverPhone?: string | null;
+  receiverPhone2?: string | null;
+  secondReceiverId?: string | null;
   destinationId: string;
   destinationName?: string | null;
   destinationLocationId?: string | null;
   destinationLocationName?: string | null;
   pickupLocationName?: string | null;
+  receivedAt?: string | null;
+  callSender?: boolean;
+  callCenterAssignedToUserId?: string | null;
+  callCenterAssignedToUserName?: string | null;
   status: number;
   chargePsw?: number;
   parcelValuePsw?: number;

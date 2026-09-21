@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { hapticError, hapticSuccess } from '@mobile/lib/haptics';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
@@ -29,7 +30,7 @@ export function useRiderDeliveryChangeRequests(
     } catch (error) {
       notifyError(
         'Change requests unavailable',
-        error instanceof Error ? error.message : 'Could not load delivery change requests.',
+        getMobileErrorMessage(error, '') || 'Could not load delivery change requests.',
       );
     }
   }, [canManage, withAuth]);
@@ -61,7 +62,7 @@ export function useRiderDeliveryChangeRequests(
       } catch (error) {
         notifyError(
           'Request failed',
-          error instanceof Error ? error.message : 'Could not send the delivery change request.',
+          getMobileErrorMessage(error, '') || 'Could not send the delivery change request.',
         );
         void hapticError();
         return false;

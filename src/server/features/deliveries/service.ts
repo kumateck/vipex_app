@@ -100,7 +100,7 @@ export async function markOfficePickupCompleteSvc(input: {
 
   // Ensure no outstanding principal dues before office handover
   const settlement = await getParcelPaymentSettlement(input.parcelId);
-  const outstanding = Math.max(parcel.plannedToBePaidPsw - settlement.paidPrincipalPsw, 0);
+  const outstanding = Math.max(settlement.requiredPrincipalPsw - settlement.paidPrincipalPsw, 0);
   if (outstanding > 0)
     throw Conflict('Outstanding to-be-paid principal exists; collect before release');
 

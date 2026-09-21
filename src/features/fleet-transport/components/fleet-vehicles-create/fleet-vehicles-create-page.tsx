@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -64,7 +65,7 @@ export function FleetVehiclesCreatePage() {
       toast.success('Vehicle created');
       navigate('/fleet-transport/vehicles');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create vehicle');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create vehicle');
     }
   };
 

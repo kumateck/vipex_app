@@ -34,6 +34,7 @@ type WaitingPickupColumnsInput = {
   isPickupQueueEnabled: boolean;
   isSaving: boolean;
   onOpen: (parcel: ParcelSearchRow) => void;
+  onEdit: (parcel: ParcelSearchRow) => void;
   onRequestDelivery: (parcel: ParcelSearchRow) => Promise<void>;
 };
 
@@ -43,6 +44,7 @@ export function useWaitingPickupColumns({
   isPickupQueueEnabled,
   isSaving,
   onOpen,
+  onEdit,
   onRequestDelivery,
 }: WaitingPickupColumnsInput) {
   return useMemo<ColumnDef<ParcelSearchRow>[]>(() => {
@@ -146,6 +148,7 @@ export function useWaitingPickupColumns({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => onOpen(row.original)}>View Details</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
             <DropdownMenuItem onClick={() => void onRequestDelivery(row.original)}>
               Request Delivery
             </DropdownMenuItem>
@@ -155,5 +158,5 @@ export function useWaitingPickupColumns({
     });
 
     return columns;
-  }, [isPickupQueueEnabled, isSaving, onOpen, onRequestDelivery, page, pageSize]);
+  }, [isPickupQueueEnabled, isSaving, onOpen, onEdit, onRequestDelivery, page, pageSize]);
 }

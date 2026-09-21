@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { MAX_BULK_ARRIVAL_PARCELS } from '@/shared/shipments/bulk-arrival';
@@ -12,7 +13,7 @@ function getErrorMessage(error: unknown) {
   ) {
     return (error as { data: { message: string } }).data.message;
   }
-  return error instanceof Error ? error.message : 'Failed to mark selected parcels as arrived';
+  return getApplicationErrorMessage(error, '') || 'Failed to mark selected parcels as arrived';
 }
 
 export function useIncomingParcelBatchArrival(input: {

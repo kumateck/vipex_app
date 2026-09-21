@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
@@ -144,7 +145,7 @@ export function useManualJournalEntryForm({
       );
       resetForm();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to post manual journal entry');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to post manual journal entry');
     }
   }
 

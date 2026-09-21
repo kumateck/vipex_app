@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -50,7 +51,7 @@ export function CustomerWalletApprovalsPage() {
       await blockAccount({ customerId }).unwrap();
       toast.success('Customer credit blocked');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to block customer credit');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to block customer credit');
     }
   };
 
@@ -59,7 +60,7 @@ export function CustomerWalletApprovalsPage() {
       await unblockAccount({ customerId }).unwrap();
       toast.success('Customer credit enabled');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to enable customer credit');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to enable customer credit');
     }
   };
 

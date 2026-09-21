@@ -13,6 +13,7 @@ import { UUID } from '../../schemas/common';
 import {
   approveParcelReconciliationCaseCtrl,
   assignParcelToCallCenterCtrl,
+  bulkAssignParcelsToCallCenterCtrl,
   createParcelCtrl,
   executeParcelReconciliationCaseCtrl,
   getParcelByIdCtrl,
@@ -37,6 +38,9 @@ import {
 } from './parcels.controller';
 import { resolveParcelSort } from './parcel-sort';
 import { uploadParcelDiscrepancyEvidenceSvc } from './parcel-discrepancy-evidence.service';
+import { listUserOptionsRepo } from '../users/repository';
+import { ParcelStatus, UserStatus } from '@/db/schemas/enums';
+import { getBranchRepo } from '../branches/repository';
 
 function parseStatuses(value: string | number[] | undefined): number[] | null {
   if (Array.isArray(value)) {
@@ -55,12 +59,176 @@ function parseStatuses(value: string | number[] | undefined): number[] | null {
   return null;
 }
 
+function emptyParcelList(query: { page?: number; pageSize?: number }) {
+  return {
+    data: [],
+    meta: {
+      totalRecords: 0,
+      totalPages: 0,
+      page: query.page ?? 1,
+      pageSize: query.pageSize ?? 20,
+      hasNextPage: false,
+      hasPreviousPage: false,
+    },
+  };
+}
+
 export const parcelsRoutes = new Elysia({ name: 'parcels' })
   .use(authPlugin)
   .get(
+    '/call-center',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      if (!authUser.companyId || !authUser.branchId) return emptyParcelList(query);
+      return listParcelsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        filters: {
+          companyId: authUser.companyId ?? null,
+          destinationId: authUser.branchId ?? null,
+          senderPaid: true,
+        },
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 200 })),
+        search: t.Optional(t.String()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCallCenterAssignment)],
+      detail: { tags: ['Shipments'], summary: 'List parcels for call center assignment' },
+    },
+  )
+  .get(
+    '/call-center/assigned',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      if (!authUser.companyId || !authUser.branchId) return emptyParcelList(query);
+      return listParcelsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        filters: {
+          companyId: authUser.companyId,
+          destinationId: authUser.branchId,
+          statuses: [
+            ParcelStatus.ARRIVED_AT_DESTINATION,
+            ParcelStatus.CUSTOMER_CONTACTED,
+            ParcelStatus.RETURNED_TO_OFFICE,
+          ],
+          assignedToUserId: authUser.sub,
+        },
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 200 })),
+        search: t.Optional(t.String()),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadCallCenterParcelStatus),
+      ],
+      detail: { tags: ['Shipments'], summary: 'List parcels assigned to the current call agent' },
+    },
+  )
+  .get(
+    '/call-center/address-collection',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      if (!authUser.companyId || !authUser.branchId) return emptyParcelList(query);
+      return listParcelsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        filters: {
+          companyId: authUser.companyId,
+          destinationId: authUser.branchId,
+          status: ParcelStatus.HOME_DELIVERY_REQUESTED,
+        },
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 200 })),
+        search: t.Optional(t.String()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanMarkDoorstepCalled)],
+      detail: { tags: ['Shipments'], summary: 'List parcels awaiting doorstep address collection' },
+    },
+  )
+  .get(
+    '/shelf-picker',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      const branch = authUser.branchId ? await getBranchRepo(authUser.branchId) : null;
+      return listParcelsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        sort:
+          branch?.usePickupQueue && !query.search?.trim()
+            ? [{ field: 'pickupQueueNumber', direction: 'asc' }]
+            : undefined,
+        filters: {
+          companyId: authUser.companyId ?? null,
+          destinationId: authUser.branchId ?? null,
+          status: 5,
+          hasPickupQueue: branch?.usePickupQueue && !query.search?.trim() ? true : undefined,
+        },
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 200 })),
+        search: t.Optional(t.String()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadShelfPickerUpdate)],
+      detail: { tags: ['Shipments'], summary: 'List parcels for shelf picker updates' },
+    },
+  )
+  .get(
+    '/assignment-staff',
+    async ({ user }) => {
+      const authUser = user as AuthUser;
+      if (!authUser.companyId || !authUser.locationId) return [];
+      return listUserOptionsRepo({
+        companyId: authUser.companyId ?? null,
+        locationId: authUser.locationId ?? null,
+        status: UserStatus.ACTIVE,
+      });
+    },
+    {
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCallCenterAssignment)],
+      detail: { tags: ['Shipments'], summary: 'List active parcel assignment staff' },
+    },
+  )
+  .get(
+    '/shelf-picker-staff',
+    async ({ user }) => {
+      const authUser = user as AuthUser;
+      if (!authUser.locationId) return [];
+      return listUserOptionsRepo({
+        companyId: authUser.companyId ?? null,
+        locationId: authUser.locationId ?? null,
+        status: UserStatus.ACTIVE,
+      });
+    },
+    {
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadShelfPickerUpdate)],
+      detail: { tags: ['Shipments'], summary: 'List active shelf picker staff' },
+    },
+  )
+  .get(
     '/',
-    async ({ query }) =>
-      listParcelsCtrl({
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      return listParcelsCtrl({
         page: query.page,
         pageSize: query.pageSize,
         search: query.search,
@@ -78,10 +246,13 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           hasPickupQueue: query.hasPickupQueue ?? null,
           agedOnly: query.agedOnly ?? null,
           storageChargeAccruing: query.storageChargeAccruing ?? null,
+          cashierCollectionRequired: query.cashierCollectionRequired ?? null,
           received: query.received ?? null,
           includeDeleted: query.includeDeleted ?? null,
+          assignedToUserId: query.assignedToCurrentUser ? authUser.sub : null,
         },
-      }),
+      });
+    },
     {
       query: t.Object({
         page: t.Optional(t.Number({ minimum: 1 })),
@@ -109,10 +280,18 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         hasPickupQueue: t.Optional(t.Boolean()),
         agedOnly: t.Optional(t.Boolean()),
         storageChargeAccruing: t.Optional(t.Boolean()),
+        cashierCollectionRequired: t.Optional(t.Boolean()),
         received: t.Optional(t.Boolean()),
         includeDeleted: t.Optional(t.Boolean()),
+        assignedToCurrentUser: t.Optional(t.Boolean()),
       }),
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcels)],
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanReadParcels,
+          PermissionKeys.CanReadCallCenterAssignment,
+        ),
+      ],
       detail: { tags: ['Shipments'], summary: 'List/search parcels' },
     },
   )
@@ -647,6 +826,16 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         tags: ['Shipments'],
         summary: 'Soft delete parcel and soft-delete (void) associated payments with reason',
       },
+    },
+  )
+  .post(
+    '/bulk-assign-call-center',
+    async ({ body }) =>
+      bulkAssignParcelsToCallCenterCtrl(body as { parcelIds: string[]; userId: string }),
+    {
+      body: t.Object({ parcelIds: t.Array(UUID, { minItems: 1, maxItems: 200 }), userId: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanAssignCallCenterParcels)],
+      detail: { tags: ['Shipments'], summary: 'Bulk assign parcels to call center representative' },
     },
   )
   .post(

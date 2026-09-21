@@ -357,6 +357,10 @@ export const parcelsRelations = relations(parcels, ({ one }) => ({
   sender: one(customers, { fields: [parcels.senderId], references: [customers.id] }),
   receiver: one(customers, { fields: [parcels.receiverId], references: [customers.id] }),
   deletedByUser: one(users, { fields: [parcels.deletedBy], references: [users.id] }),
+  shelfPickerStaff: one(users, {
+    fields: [parcels.shelfPickerStaffId],
+    references: [users.id],
+  }),
   pickupQueue: one(pickupQueues, { fields: [parcels.id], references: [pickupQueues.parcelId] }),
 }));
 

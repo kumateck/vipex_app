@@ -54,6 +54,9 @@ Atomic collection operations must not leave a successful payment with a failed p
 
 - The server validates the expected charge and allowed settlement.
 - Principal transport or parcel charges are taxable according to configured rules.
+- When no active company tax profile/components exist, taxable principal payments use the
+  default Ghana tax calculator instead of silently producing a zero-tax receipt. An active
+  company tax profile remains authoritative when configured.
 - Delivery fees are not included in the taxable principal where the product rules exclude them.
 - Corrections preserve the original cashier session attribution and an audit trail.
 - Client-calculated totals are for display; the server is authoritative.

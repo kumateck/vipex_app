@@ -6,8 +6,22 @@ Parcel operations cover booking, parcel creation, payment responsibility, physic
 
 Call-center assignment and shelf-picker updates are separate permission-gated workflows. Their pages
 require `CanReadCallCenterAssignment` and `CanReadShelfPickerUpdate`; mutations require
-`CanAssignCallCenterParcels` and `CanUpdateParcelShelfPicker`. The server enforces these permissions
+`CanAssignCallCenterParcels` and `CanUpdateParcelShelfPicker`. Shelf-picker assignment is stored on
+the parcel in `parcels.shelf_picker_staff_id`, so it remains available when pickup queues are
+disabled. When an active pickup queue exists, the server mirrors the assignment to
+`pickup_queues.picker_staff_id` for compatibility. The server enforces these permissions
 independently of sidebar visibility.
+
+The Call Center Assignment and Shelf Picker Update tables identify each parcel's payment kind beside
+its booking code and show a legend: green is **Paid**, amber is **To Be Paid**, and blue is
+**Partial**. The indicator is informational and does not change call-center or shelf-picker
+assignment behavior.
+
+Call-center assignment list and mutation failures display the message returned by the API, including
+validation, permission, and rate-limit messages. If the response cannot be decoded, the web client
+uses an operation-specific fallback. Authenticated rate limits are isolated by bearer credential,
+so staff sharing a branch network do not consume one another's request allowance; unauthenticated
+traffic remains isolated by client IP. A failed list request leaves the current table state intact.
 
 - Web: `src/features/operations/parcel`, `src/features/bookings`, and related operations features.
 - Server: `src/server/features/shipments`, `consignments`, `deliveries`, `pickup-queues`, `parcel-internal-transfers`, and `parcel-receiver-otp`.
@@ -111,6 +125,12 @@ modules on an opaque white area with a full quiet zone. Existing blue stickers r
 QR-only overlay label or manual code search; the camera must not be treated as a substitute for
 correct label stock.
 
+Thermal parcel stickers encode the compact `QR-<tracking-code>` payload rather than the longer
+public tracking URL. The mobile scanner normalizes this payload before branch-scoped lookup. The
+portrait sticker reserves a 22 mm black-on-white QR area, preserves square pixels during desktop
+and browser printing, and prints the booking code underneath as the manual fallback. Older or
+blurred stickers must be reprinted; updating the mobile app does not alter an existing physical QR.
+
 After detecting a QR code, mobile provides immediate haptic feedback, pauses further camera scanning, and covers the camera preview with a high-contrast progress overlay reading **QR detected — Finding incoming parcel…**. The overlay remains until the branch-scoped in-transit lookup succeeds or fails, preventing an ambiguous or apparently idle processing state.
 
 From mobile parcel review, **Back To Incoming List** always navigates to the existing native scan-to-receive screen (`/(app)/receive`). It must not depend on browser or navigation history, reset the navigator, create a second camera screen, or open the desktop incoming-parcels page.
@@ -118,6 +138,10 @@ From mobile parcel review, **Back To Incoming List** always navigates to the exi
 The native camera and code-scanner output exist only while the scan-to-receive screen is focused. Navigating to parcel review unmounts the camera and releases its session; returning mounts a fresh camera while preserving a stable `codeScanner` output configuration. Focus also clears stale scan-processing state. This prevents a dark preview and Vision Camera's `session/invalid-output-configuration` error on repeat visits.
 
 If a native camera session still fails, mobile handles the camera error in-screen and presents **Restart Camera**. It must not expose the developer console error screen or leave staff with an unexplained dark preview.
+The scanner also shows the native camera error message for support diagnosis, directs permanently
+denied users to system camera settings, and recommends updating or reinstalling when the native
+scanner runtime is missing. Android QR support is bundled in Vipex Mobile `1.0.18` and later; an
+older installed APK must be replaced because JavaScript updates cannot add the native ML Kit model.
 
 Branch controls can require:
 
@@ -140,9 +164,51 @@ Mobile discrepancy capture supports an expected system parcel that is physically
 
 Branch pickup uses queues for parcel readiness, cashier collection, payment where required, and OTP confirmation when enabled.
 
+The Receiver Payment + Pickup Verification and sender-paid Pickup Verification dialogs show a
+two-column skeleton while their required parcel, staff, card, location, branch, payment,
+consignment, storage, queue, and receiver data load. Interactive form content and delivery actions
+appear only after the required resources and derived form values are ready. If a required request
+fails, the skeleton ends and the dialog displays a load error; closing and reopening retries the
+resource queries.
+
+Receiver-cashier principal due is the parcel charge minus all non-voided principal payments. The
+stored `plannedToBePaidPsw` value is already reduced as principal payments are collected, so clients
+and list queries must not subtract those payments from it again. For example, a GHS 150 charge with
+a GHS 100 sender payment leaves GHS 50 available for receiver collection.
+
+Storage settlement uses the parcel's persisted `receivedAt` timestamp. For legacy parcels where
+that field is null, the earliest audited transition to `ARRIVED_AT_DESTINATION` is the effective
+received time. The detail response and storage settlement use the same effective timestamp, so the
+informational accrual and payable outstanding storage amount remain consistent. A parcel still
+inside its grace period has zero payable storage; failed or voided storage payments do not reduce
+the outstanding amount.
+
+### Shelf-picker assignment
+
+`POST /v1/shipments/parcels/:id/update-shelf-picker` accepts a required `userId` and persists the
+assignment on the parcel. A successful response is `{ success: true, parcelId }`. The Shelf Picker
+Update list must show the assigned staff member after refresh, and reopening the update dialog must
+preselect that member. Pickup Verification and Receiver Cashier also preload the parcel assignment;
+an older pickup-queue assignment is used only when the parcel-level value is absent.
+
+This workflow is supported whether `usePickupQueue` is enabled or disabled. A missing parcel fails
+with not found, and a failed write must not report success. The web and desktop clients share this
+behavior; mobile does not currently expose the shelf-picker update page.
+
 Last-mile delivery includes dispatch, rider assignment, current deliveries, delivery history, rider change requests, and real-time updates. Mobile riders operate on assignments available to their authenticated account and branch scope.
 
 Mobile call-center staff can call receivers, record call contact when authorized, and save confirmed doorstep addresses and delivery fees. Branch supervisors can approve or reject pending rider address/fee changes from mobile; branch and pending-state validation remain server-side.
+
+The mobile assigned-call queue provides separate **Call receiver** and **Call sender** actions. Each
+action opens the device dial pad with the corresponding primary telephone prefilled; an unavailable
+telephone disables only its matching action.
+
+A parcel awaiting pickup is routed to Receiver Cashier whenever either its principal amount or its
+storage accrual remains outstanding. This includes a fully paid parcel that accumulated unpaid
+storage charges. The ordinary Waiting Pickup workflow excludes that parcel until storage is paid or
+waived by the cashier workflow. This eligibility is calculated by the API from the current company
+ageing policy, non-voided storage payments, and recorded storage waivers, so web clients cannot
+bypass the routing rule with local filters.
 
 ## Internal Transfers
 
@@ -172,6 +238,15 @@ Recent correction support includes original-session amount corrections so adjust
 ## Verification Scenarios
 
 - Sender-paid, receiver-paid, split, zero-charge, and credit creation.
+- Call-center list, single assignment, and bulk assignment failures display the nested API message;
+  two authenticated staff behind one public IP have independent rate-limit quotas.
+- Mobile call-center receiver and sender call actions open the appropriate primary number, disable
+  cleanly when absent, and do not substitute one party's number for the other.
+- A paid parcel with outstanding storage appears in Receiver Cashier and not Waiting Pickup; after
+  full storage payment or waiver it leaves Receiver Cashier and becomes eligible for Waiting Pickup.
+- A fully paid parcel with no outstanding storage appears only in Waiting Pickup, even when its
+  original receiver-payment plan was greater than zero; routing uses non-voided principal payments,
+  not the original payment plan.
 - Single and multi-parcel creation with partial failure.
 - Consignment complete, missing, extra, and duplicate scans.
 - Previous-consignment retrieval for one date and a multi-day inclusive range, empty results,
@@ -183,6 +258,18 @@ Recent correction support includes original-session amount corrections so adjust
 - Mobile scan-to-receive with current tracking URL, bare code, legacy `QR-` payload, unreadable code, wrong branch, and non-in-transit status.
 - OTP enabled, disabled, expired, incorrect, alternate recipient, and alternate phone.
 - Pickup with and without receiver payment.
+- Receiver-payment and sender-paid pickup dialog initial loading, cached loading, optional
+  second-receiver/location data, completed form initialization, and required-resource failure
+  without an endless skeleton.
+- Split principal payment where a sender payment leaves a receiver balance, subsequent partial
+  receiver payment, and voided/non-principal payments that must not reduce the principal balance.
+- Storage settlement for a current `receivedAt`, a legacy null `receivedAt` with an audited arrival,
+  grace-period zero accrual, and accrual reduced by valid storage payments or waivers.
+- Shelf-picker assignment with pickup queues enabled and disabled, list refresh after assignment,
+  reopening with the assigned staff selected, pickup-verification preload, receiver-cashier
+  preload, and an unknown parcel.
+- Call-center and shelf-picker assignment payment indicators for paid, to-be-paid, and partial
+  parcels, including unchanged single and bulk assignment behavior.
 - Rider assignment, change request, completion, and real-time refresh.
 - Mobile call-only, address-only, and combined call-center permissions.
 - Mobile photo evidence success and upload failure after discrepancy creation.

@@ -10,6 +10,7 @@ import { PickupVerificationDialog } from './pickup-verification-dialog';
 import { useWaitingPickupColumns } from './use-waiting-pickup-columns';
 import { useWaitingPickupWorkflow } from './use-waiting-pickup-workflow';
 import { getQueueFilterBySearch, type CardMode, type HandoverTarget } from './waiting-pickup-types';
+import { EditIncomingTransitParcelDialog } from '../parcel-in-transit/edit-incoming-transit-parcel-dialog';
 
 const EMPTY_META: PaginationMeta = {
   totalRecords: 0,
@@ -28,13 +29,14 @@ function formatDateTime(value: string | null | undefined) {
 
 export function ParcelWaitingPickupPage() {
   const workflow = useWaitingPickupWorkflow();
-  const { context, table, dialog } = workflow;
+  const { context, table, dialog, edit } = workflow;
   const columns = useWaitingPickupColumns({
     page: table.query.page ?? 1,
     pageSize: table.query.pageSize ?? 20,
     isPickupQueueEnabled: context.isPickupQueueEnabled,
     isSaving: table.isSaving,
     onOpen: table.openParcelDialog,
+    onEdit: table.openEditDialog,
     onRequestDelivery: table.handleRequestDelivery,
   });
 
@@ -152,8 +154,23 @@ export function ParcelWaitingPickupPage() {
         cardOptions={dialog.cardOptions}
         otp={dialog.otp}
         isSaving={dialog.isSaving}
+        isLoading={dialog.isLoading}
+        hasLoadError={dialog.hasLoadError}
         onRequestHomeDelivery={dialog.handleRequestHomeDelivery}
         onConfirmDelivered={dialog.handleConfirmDelivered}
+      />
+
+      <EditIncomingTransitParcelDialog
+        open={Boolean(edit.editingParcel)}
+        onClose={() => edit.setEditingParcel(null)}
+        editParcelDetails={edit.editParcelDetails}
+        onEditParcelDetailsChange={edit.setEditParcelDetails}
+        editReceiverName={edit.editReceiverName}
+        onEditReceiverNameChange={edit.setEditReceiverName}
+        editReceiverPhone={edit.editReceiverPhone}
+        onEditReceiverPhoneChange={edit.setEditReceiverPhone}
+        isSaving={edit.isSaving}
+        onSave={edit.handleSaveEdit}
       />
     </div>
   );

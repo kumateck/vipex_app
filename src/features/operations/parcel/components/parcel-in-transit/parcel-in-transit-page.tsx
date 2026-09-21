@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
@@ -206,7 +207,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
       await refetch();
       setArrivalConfirmationParcel(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update parcel status');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update parcel status');
     }
   }, [arrivalConfirmationParcel, batchArrival, handleMarkAsArrived, refetch]);
   const rowById = useMemo(

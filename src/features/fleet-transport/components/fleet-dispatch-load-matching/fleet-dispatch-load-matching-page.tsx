@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -69,7 +70,7 @@ export function FleetDispatchLoadMatchingPage() {
       await updateStatus({ loadMatchId, status }).unwrap();
       toast.success('Load status updated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update load status');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update load status');
     }
   };
 

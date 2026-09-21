@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { getErrorMessage, getResponseError } from '@/lib/TheAduseiErrorResponse';
 import { useAuthStore } from '@/stores/auth-store';
+import { isOptionalTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
+import { useUpdateCustomerMutation } from '@/features/customers/api';
+import { useUpdateParcelMutation } from '../../api/parcel.api';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ParcelRow, StaffOption } from './shelf-picker-update-types';
 
@@ -14,6 +19,7 @@ type TableQuery = {
 
 export function useShelfPickerUpdateWorkflow() {
   const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const [query, setQuery] = useState<TableQuery>({ page: 1, pageSize: 20 });
   const [searchInput, setSearchInput] = useState('');
   const [selectedParcel, setSelectedParcel] = useState<ParcelRow | null>(null);
@@ -36,6 +42,12 @@ export function useShelfPickerUpdateWorkflow() {
   });
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [editingParcel, setEditingParcel] = useState<ParcelRow | null>(null);
+  const [editParcelDetails, setEditParcelDetails] = useState('');
+  const [editReceiverName, setEditReceiverName] = useState('');
+  const [editReceiverPhone, setEditReceiverPhone] = useState('');
+  const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
+  const [updateCustomer, { isLoading: isUpdatingCustomer }] = useUpdateCustomerMutation();
   const fetchData = useCallback(async () => {
     if (!companyId || !branchId) return;
     setIsLoading(true);
@@ -43,21 +55,30 @@ export function useShelfPickerUpdateWorkflow() {
       const params = new URLSearchParams({
         page: String(query.page ?? 1),
         pageSize: String(query.pageSize ?? 20),
-        companyId,
-        destinationId: branchId,
         ...(searchInput && { search: searchInput }),
       });
       const [parcelsRes, staffRes] = await Promise.all([
-        fetch(`/api/parcels/shelf-picker?${params}`),
-        fetch(`/api/branches/${branchId}/shelf-picker-staff`),
+        fetch(`/v1/shipments/parcels/shelf-picker?${params}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        fetch('/v1/shipments/parcels/shelf-picker-staff', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
       ]);
-      if (!parcelsRes.ok || !staffRes.ok) throw new Error('Failed to fetch shelf picker data');
+      if (!parcelsRes.ok) {
+        throw await getResponseError(parcelsRes, 'Failed to fetch shelf picker parcels');
+      }
+      if (!staffRes.ok) {
+        throw await getResponseError(staffRes, 'Failed to fetch shelf picker staff');
+      }
       setListData(await parcelsRes.json());
       setStaffOptions(await staffRes.json());
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to fetch shelf picker data'));
     } finally {
       setIsLoading(false);
     }
-  }, [branchId, companyId, query.page, query.pageSize, searchInput]);
+  }, [accessToken, branchId, companyId, query.page, query.pageSize, searchInput]);
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
@@ -73,15 +94,14 @@ export function useShelfPickerUpdateWorkflow() {
 
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/parcels/${selectedParcel.id}/update-shelf-picker`, {
+      const res = await fetch(`/v1/shipments/parcels/${selectedParcel.id}/update-shelf-picker`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ userId: selectedStaffId }),
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to update shelf picker');
+        throw await getResponseError(res, 'Failed to update shelf picker');
       }
 
       setSelectedParcel(null);
@@ -91,6 +111,70 @@ export function useShelfPickerUpdateWorkflow() {
       setIsSaving(false);
     }
   };
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!editingParcel) return;
+
+    const nextParcelDetails = editParcelDetails.trim();
+    const nextReceiverName = editReceiverName.trim();
+    const nextReceiverPhone = normalizePhoneDigits(editReceiverPhone);
+
+    if (nextParcelDetails.length === 0) {
+      toast.error('Parcel details is required');
+      return;
+    }
+    if (nextReceiverName.length === 0) {
+      toast.error('Receiver name is required');
+      return;
+    }
+    if (!isOptionalTenDigitPhone(nextReceiverPhone)) {
+      toast.error(phoneLengthMessage('Receiver telephone'));
+      return;
+    }
+
+    const updates: Promise<unknown>[] = [];
+
+    if (nextParcelDetails !== (editingParcel.parcelDetails ?? '').trim()) {
+      updates.push(
+        updateParcel({
+          id: editingParcel.id,
+          parcelDetails: nextParcelDetails,
+        }).unwrap(),
+      );
+    }
+
+    if (
+      nextReceiverName !== (editingParcel.receiverName ?? '').trim() ||
+      nextReceiverPhone !== (editingParcel.receiverPhone ?? '').trim()
+    ) {
+      updates.push(
+        updateCustomer({
+          id: editingParcel.receiverId,
+          fullname: nextReceiverName,
+          telephone: nextReceiverPhone.length > 0 ? nextReceiverPhone : null,
+        }).unwrap(),
+      );
+    }
+
+    if (updates.length === 0) {
+      toast.message('No changes to save');
+      setEditingParcel(null);
+      return;
+    }
+
+    await Promise.all(updates);
+    toast.success('Parcel updated');
+    setEditingParcel(null);
+    await listQuery.refetch();
+  }, [
+    editParcelDetails,
+    editReceiverName,
+    editReceiverPhone,
+    editingParcel,
+    listQuery,
+    updateCustomer,
+    updateParcel,
+  ]);
 
   return {
     context: {
@@ -107,7 +191,13 @@ export function useShelfPickerUpdateWorkflow() {
       listQuery,
       openUpdateDialog: (parcel: ParcelRow) => {
         setSelectedParcel(parcel);
-        setSelectedStaffId(parcel.shelfPickerUserId || '');
+        setSelectedStaffId(parcel.pickerStaffId || '');
+      },
+      openEditDialog: (parcel: ParcelRow) => {
+        setEditingParcel(parcel);
+        setEditParcelDetails(parcel.parcelDetails ?? '');
+        setEditReceiverName(parcel.receiverName ?? '');
+        setEditReceiverPhone(parcel.receiverPhone ?? '');
       },
       handleSearchSubmit,
     },
@@ -119,6 +209,18 @@ export function useShelfPickerUpdateWorkflow() {
       staffOptions,
       isSaving,
       handleUpdateShelfPicker,
+    },
+    edit: {
+      editingParcel,
+      setEditingParcel,
+      editParcelDetails,
+      setEditParcelDetails,
+      editReceiverName,
+      setEditReceiverName,
+      editReceiverPhone,
+      setEditReceiverPhone,
+      isSaving: isUpdatingParcel || isUpdatingCustomer,
+      handleSaveEdit,
     },
   };
 }

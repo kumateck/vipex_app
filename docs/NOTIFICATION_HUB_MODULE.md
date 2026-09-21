@@ -167,6 +167,11 @@ can still dispatch operational messages. Every parcel event exposes `{{branch}}`
 an empty location when the parcel has no assigned pickup location. Pickup queue tickets use the
 branch name as the queue location when no more specific location exists.
 
+OTP SMS events are explicitly classified at the event-definition level. The
+`receiver_pickup_otp` event sends `sms_type: "otp"` in the mNotify provider payload (and the same
+field to custom webhook providers). Ordinary queue, parcel-status, template, and bulk messages do
+not include `sms_type`. Account setup and password-reset OTP delivery is currently email-only.
+
 Reusable templates and new bulk SMS messages support `{{senderName}}`, `{{senderPhone}}`,
 `{{recipientName}}`, `{{recipientPhone}}`, `{{branch}}`, `{{location}}`, and `{{date}}`.
 Sender, branch, and location values resolve from the user dispatching the campaign; recipient values
@@ -183,6 +188,8 @@ QA scenarios:
 3. Enter `{{companyId}}` or another unsupported token; verify the editor rejects the message.
 4. Add `{{branch}}` and `{{location}}` to a transactional parcel definition; verify the dispatched
    message contains the parcel's destination branch and pickup or queue location.
+5. Request and resend a receiver pickup OTP through mNotify; verify both provider requests include
+   `sms_type: "otp"`. Send a queue ticket and bulk SMS; verify neither includes `sms_type`.
 
 Adding providers:
 

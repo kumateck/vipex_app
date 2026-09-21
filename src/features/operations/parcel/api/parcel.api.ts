@@ -104,6 +104,7 @@ export type ParcelSearchRow = {
   outstandingPrincipalPsw?: number;
   outstandingDeliveryFeePsw?: number;
   method: number;
+  shelfPickerStaffId: string | null;
   taxReportConfirmation: boolean;
   callSender: boolean;
   isDeleted: boolean;
@@ -304,6 +305,7 @@ export type ParcelFullDetails = {
     pickupLocationId: string | null;
     plannedToBePaidPsw: number;
     method: number;
+    shelfPickerStaffId: string | null;
     taxReportConfirmation: boolean;
     callSender: boolean;
     isDeleted: boolean;
@@ -336,6 +338,7 @@ export type ParcelFullDetails = {
     nhilPsw: number;
     covidPsw: number;
     taxTotalPsw: number;
+    taxComponentKeys: string[];
     receivedAt: string;
     notes: string | null;
     receiptNo: string | null;
@@ -546,7 +549,9 @@ export type ParcelSearchFilters = {
   hasPickupQueue?: boolean | null;
   agedOnly?: boolean | null;
   storageChargeAccruing?: boolean | null;
+  cashierCollectionRequired?: boolean | null;
   includeDeleted?: boolean | null;
+  assignedToCurrentUser?: boolean | null;
 };
 
 export type IncomingConsignmentRow = {
@@ -773,6 +778,7 @@ export const parcelApi = api.injectEndpoints({
           nhilPsw: number;
           covidPsw: number;
           taxTotalPsw: number;
+          taxComponentKeys: string[];
           grossCedis: number;
           netCedis: number;
           vatCedis: number;
@@ -818,6 +824,7 @@ export const parcelApi = api.injectEndpoints({
             nhilPsw: number;
             covidPsw: number;
             taxTotalPsw: number;
+            taxComponentKeys: string[];
             grossCedis: number;
             netCedis: number;
             vatCedis: number;
@@ -863,6 +870,7 @@ export const parcelApi = api.injectEndpoints({
             nhilPsw: number;
             covidPsw: number;
             taxTotalPsw: number;
+            taxComponentKeys: string[];
             grossCedis: number;
             netCedis: number;
             vatCedis: number;
@@ -1415,6 +1423,26 @@ export const parcelApi = api.injectEndpoints({
         { type: 'Bookings', id: `INTERNAL_TRANSFER_${id}` },
       ],
     }),
+    listPaymentsForParcel: builder.query<
+      Array<{
+        id: string;
+        parcelId: string;
+        component: number;
+        payer: number;
+        grossAmountPsw: number;
+        netAmountPsw: number;
+        vatPsw: number;
+        getfundPsw: number;
+        nhilPsw: number;
+        covidPsw: number;
+        taxTotalPsw: number;
+      }>,
+      { parcelId: string }
+    >({
+      query: ({ parcelId }) => ({
+        url: `/payments/by-parcel/${parcelId}`,
+      }),
+    }),
   }),
 });
 
@@ -1471,4 +1499,6 @@ export const {
   useCreateParcelInternalTransferMutation,
   useAcknowledgeParcelInternalTransferMutation,
   useCancelParcelInternalTransferMutation,
+  useListPaymentsForParcelQuery,
+  useLazyListPaymentsForParcelQuery,
 } = parcelApi;

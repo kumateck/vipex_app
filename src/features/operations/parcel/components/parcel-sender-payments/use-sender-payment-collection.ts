@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { PaymentMethod } from '@/db/schemas/enums';
@@ -81,6 +82,9 @@ export function useSenderPaymentCollection({ companyId, refetch }: UseSenderPaym
             ? resolveMomoTransactionId(paymentMethod, mtnPaymentFlow, momoTransactionId)
             : null,
       }).unwrap();
+      if (senderDueCedis > 0 && !result.payment) {
+        throw new Error('Payment completed without a tax breakdown; receipt was not generated');
+      }
       const destinationBranchName =
         branchOptions.find((branch) => branch.id === selectedParcel.destinationId)?.name ??
         selectedParcel.destinationId;
@@ -105,7 +109,7 @@ export function useSenderPaymentCollection({ companyId, refetch }: UseSenderPaym
       setSelectedParcel(null);
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to process parcel');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to process parcel');
     }
   };
 

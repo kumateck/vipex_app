@@ -37,6 +37,21 @@ import { ParcelStatus, PaymentComponent } from '@/db/schemas/enums';
 import type { SortField } from '@/server/types/pagination.types';
 import { extractScannedCode } from '@/server/utils/scan-code';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
+
+function effectiveParcelReceivedAt() {
+  return sql<Date | null>`coalesce(
+    "parcels"."received_at",
+    (
+      select min(receive_audit.created_at)
+      from audit_logs receive_audit
+      where receive_audit.entity_type = 'parcel'
+        and receive_audit.entity_id = "parcels"."id"
+        and receive_audit.action = 'PARCEL_UPDATED'
+        and receive_audit.metadata->'patch'->>'status' = '3'
+    )
+  )`.mapWith((value) => (value == null ? null : new Date(String(value))));
+}
+
 export type ParcelRow = {
   id: string;
   companyId: string;
@@ -61,6 +76,7 @@ export type ParcelRow = {
   pickupLocationId: string | null;
   plannedToBePaidPsw: number;
   method: number;
+  shelfPickerStaffId: string | null;
   taxReportConfirmation: boolean;
   callSender: boolean;
   isDeleted: boolean;
@@ -90,11 +106,14 @@ export type ListParcelsParams = {
   hasPickupQueue?: boolean | null;
   agedOnly?: boolean | null;
   storageChargeAccruing?: boolean | null;
+  cashierCollectionRequired?: boolean | null;
   ageThresholdMonths?: number | null;
   storageGraceDays?: number | null;
+  storageFeePerDayPsw?: number | null;
   search?: string | null; // bookingCode/trackingCode/sender/receiver names/phones
   received?: boolean | null;
   includeDeleted?: boolean | null;
+  assignedToUserId?: string | null;
   sort?: SortField[] | null;
 };
 
@@ -123,6 +142,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     pickupQueueId: string | null;
     pickupQueueCode: string | null;
     pickupQueueNumber: number | null;
+    pickerStaffId: string | null;
+    pickerStaffName: string | null;
+    callCenterAssignedToUserId: string | null;
+    callCenterAssignedToUserName: string | null;
     pickupQueuedAt: Date | null;
     pickupQueueEndedAt: Date | null;
     currentHolderType: number | null;
@@ -143,11 +166,15 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     | ReturnType<typeof or>
     | ReturnType<typeof isNull>
     | ReturnType<typeof isNotNull>
+    | ReturnType<typeof sql>
   )[] = [];
   if (!p.includeDeleted) whereParts.push(eq(parcels.isDeleted, false));
   if (p.companyId) whereParts.push(eq(parcels.companyId, p.companyId));
   if (p.sourceId) whereParts.push(eq(parcels.sourceId, p.sourceId));
   if (p.destinationId) whereParts.push(eq(parcels.destinationId, p.destinationId));
+  if (p.assignedToUserId) {
+    whereParts.push(eq(parcels.callCenterAssignedToUserId, p.assignedToUserId));
+  }
   if (p.statuses && p.statuses.length > 0) {
     whereParts.push(inArray(parcels.status, p.statuses));
   } else if (p.status != null) {
@@ -161,6 +188,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   const r = alias(customers, 'r');
   const sr = alias(customers, 'sr');
   const rider = alias(users, 'rider');
+  const picker = alias(users, 'picker');
+  const callCenterAssignee = alias(users, 'call_center_assignee');
   const d = alias(branches, 'd');
   const sb = alias(branches, 'sb');
   const sl = alias(locations, 'sl');
@@ -184,6 +213,41 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       and ${payments.component} = ${PaymentComponent.DELIVERY_FEE}
       and ${payments.voidedAt} is null
   ), 0)`;
+  const outstandingPrincipalPsw = sql<number>`greatest(
+    ${parcels.chargePsw} - ${paidPrincipalPsw},
+    0
+  )`;
+  const paidStoragePsw = sql<number>`coalesce((
+    select sum(storage_payment.gross_amount_psw)
+    from payments storage_payment
+    where storage_payment.parcel_id = ${parcels.id}
+      and storage_payment.component = ${PaymentComponent.OTHER}
+      and storage_payment.voided_at is null
+      and storage_payment.notes like 'STORAGE_CHARGE%'
+  ), 0)`;
+  const waivedStoragePsw = sql<number>`coalesce((
+    select sum(storage_waiver.waived_amount_psw)
+    from parcel_storage_waivers storage_waiver
+    where storage_waiver.parcel_id = ${parcels.id}
+  ), 0)`;
+  const storageAccruedPsw = sql<number>`greatest(
+    floor(
+      extract(epoch from (now() - (${effectiveParcelReceivedAt()} +
+        (${Math.max(1, Number(p.storageGraceDays ?? 14))} * interval '1 day')))) / 86400
+    ),
+    0
+  ) * ${Math.max(0, Number(p.storageFeePerDayPsw ?? 0))}`;
+  const outstandingStoragePsw = sql<number>`greatest(
+    ${storageAccruedPsw} - ${paidStoragePsw} - ${waivedStoragePsw},
+    0
+  )`;
+
+  if (p.cashierCollectionRequired === true) {
+    whereParts.push(sql`(${outstandingPrincipalPsw} > 0 or ${outstandingStoragePsw} > 0)`);
+  }
+  if (p.cashierCollectionRequired === false) {
+    whereParts.push(sql`(${outstandingPrincipalPsw} <= 0 and ${outstandingStoragePsw} <= 0)`);
+  }
 
   if (p.locationId) whereParts.push(eq(parcels.pickupLocationId, p.locationId));
   if (p.hasPickupQueue === true) whereParts.push(isNotNull(pickupQueues.id));
@@ -286,10 +350,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       secondCardNumber: parcels.secondCardNumber,
       pickupLocationId: parcels.pickupLocationId,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
-      outstandingPrincipalPsw:
-        sql<number>`greatest(${parcels.plannedToBePaidPsw} - ${paidPrincipalPsw}, 0)`.mapWith(
-          Number,
-        ),
+      outstandingPrincipalPsw: outstandingPrincipalPsw.mapWith(Number),
       outstandingDeliveryFeePsw:
         sql<number>`greatest(coalesce(${deliveries.chargePsw}, 0) - ${paidDeliveryFeePsw}, 0)`.mapWith(
           Number,
@@ -304,17 +365,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       createdBy: parcels.createdBy,
       createdAt: parcels.createdAt,
       receivedBy: parcels.receivedBy,
-      receivedAt: sql<Date | null>`coalesce(
-          ${parcels.receivedAt},
-          (
-            select min(receive_audit.created_at)
-            from audit_logs receive_audit
-            where receive_audit.entity_type = 'parcel'
-              and receive_audit.entity_id = ${parcels.id}
-              and receive_audit.action = 'PARCEL_UPDATED'
-              and receive_audit.metadata->'patch'->>'status' = '3'
-          )
-        )`.mapWith((value) => (value == null ? null : new Date(String(value)))),
+      receivedAt: effectiveParcelReceivedAt(),
       confirmedBy: parcels.confirmedBy,
       confirmedAt: parcels.confirmedAt,
       updatedAt: parcels.updatedAt,
@@ -344,6 +395,13 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       pickupQueueId: pickupQueues.id,
       pickupQueueCode: pickupQueues.queueCode,
       pickupQueueNumber: pickupQueues.queueNumber,
+      shelfPickerStaffId: parcels.shelfPickerStaffId,
+      pickerStaffId: sql<
+        string | null
+      >`coalesce(${parcels.shelfPickerStaffId}, ${pickupQueues.pickerStaffId})`,
+      pickerStaffName: picker.fullname,
+      callCenterAssignedToUserId: parcels.callCenterAssignedToUserId,
+      callCenterAssignedToUserName: callCenterAssignee.fullname,
       pickupQueuedAt: pickupQueues.queuedAt,
       pickupQueueEndedAt: pickupQueues.endedAt,
       currentHolderType: parcelInternalHolders.holderType,
@@ -368,6 +426,14 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
     .leftJoin(rider, eq(rider.id, deliveries.riderUserId))
     .leftJoin(pickupQueues, eq(pickupQueues.parcelId, parcels.id))
+    .leftJoin(
+      picker,
+      eq(
+        picker.id,
+        sql<string>`coalesce(${parcels.shelfPickerStaffId}, ${pickupQueues.pickerStaffId})`,
+      ),
+    )
+    .leftJoin(callCenterAssignee, eq(callCenterAssignee.id, parcels.callCenterAssignedToUserId))
     .leftJoin(parcelInternalHolders, eq(parcelInternalHolders.parcelId, parcels.id))
     .leftJoin(hb, eq(hb.id, parcelInternalHolders.branchId))
     .leftJoin(hl, eq(hl.id, parcelInternalHolders.locationId))
@@ -429,6 +495,7 @@ export async function getParcelRepo(
       pickupLocationId: parcels.pickupLocationId,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       method: parcels.method,
+      shelfPickerStaffId: parcels.shelfPickerStaffId,
       taxReportConfirmation: parcels.taxReportConfirmation,
       callSender: parcels.callSender,
       isDeleted: parcels.isDeleted,
@@ -438,7 +505,7 @@ export async function getParcelRepo(
       createdBy: parcels.createdBy,
       createdAt: parcels.createdAt,
       receivedBy: parcels.receivedBy,
-      receivedAt: parcels.receivedAt,
+      receivedAt: effectiveParcelReceivedAt(),
       confirmedBy: parcels.confirmedBy,
       confirmedAt: parcels.confirmedAt,
       updatedAt: parcels.updatedAt,

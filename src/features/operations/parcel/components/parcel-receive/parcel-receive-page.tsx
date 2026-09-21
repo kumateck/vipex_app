@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
@@ -358,7 +359,7 @@ export function ParcelReceivePage() {
           await confirmReceive(parcel, 'scan');
           triggerScanSuccessFeedback();
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : 'Failed to receive scanned parcel');
+          toast.error(getApplicationErrorMessage(error, '') || 'Failed to receive scanned parcel');
         }
       }, 3000);
     },
@@ -413,7 +414,7 @@ export function ParcelReceivePage() {
                     triggerScanSuccessFeedback();
                   } catch (error) {
                     toast.error(
-                      error instanceof Error ? error.message : 'Failed to receive parcel',
+                      getApplicationErrorMessage(error, '') || 'Failed to receive parcel',
                     );
                   }
                 }}

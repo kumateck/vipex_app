@@ -28,7 +28,7 @@ import { getBranchRepo } from '../branches/repository';
 import { recordAuditLog } from '../audit/logger';
 import { listConsignmentsForParcelRepo } from './consignments.repository';
 import { removeActiveConsignmentItemsByParcelRepo } from './consignments.repository';
-import { getPickupQueueByParcelRepo } from '../pickup-queues/repository';
+import { getPickupQueueByParcelRepo, updatePickupQueueRepo } from '../pickup-queues/repository';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
 import {
   getParcelInternalHolderByParcelRepo,
@@ -208,7 +208,7 @@ function computeParcelAgeingSnapshot(input: {
   };
 }
 
-function computeStorageAccrualPsw(input: {
+export function computeStorageAccrualPsw(input: {
   status: number;
   receivedAt: Date | null;
   policy: ParcelAgeingPolicy;
@@ -274,7 +274,7 @@ export async function getParcelStorageSettlementSvc(
 
 export async function listParcelsSvc(p: ListParcelsParams) {
   const policy =
-    p.companyId && (p.agedOnly || p.storageChargeAccruing)
+    p.companyId && (p.agedOnly || p.storageChargeAccruing || p.cashierCollectionRequired != null)
       ? await getCompanyParcelAgeingPolicy(p.companyId)
       : DEFAULT_PARCEL_AGEING_POLICY;
 
@@ -282,6 +282,7 @@ export async function listParcelsSvc(p: ListParcelsParams) {
     ...p,
     ageThresholdMonths: p.ageThresholdMonths ?? policy.agedThresholdMonths,
     storageGraceDays: p.storageGraceDays ?? policy.gracePeriodDays,
+    storageFeePerDayPsw: p.storageFeePerDayPsw ?? policy.storageFeePerDayPsw,
   });
 
   const now = new Date();
@@ -1679,11 +1680,26 @@ export async function assignParcelToCallCenterSvc(input: { parcelId: string; use
   return { success: true, parcelId: input.parcelId };
 }
 
+export async function bulkAssignParcelsToCallCenterSvc(input: {
+  parcelIds: string[];
+  userId: string;
+}) {
+  if (input.parcelIds.length === 0) throw BadRequest('Select at least one parcel');
+  for (const parcelId of input.parcelIds) {
+    await assignParcelToCallCenterSvc({ parcelId, userId: input.userId });
+  }
+  return { success: true, assignedCount: input.parcelIds.length };
+}
+
 export async function updateParcelShelfPickerSvc(input: { parcelId: string; userId: string }) {
   const parcel = await getParcelRepo(input.parcelId);
   if (!parcel) throw NotFound('Parcel not found');
 
-  await updateParcelRepo(input.parcelId, { shelfPickerUserId: input.userId }, db);
+  const queue = await getPickupQueueByParcelRepo(input.parcelId);
+  await db.transaction(async (tx) => {
+    await updateParcelRepo(input.parcelId, { shelfPickerStaffId: input.userId }, tx);
+    if (queue) await updatePickupQueueRepo(queue.id, { pickerStaffId: input.userId }, tx);
+  });
 
   return { success: true, parcelId: input.parcelId };
 }

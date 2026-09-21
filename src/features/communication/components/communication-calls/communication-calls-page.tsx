@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -93,13 +94,12 @@ export function CommunicationCallsPage() {
         threadId: createThreadId === '__none__' ? null : createThreadId,
         livekitRoomName: createRoomName.trim() || null,
       }).unwrap();
-
       toast.success('Call session created.');
       setCreateRoomName('');
       setCreateThreadId('__none__');
       refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create call session.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create call session.');
     }
   };
 
@@ -111,7 +111,7 @@ export function CommunicationCallsPage() {
       await updateCallStatus({ id, status }).unwrap();
       toast.success(`Call marked as ${prettyValue(status)}.`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update call status.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update call status.');
     }
   };
 

@@ -5,6 +5,7 @@ import { router } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 import { searchParcels } from '@mobile/lib/api';
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { extractScannedCode } from '@mobile/lib/scan-code';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
 import type { ParcelSearchRow } from '@mobile/types/parcels';
@@ -102,7 +103,7 @@ export function ReceiveScanScreen() {
       }
       void hapticTap();
     } catch (err) {
-      notifyError('Search failed', err instanceof Error ? err.message : 'Unable to search parcels');
+      notifyError('Search failed', getMobileErrorMessage(err, 'Unable to search parcels'));
       void hapticError();
     } finally {
       setSearchBusy(false);
@@ -148,10 +149,7 @@ export function ReceiveScanScreen() {
         void hapticSuccess();
         router.push(`/(app)/receive-process/${parcel.id}`);
       } catch (err) {
-        notifyError(
-          'Receive failed',
-          err instanceof Error ? err.message : 'Unable to receive parcel',
-        );
+        notifyError('Receive failed', getMobileErrorMessage(err, 'Unable to receive parcel'));
         void hapticError();
       } finally {
         scanInFlightRef.current = false;
