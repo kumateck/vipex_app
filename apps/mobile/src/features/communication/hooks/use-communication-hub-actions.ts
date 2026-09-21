@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback } from 'react';
 import { router } from '@mobile/navigation/router-compat';
 import {
@@ -117,7 +118,7 @@ export function useCommunicationHubActions(params: UseCommunicationHubActionsPar
       } catch (error) {
         notifyError(
           'Chat start failed',
-          error instanceof Error ? error.message : 'Unable to start direct chat',
+          getMobileErrorMessage(error, '') || 'Unable to start direct chat',
         );
       } finally {
         setStartingUserId(null);
@@ -147,7 +148,7 @@ export function useCommunicationHubActions(params: UseCommunicationHubActionsPar
     } catch (error) {
       notifyError(
         'Request failed',
-        error instanceof Error ? error.message : 'Unable to submit chat request',
+        getMobileErrorMessage(error, '') || 'Unable to submit chat request',
       );
     } finally {
       setIsSubmittingRequest(false);
@@ -177,7 +178,7 @@ export function useCommunicationHubActions(params: UseCommunicationHubActionsPar
       } catch (error) {
         notifyError(
           approve ? 'Approve failed' : 'Decline failed',
-          error instanceof Error ? error.message : 'Unable to decide request',
+          getMobileErrorMessage(error, '') || 'Unable to decide request',
         );
       } finally {
         setDecidingRequestId(null);
@@ -207,7 +208,7 @@ export function useCommunicationHubActions(params: UseCommunicationHubActionsPar
       } catch (error) {
         notifyError(
           'Voice join failed',
-          error instanceof Error ? error.message : 'Unable to join voice channel',
+          getMobileErrorMessage(error, '') || 'Unable to join voice channel',
         );
       } finally {
         setJoiningChannelId(null);
@@ -258,7 +259,7 @@ export function useCommunicationHubActions(params: UseCommunicationHubActionsPar
     } catch (error) {
       notifyError(
         'Update channel failed',
-        error instanceof Error ? error.message : 'Unable to update channel settings',
+        getMobileErrorMessage(error, '') || 'Unable to update channel settings',
       );
     } finally {
       setUpdatingChannel(false);

@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { ENV } from '@mobile/lib/env';
 import { reportMobileErrorToDiscord } from '@mobile/lib/mobile-error-reporter';
 import type { LoginResponse, SessionState, TokenPair } from '@mobile/types/auth';
@@ -92,7 +93,7 @@ async function probeHealth(
       ok: false,
       status: null,
       latencyMs: Date.now() - started,
-      error: isAbort ? 'timeout' : error instanceof Error ? error.message : 'network_error',
+      error: isAbort ? 'timeout' : getMobileErrorMessage(error, '') || 'network_error',
     };
   }
 }
@@ -216,11 +217,13 @@ async function request<T>(options: RequestOptions): Promise<T> {
       clearTimeout(timeout);
 
       const json = (await response.json().catch(() => null)) as {
-        error?: { message?: string; details?: Record<string, unknown> };
+        error?: { message?: string; details?: Record<string, unknown> } | string;
+        message?: string;
+        errors?: unknown;
       } | null;
 
       if (!response.ok) {
-        const serverMessage = json?.error?.message?.trim();
+        const serverMessage = getMobileErrorMessage(json, 'Request failed');
         logMobileApiError({
           method,
           path: options.path,
@@ -228,14 +231,16 @@ async function request<T>(options: RequestOptions): Promise<T> {
           activeBaseUrl: activeApiBaseUrl,
           candidateBaseUrl: baseUrl,
           status: response.status,
-          message: serverMessage || 'Request failed',
+          message: serverMessage,
           responseBody: json,
           attempt,
         });
-        throw new ApiRequestError(`${serverMessage || 'Request failed'} (${response.status})`, {
+        const details =
+          json?.error && typeof json.error === 'object' ? json.error.details : undefined;
+        throw new ApiRequestError(`${serverMessage} (${response.status})`, {
           status: response.status,
           url: targetUrl,
-          details: json?.error?.details,
+          details,
         });
       }
 

@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
@@ -21,7 +22,7 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
     try {
       setDrafts(await withAuth(listSelfServiceDrafts));
     } catch (error) {
-      notifyError('Drafts unavailable', error instanceof Error ? error.message : 'Try again.');
+      notifyError('Drafts unavailable', getMobileErrorMessage(error, '') || 'Try again.');
     } finally {
       setLoading(false);
     }
@@ -38,7 +39,7 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
       notifySuccess('You can now complete this booking.', 'Draft claimed');
       await load();
     } catch (error) {
-      notifyError('Could not claim draft', error instanceof Error ? error.message : 'Try again.');
+      notifyError('Could not claim draft', getMobileErrorMessage(error, '') || 'Try again.');
     } finally {
       setSaving(false);
     }
@@ -55,7 +56,7 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
         await load();
         return result;
       } catch (error) {
-        notifyError('Completion failed', error instanceof Error ? error.message : 'Try again.');
+        notifyError('Completion failed', getMobileErrorMessage(error, '') || 'Try again.');
         return null;
       } finally {
         setSaving(false);

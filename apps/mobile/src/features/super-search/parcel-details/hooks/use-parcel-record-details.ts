@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getParcelDetails, searchParcels } from '@mobile/lib/api';
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { notifyError } from '@mobile/lib/notify';
 import { hapticError } from '@mobile/lib/haptics';
 import type { ParcelFullDetails, ParcelSearchRow } from '@mobile/types/parcels';
@@ -67,10 +68,10 @@ export function useParcelRecordDetails({
           const detailsPayload = await withAuth((token) => getParcelDetails(token, parcelId));
           setDetails(detailsPayload);
         } catch (err) {
-          const message =
-            err instanceof Error
-              ? err.message
-              : 'Unable to load parcel details without company context';
+          const message = getMobileErrorMessage(
+            err,
+            'Unable to load parcel details without company context',
+          );
           setLoadError(message);
           setDetails(null);
         }
@@ -105,7 +106,7 @@ export function useParcelRecordDetails({
           detailsPayload = await withAuth((token) => getParcelDetails(token, key));
           break;
         } catch (err) {
-          lastDetailError = err instanceof Error ? err : new Error(String(err));
+          lastDetailError = new Error(getMobileErrorMessage(err, 'Unable to load parcel details.'));
         }
       }
 
@@ -152,7 +153,7 @@ export function useParcelRecordDetails({
         setDetails(buildDetailsFallback(strongestRow));
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unable to load record details';
+      const message = getMobileErrorMessage(err, 'Unable to load record details');
       setLoadError(message);
       notifyError('Load failed', message);
       void hapticError();

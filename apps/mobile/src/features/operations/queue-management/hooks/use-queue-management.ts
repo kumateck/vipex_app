@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Share } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -80,7 +81,7 @@ export function useQueueManagement() {
     } catch (error) {
       notifyError(
         'Queue board failed',
-        error instanceof Error ? error.message : 'Unable to load queue boards',
+        getMobileErrorMessage(error, '') || 'Unable to load queue boards',
       );
       void hapticError();
     } finally {
@@ -112,10 +113,7 @@ export function useQueueManagement() {
       setRows(data.data ?? []);
       void hapticTap();
     } catch (error) {
-      notifyError(
-        'Search failed',
-        error instanceof Error ? error.message : 'Unable to search parcels',
-      );
+      notifyError('Search failed', getMobileErrorMessage(error, '') || 'Unable to search parcels');
       void hapticError();
     } finally {
       setLoading(false);
@@ -135,7 +133,7 @@ export function useQueueManagement() {
         setSelectedDetails(null);
         notifyError(
           'Parcel details failed',
-          error instanceof Error ? error.message : 'Unable to load parcel details',
+          getMobileErrorMessage(error, '') || 'Unable to load parcel details',
         );
         void hapticError();
       }
@@ -187,10 +185,7 @@ export function useQueueManagement() {
       await Promise.all([runSearch(), refreshBoards()]);
       setSelectedDetails(await withAuth((token) => loadQueueParcelDetails(token, parcelId)));
     } catch (error) {
-      notifyError(
-        'Queue failed',
-        error instanceof Error ? error.message : 'Unable to queue parcel',
-      );
+      notifyError('Queue failed', getMobileErrorMessage(error, '') || 'Unable to queue parcel');
       void hapticError();
     } finally {
       setQueueingParcelId(null);
@@ -212,10 +207,7 @@ export function useQueueManagement() {
       Clipboard.setString(queueCode);
       notifySuccess('Queue code copied.');
     } catch (error) {
-      notifyError(
-        'Copy failed',
-        error instanceof Error ? error.message : 'Unable to copy queue code',
-      );
+      notifyError('Copy failed', getMobileErrorMessage(error, '') || 'Unable to copy queue code');
       void hapticError();
     }
   }, []);
@@ -234,7 +226,7 @@ export function useQueueManagement() {
       } catch (error) {
         notifyError(
           'Share failed',
-          error instanceof Error ? error.message : 'Unable to share queue ticket',
+          getMobileErrorMessage(error, '') || 'Unable to share queue ticket',
         );
         void hapticError();
       }

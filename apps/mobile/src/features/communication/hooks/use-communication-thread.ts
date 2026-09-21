@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalSearchParams } from '@mobile/navigation/router-compat';
 import { markCommunicationThreadRead } from '@mobile/lib/api';
@@ -105,7 +106,7 @@ export function useCommunicationThread() {
     } catch (error) {
       notifyError(
         'Chat load failed',
-        error instanceof Error ? error.message : 'Unable to load thread messages',
+        getMobileErrorMessage(error, '') || 'Unable to load thread messages',
       );
     } finally {
       setLoading(false);

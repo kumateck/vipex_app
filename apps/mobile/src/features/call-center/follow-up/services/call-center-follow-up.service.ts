@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { createCustomer, mobileApiGet, mobileApiPost, updateParcel } from '@mobile/lib/api';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 import type { ParcelSearchRow } from '@mobile/types/parcels';
@@ -61,7 +62,7 @@ export async function saveCallOutcome(token: string, input: SaveCallOutcomeInput
     return {
       sentCount: 0,
       failedCount: 0,
-      notificationError: error instanceof Error ? error.message : 'Notification failed.',
+      notificationError: getMobileErrorMessage(error, '') || 'Notification failed.',
     };
   }
 }

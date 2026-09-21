@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useState } from 'react';
 import { hapticError, hapticTap } from '@mobile/lib/haptics';
 import { notifyError } from '@mobile/lib/notify';
@@ -27,7 +28,7 @@ export function useParcelSearch(): ParcelSearchState {
     } catch (error) {
       notifyError(
         'Search failed',
-        error instanceof Error ? error.message : 'Unable to search parcel records.',
+        getMobileErrorMessage(error, '') || 'Unable to search parcel records.',
       );
       void hapticError();
     } finally {

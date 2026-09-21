@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useState } from 'react';
 import { Linking } from 'react-native';
 import { useAuth } from '@mobile/providers/auth-provider';
@@ -33,7 +34,7 @@ export function useCallCenterFollowUp(
       );
       setParcels(result.data);
     } catch (error) {
-      notifyError('Follow-up unavailable', error instanceof Error ? error.message : 'Try again.');
+      notifyError('Follow-up unavailable', getMobileErrorMessage(error, '') || 'Try again.');
     } finally {
       setLoading(false);
     }
@@ -50,7 +51,7 @@ export function useCallCenterFollowUp(
           await withAuth((token) => markReceiverCalled(token, parcel.id, userId));
         }
       } catch (error) {
-        notifyError('Call could not start', error instanceof Error ? error.message : 'Try again.');
+        notifyError('Call could not start', getMobileErrorMessage(error, '') || 'Try again.');
       }
     },
     [canRecordCall, userId, withAuth],
@@ -73,7 +74,7 @@ export function useCallCenterFollowUp(
         setSelected(null);
         await load();
       } catch (error) {
-        notifyError('Address not saved', error instanceof Error ? error.message : 'Try again.');
+        notifyError('Address not saved', getMobileErrorMessage(error, '') || 'Try again.');
       } finally {
         setSaving(false);
       }

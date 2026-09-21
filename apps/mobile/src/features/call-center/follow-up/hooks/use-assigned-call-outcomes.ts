@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useState } from 'react';
 import { Linking } from 'react-native';
 import { useAuth } from '@mobile/providers/auth-provider';
@@ -29,10 +30,7 @@ export function useAssignedCallOutcomes(enabled: boolean) {
       const result = await withAuth((token) => listAssignedCallParcels(token, submittedSearch));
       setParcels(result.data);
     } catch (error) {
-      notifyError(
-        'Assigned calls unavailable',
-        error instanceof Error ? error.message : 'Try again.',
-      );
+      notifyError('Assigned calls unavailable', getMobileErrorMessage(error, '') || 'Try again.');
     } finally {
       setLoading(false);
     }
@@ -60,7 +58,7 @@ export function useAssignedCallOutcomes(enabled: boolean) {
     try {
       await Linking.openURL(dialUrl);
     } catch (error) {
-      notifyError('Call could not start', error instanceof Error ? error.message : 'Try again.');
+      notifyError('Call could not start', getMobileErrorMessage(error, '') || 'Try again.');
     }
   }, []);
 
@@ -113,7 +111,7 @@ export function useAssignedCallOutcomes(enabled: boolean) {
       setSelected(null);
       await load();
     } catch (error) {
-      notifyError('Outcome not saved', error instanceof Error ? error.message : 'Try again.');
+      notifyError('Outcome not saved', getMobileErrorMessage(error, '') || 'Try again.');
     } finally {
       setSaving(false);
     }
