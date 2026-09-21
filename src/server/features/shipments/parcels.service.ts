@@ -274,7 +274,7 @@ export async function getParcelStorageSettlementSvc(
 
 export async function listParcelsSvc(p: ListParcelsParams) {
   const policy =
-    p.companyId && (p.agedOnly || p.storageChargeAccruing)
+    p.companyId && (p.agedOnly || p.storageChargeAccruing || p.cashierCollectionRequired != null)
       ? await getCompanyParcelAgeingPolicy(p.companyId)
       : DEFAULT_PARCEL_AGEING_POLICY;
 
@@ -282,6 +282,7 @@ export async function listParcelsSvc(p: ListParcelsParams) {
     ...p,
     ageThresholdMonths: p.ageThresholdMonths ?? policy.agedThresholdMonths,
     storageGraceDays: p.storageGraceDays ?? policy.gracePeriodDays,
+    storageFeePerDayPsw: p.storageFeePerDayPsw ?? policy.storageFeePerDayPsw,
   });
 
   const now = new Date();
