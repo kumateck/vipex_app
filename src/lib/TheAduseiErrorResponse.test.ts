@@ -46,5 +46,29 @@ describe('isLikelyStaleBuildError', () => {
         'Failed to assign parcel',
       ),
     ).toBe('You do not have permission to assign this parcel.');
+
+    expect(
+      getErrorMessage(
+        { status: 422, data: { errors: { phone: ['Enter a valid phone number.'] } } },
+        'Failed to save customer',
+      ),
+    ).toBe('Enter a valid phone number.');
+  });
+
+  test('prefers a server response over a generic transport message', () => {
+    expect(
+      getErrorMessage({
+        message: 'Request failed with status code 409',
+        response: { data: { error: { message: 'This parcel was already assigned.' } } },
+      }),
+    ).toBe('This parcel was already assigned.');
+  });
+
+  test('handles string validation arrays and cyclic error wrappers', () => {
+    expect(getErrorMessage({ errors: ['Telephone is required.'] })).toBe('Telephone is required.');
+
+    const cyclic: { data?: unknown; message: string } = { message: 'Safe fallback message' };
+    cyclic.data = cyclic;
+    expect(getErrorMessage(cyclic)).toBe('Safe fallback message');
   });
 });

@@ -1,11 +1,16 @@
 import { toast } from 'sonner';
 
 type ErrorLike = {
+  code?: string;
   message?: string;
   status?: number;
+  body?: unknown;
+  cause?: unknown;
   data?: unknown;
+  detail?: unknown;
   error?: unknown;
-  errors?: Array<{ description?: string; message?: string }>;
+  errors?: unknown;
+  response?: unknown;
 };
 
 let lastToast = { message: '', at: 0 };
@@ -109,27 +114,37 @@ export function tryRecoverFromStaleBuildError(error: unknown): boolean {
   return isLikelyStaleBuildError(error) && tryReloadForStaleBuild();
 }
 
-function readMessage(error: unknown): string | null {
+function readMessage(error: unknown, seen = new Set<object>()): string | null {
   if (!error) return null;
 
-  if (typeof error === 'string') return error;
-
-  if (error instanceof Error) return error.message || null;
+  if (typeof error === 'string') return error.trim() || null;
+  if (typeof error !== 'object') return null;
+  if (seen.has(error)) return null;
+  seen.add(error);
 
   const err = error as ErrorLike;
 
+  if (Array.isArray(err.errors)) {
+    for (const item of err.errors) {
+      const validationMessage = readMessage(item, seen);
+      if (validationMessage) return validationMessage;
+    }
+  } else if (err.errors && typeof err.errors === 'object') {
+    for (const value of Object.values(err.errors)) {
+      const validationMessage = Array.isArray(value)
+        ? readMessage(value[0], seen)
+        : readMessage(value, seen);
+      if (validationMessage) return validationMessage;
+    }
+  }
+
+  for (const nested of [err.data, err.body, err.response, err.error, err.detail, err.cause]) {
+    const nestedMessage = readMessage(nested, seen);
+    if (nestedMessage) return nestedMessage;
+  }
+
   const topMessage = err.message;
-  if (typeof topMessage === 'string' && topMessage.trim()) return topMessage;
-
-  const firstStructured = err.errors?.[0];
-  if (firstStructured?.description) return firstStructured.description;
-  if (firstStructured?.message) return firstStructured.message;
-
-  const dataMessage = readMessage(err.data);
-  if (dataMessage) return dataMessage;
-
-  const nestedErrorMessage = readMessage(err.error);
-  if (nestedErrorMessage) return nestedErrorMessage;
+  if (typeof topMessage === 'string' && topMessage.trim()) return topMessage.trim();
 
   return null;
 }
