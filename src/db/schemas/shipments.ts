@@ -113,6 +113,7 @@ export const parcels = pgTable(
     callCenterAssignedToUserId: varchar('call_center_assigned_to_user_id', {
       length: 25,
     }).references(() => users.id),
+    shelfPickerStaffId: varchar('shelf_picker_staff_id', { length: 25 }).references(() => users.id),
     taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
     callSender: boolean('call_sender').notNull().default(false),
     isDeleted: boolean('is_deleted').notNull().default(false),

@@ -78,7 +78,9 @@ export function UpdateShelfPickerDialog({
               <div className="flex items-center gap-2 pt-1">
                 <strong>Status:</strong>
                 <Badge variant="outline">{getStatusLabel(parcel.status)}</Badge>
-                {!parcel.senderPaid && <Badge variant="destructive">To Be Paid</Badge>}
+                {parcel.plannedToBePaidPsw > 0 ? (
+                  <Badge variant="destructive">To Be Paid</Badge>
+                ) : null}
               </div>
             </div>
 

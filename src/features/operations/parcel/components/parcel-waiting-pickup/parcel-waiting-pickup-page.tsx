@@ -154,6 +154,8 @@ export function ParcelWaitingPickupPage() {
         cardOptions={dialog.cardOptions}
         otp={dialog.otp}
         isSaving={dialog.isSaving}
+        isLoading={dialog.isLoading}
+        hasLoadError={dialog.hasLoadError}
         onRequestHomeDelivery={dialog.handleRequestHomeDelivery}
         onConfirmDelivered={dialog.handleConfirmDelivered}
       />

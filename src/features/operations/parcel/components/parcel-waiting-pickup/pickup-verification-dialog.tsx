@@ -15,69 +15,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select-searchable';
-import type { ParcelFullDetails, ParcelSearchRow } from '../../api/parcel.api';
 import { PickupMainCardSection } from './pickup-main-card-section';
 import { PickupOtpVerificationSection } from './pickup-otp-verification-section';
 import { PickupVerificationHandoverSection } from './pickup-verification-handover-section';
-import type { PickupOtpVerification } from './use-pickup-otp-verification';
-type StaffOption = {
-  id: string;
-  fullname: string;
-};
-type CardOption = {
-  id: string;
-  name: string;
-};
-type CustomerCard = {
-  id: string;
-  cardName: string;
-  cardNumber: string;
-};
-type PickupVerificationDialogProps = {
-  open: boolean;
-  parcel: ParcelSearchRow | null;
-  onClose: () => void;
-  pickerStaffId: string;
-  onPickerStaffIdChange: (value: string) => void;
-  staffOptions: StaffOption[];
-  staffLocationName: string | null;
-  isPickupQueueEnabled: boolean;
-  isPickupOtpRequired: boolean;
-  hasPickupQueue: boolean;
-  parcelDetails: ParcelFullDetails | undefined;
-  formatDateTime: (value: string | null | undefined) => string;
-  mainCardMode: string;
-  onMainCardModeChange: (value: string) => void;
-  mainExistingCardRecordId: string;
-  onMainExistingCardRecordIdChange: (value: string) => void;
-  mainNewCardTypeId: string;
-  onMainNewCardTypeIdChange: (value: string) => void;
-  mainNewCardNumber: string;
-  onMainNewCardNumberChange: (value: string) => void;
-  mainReceiverCards: CustomerCard[];
-  handoverTarget: string;
-  onHandoverTargetChange: (value: string) => void;
-  phoneSlot: 'primary' | 'secondary';
-  onPhoneSlotChange: (value: 'primary' | 'secondary') => void;
-  secondNewName: string;
-  onSecondNewNameChange: (value: string) => void;
-  secondNewPhone: string;
-  onSecondNewPhoneChange: (value: string) => void;
-  secondCardMode: string;
-  onSecondCardModeChange: (value: string) => void;
-  secondExistingCardRecordId: string;
-  onSecondExistingCardRecordIdChange: (value: string) => void;
-  secondNewCardTypeId: string;
-  onSecondNewCardTypeIdChange: (value: string) => void;
-  secondNewCardNumber: string;
-  onSecondNewCardNumberChange: (value: string) => void;
-  secondReceiverCards: CustomerCard[];
-  cardOptions: CardOption[];
-  otp: PickupOtpVerification;
-  isSaving: boolean;
-  onRequestHomeDelivery: () => Promise<void>;
-  onConfirmDelivered: () => Promise<void>;
-};
+import { PickupVerificationDialogSkeleton } from './pickup-verification-dialog-skeleton';
+import type { PickupVerificationDialogProps } from './pickup-verification-dialog-types';
 export function PickupVerificationDialog({
   open,
   parcel,
@@ -120,6 +62,8 @@ export function PickupVerificationDialog({
   cardOptions,
   otp,
   isSaving,
+  isLoading,
+  hasLoadError,
   onRequestHomeDelivery,
   onConfirmDelivered,
 }: PickupVerificationDialogProps) {
@@ -129,7 +73,17 @@ export function PickupVerificationDialog({
         <DialogHeader>
           <DialogTitle>Pickup Verification</DialogTitle>
         </DialogHeader>
-        {!parcel ? null : (
+        {parcel && isLoading ? <PickupVerificationDialogSkeleton /> : null}
+        {parcel && hasLoadError ? (
+          <div
+            className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm"
+            role="alert"
+          >
+            <p className="font-medium">Unable to load pickup details</p>
+            <p className="text-muted-foreground">Close this dialog and try opening it again.</p>
+          </div>
+        ) : null}
+        {!parcel || isLoading || hasLoadError ? null : (
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-4">
               <div className="grid gap-2 text-sm">
@@ -281,7 +235,7 @@ export function PickupVerificationDialog({
                 );
               }
             }}
-            disabled={isSaving}
+            disabled={isLoading || hasLoadError || isSaving}
           >
             Request Home Delivery
           </Button>
@@ -294,12 +248,14 @@ export function PickupVerificationDialog({
               }
             }}
             disabled={
+              isLoading ||
+              hasLoadError ||
               isSaving ||
               (isPickupOtpRequired && !otp.otpVerified) ||
               (isPickupQueueEnabled && !hasPickupQueue)
             }
           >
-            Confirm Delivered
+            {isLoading ? 'Loading...' : isSaving ? 'Processing...' : 'Confirm Delivered'}
           </Button>
         </DialogFooter>
       </DialogContent>

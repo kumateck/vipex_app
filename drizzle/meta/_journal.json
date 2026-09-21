@@ -484,6 +484,13 @@
       "when": 1787301000000,
       "tag": "0067_self_service_terms_acceptance",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1790000000000,
+      "tag": "0068_parcel_shelf_picker_assignment",
+      "breakpoints": true
     }
   ]
 }

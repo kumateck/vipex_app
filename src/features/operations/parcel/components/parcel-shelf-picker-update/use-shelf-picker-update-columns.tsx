@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ParcelStatus } from '@/db/schemas/enums';
+import { PaymentStatusBookingCell } from '../parcel-processed-consignment';
 import type { ParcelRow } from './shelf-picker-update-types';
 
 const getStatusLabel = (status: number) => {
@@ -44,7 +45,11 @@ export function useShelfPickerUpdateColumns({
     {
       accessorKey: 'bookingCode',
       header: 'Booking Code',
-      cell: ({ row }) => <span className="font-mono font-medium">{row.original.bookingCode}</span>,
+      cell: ({ row }) => (
+        <div className="font-mono font-medium">
+          <PaymentStatusBookingCell parcel={row.original} />
+        </div>
+      ),
     },
     {
       accessorKey: 'receiverName',

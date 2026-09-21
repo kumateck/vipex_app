@@ -18,6 +18,7 @@ import {
   useUpdateParcelMutation,
 } from '../../api/parcel.api';
 import { resolveCustomerCard } from '../parcel-receiver-cashier/resolve-customer-card';
+import { getDialogLoadState, getDialogResourceState, resolveShelfPickerStaffId } from '../../utils';
 import { useWaitingPickupDialogState } from './use-waiting-pickup-dialog-state';
 import { useWaitingPickUpEdit } from './use-waiting-pickup-edit';
 import { getQueueFilterBySearch, type WaitingPickupQuery } from './waiting-pickup-types';
@@ -28,12 +29,14 @@ export function useWaitingPickupWorkflow() {
   const branchId = user?.branch?.id ?? null;
   const cashierLocationId = user?.location?.id ?? user?.locationId ?? null;
   const cashierLocationName = user?.location?.name ?? user?.locationName ?? null;
-  const { data: currentBranch } = useGetBranchOperationsSettingsQuery(branchId ?? '', {
+  const currentBranchQuery = useGetBranchOperationsSettingsQuery(branchId ?? '', {
     skip: !branchId,
   });
+  const currentBranch = currentBranchQuery.data;
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
   const isPickupOtpRequired = currentBranch?.requirePickupOtp ?? true;
   const [searchInput, setSearchInput] = useState('');
+  const [initializedParcelId, setInitializedParcelId] = useState<string | null>(null);
   const [query, setQuery] = useState<WaitingPickupQuery>({
     page: 1,
     pageSize: 20,
@@ -52,8 +55,8 @@ export function useWaitingPickupWorkflow() {
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [addCustomerCard, { isLoading: isAddingCard }] = useAddCustomerCardMutation();
   const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
-  const { data: cardOptions = [] } = useListCardOptionsQuery();
-  const { data: staffOptions = [] } = useListUserOptionsQuery(
+  const cardOptionsQuery = useListCardOptionsQuery();
+  const staffOptionsQuery = useListUserOptionsQuery(
     companyId && branchId && cashierLocationId
       ? { companyId, branchId, locationId: cashierLocationId, status: UserStatus.ACTIVE }
       : undefined,
@@ -63,17 +66,33 @@ export function useWaitingPickupWorkflow() {
   const listQuery = useSearchParcelsQuery(query, {
     skip: !companyId || !branchId || (!isPickupQueueEnabled && !hasSearchTerm),
   });
-  const { data: parcelDetails } = useGetParcelDetailsQuery(selectedParcel?.id ?? '', {
+  const parcelDetailsQuery = useGetParcelDetailsQuery(selectedParcel?.id ?? '', {
     skip: !selectedParcel?.id,
   });
-  const { data: mainReceiverCards = [] } = useListCustomerCardsQuery(
+  const mainReceiverCardsQuery = useListCustomerCardsQuery(
     { customerId: selectedParcel?.receiverId ?? '' },
     { skip: !selectedParcel?.receiverId },
   );
-  const { data: secondReceiverCards = [] } = useListCustomerCardsQuery(
+  const secondReceiverCardsQuery = useListCustomerCardsQuery(
     { customerId: selectedParcel?.secondReceiverId ?? '' },
     { skip: !selectedParcel?.secondReceiverId },
   );
+  const cardOptions = cardOptionsQuery.data ?? [];
+  const staffOptions = staffOptionsQuery.data ?? [];
+  const parcelDetails = parcelDetailsQuery.data;
+  const mainReceiverCards = mainReceiverCardsQuery.data ?? [];
+  const secondReceiverCards = secondReceiverCardsQuery.data ?? [];
+  const dialogLoadState = getDialogLoadState([
+    getDialogResourceState(currentBranchQuery, Boolean(selectedParcel && branchId)),
+    getDialogResourceState(cardOptionsQuery, Boolean(selectedParcel)),
+    getDialogResourceState(
+      staffOptionsQuery,
+      Boolean(selectedParcel && companyId && branchId && cashierLocationId),
+    ),
+    getDialogResourceState(parcelDetailsQuery, Boolean(selectedParcel)),
+    getDialogResourceState(mainReceiverCardsQuery, Boolean(selectedParcel?.receiverId)),
+    getDialogResourceState(secondReceiverCardsQuery, Boolean(selectedParcel?.secondReceiverId)),
+  ]);
   const edit = useWaitingPickUpEdit();
 
   useEffect(() => {
@@ -93,8 +112,20 @@ export function useWaitingPickupWorkflow() {
 
   useEffect(() => {
     if (!selectedParcel || !parcelDetails) return;
-    dialog.setPickerStaffId(parcelDetails.pickupQueue?.pickerStaffId ?? '');
-  }, [dialog, parcelDetails, selectedParcel]);
+    dialog.setPickerStaffId(resolveShelfPickerStaffId(parcelDetails));
+  }, [dialog.setPickerStaffId, parcelDetails, selectedParcel]);
+
+  useEffect(() => {
+    if (
+      !selectedParcel ||
+      !parcelDetails ||
+      dialogLoadState.isLoading ||
+      dialogLoadState.hasError
+    ) {
+      return;
+    }
+    setInitializedParcelId(selectedParcel.id);
+  }, [dialogLoadState.hasError, dialogLoadState.isLoading, parcelDetails, selectedParcel]);
 
   const isSaving = isUpdatingParcel || isAddingCard || isCreatingCustomer || edit.isSaving;
 
@@ -219,6 +250,11 @@ export function useWaitingPickupWorkflow() {
       secondReceiverCards,
       hasPickupQueue: Boolean(parcelDetails?.pickupQueue),
       isSaving,
+      isLoading:
+        Boolean(selectedParcel) &&
+        !dialogLoadState.hasError &&
+        (dialogLoadState.isLoading || initializedParcelId !== selectedParcel?.id),
+      hasLoadError: dialogLoadState.hasError,
       handleConfirmDelivered,
       handleRequestHomeDelivery: async () => {
         if (selectedParcel) await handleRequestDelivery(selectedParcel);

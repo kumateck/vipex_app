@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useShelfPickerUpdateColumns } from './use-shelf-picker-update-columns';
 import { EMPTY_META } from './shelf-picker-update-types';
 import { UpdateShelfPickerDialog } from './update-shelf-picker-dialog';
+import { PaymentStatusLegend } from '../parcel-processed-consignment';
 import { EditIncomingTransitParcelDialog } from '../parcel-in-transit/edit-incoming-transit-parcel-dialog';
 
 export function ParcelShelfPickerUpdatePage() {
@@ -33,6 +34,7 @@ export function ParcelShelfPickerUpdatePage() {
                   paid and to-be-paid parcels.
                 </CardDescription>
               </div>
+              <PaymentStatusLegend />
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
