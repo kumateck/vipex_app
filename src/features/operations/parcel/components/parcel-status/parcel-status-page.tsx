@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
@@ -99,7 +100,7 @@ export function ParcelStatusPage() {
       toast.success('Parcel moved to Awaiting Pickup');
       await refreshQueues();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to move parcel to pickup');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to move parcel to pickup');
     }
   }
 

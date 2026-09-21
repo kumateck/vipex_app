@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -158,7 +159,7 @@ export function ReceiverPaymentDeliveryDialog({
                 await dialog.handleConfirmDelivered();
                 toast.success('Payment received and parcel marked as DELIVERED_BY_OFFICE');
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : 'Failed to confirm delivery');
+                toast.error(getApplicationErrorMessage(error, '') || 'Failed to confirm delivery');
               }
             }}
             disabled={

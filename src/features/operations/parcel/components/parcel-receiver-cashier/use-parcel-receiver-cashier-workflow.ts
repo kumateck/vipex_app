@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
@@ -163,7 +164,7 @@ export function useParcelReceiverCashierWorkflow() {
       await listQuery.refetch();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to move parcel to home delivery',
+        getApplicationErrorMessage(error, '') || 'Failed to move parcel to home delivery',
       );
     }
   };

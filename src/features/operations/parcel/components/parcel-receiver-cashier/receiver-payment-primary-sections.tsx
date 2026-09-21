@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -179,7 +180,7 @@ function StorageWaiver({ context, dialog }: { context: WorkflowContext; dialog: 
               toast.success('Storage accrual waived');
             } catch (error) {
               toast.error(
-                error instanceof Error ? error.message : 'Failed to waive storage accrual',
+                getApplicationErrorMessage(error, '') || 'Failed to waive storage accrual',
               );
             }
           }}

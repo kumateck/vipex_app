@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -24,7 +25,7 @@ export function ProcurementDemandsInventoryLowStockPage() {
       );
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to create demands from inventory',
+        getApplicationErrorMessage(error, '') || 'Failed to create demands from inventory',
       );
     }
   };

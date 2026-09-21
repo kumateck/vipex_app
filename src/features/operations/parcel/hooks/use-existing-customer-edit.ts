@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { useUpdateCustomerMutation, type Customer } from '@/features/customers/api';
@@ -63,7 +64,7 @@ export function useExistingCustomerEdit({ customer, onUpdated }: UseExistingCust
       setOpen(false);
       toast.success('Customer information updated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update customer');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update customer');
     }
   }, [customer, onUpdated, updateCustomer, values]);
 

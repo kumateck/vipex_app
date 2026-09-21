@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { useUpdateCompanySmsEventMutation } from '../services';
@@ -24,7 +25,7 @@ export function useSmsEventEditor(event: CompanySmsEventDefinition) {
       toast.success(`${event.name} SMS definition saved`);
       return true;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save SMS definition');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save SMS definition');
       return false;
     }
   }, [body, event.code, event.name, updateEvent]);

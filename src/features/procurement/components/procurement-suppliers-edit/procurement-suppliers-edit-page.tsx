@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -68,7 +69,7 @@ export function ProcurementSuppliersEditPage() {
       toast.success('Supplier updated');
       navigate('/procurement/suppliers');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update supplier');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update supplier');
     }
   };
 

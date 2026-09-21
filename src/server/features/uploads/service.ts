@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { db } from '@/db/config';
 import { recordAuditLog } from '../audit/logger';
 import {
@@ -110,7 +111,7 @@ export async function createUploadSvc(input: {
       modelType,
       modelId,
       fileName,
-      message: error instanceof Error ? error.message : String(error),
+      message: getApplicationErrorMessage(error, '') || String(error),
       code:
         typeof error === 'object' && error !== null && 'code' in error
           ? String((error as { code?: unknown }).code ?? '')

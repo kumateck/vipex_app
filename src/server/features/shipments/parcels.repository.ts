@@ -213,6 +213,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       and ${payments.component} = ${PaymentComponent.DELIVERY_FEE}
       and ${payments.voidedAt} is null
   ), 0)`;
+  const outstandingPrincipalPsw = sql<number>`greatest(
+    ${parcels.chargePsw} - ${paidPrincipalPsw},
+    0
+  )`;
   const paidStoragePsw = sql<number>`coalesce((
     select sum(storage_payment.gross_amount_psw)
     from payments storage_payment
@@ -239,10 +243,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   )`;
 
   if (p.cashierCollectionRequired === true) {
-    whereParts.push(sql`(${parcels.plannedToBePaidPsw} > 0 or ${outstandingStoragePsw} > 0)`);
+    whereParts.push(sql`(${outstandingPrincipalPsw} > 0 or ${outstandingStoragePsw} > 0)`);
   }
   if (p.cashierCollectionRequired === false) {
-    whereParts.push(sql`(${parcels.plannedToBePaidPsw} <= 0 and ${outstandingStoragePsw} <= 0)`);
+    whereParts.push(sql`(${outstandingPrincipalPsw} <= 0 and ${outstandingStoragePsw} <= 0)`);
   }
 
   if (p.locationId) whereParts.push(eq(parcels.pickupLocationId, p.locationId));
@@ -346,8 +350,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       secondCardNumber: parcels.secondCardNumber,
       pickupLocationId: parcels.pickupLocationId,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
-      outstandingPrincipalPsw:
-        sql<number>`greatest(${parcels.chargePsw} - ${paidPrincipalPsw}, 0)`.mapWith(Number),
+      outstandingPrincipalPsw: outstandingPrincipalPsw.mapWith(Number),
       outstandingDeliveryFeePsw:
         sql<number>`greatest(coalesce(${deliveries.chargePsw}, 0) - ${paidDeliveryFeePsw}, 0)`.mapWith(
           Number,

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -91,7 +92,7 @@ export function ParcelShelfPickerUpdatePage() {
               table.handleSearchSubmit();
             } catch (error) {
               toast.error(
-                error instanceof Error ? error.message : 'Failed to update shelf picker assignment',
+                getApplicationErrorMessage(error, '') || 'Failed to update shelf picker assignment',
               );
             }
           }}

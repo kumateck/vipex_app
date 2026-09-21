@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { Conflict, NotFound } from '@/server/utils/http-error';
 import { env } from '@/server/utils/env';
 import { recordAuditLog } from '../audit/logger';
@@ -195,7 +196,7 @@ async function sendSmsWithProvider(
     } catch (error) {
       return {
         status: 'failed',
-        errorMessage: error instanceof Error ? error.message : 'MTN SMS request failed',
+        errorMessage: getApplicationErrorMessage(error, '') || 'MTN SMS request failed',
       } satisfies DeliveryResult;
     }
   }
@@ -261,7 +262,7 @@ async function sendSmsWithProvider(
     } catch (error) {
       return {
         status: 'failed',
-        errorMessage: error instanceof Error ? error.message : 'mNotify request failed',
+        errorMessage: getApplicationErrorMessage(error, '') || 'mNotify request failed',
       } satisfies DeliveryResult;
     }
   }
@@ -369,7 +370,7 @@ async function sendEmailWithProvider(input: {
   } catch (error) {
     return {
       status: 'failed',
-      errorMessage: error instanceof Error ? error.message : 'Failed to send email',
+      errorMessage: getApplicationErrorMessage(error, '') || 'Failed to send email',
     };
   }
 }

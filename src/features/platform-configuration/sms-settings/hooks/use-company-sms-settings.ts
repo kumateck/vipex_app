@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { PermissionKeys } from '@/shared/permissions/constants';
@@ -36,7 +37,7 @@ export function useCompanySmsSettings() {
       setDraftProviderKey(null);
       toast.success('Default SMS provider updated for this company');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update SMS provider');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update SMS provider');
     }
   }, [query, selectedProviderKey, setDefaultProvider]);
 
