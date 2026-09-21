@@ -45,7 +45,7 @@ export function useWaitingPickupWorkflow() {
       companyId,
       destinationId: branchId,
       status: ParcelStatus.AWAITING_PICKUP,
-      senderPaid: true,
+      cashierCollectionRequired: false,
       hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled),
     },
   });
@@ -104,7 +104,7 @@ export function useWaitingPickupWorkflow() {
         companyId,
         destinationId: branchId,
         status: ParcelStatus.AWAITING_PICKUP,
-        senderPaid: true,
+        cashierCollectionRequired: false,
         hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, previous.search),
       },
     }));
@@ -140,7 +140,7 @@ export function useWaitingPickupWorkflow() {
         companyId,
         destinationId: branchId,
         status: ParcelStatus.AWAITING_PICKUP,
-        senderPaid: true,
+        cashierCollectionRequired: false,
         hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, term),
       },
     }));

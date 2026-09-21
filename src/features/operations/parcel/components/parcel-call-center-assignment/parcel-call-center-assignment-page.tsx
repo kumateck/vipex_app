@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/auth-store';
+import { getErrorMessage, getResponseError } from '@/lib/TheAduseiErrorResponse';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { DataTable } from '@/components/datatable';
 import { ParcelStatus } from '@/db/schemas/enums';
@@ -56,14 +57,16 @@ export function ParcelCallCenterAssignmentPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ parcelIds: [...selectedParcelIds], userId: staffId }),
       });
-      if (!response.ok) throw new Error('Failed to assign selected parcels');
+      if (!response.ok) {
+        throw await getResponseError(response, 'Failed to assign selected parcels');
+      }
       setSelectedParcelIds(new Set());
       dialog.setSelectedParcel(null);
       setBulkOpen(false);
       table.handleSearchSubmit(searchInput);
       toast.success(`${selectedParcelIds.size} parcels assigned successfully`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to assign selected parcels');
+      toast.error(getErrorMessage(error, 'Failed to assign selected parcels'));
       throw error;
     } finally {
       setIsBulkSaving(false);

@@ -35,7 +35,7 @@ export function ThermalStickerPortraitTemplate({
         padding: '1.2mm',
         fontFamily: 'Arial, sans-serif',
         display: 'grid',
-        gridTemplateRows: `21mm ${statusRowHeight} 18mm minmax(0, 1fr)`,
+        gridTemplateRows: `25mm ${statusRowHeight} 18mm minmax(0, 1fr)`,
         gap: '0.5mm',
         overflow: 'hidden',
       }}
@@ -44,7 +44,7 @@ export function ThermalStickerPortraitTemplate({
         style={{
           minWidth: 0,
           display: 'grid',
-          gridTemplateColumns: '11mm 1fr 19mm',
+          gridTemplateColumns: '11mm 1fr 23mm',
           alignItems: 'center',
           columnGap: '2mm',
         }}
@@ -65,12 +65,12 @@ export function ThermalStickerPortraitTemplate({
         >
           <BrandedQrCode
             value={qrValue}
-            size={160}
+            size={180}
             variant="print"
             ariaLabel="Parcel tracking QR code"
             style={{
-              width: '18mm',
-              height: '18mm',
+              width: '22mm',
+              height: '22mm',
               backgroundColor: '#ffffff',
             }}
           />

@@ -50,7 +50,7 @@ export function useParcelReceiverCashierWorkflow() {
       companyId,
       destinationId: branchId,
       status: ParcelStatus.AWAITING_PICKUP,
-      senderPaid: false,
+      cashierCollectionRequired: true,
       hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled),
     },
   });
@@ -125,7 +125,7 @@ export function useParcelReceiverCashierWorkflow() {
         companyId,
         destinationId: branchId,
         status: ParcelStatus.AWAITING_PICKUP,
-        senderPaid: false,
+        cashierCollectionRequired: true,
         hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, prev.search),
       },
     }));
@@ -150,7 +150,7 @@ export function useParcelReceiverCashierWorkflow() {
         companyId,
         destinationId: branchId,
         status: ParcelStatus.AWAITING_PICKUP,
-        senderPaid: false,
+        cashierCollectionRequired: true,
         hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, term),
       },
     }));

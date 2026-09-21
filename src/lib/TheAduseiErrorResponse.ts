@@ -109,12 +109,12 @@ export function tryRecoverFromStaleBuildError(error: unknown): boolean {
   return isLikelyStaleBuildError(error) && tryReloadForStaleBuild();
 }
 
-function readMessage(error: unknown): string {
-  if (!error) return 'Something went wrong';
+function readMessage(error: unknown): string | null {
+  if (!error) return null;
 
   if (typeof error === 'string') return error;
 
-  if (error instanceof Error) return error.message || 'Something went wrong';
+  if (error instanceof Error) return error.message || null;
 
   const err = error as ErrorLike;
 
@@ -125,24 +125,36 @@ function readMessage(error: unknown): string {
   if (firstStructured?.description) return firstStructured.description;
   if (firstStructured?.message) return firstStructured.message;
 
-  if (err.data && typeof err.data === 'object') {
-    const data = err.data as Record<string, unknown>;
-    if (typeof data.message === 'string' && data.message.trim()) return data.message;
+  const dataMessage = readMessage(err.data);
+  if (dataMessage) return dataMessage;
 
-    const nestedError = data.error;
-    if (nestedError && typeof nestedError === 'object') {
-      const nested = nestedError as Record<string, unknown>;
-      if (typeof nested.message === 'string' && nested.message.trim()) return nested.message;
+  const nestedErrorMessage = readMessage(err.error);
+  if (nestedErrorMessage) return nestedErrorMessage;
+
+  return null;
+}
+
+export function getErrorMessage(error: unknown, fallbackMessage = 'Something went wrong') {
+  return readMessage(error) ?? fallbackMessage;
+}
+
+export async function getResponseError(response: Response, fallbackMessage: string) {
+  let body: unknown;
+  try {
+    body = await response.clone().json();
+  } catch {
+    try {
+      body = await response.text();
+    } catch {
+      body = null;
     }
   }
 
-  if (typeof err.error === 'string' && err.error.trim()) return err.error;
-
-  return 'Internal server error';
+  return new Error(getErrorMessage(body, fallbackMessage));
 }
 
 export function TheAduseiErrorResponse(error: unknown, fallbackMessage?: string) {
-  const message = readMessage(error) || fallbackMessage || 'Something went wrong';
+  const message = getErrorMessage(error, fallbackMessage);
   const now = Date.now();
 
   // Prevent spammy duplicate toasts when the same failing request re-renders.

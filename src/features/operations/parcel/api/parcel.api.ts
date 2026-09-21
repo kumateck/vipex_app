@@ -549,6 +549,7 @@ export type ParcelSearchFilters = {
   hasPickupQueue?: boolean | null;
   agedOnly?: boolean | null;
   storageChargeAccruing?: boolean | null;
+  cashierCollectionRequired?: boolean | null;
   includeDeleted?: boolean | null;
   assignedToCurrentUser?: boolean | null;
 };
