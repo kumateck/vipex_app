@@ -13,6 +13,7 @@ export function useCallCenterFollowUp(
   canRead: boolean,
   canRecordCall: boolean,
   canCollect: boolean,
+  enabled = true,
 ) {
   const { session, withAuth } = useAuth();
   const [search, setSearch] = useState('');
@@ -21,16 +22,14 @@ export function useCallCenterFollowUp(
   const [selected, setSelected] = useState<ParcelSearchRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const companyId = session.user?.company?.id ?? session.user?.companyId ?? '';
-  const branchId = session.user?.branch?.id ?? session.user?.branchId ?? '';
   const userId = session.user?.id ?? session.user?.sub ?? '';
 
   const load = useCallback(async () => {
-    if (!canRead || !companyId || !branchId) return;
+    if (!canRead || !enabled) return;
     setLoading(true);
     try {
       const result = await withAuth((token) =>
-        listAddressCollectionParcels(token, { companyId, branchId, search: submittedSearch }),
+        listAddressCollectionParcels(token, { search: submittedSearch }),
       );
       setParcels(result.data);
     } catch (error) {
@@ -38,7 +37,7 @@ export function useCallCenterFollowUp(
     } finally {
       setLoading(false);
     }
-  }, [branchId, canRead, companyId, submittedSearch, withAuth]);
+  }, [canRead, enabled, submittedSearch, withAuth]);
 
   useEffect(() => void load(), [load]);
 

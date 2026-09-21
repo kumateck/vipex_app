@@ -139,7 +139,7 @@ export function MobileOperationsHubScreen() {
         <ModuleCard
           icon="call-outline"
           title="Call Center Follow-up"
-          description="Call receivers and collect confirmed doorstep addresses and delivery fees."
+          description="Work your assigned call queue, record outcomes, and collect confirmed delivery addresses."
           href="/(app)/call-center-follow-up"
           linkLabel="Open Follow-up"
         />

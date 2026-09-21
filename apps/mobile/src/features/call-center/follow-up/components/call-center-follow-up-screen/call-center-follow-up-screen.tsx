@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
 import {
@@ -16,8 +17,12 @@ import {
   canViewCallCenterFollowUp,
 } from '@mobile/lib/permissions';
 import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
-import { useCallCenterFollowUp } from '../../hooks';
+import { CallOutcomeDialog } from '../../dialogs';
+import { useAssignedCallOutcomes, useCallCenterFollowUp } from '../../hooks';
+import type { CallCenterQueueMode } from '../../types';
 import { AddressCollectionForm } from './address-collection-form';
+import { AssignedCallList } from './assigned-call-list';
+import { CallCenterQueueSwitch } from './call-center-queue-switch';
 
 export function CallCenterFollowUpScreen() {
   const { session } = useAuth();
@@ -26,7 +31,14 @@ export function CallCenterFollowUpScreen() {
   const canRead = canViewCallCenterFollowUp(permissions);
   const canRecordCall = canRecordCallCenterContact(permissions);
   const canCollect = canCollectDoorstepAddress(permissions);
-  const workflow = useCallCenterFollowUp(canRead, canRecordCall, canCollect);
+  const [mode, setMode] = useState<CallCenterQueueMode>(canRecordCall ? 'assigned' : 'addresses');
+  const assigned = useAssignedCallOutcomes(canRecordCall && mode === 'assigned');
+  const addresses = useCallCenterFollowUp(
+    canCollect,
+    canRecordCall,
+    canCollect,
+    mode === 'addresses',
+  );
 
   if (!canRead)
     return (
@@ -39,34 +51,59 @@ export function CallCenterFollowUpScreen() {
     <AppScreen>
       <AppPageHeader
         title="Call Center Follow-up"
-        subtitle="Call receivers and capture confirmed doorstep addresses and fees."
+        subtitle="Work parcels assigned to you and record the receiver's confirmed outcome."
       />
-      {workflow.selected ? (
+      <CallCenterQueueSwitch
+        value={mode}
+        showAssigned={canRecordCall}
+        showAddresses={canCollect}
+        onChange={(value) => {
+          addresses.setSelected(null);
+          assigned.closeOutcome();
+          setMode(value);
+        }}
+      />
+      {mode === 'assigned' ? (
+        <AssignedCallList
+          search={assigned.search}
+          loading={assigned.loading}
+          saving={assigned.saving}
+          parcels={assigned.parcels}
+          onSearchChange={assigned.setSearch}
+          onSearch={assigned.submitSearch}
+          onOpenOutcome={assigned.openOutcome}
+          onCallPhone={assigned.callPhone}
+        />
+      ) : addresses.selected ? (
         <AddressCollectionForm
-          parcel={workflow.selected}
-          saving={workflow.saving}
+          parcel={addresses.selected}
+          saving={addresses.saving}
           canCollect={canCollect}
-          onBack={() => workflow.setSelected(null)}
-          onCall={() => void workflow.callReceiver(workflow.selected!)}
-          onSave={workflow.saveAddress}
+          onBack={() => addresses.setSelected(null)}
+          onCall={() => void addresses.callReceiver(addresses.selected!)}
+          onSave={addresses.saveAddress}
         />
       ) : (
         <>
           <View style={styles.searchRow}>
             <View style={styles.searchInput}>
               <AppInput
-                value={workflow.search}
-                onChangeText={workflow.setSearch}
+                value={addresses.search}
+                onChangeText={addresses.setSearch}
                 placeholder="Booking, tracking or receiver"
               />
             </View>
-            <AppButton title="Search" loading={workflow.loading} onPress={workflow.submitSearch} />
+            <AppButton
+              title="Search"
+              loading={addresses.loading}
+              onPress={addresses.submitSearch}
+            />
           </View>
-          {workflow.loading ? (
+          {addresses.loading ? (
             <AppSkeletonCard />
-          ) : workflow.parcels.length ? (
-            workflow.parcels.map((parcel) => (
-              <Pressable key={parcel.id} onPress={() => workflow.setSelected(parcel)}>
+          ) : addresses.parcels.length ? (
+            addresses.parcels.map((parcel) => (
+              <Pressable key={parcel.id} onPress={() => addresses.setSelected(parcel)}>
                 <AppCard>
                   <Text style={[styles.title, { color: theme.colors.text }]}>
                     {parcel.bookingCode}
@@ -87,6 +124,25 @@ export function CallCenterFollowUpScreen() {
           )}
         </>
       )}
+      <CallOutcomeDialog
+        parcel={assigned.selected}
+        outcome={assigned.outcome}
+        useSecondReceiver={assigned.useSecondReceiver}
+        secondReceiverName={assigned.secondReceiverName}
+        secondReceiverPhone={assigned.secondReceiverPhone}
+        sendSms={assigned.sendSms}
+        sendEmail={assigned.sendEmail}
+        saving={assigned.saving}
+        onOutcomeChange={assigned.setOutcome}
+        onUseSecondReceiverChange={assigned.setUseSecondReceiver}
+        onSecondReceiverNameChange={assigned.setSecondReceiverName}
+        onSecondReceiverPhoneChange={assigned.setSecondReceiverPhone}
+        onSendSmsChange={assigned.setSendSms}
+        onSendEmailChange={assigned.setSendEmail}
+        onCall={() => void assigned.callReceiver()}
+        onClose={assigned.closeOutcome}
+        onSave={() => void assigned.saveOutcome()}
+      />
     </AppScreen>
   );
 }

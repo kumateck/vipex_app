@@ -612,6 +612,7 @@ export async function updateParcel(
     parcelDetails?: string;
     parcelContent?: string;
     status?: number;
+    secondReceiverId?: string | null;
   },
 ): Promise<{ id: string }> {
   const { id, ...body } = input;
