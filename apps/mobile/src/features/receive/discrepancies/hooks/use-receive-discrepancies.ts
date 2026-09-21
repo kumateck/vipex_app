@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { notifyError, notifySuccess, notifyWarning } from '@mobile/lib/notify';
@@ -31,10 +32,7 @@ export function useReceiveDiscrepancies(canRead: boolean) {
       const result = await withAuth(listOpenDiscrepancies);
       setOpenItems(result.data);
     } catch (error) {
-      notifyError(
-        'Discrepancies unavailable',
-        error instanceof Error ? error.message : 'Try again.',
-      );
+      notifyError('Discrepancies unavailable', getMobileErrorMessage(error, '') || 'Try again.');
     } finally {
       setLoading(false);
     }
@@ -51,7 +49,7 @@ export function useReceiveDiscrepancies(canRead: boolean) {
         );
         setMatches(result.data);
       } catch (error) {
-        notifyError('Parcel search failed', error instanceof Error ? error.message : 'Try again.');
+        notifyError('Parcel search failed', getMobileErrorMessage(error, '') || 'Try again.');
       }
     },
     [companyId, withAuth],
@@ -83,7 +81,7 @@ export function useReceiveDiscrepancies(canRead: boolean) {
         } catch (uploadError) {
           setPendingEvidence({ id: record.id, photo: input.photo });
           notifyWarning(
-            `Discrepancy was saved, but the photo upload failed: ${uploadError instanceof Error ? uploadError.message : 'retry from the discrepancy record.'}`,
+            `Discrepancy was saved, but the photo upload failed: ${getMobileErrorMessage(uploadError, 'retry from the discrepancy record.')}`,
             'Photo upload failed',
           );
         }
@@ -91,10 +89,7 @@ export function useReceiveDiscrepancies(canRead: boolean) {
         await load();
         return true;
       } catch (error) {
-        notifyError(
-          'Discrepancy not logged',
-          error instanceof Error ? error.message : 'Try again.',
-        );
+        notifyError('Discrepancy not logged', getMobileErrorMessage(error, '') || 'Try again.');
         return false;
       } finally {
         setSaving(false);
@@ -117,7 +112,7 @@ export function useReceiveDiscrepancies(canRead: boolean) {
       setPendingEvidence(null);
       notifySuccess('The captured photo is now linked to the discrepancy.', 'Evidence uploaded');
     } catch (error) {
-      notifyError('Evidence upload failed', error instanceof Error ? error.message : 'Try again.');
+      notifyError('Evidence upload failed', getMobileErrorMessage(error, '') || 'Try again.');
     } finally {
       setSaving(false);
     }

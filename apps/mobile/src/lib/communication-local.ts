@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { getItemAsync, setItemAsync } from '@mobile/lib/secure-store-compat';
 import { reportMobileErrorToDiscord } from '@mobile/lib/mobile-error-reporter';
 import type { CommunicationMessage } from '@mobile/types/communication';
@@ -62,7 +63,7 @@ async function safeGetItem(key: string): Promise<string | null> {
   } catch (error) {
     logStorageError('secure storage getItem failed', {
       key,
-      error: error instanceof Error ? error.message : String(error),
+      error: getMobileErrorMessage(error, '') || String(error),
     });
     return null;
   }
@@ -75,7 +76,7 @@ async function safeSetItem(key: string, value: string): Promise<void> {
   } catch (error) {
     logStorageError('secure storage setItem failed', {
       key,
-      error: error instanceof Error ? error.message : String(error),
+      error: getMobileErrorMessage(error, '') || String(error),
     });
   }
 }

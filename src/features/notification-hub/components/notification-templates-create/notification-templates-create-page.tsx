@@ -55,11 +55,10 @@ export function NotificationTemplatesUpsertPage() {
       onClose();
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : isEditMode
-            ? 'Failed to update template'
-            : 'Failed to create template',
+        getErrorMessage(
+          error,
+          isEditMode ? 'Failed to update template' : 'Failed to create template',
+        ),
       );
     }
   };
@@ -106,3 +105,4 @@ export function NotificationTemplatesUpsertPage() {
 }
 
 export const NotificationTemplatesCreatePage = NotificationTemplatesUpsertPage;
+import { getErrorMessage } from '@/lib/TheAduseiErrorResponse';

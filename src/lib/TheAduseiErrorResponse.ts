@@ -1,11 +1,16 @@
 import { toast } from 'sonner';
 
 type ErrorLike = {
+  code?: string;
   message?: string;
   status?: number;
+  body?: unknown;
+  cause?: unknown;
   data?: unknown;
+  detail?: unknown;
   error?: unknown;
-  errors?: Array<{ description?: string; message?: string }>;
+  errors?: unknown;
+  response?: unknown;
 };
 
 let lastToast = { message: '', at: 0 };
@@ -109,40 +114,62 @@ export function tryRecoverFromStaleBuildError(error: unknown): boolean {
   return isLikelyStaleBuildError(error) && tryReloadForStaleBuild();
 }
 
-function readMessage(error: unknown): string {
-  if (!error) return 'Something went wrong';
+function readMessage(error: unknown, seen = new Set<object>()): string | null {
+  if (!error) return null;
 
-  if (typeof error === 'string') return error;
-
-  if (error instanceof Error) return error.message || 'Something went wrong';
+  if (typeof error === 'string') return error.trim() || null;
+  if (typeof error !== 'object') return null;
+  if (seen.has(error)) return null;
+  seen.add(error);
 
   const err = error as ErrorLike;
 
-  const topMessage = err.message;
-  if (typeof topMessage === 'string' && topMessage.trim()) return topMessage;
-
-  const firstStructured = err.errors?.[0];
-  if (firstStructured?.description) return firstStructured.description;
-  if (firstStructured?.message) return firstStructured.message;
-
-  if (err.data && typeof err.data === 'object') {
-    const data = err.data as Record<string, unknown>;
-    if (typeof data.message === 'string' && data.message.trim()) return data.message;
-
-    const nestedError = data.error;
-    if (nestedError && typeof nestedError === 'object') {
-      const nested = nestedError as Record<string, unknown>;
-      if (typeof nested.message === 'string' && nested.message.trim()) return nested.message;
+  if (Array.isArray(err.errors)) {
+    for (const item of err.errors) {
+      const validationMessage = readMessage(item, seen);
+      if (validationMessage) return validationMessage;
+    }
+  } else if (err.errors && typeof err.errors === 'object') {
+    for (const value of Object.values(err.errors)) {
+      const validationMessage = Array.isArray(value)
+        ? readMessage(value[0], seen)
+        : readMessage(value, seen);
+      if (validationMessage) return validationMessage;
     }
   }
 
-  if (typeof err.error === 'string' && err.error.trim()) return err.error;
+  for (const nested of [err.data, err.body, err.response, err.error, err.detail, err.cause]) {
+    const nestedMessage = readMessage(nested, seen);
+    if (nestedMessage) return nestedMessage;
+  }
 
-  return 'Internal server error';
+  const topMessage = err.message;
+  if (typeof topMessage === 'string' && topMessage.trim()) return topMessage.trim();
+
+  return null;
+}
+
+export function getErrorMessage(error: unknown, fallbackMessage = 'Something went wrong') {
+  return readMessage(error) ?? fallbackMessage;
+}
+
+export async function getResponseError(response: Response, fallbackMessage: string) {
+  let body: unknown;
+  try {
+    body = await response.clone().json();
+  } catch {
+    try {
+      body = await response.text();
+    } catch {
+      body = null;
+    }
+  }
+
+  return new Error(getErrorMessage(body, fallbackMessage));
 }
 
 export function TheAduseiErrorResponse(error: unknown, fallbackMessage?: string) {
-  const message = readMessage(error) || fallbackMessage || 'Something went wrong';
+  const message = getErrorMessage(error, fallbackMessage);
   const now = Date.now();
 
   // Prevent spammy duplicate toasts when the same failing request re-renders.

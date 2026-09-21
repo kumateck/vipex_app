@@ -1,6 +1,6 @@
 # Mobile Frontline Workflows
 
-Last audited: 2026-08-27
+Last audited: 2026-09-21
 
 ## Scope
 
@@ -42,11 +42,24 @@ An authorized completing agent can:
 
 Mobile currently submits `PAY_NOW` settlement. Credit completion remains available on desktop until the mobile flow includes customer credit eligibility, credit-limit presentation, and cashier-session parity. The server rejects concurrent claims, expired drafts, invalid destinations, invalid charges, and unavailable payment/session combinations.
 
-## Call-Center Follow-up and Address Collection
+## Call-Center Assigned Calls and Address Collection
 
-The list is restricted to the authenticated branch and parcels in Home Delivery Requested status. Staff can search by booking, tracking, or receiver data and use the device telephone application to call the receiver.
+The Call Center Follow-up screen has two permission-aware queues:
 
-- Users with `CanReadCallCenterParcelStatus` can record the call through `/deliveries/dd/:parcelId/call`.
+- **Assigned calls** is available with `CanReadCallCenterParcelStatus`. It uses `GET /shipments/parcels/call-center/assigned`, which restricts results to the authenticated user's company, destination branch, and user ID. It includes Arrived at Destination, Customer Contacted, and Returned to Office parcels so follow-up remains visible until a pickup or delivery outcome is recorded.
+- **Delivery addresses** is available with `CanMarkDoorstepCalled`. It uses `GET /shipments/parcels/call-center/address-collection`, scoped by the server to the authenticated company and branch and to Home Delivery Requested parcels.
+
+When both permissions are present, mobile shows a native queue switch and defaults to Assigned calls. Users with only one permission see only the permitted workflow. Both queues support search by booking, tracking, receiver, or telephone data.
+
+An assigned parcel card shows booking and received time, parcel and receiver details, route, receiver amount, contact state, and underlying parcel status. The Call Outcome sheet can open the device telephone application and records one of:
+
+- Customer will get back → Customer Contacted
+- Customer will come → Awaiting Pickup
+- Customer wants delivery → Home Delivery Requested
+
+Awaiting Pickup optionally supports a newly created second receiver, subject to server customer-create permission and validation. The form requires a name and a ten-digit telephone number. SMS is selected by default; email is optional. Parcel status is saved before notification dispatch. If notification dispatch fails, mobile reports partial success, closes the completed outcome, and refreshes the assigned queue rather than inviting a duplicate status mutation.
+
+- In Delivery addresses, users who also have `CanReadCallCenterParcelStatus` can record the call through `/deliveries/dd/:parcelId/call`.
 - Users with `CanMarkDoorstepCalled` can save a confirmed address and delivery fee through `/deliveries/dd/:parcelId/address-collected`.
 - A user with only one permission receives only that capability; opening the telephone application itself does not grant the server mutation.
 
@@ -106,7 +119,8 @@ Credit eligibility, credit limit, customer type, identity verification, governme
 - Granted, read-only, action-only where supported, and fully denied permission combinations for every workflow.
 - Direct navigation with no permission performs no protected request.
 - Self-service available, claimed, concurrent claim, expired, completed, split-payment, and server-validation cases.
-- Call-center user with call-only permission, address-only permission, both permissions, missing phone, invalid address, and invalid fee.
+- Call-center agent with no assignments, assigned arrival/contacted/returned parcels, search, each outcome, missing phone, invalid second receiver, notification partial failure, and refresh after save.
+- Call-center user with assigned-call-only permission, address-only permission, both permissions, invalid address, and invalid fee.
 - Discrepancy selected-system-record, unmatched physical parcel, missing identity, missing notes, denied camera, capture failure, upload failure after create, and successful linked upload.
 - Delivery review branch mismatch, already-reviewed conflict, approval, rejection, and optional note.
 - Customer search with no results, read-only details, permitted contact update, duplicate telephone conflict, and company isolation.

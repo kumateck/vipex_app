@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -44,7 +45,7 @@ export function FleetCompliancePolicyAckCreatePage() {
       toast.success('Policy acknowledgment saved');
       navigate('/fleet-transport/compliance/ops');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save acknowledgment');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save acknowledgment');
     }
   };
 

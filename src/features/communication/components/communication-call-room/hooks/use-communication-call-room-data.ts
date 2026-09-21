@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { skipToken } from '@reduxjs/toolkit/query';
 import { toast } from 'sonner';
@@ -128,7 +129,7 @@ export function useCommunicationCallRoomData({
       setCallChatInput('');
       refetchCallChatMessages();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send in-call chat message.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to send in-call chat message.');
     }
   };
 
@@ -140,7 +141,7 @@ export function useCommunicationCallRoomData({
       await updateCallStatus({ id: call.id, status }).unwrap();
       toast.success(`Call marked as ${prettyValue(status)}.`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update call status.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update call status.');
     }
   };
 

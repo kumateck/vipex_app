@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useEffect, useState } from 'react';
 import { AppScreen } from '@mobile/components/screen';
 import { useLocalSearchParams } from '@mobile/navigation/router-compat';
@@ -89,7 +90,7 @@ function ParcelCreateForm({
       .catch((error) => {
         notifyError(
           'Failed to load branches',
-          error instanceof Error ? error.message : 'Please try again',
+          getMobileErrorMessage(error, '') || 'Please try again',
         );
       })
       .finally(() => {
@@ -114,7 +115,7 @@ function ParcelCreateForm({
       .catch((error) => {
         notifyError(
           'Failed to load locations',
-          error instanceof Error ? error.message : 'Please try again',
+          getMobileErrorMessage(error, '') || 'Please try again',
         );
       })
       .finally(() => {
@@ -228,7 +229,7 @@ function ParcelCreateForm({
     } catch (error) {
       notifyError(
         'Failed to create parcel',
-        error instanceof Error ? error.message : 'Please try again',
+        getMobileErrorMessage(error, '') || 'Please try again',
       );
       void hapticError();
     } finally {

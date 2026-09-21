@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { getErrorMessage, getResponseError } from '@/lib/TheAduseiErrorResponse';
 import { useAuthStore } from '@/stores/auth-store';
 import { isOptionalTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import { useUpdateCustomerMutation } from '@/features/customers/api';
@@ -64,9 +65,16 @@ export function useShelfPickerUpdateWorkflow() {
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
       ]);
-      if (!parcelsRes.ok || !staffRes.ok) throw new Error('Failed to fetch shelf picker data');
+      if (!parcelsRes.ok) {
+        throw await getResponseError(parcelsRes, 'Failed to fetch shelf picker parcels');
+      }
+      if (!staffRes.ok) {
+        throw await getResponseError(staffRes, 'Failed to fetch shelf picker staff');
+      }
       setListData(await parcelsRes.json());
       setStaffOptions(await staffRes.json());
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to fetch shelf picker data'));
     } finally {
       setIsLoading(false);
     }
@@ -93,8 +101,7 @@ export function useShelfPickerUpdateWorkflow() {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to update shelf picker');
+        throw await getResponseError(res, 'Failed to update shelf picker');
       }
 
       setSelectedParcel(null);

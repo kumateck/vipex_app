@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useMemo, useState } from 'react';
 import { useLocalSearchParams } from '@mobile/navigation/router-compat';
 import { hapticError, hapticSuccess, hapticTap } from '@mobile/lib/haptics';
@@ -84,7 +85,7 @@ export function useAssignedDeliveries() {
         if (type === 'delivered') setSignatureParcelId(null);
         return true;
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to update this delivery.';
+        const message = getMobileErrorMessage(error, '') || 'Unable to update this delivery.';
         const needsSession = message.toLowerCase().includes('active cashier session');
         notifyError(
           needsSession ? 'Cashier session required' : 'Update failed',

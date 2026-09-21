@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/datatable';
@@ -87,7 +88,7 @@ export function ParcelInternalTransferAcknowledgePage() {
       setSelectedTransferId('');
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to acknowledge transfer');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to acknowledge transfer');
     }
   }, [acknowledgeTransfer, refetch, selectedTransferId]);
 

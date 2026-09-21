@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { ParcelReconciliationCaseType, ParcelStatus } from '@/db/schemas/enums';
@@ -89,7 +90,7 @@ export function useSenderPaymentsWorkflow() {
       }
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete parcel');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to delete parcel');
     }
   };
 
@@ -137,7 +138,7 @@ export function useSenderPaymentsWorkflow() {
       reconciliation.closeReconciliationCase();
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create reconciliation case');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create reconciliation case');
     }
   };
 

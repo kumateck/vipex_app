@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { createCommunicationMessage } from '@mobile/lib/api';
@@ -157,7 +158,7 @@ export function useThreadMessageSender({
             : '';
       notifyError(
         'Send failed',
-        `${error instanceof Error ? error.message : 'Unable to send message'}${suffix}`,
+        `${getMobileErrorMessage(error, '') || 'Unable to send message'}${suffix}`,
       );
       void loadMessages();
     } finally {

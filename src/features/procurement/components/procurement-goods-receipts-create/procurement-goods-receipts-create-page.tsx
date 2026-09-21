@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -83,7 +84,7 @@ export function ProcurementGoodsReceiptsCreatePage() {
       toast.success(`Goods receipt ${result.receiptNo} created`);
       navigate('/procurement/goods-receipts');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create goods receipt');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create goods receipt');
     }
   };
 

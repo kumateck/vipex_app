@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -27,7 +28,7 @@ export function FleetMaintenanceProcurementLinkagePage() {
         `Low-stock hook done. Parts ${result.lowStockParts}, recipients ${result.recipients}, email sent ${result.emailSent}.`,
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to run low-stock hook');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to run low-stock hook');
     }
   };
 

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -134,7 +135,7 @@ export function CashierSessionControls() {
       setSessionTypeId('');
       setOpeningBalance('');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open session');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to open session');
     }
   };
 
@@ -159,7 +160,7 @@ export function CashierSessionControls() {
       setIsCloseDialogOpen(false);
       setClosingBalance('0');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to close session');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to close session');
     }
   };
 

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -47,7 +48,7 @@ export function FleetDriverTrainingRecordCreatePage() {
       toast.success('Training record created');
       navigate('/fleet-transport/drivers/training');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create training record');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create training record');
     }
   };
 

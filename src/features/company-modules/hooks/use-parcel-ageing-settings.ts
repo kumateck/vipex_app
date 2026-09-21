@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useListCompanyModulesQuery, useSetCompanyModuleStateMutation } from '../api';
@@ -83,7 +84,7 @@ export function useParcelAgeingSettings() {
       toast.success('Parcel ageing policy updated');
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save parcel ageing policy');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save parcel ageing policy');
     } finally {
       setIsSaving(false);
     }

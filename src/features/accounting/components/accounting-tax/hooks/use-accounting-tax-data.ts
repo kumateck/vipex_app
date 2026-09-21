@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { TaxFilingStatus } from '@/db/schemas/enums';
@@ -110,7 +111,7 @@ export function useAccountingTaxData({ user }: { user: AuthUser }) {
       setPeriodNotes('');
       await reloadAll();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create tax filing period');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create tax filing period');
     }
   }
 
@@ -124,7 +125,7 @@ export function useAccountingTaxData({ user }: { user: AuthUser }) {
       toast.success(successMessage);
       await refetchTaxItems();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : failureMessage);
+      toast.error(getApplicationErrorMessage(error, '') || failureMessage);
     }
   }
 
@@ -138,7 +139,7 @@ export function useAccountingTaxData({ user }: { user: AuthUser }) {
       toast.success(successMessage);
       await reloadAll();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : failureMessage);
+      toast.error(getApplicationErrorMessage(error, '') || failureMessage);
     }
   }
 

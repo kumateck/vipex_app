@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { Conflict, NotFound } from '@/server/utils/http-error';
 import { env } from '@/server/utils/env';
 import { recordAuditLog } from '../audit/logger';
@@ -44,6 +45,7 @@ import {
   type SmsEventCode,
 } from './sms-event-definitions';
 import { buildCampaignTemplateValues } from './campaign-template-values';
+import { buildMnotifySmsPayload, type SmsType } from './sms-provider-payloads';
 
 type ProviderRow = Awaited<ReturnType<typeof getDefaultProviderByChannelRepo>>;
 
@@ -73,7 +75,12 @@ function renderTemplate(
   return output;
 }
 
-async function sendSmsWithProvider(provider: NonNullable<ProviderRow>, to: string, body: string) {
+async function sendSmsWithProvider(
+  provider: NonNullable<ProviderRow>,
+  to: string,
+  body: string,
+  smsType?: SmsType,
+) {
   const key = provider.providerKey.toLowerCase();
   const cfg = (provider.configJson ?? {}) as Record<string, unknown>;
 
@@ -108,6 +115,7 @@ async function sendSmsWithProvider(provider: NonNullable<ProviderRow>, to: strin
         message: body,
         providerKey: provider.providerKey,
         channel: 'sms',
+        ...(smsType ? { sms_type: smsType } : {}),
       }),
     });
 
@@ -188,7 +196,7 @@ async function sendSmsWithProvider(provider: NonNullable<ProviderRow>, to: strin
     } catch (error) {
       return {
         status: 'failed',
-        errorMessage: error instanceof Error ? error.message : 'MTN SMS request failed',
+        errorMessage: getApplicationErrorMessage(error, '') || 'MTN SMS request failed',
       } satisfies DeliveryResult;
     }
   }
@@ -212,13 +220,9 @@ async function sendSmsWithProvider(provider: NonNullable<ProviderRow>, to: strin
         headers: {
           'content-type': 'application/json',
         },
-        body: JSON.stringify({
-          recipient: [to],
-          sender: senderId,
-          message: body,
-          is_schedule: 'false',
-          schedule_date: '',
-        }),
+        body: JSON.stringify(
+          buildMnotifySmsPayload({ recipient: to, sender: senderId, message: body, smsType }),
+        ),
       });
 
       if (!response.ok) {
@@ -258,7 +262,7 @@ async function sendSmsWithProvider(provider: NonNullable<ProviderRow>, to: strin
     } catch (error) {
       return {
         status: 'failed',
-        errorMessage: error instanceof Error ? error.message : 'mNotify request failed',
+        errorMessage: getApplicationErrorMessage(error, '') || 'mNotify request failed',
       } satisfies DeliveryResult;
     }
   }
@@ -277,6 +281,7 @@ export async function sendSmsSvc(input: {
   recipientId?: string | null;
   recipientName?: string | null;
   metadataJson?: Record<string, unknown> | null;
+  smsType?: SmsType;
 }): Promise<DeliveryResult> {
   const provider = await getDefaultProviderByChannelRepo(input.companyId, 'sms');
   const createdDispatch = await createNotificationDispatchRepo({
@@ -308,6 +313,7 @@ export async function sendSmsSvc(input: {
     recipientAddress: input.phone,
     subject: null,
     body: input.body,
+    smsType: input.smsType,
   });
 }
 
@@ -337,6 +343,7 @@ export async function dispatchSmsEventSvc(input: {
       ...input.metadataJson,
       eventCode: definition.code,
     },
+    smsType: definition.smsType,
   });
 }
 
@@ -363,7 +370,7 @@ async function sendEmailWithProvider(input: {
   } catch (error) {
     return {
       status: 'failed',
-      errorMessage: error instanceof Error ? error.message : 'Failed to send email',
+      errorMessage: getApplicationErrorMessage(error, '') || 'Failed to send email',
     };
   }
 }
@@ -376,6 +383,7 @@ async function dispatchSingleMessage(input: {
   recipientAddress: string;
   subject: string | null;
   body: string;
+  smsType?: SmsType;
 }) {
   const channel = normalizeChannel(input.channel);
   const provider = input.provider;
@@ -389,7 +397,7 @@ async function dispatchSingleMessage(input: {
       errorMessage: `No active default provider configured for ${channel}`,
     };
   } else if (channel === 'sms') {
-    result = await sendSmsWithProvider(provider, input.recipientAddress, input.body);
+    result = await sendSmsWithProvider(provider, input.recipientAddress, input.body, input.smsType);
   } else if (channel === 'email') {
     result = await sendEmailWithProvider({
       to: input.recipientAddress,

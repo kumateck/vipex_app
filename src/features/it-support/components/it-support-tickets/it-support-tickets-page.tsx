@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { MoreHorizontal } from 'lucide-react';
@@ -179,7 +180,7 @@ export function ItSupportTicketsPage() {
         return next;
       });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update ticket');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update ticket');
     } finally {
       setSubmittingRowId(null);
     }

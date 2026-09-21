@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Room, RoomEvent, Track, type LocalVideoTrack } from 'livekit-client';
 import { toast } from 'sonner';
@@ -173,7 +174,7 @@ export function useCommunicationCallRoomMedia({
       await refreshDevices();
       setIsMediaConnected(true);
     } catch (error) {
-      setMediaError(error instanceof Error ? error.message : 'Unable to connect media room.');
+      setMediaError(getApplicationErrorMessage(error, '') || 'Unable to connect media room.');
       throw error;
     } finally {
       setIsMediaConnecting(false);
@@ -193,7 +194,7 @@ export function useCommunicationCallRoomMedia({
         await updateCallStatus({ id: call.id, status: 'active' }).unwrap();
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to join call room.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to join call room.');
     }
   };
 
@@ -255,7 +256,7 @@ export function useCommunicationCallRoomMedia({
         toast.error('Screen share needs desktop capture support in Electron (getDisplayMedia).');
         return;
       }
-      toast.error(error instanceof Error ? error.message : 'Unable to toggle screen share.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Unable to toggle screen share.');
     }
   };
 

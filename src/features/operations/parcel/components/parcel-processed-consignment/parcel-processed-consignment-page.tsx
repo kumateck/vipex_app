@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
@@ -558,7 +559,7 @@ export function ParcelProcessedConsignmentPage() {
       setLockedDestinationId(null);
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create consignment');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create consignment');
     }
   };
 
@@ -653,7 +654,7 @@ export function ParcelProcessedConsignmentPage() {
       setEditingParcel(null);
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update parcel details');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update parcel details');
     }
   };
 

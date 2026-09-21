@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -66,7 +67,7 @@ export function NotificationTemplatesListPage() {
       await updateTemplate({ id, body: { isActive: !isActive } }).unwrap();
       toast.success(`Template ${isActive ? 'deactivated' : 'activated'}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update template');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update template');
     }
   };
 

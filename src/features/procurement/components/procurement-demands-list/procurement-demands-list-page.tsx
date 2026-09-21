@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -112,7 +113,7 @@ export function ProcurementDemandsListPage() {
       toast.success(`Converted ${result.converted} demand(s) to purchase request(s).`);
       setSelectedDemandIds([]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to convert demands');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to convert demands');
     }
   };
 

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -74,7 +75,7 @@ export function ParcelInternalTransfersHistoryPage() {
       setCancelReason('');
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to cancel transfer');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to cancel transfer');
     }
   }, [cancelReason, cancelTransfer, cancelTransferId, refetch]);
 

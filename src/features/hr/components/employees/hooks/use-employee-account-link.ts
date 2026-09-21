@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useListLocationOptionsQuery } from '@/features/locations/api/locations.api';
@@ -41,7 +42,7 @@ export function useEmployeeAccountLink() {
       toast.success('User account created');
       setEmployee(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create user');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create user');
     }
   }, [branchId, createEmployeeUserAccount, employee, locationId, roleId]);
 

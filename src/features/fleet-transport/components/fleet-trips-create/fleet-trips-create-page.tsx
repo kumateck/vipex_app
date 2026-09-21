@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -89,7 +90,7 @@ export function FleetTripsCreatePage() {
       toast.success('Trip created');
       navigate('/fleet-transport/trips');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create trip');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create trip');
     }
   };
 

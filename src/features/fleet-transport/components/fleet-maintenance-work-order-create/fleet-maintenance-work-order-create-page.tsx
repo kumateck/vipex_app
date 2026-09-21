@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -42,7 +43,7 @@ export function FleetMaintenanceWorkOrderCreatePage() {
       toast.success('Work order created');
       navigate('/fleet-transport/maintenance');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create work order');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create work order');
     }
   };
 

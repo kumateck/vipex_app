@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -58,7 +59,7 @@ export function ReconciliationSessionsCreatePage() {
       navigate('/reconciliation/sessions');
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to create reconciliation session',
+        getApplicationErrorMessage(error, '') || 'Failed to create reconciliation session',
       );
     }
   };

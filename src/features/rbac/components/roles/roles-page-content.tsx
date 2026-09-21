@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -107,7 +108,7 @@ export function RolesPageContent() {
       toast.success('Role created');
       setIsCreateOpen(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create role');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create role');
     }
   };
 
@@ -121,7 +122,7 @@ export function RolesPageContent() {
       toast.success('Role updated');
       setIsRenameOpen(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update role');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update role');
     }
   };
 
@@ -131,7 +132,7 @@ export function RolesPageContent() {
       toast.success('Role deleted');
       setRoleToDelete(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete role');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to delete role');
     }
   };
 

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -45,7 +46,7 @@ export function FleetTripClosePage() {
       toast.success('Trip closed');
       navigate('/fleet-transport/trips');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to close trip');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to close trip');
     }
   };
 
