@@ -244,6 +244,9 @@ Recent correction support includes original-session amount corrections so adjust
   cleanly when absent, and do not substitute one party's number for the other.
 - A paid parcel with outstanding storage appears in Receiver Cashier and not Waiting Pickup; after
   full storage payment or waiver it leaves Receiver Cashier and becomes eligible for Waiting Pickup.
+- A fully paid parcel with no outstanding storage appears only in Waiting Pickup, even when its
+  original receiver-payment plan was greater than zero; routing uses non-voided principal payments,
+  not the original payment plan.
 - Single and multi-parcel creation with partial failure.
 - Consignment complete, missing, extra, and duplicate scans.
 - Previous-consignment retrieval for one date and a multi-day inclusive range, empty results,
