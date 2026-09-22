@@ -1,5 +1,9 @@
 # Platform and Access Control
 
+## Local Development Endpoints
+
+The Vipex backend listens on `http://localhost:8080` by default. The web development server listens on `http://localhost:5173` and proxies `/v1`, `/health`, `/docs`, and `/dev` to port 8080. Set `PORT` and `VITE_BACKEND_URL` together when using a different local port.
+
 ## Access Model
 
 Vipex combines authenticated users, roles, granular permissions, company-module gates, company scope, branch scope, and operational assignments. All layers may apply to one action.
@@ -40,6 +44,10 @@ Module administration, workspace behavior, and rollout rules are documented in [
 ## User Lifecycle
 
 The user lifecycle includes invitation, password setup, activation, login, forgot-password reset, authenticated password change, deactivation, and session revocation.
+
+The web user list activates or deactivates an account with `PATCH /v1/users/:id` and a status-only body. This requires `CanUpdateUsers`. A status update changes the account status without requiring or changing cashier type, including on older cashier accounts that have no cashier type. Creating a cashier or changing a user's type to cashier requires a valid cashier type; clearing the type while the user remains a cashier returns `400`. Changing a cashier to a non-cashier type clears the cashier type. The same API behavior applies to any web, mobile, or desktop client that sends these updates.
+
+QA scenarios: activate a legacy cashier with no cashier type using `{ "status": 0 }` and confirm the cashier type remains null; update a cashier status and confirm its existing type is preserved; try assigning cashier type without a cashier subtype and confirm `400`; change a cashier to staff and confirm its subtype is cleared.
 
 Invitation and password-reset codes are time-bound. Passwords are validated and hashed on the server. Active authentication sessions must be revoked after security-sensitive password administration.
 
