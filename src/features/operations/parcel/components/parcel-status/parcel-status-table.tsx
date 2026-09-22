@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
@@ -30,6 +31,10 @@ type ParcelStatusTableProps = {
   onSearchSubmit: () => void;
   onCallOutcome: (parcel: ParcelSearchRow) => void;
   onReturnToPickup: (parcel: ParcelSearchRow) => Promise<void>;
+  selectedParcelIds: Set<string>;
+  onToggleParcel: (parcelId: string, checked: boolean) => void;
+  onSelectAll: (checked: boolean) => void;
+  onBatchCallOutcome: () => void;
 };
 
 export function ParcelStatusTable({
@@ -43,9 +48,32 @@ export function ParcelStatusTable({
   onSearchSubmit,
   onCallOutcome,
   onReturnToPickup,
+  selectedParcelIds,
+  onToggleParcel,
+  onSelectAll,
+  onBatchCallOutcome,
 }: ParcelStatusTableProps) {
+  const selectedCount = rows.filter((row) => selectedParcelIds.has(row.id)).length;
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
+      {
+        id: 'select',
+        header: () => (
+          <Checkbox
+            checked={rows.length > 0 && rows.every((row) => selectedParcelIds.has(row.id))}
+            onCheckedChange={(checked) => onSelectAll(checked === true)}
+            aria-label="Select all parcels"
+          />
+        ),
+        enableSorting: false,
+        cell: ({ row }) => (
+          <Checkbox
+            checked={selectedParcelIds.has(row.original.id)}
+            onCheckedChange={(checked) => onToggleParcel(row.original.id, checked === true)}
+            aria-label={`Select ${row.original.bookingCode}`}
+          />
+        ),
+      },
       {
         id: 'rowNumber',
         header: 'No.',
@@ -178,7 +206,15 @@ export function ParcelStatusTable({
         ),
       },
     ],
-    [isSaving, onCallOutcome, onReturnToPickup],
+    [
+      isSaving,
+      onCallOutcome,
+      onReturnToPickup,
+      onSelectAll,
+      onToggleParcel,
+      rows,
+      selectedParcelIds,
+    ],
   );
 
   return (
@@ -209,6 +245,17 @@ export function ParcelStatusTable({
               Search
             </Button>
           </form>
+
+          {selectedCount > 0 ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {selectedCount} parcel(s) selected
+              </span>
+              <Button type="button" onClick={onBatchCallOutcome} disabled={isSaving}>
+                Call Outcome for Selected
+              </Button>
+            </div>
+          ) : null}
 
           <DataTable
             mode="client"

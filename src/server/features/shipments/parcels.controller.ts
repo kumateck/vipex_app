@@ -75,6 +75,7 @@ export async function listParcelsCtrl(
       consignmentCreatedAt: p.consignmentCreatedAt ? p.consignmentCreatedAt.toISOString() : null,
       pickupQueuedAt: p.pickupQueuedAt ? p.pickupQueuedAt.toISOString() : null,
       pickupQueueEndedAt: p.pickupQueueEndedAt ? p.pickupQueueEndedAt.toISOString() : null,
+      deliveredAt: p.deliveredAt ? p.deliveredAt.toISOString() : null,
     })),
     meta: buildPaginationMeta({
       totalRecords,

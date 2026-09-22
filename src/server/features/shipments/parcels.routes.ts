@@ -41,6 +41,7 @@ import { uploadParcelDiscrepancyEvidenceSvc } from './parcel-discrepancy-evidenc
 import { listUserOptionsRepo } from '../users/repository';
 import { ParcelStatus, UserStatus } from '@/db/schemas/enums';
 import { getBranchRepo } from '../branches/repository';
+import { saveBulkCallOutcomeSvc } from './parcel-bulk-call-outcome.service';
 
 function parseStatuses(value: string | number[] | undefined): number[] | null {
   if (Array.isArray(value)) {
@@ -740,6 +741,30 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcelIncoming)],
       detail: { tags: ['Shipments'], summary: 'Resolve parcel discrepancy' },
+    },
+  )
+  .post(
+    '/bulk-call-outcome',
+    async ({ body, user }) => {
+      const authUser = user as AuthUser;
+      return saveBulkCallOutcomeSvc({
+        parcelIds: body.parcelIds,
+        outcome: body.outcome,
+        companyId: authUser.companyId ?? '',
+        branchId: authUser.branchId ?? '',
+        actorUserId: authUser.sub,
+      });
+    },
+    {
+      body: t.Object({
+        parcelIds: t.Array(UUID, { minItems: 1, maxItems: 100, uniqueItems: true }),
+        outcome: t.Union([t.Literal('follow_up'), t.Literal('pickup'), t.Literal('delivery')]),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadCallCenterParcelStatus),
+      ],
+      detail: { tags: ['Shipments'], summary: 'Save selected parcel call outcomes' },
     },
   )
   .post(

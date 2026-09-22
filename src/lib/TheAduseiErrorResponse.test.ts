@@ -3,8 +3,22 @@ import {
   createHardReloadUrl,
   getErrorMessage,
   getNextStaleBuildReloadAttempt,
+  isAbortError,
   isLikelyStaleBuildError,
+  TheAduseiErrorResponse,
 } from './TheAduseiErrorResponse';
+
+describe('isAbortError', () => {
+  test('recognizes cancellation errors without treating them as user-facing failures', () => {
+    expect(isAbortError('Aborted')).toBe(true);
+    expect(isAbortError(new DOMException('The operation was aborted.', 'AbortError'))).toBe(true);
+    expect(isAbortError('Invalid OTP')).toBe(false);
+  });
+});
+
+test('does not create a toast for an aborted request', () => {
+  expect(TheAduseiErrorResponse('Aborted')).toBe('');
+});
 
 describe('isLikelyStaleBuildError', () => {
   test.each([
