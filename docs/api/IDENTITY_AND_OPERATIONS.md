@@ -58,6 +58,12 @@ System Admin password assignment revokes the target user's active sessions and w
   parcels as arrived. The body contains only unique `parcelIds`; company, branch, and receiving user
   are taken from authentication. Any missing, out-of-scope, deleted, already-received, non-transit,
   or concurrently changed parcel rejects the entire batch.
+- `POST /shipments/parcels/bulk-call-outcome`: save one call outcome for 1–100 unique parcels assigned
+  to the authenticated call agent in their company and destination branch. The body contains
+  `parcelIds` and `outcome` (`follow_up`, `pickup`, or `delivery`). The server validates every parcel,
+  then updates them sequentially in one transaction. Missing, deleted, reassigned, out-of-scope,
+  ineligible, or concurrently changed parcels reject the batch without partial updates. No SMS or
+  email is sent. The response returns `parcelIds`, `updatedCount`, and the resulting `status`.
 - `/shipments/parcels/sticker-prints`: record a successful sticker print and its copy count.
 - `/shipments/consignments`: consignment creation, dispatch, receiving, completeness, and exceptions.
 - `GET /shipments/consignments/history`: list saved consignments for an inclusive `dateFrom` and

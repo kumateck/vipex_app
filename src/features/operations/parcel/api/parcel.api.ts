@@ -102,6 +102,7 @@ export type ParcelSearchRow = {
   pickupLocationName?: string | null;
   plannedToBePaidPsw: number;
   outstandingPrincipalPsw?: number;
+  paidPrincipalPsw?: number;
   outstandingDeliveryFeePsw?: number;
   method: number;
   shelfPickerStaffId: string | null;
@@ -138,6 +139,7 @@ export type ParcelSearchRow = {
   pickupQueueNumber?: number | null;
   pickupQueuedAt?: string | null;
   pickupQueueEndedAt?: string | null;
+  deliveredAt?: string | null;
   currentHolderType?: number | null;
   currentHolderBranchId?: string | null;
   currentHolderBranchName?: string | null;
@@ -1060,6 +1062,17 @@ export const parcelApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    saveBulkCallOutcome: builder.mutation<
+      { parcelIds: string[]; updatedCount: number; status: number },
+      { parcelIds: string[]; outcome: 'follow_up' | 'pickup' | 'delivery' }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcels/bulk-call-outcome',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
     updateParcel: builder.mutation<
       { id: string },
       {
@@ -1472,6 +1485,7 @@ export const {
   useUpdateParcelStatusMutation,
   useMarkParcelReceivedMutation,
   useMarkParcelsReceivedMutation,
+  useSaveBulkCallOutcomeMutation,
   useUpdateParcelMutation,
   useSendParcelStatusCallNotificationMutation,
   useRecordParcelDispositionActionMutation,

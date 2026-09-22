@@ -7,11 +7,13 @@ import { useCreateCustomerMutation } from '@/features/customers/api';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   type ParcelSearchRow,
+  useSaveBulkCallOutcomeMutation,
   useSendParcelStatusCallNotificationMutation,
   useSearchParcelsQuery,
   useUpdateParcelMutation,
 } from '../../api/parcel.api';
 import { ParcelCallOutcomeDialog } from './parcel-call-outcome-dialog';
+import { ParcelBulkCallOutcomeDialog } from './parcel-bulk-call-outcome-dialog';
 import { ParcelStatusTable } from './parcel-status-table';
 import type { ContactOutcome } from './types';
 
@@ -23,6 +25,8 @@ export function ParcelStatusPage() {
   const [searchInput, setSearchInput] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState('');
   const [selectedParcel, setSelectedParcel] = useState<ParcelSearchRow | null>(null);
+  const [selectedParcelIds, setSelectedParcelIds] = useState<Set<string>>(new Set());
+  const [batchParcels, setBatchParcels] = useState<ParcelSearchRow[] | null>(null);
   const [outcome, setOutcome] = useState<ContactOutcome>('follow_up');
   const [useSecondReceiver, setUseSecondReceiver] = useState(false);
   const [secondReceiverName, setSecondReceiverName] = useState('');
@@ -31,6 +35,7 @@ export function ParcelStatusPage() {
   const [sendEmail, setSendEmail] = useState(false);
 
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
+  const [saveBulkCallOutcome, { isLoading: isSavingBulk }] = useSaveBulkCallOutcomeMutation();
   const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
   const [sendCallNotification, { isLoading: isSendingNotification }] =
     useSendParcelStatusCallNotificationMutation();
@@ -74,7 +79,7 @@ export function ParcelStatusPage() {
   }, [arrivedQuery.data?.data]);
 
   const loading = arrivedQuery.isLoading;
-  const isSaving = isUpdatingParcel || isCreatingCustomer || isSendingNotification;
+  const isSaving = isUpdatingParcel || isCreatingCustomer || isSendingNotification || isSavingBulk;
 
   async function refreshQueues() {
     await arrivedQuery.refetch();
@@ -89,6 +94,41 @@ export function ParcelStatusPage() {
     setSendSms(true);
     setSendEmail(false);
   };
+
+  const toggleParcel = (id: string, checked: boolean) => {
+    setSelectedParcelIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const selectAll = (checked: boolean) =>
+    setSelectedParcelIds(checked ? new Set(rows.map((row) => row.id)) : new Set());
+
+  const openBatchCallOutcome = () => {
+    const selected = rows.filter((row) => selectedParcelIds.has(row.id));
+    if (selected.length === 0) return;
+    setOutcome('follow_up');
+    setBatchParcels(selected);
+  };
+
+  async function handleSaveBulkOutcome() {
+    if (!batchParcels?.length) return;
+    try {
+      const result = await saveBulkCallOutcome({
+        parcelIds: batchParcels.map((parcel) => parcel.id),
+        outcome,
+      }).unwrap();
+      toast.success(`Outcome saved for ${result.updatedCount} parcel(s)`);
+      setBatchParcels(null);
+      setSelectedParcelIds(new Set());
+      await refreshQueues();
+    } catch (error) {
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save bulk call outcomes');
+    }
+  }
 
   async function handleReturnToPickup(parcel: ParcelSearchRow) {
     try {
@@ -133,11 +173,7 @@ export function ParcelStatusPage() {
       secondReceiverId = created.id;
     }
 
-    await updateParcel({
-      id: selectedParcel.id,
-      status: nextStatus,
-      secondReceiverId,
-    }).unwrap();
+    await updateParcel({ id: selectedParcel.id, status: nextStatus, secondReceiverId }).unwrap();
 
     if (sendSms || sendEmail) {
       const notification = await sendCallNotification({
@@ -173,9 +209,16 @@ export function ParcelStatusPage() {
         branchId={branchId}
         searchInput={searchInput}
         onSearchInputChange={setSearchInput}
-        onSearchSubmit={() => setSubmittedSearch(searchInput.trim())}
+        onSearchSubmit={() => {
+          setSelectedParcelIds(new Set());
+          setSubmittedSearch(searchInput.trim());
+        }}
         onCallOutcome={openCallOutcome}
         onReturnToPickup={handleReturnToPickup}
+        selectedParcelIds={selectedParcelIds}
+        onToggleParcel={toggleParcel}
+        onSelectAll={selectAll}
+        onBatchCallOutcome={openBatchCallOutcome}
       />
 
       <ParcelCallOutcomeDialog
@@ -195,6 +238,14 @@ export function ParcelStatusPage() {
         isSaving={isSaving}
         onClose={() => setSelectedParcel(null)}
         onSave={handleSaveOutcome}
+      />
+      <ParcelBulkCallOutcomeDialog
+        parcels={batchParcels}
+        outcome={outcome}
+        onOutcomeChange={setOutcome}
+        onClose={() => setBatchParcels(null)}
+        onSave={handleSaveBulkOutcome}
+        isSaving={isSavingBulk}
       />
     </div>
   );

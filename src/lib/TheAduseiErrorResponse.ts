@@ -174,6 +174,7 @@ export async function getResponseError(response: Response, fallbackMessage: stri
 }
 
 export function TheAduseiErrorResponse(error: unknown, fallbackMessage?: string) {
+  if (isAbortError(error)) return '';
   const message = getErrorMessage(error, fallbackMessage);
   const now = Date.now();
 

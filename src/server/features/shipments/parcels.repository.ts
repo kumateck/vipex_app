@@ -148,6 +148,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     callCenterAssignedToUserName: string | null;
     pickupQueuedAt: Date | null;
     pickupQueueEndedAt: Date | null;
+    deliveredAt: Date | null;
     currentHolderType: number | null;
     currentHolderBranchId: string | null;
     currentHolderBranchName: string | null;
@@ -156,6 +157,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     currentHolderWarehouseId: string | null;
     currentHolderWarehouseName: string | null;
     outstandingPrincipalPsw: number;
+    paidPrincipalPsw: number;
     outstandingDeliveryFeePsw: number;
   })[];
   totalRecords: number;
@@ -351,6 +353,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       pickupLocationId: parcels.pickupLocationId,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       outstandingPrincipalPsw: outstandingPrincipalPsw.mapWith(Number),
+      paidPrincipalPsw: paidPrincipalPsw.mapWith(Number),
       outstandingDeliveryFeePsw:
         sql<number>`greatest(coalesce(${deliveries.chargePsw}, 0) - ${paidDeliveryFeePsw}, 0)`.mapWith(
           Number,
@@ -404,6 +407,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       callCenterAssignedToUserName: callCenterAssignee.fullname,
       pickupQueuedAt: pickupQueues.queuedAt,
       pickupQueueEndedAt: pickupQueues.endedAt,
+      deliveredAt: deliveries.deliveredAt,
       currentHolderType: parcelInternalHolders.holderType,
       currentHolderBranchId: parcelInternalHolders.branchId,
       currentHolderBranchName: hb.name,

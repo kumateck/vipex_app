@@ -5,6 +5,7 @@ import {
   getNextStaleBuildReloadAttempt,
   isAbortError,
   isLikelyStaleBuildError,
+  TheAduseiErrorResponse,
 } from './TheAduseiErrorResponse';
 
 describe('isAbortError', () => {
@@ -13,6 +14,10 @@ describe('isAbortError', () => {
     expect(isAbortError(new DOMException('The operation was aborted.', 'AbortError'))).toBe(true);
     expect(isAbortError('Invalid OTP')).toBe(false);
   });
+});
+
+test('does not create a toast for an aborted request', () => {
+  expect(TheAduseiErrorResponse('Aborted')).toBe('');
 });
 
 describe('isLikelyStaleBuildError', () => {
