@@ -30,7 +30,7 @@ const EnvSchema = z.object({
   APP_ENV: z.enum(['development', 'staging', 'production', 'test']).optional(),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   LOG_PRETTY: toBoolean.optional(),
-  PORT: z.coerce.number().int().positive().default(3000),
+  PORT: z.coerce.number().int().positive().default(8080),
   PASSWORD_COST: z.coerce.number().int().positive().default(10),
   DATABASE_URL: z.string().url().min(1, 'DATABASE_URL is required'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
@@ -174,7 +174,7 @@ const inferredAppBaseUrl =
   normalizeAppBaseUrl(process.env.PUBLIC_APP_URL) ??
   normalizeAppBaseUrl(process.env.VERCEL_URL);
 
-const fallbackLocalAppBaseUrl = `http://localhost:${parsed.data.PORT || 3000}`;
+const fallbackLocalAppBaseUrl = `http://localhost:${parsed.data.PORT || 8080}`;
 const resolvedAppBaseUrl = inferredAppBaseUrl ?? fallbackLocalAppBaseUrl;
 const resolvedResetLinkBaseUrl =
   normalizeAppBaseUrl(process.env.RESET_LINK_BASE_URL) ?? resolvedAppBaseUrl;

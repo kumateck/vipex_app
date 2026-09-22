@@ -17,6 +17,7 @@ import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagina
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { EMPTY_META, PARCEL_STATUS_LABELS } from './constants';
 import type { ParcelSuperSearchFilters } from './types';
+import { formatCurrency, formatParcelDate } from './utils';
 
 type ParcelSuperSearchTableProps = {
   companyId: string | null;
@@ -47,49 +48,132 @@ export function ParcelSuperSearchTable({
 }: ParcelSuperSearchTableProps) {
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'bookingCode', header: 'Booking' },
       {
-        id: 'sender',
-        header: 'Sender',
+        id: 'reference',
+        header: 'Parcel Reference',
         cell: ({ row }) => (
-          <div className="leading-tight">
-            <p className="font-medium">{row.original.senderName ?? '-'}</p>
-            <p className="text-xs text-muted-foreground">{row.original.senderPhone ?? '-'}</p>
-          </div>
-        ),
-      },
-      {
-        id: 'receiver',
-        header: 'Receiver',
-        cell: ({ row }) => (
-          <div className="leading-tight">
-            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
-            <p className="text-xs text-muted-foreground">{row.original.receiverPhone ?? '-'}</p>
-          </div>
-        ),
-      },
-      {
-        id: 'source',
-        header: 'Source',
-        cell: ({ row }) => (
-          <div className="leading-tight">
-            <p className="font-medium">{row.original.sourceLocationName ?? '-'}</p>
-            <p className="text-xs text-muted-foreground">
-              {branchNameById.get(row.original.sourceId) ?? row.original.sourceName ?? '-'}
+          <div className="space-y-1 text-xs">
+            <p>
+              <span className="text-muted-foreground">Consignment:</span>{' '}
+              {row.original.consignmentCode ?? '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Booking:</span> {row.original.bookingCode}
             </p>
           </div>
         ),
       },
       {
-        id: 'destination',
-        header: 'Destination',
+        id: 'dates',
+        header: 'Dates',
         cell: ({ row }) => (
-          <div className="leading-tight">
-            <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
-            <p className="text-xs text-muted-foreground">
-              {branchNameById.get(row.original.destinationId) ??
-                row.original.destinationName ??
+          <div className="space-y-1 text-xs">
+            <p>
+              <span className="text-muted-foreground">Sent D&T:</span>{' '}
+              {formatParcelDate(
+                row.original.consignmentCreatedAt ??
+                  row.original.bookingCreatedAt ??
+                  row.original.createdAt,
+              )}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Created D&T:</span>{' '}
+              {formatParcelDate(row.original.createdAt)}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Received D&T:</span>{' '}
+              {formatParcelDate(row.original.receivedAt)}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Delivered D&T:</span>{' '}
+              {formatParcelDate(row.original.deliveredAt)}
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'customers',
+        header: 'Customers',
+        cell: ({ row }) => (
+          <div className="space-y-1 text-xs">
+            <p>
+              <span className="text-muted-foreground">Sender:</span>{' '}
+              {row.original.senderName ?? '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Tel:</span>{' '}
+              {[row.original.senderPhone, row.original.senderPhone2].filter(Boolean).join(' / ') ||
                 '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Receiver:</span>{' '}
+              {row.original.receiverName ?? '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Tel:</span>{' '}
+              {[row.original.receiverPhone, row.original.receiverPhone2]
+                .filter(Boolean)
+                .join(' / ') || '-'}
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'description',
+        header: 'Parcel Description',
+        cell: ({ row }) => (
+          <div className="space-y-1 text-xs">
+            <p>
+              <span className="text-muted-foreground">Details:</span>{' '}
+              {row.original.parcelDetails || '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Content:</span>{' '}
+              {row.original.parcelContent || '-'}
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'payment',
+        header: 'Payment',
+        cell: ({ row }) => (
+          <div className="space-y-1 text-xs">
+            <p>
+              <span className="text-muted-foreground">Value:</span>{' '}
+              {formatCurrency(row.original.parcelValuePsw)}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Paid:</span>{' '}
+              {formatCurrency(row.original.paidPrincipalPsw ?? 0)}
+            </p>
+            <p>
+              <span className="text-muted-foreground">To be paid:</span>{' '}
+              {formatCurrency(row.original.plannedToBePaidPsw)}
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'route',
+        header: 'Route',
+        cell: ({ row }) => (
+          <div className="space-y-1 text-xs">
+            <p>
+              <span className="text-muted-foreground">From Branch:</span>{' '}
+              {row.original.sourceName ?? '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Location:</span>{' '}
+              {row.original.sourceLocationName ?? '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">To Branch:</span>{' '}
+              {row.original.destinationName ?? '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Location:</span>{' '}
+              {row.original.pickupLocationName ?? '-'}
             </p>
           </div>
         ),

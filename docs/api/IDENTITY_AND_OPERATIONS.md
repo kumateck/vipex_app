@@ -14,6 +14,8 @@ All paths are relative to `/v1`.
 - `/cards`: card reference and customer-card operations.
 - `/uploads`: model-linked upload, list, delete, and object proxy.
 
+`PATCH /users/:id` accepts partial user updates and requires `CanUpdateUsers`. `{ "status": 0 }` activates a user without changing or validating an omitted cashier type. Changing a user's type to cashier requires a cashier type, either in the request or already stored on the user. Setting a cashier's type to null returns `400`. Switching to a non-cashier type clears cashier type. This contract applies to web, mobile, and desktop callers.
+
 Mobile receiving evidence uses `POST /shipments/parcels/discrepancies/:id/evidence`. The endpoint validates incoming-parcel permission and company ownership, then creates a shared upload with model type `parcel-discrepancy-evidence` and the discrepancy ID as `modelId`.
 
 Security-sensitive identity methods include:
@@ -56,6 +58,12 @@ System Admin password assignment revokes the target user's active sessions and w
   parcels as arrived. The body contains only unique `parcelIds`; company, branch, and receiving user
   are taken from authentication. Any missing, out-of-scope, deleted, already-received, non-transit,
   or concurrently changed parcel rejects the entire batch.
+- `POST /shipments/parcels/bulk-call-outcome`: save one call outcome for 1–100 unique parcels assigned
+  to the authenticated call agent in their company and destination branch. The body contains
+  `parcelIds` and `outcome` (`follow_up`, `pickup`, or `delivery`). The server validates every parcel,
+  then updates them sequentially in one transaction. Missing, deleted, reassigned, out-of-scope,
+  ineligible, or concurrently changed parcels reject the batch without partial updates. No SMS or
+  email is sent. The response returns `parcelIds`, `updatedCount`, and the resulting `status`.
 - `/shipments/parcels/sticker-prints`: record a successful sticker print and its copy count.
 - `/shipments/consignments`: consignment creation, dispatch, receiving, completeness, and exceptions.
 - `GET /shipments/consignments/history`: list saved consignments for an inclusive `dateFrom` and

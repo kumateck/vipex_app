@@ -235,11 +235,19 @@ Recent correction support includes original-session amount corrections so adjust
 - Retried domain actions must avoid duplicate payments, duplicate parcel creation, and duplicate completion.
 - Partial multi-parcel failure must show which parcels succeeded and which require retry.
 
+Bulk call outcomes on the web Call Receivers page show the selected booking preview and resulting
+status. One request saves the selected outcome for all parcels on the server. The bulk action sends
+no SMS or email and does not change second-receiver assignments. A failed batch retains its selection
+for correction or retry. The single-parcel Call Outcome action retains its notification and optional
+second-receiver controls.
+
 ## Verification Scenarios
 
 - Sender-paid, receiver-paid, split, zero-charge, and credit creation.
 - Call-center list, single assignment, and bulk assignment failures display the nested API message;
   two authenticated staff behind one public IP have independent rate-limit quotas.
+- Bulk call outcome success for each of the three statuses, unauthorized request, out-of-scope or
+  reassigned parcel, stale status, and concurrent change with no partial updates or notifications.
 - Mobile call-center receiver and sender call actions open the appropriate primary number, disable
   cleanly when absent, and do not substitute one party's number for the other.
 - A paid parcel with outstanding storage appears in Receiver Cashier and not Waiting Pickup; after
