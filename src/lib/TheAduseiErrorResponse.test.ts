@@ -3,8 +3,17 @@ import {
   createHardReloadUrl,
   getErrorMessage,
   getNextStaleBuildReloadAttempt,
+  isAbortError,
   isLikelyStaleBuildError,
 } from './TheAduseiErrorResponse';
+
+describe('isAbortError', () => {
+  test('recognizes cancellation errors without treating them as user-facing failures', () => {
+    expect(isAbortError('Aborted')).toBe(true);
+    expect(isAbortError(new DOMException('The operation was aborted.', 'AbortError'))).toBe(true);
+    expect(isAbortError('Invalid OTP')).toBe(false);
+  });
+});
 
 describe('isLikelyStaleBuildError', () => {
   test.each([

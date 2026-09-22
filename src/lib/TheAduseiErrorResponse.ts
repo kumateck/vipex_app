@@ -48,6 +48,11 @@ export function isLikelyStaleBuildError(error: unknown): boolean {
   );
 }
 
+export function isAbortError(error: unknown): boolean {
+  const text = errorToText(error).toLowerCase();
+  return text === 'aborted' || text.includes('aborterror') || text.includes('request aborted');
+}
+
 function readReloadState(): StaleBuildReloadState | null {
   try {
     const stored = window.sessionStorage.getItem(STALE_BUILD_RELOAD_STATE_KEY);
@@ -185,6 +190,7 @@ export function installTheAduseiGlobalErrorHandlers() {
 
   const onError = (event: ErrorEvent) => {
     const error = event.error ?? event.message;
+    if (isAbortError(error)) return;
     if (isLikelyStaleBuildError(error)) {
       tryRecoverFromStaleBuildError(error);
       return;
@@ -193,6 +199,7 @@ export function installTheAduseiGlobalErrorHandlers() {
   };
 
   const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+    if (isAbortError(event.reason)) return;
     if (isLikelyStaleBuildError(event.reason)) {
       tryRecoverFromStaleBuildError(event.reason);
       return;
