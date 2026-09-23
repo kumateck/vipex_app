@@ -286,6 +286,16 @@ export type ParcelInternalHolderSnapshot = {
 export type HomeDeliveryReceipt = {
   bookingCode: string;
   trackingCode: string;
+  parcelDetails: string;
+  parcelContent: string;
+  dropoffAddress: string | null;
+  senderName: string | null;
+  senderPhone: string | null;
+  senderPhone2: string | null;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  receiverPhone2: string | null;
+  destinationName: string | null;
   chargePsw: number;
   deliveryFeePsw: number;
   paidPrincipalPsw: number;

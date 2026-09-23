@@ -45,10 +45,7 @@ export function ParcelHomeDeliveryDispatch() {
   const [searchInput, setSearchInput] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [riderUserId, setRiderUserId] = useState('');
-  const [printData, setPrintData] = useState<{
-    parcel: ParcelSearchRow;
-    receipt: HomeDeliveryReceipt;
-  } | null>(null);
+  const [printData, setPrintData] = useState<HomeDeliveryReceipt | null>(null);
   const [query, setQuery] = useState<
     ServerListQuery<{
       companyId?: string | null;
@@ -104,7 +101,7 @@ export function ParcelHomeDeliveryDispatch() {
     async (parcel: ParcelSearchRow) => {
       try {
         const receipt = await loadReceipt(parcel.id).unwrap();
-        setPrintData({ parcel, receipt });
+        setPrintData(receipt);
       } catch (error) {
         toast.error(
           getApplicationErrorMessage(error, '') || 'Failed to load home delivery receipt',
@@ -223,9 +220,8 @@ export function ParcelHomeDeliveryDispatch() {
       </ScrollableWrapper>
       {printData ? (
         <HomeDeliveryReceiptPrintController
-          key={printData.parcel.id}
-          parcel={printData.parcel}
-          receipt={printData.receipt}
+          key={printData.trackingCode}
+          receipt={printData}
           onComplete={() => setPrintData(null)}
         />
       ) : null}
