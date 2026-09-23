@@ -8,7 +8,6 @@ import { StickerRow } from './thermal-sticker-template-utils';
 import { ThermalStickerWordmark } from './thermal-sticker-wordmark';
 
 export function ThermalStickerPortraitTemplate({
-  bookingCode,
   senderName,
   senderTelephones,
   receiverName,
@@ -59,10 +58,7 @@ export function ThermalStickerPortraitTemplate({
           }}
         />
         <ThermalStickerWordmark />
-        <div
-          className="self-start justify-self-end"
-          style={{ display: 'grid', justifyItems: 'center', rowGap: '0.25mm' }}
-        >
+        <div className="self-start justify-self-end">
           <BrandedQrCode
             value={qrValue}
             size={180}
@@ -74,9 +70,6 @@ export function ThermalStickerPortraitTemplate({
               backgroundColor: '#ffffff',
             }}
           />
-          <div style={{ fontSize: '1.45mm', fontWeight: 800, lineHeight: 1, whiteSpace: 'nowrap' }}>
-            {bookingCode}
-          </div>
         </div>
       </header>
 

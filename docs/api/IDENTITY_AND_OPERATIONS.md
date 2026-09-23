@@ -41,6 +41,11 @@ System Admin password assignment revokes the target user's active sessions and w
   pickup workflows. `true` returns parcels with outstanding principal or storage; `false` returns
   parcels with neither. Storage is computed from the company ageing policy, effective received
   time, non-voided storage payments, and waivers. The response remains paginated after filtering.
+- `GET /shipments/parcels/call-center`: require `CanReadCallCenterAssignment` and return Arrived,
+  Customer Contacted, or Returned to Office parcels for the authenticated company and destination
+  branch. Results include every payment state and are ordered unassigned first, then assigned, with
+  the newest effective received time first inside each group. Pagination and search cannot broaden
+  the authenticated company or branch scope.
 - `GET /shipments/parcels/call-center/assigned`: require `CanReadCallCenterParcelStatus` and return
   only Arrived, Customer Contacted, or Returned to Office parcels assigned to the authenticated
   user at their company and destination branch. Callers can provide pagination and search only;
@@ -54,6 +59,14 @@ System Admin password assignment revokes the target user's active sessions and w
 - `POST /shipments/parcels/:id/update-shelf-picker`: persist the selected shelf-picker staff on the
   parcel and, when present, mirror it to the active pickup queue. This endpoint works independently
   of the branch `usePickupQueue` setting and requires `CanUpdateParcelShelfPicker`.
+- `GET /shipments/parcels/shelf-picker`: require `CanReadShelfPickerUpdate` and list awaiting-pickup
+  parcels for the authenticated company and destination branch. Unassigned shelf-picker parcels
+  precede assigned parcels before pagination, considering both parcel and legacy pickup-queue
+  assignments. Within each group, pickup-queue branches retain queue-number order when no search
+  is active; other results use creation order. Results include paid and due amounts so web clients
+  can show Paid, To Be Paid, or Partial. Search does not change assignment priority. Request
+  failures return the standard API error and do not update assignments. QA: paginate through
+  mixed assigned and unassigned parcels, search for both kinds, and verify the payment amounts.
 - `POST /shipments/parcels/bulk-mark-received`: atomically mark 1–100 authenticated-branch incoming
   parcels as arrived. The body contains only unique `parcelIds`; company, branch, and receiving user
   are taken from authentication. Any missing, out-of-scope, deleted, already-received, non-transit,

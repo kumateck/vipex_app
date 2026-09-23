@@ -2,8 +2,18 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { PaymentStatusBookingCell } from '../parcel-processed-consignment';
+import { formatDateTime } from '@/lib/dates';
+import { CallCenterAssignmentPaymentCell } from './call-center-assignment-payment-cell';
 import type { ParcelRow } from './call-center-assignment-types';
+
+const formatPhones = (primary?: string | null, secondary?: string | null) =>
+  [primary, secondary].filter(Boolean).join(' / ') || '-';
+
+function formatReceivedAt(value: string | null) {
+  if (!value) return '-';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '-' : formatDateTime(date);
+}
 
 export function useCallCenterAssignmentColumns({
   onOpenAssignDialog,
@@ -42,9 +52,17 @@ export function useCallCenterAssignmentColumns({
     {
       accessorKey: 'bookingCode',
       header: 'Booking Code',
+      cell: ({ row }) => <div className="font-mono font-medium">{row.original.bookingCode}</div>,
+    },
+    {
+      accessorKey: 'senderName',
+      header: 'Sender',
       cell: ({ row }) => (
-        <div className="font-mono font-medium">
-          <PaymentStatusBookingCell parcel={row.original} />
+        <div className="space-y-1">
+          <div className="font-medium">{row.original.senderName ?? '-'}</div>
+          <div className="text-xs text-muted-foreground">
+            {formatPhones(row.original.senderPhone, row.original.senderPhone2)}
+          </div>
         </div>
       ),
     },
@@ -54,9 +72,21 @@ export function useCallCenterAssignmentColumns({
       cell: ({ row }) => (
         <div className="space-y-1">
           <div className="font-medium">{row.original.receiverName ?? '-'}</div>
-          <div className="text-xs text-muted-foreground">{row.original.receiverPhone ?? '-'}</div>
+          <div className="text-xs text-muted-foreground">
+            {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
+          </div>
         </div>
       ),
+    },
+    {
+      id: 'payment',
+      header: 'Payment',
+      cell: ({ row }) => <CallCenterAssignmentPaymentCell parcel={row.original} />,
+    },
+    {
+      accessorKey: 'receivedAt',
+      header: 'Received D&T',
+      cell: ({ row }) => <div className="text-sm">{formatReceivedAt(row.original.receivedAt)}</div>,
     },
     {
       accessorKey: 'parcelDetails',

@@ -114,6 +114,8 @@ export type ListParcelsParams = {
   received?: boolean | null;
   includeDeleted?: boolean | null;
   assignedToUserId?: string | null;
+  callCenterAssignmentOrder?: boolean;
+  shelfPickerAssignmentOrder?: boolean;
   sort?: SortField[] | null;
 };
 
@@ -274,27 +276,45 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   }
 
   const sort = p.sort ?? [];
-  const orderBy = sort.length
-    ? sort
-        .map((srt) => {
-          if (srt.field === 'createdAt')
-            return srt.direction === 'desc' ? desc(parcels.createdAt) : asc(parcels.createdAt);
-          if (srt.field === 'trackingCode')
-            return srt.direction === 'desc'
-              ? desc(parcels.trackingCode)
-              : asc(parcels.trackingCode);
-          if (srt.field === 'bookingCode')
-            return srt.direction === 'desc' ? desc(parcels.bookingCode) : asc(parcels.bookingCode);
-          if (srt.field === 'pickupQueueNumber')
-            return srt.direction === 'desc'
-              ? desc(pickupQueues.queueNumber)
-              : asc(pickupQueues.queueNumber);
-          if (srt.field === 'id')
-            return srt.direction === 'desc' ? desc(parcels.id) : asc(parcels.id);
-          return null;
-        })
-        .filter((value): value is ReturnType<typeof asc> => value !== null)
-    : [asc(parcels.createdAt), asc(parcels.id)];
+  const orderBy = p.callCenterAssignmentOrder
+    ? [
+        asc(sql`case when ${parcels.callCenterAssignedToUserId} is null then 0 else 1 end`),
+        desc(sql`coalesce(${effectiveParcelReceivedAt()}, ${parcels.createdAt})`),
+        desc(parcels.id),
+      ]
+    : p.shelfPickerAssignmentOrder
+      ? [
+          asc(
+            sql`case when coalesce(${parcels.shelfPickerStaffId}, ${pickupQueues.pickerStaffId}) is null then 0 else 1 end`,
+          ),
+          ...(sort.some((item) => item.field === 'pickupQueueNumber')
+            ? [asc(pickupQueues.queueNumber)]
+            : [asc(parcels.createdAt)]),
+          asc(parcels.id),
+        ]
+      : sort.length
+        ? sort
+            .map((srt) => {
+              if (srt.field === 'createdAt')
+                return srt.direction === 'desc' ? desc(parcels.createdAt) : asc(parcels.createdAt);
+              if (srt.field === 'trackingCode')
+                return srt.direction === 'desc'
+                  ? desc(parcels.trackingCode)
+                  : asc(parcels.trackingCode);
+              if (srt.field === 'bookingCode')
+                return srt.direction === 'desc'
+                  ? desc(parcels.bookingCode)
+                  : asc(parcels.bookingCode);
+              if (srt.field === 'pickupQueueNumber')
+                return srt.direction === 'desc'
+                  ? desc(pickupQueues.queueNumber)
+                  : asc(pickupQueues.queueNumber);
+              if (srt.field === 'id')
+                return srt.direction === 'desc' ? desc(parcels.id) : asc(parcels.id);
+              return null;
+            })
+            .filter((value): value is ReturnType<typeof asc> => value !== null)
+        : [asc(parcels.createdAt), asc(parcels.id)];
 
   const [countRow] = await db
     .select({ c: count() })

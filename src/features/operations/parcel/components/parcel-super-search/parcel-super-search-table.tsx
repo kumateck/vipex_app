@@ -15,9 +15,11 @@ import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import { PaymentStatusLegend } from '../parcel-processed-consignment/payment-status-legend';
 import { EMPTY_META, PARCEL_STATUS_LABELS } from './constants';
+import { ParcelSuperSearchPaymentCell } from './parcel-super-search-payment-cell';
 import type { ParcelSuperSearchFilters } from './types';
-import { formatCurrency, formatParcelDate } from './utils';
+import { formatParcelDate } from './utils';
 
 type ParcelSuperSearchTableProps = {
   companyId: string | null;
@@ -137,22 +139,7 @@ export function ParcelSuperSearchTable({
       {
         id: 'payment',
         header: 'Payment',
-        cell: ({ row }) => (
-          <div className="space-y-1 text-xs">
-            <p>
-              <span className="text-muted-foreground">Value:</span>{' '}
-              {formatCurrency(row.original.parcelValuePsw)}
-            </p>
-            <p>
-              <span className="text-muted-foreground">Paid:</span>{' '}
-              {formatCurrency(row.original.paidPrincipalPsw ?? 0)}
-            </p>
-            <p>
-              <span className="text-muted-foreground">To be paid:</span>{' '}
-              {formatCurrency(row.original.plannedToBePaidPsw)}
-            </p>
-          </div>
-        ),
+        cell: ({ row }) => <ParcelSuperSearchPaymentCell parcel={row.original} />,
       },
       {
         id: 'route',
@@ -214,10 +201,15 @@ export function ParcelSuperSearchTable({
     <ScrollableWrapper>
       <Card>
         <CardHeader>
-          <CardTitle>All Parcels Super Search</CardTitle>
-          <CardDescription>
-            Search by sender/receiver name or phone, booking code, or tracking code.
-          </CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>All Parcels Super Search</CardTitle>
+              <CardDescription>
+                Search by sender/receiver name or phone, booking code, or tracking code.
+              </CardDescription>
+            </div>
+            <PaymentStatusLegend />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <form

@@ -105,7 +105,8 @@ Last updated: 2026-09-21
    - Scan a current tracking-URL QR and a legacy production `QR-<tracking-code>` sticker.
    - Print a new portrait thermal sticker and verify its 22 mm compact `QR-<tracking-code>` payload
      scans from the physical label, not only from the on-screen preview. Repeat through browser and
-     desktop printing at 100% scale with printer enhancement/smoothing disabled.
+     desktop printing at 100% scale with printer enhancement/smoothing disabled. Confirm no booking
+     or tracking code is printed beneath the QR.
    - Confirm the scanner starts on the neutral back lens, pinch-to-zoom works, and the Light toggle
      appears only when the device has a torch.
    - Scan a compliant black-on-white print under normal and dim light. Verify blue/dark stock is
@@ -125,7 +126,13 @@ Last updated: 2026-09-21
    - After confirming an arrived parcel from both scan and manual search, return to the receive screen with a cleared flow ready for the next parcel.
    - Tap **Back To Incoming List** after opening a parcel from scanning, manual search, and a direct route; each case must open the native parcel scanner screen, never the desktop incoming page.
 5. Self-service:
-   - List, inspect, claim, and complete sender/receiver/split pay-now drafts.
+   - With `CanReadSelfServiceBookings`, confirm Self-Service Bookings appears in both the drawer and
+     Operations Hub; without it, confirm both entry points are hidden and direct access is denied.
+   - List drafts and confirm each card shows sender, receiver, declared value, submission time,
+     expiry, and claim status.
+   - With completion permission, open an available draft and confirm it is claimed before the
+     completion form appears; with read-only permission, confirm opening does not claim it.
+   - Complete sender/receiver/split pay-now drafts.
    - Confirm concurrent claim and expired draft errors do not create bookings.
 6. Call center:
    - Confirm Assigned calls contains only the signed-in user's Arrived, Contacted, and Returned to Office assignments for the current branch.

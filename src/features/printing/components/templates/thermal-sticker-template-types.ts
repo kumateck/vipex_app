@@ -23,7 +23,6 @@ export type ThermalStickerTemplateProps = {
 };
 
 export type PreparedThermalStickerTemplateProps = {
-  bookingCode: string;
   issuedAtLabel: string;
   printedByName?: string | null;
   printedByBranchName?: string | null;
