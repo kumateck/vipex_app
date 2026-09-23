@@ -42,6 +42,7 @@ import { listUserOptionsRepo } from '../users/repository';
 import { ParcelStatus, UserStatus } from '@/db/schemas/enums';
 import { getBranchRepo } from '../branches/repository';
 import { saveBulkCallOutcomeSvc } from './parcel-bulk-call-outcome.service';
+import { getHomeDeliveryReceiptSvc } from './home-delivery-receipt.service';
 
 function parseStatuses(value: string | number[] | undefined): number[] | null {
   if (Array.isArray(value)) {
@@ -357,6 +358,22 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       summary: 'Get parcel full details (payments, delivery, consignments)',
     },
   })
+  .get(
+    '/:id/home-delivery-receipt',
+    ({ params, user }) => {
+      const authUser = user as AuthUser;
+      return getHomeDeliveryReceiptSvc({
+        parcelId: params.id,
+        companyId: authUser.companyId ?? null,
+        branchId: authUser.branchId ?? null,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanDispatchForDelivery)],
+      detail: { tags: ['Shipments'], summary: 'Calculate home delivery A5 receipt for a parcel' },
+    },
+  )
   .get(
     '/:id/disposition-actions',
     async ({ params }) => listParcelDispositionActionsCtrl(params.id),
