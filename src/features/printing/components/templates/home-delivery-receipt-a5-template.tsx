@@ -54,7 +54,7 @@ export function HomeDeliveryReceiptA5Template(props: HomeDeliveryReceiptA5Props)
         lineHeight: 1.1,
       }}
     >
-      <InvoiceA5Header issuedAtLabel={props.issuedAtLabel} title="HOME DELIVERY RECEIPT" />
+      <InvoiceA5Header issuedAtLabel={props.issuedAtLabel} title="Tax Invoice" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 44mm', gap: '3mm' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3mm' }}>
           <div>
@@ -94,7 +94,9 @@ export function HomeDeliveryReceiptA5Template(props: HomeDeliveryReceiptA5Props)
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8mm' }}>
-          <AmountLine label="Parcel charge" amountPsw={props.chargePsw} />
+          {props.principalDuePsw > 0 ? (
+            <AmountLine label="To be paid" amountPsw={props.principalDuePsw} />
+          ) : null}
           <AmountLine label="Delivery fee" amountPsw={props.deliveryFeePsw} />
           {props.paidPrincipalPsw + props.paidDeliveryFeePsw > 0 ? (
             <AmountLine
@@ -102,12 +104,9 @@ export function HomeDeliveryReceiptA5Template(props: HomeDeliveryReceiptA5Props)
               amountPsw={props.paidPrincipalPsw + props.paidDeliveryFeePsw}
             />
           ) : null}
-          {props.principalDuePsw > 0 ? (
-            <AmountLine label="Parcel balance due" amountPsw={props.principalDuePsw} />
-          ) : null}
-          <AmountLine label="Delivery fee due" amountPsw={props.deliveryFeeDuePsw} />
+
           <div style={{ borderTop: '0.2mm solid #111', paddingTop: '0.8mm', fontSize: '5mm' }}>
-            <AmountLine label="Amount due on delivery" amountPsw={props.totalDuePsw} />
+            <AmountLine label="Amount due on delivery" amountPsw={props.grossPsw} />
           </div>
         </div>
         <InvoiceTaxSummary
