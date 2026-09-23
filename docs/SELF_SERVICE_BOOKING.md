@@ -76,7 +76,12 @@ Printing a branch entry QR code uses `CanPrintSelfServiceQrCode`. This permissio
 access. The role also needs `CanReadBranches` to open the branch list and load the selected branch.
 For backward compatibility, `CanUpdateBranches` continues to allow printing.
 
-The mobile agent workflow now supports listing, inspecting, claiming, and completing drafts with pay-now settlement. It supports sender, receiver, and split payment responsibility. Credit completion remains desktop-only until mobile exposes the same customer credit eligibility and cashier-session context. See [Mobile Frontline Workflows](MOBILE_FRONTLINE_WORKFLOWS.md).
+The mobile agent workflow is available from both the navigation drawer and Operations Hub. It supports
+listing, inspecting, claiming, and completing drafts with pay-now settlement. Opening an available
+draft claims it before the completion form is shown. It supports sender, receiver, and split payment
+responsibility. Credit completion remains desktop-only until mobile exposes the same customer credit
+eligibility and cashier-session context. See
+[Mobile Frontline Workflows](MOBILE_FRONTLINE_WORKFLOWS.md).
 
 ## Draft States
 

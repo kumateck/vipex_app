@@ -59,12 +59,14 @@ export function SelfServiceAgentScreen() {
           <SelfServiceDraftCard
             key={draft.id}
             draft={draft}
-            onPress={() => workflow.setSelected(draft)}
+            disabled={workflow.saving}
+            opening={workflow.openingDraftId === draft.id}
+            onPress={() => void workflow.open(draft)}
           />
         ))
       ) : (
         <Text style={{ color: theme.colors.textSubtle }}>
-          No active self-service drafts for this branch.
+          No pending self-service bookings for your branch.
         </Text>
       )}
     </AppScreen>

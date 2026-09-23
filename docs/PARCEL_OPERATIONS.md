@@ -12,10 +12,31 @@ disabled. When an active pickup queue exists, the server mirrors the assignment 
 `pickup_queues.picker_staff_id` for compatibility. The server enforces these permissions
 independently of sidebar visibility.
 
-The Call Center Assignment and Shelf Picker Update tables identify each parcel's payment kind beside
-its booking code and show a legend: green is **Paid**, amber is **To Be Paid**, and blue is
-**Partial**. The indicator is informational and does not change call-center or shelf-picker
-assignment behavior.
+The Call Center Assignment and Shelf Picker Update tables show a Payment column and legend: green
+is **Paid**, amber is **To Be Paid**, and blue is **Partial**. A Paid parcel shows only its paid
+amount, a To Be Paid parcel shows only its balance due, and a Partial parcel shows both. The
+indicator is informational and does not change assignment behavior.
+
+Shelf Picker Update lists unassigned parcels first across the full paginated result. Assigned
+parcels follow. Within each group, branches using pickup queues retain queue-number order when
+there is no search; other results retain creation order. The server considers both the parcel's
+stored shelf-picker assignment and a legacy pickup-queue assignment when determining whether a
+parcel is assigned. A failed list request leaves the current table error visible and does not
+change any assignment. QA: check Paid, To Be Paid, and Partial rows for the correct amount lines;
+assign a picker to a parcel on page one, refresh, and verify that it moves below all unassigned
+rows, including those on later pages; repeat on a branch with pickup queues enabled.
+
+Call Center Assignment shows sender and receiver names with every available telephone, payment
+status and applicable balances, parcel details, received date and time, and the current assignee.
+Unassigned parcels appear before assigned parcels across the full paginated result. Within each
+group, the newest effective received date is first; creation time is the fallback for legacy rows
+without a received timestamp. Paid rows omit a zero To be paid line, To Be Paid rows omit a zero
+Paid line, and Partial rows show both balances.
+
+All Parcels Super Search uses the same payment legend and places the matching colored indicator in
+each Payment cell. A fully paid parcel shows only its **Paid** amount; a fully unpaid parcel shows
+only its **To be paid** amount; a partial parcel shows both amounts. Zero rows for the inapplicable
+payment side are omitted, while the declared parcel value remains visible for every result.
 
 Call-center assignment list and mutation failures display the message returned by the API, including
 validation, permission, and rate-limit messages. If the response cannot be decoded, the web client
@@ -107,7 +128,9 @@ Receiving supports scan-based parcel identification, completeness tracking, disc
 
 On the web Incoming (In Transit) page, users can select parcels individually or select every parcel
 on the current page, retain selections while paging, and mark up to 100 selected parcels as arrived
-in one action. The confirmation dialog lists the selected bookings before submission. The server
+in one action. Incoming and outgoing transit tables use one **Route** column with four lines: source
+branch, source location, destination branch, and destination location. Missing route values display
+as `-`. The confirmation dialog lists the selected bookings before submission. The server
 uses the authenticated user's company, receiving branch, and user ID; client-supplied ownership or
 receiver identity is not accepted. Every parcel must still be undeleted, in transit, not previously
 received, and destined for the authenticated receiving branch. Validation and updates run in one
@@ -118,7 +141,7 @@ batch audit event. Mobile receiving remains scan-based and processes one reviewe
 
 Mobile scan-to-receive accepts the current parcel tracking URL, a bare booking or tracking code, and legacy production payloads in the form `QR-<tracking-code>`. The client normalizes these formats before searching for an in-transit parcel at the authenticated user's destination branch. The overview count loads from the server when the screen gains focus and shows the server's total record count, not only the currently rendered page. An unreadable code or a code for another branch/status remains unmatched and does not change parcel state.
 
-The mobile camera displays a high-contrast moving scan band with a solid center line and an active-scanner status while it is looking for a QR code. It starts on the device's neutral back-camera lens, supports pinch-to-zoom, and presents a Light toggle on devices with a torch. Staff should flatten reflective wrapping and change the camera angle to remove glare. Android production builds must set `VisionCamera_enableCodeScanner=true`; this bundles the ML Kit barcode model instead of relying on an on-demand model download. Changing this native property requires rebuilding and reinstalling the Android application. If a printed QR remains unreadable because of glare, small print, or label damage, the scanner card provides an in-place booking/tracking-code fallback. Parcel stickers print the booking code beneath the QR so this fallback does not require leaving the receive workflow.
+The mobile camera displays a high-contrast moving scan band with a solid center line and an active-scanner status while it is looking for a QR code. It starts on the device's neutral back-camera lens, supports pinch-to-zoom, and presents a Light toggle on devices with a torch. Staff should flatten reflective wrapping and change the camera angle to remove glare. Android production builds must set `VisionCamera_enableCodeScanner=true`; this bundles the ML Kit barcode model instead of relying on an on-demand model download. Changing this native property requires rebuilding and reinstalling the Android application. If a printed QR remains unreadable because of glare, small print, or label damage, the scanner card provides an in-place booking/tracking-code fallback. Parcel stickers do not print a human-readable code beneath the QR.
 
 Scanner assistance does not make low-contrast stock compliant. New parcel QR codes require black
 modules on an opaque white area with a full quiet zone. Existing blue stickers require a white
@@ -128,8 +151,8 @@ correct label stock.
 Thermal parcel stickers encode the compact `QR-<tracking-code>` payload rather than the longer
 public tracking URL. The mobile scanner normalizes this payload before branch-scoped lookup. The
 portrait sticker reserves a 22 mm black-on-white QR area, preserves square pixels during desktop
-and browser printing, and prints the booking code underneath as the manual fallback. Older or
-blurred stickers must be reprinted; updating the mobile app does not alter an existing physical QR.
+and browser printing, without additional text beneath it. Older or blurred stickers must be
+reprinted; updating the mobile app does not alter an existing physical QR.
 
 After detecting a QR code, mobile provides immediate haptic feedback, pauses further camera scanning, and covers the camera preview with a high-contrast progress overlay reading **QR detected — Finding incoming parcel…**. The overlay remains until the branch-scoped in-transit lookup succeeds or fails, preventing an ambiguous or apparently idle processing state.
 
@@ -246,6 +269,8 @@ second-receiver controls.
 - Sender-paid, receiver-paid, split, zero-charge, and credit creation.
 - Call-center list, single assignment, and bulk assignment failures display the nested API message;
   two authenticated staff behind one public IP have independent rate-limit quotas.
+- Call-center assignment lists sender and receiver contacts, payment state, received D&T, unassigned
+  rows before assigned rows across pages, and newest received rows first within each group.
 - Bulk call outcome success for each of the three statuses, unauthorized request, out-of-scope or
   reassigned parcel, stale status, and concurrent change with no partial updates or notifications.
 - Mobile call-center receiver and sender call actions open the appropriate primary number, disable
@@ -263,6 +288,10 @@ second-receiver controls.
 - Web incoming batch selection across pages, select-all for the current page, successful bulk
   arrival, more than 100 selections, wrong receiving branch, already-received parcel, and concurrent
   status change with no partial updates.
+- Incoming and outgoing Route cells show From branch/location and To branch/location without
+  duplicate Source or Destination columns.
+- Super Search payment cells cover paid-only, unpaid-only, and partial balances, including the
+  matching legend indicator and omission of inapplicable zero-value rows.
 - Mobile scan-to-receive with current tracking URL, bare code, legacy `QR-` payload, unreadable code, wrong branch, and non-in-transit status.
 - OTP enabled, disabled, expired, incorrect, alternate recipient, and alternate phone.
 - Pickup with and without receiver payment.

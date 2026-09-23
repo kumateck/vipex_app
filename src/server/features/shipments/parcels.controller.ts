@@ -40,6 +40,8 @@ export async function listParcelsCtrl(
     received?: boolean | null;
     includeDeleted?: boolean | null;
     assignedToUserId?: string | null;
+    callCenterAssignmentOrder?: boolean;
+    shelfPickerAssignmentOrder?: boolean;
   }>,
 ): Promise<PaginatedResponseDto<unknown>> {
   const pagination = normalizePagination(q, { pageSize: 20, maxPageSize: 200 });
@@ -61,6 +63,8 @@ export async function listParcelsCtrl(
     received: q.filters?.received ?? null,
     includeDeleted: q.filters?.includeDeleted ?? null,
     assignedToUserId: q.filters?.assignedToUserId ?? null,
+    callCenterAssignmentOrder: q.filters?.callCenterAssignmentOrder ?? false,
+    shelfPickerAssignmentOrder: q.filters?.shelfPickerAssignmentOrder ?? false,
     sort: pagination.sort ?? null,
   });
   return {
