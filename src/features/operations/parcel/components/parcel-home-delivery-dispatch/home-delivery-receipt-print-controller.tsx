@@ -8,14 +8,12 @@ import { createPrintableHtmlDocument } from '@/features/printing/services/html-d
 import { getPrinterPreferenceMapping } from '@/features/printing/services/printer-preferences';
 import { formatDate } from '../parcel-receipt-formatters';
 import { buildParcelTrackingUrl } from '../../utils/tracking-url';
-import type { HomeDeliveryReceipt, ParcelSearchRow } from '../../api/parcel.api';
+import type { HomeDeliveryReceipt } from '../../api/parcel.api';
 
 export function HomeDeliveryReceiptPrintController({
-  parcel,
   receipt,
   onComplete,
 }: {
-  parcel: ParcelSearchRow;
   receipt: HomeDeliveryReceipt;
   onComplete: () => void;
 }) {
@@ -72,14 +70,14 @@ export function HomeDeliveryReceiptPrintController({
           issuedAtLabel={formatDate(new Date().toISOString())}
           bookingCode={receipt.bookingCode}
           trackingCode={receipt.trackingCode}
-          senderName={parcel.senderName ?? ''}
-          senderPhone={[parcel.senderPhone, parcel.senderPhone2].filter(Boolean).join(', ')}
-          receiverName={parcel.receiverName ?? ''}
-          receiverPhone={[parcel.receiverPhone, parcel.receiverPhone2].filter(Boolean).join(', ')}
-          parcelDetails={parcel.parcelDetails}
-          parcelContent={parcel.parcelContent}
-          destinationName={parcel.destinationName ?? ''}
-          dropoffAddress={parcel.dropoffAddress ?? ''}
+          senderName={receipt.senderName ?? ''}
+          senderPhone={[receipt.senderPhone, receipt.senderPhone2].filter(Boolean).join(', ')}
+          receiverName={receipt.receiverName ?? ''}
+          receiverPhone={[receipt.receiverPhone, receipt.receiverPhone2].filter(Boolean).join(', ')}
+          parcelDetails={receipt.parcelDetails}
+          parcelContent={receipt.parcelContent}
+          destinationName={receipt.destinationName ?? ''}
+          dropoffAddress={receipt.dropoffAddress ?? ''}
           chargePsw={receipt.chargePsw}
           deliveryFeePsw={receipt.deliveryFeePsw}
           paidPrincipalPsw={receipt.paidPrincipalPsw}
