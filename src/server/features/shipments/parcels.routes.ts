@@ -88,7 +88,12 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         filters: {
           companyId: authUser.companyId ?? null,
           destinationId: authUser.branchId ?? null,
-          senderPaid: true,
+          statuses: [
+            ParcelStatus.ARRIVED_AT_DESTINATION,
+            ParcelStatus.CUSTOMER_CONTACTED,
+            ParcelStatus.RETURNED_TO_OFFICE,
+          ],
+          callCenterAssignmentOrder: true,
         },
       });
     },
@@ -179,6 +184,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           companyId: authUser.companyId ?? null,
           destinationId: authUser.branchId ?? null,
           status: 5,
+          shelfPickerAssignmentOrder: true,
           hasPickupQueue: branch?.usePickupQueue && !query.search?.trim() ? true : undefined,
         },
       });

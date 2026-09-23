@@ -40,6 +40,7 @@ import { ConfirmBulkArrivalDialog } from './confirm-bulk-arrival-dialog';
 import { EditIncomingTransitParcelDialog } from './edit-incoming-transit-parcel-dialog';
 import { LogDiscrepancyDialog } from './log-discrepancy-dialog';
 import { ParcelDetailsDialog } from './parcel-details-dialog';
+import { ParcelTransitRouteCell } from './parcel-transit-route-cell';
 
 type InTransitView = 'outgoing' | 'incoming';
 
@@ -328,35 +329,17 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
           </div>
         ),
       },
-      ...(view === 'incoming'
-        ? ([
-            {
-              id: 'source',
-              header: 'Source',
-              cell: ({ row }: { row: { original: ParcelSearchRow } }) => (
-                <div className="leading-tight">
-                  <p className="font-medium">{row.original.sourceLocationName ?? '-'}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {row.original.sourceName ?? branchNameById.get(row.original.sourceId) ?? '-'}
-                  </p>
-                </div>
-              ),
-            },
-          ] satisfies ColumnDef<ParcelSearchRow>[])
-        : ([
-            {
-              id: 'destination',
-              header: 'Destination',
-              cell: ({ row }: { row: { original: ParcelSearchRow } }) => (
-                <div className="leading-tight">
-                  <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {branchNameById.get(row.original.destinationId) ?? '-'}
-                  </p>
-                </div>
-              ),
-            },
-          ] satisfies ColumnDef<ParcelSearchRow>[])),
+      {
+        id: 'route',
+        header: 'Route',
+        cell: ({ row }) => (
+          <ParcelTransitRouteCell
+            parcel={row.original}
+            sourceBranchFallback={branchNameById.get(row.original.sourceId)}
+            destinationBranchFallback={branchNameById.get(row.original.destinationId)}
+          />
+        ),
+      },
       {
         id: 'consignment',
         header: 'Consignment',

@@ -35,6 +35,8 @@ Parcel QR codes require an opaque white background with an uninterrupted white q
 four sides. The printed QR uses solid black modules, no center logo, Q-level error correction, and a
 larger physical footprint on parcel stickers. Blue, dark, transparent, patterned, or reflective
 stock must not occupy the QR area: thermal printers cannot print white ink to correct dark stock.
+The parcel sticker must not print a booking or tracking code directly beneath the QR. Manual lookup
+remains available in the receiving application when a QR cannot be scanned.
 
 New parcel stickers must use white label stock or stationery with a factory-produced opaque white
 QR panel. For blue stickers already in circulation, staff must completely cover the old QR with a
@@ -164,6 +166,8 @@ Rules:
 - Print on approved opaque white stock and scan from several Android devices under normal and dim
   branch lighting.
 - Confirm the QR has a white quiet zone, no logo over its modules, and no clipping at label edges.
+- Confirm portrait and landscape stickers contain no human-readable booking or tracking code below
+  the QR.
 - Reject blue or dark stock without an opaque white QR panel; verify an existing blue label can be
   recovered with a white 30 mm overlay label or manual code entry.
 - Print 1, 2, 20, 21, 100, and another user-entered positive whole number.

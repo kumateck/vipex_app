@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ParcelStatus } from '@/db/schemas/enums';
-import { PaymentStatusBookingCell } from '../parcel-processed-consignment';
+import { CallCenterAssignmentPaymentCell } from '../parcel-call-center-assignment/call-center-assignment-payment-cell';
 import type { ParcelRow } from './shelf-picker-update-types';
 
 const getStatusLabel = (status: number) => {
@@ -45,11 +45,7 @@ export function useShelfPickerUpdateColumns({
     {
       accessorKey: 'bookingCode',
       header: 'Booking Code',
-      cell: ({ row }) => (
-        <div className="font-mono font-medium">
-          <PaymentStatusBookingCell parcel={row.original} />
-        </div>
-      ),
+      cell: ({ row }) => <div className="font-mono font-medium">{row.original.bookingCode}</div>,
     },
     {
       accessorKey: 'receiverName',
@@ -65,6 +61,11 @@ export function useShelfPickerUpdateColumns({
       accessorKey: 'parcelDetails',
       header: 'Details',
       cell: ({ row }) => <div className="text-sm">{row.original.parcelDetails}</div>,
+    },
+    {
+      id: 'payment',
+      header: 'Payment',
+      cell: ({ row }) => <CallCenterAssignmentPaymentCell parcel={row.original} />,
     },
     {
       accessorKey: 'status',
