@@ -283,6 +283,22 @@ export type ParcelInternalHolderSnapshot = {
   updatedAt: string;
 };
 
+export type HomeDeliveryReceipt = {
+  bookingCode: string;
+  trackingCode: string;
+  chargePsw: number;
+  deliveryFeePsw: number;
+  paidPrincipalPsw: number;
+  paidDeliveryFeePsw: number;
+  principalDuePsw: number;
+  deliveryFeeDuePsw: number;
+  totalDuePsw: number;
+  grossPsw: number;
+  netPsw: number;
+  taxTotalPsw: number;
+  taxRows: Array<{ label: string; amountPsw: number }>;
+};
+
 export type ParcelFullDetails = {
   parcel: {
     id: string;
@@ -705,6 +721,9 @@ export const parcelApi = api.injectEndpoints({
         url: `/shipments/parcels/${id}/details`,
       }),
       providesTags: (_result, _error, id) => [{ type: 'Bookings', id }],
+    }),
+    getHomeDeliveryReceipt: builder.query<HomeDeliveryReceipt, string>({
+      query: (id) => ({ url: `/shipments/parcels/${id}/home-delivery-receipt` }),
     }),
     listParcelDispositionActions: builder.query<ParcelDispositionActionRow[], string>({
       query: (id) => ({
@@ -1465,6 +1484,7 @@ export const {
   useSearchParcelsQuery,
   useLazySearchParcelsQuery,
   useGetParcelDetailsQuery,
+  useLazyGetHomeDeliveryReceiptQuery,
   useLazyGetParcelDetailsQuery,
   useListParcelDispositionActionsQuery,
   useListProcessedParcelsForConsignmentQuery,

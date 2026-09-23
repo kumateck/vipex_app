@@ -56,6 +56,12 @@ System Admin password assignment revokes the target user's active sessions and w
 - `GET /shipments/parcels/:id/details`: return parcel relations and storage settlement. Remaining
   principal is based on charge minus non-voided principal payments. For legacy rows with no
   `receivedAt`, the response and storage settlement use the earliest audited arrival transition.
+- `GET /shipments/parcels/:id/home-delivery-receipt`: require `CanDispatchForDelivery` and return
+  current charge, delivery fee, non-voided paid amounts, balances due, and an unsaved tax breakdown
+  calculated from full charge plus delivery fee. The parcel must belong to the authenticated
+  company and destination branch, be address-collected or returned to office, and have an active
+  doorstep delivery record. Missing scope, ineligible parcels, or missing delivery data return an
+  error without changing data. Used by each Home Delivery Dispatch row's A5 print action.
 - `POST /shipments/parcels/:id/update-shelf-picker`: persist the selected shelf-picker staff on the
   parcel and, when present, mirror it to the active pickup queue. This endpoint works independently
   of the branch `usePickupQueue` setting and requires `CanUpdateParcelShelfPicker`.
