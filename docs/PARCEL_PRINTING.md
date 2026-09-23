@@ -17,10 +17,12 @@ The A5 document includes payer details where a payer differs from the sender or 
 Home Delivery Dispatch and Rider Assigned Parcels offer **Print** on each parcel row, including
 current rider assignments and completed rider history. The print action
 loads current amounts from a read-only, branch-scoped endpoint and produces one A5 document through
-the browser or the configured desktop A5 printer. The receipt shows the full parcel charge and
-delivery fee, previous principal and delivery-fee payments, and the amount due on delivery. A
-fully paid parcel owes only the unpaid delivery fee; an unpaid or partially paid parcel owes its
-remaining principal plus the unpaid delivery fee. Voided payments do not reduce the balance.
+the browser or the configured desktop A5 printer. The receipt shows the outstanding to-be-paid
+principal only when an amount is still owed on the parcel — it never prints the full parcel
+charge — plus the full delivery fee, previous principal and delivery-fee payments, and the amount
+due on delivery. A fully paid parcel owes only the unpaid delivery fee; an unpaid or partially
+paid parcel owes its remaining principal plus the unpaid delivery fee. Voided payments do not
+reduce the balance.
 
 The home delivery receipt calculates the tax breakdown when opened from the full parcel charge
 plus full delivery fee. It uses the active company tax profile, or the default Ghana tax rules if
