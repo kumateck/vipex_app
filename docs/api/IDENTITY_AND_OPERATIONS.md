@@ -14,6 +14,8 @@ All paths are relative to `/v1`.
 - `/cards`: card reference and customer-card operations.
 - `/uploads`: model-linked upload, list, delete, and object proxy.
 
+`PATCH /users/:id` accepts partial user updates and requires `CanUpdateUsers`. `{ "status": 0 }` activates a user without changing or validating an omitted cashier type. Changing a user's type to cashier requires a cashier type, either in the request or already stored on the user. Setting a cashier's type to null returns `400`. Switching to a non-cashier type clears cashier type. This contract applies to web, mobile, and desktop callers.
+
 Mobile receiving evidence uses `POST /shipments/parcels/discrepancies/:id/evidence`. The endpoint validates incoming-parcel permission and company ownership, then creates a shared upload with model type `parcel-discrepancy-evidence` and the discrepancy ID as `modelId`.
 
 Security-sensitive identity methods include:
@@ -39,6 +41,11 @@ System Admin password assignment revokes the target user's active sessions and w
   pickup workflows. `true` returns parcels with outstanding principal or storage; `false` returns
   parcels with neither. Storage is computed from the company ageing policy, effective received
   time, non-voided storage payments, and waivers. The response remains paginated after filtering.
+- `GET /shipments/parcels/call-center`: require `CanReadCallCenterAssignment` and return Arrived,
+  Customer Contacted, or Returned to Office parcels for the authenticated company and destination
+  branch. Results include every payment state and are ordered unassigned first, then assigned, with
+  the newest effective received time first inside each group. Pagination and search cannot broaden
+  the authenticated company or branch scope.
 - `GET /shipments/parcels/call-center/assigned`: require `CanReadCallCenterParcelStatus` and return
   only Arrived, Customer Contacted, or Returned to Office parcels assigned to the authenticated
   user at their company and destination branch. Callers can provide pagination and search only;
@@ -52,10 +59,24 @@ System Admin password assignment revokes the target user's active sessions and w
 - `POST /shipments/parcels/:id/update-shelf-picker`: persist the selected shelf-picker staff on the
   parcel and, when present, mirror it to the active pickup queue. This endpoint works independently
   of the branch `usePickupQueue` setting and requires `CanUpdateParcelShelfPicker`.
+- `GET /shipments/parcels/shelf-picker`: require `CanReadShelfPickerUpdate` and list awaiting-pickup
+  parcels for the authenticated company and destination branch. Unassigned shelf-picker parcels
+  precede assigned parcels before pagination, considering both parcel and legacy pickup-queue
+  assignments. Within each group, pickup-queue branches retain queue-number order when no search
+  is active; other results use creation order. Results include paid and due amounts so web clients
+  can show Paid, To Be Paid, or Partial. Search does not change assignment priority. Request
+  failures return the standard API error and do not update assignments. QA: paginate through
+  mixed assigned and unassigned parcels, search for both kinds, and verify the payment amounts.
 - `POST /shipments/parcels/bulk-mark-received`: atomically mark 1–100 authenticated-branch incoming
   parcels as arrived. The body contains only unique `parcelIds`; company, branch, and receiving user
   are taken from authentication. Any missing, out-of-scope, deleted, already-received, non-transit,
   or concurrently changed parcel rejects the entire batch.
+- `POST /shipments/parcels/bulk-call-outcome`: save one call outcome for 1–100 unique parcels assigned
+  to the authenticated call agent in their company and destination branch. The body contains
+  `parcelIds` and `outcome` (`follow_up`, `pickup`, or `delivery`). The server validates every parcel,
+  then updates them sequentially in one transaction. Missing, deleted, reassigned, out-of-scope,
+  ineligible, or concurrently changed parcels reject the batch without partial updates. No SMS or
+  email is sent. The response returns `parcelIds`, `updatedCount`, and the resulting `status`.
 - `/shipments/parcels/sticker-prints`: record a successful sticker print and its copy count.
 - `/shipments/consignments`: consignment creation, dispatch, receiving, completeness, and exceptions.
 - `GET /shipments/consignments/history`: list saved consignments for an inclusive `dateFrom` and

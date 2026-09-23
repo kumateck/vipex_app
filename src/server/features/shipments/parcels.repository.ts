@@ -114,6 +114,8 @@ export type ListParcelsParams = {
   received?: boolean | null;
   includeDeleted?: boolean | null;
   assignedToUserId?: string | null;
+  callCenterAssignmentOrder?: boolean;
+  shelfPickerAssignmentOrder?: boolean;
   sort?: SortField[] | null;
 };
 
@@ -148,6 +150,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     callCenterAssignedToUserName: string | null;
     pickupQueuedAt: Date | null;
     pickupQueueEndedAt: Date | null;
+    deliveredAt: Date | null;
     currentHolderType: number | null;
     currentHolderBranchId: string | null;
     currentHolderBranchName: string | null;
@@ -156,6 +159,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     currentHolderWarehouseId: string | null;
     currentHolderWarehouseName: string | null;
     outstandingPrincipalPsw: number;
+    paidPrincipalPsw: number;
     outstandingDeliveryFeePsw: number;
   })[];
   totalRecords: number;
@@ -272,27 +276,45 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   }
 
   const sort = p.sort ?? [];
-  const orderBy = sort.length
-    ? sort
-        .map((srt) => {
-          if (srt.field === 'createdAt')
-            return srt.direction === 'desc' ? desc(parcels.createdAt) : asc(parcels.createdAt);
-          if (srt.field === 'trackingCode')
-            return srt.direction === 'desc'
-              ? desc(parcels.trackingCode)
-              : asc(parcels.trackingCode);
-          if (srt.field === 'bookingCode')
-            return srt.direction === 'desc' ? desc(parcels.bookingCode) : asc(parcels.bookingCode);
-          if (srt.field === 'pickupQueueNumber')
-            return srt.direction === 'desc'
-              ? desc(pickupQueues.queueNumber)
-              : asc(pickupQueues.queueNumber);
-          if (srt.field === 'id')
-            return srt.direction === 'desc' ? desc(parcels.id) : asc(parcels.id);
-          return null;
-        })
-        .filter((value): value is ReturnType<typeof asc> => value !== null)
-    : [asc(parcels.createdAt), asc(parcels.id)];
+  const orderBy = p.callCenterAssignmentOrder
+    ? [
+        asc(sql`case when ${parcels.callCenterAssignedToUserId} is null then 0 else 1 end`),
+        desc(sql`coalesce(${effectiveParcelReceivedAt()}, ${parcels.createdAt})`),
+        desc(parcels.id),
+      ]
+    : p.shelfPickerAssignmentOrder
+      ? [
+          asc(
+            sql`case when coalesce(${parcels.shelfPickerStaffId}, ${pickupQueues.pickerStaffId}) is null then 0 else 1 end`,
+          ),
+          ...(sort.some((item) => item.field === 'pickupQueueNumber')
+            ? [asc(pickupQueues.queueNumber)]
+            : [asc(parcels.createdAt)]),
+          asc(parcels.id),
+        ]
+      : sort.length
+        ? sort
+            .map((srt) => {
+              if (srt.field === 'createdAt')
+                return srt.direction === 'desc' ? desc(parcels.createdAt) : asc(parcels.createdAt);
+              if (srt.field === 'trackingCode')
+                return srt.direction === 'desc'
+                  ? desc(parcels.trackingCode)
+                  : asc(parcels.trackingCode);
+              if (srt.field === 'bookingCode')
+                return srt.direction === 'desc'
+                  ? desc(parcels.bookingCode)
+                  : asc(parcels.bookingCode);
+              if (srt.field === 'pickupQueueNumber')
+                return srt.direction === 'desc'
+                  ? desc(pickupQueues.queueNumber)
+                  : asc(pickupQueues.queueNumber);
+              if (srt.field === 'id')
+                return srt.direction === 'desc' ? desc(parcels.id) : asc(parcels.id);
+              return null;
+            })
+            .filter((value): value is ReturnType<typeof asc> => value !== null)
+        : [asc(parcels.createdAt), asc(parcels.id)];
 
   const [countRow] = await db
     .select({ c: count() })
@@ -351,6 +373,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       pickupLocationId: parcels.pickupLocationId,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       outstandingPrincipalPsw: outstandingPrincipalPsw.mapWith(Number),
+      paidPrincipalPsw: paidPrincipalPsw.mapWith(Number),
       outstandingDeliveryFeePsw:
         sql<number>`greatest(coalesce(${deliveries.chargePsw}, 0) - ${paidDeliveryFeePsw}, 0)`.mapWith(
           Number,
@@ -404,6 +427,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       callCenterAssignedToUserName: callCenterAssignee.fullname,
       pickupQueuedAt: pickupQueues.queuedAt,
       pickupQueueEndedAt: pickupQueues.endedAt,
+      deliveredAt: deliveries.deliveredAt,
       currentHolderType: parcelInternalHolders.holderType,
       currentHolderBranchId: parcelInternalHolders.branchId,
       currentHolderBranchName: hb.name,

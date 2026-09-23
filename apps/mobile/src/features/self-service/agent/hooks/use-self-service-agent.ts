@@ -15,6 +15,7 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
   const [selected, setSelected] = useState<SelfServiceDraft | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [openingDraftId, setOpeningDraftId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!canRead) return;
@@ -29,6 +30,28 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
   }, [canRead, withAuth]);
 
   useEffect(() => void load(), [load]);
+
+  const open = useCallback(
+    async (draft: SelfServiceDraft) => {
+      if (!canComplete || draft.claimedBy) {
+        setSelected(draft);
+        return;
+      }
+      setSaving(true);
+      setOpeningDraftId(draft.id);
+      try {
+        const claimed = await withAuth((token) => claimSelfServiceDraft(token, draft.id));
+        setSelected(claimed);
+        await load();
+      } catch (error) {
+        notifyError('Could not open draft', getMobileErrorMessage(error, '') || 'Try again.');
+      } finally {
+        setOpeningDraftId(null);
+        setSaving(false);
+      }
+    },
+    [canComplete, load, withAuth],
+  );
 
   const claim = useCallback(async () => {
     if (!selected || !canComplete) return;
@@ -65,5 +88,16 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
     [canComplete, load, withAuth],
   );
 
-  return { drafts, selected, setSelected, loading, saving, load, claim, complete };
+  return {
+    drafts,
+    selected,
+    setSelected,
+    loading,
+    saving,
+    openingDraftId,
+    load,
+    open,
+    claim,
+    complete,
+  };
 }

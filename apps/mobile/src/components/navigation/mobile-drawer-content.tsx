@@ -16,6 +16,7 @@ import {
   canViewQueueScreen,
   canViewRiderCurrent,
   canViewRiderHistory,
+  canViewSelfServiceBookings,
 } from '@mobile/lib/permissions';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 
@@ -31,6 +32,7 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
   const canUseQueue = canViewQueueScreen(permissions);
   const canUseOperations = canViewOperationsHub(permissions);
   const canUseReceive = canUseTransitReceiveScan(permissions);
+  const canUseSelfService = canViewSelfServiceBookings(permissions);
   const canUseRiderCurrent = canViewRiderCurrent(permissions);
   const canUseRiderHistory = canViewRiderHistory(permissions);
   const canCreateBooking = canCreateParcelBooking(permissions);
@@ -139,6 +141,17 @@ export function MobileDrawerContent(props: DrawerContentComponentProps) {
                 <Ionicons name="qr-code-outline" size={size} color={color} />
               )}
               onPress={() => props.navigation.navigate('Receive')}
+              inactiveTintColor={theme.colors.text}
+            />
+          ) : null}
+          {canUseSelfService ? (
+            <DrawerItem
+              label="Self-Service Bookings"
+              labelStyle={{ color: theme.colors.text, fontWeight: '600' }}
+              icon={({ size, color }) => (
+                <Ionicons name="document-text-outline" size={size} color={color} />
+              )}
+              onPress={() => props.navigation.navigate('SelfService')}
               inactiveTintColor={theme.colors.text}
             />
           ) : null}

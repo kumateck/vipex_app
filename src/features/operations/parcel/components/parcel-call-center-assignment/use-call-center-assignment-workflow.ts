@@ -46,13 +46,10 @@ export function useCallCenterAssignmentWorkflow() {
       const params = new URLSearchParams({
         page: String(query.page ?? 1),
         pageSize: String(query.pageSize ?? 20),
-        companyId,
-        destinationId: branchId,
-        statuses: '3,12,4',
         ...(searchInput && { search: searchInput }),
       });
       const [parcelsRes, staffRes] = await Promise.all([
-        fetch(`/v1/shipments/parcels?${params}`, {
+        fetch(`/v1/shipments/parcels/call-center?${params}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
         fetch('/v1/shipments/parcels/assignment-staff', {

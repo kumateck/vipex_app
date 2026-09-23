@@ -13,6 +13,7 @@ export type ParcelRow = {
   parcelDetails: string;
   parcelContent: string;
   chargePsw: number;
+  paidPrincipalPsw?: number;
   plannedToBePaidPsw: number;
   status: number;
   pickerStaffId: string | null;

@@ -15,8 +15,11 @@ import { Input } from '@/components/ui/input';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import { PaymentStatusLegend } from '../parcel-processed-consignment/payment-status-legend';
 import { EMPTY_META, PARCEL_STATUS_LABELS } from './constants';
+import { ParcelSuperSearchPaymentCell } from './parcel-super-search-payment-cell';
 import type { ParcelSuperSearchFilters } from './types';
+import { formatParcelDate } from './utils';
 
 type ParcelSuperSearchTableProps = {
   companyId: string | null;
@@ -47,49 +50,117 @@ export function ParcelSuperSearchTable({
 }: ParcelSuperSearchTableProps) {
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'bookingCode', header: 'Booking' },
       {
-        id: 'sender',
-        header: 'Sender',
+        id: 'reference',
+        header: 'Parcel Reference',
         cell: ({ row }) => (
-          <div className="leading-tight">
-            <p className="font-medium">{row.original.senderName ?? '-'}</p>
-            <p className="text-xs text-muted-foreground">{row.original.senderPhone ?? '-'}</p>
-          </div>
-        ),
-      },
-      {
-        id: 'receiver',
-        header: 'Receiver',
-        cell: ({ row }) => (
-          <div className="leading-tight">
-            <p className="font-medium">{row.original.receiverName ?? '-'}</p>
-            <p className="text-xs text-muted-foreground">{row.original.receiverPhone ?? '-'}</p>
-          </div>
-        ),
-      },
-      {
-        id: 'source',
-        header: 'Source',
-        cell: ({ row }) => (
-          <div className="leading-tight">
-            <p className="font-medium">{row.original.sourceLocationName ?? '-'}</p>
-            <p className="text-xs text-muted-foreground">
-              {branchNameById.get(row.original.sourceId) ?? row.original.sourceName ?? '-'}
+          <div className="space-y-1 text-xs">
+            <p>
+              <span className="text-muted-foreground">Consignment:</span>{' '}
+              {row.original.consignmentCode ?? '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Booking:</span> {row.original.bookingCode}
             </p>
           </div>
         ),
       },
       {
-        id: 'destination',
-        header: 'Destination',
+        id: 'dates',
+        header: 'Dates',
         cell: ({ row }) => (
-          <div className="leading-tight">
-            <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
-            <p className="text-xs text-muted-foreground">
-              {branchNameById.get(row.original.destinationId) ??
-                row.original.destinationName ??
+          <div className="space-y-1 text-xs">
+            <p>
+              <span className="text-muted-foreground">Sent D&T:</span>{' '}
+              {formatParcelDate(
+                row.original.consignmentCreatedAt ??
+                  row.original.bookingCreatedAt ??
+                  row.original.createdAt,
+              )}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Created D&T:</span>{' '}
+              {formatParcelDate(row.original.createdAt)}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Received D&T:</span>{' '}
+              {formatParcelDate(row.original.receivedAt)}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Delivered D&T:</span>{' '}
+              {formatParcelDate(row.original.deliveredAt)}
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'customers',
+        header: 'Customers',
+        cell: ({ row }) => (
+          <div className="space-y-1 text-xs">
+            <p>
+              <span className="text-muted-foreground">Sender:</span>{' '}
+              {row.original.senderName ?? '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Tel:</span>{' '}
+              {[row.original.senderPhone, row.original.senderPhone2].filter(Boolean).join(' / ') ||
                 '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Receiver:</span>{' '}
+              {row.original.receiverName ?? '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Tel:</span>{' '}
+              {[row.original.receiverPhone, row.original.receiverPhone2]
+                .filter(Boolean)
+                .join(' / ') || '-'}
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'description',
+        header: 'Parcel Description',
+        cell: ({ row }) => (
+          <div className="space-y-1 text-xs">
+            <p>
+              <span className="text-muted-foreground">Details:</span>{' '}
+              {row.original.parcelDetails || '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Content:</span>{' '}
+              {row.original.parcelContent || '-'}
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'payment',
+        header: 'Payment',
+        cell: ({ row }) => <ParcelSuperSearchPaymentCell parcel={row.original} />,
+      },
+      {
+        id: 'route',
+        header: 'Route',
+        cell: ({ row }) => (
+          <div className="space-y-1 text-xs">
+            <p>
+              <span className="text-muted-foreground">From Branch:</span>{' '}
+              {row.original.sourceName ?? '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Location:</span>{' '}
+              {row.original.sourceLocationName ?? '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">To Branch:</span>{' '}
+              {row.original.destinationName ?? '-'}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Location:</span>{' '}
+              {row.original.pickupLocationName ?? '-'}
             </p>
           </div>
         ),
@@ -130,10 +201,15 @@ export function ParcelSuperSearchTable({
     <ScrollableWrapper>
       <Card>
         <CardHeader>
-          <CardTitle>All Parcels Super Search</CardTitle>
-          <CardDescription>
-            Search by sender/receiver name or phone, booking code, or tracking code.
-          </CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>All Parcels Super Search</CardTitle>
+              <CardDescription>
+                Search by sender/receiver name or phone, booking code, or tracking code.
+              </CardDescription>
+            </div>
+            <PaymentStatusLegend />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <form
