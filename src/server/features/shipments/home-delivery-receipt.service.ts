@@ -1,5 +1,4 @@
 import { DeliveryMode, PaymentComponent } from '@/db/schemas';
-import { ParcelStatus } from '@/db/schemas/enums';
 import { getActiveTaxProfileWithComponentsRepo } from '../accounting/repository';
 import { getDeliveryByParcelRepo } from '../deliveries/repository';
 import { listPaymentsForParcelRepo } from '../payments/repository';
@@ -8,6 +7,8 @@ import { computeGhanaTaxesFromPesewas } from '@/server/utils/tax/ghana';
 import { computeTaxFromProfilePrincipalPsw } from '@/server/utils/tax/profile-engine';
 import { BadRequest, Forbidden, NotFound } from '@/server/utils/http-error';
 import { buildHomeDeliveryReceiptAmounts } from './home-delivery-receipt-amounts';
+import { getHomeDeliveryReceiptContactsRepo } from './home-delivery-receipt.repository';
+import { isHomeDeliveryReceiptStatus } from './home-delivery-receipt-eligibility';
 
 export async function getHomeDeliveryReceiptSvc(input: {
   parcelId: string;
@@ -20,14 +21,15 @@ export async function getHomeDeliveryReceiptSvc(input: {
   if (parcel.companyId !== input.companyId || parcel.destinationId !== input.branchId) {
     throw Forbidden('Parcel is outside your branch');
   }
-  if (![ParcelStatus.ADDRESS_COLLECTED, ParcelStatus.RETURNED_TO_OFFICE].includes(parcel.status)) {
-    throw BadRequest('Parcel is not available for home delivery dispatch');
+  if (!isHomeDeliveryReceiptStatus(parcel.status)) {
+    throw BadRequest('Parcel is not available for a home delivery receipt');
   }
 
-  const [delivery, payments, profile] = await Promise.all([
+  const [delivery, payments, profile, contacts] = await Promise.all([
     getDeliveryByParcelRepo(parcel.id),
     listPaymentsForParcelRepo(parcel.id),
     getActiveTaxProfileWithComponentsRepo({ companyId: input.companyId }),
+    getHomeDeliveryReceiptContactsRepo(parcel.id),
   ]);
   if (!delivery || delivery.isDeleted || delivery.mode !== DeliveryMode.DOORSTEP) {
     throw BadRequest('Parcel has no active home delivery fee');
@@ -72,6 +74,16 @@ export async function getHomeDeliveryReceiptSvc(input: {
   return {
     bookingCode: parcel.bookingCode,
     trackingCode: parcel.trackingCode,
+    parcelDetails: parcel.parcelDetails,
+    parcelContent: parcel.parcelContent,
+    dropoffAddress: delivery.dropoffAddress,
+    senderName: contacts?.senderName ?? null,
+    senderPhone: contacts?.senderPhone ?? null,
+    senderPhone2: contacts?.senderPhone2 ?? null,
+    receiverName: contacts?.receiverName ?? null,
+    receiverPhone: contacts?.receiverPhone ?? null,
+    receiverPhone2: contacts?.receiverPhone2 ?? null,
+    destinationName: contacts?.destinationName ?? null,
     ...amounts,
     netPsw,
     taxTotalPsw,
