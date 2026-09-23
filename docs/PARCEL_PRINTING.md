@@ -6,13 +6,31 @@ The application prints parcel stickers and A5 customer documents from the browse
 
 ## Documents
 
-| Document           | Purpose                                                                  |
-| ------------------ | ------------------------------------------------------------------------ |
-| Parcel sticker     | Tracking and routing label attached to each physical parcel.             |
-| A5 receipt/invoice | Customer and transaction document containing parcel and payment details. |
-| A4 consignment     | Saved source-to-destination parcel manifest that can be printed again.   |
+| Document                 | Purpose                                                                  |
+| ------------------------ | ------------------------------------------------------------------------ |
+| Parcel sticker           | Tracking and routing label attached to each physical parcel.             |
+| A5 receipt/invoice       | Customer and transaction document containing parcel and payment details. |
+| A5 home delivery receipt | Per-parcel delivery document printed from Home Delivery Dispatch.        |
+| A4 consignment           | Saved source-to-destination parcel manifest that can be printed again.   |
 
 The A5 document includes payer details where a payer differs from the sender or receiver.
+Home Delivery Dispatch offers **Print** on each parcel row. The print action
+loads current amounts from a read-only, branch-scoped endpoint and produces one A5 document through
+the browser or the configured desktop A5 printer. The receipt shows the full parcel charge and
+delivery fee, previous principal and delivery-fee payments, and the amount due on delivery. A
+fully paid parcel owes only the unpaid delivery fee; an unpaid or partially paid parcel owes its
+remaining principal plus the unpaid delivery fee. Voided payments do not reduce the balance.
+
+The home delivery receipt calculates the tax breakdown when opened from the full parcel charge
+plus full delivery fee. It uses the active company tax profile, or the default Ghana tax rules if
+none is configured. The tax box shows the net price, configured components, and full charge plus
+delivery fee total. The amount due on delivery is shown separately after previous payments; no
+receipt tax calculation is saved. A parcel outside the authenticated dispatch branch, a parcel
+outside the address-collected/returned-to-office queue, or a parcel without an active doorstep
+delivery fee cannot generate this receipt. Load or print failures show an error and leave parcel
+and payment records unchanged. QA: print paid, unpaid, and partial parcels; verify fee-only and
+combined balances; void a payment and confirm a new print reflects the increased balance; compare
+tax components against the active tax profile; check browser and desktop A5 printing.
 For taxable principal payments, the A5 tax summary prints only the configured tax components from
 the payment response. The payment response carries the configured component keys, so an unset
 VAT, GETFUND, NHIL, or COVID component is not printed as a zero row.
