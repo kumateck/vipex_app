@@ -21,6 +21,7 @@ export type ReceiptPrintData = {
   senderPaidCedis: number;
   receiverToPayCedis: number;
   amountPaidCedis?: number;
+  storageChargeCedis?: number;
   issuedAt: string;
   taxBreakdown?: {
     vatCedis: number;

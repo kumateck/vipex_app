@@ -19,6 +19,7 @@ export type InvoiceA5TemplateProps = {
   senderPaidCedis: number;
   receiverToPayCedis: number;
   amountPaidCedis: number;
+  storageChargeCedis?: number;
   amountInWords: string;
   tax: {
     vat: number;

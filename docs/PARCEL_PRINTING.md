@@ -14,6 +14,21 @@ The application prints parcel stickers and A5 customer documents from the browse
 | A4 consignment           | Saved source-to-destination parcel manifest that can be printed again.                      |
 
 The A5 document includes payer details where a payer differs from the sender or receiver.
+The receiver cashier A5 receipt shows an **Ageing storage** line when storage was collected at
+handover. Its printed total adds the actual storage payment to the receiver's to-be-paid principal
+payment. A previously paid parcel with only storage due still produces a receiver payment receipt
+for the storage charge through the same A5 print flow. For any receipt with storage, the server
+calculates the displayed tax components from the combined principal and storage collection using
+the active tax profile, or the default Ghana rules, as with the home delivery receipt. This
+receipt-only tax calculation is not saved; the storage payment remains a separate payment record.
+With no storage payment, the existing principal receipt and its payment tax breakdown are used.
+The separate storage payment is already included in daily cashier sales as a non-voided payment;
+printing does not create another sale. If a required payment response lacks receipt amounts,
+the client reports an error instead of producing an incomplete receipt. QA: print receipts for
+principal only, storage only, and principal plus storage; verify the storage line, total, and
+daily cashier sales against the recorded payments without double counting. Confirm the receipt
+tax components use the combined amount when storage is present, and the existing principal tax
+breakdown when it is absent.
 Home Delivery Dispatch and Rider Assigned Parcels offer **Print** on each parcel row, including
 current rider assignments and completed rider history. The print action
 loads current amounts from a read-only, branch-scoped endpoint and produces one A5 document through

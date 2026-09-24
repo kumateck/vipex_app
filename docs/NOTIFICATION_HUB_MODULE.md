@@ -166,6 +166,12 @@ can still dispatch operational messages. Every parcel event exposes `{{branch}}`
 `{{location}}`; these resolve to the parcel's destination branch and pickup or queue location, with
 an empty location when the parcel has no assigned pickup location. Pickup queue tickets use the
 branch name as the queue location when no more specific location exists.
+Call-outcome SMS templates also expose `{{branchPhone}}`, the destination branch's telephone.
+The token renders as an empty string when that branch has no telephone. Existing call-outcome
+templates show the token in the edit form's Variables JSON and save it with the other supported
+variables; their message body changes only when an editor adds `{{branchPhone}}`. QA: edit a
+previously saved pickup template, add the token to the body, send for a branch with a telephone,
+and verify its number appears; repeat with a branch without one and verify no unresolved token.
 
 OTP SMS events are explicitly classified at the event-definition level. The
 `receiver_pickup_otp` event sends `sms_type: "otp"` in the mNotify provider payload (and the same
