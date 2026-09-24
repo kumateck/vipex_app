@@ -6,7 +6,7 @@ import { ParcelStatus, UserStatus } from '@/db/schemas/enums';
 import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
 import {
   useAddCustomerCardMutation,
-  useCreateCustomerMutation,
+  useResolveSecondReceiverMutation,
   useListCardOptionsQuery,
   useListCustomerCardsQuery,
 } from '@/features/customers/api';
@@ -55,7 +55,8 @@ export function useWaitingPickupWorkflow() {
 
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [addCustomerCard, { isLoading: isAddingCard }] = useAddCustomerCardMutation();
-  const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
+  const [resolveSecondReceiver, { isLoading: isCreatingCustomer }] =
+    useResolveSecondReceiverMutation();
   const cardOptionsQuery = useListCardOptionsQuery();
   const staffOptionsQuery = useListUserOptionsQuery(
     companyId && branchId && cashierLocationId
@@ -188,7 +189,7 @@ export function useWaitingPickupWorkflow() {
         if (!isTenDigitPhone(telephone)) {
           throw new Error(phoneLengthMessage('Second receiver telephone'));
         }
-        secondReceiverId = (await createCustomer({ fullname, telephone }).unwrap()).id;
+        secondReceiverId = (await resolveSecondReceiver({ fullname, telephone }).unwrap()).id;
       }
       secondCard = await resolveCustomerCard({
         customerId: secondReceiverId,

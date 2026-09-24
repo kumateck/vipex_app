@@ -284,6 +284,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanCreateReceiverPayments,
           },
           {
+            title: 'Reverse Delivery Confirmation',
+            url: '/parcels/delivery-reversal',
+            permissionKey: PermissionKeys.CanReverseParcelDelivery,
+          },
+          {
             title: 'Aged & Uncollected',
             url: '/parcels/uncollected',
             permissionKey: PermissionKeys.CanViewReportParcelsUncollected,

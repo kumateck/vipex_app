@@ -135,6 +135,7 @@ export const KEY_OVERRIDES: Partial<Record<PermissionKey, Partial<GroupDefault>>
   CanReadParcelReceivingModule: { module: 'Parcel Receiving' },
   CanReadParcelIncoming: { module: 'Parcel Receiving' },
   CanReadParcelScan: { module: 'Parcel Receiving' },
+  CanReverseParcelDelivery: { module: 'Pickup & Collection' },
   CanCreateReceiverPayments: {
     domain: 'Operations',
     subdomain: 'Parcel Lifecycle',

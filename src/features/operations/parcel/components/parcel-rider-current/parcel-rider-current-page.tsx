@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import {
   useAddCustomerCardMutation,
-  useCreateCustomerMutation,
+  useResolveSecondReceiverMutation,
   useListCardOptionsQuery,
   useListCustomerCardsQuery,
 } from '@/features/customers/api';
@@ -59,7 +59,7 @@ export function ParcelRiderCurrentPage() {
   );
 
   const [addCustomerCard] = useAddCustomerCardMutation();
-  const [createCustomer] = useCreateCustomerMutation();
+  const [resolveSecondReceiver] = useResolveSecondReceiverMutation();
   const [uploadImage, { isLoading: isUploadingSignature }] = useUploadImageMutation();
   const [riderGiven, { isLoading: isConfirming }] = useRiderGivenParcelToCustomerMutation();
   const [riderReturned, { isLoading: isReturning }] = useRiderReturnParcelToOfficeMutation();
@@ -157,7 +157,7 @@ export function ParcelRiderCurrentPage() {
             toast.error(phoneLengthMessage('Second receiver telephone'));
             return;
           }
-          const created = await createCustomer({ fullname, telephone }).unwrap();
+          const created = await resolveSecondReceiver({ fullname, telephone }).unwrap();
           secondReceiverId = created.id;
         }
 
