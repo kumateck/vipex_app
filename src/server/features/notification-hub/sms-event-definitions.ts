@@ -15,6 +15,7 @@ const PARCEL_STATUS_VARIABLES = [
   'bookingCode',
   'outcome',
   'branch',
+  'branchPhone',
   'location',
 ];
 

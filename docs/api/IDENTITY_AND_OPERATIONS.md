@@ -37,6 +37,12 @@ System Admin password assignment revokes the target user's active sessions and w
 
 - `/shipments/bookings`: booking creation and query, including booking-with-parcels operations.
 - `/shipments/parcels`: parcel search, detail, lifecycle actions, corrections, and receiver OTP-related operations.
+- `POST /payments/collect-receiver-and-deliver`: returns separate principal `payment` and ageing
+  `storagePayment` records when collected. When storage is collected, `receiptTaxBreakdown` is
+  calculated from the sum of both collected amounts using the company tax profile or default
+  Ghana rules. It is for the A5 receiver receipt only and is not persisted as payment tax. With
+  no storage payment, the receiver receipt continues to use the principal payment's saved tax
+  breakdown. Storage-only collection returns a receipt breakdown even when `payment` is null.
 - `GET /shipments/parcels`: optional `sentDate=YYYY-MM-DD` filters by the linked consignment's
   creation day (inclusive start, exclusive next day, UTC); optional `consignmentNumber` matches
   its daily serial or full code. Both can be combined with the existing `sourceId`, `destinationId`,

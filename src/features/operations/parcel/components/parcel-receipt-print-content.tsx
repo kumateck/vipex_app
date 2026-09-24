@@ -121,6 +121,7 @@ export function ParcelReceiptPrintContent({
             senderPaidCedis={data.senderPaidCedis}
             receiverToPayCedis={data.receiverToPayCedis}
             amountPaidCedis={amountPaidCedis}
+            storageChargeCedis={data.storageChargeCedis}
             amountInWords={toAmountWords(amountPaidCedis)}
             tax={tax}
             qrValue={qrUrl}

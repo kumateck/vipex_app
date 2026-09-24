@@ -87,4 +87,53 @@ describe('confirmReceiverDelivery branch OTP policy', () => {
       }),
     ).rejects.toThrow('Verify the receiver OTP');
   });
+
+  it('prints a storage-only receipt with combined-amount receipt tax', async () => {
+    const { receipt } = await confirmReceiverDelivery({
+      selectedParcel: PARCEL,
+      pickerStaffId: 'staff-1',
+      paymentAmount: '0',
+      storagePaymentAmount: '6',
+      receiverDuePsw: 0,
+      storageOutstandingPsw: 600,
+      canWaiveStorageAccrual: false,
+      handoverTarget: 'main',
+      mainCardMode: 'none',
+      mainExistingCardRecordId: '',
+      mainNewCardTypeId: '',
+      mainNewCardNumber: '',
+      mainReceiverCards: [],
+      secondCardMode: 'none',
+      secondExistingCardRecordId: '',
+      secondNewCardTypeId: '',
+      secondNewCardNumber: '',
+      secondNewName: '',
+      secondNewPhone: '',
+      secondReceiverCards: [],
+      paymentMethod: '0',
+      destinationBranchName: 'Accra',
+      destinationLocationName: 'Front desk',
+      isReceiverOtpRequired: false,
+      receiverOtpVerificationToken: '',
+      addCustomerCard: async () => undefined,
+      createCustomer: async () => ({ id: 'customer-2' }),
+      collectReceiverAndDeliver: async (input) => {
+        expect(input.storageAmountCedis).toBe(6);
+        return {
+          payment: null,
+          storagePayment: { amounts: { grossCedis: 6 } },
+          receiptTaxBreakdown: {
+            vatCedis: 0.5,
+            getfundCedis: 0,
+            nhilCedis: 0,
+            covidCedis: 0,
+            taxTotalCedis: 0.5,
+          },
+        };
+      },
+    });
+    expect(receipt.amountPaidCedis).toBe(6);
+    expect(receipt.storageChargeCedis).toBe(6);
+    expect(receipt.taxBreakdown?.taxTotalCedis).toBe(0.5);
+  });
 });

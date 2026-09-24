@@ -44,14 +44,18 @@ is **Paid**, amber is **To Be Paid**, and blue is **Partial**. A Paid parcel sho
 amount, a To Be Paid parcel shows only its balance due, and a Partial parcel shows both. The
 indicator is informational and does not change assignment behavior.
 
-Shelf Picker Update lists unassigned parcels first across the full paginated result. Assigned
-parcels follow. Within each group, branches using pickup queues retain queue-number order when
+Shelf Picker Update lists unassigned parcels first across the full paginated result. Every row
+shows **Received D&T** from the parcel's recorded receipt timestamp; older rows without a valid
+receipt timestamp show `-`. This display does not change assignment order. Assigned parcels follow.
+Within each group, branches using pickup queues retain queue-number order when
 there is no search; other results retain creation order. The server considers both the parcel's
 stored shelf-picker assignment and a legacy pickup-queue assignment when determining whether a
 parcel is assigned. A failed list request leaves the current table error visible and does not
 change any assignment. QA: check Paid, To Be Paid, and Partial rows for the correct amount lines;
 assign a picker to a parcel on page one, refresh, and verify that it moves below all unassigned
 rows, including those on later pages; repeat on a branch with pickup queues enabled.
+Verify Received D&T for a newly received parcel and the `-` fallback for a legacy row without a
+receipt timestamp.
 
 Call Center Assignment shows sender and receiver names with every available telephone, payment
 status and applicable balances, parcel details, received date and time, and the current assignee.

@@ -935,6 +935,15 @@ export const parcelApi = api.injectEndpoints({
         status: number;
         message: string;
         storageSettlement?: ParcelStorageSettlement;
+        storagePayment?: { id: string; amounts: { grossCedis: number } } | null;
+        receiptTaxBreakdown?: {
+          vatCedis: number;
+          getfundCedis: number;
+          nhilCedis: number;
+          covidCedis: number;
+          taxTotalCedis: number;
+          taxComponentKeys: string[];
+        } | null;
         payment: null | {
           id: string;
           amounts: {

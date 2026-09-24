@@ -20,6 +20,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     senderPaidCedis,
     receiverToPayCedis,
     amountPaidCedis,
+    storageChargeCedis = 0,
     amountInWords,
     tax,
     qrValue,
@@ -215,6 +216,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
               formatMoney={formatMoney}
               isToBePaidReceipt={false}
               priceBeforeTax={priceBeforeTax}
+              storageChargeCedis={storageChargeCedis}
               taxRows={taxRows}
               totalPaid={totalPaid}
             />

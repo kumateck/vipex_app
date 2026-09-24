@@ -1063,6 +1063,7 @@ export async function sendParcelStatusNotificationSvc(input: {
           bookingCode: parcel.bookingCode,
           outcome: input.outcome,
           branch: parcel.branch,
+          branchPhone: parcel.branchPhone,
           location: parcel.location,
         },
         metadataJson: {
