@@ -153,6 +153,20 @@ use the existing routed A4 print flow; mobile has no previous-consignment reprin
 
 Receiving supports scan-based parcel identification, completeness tracking, discrepancy recording, and confirmation. Staff can identify missing or unexpected parcels before completing the receipt.
 
+The web **In Transit (Receiving Branch)** list has optional Send Date, Source Branch, and
+Consignment Number filters. Apply Filters combines them with the destination branch and in-transit
+status, the text search, and pagination; Clear Filters removes only these three fields. Send Date
+matches the consignment's creation date shown as **Sent** under Booking, using the selected Ghana
+calendar day. Source Branch selects a branch in the current company. Consignment Number accepts
+the displayed daily serial number or the full consignment code. A parcel without a consignment
+cannot match Send Date or Consignment Number. Invalid dates and out-of-scope branches do not change
+parcel state; the server rejects invalid date values and returns no rows for branches without
+matching parcels. The outgoing list and mobile receiving scan flow do not expose these filters.
+
+QA: Combine all three filters and a text search across multiple pages; verify the total count and
+rows agree. Check a leap-day date, a non-existent date, serial and full-code matches, a source
+branch with no matches, Clear Filters, and a parcel without a consignment.
+
 On the web Incoming (In Transit) page, users can select parcels individually or select every parcel
 on the current page, retain selections while paging, and mark up to 100 selected parcels as arrived
 in one action. Incoming and outgoing transit tables use one **Route** column with four lines: source

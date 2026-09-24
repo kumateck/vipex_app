@@ -41,6 +41,10 @@ import { EditIncomingTransitParcelDialog } from './edit-incoming-transit-parcel-
 import { LogDiscrepancyDialog } from './log-discrepancy-dialog';
 import { ParcelDetailsDialog } from './parcel-details-dialog';
 import { ParcelTransitRouteCell } from './parcel-transit-route-cell';
+import {
+  IncomingTransitFilters,
+  type IncomingTransitFilterValues,
+} from './incoming-transit-filters';
 
 type InTransitView = 'outgoing' | 'incoming';
 
@@ -85,15 +89,18 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
   const [searchInput, setSearchInput] = useState('');
+  const [incomingFilters, setIncomingFilters] = useState<IncomingTransitFilterValues>({});
 
   const serverFilters = useMemo(
     () => ({
       companyId: companyId ?? undefined,
-      sourceId: view === 'outgoing' ? (branchId ?? undefined) : undefined,
+      sourceId: view === 'outgoing' ? (branchId ?? undefined) : incomingFilters.sourceId,
       destinationId: view === 'incoming' ? (branchId ?? undefined) : undefined,
       status: ParcelStatus.IN_TRANSIT,
+      sentDate: view === 'incoming' ? incomingFilters.sentDate : undefined,
+      consignmentNumber: view === 'incoming' ? incomingFilters.consignmentNumber : undefined,
     }),
-    [branchId, companyId, view],
+    [branchId, companyId, incomingFilters, view],
   );
 
   const [query, setQuery] = useState<
@@ -102,6 +109,8 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
       sourceId?: string;
       destinationId?: string;
       status?: number;
+      sentDate?: string;
+      consignmentNumber?: string;
     }>
   >({
     page: 1,
@@ -178,6 +187,8 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         sourceId?: string;
         destinationId?: string;
         status?: number;
+        sentDate?: string;
+        consignmentNumber?: string;
       }>,
     ) => {
       setQuery((prev) => ({
@@ -586,6 +597,15 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
                   Log Missing Physical Parcel
                 </Button>
               </div>
+            ) : null}
+            {view === 'incoming' ? (
+              <IncomingTransitFilters
+                branches={branchOptions}
+                onApply={(filters) => {
+                  batchArrival.clearSelection();
+                  setIncomingFilters(filters);
+                }}
+              />
             ) : null}
             <form className="flex items-center gap-2" onSubmit={handleSearchSubmit}>
               <Input

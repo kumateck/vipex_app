@@ -580,6 +580,8 @@ export type ParcelSearchFilters = {
   cashierCollectionRequired?: boolean | null;
   includeDeleted?: boolean | null;
   assignedToCurrentUser?: boolean | null;
+  sentDate?: string | null;
+  consignmentNumber?: string | null;
 };
 
 export type IncomingConsignmentRow = {

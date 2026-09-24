@@ -37,6 +37,11 @@ System Admin password assignment revokes the target user's active sessions and w
 
 - `/shipments/bookings`: booking creation and query, including booking-with-parcels operations.
 - `/shipments/parcels`: parcel search, detail, lifecycle actions, corrections, and receiver OTP-related operations.
+- `GET /shipments/parcels`: optional `sentDate=YYYY-MM-DD` filters by the linked consignment's
+  creation day (inclusive start, exclusive next day, UTC); optional `consignmentNumber` matches
+  its daily serial or full code. Both can be combined with the existing `sourceId`, `destinationId`,
+  `status`, and search parameters. Invalid calendar dates return 400. Rows without a consignment
+  cannot match either consignment filter. These predicates apply to both result rows and total count.
   The optional `cashierCollectionRequired` list filter is mutually exclusive routing support for
   pickup workflows. `true` returns parcels with outstanding principal or storage; `false` returns
   parcels with neither. Storage is computed from the company ageing policy, effective received

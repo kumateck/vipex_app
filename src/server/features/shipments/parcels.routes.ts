@@ -261,6 +261,8 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           received: query.received ?? null,
           includeDeleted: query.includeDeleted ?? null,
           assignedToUserId: query.assignedToCurrentUser ? authUser.sub : null,
+          sentDate: query.sentDate ?? null,
+          consignmentNumber: query.consignmentNumber ?? null,
         },
       });
     },
@@ -295,6 +297,8 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         received: t.Optional(t.Boolean()),
         includeDeleted: t.Optional(t.Boolean()),
         assignedToCurrentUser: t.Optional(t.Boolean()),
+        sentDate: t.Optional(t.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}$' })),
+        consignmentNumber: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
       }),
       beforeHandle: [
         requireAuth(),
