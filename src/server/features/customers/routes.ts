@@ -24,9 +24,30 @@ import {
   updateCustomerCtrl,
   updateCustomerCardCtrl,
 } from './controller';
+import { findOrCreateCustomerSvc } from './service';
 
 export const customersRoutes = new Elysia({ name: 'customers' })
   .use(authPlugin)
+  .post(
+    '/resolve-second-receiver',
+    ({ body, user }) => {
+      const authUser = user as AuthUser;
+      return findOrCreateCustomerSvc({
+        companyId: authUser.companyId ?? '',
+        fullname: body.fullname,
+        telephone: body.telephone,
+        createdBy: authUser.sub,
+      });
+    },
+    {
+      body: t.Object({
+        fullname: t.String({ minLength: 1, maxLength: 255 }),
+        telephone: t.String({ minLength: 10, maxLength: 20 }),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateCustomers)],
+      detail: { tags: ['Customers'], summary: 'Resolve or create a second receiver by telephone' },
+    },
+  )
   .get(
     '/',
     async ({ query, user }) =>

@@ -65,7 +65,7 @@ An assigned parcel card shows booking and received time, parcel and receiver det
 - Customer will come → Awaiting Pickup
 - Customer wants delivery → Home Delivery Requested
 
-Awaiting Pickup optionally supports a newly created second receiver, subject to server customer-create permission and validation. The form requires a name and a ten-digit telephone number. SMS is selected by default; email is optional. Parcel status is saved before notification dispatch. If notification dispatch fails, mobile reports partial success, closes the completed outcome, and refreshes the assigned queue rather than inviting a duplicate status mutation.
+Awaiting Pickup optionally supports a second receiver, subject to server customer-create permission and validation. The form requires a name and a ten-digit telephone number. An exact match to an active customer phone in the company links that existing customer; otherwise the server creates one. SMS is selected by default; email is optional. Parcel status is saved before notification dispatch. If notification dispatch fails, mobile reports partial success, closes the completed outcome, and refreshes the assigned queue rather than inviting a duplicate status mutation.
 
 - In Delivery addresses, users who also have `CanReadCallCenterParcelStatus` can record the call through `/deliveries/dd/:parcelId/call`.
 - Users with `CanMarkDoorstepCalled` can save a confirmed address and delivery fee through `/deliveries/dd/:parcelId/address-collected`.

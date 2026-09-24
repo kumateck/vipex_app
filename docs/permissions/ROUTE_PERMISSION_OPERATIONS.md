@@ -1,6 +1,6 @@
 # Route Permissions: Operations and People
 
-Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-08-27.
+Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-09-23.
 
 Parcel, cashier, and human-capital route overrides.
 
@@ -20,6 +20,7 @@ Parcel, cashier, and human-capital route overrides.
 | `/parcels/discrepancies`                | `CanReadParcelIncoming`           |
 | `/parcels/reconciliation-cases`         | `CanReadParcelReconciliation`     |
 | `/parcels/receive`                      | `CanReadParcelScan`               |
+| `/parcels/delivery-reversal`            | `CanReverseParcelDelivery`        |
 | `/parcels/home-delivery/dispatch`       | `CanDispatchForDelivery`          |
 | `/parcels/home-delivery/rider-assigned` | `CanDispatchForDelivery`          |
 | `/parcels/delivery-cashier`             | `CanCompleteDoorstepDelivery`     |

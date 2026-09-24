@@ -42,6 +42,8 @@ export async function listParcelsCtrl(
     assignedToUserId?: string | null;
     callCenterAssignmentOrder?: boolean;
     shelfPickerAssignmentOrder?: boolean;
+    sentDate?: string | null;
+    consignmentNumber?: string | null;
   }>,
 ): Promise<PaginatedResponseDto<unknown>> {
   const pagination = normalizePagination(q, { pageSize: 20, maxPageSize: 200 });
@@ -65,6 +67,8 @@ export async function listParcelsCtrl(
     assignedToUserId: q.filters?.assignedToUserId ?? null,
     callCenterAssignmentOrder: q.filters?.callCenterAssignmentOrder ?? false,
     shelfPickerAssignmentOrder: q.filters?.shelfPickerAssignmentOrder ?? false,
+    sentDate: q.filters?.sentDate ?? null,
+    consignmentNumber: q.filters?.consignmentNumber ?? null,
     sort: pagination.sort ?? null,
   });
   return {
@@ -278,7 +282,6 @@ export async function listParcelReconciliationCasesCtrl(input: {
     meta: buildPaginationMeta({ totalRecords, page, pageSize }),
   };
 }
-
 export async function assignParcelToCallCenterCtrl(input: { parcelId: string; userId: string }) {
   const { assignParcelToCallCenterSvc } = await import('./parcels.service');
   return assignParcelToCallCenterSvc(input);
@@ -290,7 +293,6 @@ export async function bulkAssignParcelsToCallCenterCtrl(input: {
   const { bulkAssignParcelsToCallCenterSvc } = await import('./parcels.service');
   return bulkAssignParcelsToCallCenterSvc(input);
 }
-
 export async function updateParcelShelfPickerCtrl(input: { parcelId: string; userId: string }) {
   const { updateParcelShelfPickerSvc } = await import('./parcels.service');
   return updateParcelShelfPickerSvc(input);

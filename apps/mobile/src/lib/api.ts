@@ -677,6 +677,18 @@ export async function createCustomer(
   });
 }
 
+export async function resolveSecondReceiver(
+  accessToken: string,
+  input: { fullname: string; telephone: string },
+): Promise<{ id: string }> {
+  return request<{ id: string }>({
+    path: '/customers/resolve-second-receiver',
+    method: 'POST',
+    token: accessToken,
+    body: input,
+  });
+}
+
 export async function listBranchOptions(
   accessToken: string,
   input: { companyId: string },

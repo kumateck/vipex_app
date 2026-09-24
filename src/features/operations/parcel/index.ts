@@ -5,6 +5,7 @@ export { ParcelProcessedConsignmentPage } from './pages/parcel-processed-consign
 export { PreviousConsignmentsPage } from './pages/previous-consignments-page';
 export { ParcelInTransitPage } from './pages/parcel-in-transit-page';
 export { ParcelReceivePage } from './pages/parcel-receive-page';
+export { ParcelDeliveryReversalPage } from './pages/parcel-delivery-reversal-page';
 export { ParcelDiscrepanciesPage } from './pages/parcel-discrepancies-page';
 export { ParcelReconciliationCasesPage } from './pages/parcel-reconciliation-cases-page';
 export { ParcelStatusPage } from './pages/parcel-status-page';

@@ -20,6 +20,10 @@ The CRM system currently provides:
   - `Business = 1`
 - Default customer type is always `Individual`.
 - Existing non-CRM customer creation/update flows remain unchanged.
+- Second-receiver handovers and call outcomes use a dedicated resolve-or-create operation: an
+  exact primary or secondary telephone match in the authenticated company links the active
+  existing customer; otherwise a new individual customer is created. The existing record is not
+  renamed or edited. Ordinary customer creation still rejects duplicate telephone numbers.
 - Business creation/update is enforced through CRM endpoints only.
 - Credit booking is allowed only for credit-eligible customers.
 - Credit settings persist on customer records and are not session-bound.

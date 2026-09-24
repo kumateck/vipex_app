@@ -580,6 +580,8 @@ export type ParcelSearchFilters = {
   cashierCollectionRequired?: boolean | null;
   includeDeleted?: boolean | null;
   assignedToCurrentUser?: boolean | null;
+  sentDate?: string | null;
+  consignmentNumber?: string | null;
 };
 
 export type IncomingConsignmentRow = {
@@ -725,6 +727,48 @@ export const parcelApi = api.injectEndpoints({
         params: buildServerPaginationParams(query),
       }),
       providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    listDeliveryReversalCandidates: builder.query<
+      ServerListResponse<ParcelSearchRow>,
+      { page?: number; pageSize?: number; search?: string }
+    >({
+      query: (params) => ({ url: '/shipments/parcels/delivery-reversal-candidates', params }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    lookupCallOutcomeReceiver: builder.query<
+      { id: string; fullname: string; telephone: string | null; telephone2: string | null } | null,
+      string
+    >({
+      query: (telephone) => ({
+        url: `/shipments/parcels/call-center/receiver-lookup/${encodeURIComponent(telephone)}`,
+      }),
+    }),
+    changeCallOutcomeMainReceiver: builder.mutation<
+      { id: string; receiverId: string; status: number; receiverName: string },
+      {
+        id: string;
+        telephone: string;
+        fullname?: string;
+        outcome: 'follow_up' | 'pickup' | 'delivery';
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/${id}/call-outcome/change-main-receiver`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    reverseParcelDelivery: builder.mutation<
+      { id: string; status: number },
+      { id: string; reason: string }
+    >({
+      query: ({ id, reason }) => ({
+        url: `/shipments/parcels/${id}/reverse-delivery`,
+        method: 'POST',
+        body: { reason },
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
     getParcelDetails: builder.query<ParcelFullDetails, string>({
       query: (id) => ({
@@ -1492,6 +1536,10 @@ export const {
   useCreateBookingWithParcelsMutation,
   useListSenderCashierParcelsQuery,
   useSearchParcelsQuery,
+  useListDeliveryReversalCandidatesQuery,
+  useLookupCallOutcomeReceiverQuery,
+  useChangeCallOutcomeMainReceiverMutation,
+  useReverseParcelDeliveryMutation,
   useLazySearchParcelsQuery,
   useGetParcelDetailsQuery,
   useLazyGetHomeDeliveryReceiptQuery,
