@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import { ParcelStatus } from '@/db/schemas/enums';
-import { useCreateCustomerMutation } from '@/features/customers/api';
+import { useResolveSecondReceiverMutation } from '@/features/customers/api';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   type ParcelSearchRow,
@@ -16,6 +16,7 @@ import { ParcelCallOutcomeDialog } from './parcel-call-outcome-dialog';
 import { ParcelBulkCallOutcomeDialog } from './parcel-bulk-call-outcome-dialog';
 import { ParcelStatusTable } from './parcel-status-table';
 import type { ContactOutcome } from './types';
+import { useMainReceiverChange } from './use-main-receiver-change';
 
 export function ParcelStatusPage() {
   const user = useAuthStore((state) => state.user);
@@ -33,10 +34,12 @@ export function ParcelStatusPage() {
   const [secondReceiverPhone, setSecondReceiverPhone] = useState('');
   const [sendSms, setSendSms] = useState(true);
   const [sendEmail, setSendEmail] = useState(false);
+  const mainReceiverChange = useMainReceiverChange(Boolean(selectedParcel));
 
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [saveBulkCallOutcome, { isLoading: isSavingBulk }] = useSaveBulkCallOutcomeMutation();
-  const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
+  const [resolveSecondReceiver, { isLoading: isCreatingCustomer }] =
+    useResolveSecondReceiverMutation();
   const [sendCallNotification, { isLoading: isSendingNotification }] =
     useSendParcelStatusCallNotificationMutation();
 
@@ -79,7 +82,12 @@ export function ParcelStatusPage() {
   }, [arrivedQuery.data?.data]);
 
   const loading = arrivedQuery.isLoading;
-  const isSaving = isUpdatingParcel || isCreatingCustomer || isSendingNotification || isSavingBulk;
+  const isSaving =
+    isUpdatingParcel ||
+    isCreatingCustomer ||
+    isSendingNotification ||
+    isSavingBulk ||
+    mainReceiverChange.isSaving;
 
   async function refreshQueues() {
     await arrivedQuery.refetch();
@@ -93,6 +101,7 @@ export function ParcelStatusPage() {
     setSecondReceiverPhone('');
     setSendSms(true);
     setSendEmail(false);
+    mainReceiverChange.reset();
   };
 
   const toggleParcel = (id: string, checked: boolean) => {
@@ -155,7 +164,7 @@ export function ParcelStatusPage() {
 
     let secondReceiverId = selectedParcel.secondReceiverId ?? null;
 
-    if (useSecondReceiver) {
+    if (useSecondReceiver && !mainReceiverChange.enabled) {
       const name = secondReceiverName.trim();
       const phone = normalizePhoneDigits(secondReceiverPhone);
       if (name.length === 0 || phone.length === 0) {
@@ -166,30 +175,50 @@ export function ParcelStatusPage() {
         toast.error(phoneLengthMessage('Second receiver telephone'));
         return;
       }
-      const created = await createCustomer({
+      const created = await resolveSecondReceiver({
         fullname: name,
         telephone: phone,
       }).unwrap();
       secondReceiverId = created.id;
     }
 
-    await updateParcel({ id: selectedParcel.id, status: nextStatus, secondReceiverId }).unwrap();
+    try {
+      if (mainReceiverChange.enabled) {
+        await mainReceiverChange.save({ parcelId: selectedParcel.id, outcome });
+        secondReceiverId = null;
+      } else {
+        await updateParcel({
+          id: selectedParcel.id,
+          status: nextStatus,
+          secondReceiverId,
+        }).unwrap();
+      }
+    } catch (error) {
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save call outcome');
+      return;
+    }
 
     if (sendSms || sendEmail) {
-      const notification = await sendCallNotification({
-        parcelId: selectedParcel.id,
-        outcome,
-        sendSms,
-        sendEmail,
-        includeSecondReceiver: useSecondReceiver || Boolean(secondReceiverId),
-      }).unwrap();
-
-      if (notification.failedCount > 0) {
+      try {
+        const notification = await sendCallNotification({
+          parcelId: selectedParcel.id,
+          outcome,
+          sendSms,
+          sendEmail,
+          includeSecondReceiver:
+            !mainReceiverChange.enabled && (useSecondReceiver || Boolean(secondReceiverId)),
+        }).unwrap();
+        if (notification.failedCount > 0) {
+          toast.warning(
+            `Outcome saved. Notifications sent: ${notification.sentCount}, failed: ${notification.failedCount}.`,
+          );
+        } else {
+          toast.success(`Outcome saved. Notifications sent: ${notification.sentCount}.`);
+        }
+      } catch (error) {
         toast.warning(
-          `Outcome saved. Notifications sent: ${notification.sentCount}, failed: ${notification.failedCount}.`,
+          `Outcome saved, but notification failed: ${getApplicationErrorMessage(error, '') || 'Please try again later'}`,
         );
-      } else {
-        toast.success(`Outcome saved. Notifications sent: ${notification.sentCount}.`);
       }
     } else {
       toast.success('Parcel contact outcome saved');
@@ -236,6 +265,7 @@ export function ParcelStatusPage() {
         sendEmail={sendEmail}
         onSendEmailChange={setSendEmail}
         isSaving={isSaving}
+        mainReceiverChange={mainReceiverChange}
         onClose={() => setSelectedParcel(null)}
         onSave={handleSaveOutcome}
       />

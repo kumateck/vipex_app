@@ -1,5 +1,5 @@
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
-import { createCustomer, mobileApiGet, mobileApiPost, updateParcel } from '@mobile/lib/api';
+import { resolveSecondReceiver, mobileApiGet, mobileApiPost, updateParcel } from '@mobile/lib/api';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 import type { ParcelSearchRow } from '@mobile/types/parcels';
 import type { ContactOutcome, SaveCallOutcomeInput } from '../types';
@@ -28,7 +28,7 @@ export function listAddressCollectionParcels(token: string, input: { search: str
 export async function saveCallOutcome(token: string, input: SaveCallOutcomeInput) {
   let secondReceiverId = input.existingSecondReceiverId;
   if (input.secondReceiver) {
-    const customer = await createCustomer(token, input.secondReceiver);
+    const customer = await resolveSecondReceiver(token, input.secondReceiver);
     secondReceiverId = customer.id;
   }
 
