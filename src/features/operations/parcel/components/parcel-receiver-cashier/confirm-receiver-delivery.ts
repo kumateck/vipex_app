@@ -63,7 +63,18 @@ type ConfirmReceiverDeliveryArgs = {
         taxTotalCedis: number;
       };
     } | null;
+    storagePayment?: { amounts: { grossCedis: number } } | null;
+    receiptTaxBreakdown?: ReceiverTaxBreakdown | null;
   }>;
+};
+
+type ReceiverTaxBreakdown = {
+  vatCedis: number;
+  getfundCedis: number;
+  nhilCedis: number;
+  covidCedis: number;
+  taxTotalCedis: number;
+  taxComponentKeys?: string[];
 };
 
 export async function confirmReceiverDelivery({
@@ -179,6 +190,12 @@ export async function confirmReceiverDelivery({
   if (receiverDuePsw > 0 && !result.payment) {
     throw new Error('Payment completed without a tax breakdown; receipt was not generated');
   }
+  if (storageOutstandingPsw > 0 && !result.storagePayment) {
+    throw new Error('Storage payment completed without receipt amounts; receipt was not generated');
+  }
+  if (result.storagePayment && !result.receiptTaxBreakdown) {
+    throw new Error('Storage receipt tax breakdown is missing; receipt was not generated');
+  }
 
   const linkedSecondReceiverName =
     (selectedParcel as { secondReceiverName?: string | null }).secondReceiverName ?? null;
@@ -200,7 +217,8 @@ export async function confirmReceiverDelivery({
       totalChargeCedis,
       senderPaidCedis,
       receiverPaidCedis,
-      taxBreakdown: result.payment ? result.payment.amounts : undefined,
+      storageChargeCedis: result.storagePayment?.amounts.grossCedis ?? 0,
+      taxBreakdown: result.receiptTaxBreakdown ?? result.payment?.amounts,
     }),
   };
 }

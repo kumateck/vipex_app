@@ -18,6 +18,7 @@ type BuildReceiverReceiptDataArgs = {
   totalChargeCedis: number;
   senderPaidCedis: number;
   receiverPaidCedis: number;
+  storageChargeCedis?: number;
   taxBreakdown?: ReceiverTaxBreakdown;
 };
 
@@ -29,6 +30,7 @@ export function buildReceiverReceiptData({
   totalChargeCedis,
   senderPaidCedis,
   receiverPaidCedis,
+  storageChargeCedis = 0,
   taxBreakdown,
 }: BuildReceiverReceiptDataArgs): ReceiptPrintData {
   return {
@@ -53,7 +55,8 @@ export function buildReceiverReceiptData({
     totalChargeCedis,
     senderPaidCedis,
     receiverToPayCedis: 0,
-    amountPaidCedis: receiverPaidCedis,
+    amountPaidCedis: receiverPaidCedis + storageChargeCedis,
+    storageChargeCedis,
     issuedAt: new Date().toISOString(),
     taxBreakdown,
   };

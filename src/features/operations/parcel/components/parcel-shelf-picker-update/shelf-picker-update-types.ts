@@ -19,6 +19,7 @@ export type ParcelRow = {
   pickerStaffId: string | null;
   pickerStaffName: string | null;
   createdAt: string;
+  receivedAt: string | null;
 };
 
 export const EMPTY_META = {
