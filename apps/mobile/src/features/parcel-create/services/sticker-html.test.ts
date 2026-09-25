@@ -19,6 +19,9 @@ describe('mobile to-be-paid sticker', () => {
   test('prints each requested copy with a scannable QR and escaped customer data', () => {
     const html = buildMobileStickerHtml(sticker);
     expect(html.match(/class="sticker"/g)).toHaveLength(2);
+    expect(html).toContain('PLEASE NOTE: PAYMENT DUE UPON RECEIPT OF PARCEL.');
+    expect(html).toContain('class="receiver"');
+    expect(html).toContain('class="destination"');
     expect(html).toContain('TO BE PAID');
     expect(html).toContain('GHS 40.00');
     expect(html).toContain('Ada &amp; Co');
