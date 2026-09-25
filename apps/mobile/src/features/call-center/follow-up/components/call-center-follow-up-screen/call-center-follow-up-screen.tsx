@@ -72,6 +72,7 @@ export function CallCenterFollowUpScreen() {
           onSearchChange={assigned.setSearch}
           onSearch={assigned.submitSearch}
           onOpenOutcome={assigned.openOutcome}
+          onMarkCalled={(parcel) => void assigned.markCalled(parcel)}
           onCallPhone={assigned.callPhone}
         />
       ) : addresses.selected ? (

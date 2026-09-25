@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { HomeDeliveryReceiptA5Template } from './home-delivery-receipt-a5-template';
 
 describe('home delivery A5 receipt', () => {
-  test('shows the full tax base and the separate amount due', () => {
+  test('shows only the delivery fee for a sender-paid parcel', () => {
     const html = renderToStaticMarkup(
       <HomeDeliveryReceiptA5Template
         issuedAtLabel="23 Sep 2026"
@@ -24,16 +24,18 @@ describe('home delivery A5 receipt', () => {
         principalDuePsw={0}
         deliveryFeeDuePsw={1_500}
         totalDuePsw={1_500}
-        grossPsw={5_500}
-        netPsw={4_700}
-        taxRows={[{ label: 'VAT', amountPsw: 800 }]}
+        grossPsw={1_500}
+        netPsw={1_200}
+        taxRows={[{ label: 'VAT', amountPsw: 300 }]}
         qrValue="https://example.com/AA123"
       />,
     );
     expect(html).toContain('Tax Invoice');
     expect(html).toContain('Amount due on delivery');
     expect(html).toContain('GH₵ 15.00');
-    expect(html).toContain('GH₵ 55.00');
+    expect(html).not.toContain('GH₵ 55.00');
+    expect(html).not.toContain('GH₵ 40.00');
+    expect(html).not.toContain('Previously paid');
     expect(html).toContain('VAT');
     expect(html).not.toContain('Parcel charge');
     expect(html).not.toContain('To be paid');
@@ -61,9 +63,9 @@ describe('home delivery A5 receipt', () => {
         principalDuePsw={2_000}
         deliveryFeeDuePsw={1_500}
         totalDuePsw={3_500}
-        grossPsw={5_500}
-        netPsw={4_700}
-        taxRows={[{ label: 'VAT', amountPsw: 800 }]}
+        grossPsw={3_500}
+        netPsw={3_000}
+        taxRows={[{ label: 'VAT', amountPsw: 500 }]}
         qrValue="https://example.com/BB456"
       />,
     );
@@ -73,5 +75,6 @@ describe('home delivery A5 receipt', () => {
     expect(html).toContain('GH₵ 35.00');
     expect(html).not.toContain('Parcel charge');
     expect(html).not.toContain('GH₵ 40.00');
+    expect(html).not.toContain('Previously paid');
   });
 });

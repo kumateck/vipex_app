@@ -9,6 +9,7 @@ apps/mobile/app/(app)/queue.tsx
 apps/mobile/app/(app)/receive-process/[parcelId].tsx
 apps/mobile/app/(app)/rider.tsx
 apps/mobile/src/lib/api.ts
+apps/mobile/src/features/parcel-create/components/parcel-create-screen/parcel-create-screen.tsx
 build.ts
 scripts/generate-routes.ts
 scripts/seed_accounting.ts
@@ -66,6 +67,7 @@ src/features/operations/parcel/api/parcel.api.ts
 src/features/operations/parcel/components/parcel-create-form.tsx
 src/features/operations/parcel/components/parcel-create/parcel-card.tsx
 src/features/operations/parcel/components/parcel-receipt-actions.tsx
+src/features/operations/parcel/components/parcel-status/parcel-status-page.tsx
 src/features/operations/parcel/pages/parcel-in-transit-page.tsx
 src/features/operations/parcel/pages/parcel-internal-transfer-ack-page.tsx
 src/features/operations/parcel/pages/parcel-internal-transfers-page.tsx
@@ -139,6 +141,7 @@ src/server/features/reporting/service.ts
 src/server/features/shifts/management.service.ts
 src/server/features/shipments/parcels.repository.ts
 src/server/features/shipments/parcels.routes.ts
+src/server/features/shipments/parcels.controller.ts
 src/server/features/shipments/parcels.service.ts
 src/server/features/shipments/pending-bookings.service.ts
 src/server/middlewares/error-handler.ts

@@ -90,6 +90,7 @@ export type ParcelSearchRow = {
   receiverId: string;
   secondReceiverId: string | null;
   status: number;
+  callCenterCalledAt?: string | null;
   parcelDetails: string;
   parcelContent: string;
   parcelValuePsw: number;
@@ -580,6 +581,7 @@ export type ParcelSearchFilters = {
   cashierCollectionRequired?: boolean | null;
   includeDeleted?: boolean | null;
   assignedToCurrentUser?: boolean | null;
+  callCenterUncalledOnly?: boolean | null;
   sentDate?: string | null;
   consignmentNumber?: string | null;
 };
@@ -1155,6 +1157,21 @@ export const parcelApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    recordCallCenterContact: builder.mutation<
+      { id: string; status: number; calledAt: string },
+      {
+        id: string;
+        outcome?: 'follow_up' | 'pickup' | 'delivery';
+        secondReceiverId?: string | null;
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/${id}/call-center/contact`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
     updateParcel: builder.mutation<
       { id: string },
       {
@@ -1573,6 +1590,7 @@ export const {
   useMarkParcelReceivedMutation,
   useMarkParcelsReceivedMutation,
   useSaveBulkCallOutcomeMutation,
+  useRecordCallCenterContactMutation,
   useUpdateParcelMutation,
   useSendParcelStatusCallNotificationMutation,
   useRecordParcelDispositionActionMutation,

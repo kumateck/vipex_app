@@ -5,6 +5,8 @@ export const mainReceiverChangeEligibleStatuses = [
   ParcelStatus.ARRIVED_AT_DESTINATION,
   ParcelStatus.RETURNED_TO_OFFICE,
   ParcelStatus.CUSTOMER_CONTACTED,
+  ParcelStatus.AWAITING_PICKUP,
+  ParcelStatus.HOME_DELIVERY_REQUESTED,
 ];
 
 export function normalizeMainReceiverPhone(value: string) {
@@ -19,6 +21,7 @@ type Candidate = {
   callCenterAssignedToUserId: string | null;
   isDeleted: boolean;
   status: number;
+  callCenterCalledAt?: Date | null;
 };
 
 export function assertMainReceiverChangeCandidate<T extends Candidate>(
@@ -34,7 +37,7 @@ export function assertMainReceiverChangeCandidate<T extends Candidate>(
   ) {
     throw NotFound('Assigned parcel not found at your branch');
   }
-  if (!mainReceiverChangeEligibleStatuses.includes(parcel.status)) {
+  if (parcel.callCenterCalledAt || !mainReceiverChangeEligibleStatuses.includes(parcel.status)) {
     throw Conflict('This parcel no longer allows a call outcome');
   }
 }

@@ -328,7 +328,27 @@ no SMS or email and does not change second-receiver assignments. A failed batch 
 for correction or retry. The single-parcel Call Outcome action retains its notification and optional
 second-receiver controls.
 
+Call Center Assignment sets newly assigned arrived, returned, or follow-up parcels to **Awaiting
+Pickup** as a provisional customer pickup choice. Assignment and reassignment clear the separate
+call marker. An assigned parcel remains in the caller's web and mobile worklist while uncalled,
+including when its status is Awaiting Pickup or Home Delivery Requested. The caller may record an
+outcome to switch between pickup and home delivery, or choose **Mark as Called** to keep the
+current status. A saved call outcome, including a bulk outcome or main-receiver change, records
+the call marker; a provisional assignment does not. Address collection and rider dispatch still
+leave an uncalled parcel in the caller's list for the mark-only action. Called parcels and parcels
+delivered at office or home leave the list. Only the assigned caller at the destination branch may
+record the call; repeated calls and changes after dispatch are rejected. QA: assign a parcel and
+verify Awaiting Pickup and an uncalled badge; change pickup to home delivery and verify it leaves
+the queue as called; assign another parcel and mark it called without changing pickup; complete
+an uncalled delivery and verify it leaves the queue; reject a different caller or branch.
+
 ## Verification Scenarios
+
+Call-center contacted pickup outcomes keep the parcel in **Awaiting Pickup** while
+`callCenterCalledAt` records **Customer Contacted** separately. The parcel remains eligible for
+pickup or delivery processing; only an explicit home-delivery outcome changes it to
+**Home Delivery Requested**. This behavior is shared by web, mobile, bulk outcomes, and main
+receiver changes.
 
 - Sender-paid, receiver-paid, split, zero-charge, and credit creation.
 - Call-center list, single assignment, and bulk assignment failures display the nested API message;

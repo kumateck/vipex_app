@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The application prints parcel stickers and A5 customer documents from the browser and the desktop application. Printing is part of parcel creation, payment, receiving, and reprint workflows, but a successful print is not the authority for whether the parcel or payment exists.
+The application prints parcel stickers and A5 customer documents from the browser and desktop application. Mobile receiver-paid creation can also open the phone's native print dialog for a parcel sticker. Printing is part of parcel creation, payment, receiving, and reprint workflows, but a successful print is not the authority for whether the parcel or payment exists.
 
 ## Documents
 
@@ -32,22 +32,23 @@ breakdown when it is absent.
 Home Delivery Dispatch and Rider Assigned Parcels offer **Print** on each parcel row, including
 current rider assignments and completed rider history. The print action
 loads current amounts from a read-only, branch-scoped endpoint and produces one A5 document through
-the browser or the configured desktop A5 printer. The receipt shows the outstanding to-be-paid
-principal only when an amount is still owed on the parcel — it never prints the full parcel
-charge — plus the full delivery fee, previous principal and delivery-fee payments, and the amount
-due on delivery. A fully paid parcel owes only the unpaid delivery fee; an unpaid or partially
-paid parcel owes its remaining principal plus the unpaid delivery fee. Voided payments do not
-reduce the balance.
+the browser or the configured desktop A5 printer. The receipt shows the parcel's remaining
+receiver to-be-paid amount only when positive, plus the unpaid delivery fee. Sender-paid
+principal and earlier payments are not printed as amounts due or previously paid on this
+delivery receipt. A sender-paid parcel owes only the unpaid delivery fee; a receiver-paid or
+partial parcel owes its remaining receiver balance plus the unpaid delivery fee. Voided fee
+payments do not reduce the balance.
 
-The home delivery receipt calculates the tax breakdown when opened from the full parcel charge
-plus full delivery fee. It uses the active company tax profile, or the default Ghana tax rules if
-none is configured. The tax box shows the net price, configured components, and full charge plus
-delivery fee total. The amount due on delivery is shown separately after previous payments; no
+The home delivery receipt calculates the tax breakdown when opened from the amount due on
+delivery: remaining receiver balance plus unpaid delivery fee. It uses the active company tax
+profile, or the default Ghana tax rules if none is configured. The tax box shows the net price,
+configured components, and the same amount due as the receipt total; no
 receipt tax calculation is saved. A parcel outside the authenticated dispatch branch, a parcel
 outside the address-collected/returned-to-office queue, or a parcel without an active doorstep
 delivery fee cannot generate this receipt. Load or print failures show an error and leave parcel
-and payment records unchanged. QA: print paid, unpaid, and partial parcels; verify fee-only and
-combined balances; void a payment and confirm a new print reflects the increased balance; compare
+and payment records unchanged. QA: print sender-paid, receiver-paid, and partial parcels; verify
+fee-only and combined balances, with no sender payment shown; void a fee payment and confirm a
+new print reflects the increased balance; compare
 tax components against the active tax profile; print a current rider assignment and a completed
 history row; check browser and desktop A5 printing.
 For taxable principal payments, the A5 tax summary prints only the configured tax components from
@@ -81,6 +82,24 @@ white QR-only overlay label of at least 30 mm square, or use manual code search.
 tape or glossy wrapping over the QR because glare can hide finder patterns.
 
 ## Intended Sticker Copy Rule
+
+Mobile **Complete & print sticker** asks for a positive whole number of copies (default one),
+generates one label page per copy, and passes them together to the phone print service. The
+printed label includes the tracking QR, destination, sender, receiver, and receiver amount due.
+No code appears directly under the QR. The QR has a white quiet zone and Q-level error
+correction. If the native print dialog fails after creation, mobile keeps the completed booking
+and exposes a retry button for the same sticker; it does not create another parcel.
+After the phone print service accepts the job, mobile records the selected copy count in sticker
+usage. If usage logging fails, mobile offers **Retry Print Log** without printing another label.
+On Android, the print service reports that the job was queued; physical printer failure must be
+checked on the device. On iOS, cancellation keeps the print retry available.
+The Android build overrides the native print library's obsolete compile SDK with the app's
+configured SDK; the library cannot compile against the removed Android 31 SDK otherwise.
+
+QA: choose one, two, and larger whole-number copy counts; reject empty, decimal, zero, negative,
+infinite, or unsafe values. Confirm the phone print preview has one 90 × 92 mm label page per
+copy and that a device print service can reach the paired printer. Simulate print failure and
+retry without a second booking. Test the QR with a scanner on actual white label stock.
 
 This is the canonical requirement for every sticker-print entry point across the entire application:
 

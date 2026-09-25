@@ -90,6 +90,27 @@ export const customersRoutes = new Elysia({ name: 'customers' })
       detail: { tags: ['Customers'], summary: 'Find customers by telephone' },
     },
   )
+  .get(
+    '/lookup/booking-by-telephone/:telephone',
+    async ({ params, user }) => {
+      const rows = await findCustomersByTelephoneCtrl({
+        companyId: (user as AuthUser).companyId ?? '',
+        telephone: params.telephone,
+        limit: 10,
+      });
+      return rows.map(({ id, fullname, telephone, telephone2 }) => ({
+        id,
+        fullname,
+        telephone,
+        telephone2,
+      }));
+    },
+    {
+      params: t.Object({ telephone: t.String({ pattern: '^\\d{10}$' }) }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateBookingWithParcels)],
+      detail: { tags: ['Customers'], summary: 'Find customer for parcel booking by telephone' },
+    },
+  )
   .get('/cards/options', async ({ user }) => listCardOptionsCtrl(user!.companyId!), {
     beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
     detail: { tags: ['Customers'], summary: 'List card type options' },

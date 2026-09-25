@@ -18,7 +18,13 @@ import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
 import { STATUS_LABELS } from './constants';
-import { canReturnToPickup, formatCurrency, formatPhones, formatReceivedAt } from './utils';
+import {
+  canChangeCallOutcome,
+  canReturnToPickup,
+  formatCurrency,
+  formatPhones,
+  formatReceivedAt,
+} from './utils';
 
 type ParcelStatusTableProps = {
   rows: ParcelSearchRow[];
@@ -31,6 +37,7 @@ type ParcelStatusTableProps = {
   onSearchSubmit: () => void;
   onCallOutcome: (parcel: ParcelSearchRow) => void;
   onReturnToPickup: (parcel: ParcelSearchRow) => Promise<void>;
+  onMarkCalled: (parcel: ParcelSearchRow) => Promise<void>;
   selectedParcelIds: Set<string>;
   onToggleParcel: (parcelId: string, checked: boolean) => void;
   onSelectAll: (checked: boolean) => void;
@@ -48,6 +55,7 @@ export function ParcelStatusTable({
   onSearchSubmit,
   onCallOutcome,
   onReturnToPickup,
+  onMarkCalled,
   selectedParcelIds,
   onToggleParcel,
   onSelectAll,
@@ -60,7 +68,12 @@ export function ParcelStatusTable({
         id: 'select',
         header: () => (
           <Checkbox
-            checked={rows.length > 0 && rows.every((row) => selectedParcelIds.has(row.id))}
+            checked={
+              rows.some((row) => canChangeCallOutcome(row.status)) &&
+              rows
+                .filter((row) => canChangeCallOutcome(row.status))
+                .every((row) => selectedParcelIds.has(row.id))
+            }
             onCheckedChange={(checked) => onSelectAll(checked === true)}
             aria-label="Select all parcels"
           />
@@ -68,6 +81,7 @@ export function ParcelStatusTable({
         enableSorting: false,
         cell: ({ row }) => (
           <Checkbox
+            disabled={!canChangeCallOutcome(row.original.status)}
             checked={selectedParcelIds.has(row.original.id)}
             onCheckedChange={(checked) => onToggleParcel(row.original.id, checked === true)}
             aria-label={`Select ${row.original.bookingCode}`}
@@ -163,7 +177,7 @@ export function ParcelStatusTable({
         header: 'Status',
         accessorFn: (row) => STATUS_LABELS[row.status] ?? String(row.status),
         cell: ({ row }) => {
-          const contacted = row.original.status === ParcelStatus.CUSTOMER_CONTACTED;
+          const contacted = Boolean(row.original.callCenterCalledAt);
           return (
             <div className="space-y-1">
               <Badge
@@ -193,8 +207,13 @@ export function ParcelStatusTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onCallOutcome(row.original)}>
-                Call Outcome
+              {canChangeCallOutcome(row.original.status) ? (
+                <DropdownMenuItem onClick={() => onCallOutcome(row.original)}>
+                  Call Outcome
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem onClick={() => void onMarkCalled(row.original)}>
+                Mark as Called
               </DropdownMenuItem>
               {canReturnToPickup(row.original.status) ? (
                 <DropdownMenuItem onClick={() => void onReturnToPickup(row.original)}>
@@ -209,6 +228,7 @@ export function ParcelStatusTable({
     [
       isSaving,
       onCallOutcome,
+      onMarkCalled,
       onReturnToPickup,
       onSelectAll,
       onToggleParcel,
@@ -223,8 +243,8 @@ export function ParcelStatusTable({
         <CardHeader>
           <CardTitle>Parcel Status (Call Receivers)</CardTitle>
           <CardDescription>
-            Queue includes parcels at arrival, returned to office, and already-contacted parcels
-            still awaiting an outcome (pickup or delivery).
+            Assigned parcels stay here after a pickup or delivery choice until marked as called or
+            delivered.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

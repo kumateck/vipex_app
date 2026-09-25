@@ -4,7 +4,8 @@ import { Linking } from 'react-native';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { notifyError, notifySuccess, notifyWarning } from '@mobile/lib/notify';
 import type { ParcelSearchRow } from '@mobile/types/parcels';
-import { listAssignedCallParcels, outcomeStatus, saveCallOutcome } from '../services';
+import { listAssignedCallParcels, markAssignedParcelCalled, saveCallOutcome } from '../services';
+import { ParcelStatus } from '@mobile/constants/parcel-status';
 import type { ContactOutcome } from '../types';
 import { getDialUrl, normalizePhone, validateSecondReceiver } from '../utils';
 
@@ -40,7 +41,13 @@ export function useAssignedCallOutcomes(enabled: boolean) {
 
   const openOutcome = useCallback((parcel: ParcelSearchRow) => {
     setSelected(parcel);
-    setOutcome('follow_up');
+    setOutcome(
+      parcel.status === ParcelStatus.HOME_DELIVERY_REQUESTED
+        ? 'delivery'
+        : parcel.status === ParcelStatus.AWAITING_PICKUP
+          ? 'pickup'
+          : 'follow_up',
+    );
     setUseSecondReceiver(false);
     setSecondReceiverName('');
     setSecondReceiverPhone('');
@@ -81,7 +88,6 @@ export function useAssignedCallOutcomes(enabled: boolean) {
       const result = await withAuth((token) =>
         saveCallOutcome(token, {
           parcelId: selected.id,
-          status: outcomeStatus(outcome),
           outcome,
           sendSms,
           sendEmail,
@@ -127,6 +133,22 @@ export function useAssignedCallOutcomes(enabled: boolean) {
     withAuth,
   ]);
 
+  const markCalled = useCallback(
+    async (parcel: ParcelSearchRow) => {
+      setSaving(true);
+      try {
+        await withAuth((token) => markAssignedParcelCalled(token, parcel.id));
+        notifySuccess('Call recorded.', 'Marked as called');
+        await load();
+      } catch (error) {
+        notifyError('Call not recorded', getMobileErrorMessage(error, '') || 'Try again.');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [load, withAuth],
+  );
+
   const submitSearch = useCallback(() => {
     const next = search.trim();
     if (next === submittedSearch) void load();
@@ -157,6 +179,7 @@ export function useAssignedCallOutcomes(enabled: boolean) {
     callReceiver,
     callPhone,
     saveOutcome,
+    markCalled,
     submitSearch,
   };
 }

@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { customers, parcels } from '@/db/schemas';
 import { findCustomerNameByExactTelephoneRepo } from '../customers/repository';
@@ -34,6 +34,7 @@ export async function changeMainReceiverWithCallOutcomeSvc(input: {
         destinationId: parcels.destinationId,
         callCenterAssignedToUserId: parcels.callCenterAssignedToUserId,
         isDeleted: parcels.isDeleted,
+        callCenterCalledAt: parcels.callCenterCalledAt,
       })
       .from(parcels)
       .where(eq(parcels.id, input.parcelId));
@@ -78,6 +79,7 @@ export async function changeMainReceiverWithCallOutcomeSvc(input: {
         secondCardId: null,
         secondCardNumber: null,
         status,
+        callCenterCalledAt: new Date(),
         updatedAt: new Date(),
       })
       .where(
@@ -87,6 +89,7 @@ export async function changeMainReceiverWithCallOutcomeSvc(input: {
           eq(parcels.destinationId, input.branchId),
           eq(parcels.callCenterAssignedToUserId, input.actorUserId),
           eq(parcels.isDeleted, false),
+          isNull(parcels.callCenterCalledAt),
           inArray(parcels.status, mainReceiverChangeEligibleStatuses),
           eq(parcels.receiverId, parcel.receiverId),
         ),

@@ -41,6 +41,7 @@ export async function listParcelsCtrl(
     includeDeleted?: boolean | null;
     assignedToUserId?: string | null;
     callCenterAssignmentOrder?: boolean;
+    callCenterUncalledOnly?: boolean;
     shelfPickerAssignmentOrder?: boolean;
     sentDate?: string | null;
     consignmentNumber?: string | null;
@@ -66,6 +67,7 @@ export async function listParcelsCtrl(
     includeDeleted: q.filters?.includeDeleted ?? null,
     assignedToUserId: q.filters?.assignedToUserId ?? null,
     callCenterAssignmentOrder: q.filters?.callCenterAssignmentOrder ?? false,
+    callCenterUncalledOnly: q.filters?.callCenterUncalledOnly ?? false,
     shelfPickerAssignmentOrder: q.filters?.shelfPickerAssignmentOrder ?? false,
     sentDate: q.filters?.sentDate ?? null,
     consignmentNumber: q.filters?.consignmentNumber ?? null,
@@ -78,6 +80,7 @@ export async function listParcelsCtrl(
       updatedAt: p.updatedAt.toISOString(),
       receivedAt: p.receivedAt ? p.receivedAt.toISOString() : null,
       confirmedAt: p.confirmedAt ? p.confirmedAt.toISOString() : null,
+      callCenterCalledAt: p.callCenterCalledAt ? p.callCenterCalledAt.toISOString() : null,
       deletedAt: p.deletedAt ? p.deletedAt.toISOString() : null,
       bookingCreatedAt: p.bookingCreatedAt ? p.bookingCreatedAt.toISOString() : null,
       consignmentCreatedAt: p.consignmentCreatedAt ? p.consignmentCreatedAt.toISOString() : null,

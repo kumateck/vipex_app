@@ -135,6 +135,33 @@ export const cashierSessions = pgTable(
   }),
 );
 
+export const cashierSessionDelegates = pgTable(
+  'cashier_session_delegates',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    sessionId: varchar('session_id', { length: 25 })
+      .notNull()
+      .references(() => cashierSessions.id),
+    userId: varchar('user_id', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+    assignedBy: varchar('assigned_by', { length: 25 })
+      .notNull()
+      .references(() => users.id),
+    assignedAt: timestamp('assigned_at', { withTimezone: false }).notNull().defaultNow(),
+    revokedAt: timestamp('revoked_at', { withTimezone: false }),
+  },
+  (t) => ({
+    uniqueSessionUser: uniqueIndex('cashier_session_delegates_session_user_uq').on(
+      t.sessionId,
+      t.userId,
+    ),
+    byUser: index('cashier_session_delegates_user_idx').on(t.userId),
+  }),
+);
+
 // Shift templates for recurring schedules
 export const shiftTemplates = pgTable(
   'shift_templates',

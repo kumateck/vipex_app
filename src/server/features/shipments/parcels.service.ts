@@ -82,6 +82,7 @@ import {
   validateStorageWaiverReason,
 } from './storage-accrual-guards';
 import { getParcelChargeValidationError } from '@/shared/shipments/parcel-charge-policy';
+import { callCenterAssignmentStatus } from './parcel-call-center-assignment';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 function getErrorCode(error: unknown): string | undefined {
@@ -1412,7 +1413,10 @@ export async function logParcelStickerPrintSvc(input: {
   trackingCode: string;
   copies?: number | null;
 }) {
-  const copies = Math.max(Math.trunc(input.copies ?? 1), 1);
+  const copies = input.copies ?? 1;
+  if (!Number.isSafeInteger(copies) || copies < 1) {
+    throw BadRequest('Sticker copies must be a positive whole number');
+  }
   return createParcelStickerPrintRepo({
     companyId: input.companyId,
     branchId: input.branchId ?? null,
@@ -1675,7 +1679,15 @@ export async function assignParcelToCallCenterSvc(input: { parcelId: string; use
   const parcel = await getParcelRepo(input.parcelId);
   if (!parcel) throw NotFound('Parcel not found');
 
-  await updateParcelRepo(input.parcelId, { callCenterAssignedToUserId: input.userId }, db);
+  await updateParcelRepo(
+    input.parcelId,
+    {
+      callCenterAssignedToUserId: input.userId,
+      callCenterCalledAt: null,
+      status: callCenterAssignmentStatus(parcel.status),
+    },
+    db,
+  );
 
   return { success: true, parcelId: input.parcelId };
 }

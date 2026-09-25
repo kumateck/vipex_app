@@ -1,5 +1,5 @@
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
-import { resolveSecondReceiver, mobileApiGet, mobileApiPost, updateParcel } from '@mobile/lib/api';
+import { resolveSecondReceiver, mobileApiGet, mobileApiPost } from '@mobile/lib/api';
 import { ParcelStatus } from '@mobile/constants/parcel-status';
 import type { ParcelSearchRow } from '@mobile/types/parcels';
 import type { ContactOutcome, SaveCallOutcomeInput } from '../types';
@@ -32,10 +32,10 @@ export async function saveCallOutcome(token: string, input: SaveCallOutcomeInput
     secondReceiverId = customer.id;
   }
 
-  await updateParcel(token, {
-    id: input.parcelId,
-    status: input.status,
-    secondReceiverId,
+  await mobileApiPost({
+    path: `/shipments/parcels/${input.parcelId}/call-center/contact`,
+    token,
+    body: { outcome: input.outcome, secondReceiverId },
   });
 
   if (!input.sendSms && !input.sendEmail) {
@@ -67,10 +67,17 @@ export async function saveCallOutcome(token: string, input: SaveCallOutcomeInput
   }
 }
 
+export const markAssignedParcelCalled = (token: string, parcelId: string) =>
+  mobileApiPost<{ id: string }>({
+    path: `/shipments/parcels/${parcelId}/call-center/contact`,
+    token,
+    body: {},
+  });
+
 export function outcomeStatus(outcome: ContactOutcome) {
   if (outcome === 'pickup') return ParcelStatus.AWAITING_PICKUP;
   if (outcome === 'delivery') return ParcelStatus.HOME_DELIVERY_REQUESTED;
-  return ParcelStatus.CUSTOMER_CONTACTED;
+  return ParcelStatus.AWAITING_PICKUP;
 }
 
 export const markReceiverCalled = (token: string, parcelId: string, userId: string) =>

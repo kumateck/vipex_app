@@ -43,6 +43,7 @@ export async function getHomeDeliveryReceiptSvc(input: {
       .reduce((sum, payment) => sum + Number(payment.grossAmountPsw), 0);
   const amounts = buildHomeDeliveryReceiptAmounts({
     chargePsw,
+    plannedToBePaidPsw: Number(parcel.plannedToBePaidPsw),
     deliveryFeePsw,
     paidPrincipalPsw: paidPsw(PaymentComponent.PRINCIPAL),
     paidDeliveryFeePsw: paidPsw(PaymentComponent.DELIVERY_FEE),

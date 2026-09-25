@@ -14,6 +14,18 @@ import type {
   OpenCashierSessionInput,
 } from '../types/cashier.types';
 
+export type CashierSessionDelegate = {
+  userId: string;
+  fullname: string;
+  email: string;
+  assignedAt: string;
+};
+export type CashierSessionDelegateOption = { id: string; fullname: string; email: string };
+export type CashierSessionDelegateList = {
+  eligible: CashierSessionDelegateOption[];
+  assigned: CashierSessionDelegate[];
+};
+
 export const cashiersApi = api.injectEndpoints({
   endpoints: (builder) => ({
     listSessionTypes: builder.query<CashierSessionType[], void>({
@@ -68,6 +80,31 @@ export const cashiersApi = api.injectEndpoints({
         ...invalidateEntityListTag('Cashiers'),
       ],
     }),
+    getSessionDelegates: builder.query<CashierSessionDelegateList, string>({
+      query: (id) => ({ url: `/cashiers/sessions/${id}/delegates` }),
+      providesTags: [{ type: 'Cashiers', id: 'SESSION_DELEGATES' }],
+    }),
+    assignSessionDelegate: builder.mutation<
+      { sessionId: string; userId: string },
+      { sessionId: string; userId: string }
+    >({
+      query: ({ sessionId, userId }) => ({
+        url: `/cashiers/sessions/${sessionId}/delegates`,
+        method: 'POST',
+        body: { userId },
+      }),
+      invalidatesTags: [{ type: 'Cashiers', id: 'SESSION_DELEGATES' }],
+    }),
+    revokeSessionDelegate: builder.mutation<
+      { sessionId: string; userId: string },
+      { sessionId: string; userId: string }
+    >({
+      query: ({ sessionId, userId }) => ({
+        url: `/cashiers/sessions/${sessionId}/delegates/${userId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [{ type: 'Cashiers', id: 'SESSION_DELEGATES' }],
+    }),
   }),
 });
 
@@ -78,4 +115,7 @@ export const {
   useCloseSessionMutation,
   useGetCurrentActiveSessionQuery,
   useGetCurrentActiveSessionSummaryQuery,
+  useGetSessionDelegatesQuery,
+  useAssignSessionDelegateMutation,
+  useRevokeSessionDelegateMutation,
 } = cashiersApi;
