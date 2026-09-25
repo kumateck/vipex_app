@@ -12,6 +12,7 @@ import type { ParcelSearchRow } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
 import {
   formatCurrency,
+  formatDateTime,
   formatPhones,
   formatStorageCharge,
   getPaymentType,
@@ -115,6 +116,11 @@ export function useParcelReceiverCashierColumns({
             <p className="text-muted-foreground text-xs">{row.original.destinationName ?? '-'}</p>
           </div>
         ),
+      },
+      {
+        id: 'receivedAt',
+        header: 'Received',
+        accessorFn: (row) => formatDateTime(row.receivedAt),
       },
       {
         id: 'amounts',

@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
+import { formatDateTime } from '../parcel-receiver-cashier/receiver-cashier-utils';
 
 function formatCurrency(amountPsw: number) {
   return `GHS ${(amountPsw / 100).toFixed(2)}`;
@@ -123,6 +124,11 @@ export function useWaitingPickupColumns({
             <p className="text-muted-foreground text-xs">{row.original.destinationName ?? '-'}</p>
           </div>
         ),
+      },
+      {
+        id: 'receivedAt',
+        header: 'Received',
+        accessorFn: (row) => formatDateTime(row.receivedAt),
       },
       { id: 'charge', header: 'Charge', accessorFn: (row) => formatCurrency(row.chargePsw) },
     ];
