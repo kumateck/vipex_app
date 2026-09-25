@@ -148,9 +148,7 @@ export async function createBookingWithParcelsSvc(
         branchId: primaryParcel.branchId,
       })
     : null;
-  const resolvedCashierSessionId: string | null = activeSession
-    ? (body.cashierSessionId ?? activeSession.id)
-    : null;
+  const resolvedCashierSessionId: string | null = activeSession ? activeSession.id : null;
 
   const input: CreateBookingWithParcelsInput = {
     senderId: body.senderId,
@@ -197,6 +195,7 @@ export async function createBookingWithParcelsSvc(
           p.senderPaymentCedis != null ? Number(toPesewas(p.senderPaymentCedis)) : 0,
         senderPaymentMethod: p.senderPaymentMethod ?? undefined,
         cashierUserId: p.cashierUserId,
+        processedBy: status === ParcelStatus.PROCESSED ? p.cashierUserId : null,
         branchId: p.branchId,
         callSender: p.callSender ?? false,
       };
@@ -228,6 +227,7 @@ export async function createBookingWithParcelsSvc(
       sourceId: body.sourceId,
       parcelsCount: body.parcels.length,
       paymentCount: created.payments.length,
+      processedByCashierId: body.parcels[0]?.cashierUserId ?? null,
     },
   });
 

@@ -240,12 +240,9 @@ export async function findCustomersByTelephoneRepo(input: {
       and(
         eq(customers.companyId, input.companyId),
         eq(customers.isDeleted, false),
-        or(
-          eq(customers.telephone, term),
-          eq(customers.telephone2, term),
-          ilike(customers.telephone, `%${term}%`),
-          ilike(customers.telephone2, `%${term}%`),
-        ),
+        /^\d{10}$/.test(term)
+          ? or(eq(customers.telephone, term), eq(customers.telephone2, term))
+          : or(ilike(customers.telephone, `%${term}%`), ilike(customers.telephone2, `%${term}%`)),
       ),
     )
     .orderBy(asc(customers.fullname), asc(customers.id))

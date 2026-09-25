@@ -42,6 +42,7 @@ import { listUserOptionsRepo } from '../users/repository';
 import { ParcelStatus, UserStatus } from '@/db/schemas/enums';
 import { getBranchRepo } from '../branches/repository';
 import { saveBulkCallOutcomeSvc } from './parcel-bulk-call-outcome.service';
+import { recordCallCenterContactSvc } from './parcel-call-center-contact.service';
 import { getHomeDeliveryReceiptSvc } from './home-delivery-receipt.service';
 import { reverseParcelDeliverySvc } from './parcel-delivery-reversal.service';
 import { changeMainReceiverWithCallOutcomeSvc } from './parcel-main-receiver-change.service';
@@ -96,7 +97,13 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
             ParcelStatus.ARRIVED_AT_DESTINATION,
             ParcelStatus.CUSTOMER_CONTACTED,
             ParcelStatus.RETURNED_TO_OFFICE,
+            ParcelStatus.AWAITING_PICKUP,
+            ParcelStatus.HOME_DELIVERY_REQUESTED,
+            ParcelStatus.ADDRESS_COLLECTED,
+            ParcelStatus.DISPATCHED,
+            ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER,
           ],
+          callCenterUncalledOnly: true,
           callCenterAssignmentOrder: true,
         },
       });
@@ -127,8 +134,14 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
             ParcelStatus.ARRIVED_AT_DESTINATION,
             ParcelStatus.CUSTOMER_CONTACTED,
             ParcelStatus.RETURNED_TO_OFFICE,
+            ParcelStatus.AWAITING_PICKUP,
+            ParcelStatus.HOME_DELIVERY_REQUESTED,
+            ParcelStatus.ADDRESS_COLLECTED,
+            ParcelStatus.DISPATCHED,
+            ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER,
           ],
           assignedToUserId: authUser.sub,
+          callCenterUncalledOnly: true,
         },
       });
     },
@@ -261,6 +274,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           received: query.received ?? null,
           includeDeleted: query.includeDeleted ?? null,
           assignedToUserId: query.assignedToCurrentUser ? authUser.sub : null,
+          callCenterUncalledOnly: query.callCenterUncalledOnly ?? false,
           sentDate: query.sentDate ?? null,
           consignmentNumber: query.consignmentNumber ?? null,
         },
@@ -297,6 +311,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         received: t.Optional(t.Boolean()),
         includeDeleted: t.Optional(t.Boolean()),
         assignedToCurrentUser: t.Optional(t.Boolean()),
+        callCenterUncalledOnly: t.Optional(t.Boolean()),
         sentDate: t.Optional(t.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}$' })),
         consignmentNumber: t.Optional(t.String({ minLength: 1, maxLength: 255 })),
       }),
@@ -795,6 +810,37 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         requirePermissions(PermissionKeys.CanReadCallCenterParcelStatus),
       ],
       detail: { tags: ['Shipments'], summary: 'Save selected parcel call outcomes' },
+    },
+  )
+  .post(
+    '/:id/call-center/contact',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return recordCallCenterContactSvc({
+        parcelId: params.id,
+        companyId: authUser.companyId ?? '',
+        branchId: authUser.branchId ?? '',
+        actorUserId: authUser.sub,
+        outcome: body.outcome,
+        secondReceiverId: body.secondReceiverId,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({
+        outcome: t.Optional(
+          t.Union([t.Literal('follow_up'), t.Literal('pickup'), t.Literal('delivery')]),
+        ),
+        secondReceiverId: t.Optional(t.Union([UUID, t.Null()])),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanReadCallCenterParcelStatus),
+      ],
+      detail: {
+        tags: ['Shipments'],
+        summary: 'Record a call or change an assigned parcel outcome',
+      },
     },
   )
   .get(

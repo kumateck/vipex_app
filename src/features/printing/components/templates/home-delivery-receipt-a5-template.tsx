@@ -97,16 +97,10 @@ export function HomeDeliveryReceiptA5Template(props: HomeDeliveryReceiptA5Props)
           {props.principalDuePsw > 0 ? (
             <AmountLine label="To be paid" amountPsw={props.principalDuePsw} />
           ) : null}
-          <AmountLine label="Delivery fee" amountPsw={props.deliveryFeePsw} />
-          {props.paidPrincipalPsw + props.paidDeliveryFeePsw > 0 ? (
-            <AmountLine
-              label="Previously paid"
-              amountPsw={props.paidPrincipalPsw + props.paidDeliveryFeePsw}
-            />
-          ) : null}
+          <AmountLine label="Delivery fee" amountPsw={props.deliveryFeeDuePsw} />
 
           <div style={{ borderTop: '0.2mm solid #111', paddingTop: '0.8mm', fontSize: '5mm' }}>
-            <AmountLine label="Amount due on delivery" amountPsw={props.grossPsw} />
+            <AmountLine label="Amount due on delivery" amountPsw={props.totalDuePsw} />
           </div>
         </div>
         <InvoiceTaxSummary

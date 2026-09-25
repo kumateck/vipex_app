@@ -490,6 +490,7 @@ export async function collectSenderPaymentAndProcessSvc(input: {
       const patch: Partial<Parameters<typeof updateParcelRepo>[1]> = {};
       if (parcel.status === ParcelStatus.CREATED) {
         patch.status = ParcelStatus.PROCESSED;
+        patch.processedBy = input.cashierUserId;
       }
       if (!parcel.cashierSessionId) {
         patch.cashierSessionId = activeSession.id;

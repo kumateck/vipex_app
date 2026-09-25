@@ -4,7 +4,6 @@ export type CallCenterQueueMode = 'assigned' | 'addresses';
 
 export type SaveCallOutcomeInput = {
   parcelId: string;
-  status: number;
   outcome: ContactOutcome;
   sendSms: boolean;
   sendEmail: boolean;

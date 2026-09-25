@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { parcels, ParcelStatus } from '@/db/schemas';
 import { BadRequest, Conflict, NotFound } from '@/server/utils/http-error';
@@ -10,12 +10,14 @@ const eligibleStatuses = [
   ParcelStatus.ARRIVED_AT_DESTINATION,
   ParcelStatus.RETURNED_TO_OFFICE,
   ParcelStatus.CUSTOMER_CONTACTED,
+  ParcelStatus.AWAITING_PICKUP,
+  ParcelStatus.HOME_DELIVERY_REQUESTED,
 ];
 
 export function callOutcomeStatus(outcome: CallOutcome) {
   if (outcome === 'pickup') return ParcelStatus.AWAITING_PICKUP;
   if (outcome === 'delivery') return ParcelStatus.HOME_DELIVERY_REQUESTED;
-  return ParcelStatus.CUSTOMER_CONTACTED;
+  return ParcelStatus.AWAITING_PICKUP;
 }
 
 export function validateBulkCallOutcomeCandidates(
@@ -26,6 +28,7 @@ export function validateBulkCallOutcomeCandidates(
     callCenterAssignedToUserId: string | null;
     isDeleted: boolean;
     status: number;
+    callCenterCalledAt?: Date | null;
   }>,
   parcelIds: string[],
   context: { companyId: string; branchId: string; actorUserId: string },
@@ -42,7 +45,11 @@ export function validateBulkCallOutcomeCandidates(
   ) {
     throw NotFound('One or more selected parcels are unavailable');
   }
-  if (candidates.some((parcel) => !eligibleStatuses.includes(parcel.status))) {
+  if (
+    candidates.some(
+      (parcel) => !eligibleStatuses.includes(parcel.status) || parcel.callCenterCalledAt,
+    )
+  ) {
     throw Conflict('One or more selected parcels no longer allow a call outcome');
   }
 }
@@ -75,29 +82,29 @@ export async function saveBulkCallOutcomeSvc(input: {
         callCenterAssignedToUserId: parcels.callCenterAssignedToUserId,
         isDeleted: parcels.isDeleted,
         status: parcels.status,
+        callCenterCalledAt: parcels.callCenterCalledAt,
       })
       .from(parcels)
       .where(inArray(parcels.id, parcelIds));
     validateBulkCallOutcomeCandidates(candidates, parcelIds, input);
 
-    for (const id of parcelIds) {
-      const updated = await tx
-        .update(parcels)
-        .set({ status, updatedAt: new Date() })
-        .where(
-          and(
-            eq(parcels.id, id),
-            eq(parcels.companyId, input.companyId),
-            eq(parcels.destinationId, input.branchId),
-            eq(parcels.callCenterAssignedToUserId, input.actorUserId),
-            eq(parcels.isDeleted, false),
-            inArray(parcels.status, eligibleStatuses),
-          ),
-        )
-        .returning({ id: parcels.id });
-      if (updated.length !== 1) {
-        throw Conflict('The selected parcels changed while the batch was being processed');
-      }
+    const updated = await tx
+      .update(parcels)
+      .set({ status, callCenterCalledAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          inArray(parcels.id, parcelIds),
+          eq(parcels.companyId, input.companyId),
+          eq(parcels.destinationId, input.branchId),
+          eq(parcels.callCenterAssignedToUserId, input.actorUserId),
+          eq(parcels.isDeleted, false),
+          isNull(parcels.callCenterCalledAt),
+          inArray(parcels.status, eligibleStatuses),
+        ),
+      )
+      .returning({ id: parcels.id });
+    if (updated.length !== parcelIds.length) {
+      throw Conflict('The selected parcels changed while the batch was being processed');
     }
   });
 

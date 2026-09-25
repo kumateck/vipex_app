@@ -4,6 +4,11 @@ import { PaginationRequestQueryProps, UUID } from '../../schemas/common';
 import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import {
+  assignSessionDelegateSvc,
+  listSessionDelegateOptionsSvc,
+  revokeSessionDelegateSvc,
+} from './delegates.service';
+import {
   closeSessionCtrl,
   createSessionTypeCtrl,
   getCurrentActiveSessionCtrl,
@@ -177,5 +182,33 @@ export const cashiersRoutes = new Elysia({ name: 'cashiers' })
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCloseCashierSessions)],
       detail: { tags: ['Cashiers'], summary: 'Close cashier session' },
+    },
+  )
+  .get(
+    '/sessions/:id/delegates',
+    ({ params, user }) => listSessionDelegateOptionsSvc(user as AuthUser, params.id),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCashierSessions)],
+      detail: { tags: ['Cashiers'], summary: 'List eligible and assigned to-be-paid delegates' },
+    },
+  )
+  .post(
+    '/sessions/:id/delegates',
+    ({ params, body, user }) => assignSessionDelegateSvc(user as AuthUser, params.id, body.userId),
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({ userId: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanOpenCashierSessions)],
+      detail: { tags: ['Cashiers'], summary: 'Assign to-be-paid completion delegate' },
+    },
+  )
+  .delete(
+    '/sessions/:id/delegates/:userId',
+    ({ params, user }) => revokeSessionDelegateSvc(user as AuthUser, params.id, params.userId),
+    {
+      params: t.Object({ id: UUID, userId: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCloseCashierSessions)],
+      detail: { tags: ['Cashiers'], summary: 'Remove to-be-paid completion delegate' },
     },
   );

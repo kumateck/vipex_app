@@ -35,6 +35,31 @@ System Admin password assignment revokes the target user's active sessions and w
 
 ## Shipments
 
+`POST /shipments/bookings/create-with-parcels` accepts `completeToBePaid: true` only for fully
+receiver-paid parcels with no sender payment. It requires `CanCreateBookingWithParcels` and an
+active sender/full cashier session owned by the caller or delegated to the caller. The server
+derives the owning cashier and session, marks the parcel processed, and attributes the parcel to
+that session. The parcel's `processedBy` is the cashier user ID; `createdBy` and the audit record
+identify the staff member who submitted the booking. `deferSenderCashierCompletion` and
+`completeToBePaid` cannot both be true. Missing
+authorization returns `403`; an invalid payment mix returns `400`.
+
+Cashier session delegates: `GET /cashiers/sessions/:id/delegates` lists eligible and assigned staff;
+`POST` to that path with `{ "userId": "..." }` assigns one; `DELETE
+/cashiers/sessions/:id/delegates/:userId` removes one. Only the active session's sender/full
+cashier owner may manage them, with read/open/close session permissions respectively. Delegates
+must be active in the same company and branch, match the cashier's location when one is assigned,
+and hold `CanCreateBookingWithParcels`. The location rule applies to the list, assignment, and
+completion request; a cashier without a location can select any eligible staff in their branch.
+Out-of-scope assignment and completion return `403`. Revocation or session closure ends
+authorization. Web and mobile use the same endpoints.
+
+- `GET /customers/lookup/booking-by-telephone/:telephone`: ten-digit exact lookup across active
+  primary and secondary telephone fields, scoped to the authenticated company and guarded by
+  `CanCreateBookingWithParcels`. Returns only customer ID, full name, and two telephone fields;
+  multiple matches require an explicit choice on mobile. Invalid numbers return 400. General
+  `/customers/lookup/by-telephone` remains protected by `CanReadCustomers`.
+
 - `/shipments/bookings`: booking creation and query, including booking-with-parcels operations.
 - `/shipments/parcels`: parcel search, detail, lifecycle actions, corrections, and receiver OTP-related operations.
 - `POST /payments/collect-receiver-and-deliver`: returns separate principal `payment` and ageing
@@ -109,9 +134,16 @@ System Admin password assignment revokes the target user's active sessions and w
 - `POST /shipments/parcels/bulk-call-outcome`: save one call outcome for 1–100 unique parcels assigned
   to the authenticated call agent in their company and destination branch. The body contains
   `parcelIds` and `outcome` (`follow_up`, `pickup`, or `delivery`). The server validates every parcel,
-  then updates them sequentially in one transaction. Missing, deleted, reassigned, out-of-scope,
+  then updates them together in one transaction. Missing, deleted, reassigned, out-of-scope,
   ineligible, or concurrently changed parcels reject the batch without partial updates. No SMS or
-  email is sent. The response returns `parcelIds`, `updatedCount`, and the resulting `status`.
+  email is sent. Each parcel is marked called, so it leaves the assigned call queue. The response
+  returns `parcelIds`, `updatedCount`, and the resulting `status`.
+- `POST /shipments/parcels/:id/call-center/contact`: requires `CanReadCallCenterParcelStatus` and
+  the assigned caller in the destination branch. Empty body marks a parcel called without changing
+  status. Optional `outcome` (`follow_up`, `pickup`, `delivery`) changes an eligible outcome and
+  records the call; optional `secondReceiverId` updates the second receiver with that outcome.
+  Reject called, delivered, deleted, reassigned, or out-of-branch parcels. Outcome changes are
+  rejected after address collection or dispatch, though a call can still be recorded.
 - `GET /shipments/parcels/call-center/receiver-lookup/:telephone`: exact ten-digit lookup for an
   active customer in the authenticated company, matching either telephone field. Returns ID,
   name, and telephones or `null`. Requires `CanReadCallCenterParcelStatus`.

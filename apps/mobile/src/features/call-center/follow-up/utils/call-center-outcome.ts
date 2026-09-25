@@ -1,5 +1,3 @@
-import { ParcelStatus } from '@mobile/constants/parcel-status';
-
 export const PHONE_DIGITS = 10;
 
 export function normalizePhone(value: string) {
@@ -20,10 +18,6 @@ export function validateSecondReceiver(enabled: boolean, name: string, phone: st
   if (!fullname || !telephone) return 'Second receiver name and telephone are required.';
   if (telephone.length !== PHONE_DIGITS) return 'Second receiver telephone must be 10 digits.';
   return null;
-}
-
-export function isContacted(status: number) {
-  return status === ParcelStatus.CUSTOMER_CONTACTED;
 }
 
 export function formatPsw(value: number) {
