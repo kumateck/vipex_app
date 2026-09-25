@@ -230,6 +230,11 @@ Mobile discrepancy capture supports an expected system parcel that is physically
 
 ## Pickup and Last-Mile Delivery
 
+The Waiting for Pickup and Receiver Cashier parcel tables include a **Received** column sourced from
+the parcel's persisted `receivedAt` timestamp. It uses the application's shared date/time format and
+shows `-` when a timestamp is unavailable; the display does not alter queue eligibility or payment
+behavior.
+
 ### Reverse a mistaken delivery confirmation
 
 On the web, **Pickup & Collection → Reverse Delivery Confirmation** lists parcels delivered to a
