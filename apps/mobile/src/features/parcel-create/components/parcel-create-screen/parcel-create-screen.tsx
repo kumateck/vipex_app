@@ -232,7 +232,7 @@ function ParcelCreateForm({
           destinationLocation:
             locationOptions.find((location) => location.id === pickupLocationId)?.name ?? '-',
           parcelDetails: parcelDetails.trim(),
-          amountCedis: chargeAmount,
+          amountCedis: paymentResponsibility === PaymentResponsibility.RECIPIENT ? chargeAmount : 0,
           copies,
         };
         printCompleted = await stickerPrint.print(sticker);
