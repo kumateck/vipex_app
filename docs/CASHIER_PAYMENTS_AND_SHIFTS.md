@@ -81,6 +81,11 @@ Sender payment and parcel creation can initiate sticker and A5 printing. Sticker
 
 For mobile receiver-paid creation, **Complete & print sticker** asks the server to complete the booking in an active authorized cashier session, then opens the phone's native print dialog with a 90 × 92 mm to-be-paid sticker. The app offers a retry button if the print dialog fails after booking creation. The phone needs an installed print service that can reach its paired printer; mobile printer selection does not use desktop printer routing. Leaving the box unticked queues the booking for Sender Cashier Payments as before.
 
+The mobile to-be-paid sticker uses the same 90 × 92 mm portrait layout as the desktop thermal sticker:
+brand and QR header, payment status and amount, receiver panel, destination/location row, and sender
+and parcel detail rows. Its data is rendered from the same booking fields and uses the same payment-due
+notice and fallback `-` values.
+
 QA: assign a same-branch, same-location staff member, create and print a receiver-paid parcel on mobile, and confirm the parcel is processed and attributed to the owner session. For a cashier with a location, check another-location and no-location staff are absent from the picker and rejected by a direct add request; moving an existing delegate to another location must block completion. For a cashier without a location, check eligible staff across that branch remain available. Check unassigned, revoked, inactive, wrong-branch, and closed-session staff get `403`; check paid and split parcels cannot use immediate completion. Close the print dialog or simulate a printer error, then retry without creating a second booking. Verify a later session has no inherited delegates.
 
 ## Daily Cashier Sales Report
