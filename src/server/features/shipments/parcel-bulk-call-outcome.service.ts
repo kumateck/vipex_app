@@ -15,6 +15,7 @@ const eligibleStatuses = [
 ];
 
 export function callOutcomeStatus(outcome: CallOutcome) {
+  if (outcome === 'follow_up') return ParcelStatus.CUSTOMER_CONTACTED;
   if (outcome === 'pickup') return ParcelStatus.AWAITING_PICKUP;
   if (outcome === 'delivery') return ParcelStatus.HOME_DELIVERY_REQUESTED;
   return ParcelStatus.AWAITING_PICKUP;
