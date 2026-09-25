@@ -41,7 +41,10 @@ export async function listParcelsCtrl(
     includeDeleted?: boolean | null;
     assignedToUserId?: string | null;
     callCenterAssignmentOrder?: boolean;
+    callCenterUncalledOnly?: boolean;
     shelfPickerAssignmentOrder?: boolean;
+    sentDate?: string | null;
+    consignmentNumber?: string | null;
   }>,
 ): Promise<PaginatedResponseDto<unknown>> {
   const pagination = normalizePagination(q, { pageSize: 20, maxPageSize: 200 });
@@ -64,7 +67,10 @@ export async function listParcelsCtrl(
     includeDeleted: q.filters?.includeDeleted ?? null,
     assignedToUserId: q.filters?.assignedToUserId ?? null,
     callCenterAssignmentOrder: q.filters?.callCenterAssignmentOrder ?? false,
+    callCenterUncalledOnly: q.filters?.callCenterUncalledOnly ?? false,
     shelfPickerAssignmentOrder: q.filters?.shelfPickerAssignmentOrder ?? false,
+    sentDate: q.filters?.sentDate ?? null,
+    consignmentNumber: q.filters?.consignmentNumber ?? null,
     sort: pagination.sort ?? null,
   });
   return {
@@ -74,6 +80,7 @@ export async function listParcelsCtrl(
       updatedAt: p.updatedAt.toISOString(),
       receivedAt: p.receivedAt ? p.receivedAt.toISOString() : null,
       confirmedAt: p.confirmedAt ? p.confirmedAt.toISOString() : null,
+      callCenterCalledAt: p.callCenterCalledAt ? p.callCenterCalledAt.toISOString() : null,
       deletedAt: p.deletedAt ? p.deletedAt.toISOString() : null,
       bookingCreatedAt: p.bookingCreatedAt ? p.bookingCreatedAt.toISOString() : null,
       consignmentCreatedAt: p.consignmentCreatedAt ? p.consignmentCreatedAt.toISOString() : null,
@@ -278,7 +285,6 @@ export async function listParcelReconciliationCasesCtrl(input: {
     meta: buildPaginationMeta({ totalRecords, page, pageSize }),
   };
 }
-
 export async function assignParcelToCallCenterCtrl(input: { parcelId: string; userId: string }) {
   const { assignParcelToCallCenterSvc } = await import('./parcels.service');
   return assignParcelToCallCenterSvc(input);
@@ -290,7 +296,6 @@ export async function bulkAssignParcelsToCallCenterCtrl(input: {
   const { bulkAssignParcelsToCallCenterSvc } = await import('./parcels.service');
   return bulkAssignParcelsToCallCenterSvc(input);
 }
-
 export async function updateParcelShelfPickerCtrl(input: { parcelId: string; userId: string }) {
   const { updateParcelShelfPickerSvc } = await import('./parcels.service');
   return updateParcelShelfPickerSvc(input);

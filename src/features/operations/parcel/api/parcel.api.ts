@@ -90,6 +90,7 @@ export type ParcelSearchRow = {
   receiverId: string;
   secondReceiverId: string | null;
   status: number;
+  callCenterCalledAt?: string | null;
   parcelDetails: string;
   parcelContent: string;
   parcelValuePsw: number;
@@ -281,6 +282,32 @@ export type ParcelInternalHolderSnapshot = {
   warehouseId: string | null;
   warehouseName: string | null;
   updatedAt: string;
+};
+
+export type HomeDeliveryReceipt = {
+  bookingCode: string;
+  trackingCode: string;
+  parcelDetails: string;
+  parcelContent: string;
+  dropoffAddress: string | null;
+  senderName: string | null;
+  senderPhone: string | null;
+  senderPhone2: string | null;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  receiverPhone2: string | null;
+  destinationName: string | null;
+  chargePsw: number;
+  deliveryFeePsw: number;
+  paidPrincipalPsw: number;
+  paidDeliveryFeePsw: number;
+  principalDuePsw: number;
+  deliveryFeeDuePsw: number;
+  totalDuePsw: number;
+  grossPsw: number;
+  netPsw: number;
+  taxTotalPsw: number;
+  taxRows: Array<{ label: string; amountPsw: number }>;
 };
 
 export type ParcelFullDetails = {
@@ -554,6 +581,9 @@ export type ParcelSearchFilters = {
   cashierCollectionRequired?: boolean | null;
   includeDeleted?: boolean | null;
   assignedToCurrentUser?: boolean | null;
+  callCenterUncalledOnly?: boolean | null;
+  sentDate?: string | null;
+  consignmentNumber?: string | null;
 };
 
 export type IncomingConsignmentRow = {
@@ -700,11 +730,56 @@ export const parcelApi = api.injectEndpoints({
       }),
       providesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    listDeliveryReversalCandidates: builder.query<
+      ServerListResponse<ParcelSearchRow>,
+      { page?: number; pageSize?: number; search?: string }
+    >({
+      query: (params) => ({ url: '/shipments/parcels/delivery-reversal-candidates', params }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    lookupCallOutcomeReceiver: builder.query<
+      { id: string; fullname: string; telephone: string | null; telephone2: string | null } | null,
+      string
+    >({
+      query: (telephone) => ({
+        url: `/shipments/parcels/call-center/receiver-lookup/${encodeURIComponent(telephone)}`,
+      }),
+    }),
+    changeCallOutcomeMainReceiver: builder.mutation<
+      { id: string; receiverId: string; status: number; receiverName: string },
+      {
+        id: string;
+        telephone: string;
+        fullname?: string;
+        outcome: 'follow_up' | 'pickup' | 'delivery';
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/${id}/call-outcome/change-main-receiver`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    reverseParcelDelivery: builder.mutation<
+      { id: string; status: number },
+      { id: string; reason: string }
+    >({
+      query: ({ id, reason }) => ({
+        url: `/shipments/parcels/${id}/reverse-delivery`,
+        method: 'POST',
+        body: { reason },
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
     getParcelDetails: builder.query<ParcelFullDetails, string>({
       query: (id) => ({
         url: `/shipments/parcels/${id}/details`,
       }),
       providesTags: (_result, _error, id) => [{ type: 'Bookings', id }],
+    }),
+    getHomeDeliveryReceipt: builder.query<HomeDeliveryReceipt, string>({
+      query: (id) => ({ url: `/shipments/parcels/${id}/home-delivery-receipt` }),
     }),
     listParcelDispositionActions: builder.query<ParcelDispositionActionRow[], string>({
       query: (id) => ({
@@ -862,6 +937,15 @@ export const parcelApi = api.injectEndpoints({
         status: number;
         message: string;
         storageSettlement?: ParcelStorageSettlement;
+        storagePayment?: { id: string; amounts: { grossCedis: number } } | null;
+        receiptTaxBreakdown?: {
+          vatCedis: number;
+          getfundCedis: number;
+          nhilCedis: number;
+          covidCedis: number;
+          taxTotalCedis: number;
+          taxComponentKeys: string[];
+        } | null;
         payment: null | {
           id: string;
           amounts: {
@@ -1068,6 +1152,21 @@ export const parcelApi = api.injectEndpoints({
     >({
       query: (body) => ({
         url: '/shipments/parcels/bulk-call-outcome',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    recordCallCenterContact: builder.mutation<
+      { id: string; status: number; calledAt: string },
+      {
+        id: string;
+        outcome?: 'follow_up' | 'pickup' | 'delivery';
+        secondReceiverId?: string | null;
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/${id}/call-center/contact`,
         method: 'POST',
         body,
       }),
@@ -1463,8 +1562,13 @@ export const {
   useCreateBookingWithParcelsMutation,
   useListSenderCashierParcelsQuery,
   useSearchParcelsQuery,
+  useListDeliveryReversalCandidatesQuery,
+  useLookupCallOutcomeReceiverQuery,
+  useChangeCallOutcomeMainReceiverMutation,
+  useReverseParcelDeliveryMutation,
   useLazySearchParcelsQuery,
   useGetParcelDetailsQuery,
+  useLazyGetHomeDeliveryReceiptQuery,
   useLazyGetParcelDetailsQuery,
   useListParcelDispositionActionsQuery,
   useListProcessedParcelsForConsignmentQuery,
@@ -1486,6 +1590,7 @@ export const {
   useMarkParcelReceivedMutation,
   useMarkParcelsReceivedMutation,
   useSaveBulkCallOutcomeMutation,
+  useRecordCallCenterContactMutation,
   useUpdateParcelMutation,
   useSendParcelStatusCallNotificationMutation,
   useRecordParcelDispositionActionMutation,

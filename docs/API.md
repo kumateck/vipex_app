@@ -21,6 +21,10 @@ Swagger UI at `/docs` and OpenAPI JSON at `/docs/json` from the running server a
 
 Every protected endpoint must enforce authentication, permission, company-module availability where applicable, company scope, branch/location scope, and any required operational assignment. Hiding a client route is not sufficient authorization.
 
+Cashier session delegation endpoints and `completeToBePaid` booking creation are documented in
+[Identity and parcel operations](api/IDENTITY_AND_OPERATIONS.md). Delegation is scoped to the
+owning cashier's active session; the processed parcel records that cashier as `processedBy`.
+
 ## Shared Conventions
 
 - JSON is used for ordinary request and response bodies.

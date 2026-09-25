@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ParcelStatus } from '@/db/schemas/enums';
+import { formatDateTime } from '@/lib/dates';
 import { CallCenterAssignmentPaymentCell } from '../parcel-call-center-assignment/call-center-assignment-payment-cell';
 import type { ParcelRow } from './shelf-picker-update-types';
 
@@ -56,6 +57,19 @@ export function useShelfPickerUpdateColumns({
           <div className="text-xs text-muted-foreground">{row.original.receiverPhone ?? '-'}</div>
         </div>
       ),
+    },
+    {
+      accessorKey: 'receivedAt',
+      header: 'Received D&T',
+      cell: ({ row }) => {
+        const value = row.original.receivedAt;
+        const date = value ? new Date(value) : null;
+        return (
+          <div className="text-sm">
+            {date && !Number.isNaN(date.getTime()) ? formatDateTime(date) : '-'}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'parcelDetails',

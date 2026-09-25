@@ -303,6 +303,10 @@ export function mobileApiPost<T>(input: {
   });
 }
 
+export function mobileApiDelete<T>(input: { path: string; token: string }): Promise<T> {
+  return request<T>({ path: input.path, method: 'DELETE', token: input.token });
+}
+
 export async function login(email: string, password: string): Promise<SessionState> {
   const data = await request<LoginResponse>({
     path: '/auth/login',
@@ -654,7 +658,7 @@ export async function findCustomersByTelephone(
   input: { telephone: string; limit?: number },
 ): Promise<CustomerLookupResult[]> {
   const payload = await request<unknown>({
-    path: `/customers/lookup/by-telephone/${encodeURIComponent(input.telephone)}`,
+    path: `/customers/lookup/booking-by-telephone/${encodeURIComponent(input.telephone)}`,
     token: accessToken,
     query: { limit: input.limit ?? 10 },
   });
@@ -671,6 +675,18 @@ export async function createCustomer(
 ): Promise<{ id: string }> {
   return request<{ id: string }>({
     path: '/customers',
+    method: 'POST',
+    token: accessToken,
+    body: input,
+  });
+}
+
+export async function resolveSecondReceiver(
+  accessToken: string,
+  input: { fullname: string; telephone: string },
+): Promise<{ id: string }> {
+  return request<{ id: string }>({
+    path: '/customers/resolve-second-receiver',
     method: 'POST',
     token: accessToken,
     body: input,

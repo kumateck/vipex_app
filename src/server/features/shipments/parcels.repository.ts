@@ -36,6 +36,7 @@ import {
 import { ParcelStatus, PaymentComponent } from '@/db/schemas/enums';
 import type { SortField } from '@/server/types/pagination.types';
 import { extractScannedCode } from '@/server/utils/scan-code';
+import { incomingTransitSendDateBounds } from './incoming-transit-send-date';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 function effectiveParcelReceivedAt() {
@@ -84,6 +85,7 @@ export type ParcelRow = {
   deletedAt: Date | null;
   deleteReason: string | null;
   createdBy: string | null;
+  processedBy: string | null;
   createdAt: Date;
   receivedBy: string | null;
   receivedAt: Date | null;
@@ -115,7 +117,10 @@ export type ListParcelsParams = {
   includeDeleted?: boolean | null;
   assignedToUserId?: string | null;
   callCenterAssignmentOrder?: boolean;
+  callCenterUncalledOnly?: boolean;
   shelfPickerAssignmentOrder?: boolean;
+  sentDate?: string | null;
+  consignmentNumber?: string | null;
   sort?: SortField[] | null;
 };
 
@@ -148,6 +153,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     pickerStaffName: string | null;
     callCenterAssignedToUserId: string | null;
     callCenterAssignedToUserName: string | null;
+    callCenterCalledAt: Date | null;
     pickupQueuedAt: Date | null;
     pickupQueueEndedAt: Date | null;
     deliveredAt: Date | null;
@@ -179,6 +185,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   if (p.assignedToUserId) {
     whereParts.push(eq(parcels.callCenterAssignedToUserId, p.assignedToUserId));
   }
+  if (p.callCenterUncalledOnly) whereParts.push(isNull(parcels.callCenterCalledAt));
   if (p.statuses && p.statuses.length > 0) {
     whereParts.push(inArray(parcels.status, p.statuses));
   } else if (p.status != null) {
@@ -200,6 +207,19 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   const hb = alias(branches, 'hb');
   const ci = alias(consignmentItems, 'ci');
   const cg = alias(consignments, 'cg');
+  if (p.sentDate) {
+    const { start, end } = incomingTransitSendDateBounds(p.sentDate);
+    whereParts.push(sql`${cg.createdAt} >= ${start} and ${cg.createdAt} < ${end}`);
+  }
+  if (p.consignmentNumber?.trim()) {
+    const term = p.consignmentNumber.trim();
+    const serial = /^\d+$/.test(term) ? Number(term) : NaN;
+    whereParts.push(
+      Number.isSafeInteger(serial)
+        ? or(eq(cg.serialForDay, serial), eq(cg.code, term))!
+        : eq(cg.code, term),
+    );
+  }
   const pl = alias(locations, 'pl');
   const hl = alias(locations, 'hl');
   const hw = alias(warehouses, 'hw');
@@ -323,6 +343,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(s, eq(parcels.senderId, s.id))
     .leftJoin(r, eq(parcels.receiverId, r.id))
     .leftJoin(d, eq(parcels.destinationId, d.id))
+    .leftJoin(ci, and(eq(ci.parcelId, parcels.id), isNull(ci.removedAt)))
+    .leftJoin(cg, eq(cg.id, ci.consignmentId))
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
     .leftJoin(pickupQueues, eq(pickupQueues.parcelId, parcels.id))
     .where(
@@ -386,6 +408,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       deletedAt: parcels.deletedAt,
       deleteReason: parcels.deleteReason,
       createdBy: parcels.createdBy,
+      processedBy: parcels.processedBy,
       createdAt: parcels.createdAt,
       receivedBy: parcels.receivedBy,
       receivedAt: effectiveParcelReceivedAt(),
@@ -425,6 +448,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       pickerStaffName: picker.fullname,
       callCenterAssignedToUserId: parcels.callCenterAssignedToUserId,
       callCenterAssignedToUserName: callCenterAssignee.fullname,
+      callCenterCalledAt: parcels.callCenterCalledAt,
       pickupQueuedAt: pickupQueues.queuedAt,
       pickupQueueEndedAt: pickupQueues.endedAt,
       deliveredAt: deliveries.deliveredAt,
@@ -527,6 +551,7 @@ export async function getParcelRepo(
       deletedAt: parcels.deletedAt,
       deleteReason: parcels.deleteReason,
       createdBy: parcels.createdBy,
+      processedBy: parcels.processedBy,
       createdAt: parcels.createdAt,
       receivedBy: parcels.receivedBy,
       receivedAt: effectiveParcelReceivedAt(),

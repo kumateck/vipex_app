@@ -2,7 +2,10 @@ import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiEr
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
-import { useAddCustomerCardMutation, useCreateCustomerMutation } from '@/features/customers/api';
+import {
+  useAddCustomerCardMutation,
+  useResolveSecondReceiverMutation,
+} from '@/features/customers/api';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
@@ -60,7 +63,8 @@ export function useParcelReceiverCashierWorkflow() {
   const selectedParcel = dialog.selectedParcel;
 
   const [addCustomerCard, { isLoading: isAddingCard }] = useAddCustomerCardMutation();
-  const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
+  const [resolveSecondReceiver, { isLoading: isCreatingCustomer }] =
+    useResolveSecondReceiverMutation();
   const [collectReceiverAndDeliver, { isLoading: isCollectingPayment }] =
     useCollectReceiverAndDeliverMutation();
   const [waiveParcelStorageAccrual, { isLoading: isWaivingStorage }] =
@@ -223,7 +227,7 @@ export function useParcelReceiverCashierWorkflow() {
       receiverOtpVerificationToken: dialog.otpVerificationToken,
       momoTransactionId: dialog.momoTransactionId || null,
       addCustomerCard: (args) => addCustomerCard(args).unwrap(),
-      createCustomer: (args) => createCustomer(args).unwrap(),
+      createCustomer: (args) => resolveSecondReceiver(args).unwrap(),
       collectReceiverAndDeliver: (args) => collectReceiverAndDeliver(args).unwrap(),
     });
 

@@ -4,6 +4,33 @@
 
 Parcel operations cover booking, parcel creation, payment responsibility, physical movement, custody transfer, receiving, pickup, delivery, and exception handling. The main implementation areas are:
 
+When a staff member enters a second receiver during a call outcome, office pickup, receiver
+cashier handover, or rider handover, web and mobile resolve the exact telephone against active
+customers in the authenticated company. A match in either the primary or secondary telephone
+field links that existing customer to the parcel without creating or changing the customer record.
+If no match exists, the server creates a new customer. The form still requires a name and valid
+ten-digit telephone before submission. A missing customer-create permission or failed lookup or
+creation leaves the parcel outcome/handover unsaved. This does not change ordinary customer
+creation, which still rejects duplicate telephones. QA: enter a phone already saved as a primary
+number and then as a secondary number, confirm each links the existing ID; enter a new number and
+confirm one customer is created; verify a missing permission and invalid phone do not update the
+parcel. Repeat the existing-number case on mobile call outcomes.
+
+The web **Call Outcome** dialog also supports **Change Main Receiver** for a sender-requested
+replacement. It shows the current main receiver and telephones. After staff enter a valid
+ten-digit new telephone, an exact match in the company (primary or secondary telephone) displays
+the existing customer's name and links that customer ID. If there is no match, staff enter a name
+and the server creates a customer, then associates the new ID with `parcels.receiver_id`. This is
+a single-parcel action; bulk outcomes do not change receivers. Saving also applies the selected
+call outcome. It clears the former second-receiver and handover-card fields so an earlier handover
+authorization cannot carry over to the new main receiver. SMS/email options remain available for
+the single outcome and use the newly linked main receiver. The server requires the parcel to remain
+assigned to the call agent, at their destination branch, and in an outcome-eligible state. A
+missing or invalid telephone, missing name for a new customer, same existing main receiver, or
+concurrent parcel change rejects the association. QA: lookup a number stored as primary and as
+secondary, create a new receiver, save each outcome, check the updated receiver ID and notification
+target, then verify wrong-branch, reassigned, stale, and duplicate-main-receiver requests fail.
+
 Call-center assignment and shelf-picker updates are separate permission-gated workflows. Their pages
 require `CanReadCallCenterAssignment` and `CanReadShelfPickerUpdate`; mutations require
 `CanAssignCallCenterParcels` and `CanUpdateParcelShelfPicker`. Shelf-picker assignment is stored on
@@ -17,14 +44,18 @@ is **Paid**, amber is **To Be Paid**, and blue is **Partial**. A Paid parcel sho
 amount, a To Be Paid parcel shows only its balance due, and a Partial parcel shows both. The
 indicator is informational and does not change assignment behavior.
 
-Shelf Picker Update lists unassigned parcels first across the full paginated result. Assigned
-parcels follow. Within each group, branches using pickup queues retain queue-number order when
+Shelf Picker Update lists unassigned parcels first across the full paginated result. Every row
+shows **Received D&T** from the parcel's recorded receipt timestamp; older rows without a valid
+receipt timestamp show `-`. This display does not change assignment order. Assigned parcels follow.
+Within each group, branches using pickup queues retain queue-number order when
 there is no search; other results retain creation order. The server considers both the parcel's
 stored shelf-picker assignment and a legacy pickup-queue assignment when determining whether a
 parcel is assigned. A failed list request leaves the current table error visible and does not
 change any assignment. QA: check Paid, To Be Paid, and Partial rows for the correct amount lines;
 assign a picker to a parcel on page one, refresh, and verify that it moves below all unassigned
 rows, including those on later pages; repeat on a branch with pickup queues enabled.
+Verify Received D&T for a newly received parcel and the `-` fallback for a legacy row without a
+receipt timestamp.
 
 Call Center Assignment shows sender and receiver names with every available telephone, payment
 status and applicable balances, parcel details, received date and time, and the current assignee.
@@ -126,6 +157,20 @@ use the existing routed A4 print flow; mobile has no previous-consignment reprin
 
 Receiving supports scan-based parcel identification, completeness tracking, discrepancy recording, and confirmation. Staff can identify missing or unexpected parcels before completing the receipt.
 
+The web **In Transit (Receiving Branch)** list has optional Send Date, Source Branch, and
+Consignment Number filters. Apply Filters combines them with the destination branch and in-transit
+status, the text search, and pagination; Clear Filters removes only these three fields. Send Date
+matches the consignment's creation date shown as **Sent** under Booking, using the selected Ghana
+calendar day. Source Branch selects a branch in the current company. Consignment Number accepts
+the displayed daily serial number or the full consignment code. A parcel without a consignment
+cannot match Send Date or Consignment Number. Invalid dates and out-of-scope branches do not change
+parcel state; the server rejects invalid date values and returns no rows for branches without
+matching parcels. The outgoing list and mobile receiving scan flow do not expose these filters.
+
+QA: Combine all three filters and a text search across multiple pages; verify the total count and
+rows agree. Check a leap-day date, a non-existent date, serial and full-code matches, a source
+branch with no matches, Clear Filters, and a parcel without a consignment.
+
 On the web Incoming (In Transit) page, users can select parcels individually or select every parcel
 on the current page, retain selections while paging, and mark up to 100 selected parcels as arrived
 in one action. Incoming and outgoing transit tables use one **Route** column with four lines: source
@@ -184,6 +229,25 @@ Mobile discrepancy capture supports an expected system parcel that is physically
 - OTP failure must leave the parcel and payment state unchanged.
 
 ## Pickup and Last-Mile Delivery
+
+### Reverse a mistaken delivery confirmation
+
+On the web, **Pickup & Collection → Reverse Delivery Confirmation** lists parcels delivered to a
+customer at the signed-in user's branch. Search by booking, tracking, sender, or receiver; choose
+**Reverse** and enter a reason of 5–500 characters. This reverses the customer delivery
+confirmation; it does not undo branch receipt. The page and API require the dedicated
+`CanReverseParcelDelivery` permission. Mobile does not currently expose this correction page.
+An administrator must grant this new permission to the appropriate role before staff can use it.
+
+An office-delivered parcel returns to **Awaiting Pickup** with its parcel confirmation cleared. The
+latest ended pickup-queue ticket is reopened if one exists. A home-delivered parcel returns to
+**Rider Given Parcel to Customer**; its delivery record loses the final delivery timestamp and
+returns to the rider handover confirmation. Payments and customer/card information remain recorded
+and are not voided by this operational correction. The actor, reason, branch, and prior state are
+audited. Missing, deleted, other-branch, already reversed, or inconsistent home-delivery records
+are rejected without partial updates. QA: reverse an office handover with and without a queue
+ticket, reverse a finalized home delivery, and verify payments persist; verify wrong-branch and
+repeat reversals fail. Notifications already sent cannot be recalled.
 
 Branch pickup uses queues for parcel readiness, cashier collection, payment where required, and OTP confirmation when enabled.
 
@@ -264,7 +328,27 @@ no SMS or email and does not change second-receiver assignments. A failed batch 
 for correction or retry. The single-parcel Call Outcome action retains its notification and optional
 second-receiver controls.
 
+Call Center Assignment sets newly assigned arrived, returned, or follow-up parcels to **Awaiting
+Pickup** as a provisional customer pickup choice. Assignment and reassignment clear the separate
+call marker. An assigned parcel remains in the caller's web and mobile worklist while uncalled,
+including when its status is Awaiting Pickup or Home Delivery Requested. The caller may record an
+outcome to switch between pickup and home delivery, or choose **Mark as Called** to keep the
+current status. A saved call outcome, including a bulk outcome or main-receiver change, records
+the call marker; a provisional assignment does not. Address collection and rider dispatch still
+leave an uncalled parcel in the caller's list for the mark-only action. Called parcels and parcels
+delivered at office or home leave the list. Only the assigned caller at the destination branch may
+record the call; repeated calls and changes after dispatch are rejected. QA: assign a parcel and
+verify Awaiting Pickup and an uncalled badge; change pickup to home delivery and verify it leaves
+the queue as called; assign another parcel and mark it called without changing pickup; complete
+an uncalled delivery and verify it leaves the queue; reject a different caller or branch.
+
 ## Verification Scenarios
+
+Call-center contacted pickup outcomes keep the parcel in **Awaiting Pickup** while
+`callCenterCalledAt` records **Customer Contacted** separately. The parcel remains eligible for
+pickup or delivery processing; only an explicit home-delivery outcome changes it to
+**Home Delivery Requested**. This behavior is shared by web, mobile, bulk outcomes, and main
+receiver changes.
 
 - Sender-paid, receiver-paid, split, zero-charge, and credit creation.
 - Call-center list, single assignment, and bulk assignment failures display the nested API message;

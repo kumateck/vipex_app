@@ -10,6 +10,7 @@ import { PaymentResponsibility } from '@mobile/constants/payment';
 import {
   createBookingWithParcels,
   createCustomer,
+  findCustomersByTelephone,
   listBranchOptions,
   listLocationOptions,
 } from '@mobile/lib/api';
@@ -18,11 +19,8 @@ import { hapticError, hapticSuccess } from '@mobile/lib/haptics';
 import type { BranchOption, LocationOption } from '@mobile/types/booking';
 import { AppButton, MobileNoAccess } from '@mobile/components/ui/mobile';
 import { CustomerLookupCard } from '../../customer-lookup-card';
-import {
-  isTenDigitPhone,
-  useCustomerLookup,
-  type UseCustomerLookupResult,
-} from '../../use-customer-lookup';
+import { isTenDigitPhone, useCustomerLookup } from '../../use-customer-lookup';
+import { resolveBookingCustomer } from '../..';
 import { ParcelCreateHeader } from '../parcel-create-header';
 import {
   buildMobileParcelPaymentPlan,
@@ -30,18 +28,14 @@ import {
   type MobilePaymentResponsibility,
 } from '../../mobile-parcel-payment-plan';
 import { ParcelBookingFields } from './parcel-booking-fields';
-
-function parseAmount(raw: string): number | null {
-  const normalized = raw.replace(/,/g, '').trim();
-  if (!normalized) return 0;
-  const value = Number(normalized);
-  return Number.isNaN(value) || value < 0 ? null : value;
-}
+import type { MobileSticker } from '../../services';
+import { useMobileStickerPrint } from '../../hooks';
+import { parseAmount } from '../../utils';
+import { StickerRetryActions } from './sticker-retry-actions';
 
 export function ParcelCreateScreen() {
   const { payment } = useLocalSearchParams<{ payment?: string }>();
   const initialPaymentResponsibility = getInitialMobilePaymentResponsibility(payment);
-
   return (
     <ParcelCreateForm
       key={initialPaymentResponsibility}
@@ -49,7 +43,6 @@ export function ParcelCreateScreen() {
     />
   );
 }
-
 function ParcelCreateForm({
   initialPaymentResponsibility,
 }: {
@@ -78,7 +71,9 @@ function ParcelCreateForm({
   const [locationOptions, setLocationOptions] = useState<LocationOption[]>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [printSticker, setPrintSticker] = useState(false);
+  const [stickerCopies, setStickerCopies] = useState('1');
+  const stickerPrint = useMobileStickerPrint();
   useEffect(() => {
     if (!companyId || !canCreate || isHeadOffice) return;
     let cancelled = false;
@@ -125,7 +120,6 @@ function ParcelCreateForm({
       cancelled = true;
     };
   }, [companyId, destinationBranchId, withAuth]);
-
   if (!canCreate || isHeadOffice) {
     return (
       <AppScreen scrollable={false}>
@@ -141,20 +135,6 @@ function ParcelCreateForm({
     );
   }
 
-  async function resolveCustomerId(person: UseCustomerLookupResult, label: string) {
-    if (person.customerId) return person.customerId;
-    const fullname = person.fullname.trim();
-    if (!fullname) throw new Error(`${label} fullname is required`);
-    const result = await withAuth((token) =>
-      createCustomer(token, {
-        fullname,
-        telephone: person.telephone,
-        telephone2: person.telephone2 || null,
-      }),
-    );
-    return result.id;
-  }
-
   const resetForm = () => {
     sender.reset();
     receiver.reset();
@@ -165,23 +145,21 @@ function ParcelCreateForm({
     setParcelValue('');
     setCharge('');
     setPaymentResponsibility(initialPaymentResponsibility);
+    setPrintSticker(false);
+    setStickerCopies('1');
   };
-
   const handleSubmit = async () => {
     if (isSubmitting) return;
     if (!companyId || !userBranchId)
       return notifyError('Missing context', 'Your company or branch is missing.');
-    if (!isTenDigitPhone(sender.telephone) || !sender.hasLookedUp)
-      return notifyError('Sender required', 'Look up the sender by telephone before continuing.');
-    if (!sender.isExistingCustomer && !sender.fullname.trim())
-      return notifyError('Sender required', 'Enter the sender fullname.');
-    if (!isTenDigitPhone(receiver.telephone) || !receiver.hasLookedUp)
-      return notifyError(
-        'Receiver required',
-        'Look up the receiver by telephone before continuing.',
-      );
-    if (!receiver.isExistingCustomer && !receiver.fullname.trim())
-      return notifyError('Receiver required', 'Enter the receiver fullname.');
+    if (!isTenDigitPhone(sender.telephone))
+      return notifyError('Sender required', 'Enter the sender telephone.');
+    if (sender.telephone2 && !isTenDigitPhone(sender.telephone2))
+      return notifyError('Invalid sender number', 'Telephone 2 must have 10 digits.');
+    if (!isTenDigitPhone(receiver.telephone))
+      return notifyError('Receiver required', 'Enter the receiver telephone.');
+    if (receiver.telephone2 && !isTenDigitPhone(receiver.telephone2))
+      return notifyError('Invalid receiver number', 'Telephone 2 must have 10 digits.');
     if (!destinationBranchId)
       return notifyError('Destination required', 'Select a destination branch.');
     if (!parcelDetails.trim())
@@ -192,18 +170,38 @@ function ParcelCreateForm({
     if (chargeAmount === null || chargeAmount <= 0)
       return notifyError('Invalid charge', 'Enter a valid charge amount.');
     const valueAmount = parseAmount(parcelValue) ?? 0;
+    const copies = Number(stickerCopies);
+    if (
+      printSticker &&
+      paymentResponsibility === PaymentResponsibility.RECIPIENT &&
+      (!Number.isSafeInteger(copies) || copies < 1)
+    )
+      return notifyError(
+        'Invalid sticker copies',
+        'Enter a positive whole number of sticker copies.',
+      );
 
     setIsSubmitting(true);
     try {
+      const customerDependencies = {
+        find: (telephone: string) =>
+          withAuth((token) => findCustomersByTelephone(token, { telephone })),
+        create: (input: { fullname: string; telephone: string; telephone2: string | null }) =>
+          withAuth((token) => createCustomer(token, input)),
+      };
       const [senderId, receiverId] = await Promise.all([
-        resolveCustomerId(sender, 'Sender'),
-        resolveCustomerId(receiver, 'Recipient'),
+        resolveBookingCustomer(sender, 'Sender', customerDependencies),
+        resolveBookingCustomer(receiver, 'Recipient', customerDependencies),
       ]);
       const response = await withAuth((token) =>
         createBookingWithParcels(token, {
           senderId,
           status: ParcelStatus.CREATED,
-          deferSenderCashierCompletion: true,
+          deferSenderCashierCompletion: !(
+            printSticker && paymentResponsibility === PaymentResponsibility.RECIPIENT
+          ),
+          completeToBePaid:
+            printSticker && paymentResponsibility === PaymentResponsibility.RECIPIENT,
           parcels: [
             {
               destinationId: destinationBranchId,
@@ -220,10 +218,32 @@ function ParcelCreateForm({
         }),
       );
       const created = response.parcels[0];
-      notifySuccess(
-        `Booking ${created?.bookingCode ?? response.bookingId}. Complete this transaction from Sender Cashier Payments; mobile printing is disabled.`,
-        'Parcel queued for sender cashier',
-      );
+      let printCompleted = true;
+      if (printSticker && created) {
+        const sticker: MobileSticker = {
+          bookingCode: created.bookingCode,
+          trackingCode: created.trackingCode,
+          senderName: sender.fullname,
+          senderPhone: [sender.telephone, sender.telephone2].filter(Boolean).join(' / '),
+          receiverName: receiver.fullname,
+          receiverPhone: [receiver.telephone, receiver.telephone2].filter(Boolean).join(' / '),
+          destinationBranch:
+            branchOptions.find((branch) => branch.id === destinationBranchId)?.name ?? '-',
+          destinationLocation:
+            locationOptions.find((location) => location.id === pickupLocationId)?.name ?? '-',
+          parcelDetails: parcelDetails.trim(),
+          amountCedis: chargeAmount,
+          copies,
+        };
+        printCompleted = await stickerPrint.print(sticker);
+      }
+      if (printCompleted)
+        notifySuccess(
+          printSticker
+            ? `Booking ${created?.bookingCode ?? response.bookingId} completed in the cashier session.`
+            : `Booking ${created?.bookingCode ?? response.bookingId} queued for Sender Cashier Payments.`,
+          printSticker ? 'To-be-paid parcel completed' : 'Parcel queued for sender cashier',
+        );
       void hapticSuccess();
       resetForm();
     } catch (error) {
@@ -236,7 +256,6 @@ function ParcelCreateForm({
       setIsSubmitting(false);
     }
   };
-
   return (
     <AppScreen>
       <ParcelCreateHeader paymentResponsibility={paymentResponsibility} />
@@ -253,6 +272,10 @@ function ParcelCreateForm({
         parcelValue={parcelValue}
         charge={charge}
         paymentResponsibility={paymentResponsibility}
+        printSticker={printSticker}
+        stickerCopies={stickerCopies}
+        onPrintStickerChange={setPrintSticker}
+        onStickerCopiesChange={setStickerCopies}
         isLoadingBranches={isLoadingBranches}
         isLoadingLocations={isLoadingLocations}
         onDestinationChange={(value) => {
@@ -264,7 +287,10 @@ function ParcelCreateForm({
         onParcelContentChange={setParcelContent}
         onParcelValueChange={setParcelValue}
         onChargeChange={setCharge}
-        onPaymentResponsibilityChange={setPaymentResponsibility}
+        onPaymentResponsibilityChange={(value) => {
+          setPaymentResponsibility(value);
+          if (value !== PaymentResponsibility.RECIPIENT) setPrintSticker(false);
+        }}
       />
       <AppButton
         title={
@@ -277,6 +303,12 @@ function ParcelCreateForm({
         onPress={() => void handleSubmit()}
         disabled={isSubmitting}
         loading={isSubmitting}
+      />
+      <StickerRetryActions
+        pendingSticker={stickerPrint.pendingSticker}
+        pendingLog={stickerPrint.pendingLog}
+        onRetryPrint={() => void stickerPrint.retry()}
+        onRetryLog={() => void stickerPrint.retryLog()}
       />
     </AppScreen>
   );

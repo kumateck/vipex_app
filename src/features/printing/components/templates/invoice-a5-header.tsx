@@ -2,7 +2,7 @@ import logoPng from '@/assets/logo.png';
 
 type InvoiceA5HeaderProps = {
   issuedAtLabel: string;
-  title: 'Tax Invoice' | 'ACKNOWLEDGEMENT NOTE';
+  title: 'Tax Invoice' | 'ACKNOWLEDGEMENT NOTE' | 'HOME DELIVERY RECEIPT';
   subtitle?: string;
 };
 

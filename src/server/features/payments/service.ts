@@ -490,6 +490,7 @@ export async function collectSenderPaymentAndProcessSvc(input: {
       const patch: Partial<Parameters<typeof updateParcelRepo>[1]> = {};
       if (parcel.status === ParcelStatus.CREATED) {
         patch.status = ParcelStatus.PROCESSED;
+        patch.processedBy = input.cashierUserId;
       }
       if (!parcel.cashierSessionId) {
         patch.cashierSessionId = activeSession.id;
@@ -654,7 +655,18 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
         tx,
       );
 
-      return { payment, storagePayment, storageBefore, storageAfter };
+      const receiptTaxBreakdown = storagePayment
+        ? toPaymentAmounts(
+            await computeProfileTaxBreakdown({
+              companyId: input.companyId,
+              principalPsw: BigInt(
+                (payment?.amounts.grossPsw ?? 0) + storagePayment.amounts.grossPsw,
+              ),
+              executor: tx,
+            }),
+          )
+        : null;
+      return { payment, storagePayment, storageBefore, storageAfter, receiptTaxBreakdown };
     });
 
     if (verifiedOtp) await consumeReceiverOtpTokenSvc(verifiedOtp.id);
@@ -681,6 +693,7 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
       status: ParcelStatus.DELIVERED_BY_OFFICE,
       payment: result.payment,
       storagePayment: result.storagePayment,
+      receiptTaxBreakdown: result.receiptTaxBreakdown,
       storageSettlement: result.storageAfter,
       message: 'Receiver cashier flow completed.',
     };

@@ -7,6 +7,9 @@ import { authPlugin, type AuthUser, requireAuth, requirePermissions } from '@/se
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { Forbidden } from '@/server/utils/http-error';
 import { BranchType, PaymentResponsibility, UserType } from '@/db/schemas/enums';
+import { resolveToBePaidCompletionSessionSvc } from '../cashiers/delegates.service';
+import { BadRequest } from '@/server/utils/http-error';
+import { assertToBePaidCompletion } from './to-be-paid-completion';
 
 export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-parcels' })
   .use(authPlugin)
@@ -23,6 +26,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
         cashierSessionId?: string | null;
         bookingCode?: string | null;
         deferSenderCashierCompletion?: boolean;
+        completeToBePaid?: boolean;
         parcels: Array<{
           destinationId: string;
           pickupLocationId?: string | null;
@@ -41,6 +45,17 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
           callSender?: boolean;
         }>;
       };
+      if (payload.completeToBePaid && payload.deferSenderCashierCompletion) {
+        throw BadRequest('Choose either deferred or immediate to-be-paid completion');
+      }
+      if (payload.completeToBePaid) assertToBePaidCompletion(payload.parcels);
+      const completion = payload.completeToBePaid
+        ? await resolveToBePaidCompletionSessionSvc({
+            userId: authUser.sub,
+            companyId: authUser.companyId ?? '',
+            branchId: authUser.branchId ?? '',
+          })
+        : null;
       const createBody = {
         senderId: payload.senderId,
         companyId: authUser.companyId ?? '',
@@ -48,13 +63,13 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
         sourceLocationId: authUser.locationId ?? null,
         status: payload.status,
         createdBy: authUser.sub,
-        cashierSessionId: payload.cashierSessionId ?? null,
+        cashierSessionId: completion?.sessionId ?? payload.cashierSessionId ?? null,
         bookingCode: payload.bookingCode ?? null,
         requireActiveCashierSession:
-          authUser.userType === UserType.CASHIER || authUser.cashierType != null,
+          !!completion || authUser.userType === UserType.CASHIER || authUser.cashierType != null,
         parcels: payload.parcels.map((parcel) => ({
           ...parcel,
-          cashierUserId: authUser.sub,
+          cashierUserId: completion?.cashierId ?? authUser.sub,
           branchId: authUser.branchId ?? '',
         })),
       };
@@ -69,6 +84,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
         senderId: UUID,
         status: t.Number(),
         deferSenderCashierCompletion: t.Optional(t.Boolean()),
+        completeToBePaid: t.Optional(t.Boolean()),
         cashierSessionId: t.Optional(UUID),
         bookingCode: t.Optional(t.String()),
         parcels: t.Array(
