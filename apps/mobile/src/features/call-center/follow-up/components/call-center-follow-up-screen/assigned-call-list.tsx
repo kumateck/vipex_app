@@ -4,7 +4,8 @@ import { getParcelStatusLabel } from '@mobile/constants/parcel-status';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import type { ParcelSearchRow } from '@mobile/types/parcels';
-import { formatPsw, formatReceivedAt, isContacted } from '../../utils';
+import { formatPsw, formatReceivedAt } from '../../utils';
+import { ParcelStatus } from '@mobile/constants/parcel-status';
 
 type Props = {
   search: string;
@@ -14,6 +15,7 @@ type Props = {
   onSearchChange: (value: string) => void;
   onSearch: () => void;
   onOpenOutcome: (parcel: ParcelSearchRow) => void;
+  onMarkCalled: (parcel: ParcelSearchRow) => void;
   onCallPhone: (phone: string | null | undefined) => void;
 };
 
@@ -50,7 +52,7 @@ export function AssignedCallList(props: Props) {
                   Received {formatReceivedAt(parcel.receivedAt)}
                 </Text>
               </View>
-              <ContactState contacted={isContacted(parcel.status)} />
+              <ContactState contacted={Boolean(parcel.callCenterCalledAt)} />
             </View>
             <View style={styles.details}>
               <Text style={[styles.text, { color: theme.colors.text }]}>
@@ -93,10 +95,26 @@ export function AssignedCallList(props: Props) {
                 />
               </View>
             </View>
+            {(
+              [
+                ParcelStatus.ARRIVED_AT_DESTINATION,
+                ParcelStatus.CUSTOMER_CONTACTED,
+                ParcelStatus.RETURNED_TO_OFFICE,
+                ParcelStatus.AWAITING_PICKUP,
+                ParcelStatus.HOME_DELIVERY_REQUESTED,
+              ] as number[]
+            ).includes(parcel.status) ? (
+              <AppButton
+                title="Change outcome and record call"
+                disabled={props.saving}
+                onPress={() => props.onOpenOutcome(parcel)}
+              />
+            ) : null}
             <AppButton
-              title="Record call outcome"
+              title="Mark as called"
+              variant="secondary"
               disabled={props.saving}
-              onPress={() => props.onOpenOutcome(parcel)}
+              onPress={() => props.onMarkCalled(parcel)}
             />
           </AppCard>
         ))

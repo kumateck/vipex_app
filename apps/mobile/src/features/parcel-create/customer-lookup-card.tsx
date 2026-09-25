@@ -30,12 +30,18 @@ export function CustomerLookupCard({ title, lookup }: CustomerLookupCardProps) {
           />
         </View>
         <AppButton
-          title={lookup.isLookingUp ? 'Searching...' : 'Find'}
+          title={lookup.isLookingUp ? 'Searching...' : 'Search again'}
           onPress={() => void lookup.lookup()}
           disabled={!canLookup || lookup.isLookingUp}
           variant="secondary"
         />
       </View>
+
+      {canLookup && !lookup.hasLookedUp && !lookup.isLookingUp ? (
+        <Text style={[styles.helper, { color: theme.colors.textSubtle }]}>
+          Customer lookup starts automatically.
+        </Text>
+      ) : null}
 
       {lookup.hasLookedUp && lookup.matches.length > 0 ? (
         <View style={styles.matches}>

@@ -113,6 +113,7 @@ export const parcels = pgTable(
     callCenterAssignedToUserId: varchar('call_center_assigned_to_user_id', {
       length: 25,
     }).references(() => users.id),
+    callCenterCalledAt: timestamp('call_center_called_at', { withTimezone: false }),
     shelfPickerStaffId: varchar('shelf_picker_staff_id', { length: 25 }).references(() => users.id),
     taxReportConfirmation: boolean('tax_report_confirmation').notNull().default(false),
     callSender: boolean('call_sender').notNull().default(false),
@@ -123,6 +124,7 @@ export const parcels = pgTable(
 
     createdBy: varchar('created_by', { length: 25 }),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+    processedBy: varchar('processed_by', { length: 25 }).references(() => users.id),
     receivedBy: varchar('received_by', { length: 25 }),
     receivedAt: timestamp('received_at', { withTimezone: false }),
     confirmedBy: varchar('confirmed_by', { length: 25 }),

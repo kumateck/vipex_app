@@ -23,3 +23,13 @@ export function canReturnToPickup(status: number) {
     status === ParcelStatus.RETURNED_TO_OFFICE
   );
 }
+
+export function canChangeCallOutcome(status: number) {
+  return [
+    ParcelStatus.ARRIVED_AT_DESTINATION,
+    ParcelStatus.CUSTOMER_CONTACTED,
+    ParcelStatus.RETURNED_TO_OFFICE,
+    ParcelStatus.AWAITING_PICKUP,
+    ParcelStatus.HOME_DELIVERY_REQUESTED,
+  ].includes(status);
+}

@@ -37,6 +37,16 @@ The available type list is permission-controlled. A user who can view a cashier 
 
 A user cannot open a session for an unrelated cashier or branch unless explicitly authorized. Controlled payment flows should require an active compatible session.
 
+### Session delegates for to-be-paid creation
+
+A sender or full cashier can list active staff at the same branch and assigned location whose role permits parcel booking, then add or remove them from the cashier's active session. The assignment is tied to that session, not to the staff member permanently. Web session controls and the mobile cashier dashboard expose the same list. A cashier cannot assign themself or staff from another company, branch, assigned location, inactive account, or role without `CanCreateBookingWithParcels`.
+
+Assigned staff may create a **fully receiver-paid** parcel and immediately mark it processed in the owning cashier's session. No sender payment is collected. The server resolves the owner and active session from current user records; a client-supplied session, cashier ID, or stale cashier type in a token is not trusted. The booking audit records the actual creator. Removing the staff member or closing the session denies later completion requests. A new session needs a new assignment. Sender-paid, split, and zero-charge bookings cannot use this delegate path. Eligible staff must be active in the cashier's company and branch and, when the cashier has an assigned location, in that same location. A cashier without an assigned location may select staff across their branch. The server applies this scope when listing, adding, and using delegates; moving a delegate to another location suspends their completion access while they remain out of scope.
+
+The parcel's `processedBy` user ID is the **owning cashier**, including when a delegated staff member submitted the mobile booking. `createdBy` and the booking audit retain the actual staff member who entered it. The parcel and booking `cashierSessionId` reference the owning cashier's session. Ordinary sender cashier processing also writes the cashier to `processedBy`. This field is distinct from `confirmedBy`, which represents receiver handover or delivery confirmation. Existing parcels are not backfilled because historic processors cannot always be inferred safely.
+
+`GET /cashiers/sessions/:id/delegates` needs session-read permission and returns eligible and assigned staff to the session owner. `POST /cashiers/sessions/:id/delegates` needs session-open permission, and `DELETE /cashiers/sessions/:id/delegates/:userId` needs session-close permission. Every mutation checks that the caller is the owner of an active sender or full cashier session. Invalid or expired delegation returns `403`; a session owned by someone else returns `404`.
+
 ## Payment Workflows
 
 The payment service supports:
@@ -68,6 +78,10 @@ Sender payment supports manual and automated MTN MoMo paths where configured. Au
 ## Printing
 
 Sender payment and parcel creation can initiate sticker and A5 printing. Sticker quantity follows the unlimited positive-whole-number rule in [Parcel Printing](PARCEL_PRINTING.md). The payment transaction must not be rolled back merely because printing fails.
+
+For mobile receiver-paid creation, **Complete & print sticker** asks the server to complete the booking in an active authorized cashier session, then opens the phone's native print dialog with a 90 × 92 mm to-be-paid sticker. The app offers a retry button if the print dialog fails after booking creation. The phone needs an installed print service that can reach its paired printer; mobile printer selection does not use desktop printer routing. Leaving the box unticked queues the booking for Sender Cashier Payments as before.
+
+QA: assign a same-branch, same-location staff member, create and print a receiver-paid parcel on mobile, and confirm the parcel is processed and attributed to the owner session. For a cashier with a location, check another-location and no-location staff are absent from the picker and rejected by a direct add request; moving an existing delegate to another location must block completion. For a cashier without a location, check eligible staff across that branch remain available. Check unassigned, revoked, inactive, wrong-branch, and closed-session staff get `403`; check paid and split parcels cannot use immediate completion. Close the print dialog or simulate a printer error, then retry without creating a second booking. Verify a later session has no inherited delegates.
 
 ## Daily Cashier Sales Report
 

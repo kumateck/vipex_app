@@ -21,6 +21,7 @@ export type CreateBookingWithParcelsInput = {
   senderId: string;
   status: number;
   deferSenderCashierCompletion?: boolean;
+  completeToBePaid?: boolean;
   parcels: Array<{
     destinationId: string;
     pickupLocationId?: string | null;

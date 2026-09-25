@@ -25,6 +25,7 @@ export type ParcelSearchRow = {
   callSender?: boolean;
   callCenterAssignedToUserId?: string | null;
   callCenterAssignedToUserName?: string | null;
+  callCenterCalledAt?: string | null;
   status: number;
   chargePsw?: number;
   parcelValuePsw?: number;

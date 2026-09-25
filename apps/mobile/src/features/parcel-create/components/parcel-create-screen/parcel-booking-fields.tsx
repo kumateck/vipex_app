@@ -6,6 +6,7 @@ import type { BranchOption, LocationOption } from '@mobile/types/booking';
 import { mobileTextStyles } from '@mobile/theme/layout';
 import { AppCard, AppInput, AppLabel, AppSelectField } from '@mobile/components/ui/mobile';
 import type { MobilePaymentResponsibility } from '../../mobile-parcel-payment-plan';
+import { StickerPrintChoice } from './sticker-print-choice';
 
 const PAYMENT_RESPONSIBILITY_OPTIONS = [
   { value: String(PaymentResponsibility.SENDER), label: 'Sender pay — complete at cashier' },
@@ -23,6 +24,10 @@ type ParcelBookingFieldsProps = {
   parcelValue: string;
   charge: string;
   paymentResponsibility: MobilePaymentResponsibility;
+  printSticker: boolean;
+  stickerCopies: string;
+  onPrintStickerChange: (value: boolean) => void;
+  onStickerCopiesChange: (value: string) => void;
   isLoadingBranches: boolean;
   isLoadingLocations: boolean;
   onDestinationChange: (value: string) => void;
@@ -45,6 +50,10 @@ export function ParcelBookingFields({
   parcelValue,
   charge,
   paymentResponsibility,
+  printSticker,
+  stickerCopies,
+  onPrintStickerChange,
+  onStickerCopiesChange,
   isLoadingBranches,
   isLoadingLocations,
   onDestinationChange,
@@ -134,10 +143,18 @@ export function ParcelBookingFields({
           options={PAYMENT_RESPONSIBILITY_OPTIONS}
           placeholder="Select who pays"
         />
-        <Text style={[mobileTextStyles.footnote, { color: theme.colors.textSubtle }]}>
-          Payment and all sticker or receipt printing must be completed from Sender Cashier Payments
-          on desktop.
-        </Text>
+        {paymentResponsibility === PaymentResponsibility.RECIPIENT ? (
+          <StickerPrintChoice
+            value={printSticker}
+            onChange={onPrintStickerChange}
+            copies={stickerCopies}
+            onCopiesChange={onStickerCopiesChange}
+          />
+        ) : (
+          <Text style={[mobileTextStyles.footnote, { color: theme.colors.textSubtle }]}>
+            Sender payment and receipt printing are completed at Sender Cashier Payments.
+          </Text>
+        )}
       </AppCard>
     </>
   );

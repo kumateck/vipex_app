@@ -25,8 +25,39 @@ Each Operations workflow card opens its registered native screen. The shared mob
 | Receiving discrepancies | `CanReadParcelIncoming`                                    | The current server discrepancy endpoints use `CanReadParcelIncoming` for create/list/resolve; photo upload requires authentication and is linked to the authorized discrepancy. |
 | Delivery-change review  | `CanMarkDoorstepCalled`                                    | Approve/reject: `CanMarkDoorstepCalled`, plus server branch matching.                                                                                                           |
 | Customer directory      | `CanReadCustomers`                                         | Limited contact update: `CanUpdateCustomers`                                                                                                                                    |
+| Parcel creation         | `CanCreateBookingWithParcels` for minimal telephone lookup | New customer creation: `CanCreateCustomers`; booking submission: `CanCreateBookingWithParcels`                                                                                  |
 
 Read access never substitutes for a separate mutation permission. The server remains authoritative when a cached screen or stale session attempts an action.
+
+## Parcel Creation and Customer Reuse
+
+The mobile parcel creation form automatically searches for the sender and recipient when a
+ten-digit telephone is entered. It checks primary and optional secondary telephones, shows matching
+customer names, and selects a single match. Staff choose a match when a number is shared by more
+than one active customer. An unmatched number allows a new name and optional second number.
+Submitting checks both numbers again: an existing customer ID is attached to the booking and
+parcel instead of creating a duplicate; a new customer is created only when neither number
+matches. A duplicate created concurrently is resolved by repeating the lookup. Different
+customers matched by the two numbers require staff to correct the entry. Lookup errors prevent
+submission rather than silently attempting customer creation. Self-service draft completion already
+uses server-side resolve-or-create and has no editable customer telephone fields on mobile.
+
+The booking lookup endpoint requires `CanCreateBookingWithParcels`, scopes results to the signed-in
+company, and returns only customer ID, name, and telephone fields. The general customer directory
+continues to require `CanReadCustomers`. QA: create parcels with new and existing sender/recipient
+numbers; match a secondary number; use the same customer for both roles; submit before automatic
+lookup finishes; test concurrent duplicate creation, two numbers owned by different customers,
+lookup failure, and a booking creator without customer-directory permission.
+
+For fully receiver-paid bookings, staff may tick **Complete & print sticker**. A sender or full
+cashier must have an active session, or must have assigned the staff member to that active session
+from web session controls or the mobile cashier dashboard. The server completes the parcel in the
+cashier session; the phone then opens its native print dialog for the sticker. The printer must be
+available through the phone's print service. If printing fails, the booking remains complete and
+the screen offers a sticker retry without resubmitting it. Unticked bookings remain queued for
+Sender Cashier Payments. The parcel's processed-by user is the cashier who owns the session;
+created-by and the audit retain the staff member who entered the booking. Sender-paid bookings
+cannot use this option.
 
 ## Self-Service Completion
 
@@ -54,7 +85,7 @@ an editable completion form.
 
 The Call Center Follow-up screen has two permission-aware queues:
 
-- **Assigned calls** is available with `CanReadCallCenterParcelStatus`. It uses `GET /shipments/parcels/call-center/assigned`, which restricts results to the authenticated user's company, destination branch, and user ID. It includes Arrived at Destination, Customer Contacted, and Returned to Office parcels so follow-up remains visible until a pickup or delivery outcome is recorded.
+- **Assigned calls** is available with `CanReadCallCenterParcelStatus`. It uses `GET /shipments/parcels/call-center/assigned`, which restricts results to the authenticated user's company, destination branch, and user ID. Assigned parcels remain visible while uncalled, even after a provisional pickup or home-delivery choice; completed deliveries are excluded.
 - **Delivery addresses** is available with `CanMarkDoorstepCalled`. It uses `GET /shipments/parcels/call-center/address-collection`, scoped by the server to the authenticated company and branch and to Home Delivery Requested parcels.
 
 When both permissions are present, mobile shows a native queue switch and defaults to Assigned calls. Users with only one permission see only the permitted workflow. Both queues support search by booking, tracking, receiver, or telephone data.
@@ -64,6 +95,11 @@ An assigned parcel card shows booking and received time, parcel and receiver det
 - Customer will get back → Customer Contacted
 - Customer will come → Awaiting Pickup
 - Customer wants delivery → Home Delivery Requested
+
+Assignment can set Awaiting Pickup before a call. **Mark as called** records contact without
+changing that status. **Change outcome and record call** can switch between pickup and home
+delivery while the parcel has not advanced to address collection or dispatch. Both actions remove
+the parcel from Assigned calls; merely opening the telephone application does not mark it called.
 
 Awaiting Pickup optionally supports a second receiver, subject to server customer-create permission and validation. The form requires a name and a ten-digit telephone number. An exact match to an active customer phone in the company links that existing customer; otherwise the server creates one. SMS is selected by default; email is optional. Parcel status is saved before notification dispatch. If notification dispatch fails, mobile reports partial success, closes the completed outcome, and refreshes the assigned queue rather than inviting a duplicate status mutation.
 
