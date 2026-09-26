@@ -230,6 +230,16 @@ Mobile discrepancy capture supports an expected system parcel that is physically
 
 ## Pickup and Last-Mile Delivery
 
+Shelf Picker Update offers **Request Delivery** for an Awaiting Pickup parcel. Staff with
+`CanUpdateParcelShelfPicker` may use it for a parcel in their own company and destination branch.
+The server changes its status to Home Delivery Requested and ends its active pickup queue ticket
+in the same transaction. The parcel then leaves Shelf Picker Update and enters the home-delivery
+workflow. Missing, deleted, out-of-branch, already confirmed, or no-longer-awaiting-pickup parcels
+are rejected without changing status or queue. This web and desktop action is unavailable on the
+mobile Shelf Picker screen. QA: request delivery for an active ticket, verify the status and ended
+ticket, and confirm the parcel is no longer in the shelf picker list. Retry from a stale row and
+with another branch or missing permission; confirm each request fails without changing the parcel.
+
 The Waiting for Pickup and Receiver Cashier parcel tables include a **Received** column sourced from
 the parcel's persisted `receivedAt` timestamp. It uses the application's shared date/time format and
 shows `-` when a timestamp is unavailable; the display does not alter queue eligibility or payment
@@ -353,7 +363,18 @@ Call-center contacted pickup outcomes keep the parcel in **Awaiting Pickup** whi
 `callCenterCalledAt` records **Customer Contacted** separately. The parcel remains eligible for
 pickup or delivery processing; only an explicit home-delivery outcome changes it to
 **Home Delivery Requested**. This behavior is shared by web, mobile, bulk outcomes, and main
-receiver changes.
+receiver changes. Migration `0072_contacted_parcels_awaiting_pickup` restores previously
+received, unconfirmed, active parcels saved with the legacy **Customer Contacted** status to
+**Awaiting Pickup** only when they have no active doorstep delivery or collected address. It leaves
+deleted, unreceived, confirmed, and home-delivery parcels untouched; payment and
+OTP checks still apply at handover. The Call Outcome queue lists only parcels with no
+`callCenterCalledAt` value, regardless of their pickup or home-delivery status; recording the call
+time removes a parcel from that queue. Verify a previously contacted, fully paid parcel can be found
+by booking code in Waiting for Pickup and Shelf Picker Update, and one with an amount due can be
+found in Receiver Cashier. Verify an uncalled Awaiting Pickup parcel remains on Call Outcome and
+leaves it after marking called. Verify a legacy Customer Contacted parcel with an active doorstep
+delivery or saved address retains its status through the migration. Verify an unpaid parcel cannot
+be completed without collection.
 
 - Sender-paid, receiver-paid, split, zero-charge, and credit creation.
 - Call-center list, single assignment, and bulk assignment failures display the nested API message;

@@ -512,6 +512,13 @@
       "when": 1790000300000,
       "tag": "0071_parcel_call_center_called_at",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1790000400000,
+      "tag": "0072_contacted_parcels_awaiting_pickup",
+      "breakpoints": true
     }
   ]
 }

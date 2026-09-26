@@ -46,6 +46,7 @@ import { recordCallCenterContactSvc } from './parcel-call-center-contact.service
 import { getHomeDeliveryReceiptSvc } from './home-delivery-receipt.service';
 import { reverseParcelDeliverySvc } from './parcel-delivery-reversal.service';
 import { changeMainReceiverWithCallOutcomeSvc } from './parcel-main-receiver-change.service';
+import { requestShelfPickerHomeDeliverySvc } from './shelf-picker-home-delivery.service';
 import { findCustomerNameByExactTelephoneRepo } from '../customers/repository';
 
 function parseStatuses(value: string | number[] | undefined): number[] | null {
@@ -1048,6 +1049,23 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         tags: ['Shipments'],
         summary: 'Assign parcel to call center representative',
       },
+    },
+  )
+  .post(
+    '/:id/shelf-picker/request-delivery',
+    ({ params, user }) => {
+      const actor = user as AuthUser;
+      return requestShelfPickerHomeDeliverySvc({
+        parcelId: params.id,
+        companyId: actor.companyId ?? '',
+        branchId: actor.branchId ?? '',
+        actorUserId: actor.sub,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateParcelShelfPicker)],
+      detail: { tags: ['Shipments'], summary: 'Request home delivery from shelf picker' },
     },
   )
   .post(

@@ -4,6 +4,8 @@ import { getErrorMessage, getResponseError } from '@/lib/TheAduseiErrorResponse'
 import { useAuthStore } from '@/stores/auth-store';
 import { isOptionalTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import { useUpdateCustomerMutation } from '@/features/customers/api';
+import { ParcelStatus } from '@/db/schemas/enums';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import { useUpdateParcelMutation } from '../../api/parcel.api';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ParcelRow, StaffOption } from './shelf-picker-update-types';
@@ -25,10 +27,14 @@ export function useShelfPickerUpdateWorkflow() {
   const [selectedParcel, setSelectedParcel] = useState<ParcelRow | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isRequestingDelivery, setIsRequestingDelivery] = useState(false);
 
   const companyId = user?.company?.id || '';
   const branchId = user?.branch?.id || '';
   const userId = user?.id || '';
+  const canRequestDelivery = (user?.permissions ?? []).includes(
+    PermissionKeys.CanUpdateParcelShelfPicker,
+  );
   const [listData, setListData] = useState<ParcelListResponse>({
     data: [],
     meta: {
@@ -87,6 +93,29 @@ export function useShelfPickerUpdateWorkflow() {
 
   const handleSearchSubmit = () => {
     setQuery((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const handleRequestDelivery = async (parcel: ParcelRow) => {
+    if (parcel.status !== ParcelStatus.AWAITING_PICKUP || isRequestingDelivery) return;
+    setIsRequestingDelivery(true);
+    try {
+      const response = await fetch(
+        `/v1/shipments/parcels/${parcel.id}/shelf-picker/request-delivery`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}` },
+        },
+      );
+      if (!response.ok) {
+        throw await getResponseError(response, 'Failed to request home delivery');
+      }
+      toast.success('Parcel moved to Home Delivery Requested');
+      await fetchData();
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to request home delivery'));
+    } finally {
+      setIsRequestingDelivery(false);
+    }
   };
 
   const handleUpdateShelfPicker = async () => {
@@ -200,6 +229,9 @@ export function useShelfPickerUpdateWorkflow() {
         setEditReceiverPhone(parcel.receiverPhone ?? '');
       },
       handleSearchSubmit,
+      handleRequestDelivery,
+      isRequestingDelivery,
+      canRequestDelivery,
     },
     dialog: {
       selectedParcel,

@@ -92,7 +92,7 @@ When both permissions are present, mobile shows a native queue switch and defaul
 
 An assigned parcel card shows booking and received time, parcel and receiver details, route, receiver amount, contact state, and underlying parcel status. The Call Outcome sheet can open the device telephone application and records one of:
 
-- Customer will get back → Customer Contacted
+- Customer will get back → Awaiting Pickup (the call is recorded separately)
 - Customer will come → Awaiting Pickup
 - Customer wants delivery → Home Delivery Requested
 
