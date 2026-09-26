@@ -11,7 +11,7 @@ import type { ParcelSearchRow } from '../../api/parcel.api';
 import type { ContactOutcome } from './types';
 
 const outcomeOptions: Array<{ value: ContactOutcome; label: string; status: string }> = [
-  { value: 'follow_up', label: 'Customer will get back', status: 'Customer Contacted' },
+  { value: 'follow_up', label: 'Customer will get back', status: 'Awaiting Pickup' },
   { value: 'pickup', label: 'Customer will come', status: 'Awaiting Pickup' },
   { value: 'delivery', label: 'Customer wants delivery', status: 'Home Delivery Requested' },
 ];

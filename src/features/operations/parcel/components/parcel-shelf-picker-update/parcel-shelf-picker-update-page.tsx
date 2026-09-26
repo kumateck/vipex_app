@@ -20,6 +20,9 @@ export function ParcelShelfPickerUpdatePage() {
   const columns = useShelfPickerUpdateColumns({
     onOpenUpdateDialog: table.openUpdateDialog,
     onEdit: table.openEditDialog,
+    onRequestDelivery: table.handleRequestDelivery,
+    isRequestingDelivery: table.isRequestingDelivery,
+    canRequestDelivery: table.canRequestDelivery,
   });
 
   return (
