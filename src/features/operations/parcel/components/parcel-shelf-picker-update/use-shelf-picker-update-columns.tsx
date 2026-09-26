@@ -38,9 +38,15 @@ const getStatusVariant = (status: number) => {
 export function useShelfPickerUpdateColumns({
   onOpenUpdateDialog,
   onEdit,
+  onRequestDelivery,
+  isRequestingDelivery,
+  canRequestDelivery,
 }: {
   onOpenUpdateDialog: (parcel: ParcelRow) => void;
   onEdit: (parcel: ParcelRow) => void;
+  onRequestDelivery: (parcel: ParcelRow) => Promise<void>;
+  isRequestingDelivery: boolean;
+  canRequestDelivery: boolean;
 }): ColumnDef<ParcelRow>[] {
   return [
     {
@@ -109,7 +115,12 @@ export function useShelfPickerUpdateColumns({
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="icon" variant="outline" className="h-8 w-8">
+            <Button
+              size="icon"
+              variant="outline"
+              className="h-8 w-8"
+              disabled={isRequestingDelivery}
+            >
               <EllipsisVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -118,6 +129,11 @@ export function useShelfPickerUpdateColumns({
               Update
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
+            {canRequestDelivery && row.original.status === ParcelStatus.AWAITING_PICKUP ? (
+              <DropdownMenuItem onClick={() => void onRequestDelivery(row.original)}>
+                Request Delivery
+              </DropdownMenuItem>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
       ),

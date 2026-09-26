@@ -19,7 +19,7 @@ const candidate = {
 
 describe('bulk call outcome', () => {
   test('maps each outcome to its parcel status', () => {
-    expect(callOutcomeStatus('follow_up')).toBe(ParcelStatus.CUSTOMER_CONTACTED);
+    expect(callOutcomeStatus('follow_up')).toBe(ParcelStatus.AWAITING_PICKUP);
     expect(callOutcomeStatus('pickup')).toBe(ParcelStatus.AWAITING_PICKUP);
     expect(callOutcomeStatus('delivery')).toBe(ParcelStatus.HOME_DELIVERY_REQUESTED);
   });

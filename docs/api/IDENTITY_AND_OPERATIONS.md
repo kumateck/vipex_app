@@ -137,13 +137,21 @@ authorization. Web and mobile use the same endpoints.
   then updates them together in one transaction. Missing, deleted, reassigned, out-of-scope,
   ineligible, or concurrently changed parcels reject the batch without partial updates. No SMS or
   email is sent. Each parcel is marked called, so it leaves the assigned call queue. The response
-  returns `parcelIds`, `updatedCount`, and the resulting `status`.
+  returns `parcelIds`, `updatedCount`, and the resulting `status`. Both `follow_up` and
+  `pickup` result in Awaiting Pickup; `delivery` results in Home Delivery Requested.
 - `POST /shipments/parcels/:id/call-center/contact`: requires `CanReadCallCenterParcelStatus` and
   the assigned caller in the destination branch. Empty body marks a parcel called without changing
   status. Optional `outcome` (`follow_up`, `pickup`, `delivery`) changes an eligible outcome and
   records the call; optional `secondReceiverId` updates the second receiver with that outcome.
+  The `follow_up` outcome retains Awaiting Pickup and sets `callCenterCalledAt`; it does not
+  persist Customer Contacted as the parcel status.
   Reject called, delivered, deleted, reassigned, or out-of-branch parcels. Outcome changes are
   rejected after address collection or dispatch, though a call can still be recorded.
+- `POST /shipments/parcels/:id/shelf-picker/request-delivery`: requires
+  `CanUpdateParcelShelfPicker` and an Awaiting Pickup parcel in the caller's company and
+  destination branch. Atomically sets Home Delivery Requested and ends an active pickup queue
+  ticket. Returns the parcel ID and status. Missing or out-of-scope parcels return 404; stale
+  statuses or concurrent changes return 409.
 - `GET /shipments/parcels/call-center/receiver-lookup/:telephone`: exact ten-digit lookup for an
   active customer in the authenticated company, matching either telephone field. Returns ID,
   name, and telephones or `null`. Requires `CanReadCallCenterParcelStatus`.

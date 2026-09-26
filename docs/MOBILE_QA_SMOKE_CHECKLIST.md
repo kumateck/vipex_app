@@ -138,7 +138,7 @@ Last updated: 2026-09-21
    - Confirm Assigned calls contains only the signed-in user's Arrived, Contacted, and Returned to Office assignments for the current branch.
    - Search by booking, tracking, receiver, and telephone; confirm an unassigned parcel cannot be found.
    - Open the device telephone app from an assigned parcel; verify a missing telephone disables the action.
-   - Save Customer will get back and confirm the parcel remains visible as Contacted.
+   - Save Customer will get back and confirm the parcel is Awaiting Pickup and searchable in the pickup and shelf picker queues; the call is recorded separately.
    - Save Customer will come and confirm the parcel moves to Awaiting Pickup and leaves the assigned queue.
    - Enable a second receiver, reject missing/short values, and save a valid ten-digit telephone when customer-create permission is present.
    - Save Customer wants delivery and confirm it enters Delivery addresses when that queue is permitted.

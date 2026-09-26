@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
-import { ParcelStatus } from '@/db/schemas/enums';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
