@@ -5,11 +5,13 @@ import {
   desc,
   eq,
   gt,
+  gte,
   ilike,
   inArray,
   isNull,
   isNotNull,
   lte,
+  lt,
   notInArray,
   or,
   sql,
@@ -105,6 +107,7 @@ export type ListParcelsParams = {
   status?: number | null;
   statuses?: number[] | null;
   senderPaid?: boolean | null;
+  paymentType?: 'paid' | 'to_be_paid' | 'partial' | null;
   hasPickupQueue?: boolean | null;
   agedOnly?: boolean | null;
   storageChargeAccruing?: boolean | null;
@@ -195,6 +198,17 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   if (p.received === false) whereParts.push(isNull(parcels.receivedAt));
   if (p.senderPaid === true) whereParts.push(lte(parcels.plannedToBePaidPsw, 0));
   if (p.senderPaid === false) whereParts.push(gt(parcels.plannedToBePaidPsw, 0));
+  if (p.paymentType === 'paid') whereParts.push(lte(parcels.plannedToBePaidPsw, 0));
+  if (p.paymentType === 'to_be_paid') {
+    whereParts.push(
+      and(gt(parcels.plannedToBePaidPsw, 0), gte(parcels.plannedToBePaidPsw, parcels.chargePsw))!,
+    );
+  }
+  if (p.paymentType === 'partial') {
+    whereParts.push(
+      and(gt(parcels.plannedToBePaidPsw, 0), lt(parcels.plannedToBePaidPsw, parcels.chargePsw))!,
+    );
+  }
   const s = alias(customers, 's');
   const r = alias(customers, 'r');
   const sr = alias(customers, 'sr');
