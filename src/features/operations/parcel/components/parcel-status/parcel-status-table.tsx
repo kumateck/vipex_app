@@ -11,12 +11,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import { CallSenderBadge } from '../call-sender-badge';
 import { STATUS_LABELS } from './constants';
+import { PaymentTypeFilter, type PaymentType } from './payment-type-filter';
+import { ParcelStatusSearch } from './parcel-status-search';
 import {
   canChangeCallOutcome,
   canReturnToPickup,
@@ -24,7 +26,14 @@ import {
   formatPhones,
   formatReceivedAt,
 } from './utils';
-
+const DEFAULT_META: PaginationMeta = {
+  totalRecords: 0,
+  totalPages: 1,
+  page: 1,
+  pageSize: 20,
+  hasNextPage: false,
+  hasPreviousPage: false,
+};
 type ParcelStatusTableProps = {
   rows: ParcelSearchRow[];
   loading: boolean;
@@ -41,6 +50,10 @@ type ParcelStatusTableProps = {
   onToggleParcel: (parcelId: string, checked: boolean) => void;
   onSelectAll: (checked: boolean) => void;
   onBatchCallOutcome: () => void;
+  meta?: PaginationMeta;
+  onRequestChange: (request: PaginationRequestDto) => void;
+  paymentType: PaymentType;
+  onPaymentTypeChange: (value: PaymentType) => void;
 };
 
 export function ParcelStatusTable({
@@ -59,6 +72,10 @@ export function ParcelStatusTable({
   onToggleParcel,
   onSelectAll,
   onBatchCallOutcome,
+  meta,
+  onRequestChange,
+  paymentType,
+  onPaymentTypeChange,
 }: ParcelStatusTableProps) {
   const selectedCount = rows.filter((row) => selectedParcelIds.has(row.id)).length;
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
@@ -247,24 +264,13 @@ export function ParcelStatusTable({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form
-            className="flex items-center gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              onSearchSubmit();
-            }}
-          >
-            <Input
-              value={searchInput}
-              onChange={(event) => onSearchInputChange(event.target.value)}
-              placeholder="Search by tracking, booking, receiver name or phone"
-              className="h-11 text-base"
-            />
-            <Button type="submit" className="h-11 px-6" disabled={!companyId || !branchId}>
-              Search
-            </Button>
-          </form>
-
+          <ParcelStatusSearch
+            value={searchInput}
+            onChange={onSearchInputChange}
+            onSubmit={onSearchSubmit}
+            disabled={!companyId || !branchId}
+          />
+          <PaymentTypeFilter value={paymentType} onChange={onPaymentTypeChange} />
           {selectedCount > 0 ? (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
@@ -275,14 +281,16 @@ export function ParcelStatusTable({
               </Button>
             </div>
           ) : null}
-
           <DataTable
-            mode="client"
+            mode="server"
             data={rows}
             columns={columns}
+            meta={meta ?? DEFAULT_META}
             loading={loading}
             showSearch={false}
             enableVirtualization={false}
+            pageSizeOptions={[10, 20, 30, 40, 50]}
+            onRequestChange={onRequestChange}
           />
         </CardContent>
       </Card>

@@ -423,3 +423,15 @@ be completed without collection.
 - Mobile supervisor approval, rejection, branch mismatch, and already-reviewed conflict.
 - Internal transfer create, acknowledge, reject, and history.
 - Reconciliation request, approval, rejection, and original-session correction.
+
+The web Call Outcome queue uses server-side pagination. The selected rows-per-page value is sent as
+`pageSize` to the parcel search endpoint, and page changes send the corresponding `page` value;
+`meta.totalRecords` and `meta.totalPages` drive the controls. Search resets to the first page, so
+assigned calls beyond the first 20 rows remain reachable. QA: with more than 20 uncalled parcels
+assigned to one call agent, select 50 rows per page and verify up to 50 rows load, then navigate to
+the next page and verify the next server page is returned.
+
+The Call Outcome queue also supports a server-side Payment type filter: All, Paid, To Be Paid, and
+Partial. The filter uses the parcel charge and outstanding planned-to-be-paid amount, and applies
+before pagination so totals and page navigation remain accurate. QA: verify each payment type across
+multiple pages, including a split-payment parcel under Partial.

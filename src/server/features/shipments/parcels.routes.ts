@@ -268,6 +268,7 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           status: query.status ?? null,
           statuses: parseStatuses(query.statuses),
           senderPaid: query.senderPaid ?? null,
+          paymentType: query.paymentType ?? null,
           hasPickupQueue: query.hasPickupQueue ?? null,
           agedOnly: query.agedOnly ?? null,
           storageChargeAccruing: query.storageChargeAccruing ?? null,
@@ -305,6 +306,9 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
         status: t.Optional(t.Number()),
         statuses: t.Optional(t.Union([t.Array(t.Number()), t.String()])),
         senderPaid: t.Optional(t.Boolean()),
+        paymentType: t.Optional(
+          t.Union([t.Literal('paid'), t.Literal('to_be_paid'), t.Literal('partial')]),
+        ),
         hasPickupQueue: t.Optional(t.Boolean()),
         agedOnly: t.Optional(t.Boolean()),
         storageChargeAccruing: t.Optional(t.Boolean()),

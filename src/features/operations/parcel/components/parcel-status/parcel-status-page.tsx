@@ -27,6 +27,9 @@ export function ParcelStatusPage() {
 
   const [searchInput, setSearchInput] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [paymentType, setPaymentType] = useState<'all' | 'paid' | 'to_be_paid' | 'partial'>('all');
   const [selectedParcel, setSelectedParcel] = useState<ParcelSearchRow | null>(null);
   const [selectedParcelIds, setSelectedParcelIds] = useState<Set<string>>(new Set());
   const [batchParcels, setBatchParcels] = useState<ParcelSearchRow[] | null>(null);
@@ -48,11 +51,11 @@ export function ParcelStatusPage() {
 
   const baseQuery = useMemo(
     () => ({
-      page: 1,
-      pageSize: 20,
+      page,
+      pageSize,
       search: submittedSearch.trim().length > 0 ? submittedSearch.trim() : undefined,
     }),
-    [submittedSearch],
+    [page, pageSize, paymentType, submittedSearch],
   );
 
   const arrivedQuery = useSearchParcelsQuery(
@@ -76,21 +79,13 @@ export function ParcelStatusPage() {
         ],
         assignedToCurrentUser: true,
         callCenterUncalledOnly: true,
+        paymentType: paymentType === 'all' ? undefined : paymentType,
       },
     },
     { skip: !companyId || !branchId },
   );
 
-  const rows = useMemo(() => {
-    const source = arrivedQuery.data?.data ?? [];
-    return source
-      .filter((parcel) => !parcel.callCenterCalledAt)
-      .toSorted((a, b) => {
-        const aTime = new Date(a.createdAt).getTime();
-        const bTime = new Date(b.createdAt).getTime();
-        return bTime - aTime;
-      });
-  }, [arrivedQuery.data?.data]);
+  const rows = arrivedQuery.data?.data ?? [];
 
   const loading = arrivedQuery.isLoading;
   const isSaving =
@@ -104,6 +99,11 @@ export function ParcelStatusPage() {
   async function refreshQueues() {
     await arrivedQuery.refetch();
   }
+
+  const handleTableRequestChange = (request: { page?: number; pageSize?: number }) => {
+    setPage(request.page ?? 1);
+    setPageSize(request.pageSize ?? 20);
+  };
 
   const openCallOutcome = (parcel: ParcelSearchRow) => {
     setSelectedParcel(parcel);
@@ -266,6 +266,7 @@ export function ParcelStatusPage() {
         onSearchInputChange={setSearchInput}
         onSearchSubmit={() => {
           setSelectedParcelIds(new Set());
+          setPage(1);
           setSubmittedSearch(searchInput.trim());
         }}
         onCallOutcome={openCallOutcome}
@@ -275,6 +276,14 @@ export function ParcelStatusPage() {
         onToggleParcel={toggleParcel}
         onSelectAll={selectAll}
         onBatchCallOutcome={openBatchCallOutcome}
+        meta={arrivedQuery.data?.meta}
+        onRequestChange={handleTableRequestChange}
+        paymentType={paymentType}
+        onPaymentTypeChange={(value) => {
+          setPage(1);
+          setPaymentType(value);
+          setSelectedParcelIds(new Set());
+        }}
       />
 
       <ParcelCallOutcomeDialog
