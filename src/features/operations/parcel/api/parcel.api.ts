@@ -575,6 +575,7 @@ export type ParcelSearchFilters = {
   status?: number | null;
   statuses?: number[] | null;
   senderPaid?: boolean | null;
+  paymentType?: 'paid' | 'to_be_paid' | 'partial' | null;
   hasPickupQueue?: boolean | null;
   agedOnly?: boolean | null;
   storageChargeAccruing?: boolean | null;

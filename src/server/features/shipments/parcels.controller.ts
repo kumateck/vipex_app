@@ -33,6 +33,7 @@ export async function listParcelsCtrl(
     status?: number | null;
     statuses?: number[] | null;
     senderPaid?: boolean | null;
+    paymentType?: 'paid' | 'to_be_paid' | 'partial' | null;
     hasPickupQueue?: boolean | null;
     agedOnly?: boolean | null;
     storageChargeAccruing?: boolean | null;
@@ -58,6 +59,7 @@ export async function listParcelsCtrl(
     status: q.filters?.status ?? null,
     statuses: q.filters?.statuses ?? null,
     senderPaid: q.filters?.senderPaid ?? null,
+    paymentType: q.filters?.paymentType ?? null,
     hasPickupQueue: q.filters?.hasPickupQueue ?? null,
     agedOnly: q.filters?.agedOnly ?? null,
     storageChargeAccruing: q.filters?.storageChargeAccruing ?? null,

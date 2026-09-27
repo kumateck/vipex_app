@@ -13,8 +13,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import { CallSenderBadge } from '../call-sender-badge';
 import { STATUS_LABELS } from './constants';
 import {
@@ -41,6 +49,10 @@ type ParcelStatusTableProps = {
   onToggleParcel: (parcelId: string, checked: boolean) => void;
   onSelectAll: (checked: boolean) => void;
   onBatchCallOutcome: () => void;
+  meta?: PaginationMeta;
+  onRequestChange: (request: PaginationRequestDto) => void;
+  paymentType: 'all' | 'paid' | 'to_be_paid' | 'partial';
+  onPaymentTypeChange: (value: 'all' | 'paid' | 'to_be_paid' | 'partial') => void;
 };
 
 export function ParcelStatusTable({
@@ -59,6 +71,10 @@ export function ParcelStatusTable({
   onToggleParcel,
   onSelectAll,
   onBatchCallOutcome,
+  meta,
+  onRequestChange,
+  paymentType,
+  onPaymentTypeChange,
 }: ParcelStatusTableProps) {
   const selectedCount = rows.filter((row) => selectedParcelIds.has(row.id)).length;
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
@@ -265,6 +281,24 @@ export function ParcelStatusTable({
             </Button>
           </form>
 
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Payment type</span>
+            <Select
+              value={paymentType}
+              onValueChange={(value) => onPaymentTypeChange(value as typeof paymentType)}
+            >
+              <SelectTrigger className="w-44" aria-label="Filter by payment type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All payment types</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="to_be_paid">To Be Paid</SelectItem>
+                <SelectItem value="partial">Partial</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {selectedCount > 0 ? (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
@@ -277,12 +311,24 @@ export function ParcelStatusTable({
           ) : null}
 
           <DataTable
-            mode="client"
+            mode="server"
             data={rows}
             columns={columns}
+            meta={
+              meta ?? {
+                totalRecords: 0,
+                totalPages: 1,
+                page: 1,
+                pageSize: 20,
+                hasNextPage: false,
+                hasPreviousPage: false,
+              }
+            }
             loading={loading}
             showSearch={false}
             enableVirtualization={false}
+            pageSizeOptions={[10, 20, 30, 40, 50]}
+            onRequestChange={onRequestChange}
           />
         </CardContent>
       </Card>
