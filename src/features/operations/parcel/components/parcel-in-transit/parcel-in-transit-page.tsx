@@ -21,6 +21,10 @@ import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
+import { ParcelReceiptActions } from '../parcel-receipt-actions';
+import { useOutgoingParcelPrint } from './use-outgoing-parcel-print';
+import { StickerCopiesInput } from '../parcel-receipt-print-controls/sticker-copies-input';
+import { normalizeStickerCopies } from '../parcel-receipt-print-controls/sticker-copies';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { useUpdateCustomerMutation } from '@/features/customers/api';
 import { useIncomingParcelBatchArrival } from '../../hooks/use-incoming-parcel-batch-arrival';
@@ -119,6 +123,9 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
   });
 
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
+  const outgoingPrint = useOutgoingParcelPrint(companyId);
+  const printOutgoing = outgoingPrint.print;
+  const [stickerCopies, setStickerCopies] = useState(1);
   const [arrivalConfirmationParcel, setArrivalConfirmationParcel] =
     useState<ParcelSearchRow | null>(null);
   const [editingParcel, setEditingParcel] = useState<ParcelSearchRow | null>(null);
@@ -405,6 +412,24 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
                     Edit
                   </DropdownMenuItem>
                 ) : null}
+                {view === 'outgoing' ? (
+                  <>
+                    <div className="px-2 py-1.5" onKeyDown={(event) => event.stopPropagation()}>
+                      <StickerCopiesInput
+                        copies={stickerCopies}
+                        onChange={(copies) => setStickerCopies(normalizeStickerCopies(copies))}
+                      />
+                    </div>
+                    <DropdownMenuItem
+                      onClick={() => void printOutgoing(parcel, 'sticker', stickerCopies)}
+                    >
+                      Print Sticker
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => void printOutgoing(parcel, 'invoice')}>
+                      Print Receipt
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
                 {view === 'incoming' ? (
                   <DropdownMenuItem
                     onClick={() => {
@@ -429,7 +454,16 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         },
       },
     ],
-    [batchArrival, branchNameById, isUpdatingStatus, rowNumberOffset, rows.length, view],
+    [
+      batchArrival,
+      branchNameById,
+      isUpdatingStatus,
+      printOutgoing,
+      rowNumberOffset,
+      rows.length,
+      stickerCopies,
+      view,
+    ],
   );
 
   const handleSaveIncomingEdits = useCallback(async () => {
@@ -719,6 +753,17 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
         isSaving={isUpdatingParcel || isUpdatingCustomer}
         onSave={handleSaveIncomingEdits}
       />
+
+      {outgoingPrint.printData ? (
+        <ParcelReceiptActions
+          data={outgoingPrint.printData}
+          autoPrint
+          autoPrintSelection={outgoingPrint.selection}
+          stickerCopies={outgoingPrint.stickerCopies}
+          mode="reprint"
+          onAutoPrintComplete={outgoingPrint.clear}
+        />
+      ) : null}
     </div>
   );
 }

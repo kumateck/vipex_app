@@ -4,6 +4,7 @@ import { InvoiceA5Terms } from './invoice-a5-terms';
 import { InvoiceTaxSummary } from './invoice-tax-summary';
 
 export type HomeDeliveryReceiptA5Props = {
+  cashierName?: string | null;
   issuedAtLabel: string;
   bookingCode: string;
   trackingCode: string;
@@ -54,7 +55,11 @@ export function HomeDeliveryReceiptA5Template(props: HomeDeliveryReceiptA5Props)
         lineHeight: 1.1,
       }}
     >
-      <InvoiceA5Header issuedAtLabel={props.issuedAtLabel} title="Tax Invoice" />
+      <InvoiceA5Header
+        issuedAtLabel={props.issuedAtLabel}
+        title="Tax Invoice"
+        cashierName={props.cashierName}
+      />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 44mm', gap: '3mm' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3mm' }}>
           <div>
