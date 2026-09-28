@@ -133,6 +133,14 @@ Sticker quantity requirements and current implementation gaps are documented in 
 
 The server owns status transitions. Clients should request domain actions rather than update status fields directly.
 
+The **In Transit (Sending Branch)** table provides independent **Print Sticker** and **Print Receipt**
+actions for each outgoing parcel. Sticker copies can be selected before printing. These actions
+use the same sticker and A5 receipt templates as the processed-consignment page,
+including the parcel's sender/receiver, destination, payment responsibility, and authenticated
+cashier name. Printing does not change transit or payment state. QA: print an outgoing sender-paid
+parcel, a to-be-paid parcel, and a partial parcel; print each document separately, verify the
+selected sticker copy count, and confirm the row remains in transit.
+
 ## Previous Consignment Reprinting
 
 The web **Previous Consignments** page at `/parcels/consignments/history` retrieves persisted

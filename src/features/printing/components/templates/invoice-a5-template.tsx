@@ -22,6 +22,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     amountPaidCedis,
     storageChargeCedis = 0,
     amountInWords,
+    cashierName,
     tax,
     qrValue,
     formatMoney,
@@ -75,6 +76,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
         issuedAtLabel={issuedAtLabel}
         title="Tax Invoice"
         subtitle={isPartialReceipt ? 'PARTIAL PAYMENT RECEIPT' : undefined}
+        cashierName={cashierName}
       />
 
       <div
