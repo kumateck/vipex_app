@@ -1,8 +1,17 @@
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { deliveries, parcels, pickupQueues, ParcelStatus } from '@/db/schemas';
+import { deliveries, parcels, pickupQueues, ParcelStatus, Payer } from '@/db/schemas';
 import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 import { recordAuditLog } from '../audit/logger';
+import { listAllPaymentsForParcelRepo, softVoidPaymentsByIdsRepo } from '../payments/repository';
+
+export function getRecipientPaymentIdsForDeliveryReversal(
+  payments: Array<{ id: string; payer: number; voidedAt: Date | null }>,
+) {
+  return payments
+    .filter((payment) => payment.payer === Payer.RECIPIENT && !payment.voidedAt)
+    .map((payment) => payment.id);
+}
 
 export async function reverseParcelDeliverySvc(input: {
   parcelId: string;
@@ -82,6 +91,15 @@ export async function reverseParcelDeliverySvc(input: {
     if (!updated)
       throw Conflict('The parcel changed while reversing delivery; reload and try again');
 
+    const paymentRows = await listAllPaymentsForParcelRepo(input.parcelId, tx);
+    const recipientPaymentIds = getRecipientPaymentIdsForDeliveryReversal(paymentRows);
+    const voidedPaymentCount = await softVoidPaymentsByIdsRepo(
+      recipientPaymentIds,
+      input.actorUserId,
+      `Delivery confirmation reversed: ${reason}`,
+      tx,
+    );
+
     if (office) {
       const [activeQueue] = await tx
         .select({ id: pickupQueues.id })
@@ -122,7 +140,7 @@ export async function reverseParcelDeliverySvc(input: {
         .returning({ id: deliveries.id });
       if (!restored) throw Conflict('The delivery changed while reversing; reload and try again');
     }
-    return { ...parcel, restoredStatus };
+    return { ...parcel, restoredStatus, voidedPaymentCount };
   });
 
   await recordAuditLog({
@@ -138,8 +156,13 @@ export async function reverseParcelDeliverySvc(input: {
       restoredStatus: previous.restoredStatus,
       previousConfirmedAt: previous.confirmedAt?.toISOString(),
       previousConfirmedBy: previous.confirmedBy,
+      voidedPaymentCount: previous.voidedPaymentCount,
       branchId: input.branchId,
     },
   });
-  return { id: input.parcelId, status: previous.restoredStatus };
+  return {
+    id: input.parcelId,
+    status: previous.restoredStatus,
+    voidedPaymentCount: previous.voidedPaymentCount,
+  };
 }

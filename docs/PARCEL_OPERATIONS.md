@@ -265,12 +265,15 @@ An administrator must grant this new permission to the appropriate role before s
 An office-delivered parcel returns to **Awaiting Pickup** with its parcel confirmation cleared. The
 latest ended pickup-queue ticket is reopened if one exists. A home-delivered parcel returns to
 **Rider Given Parcel to Customer**; its delivery record loses the final delivery timestamp and
-returns to the rider handover confirmation. Payments and customer/card information remain recorded
-and are not voided by this operational correction. The actor, reason, branch, and prior state are
-audited. Missing, deleted, other-branch, already reversed, or inconsistent home-delivery records
-are rejected without partial updates. QA: reverse an office handover with and without a queue
-ticket, reverse a finalized home delivery, and verify payments persist; verify wrong-branch and
-repeat reversals fail. Notifications already sent cannot be recalled.
+returns to the rider handover confirmation. Customer/card information and sender-side payments
+remain recorded. Active recipient-side payments collected as part of the delivery confirmation are
+voided in the same transaction, so the parcel's outstanding to-be-paid balance is restored. The
+actor, reason, branch, prior state, and voided-payment count are audited. Missing, deleted,
+other-branch, already reversed, or inconsistent home-delivery records are rejected without partial
+updates. QA: reverse an office handover with and without a queue ticket, reverse a finalized home
+delivery, verify recipient payments are voided and the parcel is to-be-paid again, verify sender
+payments persist, and verify wrong-branch and repeat reversals fail. Notifications already sent
+cannot be recalled.
 
 Branch pickup uses queues for parcel readiness, cashier collection, payment where required, and OTP confirmation when enabled.
 
