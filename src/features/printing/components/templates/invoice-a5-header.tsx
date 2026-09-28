@@ -4,9 +4,15 @@ type InvoiceA5HeaderProps = {
   issuedAtLabel: string;
   title: 'Tax Invoice' | 'ACKNOWLEDGEMENT NOTE' | 'HOME DELIVERY RECEIPT';
   subtitle?: string;
+  cashierName?: string | null;
 };
 
-export function InvoiceA5Header({ issuedAtLabel, title, subtitle }: InvoiceA5HeaderProps) {
+export function InvoiceA5Header({
+  issuedAtLabel,
+  title,
+  subtitle,
+  cashierName,
+}: InvoiceA5HeaderProps) {
   return (
     <div
       style={{ borderBottom: '0.28mm solid #111', paddingBottom: '1.1mm', marginBottom: '1.1mm' }}
@@ -44,7 +50,7 @@ export function InvoiceA5Header({ issuedAtLabel, title, subtitle }: InvoiceA5Hea
 
         <div style={{ textAlign: 'right', fontSize: '3.1mm', minWidth: '46mm' }}>
           <div>P. O. BOX 16875 - Kumasi - Ashanti</div>
-          <div style={{ marginTop: '0.4mm' }}>user: SYSTEM</div>
+          <div style={{ marginTop: '0.4mm' }}>Cashier: {cashierName || '-'}</div>
           <div style={{ marginTop: '0.7mm' }}>Date: {issuedAtLabel}</div>
         </div>
       </div>

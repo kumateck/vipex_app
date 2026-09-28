@@ -60,6 +60,10 @@ Paid sender and receiver receipt flows now require the payment response to inclu
 breakdown before creating the receipt; they fail visibly instead of printing a paid receipt with
 silently substituted zero tax values.
 
+All A5 payment receipts and receiver acknowledgement notes print the authenticated cashier's name
+in the header. This applies to sender payment, receiver payment, to-be-paid acknowledgement, and
+home-delivery receipt flows; if no cashier identity is available, the header shows `-`.
+
 Both sender payment receipts and receiver acknowledgement notes include these terms:
 
 - Parcels not collected within two weeks will incur a daily storage fee of GH₵2.

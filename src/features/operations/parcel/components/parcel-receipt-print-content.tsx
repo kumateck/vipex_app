@@ -95,6 +95,7 @@ export function ParcelReceiptPrintContent({
           <InvoiceA5Template
             bookingCode={data.bookingCode}
             issuedAtLabel={formatDate(data.issuedAt)}
+            cashierName={printedByName}
             parcelDetails={data.parcelDetails}
             parcelContent={data.parcelContent}
             parcelValueCedis={data.parcelValueCedis}
