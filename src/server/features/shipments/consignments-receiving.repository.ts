@@ -5,7 +5,6 @@ import {
   consignments,
   consignmentItems,
   branches,
-  customers,
   parcels,
   users,
   ConsignmentReceivingStatus,
@@ -32,8 +31,8 @@ export async function listConsignmentItemsRepo(
   const arrivedByUser = sql<
     string | null
   >`(select ${users.fullname} from ${users} where ${users.id} = ${consignmentItems.arrivedBy})`;
-  const senderCustomer = sql<string>`(select ${customers.fullname} from ${customers} where ${customers.id} = ${parcels.senderId})`;
-  const receiverCustomer = sql<string>`(select ${customers.fullname} from ${customers} where ${customers.id} = ${parcels.receiverId})`;
+  const senderCustomer = parcels.senderNameSnapshot;
+  const receiverCustomer = parcels.receiverNameSnapshot;
 
   return db
     .select({

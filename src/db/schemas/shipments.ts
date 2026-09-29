@@ -9,6 +9,7 @@ import {
   smallint,
   integer,
   json,
+  jsonb,
   text,
 } from 'drizzle-orm/pg-core';
 import { companies, branches, users, locations, warehouses } from './core';
@@ -29,6 +30,7 @@ import {
   PendingBookingStatus,
 } from './enums';
 import { createId } from '@paralleldrive/cuid2';
+import type { DeliveryConfirmationSnapshot } from '@/shared/shipments/delivery-confirmation-snapshot';
 
 // Bookings: pure header (no destinationId, invoice, paymentMode, actionType)
 // id is UUID primary key; parcels link via bookingId
@@ -80,10 +82,16 @@ export const parcels = pgTable(
     senderId: varchar('sender_id', { length: 25 })
       .notNull()
       .references(() => customers.id),
+    senderNameSnapshot: varchar('sender_name_snapshot', { length: 255 }).notNull().default(''),
     receiverId: varchar('receiver_id', { length: 25 })
       .notNull()
       .references(() => customers.id),
+    receiverNameSnapshot: varchar('receiver_name_snapshot', { length: 255 }).notNull().default(''),
     secondReceiverId: varchar('second_receiver_id', { length: 25 }).references(() => customers.id),
+    secondReceiverNameSnapshot: varchar('second_receiver_name_snapshot', { length: 255 }),
+    deliveryConfirmationSnapshot: jsonb(
+      'delivery_confirmation_snapshot',
+    ).$type<DeliveryConfirmationSnapshot>(),
 
     status: smallint('status').notNull().default(ParcelStatus.CREATED),
     parcelDetails: varchar('parcel_details', { length: 255 }).notNull(),

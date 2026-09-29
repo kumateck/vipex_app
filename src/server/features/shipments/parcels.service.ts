@@ -76,6 +76,8 @@ import {
   type ParcelRow,
 } from './parcels.repository';
 import { assertParcelFullyPaid } from './parcel-payment-settlement';
+import { assertNoOpenParcelReconciliationCaseForDelivery } from './parcel-delivery-reconciliation-guard';
+import { isParcelEligibleForReconciliation } from './parcel-reconciliation-eligibility';
 import {
   assertNoOutstandingStorageForHandover,
   resolveAndValidateStorageWaiverAmountPsw,
@@ -123,10 +125,6 @@ function assertActionType(value: number): ParcelReconciliationActionType {
     return value as ParcelReconciliationActionType;
   }
   throw BadRequest('Unsupported reconciliation action type');
-}
-
-function isReversalAllowedParcelStatus(status: number) {
-  return status !== ParcelStatus.DELIVERED_AT_HOME && status !== ParcelStatus.DELIVERED_BY_OFFICE;
 }
 
 function isAmountCorrectionCaseType(caseType: ParcelReconciliationCaseType) {
@@ -350,6 +348,9 @@ export async function createParcelSvc(input: {
   ) {
     throw BadRequest('Missing required fields');
   }
+  if (input.status === ParcelStatus.RETURN_TO_SOURCE) {
+    throw BadRequest('Use the destination branch return action to record a return to source');
+  }
   const parcelValuePsw = input.parcelValueCedis != null ? toPesewas(input.parcelValueCedis) : 0n;
   const plannedToBePaidPsw =
     input.plannedToBePaidCedis != null ? toPesewas(input.plannedToBePaidCedis) : 0n;
@@ -408,7 +409,27 @@ export async function updateParcelSvc(
 ): Promise<{ id: string }> {
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
+  if (
+    patch.status === ParcelStatus.RETURN_TO_SOURCE &&
+    cur.status !== ParcelStatus.RETURN_TO_SOURCE
+  ) {
+    throw BadRequest('Use the destination branch return action to record a return to source');
+  }
+  if (
+    cur.status === ParcelStatus.RETURN_TO_SOURCE &&
+    patch.status !== undefined &&
+    patch.status !== ParcelStatus.RETURN_TO_SOURCE
+  ) {
+    throw Conflict('Parcel is marked for return to its source branch');
+  }
   let verifiedReceiverOtp: Awaited<ReturnType<typeof assertReceiverOtpVerifiedSvc>> | null = null;
+  if (
+    patch.status === ParcelStatus.DELIVERED_BY_OFFICE ||
+    patch.status === ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER ||
+    patch.status === ParcelStatus.DELIVERED_AT_HOME
+  ) {
+    await assertNoOpenParcelReconciliationCaseForDelivery(id);
+  }
   if (patch.status === ParcelStatus.DELIVERED_BY_OFFICE) {
     const destinationBranch = await getBranchRepo(cur.destinationId);
     if (!destinationBranch) throw NotFound('Destination branch not found');
@@ -503,6 +524,12 @@ export async function markParcelReceivedSvc(
 ) {
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
+  if (input.status === ParcelStatus.RETURN_TO_SOURCE) {
+    throw BadRequest('Use the destination branch return action to record a return to source');
+  }
+  if (cur.status === ParcelStatus.RETURN_TO_SOURCE) {
+    throw Conflict('Parcel is marked for return to its source branch');
+  }
   if (cur.receivedAt) throw Conflict('Parcel already marked received');
   const patch: Partial<typeof cur> = {
     receivedBy: input.receivedBy,
@@ -641,7 +668,7 @@ export async function requestParcelReconciliationCaseSvc(input: {
   if (parcel.companyId !== input.companyId) throw NotFound('Parcel not found in company');
   if (parcel.isDeleted) throw BadRequest('Cannot open case for a deleted parcel');
 
-  if (!isReversalAllowedParcelStatus(parcel.status)) {
+  if (!isParcelEligibleForReconciliation(parcel.status)) {
     throw BadRequest('Delivered parcels require finance exception handling');
   }
 
@@ -655,6 +682,9 @@ export async function requestParcelReconciliationCaseSvc(input: {
       throw BadRequest('Linked parcel does not belong to this company');
     }
     if (linkedParcel.id === parcel.id) throw BadRequest('Linked parcel must be different');
+    if (!isParcelEligibleForReconciliation(linkedParcel.status)) {
+      throw BadRequest('Delivered parcels require finance exception handling');
+    }
   }
 
   if (caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY && !linkedParcel) {
@@ -815,6 +845,14 @@ export async function approveParcelReconciliationCaseSvc(input: {
   if (existing.requestedBy === input.actorUserId) {
     throw BadRequest('Requester cannot approve the same reconciliation case');
   }
+  const involvedParcels = await Promise.all(
+    [existing.parcelId, existing.linkedParcelId]
+      .filter((parcelId): parcelId is string => parcelId != null)
+      .map((parcelId) => getParcelSvc(parcelId)),
+  );
+  if (involvedParcels.some((parcel) => !isParcelEligibleForReconciliation(parcel.status))) {
+    throw BadRequest('Delivered parcels require finance exception handling');
+  }
   if (
     existing.caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY &&
     actionType !== ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE &&
@@ -883,6 +921,12 @@ export async function executeParcelReconciliationCaseSvc(input: {
     const linkedParcel = existing.linkedParcelId
       ? await getParcelSvc(existing.linkedParcelId, tx)
       : null;
+    if (
+      !isParcelEligibleForReconciliation(primaryParcel.status) ||
+      (linkedParcel != null && !isParcelEligibleForReconciliation(linkedParcel.status))
+    ) {
+      throw BadRequest('Delivered parcels require finance exception handling');
+    }
     const targetParcels: ParcelRow[] = [];
 
     if (isOriginalSessionAmountCorrection(actionType)) {
@@ -996,7 +1040,7 @@ export async function executeParcelReconciliationCaseSvc(input: {
 
     for (const targetParcel of targetParcels) {
       if (targetParcel.isDeleted) continue;
-      if (!isReversalAllowedParcelStatus(targetParcel.status)) {
+      if (!isParcelEligibleForReconciliation(targetParcel.status)) {
         throw BadRequest(`Parcel ${targetParcel.trackingCode} is already delivered`);
       }
 

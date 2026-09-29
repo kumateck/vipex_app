@@ -6,14 +6,20 @@ The application prints parcel stickers and A5 customer documents from the browse
 
 ## Documents
 
-| Document                 | Purpose                                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------------------- |
-| Parcel sticker           | Tracking and routing label attached to each physical parcel.                                |
-| A5 receipt/invoice       | Customer and transaction document containing parcel and payment details.                    |
-| A5 home delivery receipt | Per-parcel delivery document printed from Home Delivery Dispatch or Rider Assigned Parcels. |
-| A4 consignment           | Saved source-to-destination parcel manifest that can be printed again.                      |
+| Document                 | Purpose                                                                                                  |
+| ------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Parcel sticker           | Tracking and routing label attached to each physical parcel.                                             |
+| A5 receipt/invoice       | Customer and transaction document containing parcel and payment details.                                 |
+| A5 home delivery receipt | Per-parcel delivery document printed from Home Delivery Dispatch or Rider Assigned Parcels.              |
+| A4 rider assignment list | All parcels in the selected rider's Current, History, or All view, including rows beyond the table page. |
+| A4 consignment           | Saved source-to-destination parcel manifest that can be printed again.                                   |
 
 The A5 document includes payer details where a payer differs from the sender or receiver.
+Sender and receiver names on parcel documents come from names stored with the parcel, so later
+customer profile edits do not rewrite historical receipts or consignment lists. Existing parcels
+are backfilled in batches from customer names available when the backfill runs. Deploy the
+new printing code after the backfill completes; see the rollout steps in
+[Parcel operations](PARCEL_OPERATIONS.md).
 The receiver cashier A5 receipt shows an **Ageing storage** line when storage was collected at
 handover. Its printed total adds the actual storage payment to the receiver's to-be-paid principal
 payment. A previously paid parcel with only storage due still produces a receiver payment receipt
@@ -38,6 +44,22 @@ principal and earlier payments are not printed as amounts due or previously paid
 delivery receipt. A sender-paid parcel owes only the unpaid delivery fee; a receiver-paid or
 partial parcel owes its remaining receiver balance plus the unpaid delivery fee. Voided fee
 payments do not reduce the balance.
+
+On **Rider Assigned Parcels**, staff select one rider and a Current, History, or All view,
+then choose **Print List** to print an A4 list of every parcel returned for that rider and
+view. The list includes booking and tracking codes, parcel details, receiver and phone,
+to-be-paid amount, delivery fee, status, rider name, print date, parcel count, and column
+totals. It is independent of the table's page size. The button is disabled until the
+selected rider's data has loaded and contains at least one parcel. This uses the existing
+rider list response and `report-a4` browser or desktop print route; it makes no parcel or
+payment changes. The per-parcel A5 **Print** action remains available. Mobile has no
+rider assignment list print action.
+
+QA: assign more than ten parcels to one rider and verify the printed list contains every
+booking, not only the first table page. Switch between Current, History, and All and
+verify the printed mode, statuses, count, and totals. Switch riders and verify the
+previous rider's parcels do not appear. Confirm empty or loading lists cannot print,
+and check browser and desktop A4 output across multiple pages.
 
 The home delivery receipt calculates the tax breakdown when opened from the amount due on
 delivery: remaining receiver balance plus unpaid delivery fee. It uses the active company tax

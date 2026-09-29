@@ -68,9 +68,9 @@ export async function getConsignmentPrintPayloadRepo(input: {
   const items = await db
     .select({
       id: parcels.id,
-      senderName: sender.fullname,
+      senderName: parcels.senderNameSnapshot,
       senderPhone: sender.telephone,
-      receiverName: receiver.fullname,
+      receiverName: parcels.receiverNameSnapshot,
       receiverPhone: receiver.telephone,
       parcelDetails: parcels.parcelDetails,
       chargePsw: parcels.chargePsw,

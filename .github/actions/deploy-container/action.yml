@@ -60,6 +60,16 @@ inputs:
   livekit_public_url:
     required: true
 
+  anthropic_api_key:
+    required: false
+    default: ''
+  openai_api_key:
+    required: false
+    default: ''
+  google_api_key:
+    required: false
+    default: ''
+
   sentry_dsn:
     required: false
     default: ''
@@ -155,6 +165,9 @@ runs:
         LIVEKIT_API_SECRET: ${{ inputs.livekit_api_secret }}
         LIVEKIT_URL: ${{ inputs.livekit_url }}
         LIVEKIT_PUBLIC_URL: ${{ inputs.livekit_public_url }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        OPENAI_API_KEY: ${{ inputs.openai_api_key }}
+        GOOGLE_API_KEY: ${{ inputs.google_api_key }}
         SENTRY_DSN: ${{ inputs.sentry_dsn }}
         DISCORD_WEBHOOK_PRODUCTION: ${{ inputs.discord_webhook_production }}
         DISCORD_WEBHOOK_DEVELOPMENT: ${{ inputs.discord_webhook_development }}
@@ -223,6 +236,9 @@ runs:
         add_optional_env MNOTIFY_API_URL "$MNOTIFY_API_URL"
         add_optional_env MNOTIFY_API_KEY "$MNOTIFY_API_KEY"
         add_optional_env MNOTIFY_SENDER_ID "$MNOTIFY_SENDER_ID"
+        add_optional_env ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY"
+        add_optional_env OPENAI_API_KEY "$OPENAI_API_KEY"
+        add_optional_env GOOGLE_API_KEY "$GOOGLE_API_KEY"
 
         mkdir -p ~/.ssh
         echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa

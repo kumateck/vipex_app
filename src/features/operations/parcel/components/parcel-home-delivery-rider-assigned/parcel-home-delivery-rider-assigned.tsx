@@ -1,5 +1,3 @@
-import { useMemo, useState } from 'react';
-import type { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,97 +9,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select-searchable';
-import { useListUserOptionsQuery } from '@/features/users/api/users.api';
-import { useAuthStore } from '@/stores/auth-store';
-import { type RiderDoorstepRecord, useListRiderDoorstepParcelsQuery } from '../../api/parcel.api';
 import { HomeDeliveryReceiptPrintController } from '../parcel-home-delivery-dispatch';
+import { RiderAssignmentListPrintController } from './rider-assignment-list-print-controller';
+import { useRiderAssignedColumns } from './use-rider-assigned-columns';
+import { useRiderAssignedParcels, type RiderListMode } from './use-rider-assigned-parcels';
+import { useRiderAssignmentListPrint } from './use-rider-assignment-list-print';
 import { useRiderAssignedReceiptPrint } from './use-rider-assigned-receipt-print';
 
-function formatCurrency(amountPsw: number | null | undefined) {
-  return `GHS ${((amountPsw ?? 0) / 100).toFixed(2)}`;
-}
-
 export function ParcelHomeDeliveryRiderAssigned() {
-  const user = useAuthStore((state) => state.user);
-  const companyId = user?.company?.id ?? null;
-  const branchId = user?.branch?.id ?? null;
-  const [selectedRiderUserId, setSelectedRiderUserId] = useState('');
-  const [mode, setMode] = useState<'current' | 'history' | 'all'>('all');
-  const { printData, isPrinting, onPrint, onComplete } = useRiderAssignedReceiptPrint();
-
-  const { data: riderOptions = [] } = useListUserOptionsQuery(
-    companyId && branchId ? { companyId, branchId, userType: 2 } : undefined,
-    { skip: !companyId || !branchId },
-  );
-
-  const { data: currentData, isLoading: isLoadingCurrent } = useListRiderDoorstepParcelsQuery(
-    { riderUserId: selectedRiderUserId, mode: 'current' },
-    { skip: !selectedRiderUserId || mode === 'history' },
-  );
-  const { data: historyData, isLoading: isLoadingHistory } = useListRiderDoorstepParcelsQuery(
-    { riderUserId: selectedRiderUserId, mode: 'history' },
-    { skip: !selectedRiderUserId || mode === 'current' },
-  );
-
-  const rows = useMemo(() => {
-    if (mode === 'current') return currentData?.rows ?? [];
-    if (mode === 'history') return historyData?.rows ?? [];
-    return [...(currentData?.rows ?? []), ...(historyData?.rows ?? [])];
-  }, [currentData?.rows, historyData?.rows, mode]);
-
-  const isLoading =
-    mode === 'all'
-      ? isLoadingCurrent || isLoadingHistory
-      : mode === 'current'
-        ? isLoadingCurrent
-        : isLoadingHistory;
-
-  const columns = useMemo<ColumnDef<RiderDoorstepRecord>[]>(
-    () => [
-      { accessorKey: 'bookingCode', header: 'Booking' },
-      { accessorKey: 'parcelDetails', header: 'Parcel Details' },
-      {
-        id: 'receiver',
-        header: 'Receiver',
-        accessorFn: (row) =>
-          `${row.receiverName ?? '-'}${row.receiverPhone ? ` (${row.receiverPhone})` : ''}`,
-      },
-      {
-        id: 'toBePaid',
-        header: 'To Be Paid',
-        accessorFn: (row) => formatCurrency(row.outstandingPrincipalPsw ?? row.plannedToBePaidPsw),
-      },
-      {
-        id: 'deliveryFee',
-        header: 'Delivery Fee',
-        accessorFn: (row) => formatCurrency(row.deliveryFeePsw),
-      },
-      {
-        id: 'status',
-        header: 'Status',
-        accessorFn: (row) => row.deliveryStatus,
-      },
-      {
-        id: 'action',
-        header: 'Action',
-        enableSorting: false,
-        cell: ({ row }) => (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isPrinting}
-            onClick={() => void onPrint(row.original.parcelId)}
-          >
-            Print
-          </Button>
-        ),
-      },
-    ],
-    [isPrinting, onPrint],
-  );
+  const list = useRiderAssignedParcels();
+  const receiptPrint = useRiderAssignedReceiptPrint();
+  const listPrint = useRiderAssignmentListPrint();
+  const columns = useRiderAssignedColumns(receiptPrint.onPrint, receiptPrint.isPrinting);
 
   return (
-    <div className="w-full p-4 space-y-4">
+    <div className="w-full space-y-4 p-4">
       <ScrollableWrapper>
         <Card>
           <CardHeader>
@@ -112,19 +34,22 @@ export function ParcelHomeDeliveryRiderAssigned() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap gap-3">
-              <Select value={selectedRiderUserId} onValueChange={setSelectedRiderUserId}>
+              <Select value={list.selectedRiderUserId} onValueChange={list.setSelectedRiderUserId}>
                 <SelectTrigger className="w-full max-w-md">
                   <SelectValue placeholder="Select rider" />
                 </SelectTrigger>
                 <SelectContent>
-                  {riderOptions.map((rider) => (
+                  {list.riderOptions.map((rider) => (
                     <SelectItem key={rider.id} value={rider.id}>
                       {rider.fullname}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={mode} onValueChange={(value) => setMode(value as typeof mode)}>
+              <Select
+                value={list.mode}
+                onValueChange={(value) => list.setMode(value as RiderListMode)}
+              >
                 <SelectTrigger className="w-full max-w-48">
                   <SelectValue placeholder="Select mode" />
                 </SelectTrigger>
@@ -134,24 +59,44 @@ export function ParcelHomeDeliveryRiderAssigned() {
                   <SelectItem value="history">History</SelectItem>
                 </SelectContent>
               </Select>
+              <Button
+                variant="outline"
+                disabled={
+                  !list.selectedRiderName ||
+                  !list.isReady ||
+                  list.rows.length === 0 ||
+                  list.isLoading ||
+                  Boolean(listPrint.payload)
+                }
+                onClick={() =>
+                  listPrint.printList(list.selectedRiderName ?? '', list.mode, list.rows)
+                }
+              >
+                Print List
+              </Button>
             </div>
-
             <DataTable
               mode="client"
-              data={rows}
+              data={list.rows}
               columns={columns}
-              loading={isLoading}
+              loading={list.isLoading}
               showSearch={false}
               enableVirtualization={false}
             />
           </CardContent>
         </Card>
       </ScrollableWrapper>
-      {printData ? (
+      {receiptPrint.printData ? (
         <HomeDeliveryReceiptPrintController
-          key={printData.trackingCode}
-          receipt={printData}
-          onComplete={onComplete}
+          key={receiptPrint.printData.trackingCode}
+          receipt={receiptPrint.printData}
+          onComplete={receiptPrint.onComplete}
+        />
+      ) : null}
+      {listPrint.payload ? (
+        <RiderAssignmentListPrintController
+          payload={listPrint.payload}
+          onComplete={listPrint.onComplete}
         />
       ) : null}
     </div>
