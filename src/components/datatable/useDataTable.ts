@@ -63,8 +63,10 @@ export function useDataTable<TData, TValue, TFilters = Record<string, unknown>>(
       ? props.defaultSort.map((s) => ({ id: s.field, desc: s.direction === 'desc' }))
       : [],
   );
-  const [globalFilter, setGlobalFilter] = React.useState('');
-  const [debouncedGlobalFilter, setDebouncedGlobalFilter] = React.useState('');
+  const [globalFilter, setGlobalFilter] = React.useState(serverProps?.initialSearch ?? '');
+  const [debouncedGlobalFilter, setDebouncedGlobalFilter] = React.useState(
+    serverProps?.initialSearch ?? '',
+  );
   const [pagination, setPagination] = React.useState<PaginationState>({
     pageIndex: serverProps ? Math.max((serverPage ?? 1) - 1, 0) : 0,
     pageSize: serverProps

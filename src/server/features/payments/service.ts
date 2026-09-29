@@ -27,6 +27,7 @@ import {
   getParcelPaymentSettlement,
 } from '../shipments/parcel-payment-settlement';
 import { updateParcelRepo } from '../shipments/parcels.repository';
+import { assertNoOpenParcelReconciliationCaseForDelivery } from '../shipments/parcel-delivery-reconciliation-guard';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
 import { recordPaymentTaxJournalItemSvc } from '../accounting/service';
 import { getActiveTaxProfileWithComponentsRepo } from '../accounting/repository';
@@ -582,6 +583,7 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
       Number(input.storageAmountCedis) > 0;
 
     const result = await db.transaction(async (tx) => {
+      await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId, tx);
       let payment: PaymentCreateResponse | null = null;
       let storagePayment: PaymentCreateResponse | null = null;
       if (hasAmount) {

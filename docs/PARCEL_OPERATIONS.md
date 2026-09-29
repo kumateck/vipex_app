@@ -238,6 +238,81 @@ Mobile discrepancy capture supports an expected system parcel that is physically
 
 ## Pickup and Last-Mile Delivery
 
+### Return to source branch
+
+Destination staff with `CanUpdateParcels` can find a parcel in **All Parcels Super Search**,
+open its details, and select **Return to Source**. A reason of 5–500 characters is required.
+The server checks that the actor belongs to the parcel's destination branch, that the
+source and destination differ, and that the parcel is available at the destination.
+Eligible statuses are Arrived at Destination, Customer Contacted, Awaiting Pickup,
+Home Delivery Requested, Address Collected, Returned to Office, and Discrepancy.
+Dispatched parcels must first be returned to the office. Parcels handed to a customer,
+deleted parcels, parcels still in transit, repeated returns, and parcels with open
+reconciliation cases are rejected without changing status.
+
+The action records status **Return to Source** and audits the reason and branch IDs.
+It ends any active pickup queue ticket, stops customer delivery, and removes the parcel
+from active destination workflows.
+This status records the destination branch's return decision; it does not assert physical
+receipt at the source branch. No return consignment or source scan is created. The action
+is available on web and desktop through the shared API; mobile displays the status but
+has no return action.
+
+Source-branch staff with Parcel Receiving module access and `CanReadParcels` can open
+**Parcel Receiving → Returns to Source** to search and page through parcels marked for
+return to their branch. They can
+review the original parcel details. Staff with `CanReadParcelReconciliation` can select
+**Manage Reconciliation** to open the case list searched by booking code; creating,
+approving, and executing cases still require their separate permissions and server
+eligibility checks. Staff with `CanCreateBookingWithParcels` can select **New Shipment**,
+which opens the booking creation page for a separate shipment. The original returned
+parcel remains in the list as history. No fields are copied into the new booking and
+the list does not confirm physical receipt.
+
+QA: return a parcel from the destination and verify it appears only for its source
+branch. Search by booking code, review details, open reconciliation filtered to the
+booking, and start a new shipment. Check that users lacking the relevant action
+permissions do not see those actions, that pagination works, and that the original
+return record remains after creating a new booking. A destination or unrelated branch
+must not see the source branch's list.
+
+QA: mark a parcel arrived at its destination, record a reasoned return, and verify the
+status and audit entry. Repeat from Awaiting Pickup and Returned to Office. Verify
+wrong-branch, in-transit, dispatched, delivered, open-case, and repeat requests fail.
+Attempt office pickup and receiver cashier delivery after return; both must fail.
+
+### Reconciliation hold on delivery
+
+A parcel with a requested or approved parcel reconciliation case cannot be handed to a
+receiver or marked delivered. The server returns HTTP 409 with “Parcel has an open
+reconciliation case; resolve it before delivery” for office pickup, receiver cashier,
+rider handover, doorstep completion, and delivery cashier finalization. The generic parcel
+status update is subject to the same check. A duplicate-entry case also holds its linked
+parcel. Home-delivery dispatch and rider assignment are blocked while the hold is active.
+The check runs before collection in combined payment and delivery actions, so a blocked
+attempt does not collect money or change delivery state. Execution or rejection of the
+case clears the hold; approval alone does not. These rules apply to web, mobile, and
+desktop clients through the shared API.
+
+Reconciliation approval and execution remain available before customer handover, including
+after the parcel has arrived at its destination branch, while it awaits pickup, and while
+it is dispatched to a rider. The case list at a branch shows cases for parcels sent from
+or destined for that branch. Creating a case can search parcels on either side of the
+branch. A requested case requires an independent approver; an approved case may then be
+executed. Office handovers, rider-confirmed handovers, and completed home deliveries
+require finance exception handling and cannot enter this ordinary reconciliation workflow.
+
+QA: raise a case for a parcel awaiting office pickup and attempt sender-paid pickup and
+receiver cashier payment plus pickup; both must fail with HTTP 409 and no payment or
+status change. Repeat for a dispatched parcel at rider handover, and for a parcel at
+delivery cashier finalization. Verify both the primary and linked parcel of a duplicate
+case are held. Approve the case and verify the hold remains. Execute or reject it and
+verify normal delivery is available again when the parcel's other eligibility checks pass.
+From the destination branch, find a parcel that originated elsewhere, raise a case,
+approve it with a different user, and execute it after arrival but before handover.
+Confirm the case appears in both the source and destination branch lists. Repeat with a
+parcel awaiting pickup and a dispatched parcel. Completed deliveries must remain ineligible.
+
 Shelf Picker Update offers **Request Delivery** for an Awaiting Pickup parcel. Staff with
 `CanUpdateParcelShelfPicker` may use it for a parcel in their own company and destination branch.
 The server changes its status to Home Delivery Requested and ends its active pickup queue ticket

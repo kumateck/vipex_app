@@ -200,6 +200,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadParcelIncoming,
           },
           {
+            title: 'Returns to Source',
+            url: '/parcels/return-to-source',
+            permissionKey: PermissionKeys.CanReadParcels,
+          },
+          {
             title: 'Scan to Receive',
             url: '/parcels/receive',
             permissionKey: PermissionKeys.CanReadParcelScan,

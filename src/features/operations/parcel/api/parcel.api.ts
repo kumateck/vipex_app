@@ -731,12 +731,33 @@ export const parcelApi = api.injectEndpoints({
       }),
       providesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    listReturnToSourceParcels: builder.query<
+      ServerListResponse<ParcelSearchRow>,
+      { page: number; pageSize: number; search?: string }
+    >({
+      query: (params) => ({ url: '/shipments/parcels/return-to-source', params }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
     listDeliveryReversalCandidates: builder.query<
       ServerListResponse<ParcelSearchRow>,
       { page?: number; pageSize?: number; search?: string }
     >({
       query: (params) => ({ url: '/shipments/parcels/delivery-reversal-candidates', params }),
       providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    returnParcelToSource: builder.mutation<
+      { id: string; status: number },
+      { id: string; reason: string }
+    >({
+      query: ({ id, reason }) => ({
+        url: `/shipments/parcels/${id}/return-to-source`,
+        method: 'POST',
+        body: { reason },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Bookings', id },
+      ],
     }),
     lookupCallOutcomeReceiver: builder.query<
       { id: string; fullname: string; telephone: string | null; telephone2: string | null } | null,
@@ -1563,10 +1584,12 @@ export const {
   useCreateBookingWithParcelsMutation,
   useListSenderCashierParcelsQuery,
   useSearchParcelsQuery,
+  useListReturnToSourceParcelsQuery,
   useListDeliveryReversalCandidatesQuery,
   useLookupCallOutcomeReceiverQuery,
   useChangeCallOutcomeMainReceiverMutation,
   useReverseParcelDeliveryMutation,
+  useReturnParcelToSourceMutation,
   useLazySearchParcelsQuery,
   useGetParcelDetailsQuery,
   useLazyGetHomeDeliveryReceiptQuery,

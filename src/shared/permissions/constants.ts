@@ -794,6 +794,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/parcels/in-transit/outgoing': PermissionKeys.CanReadParcelOutgoing,
   '/parcels/in-transit/incoming': PermissionKeys.CanReadParcelIncoming,
   '/parcels/discrepancies': PermissionKeys.CanReadParcelIncoming,
+  '/parcels/return-to-source': PermissionKeys.CanReadParcels,
   '/parcels/reconciliation-cases': PermissionKeys.CanReadParcelReconciliation,
   '/parcels/receive': PermissionKeys.CanReadParcelScan,
   '/parcels/delivery-reversal': PermissionKeys.CanReverseParcelDelivery,

@@ -1549,7 +1549,7 @@ export async function listToBePaidOutstandingReportRowsRepo(input: {
     WHERE pr.company_id = ${input.companyId}
       AND pr.is_deleted = false
       AND pr.planned_tobepaid_psw > 0
-      AND pr.status NOT IN (${ParcelStatus.DELIVERED_BY_OFFICE}, ${ParcelStatus.DELIVERED_AT_HOME}, ${ParcelStatus.RETURNED_TO_SENDER}, ${ParcelStatus.CANCELLED})
+      AND pr.status NOT IN (${ParcelStatus.DELIVERED_BY_OFFICE}, ${ParcelStatus.DELIVERED_AT_HOME}, ${ParcelStatus.RETURNED_TO_SENDER}, ${ParcelStatus.RETURN_TO_SOURCE}, ${ParcelStatus.CANCELLED})
       AND GREATEST(pr.planned_tobepaid_psw - COALESCE(pp.paid_principal_psw, 0), 0) > 0
       ${input.sourceBranchId ? sql`AND pr.source_id = ${input.sourceBranchId}` : sql``}
       ${input.destinationBranchId ? sql`AND pr.destination_id = ${input.destinationBranchId}` : sql``}

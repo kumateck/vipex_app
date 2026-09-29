@@ -8,6 +8,7 @@ export { ParcelReceivePage } from './pages/parcel-receive-page';
 export { ParcelDeliveryReversalPage } from './pages/parcel-delivery-reversal-page';
 export { ParcelDiscrepanciesPage } from './pages/parcel-discrepancies-page';
 export { ParcelReconciliationCasesPage } from './pages/parcel-reconciliation-cases-page';
+export { ParcelReturnToSourcePage } from './pages/parcel-return-to-source-page';
 export { ParcelStatusPage } from './pages/parcel-status-page';
 export { ParcelPickupQueuePage } from './pages/parcel-pickup-queue-page';
 export { ParcelPickupQueueBoardPage } from './pages/parcel-pickup-queue-board-page';

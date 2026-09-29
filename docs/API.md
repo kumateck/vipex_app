@@ -15,6 +15,31 @@ The API reference is split by domain:
 
 `auth`, `users`, `branches`, `locations`, `warehouses`, `customers`, `cards`, `uploads`, `cashiers`, `shipments`, `payments`, `deliveries`, `pickup-queues`, `accounting`, `inventory`, `shifts`, `company-modules`, `module-workspace`, `procurement`, `fleet-transport`, `customer-wallet-credit`, `reconciliation`, `notification-hub`, `momo`, `self-service`, `desktop-updates`, `mobile-updates`, `communication`, `customer-service`, `help-assistant`, `executive-insights`, `fleet-anomaly-brief`, `operations-exceptions-brief`, `management-daily-brief`, `ai-chat`, `it-support`, `reports`, `audit`, `hr`, `payroll`, `rbac`, and `geolocation`.
 
+Parcel delivery, pickup, rider handover, and home-delivery dispatch endpoints return HTTP 409
+when the parcel (or the linked parcel in a duplicate-entry case) has a requested or approved
+parcel reconciliation case. The response message is “Parcel has an open reconciliation case;
+resolve it before delivery”. Combined payment and handover endpoints reject before recording
+payment. Executed and rejected cases do not block delivery.
+
+`POST /v1/shipments/parcels/:id/return-to-source` requires `CanUpdateParcels` and a
+`reason` of 5–500 characters. It uses the authenticated user's company and destination
+branch. Success returns the parcel ID and `RETURN_TO_SOURCE` status. It returns 404
+when the parcel is outside that branch, 409 when the parcel is not eligible or has an
+open reconciliation case, and 400 for an invalid reason. Delivery attempts after return
+receive HTTP 409. Web and desktop expose the action in All Parcels Super Search;
+mobile does not expose it.
+
+`GET /v1/shipments/parcels/return-to-source` requires `CanReadParcels` and returns a
+paginated, searchable list of parcels in `RETURN_TO_SOURCE` status whose original source
+is the authenticated user's branch. The company and branch are taken from the session,
+not client filters. Users without a company or branch receive an empty list. Invalid
+pagination receives 400; unauthenticated or unauthorized requests are rejected. Web and
+desktop use this endpoint for the Returns to Source page; mobile has no list page.
+
+`GET /v1/shipments/parcels/reconciliation-cases` with a branch filter includes cases whose
+parcel source or destination is that branch. Requested cases may be approved, then executed,
+after destination arrival as long as the parcel has not been delivered to the customer.
+
 ## Contract Authority
 
 Swagger UI at `/docs` and OpenAPI JSON at `/docs/json` from the running server are authoritative for exact methods, schemas, validation, and response bodies. These documents explain the stable domain surface and access rules.

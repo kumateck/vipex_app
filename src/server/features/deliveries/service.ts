@@ -28,6 +28,7 @@ import { toPesewas } from '@/server/utils/gh-money';
 import { updateParcelRepo } from '../shipments/parcels.repository';
 import { postCustomerCreditChargeSvc } from '../customers/service';
 import { getParcelChargeValidationError } from '@/shared/shipments/parcel-charge-policy';
+import { assertNoOpenParcelReconciliationCaseForDelivery } from '../shipments/parcel-delivery-reconciliation-guard';
 import { emitRiderAssignmentsCreated } from '../communication/realtime';
 
 export async function createDeliverySvc(input: {
@@ -99,6 +100,7 @@ export async function markOfficePickupCompleteSvc(input: {
   if (!parcel) throw NotFound('Parcel not found');
 
   // Ensure no outstanding principal dues before office handover
+  await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId);
   const settlement = await getParcelPaymentSettlement(input.parcelId);
   const outstanding = Math.max(settlement.requiredPrincipalPsw - settlement.paidPrincipalPsw, 0);
   if (outstanding > 0)
@@ -120,6 +122,7 @@ export async function doorToDoorCallSvc(input: { parcelId: string; userId: strin
   const delivery = await getDeliveryByParcelRepo(input.parcelId);
   if (!delivery) throw NotFound('Delivery not found');
   if (delivery.mode !== DeliveryMode.DOORSTEP) throw Conflict('Not a DOORSTEP delivery');
+  await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId);
   const updated = await updateDeliveryRepo(delivery.id, {
     receiverCalledConfirmedBy: input.userId,
     receiverCalledConfirmedAt: new Date(),
@@ -135,6 +138,7 @@ export async function doorToDoorAssignSvc(input: { parcelId: string; riderUserId
   if (delivery.mode !== DeliveryMode.DOORSTEP) throw Conflict('Not a DOORSTEP delivery');
   const parcel = await getParcelRepo(input.parcelId);
   if (!parcel) throw NotFound('Parcel not found');
+  await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId);
   const updated = await updateDeliveryRepo(delivery.id, {
     riderUserId: input.riderUserId,
     riderAssignedAt: new Date(),
@@ -153,6 +157,7 @@ export async function doorToDoorOutForDeliverySvc(input: { parcelId: string }) {
   const delivery = await getDeliveryByParcelRepo(input.parcelId);
   if (!delivery) throw NotFound('Delivery not found');
   if (delivery.mode !== DeliveryMode.DOORSTEP) throw Conflict('Not a DOORSTEP delivery');
+  await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId);
   const updated = await updateDeliveryRepo(delivery.id, {
     status: 'OUT_FOR_DELIVERY',
   });
@@ -173,6 +178,7 @@ export async function doorToDoorCompleteSvc(input: {
   return db.transaction(async (tx) => {
     const parcel = await getParcelRepo(input.parcelId, tx);
     if (!parcel) throw NotFound('Parcel not found');
+    await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId, tx);
 
     if (input.principalAmountCedis && Number(input.principalAmountCedis) > 0) {
       if (input.method === PaymentMethod.CREDIT) {
@@ -302,8 +308,11 @@ export async function doorToDoorDispatchBulkSvc(input: {
   if (!input.parcelIds.length) throw BadRequest('Select at least one parcel');
   let updated = 0;
   const assignedParcelIdsByCompany = new Map<string, string[]>();
-  for (const parcelId of input.parcelIds) {
-    const parcel = await getParcelRepo(parcelId);
+  const eligibleParcels: { id: string; companyId: string }[] = [];
+  const candidateParcels = await Promise.all(
+    input.parcelIds.map((parcelId) => getParcelRepo(parcelId)),
+  );
+  for (const parcel of candidateParcels) {
     if (!parcel) continue;
     if (
       parcel.status !== ParcelStatus.ADDRESS_COLLECTED &&
@@ -312,7 +321,14 @@ export async function doorToDoorDispatchBulkSvc(input: {
     ) {
       continue;
     }
+    eligibleParcels.push({ id: parcel.id, companyId: parcel.companyId });
+  }
+  await Promise.all(
+    eligibleParcels.map((parcel) => assertNoOpenParcelReconciliationCaseForDelivery(parcel.id)),
+  );
 
+  for (const parcel of eligibleParcels) {
+    const parcelId = parcel.id;
     const delivery = await getOrCreateDoorstepDelivery({
       parcelId,
       createdBy: input.userId,
@@ -536,6 +552,7 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
     if (parcel.status !== ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER) {
       throw Conflict('Parcel is not ready for delivery cashier finalization');
     }
+    await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId, tx);
     const delivery = await getDeliveryByParcelRepo(input.parcelId, tx);
     if (!delivery) throw NotFound('Delivery not found');
 

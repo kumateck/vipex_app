@@ -45,6 +45,7 @@ import { saveBulkCallOutcomeSvc } from './parcel-bulk-call-outcome.service';
 import { recordCallCenterContactSvc } from './parcel-call-center-contact.service';
 import { getHomeDeliveryReceiptSvc } from './home-delivery-receipt.service';
 import { reverseParcelDeliverySvc } from './parcel-delivery-reversal.service';
+import { returnParcelToSourceSvc } from './return-to-source.service';
 import { changeMainReceiverWithCallOutcomeSvc } from './parcel-main-receiver-change.service';
 import { requestShelfPickerHomeDeliverySvc } from './shelf-picker-home-delivery.service';
 import { findCustomerNameByExactTelephoneRepo } from '../customers/repository';
@@ -82,6 +83,35 @@ function emptyParcelList(query: { page?: number; pageSize?: number }) {
 
 export const parcelsRoutes = new Elysia({ name: 'parcels' })
   .use(authPlugin)
+  .get(
+    '/return-to-source',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      if (!authUser.companyId || !authUser.branchId) return emptyParcelList(query);
+      return listParcelsCtrl({
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        filters: {
+          companyId: authUser.companyId,
+          sourceId: authUser.branchId,
+          status: ParcelStatus.RETURN_TO_SOURCE,
+        },
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.Number({ minimum: 1 })),
+        pageSize: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
+        search: t.Optional(t.String()),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcels)],
+      detail: {
+        tags: ['Shipments'],
+        summary: 'List parcels marked for return to this source branch',
+      },
+    },
+  )
   .get(
     '/call-center',
     async ({ query, user }) => {
@@ -940,6 +970,25 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       body: t.Object({ reason: t.String({ minLength: 5, maxLength: 500 }) }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReverseParcelDelivery)],
       detail: { tags: ['Shipments'], summary: 'Reverse a parcel delivery confirmation' },
+    },
+  )
+  .post(
+    '/:id/return-to-source',
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      return returnParcelToSourceSvc({
+        parcelId: params.id,
+        companyId: authUser.companyId ?? '',
+        branchId: authUser.branchId ?? '',
+        actorUserId: authUser.sub,
+        reason: body.reason,
+      });
+    },
+    {
+      params: t.Object({ id: UUID }),
+      body: t.Object({ reason: t.String({ minLength: 5, maxLength: 500 }) }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateParcels)],
+      detail: { tags: ['Shipments'], summary: 'Record return to source branch' },
     },
   )
   .post(
