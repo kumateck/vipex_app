@@ -3,7 +3,7 @@ import { Payer, PaymentComponent } from '@/db/schemas';
 import {
   getRecipientPaymentIdsForDeliveryReversal,
   getRestoredToBePaidPsw,
-} from './parcel-delivery-reversal.service';
+} from './parcel-delivery-reversal.utils';
 
 describe('getRecipientPaymentIdsForDeliveryReversal', () => {
   test('selects only active recipient payments', () => {
