@@ -98,27 +98,31 @@ async function main() {
             `No active recipient payment is present for ${row.booking_code}; refusing to apply repair.`,
           );
         }
-        const voided = await tx`
+        const voided = await tx.unsafe(
+          `
           UPDATE payments pay
           SET voided_at = NOW(),
               void_reason = 'Production repair: restore to-be-paid balance after returned-paid reversal'
           FROM parcels p
           WHERE pay.parcel_id = p.id
-            AND p.id = ${row.parcel_id}
-            AND p.booking_code = ${row.booking_code}
+            AND p.id = $1
+            AND p.booking_code = $2
             AND p.is_deleted = false
             AND pay.payer = 1
             AND pay.voided_at IS NULL
             AND pay.gross_amount_psw > 0
           RETURNING pay.id
-        `;
+        `,
+          [row.parcel_id, row.booking_code],
+        );
         if (voided.length !== row.active_recipient_payment_count) {
           throw new Error(
             `Recipient payments changed for ${row.booking_code}; transaction rolled back.`,
           );
         }
 
-        const updated = await tx`
+        const updated = await tx.unsafe(
+          `
           UPDATE parcels p
           SET planned_tobepaid_psw = GREATEST(
                 p.charge_psw - COALESCE((
@@ -132,11 +136,13 @@ async function main() {
                 0
               ),
               updated_at = NOW()
-          WHERE p.id = ${row.parcel_id}
-            AND p.booking_code = ${row.booking_code}
+          WHERE p.id = $1
+            AND p.booking_code = $2
             AND p.is_deleted = false
           RETURNING p.id
-        `;
+        `,
+          [row.parcel_id, row.booking_code],
+        );
         if (updated.length !== 1) {
           throw new Error(
             `Parcel ${row.booking_code} changed during repair; transaction rolled back.`,
