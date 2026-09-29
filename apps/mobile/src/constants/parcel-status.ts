@@ -19,6 +19,7 @@ export const ParcelStatus = {
   DISPOSED_BY_SALE: 17,
   DISPOSED_BY_DESTRUCTION: 18,
   DISPOSED_BY_DONATION: 19,
+  RETURN_TO_SOURCE: 20,
 } as const;
 
 const PARCEL_STATUS_LABELS: Record<number, string> = {
@@ -42,6 +43,7 @@ const PARCEL_STATUS_LABELS: Record<number, string> = {
   [ParcelStatus.DISPOSED_BY_SALE]: 'Disposed by Sale',
   [ParcelStatus.DISPOSED_BY_DESTRUCTION]: 'Disposed by Destruction',
   [ParcelStatus.DISPOSED_BY_DONATION]: 'Disposed by Donation',
+  [ParcelStatus.RETURN_TO_SOURCE]: 'Return to Source',
 };
 
 export function getParcelStatusLabel(status: number): string {

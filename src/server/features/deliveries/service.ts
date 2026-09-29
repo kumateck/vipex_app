@@ -7,8 +7,10 @@ import {
   CashierType,
   PaymentMethod,
   CustomerCreditSourceType,
+  parcels,
 } from '@/db/schemas';
 import { db } from '@/db/config';
+import { eq } from 'drizzle-orm';
 import { createPaymentWithExecutorSvc } from '../payments/service';
 import { getParcelRepo } from '../shipments/parcels.repository';
 import { ParcelStatus } from '@/db/schemas/enums';
@@ -28,6 +30,7 @@ import { toPesewas } from '@/server/utils/gh-money';
 import { updateParcelRepo } from '../shipments/parcels.repository';
 import { postCustomerCreditChargeSvc } from '../customers/service';
 import { getParcelChargeValidationError } from '@/shared/shipments/parcel-charge-policy';
+import { assertNoOpenParcelReconciliationCaseForDelivery } from '../shipments/parcel-delivery-reconciliation-guard';
 import { emitRiderAssignmentsCreated } from '../communication/realtime';
 
 export async function createDeliverySvc(input: {
@@ -99,6 +102,7 @@ export async function markOfficePickupCompleteSvc(input: {
   if (!parcel) throw NotFound('Parcel not found');
 
   // Ensure no outstanding principal dues before office handover
+  await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId);
   const settlement = await getParcelPaymentSettlement(input.parcelId);
   const outstanding = Math.max(settlement.requiredPrincipalPsw - settlement.paidPrincipalPsw, 0);
   if (outstanding > 0)
@@ -120,6 +124,7 @@ export async function doorToDoorCallSvc(input: { parcelId: string; userId: strin
   const delivery = await getDeliveryByParcelRepo(input.parcelId);
   if (!delivery) throw NotFound('Delivery not found');
   if (delivery.mode !== DeliveryMode.DOORSTEP) throw Conflict('Not a DOORSTEP delivery');
+  await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId);
   const updated = await updateDeliveryRepo(delivery.id, {
     receiverCalledConfirmedBy: input.userId,
     receiverCalledConfirmedAt: new Date(),
@@ -135,6 +140,7 @@ export async function doorToDoorAssignSvc(input: { parcelId: string; riderUserId
   if (delivery.mode !== DeliveryMode.DOORSTEP) throw Conflict('Not a DOORSTEP delivery');
   const parcel = await getParcelRepo(input.parcelId);
   if (!parcel) throw NotFound('Parcel not found');
+  await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId);
   const updated = await updateDeliveryRepo(delivery.id, {
     riderUserId: input.riderUserId,
     riderAssignedAt: new Date(),
@@ -153,6 +159,7 @@ export async function doorToDoorOutForDeliverySvc(input: { parcelId: string }) {
   const delivery = await getDeliveryByParcelRepo(input.parcelId);
   if (!delivery) throw NotFound('Delivery not found');
   if (delivery.mode !== DeliveryMode.DOORSTEP) throw Conflict('Not a DOORSTEP delivery');
+  await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId);
   const updated = await updateDeliveryRepo(delivery.id, {
     status: 'OUT_FOR_DELIVERY',
   });
@@ -173,6 +180,7 @@ export async function doorToDoorCompleteSvc(input: {
   return db.transaction(async (tx) => {
     const parcel = await getParcelRepo(input.parcelId, tx);
     if (!parcel) throw NotFound('Parcel not found');
+    await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId, tx);
 
     if (input.principalAmountCedis && Number(input.principalAmountCedis) > 0) {
       if (input.method === PaymentMethod.CREDIT) {
@@ -302,8 +310,11 @@ export async function doorToDoorDispatchBulkSvc(input: {
   if (!input.parcelIds.length) throw BadRequest('Select at least one parcel');
   let updated = 0;
   const assignedParcelIdsByCompany = new Map<string, string[]>();
-  for (const parcelId of input.parcelIds) {
-    const parcel = await getParcelRepo(parcelId);
+  const eligibleParcels: { id: string; companyId: string }[] = [];
+  const candidateParcels = await Promise.all(
+    input.parcelIds.map((parcelId) => getParcelRepo(parcelId)),
+  );
+  for (const parcel of candidateParcels) {
     if (!parcel) continue;
     if (
       parcel.status !== ParcelStatus.ADDRESS_COLLECTED &&
@@ -312,7 +323,14 @@ export async function doorToDoorDispatchBulkSvc(input: {
     ) {
       continue;
     }
+    eligibleParcels.push({ id: parcel.id, companyId: parcel.companyId });
+  }
+  await Promise.all(
+    eligibleParcels.map((parcel) => assertNoOpenParcelReconciliationCaseForDelivery(parcel.id)),
+  );
 
+  for (const parcel of eligibleParcels) {
+    const parcelId = parcel.id;
     const delivery = await getOrCreateDoorstepDelivery({
       parcelId,
       createdBy: input.userId,
@@ -531,19 +549,26 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
   method: PaymentMethod;
 }) {
   return db.transaction(async (tx) => {
-    const parcel = await getParcelRepo(input.parcelId, tx);
+    const [parcel] = await tx
+      .select()
+      .from(parcels)
+      .where(eq(parcels.id, input.parcelId))
+      .for('update');
     if (!parcel) throw NotFound('Parcel not found');
     if (parcel.status !== ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER) {
       throw Conflict('Parcel is not ready for delivery cashier finalization');
     }
+    await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId, tx);
     const delivery = await getDeliveryByParcelRepo(input.parcelId, tx);
     if (!delivery) throw NotFound('Delivery not found');
 
     let collectedPsw = 0;
+    const paymentIds: string[] = [];
+    const creditChargeIds: string[] = [];
     if (input.principalAmountCedis && Number(input.principalAmountCedis) > 0) {
       if (input.method === PaymentMethod.CREDIT) {
         const amountPsw = Number(toPesewas(input.principalAmountCedis));
-        await postCustomerCreditChargeSvc({
+        const charge = await postCustomerCreditChargeSvc({
           customerId: parcel.receiverId,
           companyId: input.companyId,
           amountPsw,
@@ -553,6 +578,7 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
           createdBy: input.cashierUserId,
           executor: tx,
         });
+        creditChargeIds.push(charge.id);
         collectedPsw += amountPsw;
       } else {
         const payment = await createPaymentWithExecutorSvc(
@@ -569,6 +595,7 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
           },
           tx,
         );
+        paymentIds.push(payment.id);
         collectedPsw += payment.amounts.grossPsw;
       }
     }
@@ -576,7 +603,7 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
     if (input.deliveryFeeAmountCedis && Number(input.deliveryFeeAmountCedis) > 0) {
       if (input.method === PaymentMethod.CREDIT) {
         const amountPsw = Number(toPesewas(input.deliveryFeeAmountCedis));
-        await postCustomerCreditChargeSvc({
+        const charge = await postCustomerCreditChargeSvc({
           customerId: parcel.receiverId,
           companyId: input.companyId,
           amountPsw,
@@ -586,6 +613,7 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
           createdBy: input.cashierUserId,
           executor: tx,
         });
+        creditChargeIds.push(charge.id);
         collectedPsw += amountPsw;
       } else {
         const payment = await createPaymentWithExecutorSvc(
@@ -602,6 +630,7 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
           },
           tx,
         );
+        paymentIds.push(payment.id);
         collectedPsw += payment.amounts.grossPsw;
       }
     }
@@ -622,6 +651,30 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
       input.parcelId,
       {
         status: ParcelStatus.DELIVERED_AT_HOME,
+        deliveryConfirmationSnapshot: {
+          parcelStatus: parcel.status,
+          confirmedAt: parcel.confirmedAt?.toISOString() ?? null,
+          confirmedBy: parcel.confirmedBy,
+          plannedToBePaidPsw: parcel.plannedToBePaidPsw,
+          paymentIds,
+          creditChargeIds,
+          pickupQueueId: null,
+          handover: {
+            secondReceiverId: parcel.secondReceiverId,
+            secondReceiverNameSnapshot: parcel.secondReceiverNameSnapshot,
+            cardId: parcel.cardId,
+            cardNumber: parcel.cardNumber,
+            secondCardId: parcel.secondCardId,
+            secondCardNumber: parcel.secondCardNumber,
+          },
+          delivery: {
+            status: delivery.status,
+            amountPaidPsw: delivery.amountPaidPsw,
+            deliveredAt: delivery.deliveredAt?.toISOString() ?? null,
+            confirmedAt: delivery.confirmedAt?.toISOString() ?? null,
+            confirmedBy: delivery.confirmedBy,
+          },
+        },
       },
       tx,
     );

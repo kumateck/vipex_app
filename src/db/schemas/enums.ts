@@ -450,6 +450,7 @@ export enum ParcelStatus {
   DISPOSED_BY_SALE = 17, // Aged parcel sold to recover outstanding charges
   DISPOSED_BY_DESTRUCTION = 18, // Aged parcel destroyed/disposed as waste
   DISPOSED_BY_DONATION = 19, // Aged parcel donated/disposed without sale
+  RETURN_TO_SOURCE = 20, // Destination branch recorded a return to the original source branch
 }
 
 export enum ParcelDispositionActionType {

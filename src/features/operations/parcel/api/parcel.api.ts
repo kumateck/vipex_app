@@ -320,8 +320,11 @@ export type ParcelFullDetails = {
     bookingCode: string;
     trackingCode: string;
     senderId: string;
+    senderNameSnapshot: string;
     receiverId: string;
+    receiverNameSnapshot: string;
     secondReceiverId: string | null;
+    secondReceiverNameSnapshot: string | null;
     status: number;
     parcelDetails: string;
     parcelContent: string;
@@ -731,12 +734,71 @@ export const parcelApi = api.injectEndpoints({
       }),
       providesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    listReturnToSourceParcels: builder.query<
+      ServerListResponse<ParcelSearchRow>,
+      { page: number; pageSize: number; search?: string }
+    >({
+      query: (params) => ({ url: '/shipments/parcels/return-to-source', params }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
     listDeliveryReversalCandidates: builder.query<
       ServerListResponse<ParcelSearchRow>,
       { page?: number; pageSize?: number; search?: string }
     >({
       query: (params) => ({ url: '/shipments/parcels/delivery-reversal-candidates', params }),
       providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    previewParcelFinancialRepair: builder.query<
+      {
+        id: string;
+        bookingCode: string;
+        trackingCode: string;
+        status: number;
+        chargePsw: number;
+        activePrincipalPaidPsw: number;
+        currentToBePaidPsw: number;
+        expectedToBePaidPsw: number;
+        needsRepair: boolean;
+        canRepair: boolean;
+        restriction: string | null;
+      },
+      { search: string }
+    >({
+      query: ({ search }) => ({
+        url: '/shipments/parcels/financial-repair/preview',
+        params: { search },
+      }),
+    }),
+    repairParcelFinancialState: builder.mutation<
+      {
+        id: string;
+        bookingCode: string;
+        trackingCode: string;
+        previousToBePaidPsw: number;
+        plannedToBePaidPsw: number;
+      },
+      { search: string; reason: string }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcels/financial-repair/execute',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error) => [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    returnParcelToSource: builder.mutation<
+      { id: string; status: number },
+      { id: string; reason: string }
+    >({
+      query: ({ id, reason }) => ({
+        url: `/shipments/parcels/${id}/return-to-source`,
+        method: 'POST',
+        body: { reason },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Bookings', id },
+      ],
     }),
     lookupCallOutcomeReceiver: builder.query<
       { id: string; fullname: string; telephone: string | null; telephone2: string | null } | null,
@@ -1563,10 +1625,14 @@ export const {
   useCreateBookingWithParcelsMutation,
   useListSenderCashierParcelsQuery,
   useSearchParcelsQuery,
+  useListReturnToSourceParcelsQuery,
   useListDeliveryReversalCandidatesQuery,
+  useLazyPreviewParcelFinancialRepairQuery,
+  useRepairParcelFinancialStateMutation,
   useLookupCallOutcomeReceiverQuery,
   useChangeCallOutcomeMainReceiverMutation,
   useReverseParcelDeliveryMutation,
+  useReturnParcelToSourceMutation,
   useLazySearchParcelsQuery,
   useGetParcelDetailsQuery,
   useLazyGetHomeDeliveryReceiptQuery,

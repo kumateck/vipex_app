@@ -65,8 +65,11 @@ export type ParcelRow = {
   bookingCode: string;
   trackingCode: string;
   senderId: string;
+  senderNameSnapshot: string;
   receiverId: string;
+  receiverNameSnapshot: string;
   secondReceiverId: string | null;
+  secondReceiverNameSnapshot: string | null;
   status: number;
   parcelDetails: string;
   parcelContent: string;
@@ -370,10 +373,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
                   or(
                     ilike(parcels.bookingCode, `%${p.search}%`),
                     ilike(parcels.trackingCode, `%${p.search}%`),
-                    ilike(s.fullname, `%${p.search}%`),
+                    ilike(parcels.senderNameSnapshot, `%${p.search}%`),
                     ilike(s.telephone, `%${p.search}%`),
                     ilike(s.telephone2, `%${p.search}%`),
-                    ilike(r.fullname, `%${p.search}%`),
+                    ilike(parcels.receiverNameSnapshot, `%${p.search}%`),
+                    ilike(parcels.secondReceiverNameSnapshot, `%${p.search}%`),
                     ilike(r.telephone, `%${p.search}%`),
                     ilike(r.telephone2, `%${p.search}%`),
                   ),
@@ -395,8 +399,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
       senderId: parcels.senderId,
+      senderNameSnapshot: parcels.senderNameSnapshot,
       receiverId: parcels.receiverId,
+      receiverNameSnapshot: parcels.receiverNameSnapshot,
       secondReceiverId: parcels.secondReceiverId,
+      secondReceiverNameSnapshot: parcels.secondReceiverNameSnapshot,
       status: parcels.status,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
@@ -438,13 +445,13 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       consignmentCode: cg.code,
       consignmentSerialForDay: cg.serialForDay,
       consignmentCreatedAt: cg.createdAt,
-      senderName: s.fullname,
+      senderName: parcels.senderNameSnapshot,
       senderPhone: s.telephone,
       senderPhone2: s.telephone2,
-      receiverName: r.fullname,
+      receiverName: parcels.receiverNameSnapshot,
       receiverPhone: r.telephone,
       receiverPhone2: r.telephone2,
-      secondReceiverName: sr.fullname,
+      secondReceiverName: parcels.secondReceiverNameSnapshot,
       secondReceiverPhone: sr.telephone,
       secondReceiverPhone2: sr.telephone2,
       dropoffAddress: deliveries.dropoffAddress,
@@ -509,10 +516,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
                   or(
                     ilike(parcels.bookingCode, `%${p.search}%`),
                     ilike(parcels.trackingCode, `%${p.search}%`),
-                    ilike(s.fullname, `%${p.search}%`),
+                    ilike(parcels.senderNameSnapshot, `%${p.search}%`),
                     ilike(s.telephone, `%${p.search}%`),
                     ilike(s.telephone2, `%${p.search}%`),
-                    ilike(r.fullname, `%${p.search}%`),
+                    ilike(parcels.receiverNameSnapshot, `%${p.search}%`),
+                    ilike(parcels.secondReceiverNameSnapshot, `%${p.search}%`),
                     ilike(r.telephone, `%${p.search}%`),
                     ilike(r.telephone2, `%${p.search}%`),
                   ),
@@ -543,8 +551,11 @@ export async function getParcelRepo(
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
       senderId: parcels.senderId,
+      senderNameSnapshot: parcels.senderNameSnapshot,
       receiverId: parcels.receiverId,
+      receiverNameSnapshot: parcels.receiverNameSnapshot,
       secondReceiverId: parcels.secondReceiverId,
+      secondReceiverNameSnapshot: parcels.secondReceiverNameSnapshot,
       status: parcels.status,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
@@ -728,6 +739,7 @@ const STUCK_PARCEL_EXCLUDED_STATUSES = [
   ParcelStatus.DELIVERED_BY_OFFICE,
   ParcelStatus.DELIVERED_AT_HOME,
   ParcelStatus.RETURNED_TO_SENDER,
+  ParcelStatus.RETURN_TO_SOURCE,
   ParcelStatus.CANCELLED,
   ParcelStatus.DISPOSED_BY_SALE,
   ParcelStatus.DISPOSED_BY_DESTRUCTION,

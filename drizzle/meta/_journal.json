@@ -519,6 +519,20 @@
       "when": 1790000400000,
       "tag": "0072_contacted_parcels_awaiting_pickup",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1790000500000,
+      "tag": "0073_parcel_customer_name_snapshots",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1790000600000,
+      "tag": "0074_delivery_confirmation_snapshot",
+      "breakpoints": true
     }
   ]
 }

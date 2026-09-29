@@ -1,7 +1,7 @@
 import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
-import { branches, customers, locations, parcelDiscrepancies, parcels, users } from '@/db/schemas';
+import { branches, locations, parcelDiscrepancies, parcels, users } from '@/db/schemas';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
@@ -79,8 +79,6 @@ export async function listOpenParcelDiscrepanciesRepo(input: {
   const creator = alias(users, 'creator');
   const branch = alias(branches, 'b');
   const destinationLocation = alias(locations, 'dl');
-  const sender = alias(customers, 's');
-  const receiver = alias(customers, 'r');
 
   const where = and(
     eq(parcelDiscrepancies.companyId, input.companyId),
@@ -118,15 +116,13 @@ export async function listOpenParcelDiscrepanciesRepo(input: {
       destinationId: parcels.destinationId,
       pickupLocationId: parcels.pickupLocationId,
       destinationLocationName: destinationLocation.name,
-      senderName: sender.fullname,
-      receiverName: receiver.fullname,
+      senderName: parcels.senderNameSnapshot,
+      receiverName: parcels.receiverNameSnapshot,
     })
     .from(parcelDiscrepancies)
     .leftJoin(parcels, eq(parcelDiscrepancies.parcelId, parcels.id))
     .leftJoin(branch, eq(parcelDiscrepancies.branchId, branch.id))
     .leftJoin(creator, eq(parcelDiscrepancies.createdBy, creator.id))
-    .leftJoin(sender, eq(parcels.senderId, sender.id))
-    .leftJoin(receiver, eq(parcels.receiverId, receiver.id))
     .leftJoin(destinationLocation, eq(parcels.pickupLocationId, destinationLocation.id))
     .where(where)
     .orderBy(desc(parcelDiscrepancies.createdAt))

@@ -15,6 +15,67 @@ The API reference is split by domain:
 
 `auth`, `users`, `branches`, `locations`, `warehouses`, `customers`, `cards`, `uploads`, `cashiers`, `shipments`, `payments`, `deliveries`, `pickup-queues`, `accounting`, `inventory`, `shifts`, `company-modules`, `module-workspace`, `procurement`, `fleet-transport`, `customer-wallet-credit`, `reconciliation`, `notification-hub`, `momo`, `self-service`, `desktop-updates`, `mobile-updates`, `communication`, `customer-service`, `help-assistant`, `executive-insights`, `fleet-anomaly-brief`, `operations-exceptions-brief`, `management-daily-brief`, `ai-chat`, `it-support`, `reports`, `audit`, `hr`, `payroll`, `rbac`, and `geolocation`.
 
+Parcel delivery, pickup, rider handover, and home-delivery dispatch endpoints return HTTP 409
+when the parcel (or the linked parcel in a duplicate-entry case) has a requested or approved
+parcel reconciliation case. The response message is “Parcel has an open reconciliation case;
+resolve it before delivery”. Combined payment and handover endpoints reject before recording
+payment. Executed and rejected cases do not block delivery.
+
+`POST /v1/shipments/parcels/:id/return-to-source` requires `CanUpdateParcels` and a
+`reason` of 5–500 characters. It uses the authenticated user's company and destination
+branch. Success returns the parcel ID and `RETURN_TO_SOURCE` status. It returns 404
+when the parcel is outside that branch, 409 when the parcel is not eligible or has an
+open reconciliation case, and 400 for an invalid reason. Delivery attempts after return
+receive HTTP 409. Web and desktop expose the action in All Parcels Super Search;
+mobile does not expose it.
+
+`GET /v1/shipments/parcels/return-to-source` requires `CanReadParcels` and returns a
+paginated, searchable list of parcels in `RETURN_TO_SOURCE` status whose original source
+is the authenticated user's branch. The company and branch are taken from the session,
+not client filters. Users without a company or branch receive an empty list. Invalid
+pagination receives 400; unauthenticated or unauthorized requests are rejected. Web and
+desktop use this endpoint for the Returns to Source page; mobile has no list page.
+
+`GET /v1/shipments/parcels/reconciliation-cases` with a branch filter includes cases whose
+parcel source or destination is that branch. Requested cases may be approved, then executed,
+after destination arrival as long as the parcel has not been delivered to the customer.
+
+Parcel creation stores the sender, receiver, and optional second receiver names on the parcel
+alongside their linked customer IDs. Existing parcel list/detail, consignment, delivery, and
+report responses return these stored names. A later customer profile rename leaves older
+parcel names unchanged. Changing a parcel's receiver ID through an authorized parcel action
+captures the replacement customer's current name. Contact fields remain linked to the customer
+record. Migration `0073` adds the columns and capture trigger without rewriting existing
+parcels. Run `bun run scripts/backfill-parcel-customer-names.ts --apply` before deploying a
+server build that reads these columns. It commits batches of 500 and is safe to rerun; run it
+without `--apply` to check for remaining rows. Names already lost before backfill cannot be
+recovered from current customer records. The capture trigger rejects a missing, blank, or
+cross-company customer name on a new parcel or receiver change.
+Parcel list search matches the stored sender, main receiver, and second receiver names with
+case-insensitive partial matching; both total count and page rows use the same filter.
+
+`GET /v1/shipments/parcels/financial-repair/preview?search=<booking-or-tracking-code>` and
+`POST /v1/shipments/parcels/financial-repair/execute` require
+`CanRepairParcelFinancialState`. Both use the authenticated company and branch and only match an
+exact booking or tracking code for a parcel whose source or destination is that branch. Preview
+shows the current To Be Paid amount and calculates the expected amount as parcel charge minus all
+active principal payments, floored at zero. Execute requires a 5–500 character reason, locks and
+rechecks the parcel, rejects currently delivered parcels, and changes only `plannedToBePaidPsw`.
+Every change records the actor, reason, branch, old and new values, charge, and active principal
+payments in the audit log. A no-op, ambiguous booking-code match, or currently delivered parcel
+returns 409; missing/out-of-scope parcels return 404. Use the tracking code when a booking contains
+multiple parcels. The web page is `/parcels/financial-repair`; mobile has no equivalent page.
+
+`POST /v1/shipments/parcels/:id/reverse-delivery` also recalculates and returns
+`plannedToBePaidPsw` after voiding recipient payments. It derives this amount from the parcel
+charge minus remaining active principal payments. For confirmations made after migration `0074`,
+the parcel stores its pre-delivery status and confirmation details plus payment IDs. Reversal
+restores that status and voids only payments from the confirmation. Earlier payments remain valid.
+The linked delivery state and pickup ticket are restored when applicable. A payment or delivery
+change during reversal causes the transaction to fail rather than leaving status and balance out
+of sync. Apply migration `0074` before deploying this server behavior; older delivered parcels
+without snapshots use the legacy status and payment fallback.
+
 ## Contract Authority
 
 Swagger UI at `/docs` and OpenAPI JSON at `/docs/json` from the running server are authoritative for exact methods, schemas, validation, and response bodies. These documents explain the stable domain surface and access rules.

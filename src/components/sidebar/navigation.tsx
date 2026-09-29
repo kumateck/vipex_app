@@ -200,6 +200,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadParcelIncoming,
           },
           {
+            title: 'Returns to Source',
+            url: '/parcels/return-to-source',
+            permissionKey: PermissionKeys.CanReadParcels,
+          },
+          {
             title: 'Scan to Receive',
             url: '/parcels/receive',
             permissionKey: PermissionKeys.CanReadParcelScan,
@@ -287,6 +292,11 @@ const BASE_ROUTES: Route[] = [
             title: 'Reverse Delivery Confirmation',
             url: '/parcels/delivery-reversal',
             permissionKey: PermissionKeys.CanReverseParcelDelivery,
+          },
+          {
+            title: 'Parcel Financial Repair',
+            url: '/parcels/financial-repair',
+            permissionKey: PermissionKeys.CanRepairParcelFinancialState,
           },
           {
             title: 'Aged & Uncollected',

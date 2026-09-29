@@ -6,6 +6,7 @@ import { toPesewas } from '@/server/utils/gh-money';
 import { getDeliveryByParcelRepo, updateDeliveryRepo } from './repository';
 import { hasPendingDeliveryChangeRequestRepo } from './delivery-change-request.repository';
 import { getParcelPaymentSettlement } from '@/server/features/shipments/parcel-payment-settlement';
+import { assertNoOpenParcelReconciliationCaseForDelivery } from '@/server/features/shipments/parcel-delivery-reconciliation-guard';
 
 export type RiderHandoverInput = {
   parcelId: string;
@@ -31,6 +32,7 @@ export async function doorToDoorRiderGivenToCustomerSvc(input: RiderHandoverInpu
     if (parcel.status !== ParcelStatus.DISPATCHED) {
       throw Conflict('Parcel is not dispatched');
     }
+    await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId, tx);
 
     const delivery = await getDeliveryByParcelRepo(input.parcelId, tx);
     if (!delivery) throw NotFound('Delivery not found');
