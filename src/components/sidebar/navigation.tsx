@@ -294,6 +294,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReverseParcelDelivery,
           },
           {
+            title: 'Parcel Financial Repair',
+            url: '/parcels/financial-repair',
+            permissionKey: PermissionKeys.CanRepairParcelFinancialState,
+          },
+          {
             title: 'Aged & Uncollected',
             url: '/parcels/uncollected',
             permissionKey: PermissionKeys.CanViewReportParcelsUncollected,

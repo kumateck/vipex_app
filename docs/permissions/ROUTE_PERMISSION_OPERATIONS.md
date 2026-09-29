@@ -22,6 +22,7 @@ Parcel, cashier, and human-capital route overrides.
 | `/parcels/reconciliation-cases`         | `CanReadParcelReconciliation`     |
 | `/parcels/receive`                      | `CanReadParcelScan`               |
 | `/parcels/delivery-reversal`            | `CanReverseParcelDelivery`        |
+| `/parcels/financial-repair`             | `CanRepairParcelFinancialState`   |
 | `/parcels/home-delivery/dispatch`       | `CanDispatchForDelivery`          |
 | `/parcels/home-delivery/rider-assigned` | `CanDispatchForDelivery`          |
 | `/parcels/delivery-cashier`             | `CanCompleteDoorstepDelivery`     |

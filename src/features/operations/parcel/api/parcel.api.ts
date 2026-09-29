@@ -748,6 +748,44 @@ export const parcelApi = api.injectEndpoints({
       query: (params) => ({ url: '/shipments/parcels/delivery-reversal-candidates', params }),
       providesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    previewParcelFinancialRepair: builder.query<
+      {
+        id: string;
+        bookingCode: string;
+        trackingCode: string;
+        status: number;
+        chargePsw: number;
+        activePrincipalPaidPsw: number;
+        currentToBePaidPsw: number;
+        expectedToBePaidPsw: number;
+        needsRepair: boolean;
+        canRepair: boolean;
+        restriction: string | null;
+      },
+      { search: string }
+    >({
+      query: ({ search }) => ({
+        url: '/shipments/parcels/financial-repair/preview',
+        params: { search },
+      }),
+    }),
+    repairParcelFinancialState: builder.mutation<
+      {
+        id: string;
+        bookingCode: string;
+        trackingCode: string;
+        previousToBePaidPsw: number;
+        plannedToBePaidPsw: number;
+      },
+      { search: string; reason: string }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcels/financial-repair/execute',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error) => [{ type: 'Bookings', id: 'LIST' }],
+    }),
     returnParcelToSource: builder.mutation<
       { id: string; status: number },
       { id: string; reason: string }
@@ -1589,6 +1627,8 @@ export const {
   useSearchParcelsQuery,
   useListReturnToSourceParcelsQuery,
   useListDeliveryReversalCandidatesQuery,
+  useLazyPreviewParcelFinancialRepairQuery,
+  useRepairParcelFinancialStateMutation,
   useLookupCallOutcomeReceiverQuery,
   useChangeCallOutcomeMainReceiverMutation,
   useReverseParcelDeliveryMutation,

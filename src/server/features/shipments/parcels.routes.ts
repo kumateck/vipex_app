@@ -49,6 +49,10 @@ import { returnParcelToSourceSvc } from './return-to-source.service';
 import { changeMainReceiverWithCallOutcomeSvc } from './parcel-main-receiver-change.service';
 import { requestShelfPickerHomeDeliverySvc } from './shelf-picker-home-delivery.service';
 import { findCustomerNameByExactTelephoneRepo } from '../customers/repository';
+import {
+  previewParcelFinancialRepairSvc,
+  repairParcelFinancialStateSvc,
+} from './parcel-financial-repair.service';
 
 function parseStatuses(value: string | number[] | undefined): number[] | null {
   if (Array.isArray(value)) {
@@ -83,6 +87,50 @@ function emptyParcelList(query: { page?: number; pageSize?: number }) {
 
 export const parcelsRoutes = new Elysia({ name: 'parcels' })
   .use(authPlugin)
+  .get(
+    '/financial-repair/preview',
+    async ({ query, user }) => {
+      const authUser = user as AuthUser;
+      if (!authUser.companyId || !authUser.branchId) return null;
+      return previewParcelFinancialRepairSvc({
+        companyId: authUser.companyId,
+        branchId: authUser.branchId,
+        search: query.search,
+      });
+    },
+    {
+      query: t.Object({ search: t.String({ minLength: 3, maxLength: 255 }) }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanRepairParcelFinancialState),
+      ],
+      detail: { tags: ['Shipments'], summary: 'Preview parcel financial state repair' },
+    },
+  )
+  .post(
+    '/financial-repair/execute',
+    async ({ body, user }) => {
+      const authUser = user as AuthUser;
+      return repairParcelFinancialStateSvc({
+        companyId: authUser.companyId ?? '',
+        branchId: authUser.branchId ?? '',
+        actorUserId: authUser.sub,
+        search: body.search,
+        reason: body.reason,
+      });
+    },
+    {
+      body: t.Object({
+        search: t.String({ minLength: 3, maxLength: 255 }),
+        reason: t.String({ minLength: 5, maxLength: 500 }),
+      }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanRepairParcelFinancialState),
+      ],
+      detail: { tags: ['Shipments'], summary: 'Repair parcel To Be Paid amount' },
+    },
+  )
   .get(
     '/return-to-source',
     async ({ query, user }) => {
