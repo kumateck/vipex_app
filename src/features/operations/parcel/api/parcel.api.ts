@@ -320,8 +320,11 @@ export type ParcelFullDetails = {
     bookingCode: string;
     trackingCode: string;
     senderId: string;
+    senderNameSnapshot: string;
     receiverId: string;
+    receiverNameSnapshot: string;
     secondReceiverId: string | null;
+    secondReceiverNameSnapshot: string | null;
     status: number;
     parcelDetails: string;
     parcelContent: string;

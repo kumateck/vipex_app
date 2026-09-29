@@ -7,8 +7,10 @@ import {
   CashierType,
   PaymentMethod,
   CustomerCreditSourceType,
+  parcels,
 } from '@/db/schemas';
 import { db } from '@/db/config';
+import { eq } from 'drizzle-orm';
 import { createPaymentWithExecutorSvc } from '../payments/service';
 import { getParcelRepo } from '../shipments/parcels.repository';
 import { ParcelStatus } from '@/db/schemas/enums';
@@ -547,7 +549,11 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
   method: PaymentMethod;
 }) {
   return db.transaction(async (tx) => {
-    const parcel = await getParcelRepo(input.parcelId, tx);
+    const [parcel] = await tx
+      .select()
+      .from(parcels)
+      .where(eq(parcels.id, input.parcelId))
+      .for('update');
     if (!parcel) throw NotFound('Parcel not found');
     if (parcel.status !== ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER) {
       throw Conflict('Parcel is not ready for delivery cashier finalization');
@@ -557,10 +563,12 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
     if (!delivery) throw NotFound('Delivery not found');
 
     let collectedPsw = 0;
+    const paymentIds: string[] = [];
+    const creditChargeIds: string[] = [];
     if (input.principalAmountCedis && Number(input.principalAmountCedis) > 0) {
       if (input.method === PaymentMethod.CREDIT) {
         const amountPsw = Number(toPesewas(input.principalAmountCedis));
-        await postCustomerCreditChargeSvc({
+        const charge = await postCustomerCreditChargeSvc({
           customerId: parcel.receiverId,
           companyId: input.companyId,
           amountPsw,
@@ -570,6 +578,7 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
           createdBy: input.cashierUserId,
           executor: tx,
         });
+        creditChargeIds.push(charge.id);
         collectedPsw += amountPsw;
       } else {
         const payment = await createPaymentWithExecutorSvc(
@@ -586,6 +595,7 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
           },
           tx,
         );
+        paymentIds.push(payment.id);
         collectedPsw += payment.amounts.grossPsw;
       }
     }
@@ -593,7 +603,7 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
     if (input.deliveryFeeAmountCedis && Number(input.deliveryFeeAmountCedis) > 0) {
       if (input.method === PaymentMethod.CREDIT) {
         const amountPsw = Number(toPesewas(input.deliveryFeeAmountCedis));
-        await postCustomerCreditChargeSvc({
+        const charge = await postCustomerCreditChargeSvc({
           customerId: parcel.receiverId,
           companyId: input.companyId,
           amountPsw,
@@ -603,6 +613,7 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
           createdBy: input.cashierUserId,
           executor: tx,
         });
+        creditChargeIds.push(charge.id);
         collectedPsw += amountPsw;
       } else {
         const payment = await createPaymentWithExecutorSvc(
@@ -619,6 +630,7 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
           },
           tx,
         );
+        paymentIds.push(payment.id);
         collectedPsw += payment.amounts.grossPsw;
       }
     }
@@ -639,6 +651,30 @@ export async function doorToDoorFinalizeAtOfficeSvc(input: {
       input.parcelId,
       {
         status: ParcelStatus.DELIVERED_AT_HOME,
+        deliveryConfirmationSnapshot: {
+          parcelStatus: parcel.status,
+          confirmedAt: parcel.confirmedAt?.toISOString() ?? null,
+          confirmedBy: parcel.confirmedBy,
+          plannedToBePaidPsw: parcel.plannedToBePaidPsw,
+          paymentIds,
+          creditChargeIds,
+          pickupQueueId: null,
+          handover: {
+            secondReceiverId: parcel.secondReceiverId,
+            secondReceiverNameSnapshot: parcel.secondReceiverNameSnapshot,
+            cardId: parcel.cardId,
+            cardNumber: parcel.cardNumber,
+            secondCardId: parcel.secondCardId,
+            secondCardNumber: parcel.secondCardNumber,
+          },
+          delivery: {
+            status: delivery.status,
+            amountPaidPsw: delivery.amountPaidPsw,
+            deliveredAt: delivery.deliveredAt?.toISOString() ?? null,
+            confirmedAt: delivery.confirmedAt?.toISOString() ?? null,
+            confirmedBy: delivery.confirmedBy,
+          },
+        },
       },
       tx,
     );

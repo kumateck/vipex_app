@@ -238,6 +238,48 @@ Mobile discrepancy capture supports an expected system parcel that is physically
 
 ## Pickup and Last-Mile Delivery
 
+### Customer names retained on parcels
+
+Each parcel keeps the sender, main receiver, and optional second receiver names that were
+associated with their customer IDs when the parcel was created. The customer IDs remain linked
+for contact and customer-account operations. Editing a customer's profile name later does not
+change the names shown on older parcel records, searches, consignments, delivery views,
+receipts, or reports. If staff deliberately change a parcel's main or second receiver, the
+parcel records the replacement customer's name at that change. Removing a second receiver
+clears its stored name. Phone numbers and other customer contact fields still come from the
+linked customer record.
+
+Parcel search matches the stored sender, main receiver, and second receiver names, case
+insensitively and by partial name, as well as booking/tracking codes and customer phone
+numbers. Searching the name recorded on an older parcel returns that parcel after the
+customer profile is renamed. A newer name only matches parcels that recorded that name.
+
+Migration `0073_parcel_customer_name_snapshots` adds nullable columns and a trigger in a
+short transaction. It does not update historical rows or add a table-wide default. Its
+three-second lock timeout makes it fail for retry if the table is busy. The trigger captures
+names for new parcels and fills missing names when older parcels are updated. Run
+`bun run scripts/backfill-parcel-customer-names.ts --apply` after migration `0073` and before
+deploying server code that reads the columns. The script updates at most 500 parcels per
+transaction, pauses between batches, and can be rerun after interruption. Running it without
+`--apply` checks whether work remains. A customer with a missing, blank, or cross-company
+name stops the backfill; correct the data and rerun. Confirm the script reports completion
+before deploying the new server. The database columns remain nullable during this rollout,
+while the trigger fills names for every new parcel. Earlier names already overwritten in the
+customer table cannot be reconstructed; the backfill freezes the names available when each
+batch runs. The trigger covers web, mobile, desktop, self-service, and pending-booking flows.
+
+QA: create two parcels for one customer, rename the customer between creations, and verify
+each parcel retains its own name in search, detail, consignment print, delivery print, and
+reports. Rename the customer again and verify neither parcel changes. Change a parcel's
+receiver through the authorized workflow and verify its displayed name switches to the new
+receiver while the audit records the change. Verify a customer from another company cannot
+be attached to a new parcel. On a production-sized copy, verify migration `0073` completes
+without a table-wide update, interrupt and rerun the backfill, then confirm no parcel has a
+missing sender, receiver, or applicable second receiver snapshot. Keep the old server running
+until the backfill finishes; apply the migration before starting the new server.
+Search by each recorded sender, main receiver, and second receiver name, including partial
+case-insensitive matches, and confirm the result count matches the displayed rows.
+
 ### Return to source branch
 
 Destination staff with `CanUpdateParcels` can find a parcel in **All Parcels Super Search**,
@@ -337,18 +379,51 @@ confirmation; it does not undo branch receipt. The page and API require the dedi
 `CanReverseParcelDelivery` permission. Mobile does not currently expose this correction page.
 An administrator must grant this new permission to the appropriate role before staff can use it.
 
-An office-delivered parcel returns to **Awaiting Pickup** with its parcel confirmation cleared. The
-latest ended pickup-queue ticket is reopened if one exists. A home-delivered parcel returns to
-**Rider Given Parcel to Customer**; its delivery record loses the final delivery timestamp and
-returns to the rider handover confirmation. Customer/card information and sender-side payments
-remain recorded. Active recipient-side payments collected as part of the delivery confirmation are
-voided in the same transaction, so the parcel's outstanding to-be-paid balance is restored. The
+New confirmations save a pre-delivery snapshot on the parcel. Reversal restores that exact parcel
+status and confirmation fields, reopens the pickup ticket that was active at confirmation, and
+restores the linked delivery record's status, timestamps, and collected total. It voids only
+payments created by that confirmation, preserving earlier recipient and sender payments. Credit
+charges created by home delivery finalization receive offsetting adjustments; an allocated credit
+charge requires finance review and blocks reversal. The parcel's stored to-be-paid principal
+balance is recalculated from its charge minus all remaining active principal payments in the same
+transaction. The payment badge, list amount, and cashier due then reflect that balance. A
+confirmation snapshot is cleared after a successful reversal, allowing a later delivery attempt
+to record a fresh one. The parcel's second receiver and ID card fields return to their
+pre-delivery values. Older confirmations without a snapshot retain the legacy status fallback: office delivery
+returns to **Awaiting Pickup** and home delivery to **Rider Given Parcel to Customer**; their
+active recipient payments are voided as before.
+
+Migration `0074_delivery_confirmation_snapshot` adds one nullable JSONB column and a trigger
+that captures pre-delivery state for ordinary parcel status updates. It has no backfill or table
+rewrite. Its three-second lock timeout makes it fail for retry if the parcels table is busy.
+Apply it before deploying server code that records or reads snapshots. The
 actor, reason, branch, prior state, and voided-payment count are audited. Missing, deleted,
 other-branch, already reversed, or inconsistent home-delivery records are rejected without partial
 updates. QA: reverse an office handover with and without a queue ticket, reverse a finalized home
-delivery, verify recipient payments are voided and the parcel is to-be-paid again, verify sender
-payments persist, and verify wrong-branch and repeat reversals fail. Notifications already sent
+delivery, verify confirmation-created payments are voided and the parcel is to-be-paid again,
+verify earlier recipient and sender payments persist, and verify wrong-branch and repeat reversals
+fail. Also test an office confirmation from a status other than Awaiting Pickup, home delivery
+amount restoration, second-receiver/card restoration, a second confirmation after reversal, and
+credit adjustment with and without an allocation. For an already reversed
+parcel with a stale stored balance, run the single-parcel, audit-guarded SQL repair in
+`scripts/repair-as7749418g-to-be-paid.sql` for booking code `AS7749418G`. Run it with
+`bun run scripts/run-repair-as7749418g.ts`; the runner reads `DATABASE_URL` directly from `.env`.
+It recalculates the balance from active principal payments and does not void or create payments.
+Confirm its final SELECT shows the expected balance and the parcel list badge after refresh.
+The script is idempotent and must be run against the intended database only. Notifications already sent
 cannot be recalled.
+
+For future stale To Be Paid values, staff with `CanRepairParcelFinancialState` can open
+`/parcels/financial-repair`, search by exact booking or tracking code, review the current and
+calculated amounts, and apply a reasoned repair. The API scopes access to the user's company and
+branch, refuses currently delivered parcels, and recomputes the amount from parcel charge less all
+active principal payments. Only this financial field is changed; the repair is recorded in the
+parcel audit history. Extend this tool with explicit, separately previewed repair operations when
+other repair cases are identified; it does not permit arbitrary status changes or SQL.
+
+Production rollout for the pending parcel migrations: apply migrations `0073` and `0074`, run
+`bun run scripts/backfill-parcel-customer-names.ts --apply` to completion, then deploy the new
+server. Both migrations have short lock timeouts and leave existing parcel rows untouched.
 
 Branch pickup uses queues for parcel readiness, cashier collection, payment where required, and OTP confirmation when enabled.
 

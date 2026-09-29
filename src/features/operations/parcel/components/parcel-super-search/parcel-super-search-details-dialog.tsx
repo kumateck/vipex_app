@@ -119,6 +119,11 @@ export function ParcelSuperSearchDetailsDialog({
                   </div>
                 ) : null}
                 {detailRow('Booking', parcelDetails.parcel.bookingCode)}
+                {detailRow('Sender', parcelDetails.parcel.senderNameSnapshot)}
+                {detailRow('Receiver', parcelDetails.parcel.receiverNameSnapshot)}
+                {parcelDetails.parcel.secondReceiverNameSnapshot
+                  ? detailRow('Second Receiver', parcelDetails.parcel.secondReceiverNameSnapshot)
+                  : null}
                 {detailRow(
                   'Status',
                   PARCEL_STATUS_LABELS[parcelDetails.parcel.status] ?? parcelDetails.parcel.status,
