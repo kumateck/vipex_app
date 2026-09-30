@@ -527,6 +527,12 @@ record the call; repeated calls and changes after dispatch are rejected. QA: ass
 verify Awaiting Pickup and an uncalled badge; change pickup to home delivery and verify it leaves
 the queue as called; assign another parcel and mark it called without changing pickup; complete
 an uncalled delivery and verify it leaves the queue; reject a different caller or branch.
+Older call-center clients submit a two-field parcel update (`status` 5 or 7 plus
+`secondReceiverId`) when saving an outcome. The server routes that exact payload through the
+same authorized call recording action, so it sets `callCenterCalledAt` and removes the parcel
+from the active calling queue. Other parcel updates retain their normal behavior. QA: save
+pickup and delivery outcomes from an older client, verify the call audit and queue removal,
+then verify a status-only pickup update does not mark a call.
 
 ## Verification Scenarios
 

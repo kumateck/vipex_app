@@ -58,6 +58,13 @@ pickup queue, consignment receiving, discrepancy, and report responses temporari
 the linked customer's current name, and list search matches that name.
 Once a snapshot is populated, it takes precedence over later customer profile changes.
 
+Call-center clients should use `POST /v1/shipments/parcels/:id/call-center/contact` to record
+a call outcome. For older clients, `PATCH /v1/shipments/parcels/:id` with exactly `status` 5 or
+7 and `secondReceiverId` is handled as the equivalent call outcome. It requires call-center
+permission and an assignment to the caller at the destination branch. The call time is saved,
+the action is audited, and the parcel leaves the active calling queue. Other PATCH payloads
+remain ordinary parcel updates.
+
 `GET /v1/shipments/parcels/financial-repair/preview?search=<booking-or-tracking-code>` and
 `POST /v1/shipments/parcels/financial-repair/execute` require
 `CanRepairParcelFinancialState`. Both use the authenticated company and branch and only match an
