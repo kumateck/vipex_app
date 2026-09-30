@@ -53,6 +53,10 @@ recovered from current customer records. The capture trigger rejects a missing, 
 cross-company customer name on a new parcel or receiver change.
 Parcel list search matches the stored sender, main receiver, and second receiver names with
 case-insensitive partial matching; both total count and page rows use the same filter.
+For a legacy parcel whose name snapshot is null or blank, parcel list, detail, rider delivery,
+pickup queue, consignment receiving, discrepancy, and report responses temporarily display
+the linked customer's current name, and list search matches that name.
+Once a snapshot is populated, it takes precedence over later customer profile changes.
 
 `GET /v1/shipments/parcels/financial-repair/preview?search=<booking-or-tracking-code>` and
 `POST /v1/shipments/parcels/financial-repair/execute` require

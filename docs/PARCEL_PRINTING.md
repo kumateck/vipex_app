@@ -4,6 +4,13 @@
 
 The application prints parcel stickers and A5 customer documents from the browser and desktop application. Mobile receiver-paid creation can also open the phone's native print dialog for a parcel sticker. Printing is part of parcel creation, payment, receiving, and reprint workflows, but a successful print is not the authority for whether the parcel or payment exists.
 
+The mobile sticker header prints the Vipex company emblem beside the VIPEX PARCEL wordmark. Its
+image is embedded in the HTML passed to the native print dialog, so it does not depend on a
+network image request or printer access to application assets. If the shared logo PNG changes,
+regenerate `apps/mobile/src/features/parcel-create/services/sticker-logo-data-uri.json` from
+`src/assets/logo.png`. QA: print a mobile sticker and confirm the emblem appears in the preview
+and on paper for one and multiple copies; check that the QR code and header remain legible.
+
 ## Documents
 
 | Document                 | Purpose                                                                                                  |

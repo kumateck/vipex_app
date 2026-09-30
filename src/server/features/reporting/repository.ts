@@ -237,7 +237,7 @@ export async function listDeliveryPerformanceReportRowsRepo(input: {
       riderName: rider.fullname,
       destinationBranchId: parcels.destinationId,
       destinationBranchName: destinationBranch.name,
-      receiverName: parcels.receiverNameSnapshot,
+      receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       receiverPhone: receiver.telephone,
       trackingCode: parcels.trackingCode,
       bookingCode: parcels.bookingCode,
@@ -477,9 +477,9 @@ export async function listDailyCashierSalesTransactionsRepo(input: {
       trackingCode: parcels.trackingCode,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
-      senderName: parcels.senderNameSnapshot,
+      senderName: sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname}, '')`,
       senderTelephone: sender.telephone,
-      receiverName: parcels.receiverNameSnapshot,
+      receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       receiverTelephone: receiver.telephone,
       cashierType: payments.cashierType,
       method: payments.method,
@@ -537,9 +537,9 @@ export async function listDailyCashierSalesToBePaidRowsRepo(input: {
       bookingCode: parcels.bookingCode,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
-      senderName: parcels.senderNameSnapshot,
+      senderName: sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname}, '')`,
       senderTelephone: sender.telephone,
-      receiverName: parcels.receiverNameSnapshot,
+      receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       receiverTelephone: receiver.telephone,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       createdAt: parcels.createdAt,
@@ -1024,6 +1024,8 @@ export async function listParcelStatusReportRowsRepo(input: {
   to?: Date | null;
   branchId?: string | null;
 }) {
+  const sender = alias(customers, 'status_report_sender');
+  const receiver = alias(customers, 'status_report_receiver');
   return db
     .select({
       id: parcels.id,
@@ -1038,12 +1040,14 @@ export async function listParcelStatusReportRowsRepo(input: {
       sourceBranchName: sourceBranch.name,
       destinationBranchId: parcels.destinationId,
       destinationBranchName: destinationBranch.name,
-      senderName: parcels.senderNameSnapshot,
-      receiverName: parcels.receiverNameSnapshot,
+      senderName: sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname}, '')`,
+      receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       createdAt: parcels.createdAt,
       receivedAt: parcels.receivedAt,
     })
     .from(parcels)
+    .leftJoin(sender, eq(sender.id, parcels.senderId))
+    .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
     .leftJoin(sourceBranch, eq(sourceBranch.id, parcels.sourceId))
     .leftJoin(destinationBranch, eq(destinationBranch.id, parcels.destinationId))
     .where(
