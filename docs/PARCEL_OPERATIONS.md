@@ -253,6 +253,12 @@ Parcel search matches the stored sender, main receiver, and second receiver name
 insensitively and by partial name, as well as booking/tracking codes and customer phone
 numbers. Searching the name recorded on an older parcel returns that parcel after the
 customer profile is renamed. A newer name only matches parcels that recorded that name.
+If a legacy parcel has a null or blank name snapshot, parcel list, detail, search, rider
+delivery, pickup queue, consignment receiving, discrepancy, and report reads use the linked
+customer's current name until the snapshot is backfilled. A populated snapshot
+always takes precedence, so later customer edits do not change recorded parcel names.
+Mobile parcel search, rider, and receiving screens consume these server responses, so this
+fallback requires a server deployment but no mobile app update.
 
 Migration `0073_parcel_customer_name_snapshots` adds nullable columns and a trigger in a
 short transaction. It does not update historical rows or add a table-wide default. Its
@@ -279,6 +285,10 @@ missing sender, receiver, or applicable second receiver snapshot. Keep the old s
 until the backfill finishes; apply the migration before starting the new server.
 Search by each recorded sender, main receiver, and second receiver name, including partial
 case-insensitive matches, and confirm the result count matches the displayed rows.
+For a legacy parcel with a missing snapshot, verify the linked customer's name appears in
+list, detail, mobile rider and receiving screens, and reports, and returns in name search;
+after backfill, rename the customer and verify
+the parcel keeps the backfilled name.
 
 ### Return to source branch
 

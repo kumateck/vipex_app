@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, max } from 'drizzle-orm';
+import { and, asc, eq, isNull, max, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/db/config';
 import { customers, parcels, pickupQueues } from '@/db/schemas';
@@ -115,7 +115,7 @@ export async function listActivePickupQueuesForBranchRepo(
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       chargePsw: parcels.chargePsw,
       callSender: parcels.callSender,
-      receiverName: parcels.receiverNameSnapshot,
+      receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       receiverPhone: receiver.telephone,
     })
     .from(pickupQueues)
