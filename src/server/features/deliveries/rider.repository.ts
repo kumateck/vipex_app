@@ -125,7 +125,7 @@ export async function listDoorstepByRiderRepo(input: {
       ...riderDeliverySelection,
       destinationName: destination.name,
       receiverId: parcels.receiverId,
-      receiverName: parcels.receiverNameSnapshot,
+      receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       receiverPhone: receiver.telephone,
     })
     .from(deliveries)
@@ -154,7 +154,7 @@ export async function listDoorstepByBranchRepo(input: {
       ...riderDeliverySelection,
       destinationName: destination.name,
       receiverId: parcels.receiverId,
-      receiverName: parcels.receiverNameSnapshot,
+      receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       receiverPhone: receiver.telephone,
     })
     .from(deliveries)

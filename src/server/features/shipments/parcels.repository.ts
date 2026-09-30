@@ -215,6 +215,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   const s = alias(customers, 's');
   const r = alias(customers, 'r');
   const sr = alias(customers, 'sr');
+  const senderName = sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${s.fullname}, '')`;
+  const receiverName = sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${r.fullname}, '')`;
+  const secondReceiverName = sql<
+    string | null
+  >`coalesce(nullif(btrim(${parcels.secondReceiverNameSnapshot}), ''), ${sr.fullname})`;
   const rider = alias(users, 'rider');
   const picker = alias(users, 'picker');
   const callCenterAssignee = alias(users, 'call_center_assignee');
@@ -359,6 +364,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(bookings, eq(parcels.bookingId, bookings.id))
     .leftJoin(s, eq(parcels.senderId, s.id))
     .leftJoin(r, eq(parcels.receiverId, r.id))
+    .leftJoin(sr, eq(parcels.secondReceiverId, sr.id))
     .leftJoin(d, eq(parcels.destinationId, d.id))
     .leftJoin(ci, and(eq(ci.parcelId, parcels.id), isNull(ci.removedAt)))
     .leftJoin(cg, eq(cg.id, ci.consignmentId))
@@ -373,11 +379,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
                   or(
                     ilike(parcels.bookingCode, `%${p.search}%`),
                     ilike(parcels.trackingCode, `%${p.search}%`),
-                    ilike(parcels.senderNameSnapshot, `%${p.search}%`),
+                    ilike(senderName, `%${p.search}%`),
                     ilike(s.telephone, `%${p.search}%`),
                     ilike(s.telephone2, `%${p.search}%`),
-                    ilike(parcels.receiverNameSnapshot, `%${p.search}%`),
-                    ilike(parcels.secondReceiverNameSnapshot, `%${p.search}%`),
+                    ilike(receiverName, `%${p.search}%`),
+                    ilike(secondReceiverName, `%${p.search}%`),
                     ilike(r.telephone, `%${p.search}%`),
                     ilike(r.telephone2, `%${p.search}%`),
                   ),
@@ -399,11 +405,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
       senderId: parcels.senderId,
-      senderNameSnapshot: parcels.senderNameSnapshot,
+      senderNameSnapshot: senderName,
       receiverId: parcels.receiverId,
-      receiverNameSnapshot: parcels.receiverNameSnapshot,
+      receiverNameSnapshot: receiverName,
       secondReceiverId: parcels.secondReceiverId,
-      secondReceiverNameSnapshot: parcels.secondReceiverNameSnapshot,
+      secondReceiverNameSnapshot: secondReceiverName,
       status: parcels.status,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
@@ -445,13 +451,13 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       consignmentCode: cg.code,
       consignmentSerialForDay: cg.serialForDay,
       consignmentCreatedAt: cg.createdAt,
-      senderName: parcels.senderNameSnapshot,
+      senderName,
       senderPhone: s.telephone,
       senderPhone2: s.telephone2,
-      receiverName: parcels.receiverNameSnapshot,
+      receiverName,
       receiverPhone: r.telephone,
       receiverPhone2: r.telephone2,
-      secondReceiverName: parcels.secondReceiverNameSnapshot,
+      secondReceiverName,
       secondReceiverPhone: sr.telephone,
       secondReceiverPhone2: sr.telephone2,
       dropoffAddress: deliveries.dropoffAddress,
@@ -516,11 +522,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
                   or(
                     ilike(parcels.bookingCode, `%${p.search}%`),
                     ilike(parcels.trackingCode, `%${p.search}%`),
-                    ilike(parcels.senderNameSnapshot, `%${p.search}%`),
+                    ilike(senderName, `%${p.search}%`),
                     ilike(s.telephone, `%${p.search}%`),
                     ilike(s.telephone2, `%${p.search}%`),
-                    ilike(parcels.receiverNameSnapshot, `%${p.search}%`),
-                    ilike(parcels.secondReceiverNameSnapshot, `%${p.search}%`),
+                    ilike(receiverName, `%${p.search}%`),
+                    ilike(secondReceiverName, `%${p.search}%`),
                     ilike(r.telephone, `%${p.search}%`),
                     ilike(r.telephone2, `%${p.search}%`),
                   ),
@@ -540,6 +546,9 @@ export async function getParcelRepo(
   id: string,
   executor: DbExecutor = db,
 ): Promise<ParcelRow | null> {
+  const sender = alias(customers, 'parcel_sender');
+  const receiver = alias(customers, 'parcel_receiver');
+  const secondReceiver = alias(customers, 'parcel_second_receiver');
   const [row] = await executor
     .select({
       id: parcels.id,
@@ -551,11 +560,13 @@ export async function getParcelRepo(
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
       senderId: parcels.senderId,
-      senderNameSnapshot: parcels.senderNameSnapshot,
+      senderNameSnapshot: sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname}, '')`,
       receiverId: parcels.receiverId,
-      receiverNameSnapshot: parcels.receiverNameSnapshot,
+      receiverNameSnapshot: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       secondReceiverId: parcels.secondReceiverId,
-      secondReceiverNameSnapshot: parcels.secondReceiverNameSnapshot,
+      secondReceiverNameSnapshot: sql<
+        string | null
+      >`coalesce(nullif(btrim(${parcels.secondReceiverNameSnapshot}), ''), ${secondReceiver.fullname})`,
       status: parcels.status,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
@@ -586,6 +597,9 @@ export async function getParcelRepo(
       cashierSessionId: parcels.cashierSessionId,
     })
     .from(parcels)
+    .leftJoin(sender, eq(parcels.senderId, sender.id))
+    .leftJoin(receiver, eq(parcels.receiverId, receiver.id))
+    .leftJoin(secondReceiver, eq(parcels.secondReceiverId, secondReceiver.id))
     .where(eq(parcels.id, id))
     .limit(1);
   return row ?? null;
