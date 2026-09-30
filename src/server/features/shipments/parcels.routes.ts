@@ -43,6 +43,7 @@ import { ParcelStatus, UserStatus } from '@/db/schemas/enums';
 import { getBranchRepo } from '../branches/repository';
 import { saveBulkCallOutcomeSvc } from './parcel-bulk-call-outcome.service';
 import { recordCallCenterContactSvc } from './parcel-call-center-contact.service';
+import { legacyCallOutcomeFromParcelPatch } from './legacy-call-outcome';
 import { getHomeDeliveryReceiptSvc } from './home-delivery-receipt.service';
 import { reverseParcelDeliverySvc } from './parcel-delivery-reversal.service';
 import { returnParcelToSourceSvc } from './return-to-source.service';
@@ -588,8 +589,21 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
   )
   .patch(
     '/:id',
-    async ({ params, body, user }) =>
-      updateParcelCtrl(
+    async ({ params, body, user }) => {
+      const authUser = user as AuthUser;
+      const legacyOutcome = legacyCallOutcomeFromParcelPatch(body);
+      if (legacyOutcome) {
+        requirePermissions(PermissionKeys.CanReadCallCenterParcelStatus)({ user: authUser });
+        return recordCallCenterContactSvc({
+          parcelId: params.id,
+          companyId: authUser.companyId ?? '',
+          branchId: authUser.branchId ?? '',
+          actorUserId: authUser.sub,
+          outcome: legacyOutcome,
+          secondReceiverId: body.secondReceiverId,
+        });
+      }
+      return updateParcelCtrl(
         params.id,
         body as {
           status?: number;
@@ -612,8 +626,9 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
           receiverOtpVerificationToken?: string;
           receiverOtpTarget?: 'main' | 'second';
         },
-        (user as AuthUser | null)?.sub ?? null,
-      ),
+        authUser.sub,
+      );
+    },
     {
       params: t.Object({ id: UUID }),
       body: t.Object({
