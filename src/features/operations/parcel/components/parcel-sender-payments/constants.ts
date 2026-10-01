@@ -9,6 +9,8 @@ export const SENDER_PAYMENTS_DEFAULT_SORT: SortField[] = [
   { field: 'createdAt', direction: 'desc' },
 ];
 
+export const SENDER_PAYMENTS_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+
 export const EMPTY_META: PaginationMeta = {
   totalRecords: 0,
   totalPages: 1,
