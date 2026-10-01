@@ -104,6 +104,8 @@ export type ParcelSearchRow = {
   plannedToBePaidPsw: number;
   outstandingPrincipalPsw?: number;
   paidPrincipalPsw?: number;
+  senderPaidPrincipalPsw?: number;
+  receiverPaidPrincipalPsw?: number;
   outstandingDeliveryFeePsw?: number;
   method: number;
   shelfPickerStaffId: string | null;

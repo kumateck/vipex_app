@@ -68,6 +68,12 @@ All Parcels Super Search uses the same payment legend and places the matching co
 each Payment cell. A fully paid parcel shows only its **Paid** amount; a fully unpaid parcel shows
 only its **To be paid** amount; a partial parcel shows both amounts. Zero rows for the inapplicable
 payment side are omitted, while the declared parcel value remains visible for every result.
+For parcels currently delivered by office or rider, the Payment cell also shows who paid the
+principal: a blue `S` badge for a sender payment, a red `R` badge for a receiver payment, or both
+badges when both contributed. These badges use non-voided principal payment records, not the
+original payment plan; delivery fees, storage charges, and voided payments do not determine them.
+If a delivered parcel has no recorded principal payer, the cell shows `Paid by: -`. Non-delivered
+and returned parcels do not show payer badges. Badge titles spell out Sender and Receiver.
 
 Call-center assignment list and mutation failures display the message returned by the API, including
 validation, permission, and rate-limit messages. If the response cannot be decoded, the web client
@@ -579,6 +585,10 @@ be completed without collection.
   duplicate Source or Destination columns.
 - Super Search payment cells cover paid-only, unpaid-only, and partial balances, including the
   matching legend indicator and omission of inapplicable zero-value rows.
+- Super Search shows blue `S`, red `R`, or both on currently delivered parcels according to
+  non-voided sender/receiver principal payments. Check no-payment delivered, pre-delivery,
+  returned, voided-only, delivery-fee-only, and split-payment cases; none may claim a payer that
+  the active principal payment records do not support.
 - Mobile scan-to-receive with current tracking URL, bare code, legacy `QR-` payload, unreadable code, wrong branch, and non-in-transit status.
 - OTP enabled, disabled, expired, incorrect, alternate recipient, and alternate phone.
 - Pickup with and without receiver payment.

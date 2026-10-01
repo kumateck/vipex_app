@@ -35,7 +35,7 @@ import {
   parcelStorageWaivers,
   payments,
 } from '@/db/schemas';
-import { ParcelStatus, PaymentComponent } from '@/db/schemas/enums';
+import { ParcelStatus, Payer, PaymentComponent } from '@/db/schemas/enums';
 import type { SortField } from '@/server/types/pagination.types';
 import { extractScannedCode } from '@/server/utils/scan-code';
 import { incomingTransitSendDateBounds } from './incoming-transit-send-date';
@@ -172,6 +172,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     currentHolderWarehouseName: string | null;
     outstandingPrincipalPsw: number;
     paidPrincipalPsw: number;
+    senderPaidPrincipalPsw: number;
+    receiverPaidPrincipalPsw: number;
     outstandingDeliveryFeePsw: number;
   })[];
   totalRecords: number;
@@ -250,6 +252,22 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     from ${payments}
     where ${payments.parcelId} = ${parcels.id}
       and ${payments.component} = ${PaymentComponent.PRINCIPAL}
+      and ${payments.voidedAt} is null
+  ), 0)`;
+  const senderPaidPrincipalPsw = sql<number>`coalesce((
+    select sum(${payments.grossAmountPsw})
+    from ${payments}
+    where ${payments.parcelId} = ${parcels.id}
+      and ${payments.component} = ${PaymentComponent.PRINCIPAL}
+      and ${payments.payer} = ${Payer.SENDER}
+      and ${payments.voidedAt} is null
+  ), 0)`;
+  const receiverPaidPrincipalPsw = sql<number>`coalesce((
+    select sum(${payments.grossAmountPsw})
+    from ${payments}
+    where ${payments.parcelId} = ${parcels.id}
+      and ${payments.component} = ${PaymentComponent.PRINCIPAL}
+      and ${payments.payer} = ${Payer.RECIPIENT}
       and ${payments.voidedAt} is null
   ), 0)`;
   const paidDeliveryFeePsw = sql<number>`coalesce((
@@ -423,6 +441,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       outstandingPrincipalPsw: outstandingPrincipalPsw.mapWith(Number),
       paidPrincipalPsw: paidPrincipalPsw.mapWith(Number),
+      senderPaidPrincipalPsw: senderPaidPrincipalPsw.mapWith(Number),
+      receiverPaidPrincipalPsw: receiverPaidPrincipalPsw.mapWith(Number),
       outstandingDeliveryFeePsw:
         sql<number>`greatest(coalesce(${deliveries.chargePsw}, 0) - ${paidDeliveryFeePsw}, 0)`.mapWith(
           Number,

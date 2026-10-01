@@ -13,6 +13,11 @@ The API reference is split by domain:
 
 Public parcel tracking is documented in [Public parcel tracking API](PUBLIC_PARCEL_TRACKING_API.md).
 
+Parcel list/search responses include `senderPaidPrincipalPsw` and `receiverPaidPrincipalPsw`,
+non-voided principal totals by payer in pesewas. Both are zero when that payer has no principal
+payment. Super Search uses these fields only for delivered-parcel payer badges; see
+[Parcel operations](PARCEL_OPERATIONS.md). Delivery fees, storage, and voided payments are excluded.
+
 ## Current Mounted Roots
 
 `auth`, `users`, `branches`, `locations`, `warehouses`, `customers`, `cards`, `uploads`, `cashiers`, `shipments`, `payments`, `deliveries`, `pickup-queues`, `accounting`, `inventory`, `shifts`, `company-modules`, `module-workspace`, `procurement`, `fleet-transport`, `customer-wallet-credit`, `reconciliation`, `notification-hub`, `momo`, `self-service`, `desktop-updates`, `mobile-updates`, `communication`, `customer-service`, `help-assistant`, `executive-insights`, `fleet-anomaly-brief`, `operations-exceptions-brief`, `management-daily-brief`, `ai-chat`, `it-support`, `reports`, `audit`, `hr`, `payroll`, `rbac`, and `geolocation`.
