@@ -80,18 +80,48 @@ fee-only and combined balances, with no sender payment shown; void a fee payment
 new print reflects the increased balance; compare
 tax components against the active tax profile; print a current rider assignment and a completed
 history row; check browser and desktop A5 printing.
-For taxable principal payments, the A5 tax summary prints only the configured tax components from
-the payment response. The payment response carries the configured component keys, so an unset
-VAT, GETFUND, NHIL, or COVID component is not printed as a zero row.
+For taxable principal payments, the A5 tax summary prints the configured tax components from the
+payment response and any recorded nonzero component even if its configured-key list is absent.
+This applies to original and duplicate sender- and receiver-paid receipts. An unset VAT, GETFUND,
+NHIL, or COVID component is not printed as a zero row.
 If no company tax profile is configured, the payment service applies the default Ghana tax
 calculator.
 Paid sender and receiver receipt flows now require the payment response to include its tax
 breakdown before creating the receipt; they fail visibly instead of printing a paid receipt with
 silently substituted zero tax values.
 
+Web and desktop **Reprint Receipt** actions in Processed Parcels and Outgoing In Transit load the
+saved, non-voided sender principal payments before printing a paid A5 receipt. Their recorded
+gross and tax amounts are summed and used for the reprint; delivery fees and recipient payments are
+not included. The tax rows reflect the components actually charged on those payments, rather than
+the tax profile currently active. A reprint carries a conspicuous `DUPLICATE` label below the
+document title, including when the document is a to-be-paid acknowledgement note. The original
+receipt and sticker-only reprints are unchanged. If a paid receipt's recorded payment or tax data
+cannot be loaded, reprinting is cancelled with an error instead of producing a receipt with missing
+tax. A no-payment acknowledgement note can still be reprinted. The receipt's original issue date
+is retained; no new payment or tax calculation is saved.
+
+QA: Render the shared A5 template with sender- and receiver-paid data in original and duplicate
+mode, including a payment response without component keys, and compare each nonzero tax row with
+the payment record. The current Processed Parcels and Outgoing In Transit reprint actions cover
+sender principal payments; receiver-paid printing occurs in the cashier delivery flow. Reprint a
+sender-paid and partial-payment receipt and compare gross, net, and each tax row with
+the non-voided payment records. Confirm `DUPLICATE` appears in browser and desktop A5 output, but
+not on the original. Change the active tax profile and confirm an existing receipt still shows its
+recorded nonzero components. Reprint a to-be-paid note and confirm the label appears. Deny the tax
+request or remove the payment from a paid parcel and confirm no incomplete receipt prints. Verify
+sticker-only reprints still work.
+
 All A5 payment receipts and receiver acknowledgement notes print the authenticated cashier's name
 in the header. This applies to sender payment, receiver payment, to-be-paid acknowledgement, and
 home-delivery receipt flows; if no cashier identity is available, the header shows `-`.
+The shared A5 header embeds the company logo as an image data URI in the web build. Browser print
+previews and standalone desktop print jobs therefore do not need to resolve a separate logo URL.
+This applies to original sender- and receiver-paid receipts and to duplicate rendering of either
+payer type. QA: print original sender- and receiver-paid receipts in browser and desktop modes;
+reprint a sender receipt and verify the logo and `DUPLICATE` label. Verify duplicate-mode receiver
+rendering with the template test. A failed image load must not be mistaken for a successful print
+verification; check the preview or physical paper.
 
 Both sender payment receipts and receiver acknowledgement notes include these terms:
 

@@ -23,6 +23,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     storageChargeCedis = 0,
     amountInWords,
     cashierName,
+    duplicate,
     tax,
     qrValue,
     formatMoney,
@@ -57,7 +58,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     { label: 'NHIL', value: tax.nhil },
     { label: 'VAT', value: tax.vat },
     { label: 'COVID', value: tax.covid ?? 0 },
-  ].filter((row) => isConfigured(row.label));
+  ].filter((row) => isConfigured(row.label) || row.value !== 0);
 
   return (
     <div
@@ -77,6 +78,7 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
         title="Tax Invoice"
         subtitle={isPartialReceipt ? 'PARTIAL PAYMENT RECEIPT' : undefined}
         cashierName={cashierName}
+        duplicate={duplicate}
       />
 
       <div

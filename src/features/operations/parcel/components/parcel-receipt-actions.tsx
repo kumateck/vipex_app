@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useGetCurrentActiveSessionQuery } from '@/features/cashiers/api/cashiers.api';
 import { PAGE_STYLES } from '@/features/printing/constants/page-styles';
 import { useManagedReactPrint } from '@/features/printing/hooks/use-managed-react-print';
 import { useAuthStore } from '@/stores/auth-store';
-import { useStickerPrintModule } from '../hooks';
+import { useParcelInvoicePrintAction, useParcelReceiptTax, useStickerPrintModule } from '../hooks';
 import { buildParcelTrackingUrl } from '../utils/tracking-url';
 import {
   normalizeStickerCopies,
@@ -59,37 +59,8 @@ export function ParcelReceiptActions({
   const qrUrl = buildParcelTrackingUrl(data.trackingCode);
   const hasPaidAmount = (data.amountPaidCedis ?? data.senderPaidCedis) > 0;
   const hasPrintableReceipt = hasPaidAmount || data.receiverToPayCedis > 0;
-  const tax = useMemo(() => {
-    const amountPaid = data.amountPaidCedis ?? data.senderPaidCedis;
-    if (data.taxBreakdown) {
-      return {
-        principal: amountPaid,
-        net: amountPaid - data.taxBreakdown.taxTotalCedis,
-        vat: data.taxBreakdown.vatCedis,
-        getfund: data.taxBreakdown.getfundCedis,
-        nhil: data.taxBreakdown.nhilCedis,
-        covid: data.taxBreakdown.covidCedis ?? 0,
-        totalTax: data.taxBreakdown.taxTotalCedis,
-        taxComponentKeys: data.taxBreakdown.taxComponentKeys,
-        residual: 0,
-      };
-    }
-    // When tax breakdown is not available (e.g. reprints from consignment
-    // page or sticker-only printing), return zeroed-out tax values.
-    // Sticker printing never uses tax data. Invoice printing will show
-    // GHS 0.00 for tax components, which is acceptable for reprints.
-    // Callers should provide taxBreakdown via payment data when available.
-    return {
-      principal: amountPaid,
-      net: amountPaid,
-      vat: 0,
-      getfund: 0,
-      nhil: 0,
-      covid: 0,
-      totalTax: 0,
-      residual: 0,
-    };
-  }, [data.amountPaidCedis, data.senderPaidCedis, data.taxBreakdown]);
+  const missingPaidTax = hasPaidAmount && !data.taxBreakdown;
+  const tax = useParcelReceiptTax(data);
   const printInvoice = useManagedReactPrint({
     contentRef: invoiceRef,
     documentTitle: `invoice-${data.bookingCode}`,
@@ -157,6 +128,11 @@ export function ParcelReceiptActions({
     selectedStickerCopies,
   ]);
   const handlePrintBoth = useCallback(() => {
+    if (missingPaidTax) {
+      toast.error('Tax breakdown is required to print a paid receipt');
+      onAutoPrintComplete?.();
+      return;
+    }
     if (!canPrintForSession) {
       toast.error('Open a cashier session before printing receipts');
       return;
@@ -194,6 +170,7 @@ export function ParcelReceiptActions({
     handlePrintStickerOnly,
     hasPrintableReceipt,
     isStickerPrintEnabled,
+    missingPaidTax,
     onAutoPrintComplete,
     printInvoice,
     printInvoiceViaDesktop,
@@ -213,23 +190,14 @@ export function ParcelReceiptActions({
     stickerRef: desktopStickerRef,
     stickerCopies: selectedStickerCopies,
   });
-  const handlePrintInvoiceOnly = useCallback(() => {
-    if (!canPrintForSession) {
-      toast.error('Open a cashier session before printing receipts');
-      return;
-    }
-    if (canPrintInvoiceViaDesktop) {
-      void printInvoiceViaDesktop().then(() => onAutoPrintComplete?.());
-      return;
-    }
-    void printInvoice();
-  }, [
+  const handlePrintInvoiceOnly = useParcelInvoicePrintAction({
     canPrintForSession,
     canPrintInvoiceViaDesktop,
+    missingPaidTax,
     onAutoPrintComplete,
     printInvoice,
     printInvoiceViaDesktop,
-  ]);
+  });
   useEffect(() => {
     if (
       !autoPrint ||
@@ -288,6 +256,7 @@ export function ParcelReceiptActions({
           totalTax: tax.totalTax,
           taxComponentKeys: tax.taxComponentKeys,
         }}
+        isDuplicate={mode === 'reprint'}
       />
 
       <ParcelReceiptPrintControls

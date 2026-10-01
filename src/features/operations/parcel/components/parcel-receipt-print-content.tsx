@@ -28,6 +28,7 @@ type ParcelReceiptPrintContentProps = {
     totalTax: number;
     taxComponentKeys?: string[];
   };
+  isDuplicate?: boolean;
 };
 
 export function ParcelReceiptPrintContent({
@@ -42,6 +43,7 @@ export function ParcelReceiptPrintContent({
   amountPaidCedis,
   stickerCopies = 1,
   tax,
+  isDuplicate = false,
 }: ParcelReceiptPrintContentProps) {
   const copies = Math.max(Math.trunc(stickerCopies), 1);
   const payerTelephone = formatTelephonePair(
@@ -96,6 +98,7 @@ export function ParcelReceiptPrintContent({
             bookingCode={data.bookingCode}
             issuedAtLabel={formatDate(data.issuedAt)}
             cashierName={printedByName}
+            duplicate={isDuplicate}
             parcelDetails={data.parcelDetails}
             parcelContent={data.parcelContent}
             parcelValueCedis={data.parcelValueCedis}
