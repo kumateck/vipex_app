@@ -127,6 +127,7 @@ function buildPendingParcelFromDetails(
     parcelId: fallback.parcelId,
     bookingCode: details.parcel.bookingCode,
     trackingCode: details.parcel.trackingCode,
+    callSender: details.parcel.callSender,
     parcelDetails: details.parcel.parcelDetails,
     parcelContent: details.parcel.parcelContent,
     parcelValueCedis: Number(details.parcel.parcelValuePsw ?? 0) / 100,

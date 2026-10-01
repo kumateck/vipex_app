@@ -1,10 +1,11 @@
-import logoPng from '@/assets/logo.png';
+import stickerLogo from '../../../../../apps/mobile/src/features/parcel-create/services/sticker-logo-data-uri.json';
 
 type InvoiceA5HeaderProps = {
   issuedAtLabel: string;
   title: 'Tax Invoice' | 'ACKNOWLEDGEMENT NOTE' | 'HOME DELIVERY RECEIPT';
   subtitle?: string;
   cashierName?: string | null;
+  duplicate?: boolean;
 };
 
 export function InvoiceA5Header({
@@ -12,6 +13,7 @@ export function InvoiceA5Header({
   title,
   subtitle,
   cashierName,
+  duplicate = false,
 }: InvoiceA5HeaderProps) {
   return (
     <div
@@ -28,7 +30,7 @@ export function InvoiceA5Header({
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.6mm' }}>
             <img
-              src={logoPng}
+              src={stickerLogo.dataUri}
               alt="Vipex logo"
               style={{ width: '16mm', height: '16mm', objectFit: 'contain' }}
             />
@@ -42,6 +44,21 @@ export function InvoiceA5Header({
 
         <div style={{ textAlign: 'center', minWidth: '50mm' }}>
           <div style={{ fontSize: '6.8mm', fontWeight: 700 }}>{title}</div>
+          {duplicate ? (
+            <div
+              style={{
+                display: 'inline-block',
+                border: '0.35mm solid #111',
+                padding: '0.4mm 2mm',
+                marginTop: '0.5mm',
+                fontSize: '4.7mm',
+                fontWeight: 900,
+                letterSpacing: '0.08em',
+              }}
+            >
+              DUPLICATE
+            </div>
+          ) : null}
           <div style={{ fontSize: '5mm', marginTop: '0.4mm' }}>TIN #: C0003621138</div>
           {subtitle ? (
             <div style={{ marginTop: '0.5mm', fontSize: '4.4mm', fontWeight: 700 }}>{subtitle}</div>

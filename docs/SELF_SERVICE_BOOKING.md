@@ -38,6 +38,9 @@ A draft can contain:
 - Destination branch or location.
 - Parcel description, quantity, value, and other supported booking details.
 - The `callSender` operational instruction.
+- The customer-facing **CS — Call Sender before deliver to Receiver** option keeps the receiver's
+  name and telephone on the booking and sticker. It instructs staff to call the sender before
+  handover; it does not replace the receiver contact or block receiving.
 - The accepted terms version and server-recorded acceptance time.
 - Branch and session attribution.
 - Creation and expiry timestamps.
@@ -64,6 +67,8 @@ Authenticated agents use permission-controlled routes to:
 2. Open a draft and inspect its submitted details.
 3. Claim it so another agent cannot complete it concurrently.
 4. Confirm or add operational details and calculate the charge.
+   The officer can keep or change the draft's CS checkbox while entering the charge. Omitted CS
+   on older completion clients retains the customer's draft choice; an explicit `false` clears it.
 5. Choose payment responsibility: sender, receiver, or split.
 6. Choose settlement such as pay now or approved credit, including supported partial settlement.
 7. Complete the draft into the normal parcel workflow.
@@ -82,6 +87,7 @@ draft claims it before the completion form is shown. It supports sender, receive
 responsibility. Credit completion remains desktop-only until mobile exposes the same customer credit
 eligibility and cashier-session context. See
 [Mobile Frontline Workflows](MOBILE_FRONTLINE_WORKFLOWS.md).
+Both web and mobile completion forms expose the editable CS choice, prefilled from the draft.
 
 ## Draft States
 
@@ -127,6 +133,10 @@ Sticker copies must follow [Parcel Printing](PARCEL_PRINTING.md): the user enter
 - New and existing sender/receiver combinations.
 - Concurrent claim by two agents.
 - Sender, receiver, split, pay-now, credit, and partial settlement.
+- Customer selects or clears CS; web/mobile officers keep or change it during pricing; completed
+  parcel and portrait/landscape sticker reflect the final choice while showing receiver contacts.
+- Older completion requests without `callSender` retain the draft choice; explicit `false`
+  clears a previously selected choice. A failed completion does not alter the draft.
 - Cancellation, expiry, and claim recovery.
 - Successful completion followed by print failure and reprint.
 - Mobile read-only access, claim permission denial, pay-now sender/receiver/split completion, and credit-option absence.

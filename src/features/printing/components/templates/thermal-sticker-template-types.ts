@@ -14,6 +14,7 @@ export type ThermalStickerTemplateProps = {
   receiverName: string;
   receiverTelephone: string;
   receiverTelephone2?: string | null;
+  callSender?: boolean;
   destinationBranchName: string;
   destinationLocationName: string;
   toBePaidCedis?: number;
@@ -31,6 +32,7 @@ export type PreparedThermalStickerTemplateProps = {
   senderTelephones: string;
   receiverName: string;
   receiverTelephones: string;
+  callSender?: boolean;
   destinationBranchName: string;
   destinationLocationName: string;
   parcelContent?: string | null;

@@ -36,6 +36,7 @@ export function buildReceiverReceiptData({
   return {
     bookingCode: parcel.bookingCode,
     trackingCode: parcel.trackingCode,
+    callSender: parcel.callSender,
     parcelDetails: parcel.parcelDetails,
     parcelContent: parcel.parcelContent,
     parcelValueCedis: Number(parcel.parcelValuePsw ?? 0) / 100,

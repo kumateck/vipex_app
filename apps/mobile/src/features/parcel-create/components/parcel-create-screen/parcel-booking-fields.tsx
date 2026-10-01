@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { Switch, Text, View } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { BranchType } from '@mobile/constants/branch';
 import { PaymentResponsibility } from '@mobile/constants/payment';
@@ -23,6 +23,7 @@ type ParcelBookingFieldsProps = {
   parcelContent: string;
   parcelValue: string;
   charge: string;
+  callSender: boolean;
   paymentResponsibility: MobilePaymentResponsibility;
   printSticker: boolean;
   stickerCopies: string;
@@ -36,6 +37,7 @@ type ParcelBookingFieldsProps = {
   onParcelContentChange: (value: string) => void;
   onParcelValueChange: (value: string) => void;
   onChargeChange: (value: string) => void;
+  onCallSenderChange: (value: boolean) => void;
   onPaymentResponsibilityChange: (value: MobilePaymentResponsibility) => void;
 };
 
@@ -49,6 +51,7 @@ export function ParcelBookingFields({
   parcelContent,
   parcelValue,
   charge,
+  callSender,
   paymentResponsibility,
   printSticker,
   stickerCopies,
@@ -62,6 +65,7 @@ export function ParcelBookingFields({
   onParcelContentChange,
   onParcelValueChange,
   onChargeChange,
+  onCallSenderChange,
   onPaymentResponsibilityChange,
 }: ParcelBookingFieldsProps) {
   const { theme } = useAppearance();
@@ -134,6 +138,15 @@ export function ParcelBookingFields({
           placeholder="0.00"
           keyboardType="decimal-pad"
         />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <AppLabel>CS — Call Sender before deliver to Receiver</AppLabel>
+            <Text style={[mobileTextStyles.footnote, { color: theme.colors.textSubtle }]}>
+              The receiver name and number remain on the parcel sticker.
+            </Text>
+          </View>
+          <Switch value={callSender} onValueChange={onCallSenderChange} />
+        </View>
         <AppSelectField
           label="Payment Responsibility"
           value={String(paymentResponsibility)}

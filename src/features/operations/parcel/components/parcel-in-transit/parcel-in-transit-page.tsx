@@ -123,7 +123,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
   });
 
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
-  const outgoingPrint = useOutgoingParcelPrint(companyId);
+  const outgoingPrint = useOutgoingParcelPrint();
   const printOutgoing = outgoingPrint.print;
   const [stickerCopies, setStickerCopies] = useState(1);
   const [arrivalConfirmationParcel, setArrivalConfirmationParcel] =

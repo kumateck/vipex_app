@@ -19,6 +19,7 @@ describe('buildParcelCreateReceipt', () => {
       destinationLocationId: 'mkz8khnnkc6wpdnv61mrsxun',
       destinationLocationName: 'VIP Bus Terminal',
       parcelDetails: '1 bag',
+      callSender: true,
       parcelContent: 'Clothes',
       charge: '100',
       receiver: {
@@ -41,6 +42,7 @@ describe('buildParcelCreateReceipt', () => {
     });
 
     expect(receipt.parcels[0]?.destinationLocationName).toBe('VIP Bus Terminal');
+    expect(receipt.parcels[0]?.callSender).toBe(true);
     expect(JSON.stringify(receipt)).not.toContain('mkz8khnnkc6wpdnv61mrsxun');
   });
 });

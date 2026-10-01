@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Form,
   FormControl,
@@ -80,6 +81,7 @@ export function SelfServiceDraftCompletePage() {
           parcel.paymentResponsibility === 'SPLIT'
             ? sanitizeString(parcel.senderPartialPayment).replace(/,/g, '')
             : null,
+        callSender: parcel.callSender,
       }).unwrap();
       toast.success(`Booking created: ${response.parcels[0]?.trackingCode ?? response.bookingId}`);
       navigate('/parcels/self-service');
@@ -122,6 +124,28 @@ export function SelfServiceDraftCompletePage() {
               parcelChargeValue={parcelChargeValue}
             />
           </div>
+
+          <FormField
+            control={control}
+            name="parcels.0.callSender"
+            render={({ field }) => (
+              <FormItem className="flex items-start gap-3 rounded-md border p-4">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={(value) => field.onChange(value === true)}
+                  />
+                </FormControl>
+                <div>
+                  <FormLabel>CS — Call Sender before deliver to Receiver</FormLabel>
+                  <p className="text-xs text-muted-foreground">
+                    Keep or change the customer&apos;s choice. The receiver details remain on the
+                    sticker, with CS marked when selected.
+                  </p>
+                </div>
+              </FormItem>
+            )}
+          />
 
           <Card size="sm" className="border-muted/50 bg-muted/20 shadow-none">
             <CardHeader className="pb-2">

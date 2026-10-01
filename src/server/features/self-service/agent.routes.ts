@@ -52,6 +52,7 @@ export const selfServiceAgentRoutes = new Elysia({ name: 'self-service-agent' })
         senderPartialPaymentCedis: t.Optional(
           t.Union([t.Number({ minimum: 0 }), t.String(), t.Null()]),
         ),
+        callSender: t.Optional(t.Boolean()),
       }),
       beforeHandle: [
         requireAuth(),

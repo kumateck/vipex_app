@@ -3,6 +3,7 @@ import { ThermalStickerHeaderPanel } from './thermal-sticker-header-panel';
 import { landscapeReceiverNameFontSize } from './thermal-sticker-font-size.utils';
 import { InfoBlock, ParcelStack, SenderBlock } from './thermal-sticker-info-sections';
 import { PAYMENT_DUE_NOTE } from './thermal-sticker-copy';
+import { ThermalStickerCallSenderMark } from './thermal-sticker-call-sender-mark';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
 
 export function ThermalStickerLandscapeTemplate({
@@ -10,6 +11,7 @@ export function ThermalStickerLandscapeTemplate({
   senderTelephones,
   receiverName,
   receiverTelephones,
+  callSender,
   destinationBranchName,
   destinationLocationName,
   parcelContent,
@@ -46,7 +48,11 @@ export function ThermalStickerLandscapeTemplate({
           borderRight: '0.25mm solid #111',
         }}
       >
-        <ReceiverHeader receiverName={receiverName} receiverTelephones={receiverTelephones} />
+        <ReceiverHeader
+          receiverName={receiverName}
+          receiverTelephones={receiverTelephones}
+          callSender={callSender}
+        />
 
         <div
           style={{
@@ -127,15 +133,18 @@ export function ThermalStickerLandscapeTemplate({
 function ReceiverHeader({
   receiverName,
   receiverTelephones,
+  callSender,
 }: {
   receiverName: string;
   receiverTelephones: string;
+  callSender?: boolean;
 }) {
   const receiverNameFontSize = landscapeReceiverNameFontSize(receiverName);
 
   return (
     <header
       style={{
+        position: 'relative',
         minWidth: 0,
         display: 'grid',
         gridTemplateRows: 'auto minmax(0, 1fr) auto',
@@ -144,6 +153,7 @@ function ReceiverHeader({
         overflow: 'hidden',
       }}
     >
+      {callSender ? <ThermalStickerCallSenderMark /> : null}
       <div style={{ fontSize: '3mm', fontWeight: 700, textTransform: 'uppercase', lineHeight: 1 }}>
         Receiver
       </div>
