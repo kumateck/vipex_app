@@ -1,5 +1,5 @@
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AppScreen } from '@mobile/components/screen';
 import { useLocalSearchParams } from '@mobile/navigation/router-compat';
 import { useAuth } from '@mobile/providers/auth-provider';
@@ -11,12 +11,9 @@ import {
   createBookingWithParcels,
   createCustomer,
   findCustomersByTelephone,
-  listBranchOptions,
-  listLocationOptions,
 } from '@mobile/lib/api';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
 import { hapticError, hapticSuccess } from '@mobile/lib/haptics';
-import type { BranchOption, LocationOption } from '@mobile/types/booking';
 import { AppButton, MobileNoAccess } from '@mobile/components/ui/mobile';
 import { CustomerLookupCard } from '../../customer-lookup-card';
 import { isTenDigitPhone, useCustomerLookup } from '../../use-customer-lookup';
@@ -29,7 +26,7 @@ import {
 } from '../../mobile-parcel-payment-plan';
 import { ParcelBookingFields } from './parcel-booking-fields';
 import type { MobileSticker } from '../../services';
-import { useMobileStickerPrint } from '../../hooks';
+import { useMobileStickerPrint, useParcelBranchOptions } from '../../hooks';
 import { parseAmount } from '../../utils';
 import { StickerRetryActions } from './sticker-retry-actions';
 
@@ -63,63 +60,16 @@ function ParcelCreateForm({
   const [parcelContent, setParcelContent] = useState('');
   const [parcelValue, setParcelValue] = useState('');
   const [charge, setCharge] = useState('');
+  const [callSender, setCallSender] = useState(false);
   const [paymentResponsibility, setPaymentResponsibility] = useState<MobilePaymentResponsibility>(
     initialPaymentResponsibility,
   );
-  const [branchOptions, setBranchOptions] = useState<BranchOption[]>([]);
-  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
-  const [locationOptions, setLocationOptions] = useState<LocationOption[]>([]);
-  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const { branchOptions, isLoadingBranches, locationOptions, isLoadingLocations } =
+    useParcelBranchOptions(companyId, destinationBranchId, canCreate, isHeadOffice);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [printSticker, setPrintSticker] = useState(false);
   const [stickerCopies, setStickerCopies] = useState('1');
   const stickerPrint = useMobileStickerPrint();
-  useEffect(() => {
-    if (!companyId || !canCreate || isHeadOffice) return;
-    let cancelled = false;
-    setIsLoadingBranches(true);
-    withAuth((token) => listBranchOptions(token, { companyId }))
-      .then((options) => {
-        if (!cancelled) setBranchOptions(options);
-      })
-      .catch((error) => {
-        notifyError(
-          'Failed to load branches',
-          getMobileErrorMessage(error, '') || 'Please try again',
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingBranches(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [companyId, canCreate, isHeadOffice, withAuth]);
-
-  useEffect(() => {
-    if (!companyId || !destinationBranchId) {
-      setLocationOptions([]);
-      return;
-    }
-    let cancelled = false;
-    setIsLoadingLocations(true);
-    withAuth((token) => listLocationOptions(token, { companyId, branchId: destinationBranchId }))
-      .then((options) => {
-        if (!cancelled) setLocationOptions(options);
-      })
-      .catch((error) => {
-        notifyError(
-          'Failed to load locations',
-          getMobileErrorMessage(error, '') || 'Please try again',
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingLocations(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [companyId, destinationBranchId, withAuth]);
   if (!canCreate || isHeadOffice) {
     return (
       <AppScreen scrollable={false}>
@@ -144,6 +94,7 @@ function ParcelCreateForm({
     setParcelContent('');
     setParcelValue('');
     setCharge('');
+    setCallSender(false);
     setPaymentResponsibility(initialPaymentResponsibility);
     setPrintSticker(false);
     setStickerCopies('1');
@@ -212,6 +163,7 @@ function ParcelCreateForm({
               parcelContent: parcelContent.trim(),
               parcelValueCedis: valueAmount,
               chargeCedis: chargeAmount,
+              callSender,
               ...buildMobileParcelPaymentPlan(paymentResponsibility, chargeAmount),
             },
           ],
@@ -233,6 +185,7 @@ function ParcelCreateForm({
             locationOptions.find((location) => location.id === pickupLocationId)?.name ?? '-',
           parcelDetails: parcelDetails.trim(),
           amountCedis: paymentResponsibility === PaymentResponsibility.RECIPIENT ? chargeAmount : 0,
+          callSender,
           copies,
         };
         printCompleted = await stickerPrint.print(sticker);
@@ -271,6 +224,7 @@ function ParcelCreateForm({
         parcelContent={parcelContent}
         parcelValue={parcelValue}
         charge={charge}
+        callSender={callSender}
         paymentResponsibility={paymentResponsibility}
         printSticker={printSticker}
         stickerCopies={stickerCopies}
@@ -287,6 +241,7 @@ function ParcelCreateForm({
         onParcelContentChange={setParcelContent}
         onParcelValueChange={setParcelValue}
         onChargeChange={setCharge}
+        onCallSenderChange={setCallSender}
         onPaymentResponsibilityChange={(value) => {
           setPaymentResponsibility(value);
           if (value !== PaymentResponsibility.RECIPIENT) setPrintSticker(false);

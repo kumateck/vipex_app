@@ -35,6 +35,7 @@ export type CreateBookingWithParcelsInput = {
     plannedToBePaidCedis?: number;
     senderPaymentCedis?: number;
     paymentResponsibility?: number;
+    callSender?: boolean;
   }>;
 };
 

@@ -63,6 +63,7 @@ import { selfServicePublicRoutes } from './features/self-service/public.routes';
 import { selfServiceAgentRoutes } from './features/self-service/agent.routes';
 import { startSelfServiceDraftExpirySweep } from './features/self-service/expiry-sweep';
 import { publicTrackingRoutes } from './features/public-tracking/public-tracking.routes';
+import { receiptReprintRoutes } from './features/receipt-reprint/receipt-reprint.routes';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -76,6 +77,7 @@ export const app = new Elysia()
   .use(errorHandler)
   .use(health)
   .use(publicTrackingRoutes)
+  .use(receiptReprintRoutes)
   // Mount dev routes BEFORE any catch-all
   .use(isDev ? devMailRoutes : (a: Elysia) => a)
   .group('/v1', (v1) =>

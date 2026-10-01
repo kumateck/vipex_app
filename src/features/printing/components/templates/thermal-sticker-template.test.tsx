@@ -29,4 +29,21 @@ describe('ThermalStickerTemplate', () => {
       expect(markup).not.toContain(baseProps.bookingCode);
     },
   );
+
+  test.each(['portrait', 'landscape'] as const)(
+    'shows CS beside receiver details on a flagged %s sticker only',
+    (orientation) => {
+      const marked = renderToStaticMarkup(
+        <ThermalStickerTemplate {...baseProps} callSender orientation={orientation} />,
+      );
+      const unmarked = renderToStaticMarkup(
+        <ThermalStickerTemplate {...baseProps} orientation={orientation} />,
+      );
+
+      expect(marked).toContain('>CS</span>');
+      expect(marked).toContain('Receiver');
+      expect(marked).toContain('0500000000');
+      expect(unmarked).not.toContain('>CS</span>');
+    },
+  );
 });

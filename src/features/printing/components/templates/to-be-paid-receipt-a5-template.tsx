@@ -7,6 +7,7 @@ export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
   const {
     bookingCode,
     cashierName,
+    duplicate,
     destinationBranchName,
     destinationLocationName,
     issuedAtLabel,
@@ -44,6 +45,7 @@ export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
         issuedAtLabel={issuedAtLabel}
         title="ACKNOWLEDGEMENT NOTE"
         cashierName={cashierName}
+        duplicate={duplicate}
       />
 
       <div

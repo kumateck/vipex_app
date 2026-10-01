@@ -61,6 +61,7 @@ type ConfirmReceiverDeliveryArgs = {
         nhilCedis: number;
         covidCedis: number;
         taxTotalCedis: number;
+        taxComponentKeys?: string[];
       };
     } | null;
     storagePayment?: { amounts: { grossCedis: number } } | null;

@@ -33,6 +33,7 @@ export type CompleteSelfServiceDraftInput = {
   paymentResponsibility: 'SENDER' | 'RECEIVER' | 'SPLIT';
   senderSettlementMode: 'PAY_NOW' | 'CREDIT';
   senderPartialPaymentCedis?: number | string | null;
+  callSender?: boolean;
 };
 
 export type CompleteSelfServiceDraftResponse = {

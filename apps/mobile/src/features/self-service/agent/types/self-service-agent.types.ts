@@ -27,6 +27,7 @@ export type CompleteSelfServiceDraftInput = {
   paymentResponsibility: 'SENDER' | 'RECEIVER' | 'SPLIT';
   senderSettlementMode: 'PAY_NOW';
   senderPartialPaymentCedis: string | null;
+  callSender?: boolean;
 };
 
 export type CompleteSelfServiceDraftResponse = {

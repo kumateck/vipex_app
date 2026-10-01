@@ -35,6 +35,7 @@ export type ReceiptSummary = {
     parcelId?: string;
     bookingCode: string;
     trackingCode: string;
+    callSender?: boolean;
     parcelDetails: string;
     parcelContent?: string | null;
     parcelValueCedis?: number | null;

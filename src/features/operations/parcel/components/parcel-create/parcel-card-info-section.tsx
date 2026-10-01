@@ -89,7 +89,7 @@ export function ParcelCardInfoSection({
             )}
           />
           <span className="text-sm">
-            <span className="block font-medium">Call sender before delivery</span>
+            <span className="block font-medium">CS — Call Sender before deliver to Receiver</span>
             <span className="text-muted-foreground">
               Require staff to call the sender first before this parcel is given to the receiver.
             </span>

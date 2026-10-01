@@ -49,6 +49,11 @@ numbers; match a secondary number; use the same customer for both roles; submit 
 lookup finishes; test concurrent duplicate creation, two numbers owned by different customers,
 lookup failure, and a booking creator without customer-directory permission.
 
+Every mobile parcel creation form includes an optional CS switch: **Call Sender before deliver to
+Receiver**. The selected value is saved with the parcel and appears as `CS` on the mobile printed
+sticker while receiver name and telephone remain visible. Resetting the form clears the switch.
+QA: create with CS on and off, including the receiver-paid print path and sticker retry.
+
 For fully receiver-paid bookings, staff may tick **Complete & print sticker**. A sender or full
 cashier must have an active session, or must have assigned the staff member to that active session
 from web session controls or the mobile cashier dashboard. The server completes the parcel in the
@@ -71,6 +76,7 @@ An authorized completing agent can:
 1. Open an available draft; mobile claims it before displaying the completion form, matching the web
    workflow and preventing another agent from completing it concurrently.
 2. Confirm parcel details and the authoritative charge.
+   The officer may change the draft's CS switch, initially set to the customer's choice.
 3. Select sender, receiver, or split payment responsibility.
 4. Enter the sender portion for a split payment.
 5. Complete the draft through `POST /self-service/drafts/:id/complete`.

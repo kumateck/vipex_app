@@ -1,18 +1,17 @@
-import { useCallback, useMemo, useState } from 'react';
-import { useListTaxComponentsQuery } from '@/features/accounting/api';
-import { useLazyListPaymentsForParcelQuery, type ParcelSearchRow } from '../../api/parcel.api';
+import { useCallback, useState } from 'react';
+import { toast } from 'sonner';
+import { type ParcelSearchRow } from '../../api/parcel.api';
+import { useReceiptReprintTax } from '../../hooks';
 import type { ReceiptPrintData } from '../parcel-receipt.types';
 
-function toReceiptData(
-  parcel: ParcelSearchRow,
-  taxBreakdown?: ReceiptPrintData['taxBreakdown'],
-): ReceiptPrintData {
+function toReceiptData(parcel: ParcelSearchRow): ReceiptPrintData {
   const totalChargeCedis = Math.max(parcel.chargePsw ?? 0, 0) / 100;
   const receiverToPayCedis = Math.max(parcel.plannedToBePaidPsw ?? 0, 0) / 100;
   const senderPaidCedis = Math.max(totalChargeCedis - receiverToPayCedis, 0);
   return {
     bookingCode: parcel.bookingCode,
     trackingCode: parcel.trackingCode,
+    callSender: parcel.callSender,
     parcelDetails: parcel.parcelDetails,
     parcelContent: parcel.parcelContent,
     parcelValueCedis: Math.max(parcel.parcelValuePsw ?? 0, 0) / 100,
@@ -29,50 +28,31 @@ function toReceiptData(
     receiverToPayCedis,
     amountPaidCedis: senderPaidCedis,
     issuedAt: parcel.createdAt,
-    taxBreakdown,
   };
 }
 
-export function useOutgoingParcelPrint(companyId: string | null) {
+export function useOutgoingParcelPrint() {
   const [printData, setPrintData] = useState<ReceiptPrintData | null>(null);
   const [selection, setSelection] = useState<'sticker' | 'invoice'>('sticker');
   const [stickerCopies, setStickerCopies] = useState(1);
-  const [loadPayments] = useLazyListPaymentsForParcelQuery();
-  const { data: taxComponents = [] } = useListTaxComponentsQuery(
-    { companyId: companyId ?? '', active: true },
-    { skip: !companyId },
-  );
-  const taxComponentKeys = useMemo(
-    () => taxComponents.map((component) => component.key),
-    [taxComponents],
-  );
+  const loadReceiptReprintTax = useReceiptReprintTax();
 
   const print = useCallback(
     async (parcel: ParcelSearchRow, nextSelection: 'sticker' | 'invoice', copies = 1) => {
-      let taxBreakdown: ReceiptPrintData['taxBreakdown'];
+      let receipt = toReceiptData(parcel);
       if (nextSelection === 'invoice') {
         try {
-          const payments = await loadPayments({ parcelId: parcel.id }).unwrap();
-          const principal = payments.find((payment) => payment.component === 0);
-          if (principal && principal.taxTotalPsw > 0) {
-            taxBreakdown = {
-              vatCedis: principal.vatPsw / 100,
-              getfundCedis: principal.getfundPsw / 100,
-              nhilCedis: principal.nhilPsw / 100,
-              covidCedis: principal.covidPsw / 100,
-              taxTotalCedis: principal.taxTotalPsw / 100,
-              taxComponentKeys,
-            };
-          }
+          receipt = await loadReceiptReprintTax(parcel.id, receipt);
         } catch {
-          // Follow the consignment reprint fallback when payment details are unavailable.
+          toast.error('Could not load recorded tax breakdown; receipt reprint cancelled');
+          return;
         }
       }
       setSelection(nextSelection);
       setStickerCopies(copies);
-      setPrintData(toReceiptData(parcel, taxBreakdown));
+      setPrintData(receipt);
     },
-    [loadPayments, taxComponentKeys],
+    [loadReceiptReprintTax],
   );
 
   const clear = useCallback(() => setPrintData(null), []);

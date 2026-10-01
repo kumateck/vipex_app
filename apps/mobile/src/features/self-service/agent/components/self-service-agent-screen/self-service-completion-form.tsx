@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 import {
   AppButton,
   AppCard,
@@ -41,6 +41,12 @@ export function SelfServiceCompletionForm({
     'SENDER' | 'RECEIVER' | 'SPLIT'
   >('SENDER');
   const [senderPartialPaymentCedis, setSenderPartialPaymentCedis] = useState('');
+  const [callSenderSelection, setCallSenderSelection] = useState<{
+    draftId: string;
+    value: boolean;
+  } | null>(null);
+  const callSender =
+    callSenderSelection?.draftId === draft.id ? callSenderSelection.value : draft.callSender;
   const destinationId = draft.destinationBranchId ?? '';
   const valid = destinationId && parcelDetails.trim() && Number(chargeCedis) >= 0;
 
@@ -86,6 +92,18 @@ export function SelfServiceCompletionForm({
             keyboardType="decimal-pad"
             placeholder="0.00"
           />
+          <View style={styles.callSenderRow}>
+            <View style={styles.callSenderText}>
+              <AppLabel>CS — Call Sender before deliver to Receiver</AppLabel>
+              <Text style={[styles.text, { color: theme.colors.textMuted }]}>
+                The receiver details stay on the sticker. Officers may change this choice.
+              </Text>
+            </View>
+            <Switch
+              value={callSender}
+              onValueChange={(value) => setCallSenderSelection({ draftId: draft.id, value })}
+            />
+          </View>
           <AppSelectField
             label="Payment responsibility"
             value={paymentResponsibility}
@@ -120,6 +138,7 @@ export function SelfServiceCompletionForm({
                 senderSettlementMode: 'PAY_NOW',
                 senderPartialPaymentCedis:
                   paymentResponsibility === 'SPLIT' ? senderPartialPaymentCedis : null,
+                callSender,
               })
             }
           />
@@ -134,4 +153,6 @@ const styles = StyleSheet.create({
   title: { ...mobileTextStyles.title3 },
   text: { ...mobileTextStyles.subhead },
   spacer: { marginTop: mobileSpacing.xs },
+  callSenderRow: { flexDirection: 'row', alignItems: 'center', gap: mobileSpacing.sm },
+  callSenderText: { flex: 1 },
 });

@@ -58,6 +58,7 @@ export type SenderCashierParcel = {
   chargePsw: number;
   plannedToBePaidPsw: number;
   status: number;
+  callSender?: boolean;
   createdAt: string;
   currentHolderType?: number | null;
   currentHolderBranchId?: string | null;
@@ -104,6 +105,8 @@ export type ParcelSearchRow = {
   plannedToBePaidPsw: number;
   outstandingPrincipalPsw?: number;
   paidPrincipalPsw?: number;
+  senderPaidPrincipalPsw?: number;
+  receiverPaidPrincipalPsw?: number;
   outstandingDeliveryFeePsw?: number;
   method: number;
   shelfPickerStaffId: string | null;

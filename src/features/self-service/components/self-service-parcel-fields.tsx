@@ -97,10 +97,11 @@ export function SelfServiceParcelFields({
             />
             <span className="text-sm text-white">
               <Label htmlFor="self-service-call-sender" className="font-semibold text-white">
-                Call me before delivery
+                Call Sender before deliver to Receiver (CS)
               </Label>
               <span className="mt-1 block leading-5 text-white/45">
-                We&apos;ll call you before this parcel is given to the receiver.
+                Your receiver&apos;s name and number will still appear on the parcel. The CS mark
+                tells staff to call you before handing it to the receiver.
               </span>
             </span>
           </label>
