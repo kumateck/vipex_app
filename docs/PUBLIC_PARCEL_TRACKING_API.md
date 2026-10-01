@@ -26,6 +26,10 @@ are never returned.
 
 An unknown or deleted tracking code returns `404` with the standard API error shape. The
 endpoint is still covered by the global rate limiter because it is public and unauthenticated.
+The API accepts requests from `https://vipexparcels.com` and `https://vipexparcel.com` for the
+public tracking pages. The current legacy client sends `Access-Control-Allow-Origin` as a request
+header; the API accepts that header for compatibility, although new clients should omit it because
+it belongs in the server response.
 
 ## QA scenarios
 
