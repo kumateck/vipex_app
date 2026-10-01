@@ -4,6 +4,14 @@
 
 The application prints parcel stickers and A5 customer documents from the browser and desktop application. Mobile receiver-paid creation can also open the phone's native print dialog for a parcel sticker. Printing is part of parcel creation, payment, receiving, and reprint workflows, but a successful print is not the authority for whether the parcel or payment exists.
 
+When `callSender` is true, portrait and landscape parcel stickers print a prominent black-on-white
+`CS` mark beside the receiver block. Receiver name and phone remain visible. The mark is present
+on original and reprinted stickers, in browser/desktop printing and the mobile to-be-paid print
+dialog. Unflagged parcels have no CS mark. It means call the sender before handing the parcel to
+the receiver; it does not remove the receiver contact or change payment status. QA: print and
+reprint flagged/unflagged parcels in both orientations, check copies and receiver details, and
+verify mobile printed HTML matches the stored final CS choice.
+
 The mobile sticker header prints the Vipex company emblem beside the VIPEX PARCEL wordmark. Its
 image is embedded in the HTML passed to the native print dialog, so it does not depend on a
 network image request or printer access to application assets. If the shared logo PNG changes,
@@ -115,8 +123,10 @@ sticker-only reprints still work.
 All A5 payment receipts and receiver acknowledgement notes print the authenticated cashier's name
 in the header. This applies to sender payment, receiver payment, to-be-paid acknowledgement, and
 home-delivery receipt flows; if no cashier identity is available, the header shows `-`.
-The shared A5 header embeds the company logo as an image data URI in the web build. Browser print
-previews and standalone desktop print jobs therefore do not need to resolve a separate logo URL.
+The shared A5 header uses the same checked-in logo data URI as mobile stickers. Bun and web builds
+can both resolve this JSON asset without a bundler-specific image query. Browser print previews and
+standalone desktop print jobs therefore do not need to resolve a separate logo URL. If the source
+logo changes, regenerate the shared data URI from `src/assets/logo.png` before building.
 This applies to original sender- and receiver-paid receipts and to duplicate rendering of either
 payer type. QA: print original sender- and receiver-paid receipts in browser and desktop modes;
 reprint a sender receipt and verify the logo and `DUPLICATE` label. Verify duplicate-mode receiver

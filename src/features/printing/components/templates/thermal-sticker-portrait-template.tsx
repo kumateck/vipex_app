@@ -1,6 +1,7 @@
 import logoPng from '@/assets/logo.png';
 import { BrandedQrCode } from '@/components/ui/branded-qr-code';
 import { PAYMENT_DUE_NOTE } from './thermal-sticker-copy';
+import { ThermalStickerCallSenderMark } from './thermal-sticker-call-sender-mark';
 import { portraitReceiverNameFontSize } from './thermal-sticker-font-size.utils';
 import { DestinationRow } from './thermal-sticker-portrait-sections';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
@@ -12,6 +13,7 @@ export function ThermalStickerPortraitTemplate({
   senderTelephones,
   receiverName,
   receiverTelephones,
+  callSender,
   destinationBranchName,
   destinationLocationName,
   parcelDetails,
@@ -104,6 +106,7 @@ export function ThermalStickerPortraitTemplate({
 
       <section
         style={{
+          position: 'relative',
           border: '0.35mm solid #111',
           display: 'grid',
           gridTemplateRows: 'auto minmax(0, 1fr) auto',
@@ -113,6 +116,7 @@ export function ThermalStickerPortraitTemplate({
           padding: '0.3mm 1mm',
         }}
       >
+        {callSender ? <ThermalStickerCallSenderMark /> : null}
         <div
           style={{
             fontSize: '1.8mm',

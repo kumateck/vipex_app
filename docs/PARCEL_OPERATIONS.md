@@ -110,7 +110,9 @@ Important rules:
 - Sender-paid creation requires an eligible cashier and an active cashier session when payment is collected immediately.
 - Credit settlement is available only when account and permission rules allow it.
 - Multi-parcel creation processes each submitted parcel and produces separate tracking and print outcomes.
-- The `callSender` option follows the parcel into receiving workflows when staff must contact the sender.
+- The `callSender` option is available in web and mobile parcel creation and self-service officer
+  completion. It follows the parcel into receiving workflows and prints as `CS` on stickers while
+  preserving receiver name and phone. Staff must call the sender before receiver handover.
 
 ## Creation Print Decision
 

@@ -93,6 +93,7 @@ function toReceiptPrintData(
   return {
     bookingCode: parcel.bookingCode ?? '-',
     trackingCode: parcel.trackingCode ?? '-',
+    callSender: parcel.callSender,
     parcelDetails: parcel.parcelDetails ?? '-',
     parcelContent: parcel.parcelContent ?? null,
     parcelValueCedis:

@@ -1,4 +1,4 @@
-import logoPng from '@/assets/logo.png?inline';
+import stickerLogo from '../../../../../apps/mobile/src/features/parcel-create/services/sticker-logo-data-uri.json';
 
 type InvoiceA5HeaderProps = {
   issuedAtLabel: string;
@@ -30,7 +30,7 @@ export function InvoiceA5Header({
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.6mm' }}>
             <img
-              src={logoPng}
+              src={stickerLogo.dataUri}
               alt="Vipex logo"
               style={{ width: '16mm', height: '16mm', objectFit: 'contain' }}
             />

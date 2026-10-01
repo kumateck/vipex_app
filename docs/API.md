@@ -13,6 +13,12 @@ The API reference is split by domain:
 
 Public parcel tracking is documented in [Public parcel tracking API](PUBLIC_PARCEL_TRACKING_API.md).
 
+`POST /v1/self-service/drafts/:id/complete` accepts optional boolean `callSender`. The completed
+parcel uses that explicit officer choice; if omitted, it keeps the customer's draft value. The
+existing completion permission, branch ownership, state, and charge validation still apply. Web
+and mobile officer clients expose this checkbox; the public draft form remains separate. See
+[Self-Service Booking](SELF_SERVICE_BOOKING.md).
+
 Parcel list/search responses include `senderPaidPrincipalPsw` and `receiverPaidPrincipalPsw`,
 non-voided principal totals by payer in pesewas. Both are zero when that payer has no principal
 payment. Super Search uses these fields only for delivered-parcel payer badges; see

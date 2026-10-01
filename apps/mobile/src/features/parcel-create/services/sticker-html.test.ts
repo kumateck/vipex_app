@@ -33,4 +33,12 @@ describe('mobile to-be-paid sticker', () => {
   test.each([0, -1, 1.5, Number.POSITIVE_INFINITY])('rejects invalid copy count', (copies) => {
     expect(() => buildMobileStickerHtml({ ...sticker, copies })).toThrow();
   });
+
+  test('marks CS on each copy without hiding receiver details', () => {
+    const html = buildMobileStickerHtml({ ...sticker, callSender: true });
+    expect(html.match(/<span class="cs">CS<\/span>/g)).toHaveLength(2);
+    expect(html).toContain('&lt;Ben&gt;');
+    expect(html).toContain('0550000000');
+    expect(buildMobileStickerHtml(sticker)).not.toContain('<span class="cs">CS</span>');
+  });
 });

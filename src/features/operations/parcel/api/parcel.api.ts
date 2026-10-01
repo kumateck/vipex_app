@@ -58,6 +58,7 @@ export type SenderCashierParcel = {
   chargePsw: number;
   plannedToBePaidPsw: number;
   status: number;
+  callSender?: boolean;
   createdAt: string;
   currentHolderType?: number | null;
   currentHolderBranchId?: string | null;

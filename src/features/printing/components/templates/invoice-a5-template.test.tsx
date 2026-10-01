@@ -37,7 +37,7 @@ describe('A5 receipt reprint', () => {
   test('marks duplicate and prints recorded tax components', () => {
     const html = renderToStaticMarkup(<InvoiceA5Template {...receipt} duplicate />);
     expect(html).toContain('DUPLICATE');
-    expect(html).toMatch(/<img src="[^"]+" alt="Vipex logo"/);
+    expect(html).toMatch(/<img src="data:image\/png;base64,[^"]+" alt="Vipex logo"/);
     expect(html).toContain('GETFUND:');
     expect(html).toContain('NHIL:');
     expect(html).toContain('VAT:');
@@ -48,7 +48,7 @@ describe('A5 receipt reprint', () => {
   test('does not mark an original receipt', () => {
     const html = renderToStaticMarkup(<InvoiceA5Template {...receipt} />);
     expect(html).not.toContain('DUPLICATE');
-    expect(html).toMatch(/<img src="[^"]+" alt="Vipex logo"/);
+    expect(html).toMatch(/<img src="data:image\/png;base64,[^"]+" alt="Vipex logo"/);
   });
 
   test('prints recorded sender tax when component keys are absent', () => {
@@ -75,7 +75,7 @@ describe('A5 receipt reprint', () => {
     const duplicate = renderToStaticMarkup(<InvoiceA5Template {...receiverReceipt} duplicate />);
     for (const html of [original, duplicate]) {
       expect(html).toContain('Receiver Info');
-      expect(html).toMatch(/<img src="[^"]+" alt="Vipex logo"/);
+      expect(html).toMatch(/<img src="data:image\/png;base64,[^"]+" alt="Vipex logo"/);
       expect(html).toContain('GETFUND:');
       expect(html).toContain('NHIL:');
       expect(html).toContain('VAT:');

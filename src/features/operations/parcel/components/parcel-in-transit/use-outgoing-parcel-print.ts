@@ -11,6 +11,7 @@ function toReceiptData(parcel: ParcelSearchRow): ReceiptPrintData {
   return {
     bookingCode: parcel.bookingCode,
     trackingCode: parcel.trackingCode,
+    callSender: parcel.callSender,
     parcelDetails: parcel.parcelDetails,
     parcelContent: parcel.parcelContent,
     parcelValueCedis: Math.max(parcel.parcelValuePsw ?? 0, 0) / 100,

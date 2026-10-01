@@ -64,6 +64,7 @@ export function ParcelReceiptPrintContent({
     receiverName: data.receiverName,
     receiverTelephone: data.receiverTelephone,
     receiverTelephone2: data.receiverTelephone2,
+    callSender: data.callSender,
     destinationBranchName: data.destinationBranchName,
     destinationLocationName: data.destinationLocationName,
     toBePaidCedis: data.receiverToPayCedis > 0 ? data.receiverToPayCedis : undefined,
