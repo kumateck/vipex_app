@@ -17,6 +17,7 @@ This directory is the canonical documentation set for the current Vipex applicat
 ## Operations and Parcels
 
 - [Parcel operations](PARCEL_OPERATIONS.md)
+- [Public parcel tracking API](PUBLIC_PARCEL_TRACKING_API.md)
 - [Parcel printing](PARCEL_PRINTING.md)
 - [Cashier, payments, and shifts](CASHIER_PAYMENTS_AND_SHIFTS.md)
 - [Parcel internal transfers](PARCEL_INTERNAL_TRANSFERS.md)

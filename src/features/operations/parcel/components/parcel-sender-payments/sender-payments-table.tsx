@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { EllipsisVertical } from 'lucide-react';
+import { EllipsisVertical, RefreshCw } from 'lucide-react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { ParcelStatus } from '@/db/schemas/enums';
+import { Spinner } from '@/components/ui/spinner';
 import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import type { SenderCashierParcel } from '../../api/parcel.api';
 import { EMPTY_META, PAYMENT_TYPE_LEGEND, SENDER_PAYMENTS_DEFAULT_SORT } from './constants';
@@ -27,6 +28,7 @@ type SenderPaymentsTableProps = {
   data: SenderCashierParcel[];
   meta: PaginationMeta | undefined;
   loading: boolean;
+  isRefreshing: boolean;
   companyId: string | null;
   branchId: string | null;
   canDeleteParcel: boolean;
@@ -38,6 +40,7 @@ type SenderPaymentsTableProps = {
       status?: number | null;
     }>,
   ) => void;
+  onRefresh: () => void;
   onOpenCollectPayment: (parcel: SenderCashierParcel) => void;
   onOpenDeleteParcel: (parcel: SenderCashierParcel) => void;
   onOpenReconciliationCase: (parcel: SenderCashierParcel) => void;
@@ -47,11 +50,13 @@ export function SenderPaymentsTable({
   data,
   meta,
   loading,
+  isRefreshing,
   companyId,
   branchId,
   canDeleteParcel,
   canRequestReconciliation,
   onRequestChange,
+  onRefresh,
   onOpenCollectPayment,
   onOpenDeleteParcel,
   onOpenReconciliationCase,
@@ -171,6 +176,15 @@ export function SenderPaymentsTable({
               <CardDescription>
                 Parcels created at your branch and ready for sender payment collection.
               </CardDescription>
+              {isRefreshing ? (
+                <div
+                  className="text-muted-foreground mt-2 inline-flex items-center gap-1.5 text-xs"
+                  role="status"
+                >
+                  <Spinner className="size-3" />
+                  Refreshing payments...
+                </div>
+              ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {PAYMENT_TYPE_LEGEND.map((item) => (
@@ -179,6 +193,17 @@ export function SenderPaymentsTable({
                   <span className="text-muted-foreground text-xs">{item.label}</span>
                 </div>
               ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                aria-label="Refresh sender payments"
+              >
+                <RefreshCw className={isRefreshing ? 'animate-spin' : undefined} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </Button>
             </div>
           </div>
         </CardHeader>

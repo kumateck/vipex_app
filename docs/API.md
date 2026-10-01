@@ -11,6 +11,8 @@ The API reference is split by domain:
 - [Platform, communication, and intelligence](api/PLATFORM_AND_INTELLIGENCE.md)
 - [Reporting](api/REPORTING.md)
 
+Public parcel tracking is documented in [Public parcel tracking API](PUBLIC_PARCEL_TRACKING_API.md).
+
 ## Current Mounted Roots
 
 `auth`, `users`, `branches`, `locations`, `warehouses`, `customers`, `cards`, `uploads`, `cashiers`, `shipments`, `payments`, `deliveries`, `pickup-queues`, `accounting`, `inventory`, `shifts`, `company-modules`, `module-workspace`, `procurement`, `fleet-transport`, `customer-wallet-credit`, `reconciliation`, `notification-hub`, `momo`, `self-service`, `desktop-updates`, `mobile-updates`, `communication`, `customer-service`, `help-assistant`, `executive-insights`, `fleet-anomaly-brief`, `operations-exceptions-brief`, `management-daily-brief`, `ai-chat`, `it-support`, `reports`, `audit`, `hr`, `payroll`, `rbac`, and `geolocation`.
