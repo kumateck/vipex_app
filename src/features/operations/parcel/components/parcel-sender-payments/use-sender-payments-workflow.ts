@@ -12,7 +12,7 @@ import {
   useRequestParcelReconciliationCaseMutation,
   useSoftDeleteParcelMutation,
 } from '../../api/parcel.api';
-import { SENDER_PAYMENTS_DEFAULT_SORT } from './constants';
+import { SENDER_PAYMENTS_DEFAULT_SORT, SENDER_PAYMENTS_REFRESH_INTERVAL_MS } from './constants';
 import { useReconciliationRequestState } from './use-reconciliation-request-state';
 import { useSenderPaymentCollection } from './use-sender-payment-collection';
 import { toDataUrl } from './utils';
@@ -52,8 +52,9 @@ export function useSenderPaymentsWorkflow() {
     }));
   }, [branchId, companyId]);
 
-  const { data, isLoading, refetch } = useListSenderCashierParcelsQuery(query, {
+  const { data, isLoading, isFetching, refetch } = useListSenderCashierParcelsQuery(query, {
     skip: !companyId || !branchId,
+    pollingInterval: SENDER_PAYMENTS_REFRESH_INTERVAL_MS,
   });
   const [softDeleteParcel, { isLoading: isDeletingParcel }] = useSoftDeleteParcelMutation();
   const [requestReconciliationCase, { isLoading: isRequestingReconciliation }] =
@@ -151,6 +152,8 @@ export function useSenderPaymentsWorkflow() {
     canRequestReconciliation,
     data,
     isLoading,
+    isRefreshing: isFetching,
+    refresh: refetch,
     ...collection,
     deleteTargetParcel,
     deleteReason,

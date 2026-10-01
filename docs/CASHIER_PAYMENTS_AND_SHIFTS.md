@@ -75,6 +75,15 @@ Atomic collection operations must not leave a successful payment with a failed p
 
 Sender payment supports manual and automated MTN MoMo paths where configured. Automated collection must preserve provider references and an unambiguous pending, successful, failed, or timed-out result. A timeout must not be treated as failure if the provider status is still unknown; reconciliation must be possible.
 
+## Sender payment list refresh
+
+The web Sender Cashier Payments page polls for new or changed parcels every 15 minutes. Users
+can also use the **Refresh** button to request an immediate update. During an initial load,
+scheduled poll, or manual refresh, the page keeps the current rows visible and shows a
+`Refreshing payments...` indicator plus a spinning refresh button; the button is disabled until
+the request finishes. This applies to the web page only; mobile and desktop clients retain their
+existing refresh behavior.
+
 ## Printing
 
 Sender payment and parcel creation can initiate sticker and A5 printing. Sticker quantity follows the unlimited positive-whole-number rule in [Parcel Printing](PARCEL_PRINTING.md). The payment transaction must not be rolled back merely because printing fails.
