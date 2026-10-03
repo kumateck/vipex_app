@@ -13,6 +13,7 @@ describe('rider assignment list document', () => {
         parcelDetails: 'Box',
         receiverName: 'Ada',
         receiverPhone: '0500000000',
+        dropoffAddress: 'House 12, Adum Road, Kumasi',
         outstandingPrincipalPsw: 1200,
         deliveryFeePsw: 500,
         deliveryStatus: 'Dispatched',
@@ -47,6 +48,45 @@ describe('rider assignment list document', () => {
     expect(html).toContain('KS9612493L');
     expect(html).toContain('GHS 20.00');
     expect(html).toContain('GHS 8.00');
+  });
+
+  test('prints booking code, home address, and a blank delivered checkbox per parcel', () => {
+    const rows = [
+      {
+        deliveryId: 'delivery-1',
+        bookingCode: 'KS9612492L',
+        trackingCode: 'TRACK-1',
+        dropoffAddress: 'House 12, Adum Road, Kumasi',
+        deliveryFeePsw: 500,
+        plannedToBePaidPsw: 0,
+        deliveryStatus: 'Dispatched',
+      },
+      {
+        deliveryId: 'delivery-2',
+        bookingCode: 'KS9612493L',
+        trackingCode: 'TRACK-2',
+        dropoffAddress: null,
+        deliveryFeePsw: 300,
+        plannedToBePaidPsw: 0,
+        deliveryStatus: 'Dispatched',
+      },
+    ] as RiderDoorstepRecord[];
+
+    const html = renderToStaticMarkup(
+      <RiderAssignmentListDocument
+        payload={{ riderName: 'Kwame Rider', mode: 'all', rows, printedAt: '2026-09-29T12:00:00Z' }}
+      />,
+    );
+
+    expect(html).toContain('Booking Code');
+    expect(html).toContain('Home Address');
+    expect(html).toContain('House 12, Adum Road, Kumasi');
+    expect(html).toContain('Delivered');
+    expect(html.match(/rider-assignment-list-checkbox/g)).toHaveLength(2);
+    expect(html).not.toContain('TRACK-1');
+    expect(html).not.toContain('Tracking');
+    expect(html).not.toContain('Status');
+    expect(html).not.toContain('Dispatched');
   });
 
   test('includes assignments beyond the table default page size', () => {

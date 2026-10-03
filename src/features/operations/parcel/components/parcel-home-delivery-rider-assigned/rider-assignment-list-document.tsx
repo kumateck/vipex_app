@@ -30,38 +30,38 @@ export function RiderAssignmentListDocument({
         <thead>
           <tr>
             <th>#</th>
-            <th>Booking / Tracking</th>
+            <th>Booking Code</th>
             <th>Parcel Details</th>
             <th>Receiver / Phone</th>
+            <th>Home Address</th>
             <th>To Be Paid</th>
             <th>Delivery Fee</th>
-            <th>Status</th>
+            <th className="rider-assignment-list-check">Delivered</th>
           </tr>
         </thead>
         <tbody>
           {payload.rows.map((row, index) => (
             <tr key={row.deliveryId}>
               <td>{index + 1}</td>
-              <td>
-                {row.bookingCode}
-                <br />
-                {row.trackingCode}
-              </td>
+              <td>{row.bookingCode}</td>
               <td>{row.parcelDetails || row.parcelContent || '-'}</td>
               <td>
                 {row.receiverName ?? '-'}
                 <br />
                 {row.receiverPhone ?? '-'}
               </td>
+              <td>{row.dropoffAddress?.trim() || '-'}</td>
               <td>{formatRiderListMoney(row.outstandingPrincipalPsw ?? row.plannedToBePaidPsw)}</td>
               <td>{formatRiderListMoney(row.deliveryFeePsw)}</td>
-              <td>{row.deliveryStatus}</td>
+              <td className="rider-assignment-list-check">
+                <span className="rider-assignment-list-checkbox" aria-label="Delivered checkbox" />
+              </td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr>
-            <th colSpan={4}>Total</th>
+            <th colSpan={5}>Total</th>
             <th>{formatRiderListMoney(totals.principalPsw)}</th>
             <th>{formatRiderListMoney(totals.deliveryFeePsw)}</th>
             <th />

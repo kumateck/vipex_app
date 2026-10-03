@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { formatDateTime } from '@/lib/dates';
+import { canEditSecondReceiver } from '@/shared/shipments/second-receiver';
 import { CallCenterAssignmentPaymentCell } from '../parcel-call-center-assignment/call-center-assignment-payment-cell';
 import type { ParcelRow } from './shelf-picker-update-types';
 
@@ -38,12 +39,16 @@ const getStatusVariant = (status: number) => {
 export function useShelfPickerUpdateColumns({
   onOpenUpdateDialog,
   onEdit,
+  onEditSecondReceiver,
+  canManageSecondReceiver,
   onRequestDelivery,
   isRequestingDelivery,
   canRequestDelivery,
 }: {
   onOpenUpdateDialog: (parcel: ParcelRow) => void;
   onEdit: (parcel: ParcelRow) => void;
+  onEditSecondReceiver: (parcel: ParcelRow) => void;
+  canManageSecondReceiver: boolean;
   onRequestDelivery: (parcel: ParcelRow) => Promise<void>;
   isRequestingDelivery: boolean;
   canRequestDelivery: boolean;
@@ -61,6 +66,12 @@ export function useShelfPickerUpdateColumns({
         <div className="space-y-1">
           <div className="font-medium">{row.original.receiverName ?? '-'}</div>
           <div className="text-xs text-muted-foreground">{row.original.receiverPhone ?? '-'}</div>
+          {row.original.secondReceiverName ? (
+            <div className="text-xs text-muted-foreground">
+              2nd: {row.original.secondReceiverName}
+              {row.original.secondReceiverPhone ? ` (${row.original.secondReceiverPhone})` : ''}
+            </div>
+          ) : null}
         </div>
       ),
     },
@@ -81,6 +92,11 @@ export function useShelfPickerUpdateColumns({
       accessorKey: 'parcelDetails',
       header: 'Details',
       cell: ({ row }) => <div className="text-sm">{row.original.parcelDetails}</div>,
+    },
+    {
+      accessorKey: 'parcelContent',
+      header: 'Content',
+      cell: ({ row }) => <div className="text-sm">{row.original.parcelContent || '-'}</div>,
     },
     {
       id: 'payment',
@@ -129,6 +145,11 @@ export function useShelfPickerUpdateColumns({
               Update
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
+            {canManageSecondReceiver && canEditSecondReceiver(row.original.status) ? (
+              <DropdownMenuItem onClick={() => onEditSecondReceiver(row.original)}>
+                {row.original.secondReceiverName ? 'Change Second Receiver' : 'Add Second Receiver'}
+              </DropdownMenuItem>
+            ) : null}
             {canRequestDelivery && row.original.status === ParcelStatus.AWAITING_PICKUP ? (
               <DropdownMenuItem onClick={() => void onRequestDelivery(row.original)}>
                 Request Delivery

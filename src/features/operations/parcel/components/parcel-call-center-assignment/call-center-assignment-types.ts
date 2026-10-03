@@ -13,8 +13,11 @@ export type ParcelRow = {
   receiverName: string | null;
   receiverPhone: string | null;
   receiverPhone2: string | null;
+  secondReceiverName?: string | null;
+  secondReceiverPhone?: string | null;
   parcelDetails: string;
   parcelContent: string;
+  status: number;
   chargePsw: number;
   paidPrincipalPsw?: number;
   plannedToBePaidPsw: number;

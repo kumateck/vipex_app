@@ -33,7 +33,8 @@ target, then verify wrong-branch, reassigned, stale, and duplicate-main-receiver
 
 Call-center assignment and shelf-picker updates are separate permission-gated workflows. Their pages
 require `CanReadCallCenterAssignment` and `CanReadShelfPickerUpdate`; mutations require
-`CanAssignCallCenterParcels` and `CanUpdateParcelShelfPicker`. Shelf-picker assignment is stored on
+`CanAssignCallCenterParcels` and `CanUpdateParcelShelfPicker`; adding, changing, or removing a
+second receiver on either page requires `CanManageParcelSecondReceiver`. Shelf-picker assignment is stored on
 the parcel in `parcels.shelf_picker_staff_id`, so it remains available when pickup queues are
 disabled. When an active pickup queue exists, the server mirrors the assignment to
 `pickup_queues.picker_staff_id` for compatibility. The server enforces these permissions
@@ -63,6 +64,42 @@ Unassigned parcels appear before assigned parcels across the full paginated resu
 group, the newest effective received date is first; creation time is the fallback for legacy rows
 without a received timestamp. Paid rows omit a zero To be paid line, To Be Paid rows omit a zero
 Paid line, and Partial rows show both balances.
+
+Shelf Picker Update and Call Center Assignment (sidebar **Parcel Assignment**) also show a
+**Content** column with the parcel content recorded at creation (`-` when empty), next to
+**Details**. Under the receiver, a row with a second receiver shows `2nd: <name> (<telephone>)`.
+
+Both pages let staff add, change, or remove a parcel's second receiver without recording a call
+outcome. This requires the dedicated `CanManageParcelSecondReceiver` permission (group
+Deliveries); it is not granted to any role automatically, so an administrator must add it to the
+roles that need it. Without it the action is hidden and the server returns 403. Shelf Picker
+Update offers **Add Second Receiver** / **Change Second Receiver** in the row action menu; Parcel
+Assignment shows an **Add 2nd Receiver** / **Change 2nd Receiver** button beside Assign. The
+action appears only for parcels in Arrived at Destination, Customer Contacted, Returned to Office,
+Awaiting Pickup, or Home Delivery Requested; parcels with a rider, delivered, or returning to
+source do not offer it.
+
+The dialog requires a name and a ten-digit telephone that differs from the main receiver's, and is
+prefilled with the current second receiver when one exists. The telephone is resolved like other
+second-receiver entries: an existing company customer with that primary or secondary telephone is
+linked as-is (its name is not changed); otherwise a new customer is created. When a second
+receiver exists, **Remove Second Receiver** asks for confirmation and then clears it, leaving only
+the main receiver able to collect. Adding, replacing, or removing clears second-receiver ID card
+details and expires any pickup OTP or unused OTP verification issued for the previous second
+receiver; the main receiver, status, call-center call state, and assignments are unchanged. Audit
+events `PARCEL_SECOND_RECEIVER_SET` and `PARCEL_SECOND_RECEIVER_REMOVED` are recorded. Saving the
+same customer again, or removing when there is none, changes nothing. These pages send no SMS or
+email; customer notifications remain available only from the call outcome. The server rejects
+parcels outside the staff member's company and destination branch. Web only; mobile has no
+equivalent page.
+
+QA: with a role lacking `CanManageParcelSecondReceiver`, confirm neither page shows the action;
+grant it and add a second receiver on each page and confirm it appears under the receiver and in
+Waiting for Pickup with no SMS sent; change it and confirm the old second receiver's OTP no longer
+verifies; remove it, confirm the prompt, and verify the row no longer shows a second receiver;
+enter an existing customer's telephone and confirm that customer is linked unchanged; enter the
+main receiver's telephone and a nine-digit number and confirm both are rejected; confirm a
+dispatched parcel offers no action and a direct request for another branch's parcel returns 404.
 
 All Parcels Super Search uses the same payment legend and places the matching colored indicator in
 each Payment cell. A fully paid parcel shows only its **Paid** amount; a fully unpaid parcel shows

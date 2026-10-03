@@ -110,6 +110,11 @@ const catalog = [
   ['CanAssignCallCenterParcels', 'Assign parcels to call center representatives', 'Deliveries'],
   ['CanReadShelfPickerUpdate', 'View shelf picker update page', 'Deliveries'],
   ['CanUpdateParcelShelfPicker', 'Update parcel shelf picker assignments', 'Deliveries'],
+  [
+    'CanManageParcelSecondReceiver',
+    'Add, change, or remove parcel second receivers on Shelf Picker Update and Parcel Assignment',
+    'Deliveries',
+  ],
 
   // Payments / Accounting
   ['CanCreatePayments', 'Create payments', 'Payments'],

@@ -13,6 +13,8 @@ const PAGE_STYLE = `
     .rider-assignment-list-sheet table { width: 100%; border-collapse: collapse; font-size: 9px; }
     .rider-assignment-list-sheet th, .rider-assignment-list-sheet td { border: 1px solid #bbb; padding: 4px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
     .rider-assignment-list-sheet th { background: #eee; }
+    .rider-assignment-list-sheet .rider-assignment-list-check { width: 16mm; text-align: center; vertical-align: middle; }
+    .rider-assignment-list-checkbox { display: inline-block; width: 5mm; height: 5mm; border: 1.5px solid #111; background: #fff; }
     .rider-assignment-list-sheet thead { display: table-header-group; }
     .rider-assignment-list-sheet tfoot { display: table-row-group; }
     .rider-assignment-list-sheet tr { break-inside: avoid; }
