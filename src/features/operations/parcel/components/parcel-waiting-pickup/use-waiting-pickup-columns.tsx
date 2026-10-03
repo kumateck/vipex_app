@@ -11,6 +11,7 @@ import {
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
 import { formatDateTime } from '../parcel-receiver-cashier/receiver-cashier-utils';
+import { ParcelTimestampsCell } from '../parcel-timestamps';
 
 function formatCurrency(amountPsw: number) {
   return `GHS ${(amountPsw / 100).toFixed(2)}`;
@@ -127,8 +128,14 @@ export function useWaitingPickupColumns({
       },
       {
         id: 'receivedAt',
-        header: 'Received',
+        header: 'Dates',
         accessorFn: (row) => formatDateTime(row.receivedAt),
+        cell: ({ row }) => (
+          <ParcelTimestampsCell
+            createdAt={row.original.createdAt}
+            receivedAt={row.original.receivedAt}
+          />
+        ),
       },
       { id: 'charge', header: 'Charge', accessorFn: (row) => formatCurrency(row.chargePsw) },
     ];

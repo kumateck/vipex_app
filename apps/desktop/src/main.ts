@@ -13,6 +13,12 @@ import { lookup } from 'node:dns/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { autoUpdater } from 'electron-updater';
+import {
+  getDesktopDeviceStatus,
+  installDesktopDeviceHeaders,
+  loadDesktopDeviceCredential,
+  registerDesktopDevice,
+} from './device-registration';
 
 declare const __DESKTOP_WEB_BASE_URL__: string;
 declare const __DESKTOP_UPDATE_FEED_URL__: string;
@@ -740,6 +746,12 @@ async function validateRequestedPrinter(request: PrintHtmlRequest) {
 }
 
 function registerIpcHandlers() {
+  ipcMain.handle('device:status', () =>
+    getDesktopDeviceStatus(activeDesktopBaseUrl ?? getWebBaseUrl()),
+  );
+  ipcMain.handle('device:register', (_event, input: { email: string; password: string }) =>
+    registerDesktopDevice(activeDesktopBaseUrl ?? getWebBaseUrl(), input.email, input.password),
+  );
   ipcMain.handle('app:retry-load', async () => {
     if (!app.isPackaged) {
       if (mainWindow && !mainWindow.isDestroyed()) {
@@ -1034,8 +1046,10 @@ app.on('open-url', (event, url) => {
   void navigateToDeepLink(url);
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   logDesktopRoutingSelection();
+  await loadDesktopDeviceCredential();
+  installDesktopDeviceHeaders([...getPackagedWebBaseUrlCandidates(), DEV_WEB_BASE_URL]);
   attachDesktopNetworkLogging();
 
   if (app.isPackaged) {

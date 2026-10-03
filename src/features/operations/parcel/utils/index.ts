@@ -1,4 +1,5 @@
 export * from './existing-customer-edit';
+export { formatParcelTimestamp } from './format-parcel-timestamp';
 export * from './dialog-load-state';
 export * from './internal-transfer-print';
 export * from './parcel-print';

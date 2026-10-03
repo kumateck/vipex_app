@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia';
 import { UUID } from '@/server/schemas/common';
 import { BranchType } from '@/db/schemas/enums';
 import { Forbidden } from '@/server/utils/http-error';
+import { getDailyParcelAuditReportSvc } from './daily-parcel-audit.service';
 import {
   authPlugin,
   requireAuth,
@@ -37,6 +38,34 @@ import {
 
 export const reportingRoutes = new Elysia({ name: 'reporting' })
   .use(authPlugin)
+  .get(
+    '/daily-parcel-audit',
+    async ({ user, query }) => {
+      const authUser = user!;
+      if (!authUser.companyId) throw Forbidden('Authenticated user company context is missing');
+      const isHeadOffice = authUser.branchType === BranchType.HEADOFFICE;
+      const branchId = isHeadOffice ? (query.branchId ?? null) : (authUser.branchId ?? null);
+      if (!isHeadOffice && !branchId)
+        throw Forbidden('Authenticated user branch context is missing');
+      return getDailyParcelAuditReportSvc({
+        companyId: authUser.companyId,
+        branchId,
+        date: query.date,
+      });
+    },
+    {
+      query: t.Object({ date: t.String({ format: 'date' }), branchId: t.Optional(UUID) }),
+      beforeHandle: [
+        requireAuth(),
+        requirePermissions(PermissionKeys.CanViewReportParcelsDailyAudit),
+      ],
+      detail: {
+        tags: ['Reporting'],
+        summary: 'Daily parcel payment and delivery audit',
+        operationId: 'getDailyParcelAuditReport',
+      },
+    },
+  )
   .get(
     '/daily-cashier-sales/cashiers',
     async ({ user, query }) => {

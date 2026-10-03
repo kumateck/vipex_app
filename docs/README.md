@@ -48,6 +48,7 @@ This directory is the canonical documentation set for the current Vipex applicat
 ## Platform, Access, and Intelligence
 
 - [Platform and access control](PLATFORM_AND_ACCESS.md)
+- [Native device registration](DEVICE_REGISTRATION.md)
 - [Company modules](COMPANY_MODULES.md)
 - [AI, help, and management insights](AI_HELP_AND_INSIGHTS.md)
 - [Communication suite](COMMUNICATION_SUITE_SPEC.md)

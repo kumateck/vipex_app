@@ -5,6 +5,7 @@ All paths are relative to `/v1`.
 ## Operational Report Endpoints
 
 - `GET /reports/daily-cashier-sales`
+- `GET /reports/daily-parcel-audit`
 - `GET /reports/daily-cashier-sales/cashiers`
 - `GET /reports/accounting/storage-waivers`
 - `GET /reports/daily-cash-confirmations`
@@ -34,6 +35,12 @@ Accounting financial-statement endpoints remain under `/accounting/reports/*`.
 - Reports use their underlying domain or dedicated report permission, not a single universal grant.
 - Company-module gating still applies to HR, payroll, accounting, and other module-backed reports.
 - Head-office and branch-scoped results are resolved on the server.
+- Daily Parcel Audit requires `date=YYYY-MM-DD` and optionally `branchId` for head-office users.
+  The server ignores a branch filter from branch staff and restricts them to their own branch.
+  Missing company or branch context, invalid date, and missing permission reject the request.
+  The response contains `filters`, `generatedAt`, and parcel `rows` with charge, sender/receiver
+  principal payments, recognized delivery credit, receiver outstanding, payment status, and
+  delivery/actor details. Empty cohorts return an empty `rows` array.
 - Export and print are presentations of the returned report; they do not grant broader data access.
 - Sticker Print Usage reads successful events recorded by `/shipments/parcels/sticker-prints`.
 - Daily Cashier Sales cashier options must not infer a cashier assignment from an ordinary account role.

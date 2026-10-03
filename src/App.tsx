@@ -4,6 +4,7 @@ import { ThemeProvider } from './components/providers/theme';
 import ClientProvider from './components/providers/client';
 import { Toaster } from './components/ui/sonner';
 import { installTheAduseiGlobalErrorHandlers } from './lib/TheAduseiErrorResponse';
+import { DesktopDeviceGate } from './features/auth/device-registration';
 
 export function App() {
   useEffect(() => {
@@ -13,7 +14,9 @@ export function App() {
   return (
     <ClientProvider>
       <ThemeProvider>
-        <MainRoutes />
+        <DesktopDeviceGate>
+          <MainRoutes />
+        </DesktopDeviceGate>
         <Toaster richColors closeButton />
       </ThemeProvider>
     </ClientProvider>
