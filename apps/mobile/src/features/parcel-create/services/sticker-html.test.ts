@@ -30,6 +30,19 @@ describe('mobile to-be-paid sticker', () => {
     expect(html).toContain('class="qr"');
   });
 
+  test('sizes the receiver name so the receiver phone is never pushed out of the block', () => {
+    const short = buildMobileStickerHtml({ ...sticker, receiverName: 'ADU EVANS', copies: 1 });
+    const long = buildMobileStickerHtml({
+      ...sticker,
+      receiverName: 'JOSEMARIAM ABENA APPIAH',
+      copies: 1,
+    });
+    expect(short).toContain('class="receiver-name" style="font-size:5mm"');
+    expect(long).toContain('class="receiver-name" style="font-size:3.8mm"');
+    expect(long).toContain('0550000000');
+    expect(long).not.toContain('grid-template-rows:25mm 12.5mm 18mm');
+  });
+
   test.each([0, -1, 1.5, Number.POSITIVE_INFINITY])('rejects invalid copy count', (copies) => {
     expect(() => buildMobileStickerHtml({ ...sticker, copies })).toThrow();
   });

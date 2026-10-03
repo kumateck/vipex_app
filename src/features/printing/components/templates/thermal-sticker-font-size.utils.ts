@@ -1,13 +1,24 @@
 export function portraitDestinationFontSize(value?: string | null) {
-  return (value?.trim().length ?? 0) > 18 ? '6.6mm' : '8.4mm';
+  const length = value?.trim().length ?? 0;
+  if (length > 18) return '5mm';
+  if (length > 11) return '6mm';
+  return '7.6mm';
 }
 
+export function portraitLocationFontSize(value?: string | null) {
+  const length = value?.trim().length ?? 0;
+  if (length > 18) return '3.1mm';
+  if (length > 10) return '3.6mm';
+  return '4.2mm';
+}
+
+// Sized so typical names stay on one line and the receiver phone always has room below.
 export function portraitReceiverNameFontSize(value?: string | null) {
   const length = value?.trim().length ?? 0;
   if (length > 26) return '3.2mm';
-  if (length > 18) return '4mm';
-  if (length > 12) return '5mm';
-  return '6mm';
+  if (length > 18) return '3.8mm';
+  if (length > 12) return '4.4mm';
+  return '5mm';
 }
 
 export function landscapePrimaryFontSize(value?: string | null) {
