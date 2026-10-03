@@ -25,9 +25,12 @@ export function LoginScreen() {
             password={login.password}
             error={login.error}
             loading={login.loading}
+            deviceStatus={login.deviceStatus}
             onEmailChange={login.handleEmailChange}
             onPasswordChange={login.handlePasswordChange}
             onSubmit={() => void login.handleLogin()}
+            onRegisterDevice={() => void login.handleRegisterDevice()}
+            onCheckDevice={() => void login.handleCheckDevice()}
           />
         </Animated.View>
 

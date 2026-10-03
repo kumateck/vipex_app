@@ -1029,6 +1029,11 @@ const BASE_ROUTES: Route[] = [
             url: '/users/password-management',
             permissionKey: PermissionKeys.CanSetUserPassword,
           },
+          {
+            title: 'Registered Devices',
+            url: '/users/devices',
+            permissionKey: PermissionKeys.CanUpdateUsers,
+          },
         ],
       },
       {

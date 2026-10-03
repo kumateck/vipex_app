@@ -26,6 +26,8 @@ import {
   setPasswordAndActivateUserRepo,
   setUserResetTokenRepo,
 } from './repository.tokens';
+import { requireApprovedDeviceSvc, type DeviceCredential } from './device.service';
+import { touchDeviceRepo } from './device.repository';
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -35,7 +37,14 @@ async function hashEmailOtp(email: string, otp: string) {
   return hashOtp(normalizeEmail(email), otp);
 }
 
-export async function loginSvc(email: string, password: string, ua?: string, ip?: string) {
+export async function loginSvc(
+  email: string,
+  password: string,
+  ua?: string,
+  ip?: string,
+  client?: 'mobile' | 'desktop' | null,
+  deviceCredential?: DeviceCredential | null,
+) {
   const user = await getUserByEmailRepo(email);
   if (!user || user === null) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
   if (user.status === UserStatus.INVITED) {
@@ -48,6 +57,10 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
     throw new HttpError(HttpStatus.FORBIDDEN, 'Account disabled');
   const ok = await verifyPassword(password, user?.password);
   if (!ok) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
+  const device = client
+    ? await requireApprovedDeviceSvc(deviceCredential ?? null, user.id, client)
+    : null;
+  if (device) await touchDeviceRepo(device.id);
   const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
   const refreshPlain = generateOpaqueToken(32);
   const refreshHash = await sha256HexAsync(refreshPlain);
@@ -56,6 +69,7 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
 
   await insertRefreshTokenRepo({
     userId: user.id,
+    deviceId: device?.id ?? null,
     tokenHash: refreshHash,
     expiresAt: refreshExpiresAt,
     permissionsSnapshot: permissionKeys,
@@ -99,13 +113,27 @@ export async function loginSvc(email: string, password: string, ua?: string, ip?
   };
 }
 
-export async function refreshSvc(refreshToken: string) {
+export async function refreshSvc(
+  refreshToken: string,
+  deviceCredential?: DeviceCredential | null,
+  client?: 'mobile' | 'desktop' | null,
+) {
   const hash = await sha256HexAsync(refreshToken);
   const current = await findRefreshTokenRepo(hash);
   if (!current) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
   if (current.revokedAt) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token revoked');
   if (current.expiresAt.getTime() <= Date.now())
     throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token expired');
+  if (client && !current.deviceId) {
+    throw new HttpError(HttpStatus.UNAUTHORIZED, 'Native session requires device registration');
+  }
+  if (current.deviceId) {
+    const device = await requireApprovedDeviceSvc(deviceCredential ?? null, current.userId);
+    if (device.id !== current.deviceId) {
+      throw new HttpError(HttpStatus.UNAUTHORIZED, 'Device session mismatch');
+    }
+    await touchDeviceRepo(device.id);
+  }
 
   const user = await getUserByIdRepo(current.userId);
   if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
@@ -119,7 +147,8 @@ export async function refreshSvc(refreshToken: string) {
   const nextHash = await sha256HexAsync(nextPlain);
   const refreshExpSec = parseDurationToSeconds(env.JWT_REFRESH_EXPIRES);
   const nextExpiresAt = new Date(Date.now() + refreshExpSec * 1000);
-  await rotateRefreshTokenRepo(hash, nextHash, nextExpiresAt, permissionKeys);
+  const rotated = await rotateRefreshTokenRepo(hash, nextHash, nextExpiresAt, permissionKeys);
+  if (!rotated) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token revoked');
 
   const nextRefresh = await findRefreshTokenRepo(nextHash);
   if (!nextRefresh) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');

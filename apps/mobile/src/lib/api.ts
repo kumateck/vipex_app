@@ -2,6 +2,12 @@ import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { ENV } from '@mobile/lib/env';
 import { reportMobileErrorToDiscord } from '@mobile/lib/mobile-error-reporter';
 import type { LoginResponse, SessionState, TokenPair } from '@mobile/types/auth';
+import {
+  getMobileDeviceMetadata,
+  loadDeviceCredential,
+  saveDeviceCredential,
+  type DeviceStatus,
+} from '@mobile/lib/device-registration';
 import type {
   CommunicationCallSession,
   CommunicationChannel,
@@ -193,6 +199,7 @@ function toQueryString(query?: RequestOptions['query']): string {
 async function request<T>(options: RequestOptions): Promise<T> {
   let lastError: Error | null = null;
   const method = options.method ?? 'GET';
+  const credential = await loadDeviceCredential();
 
   let attempt = 0;
   for (const baseUrl of [
@@ -209,6 +216,10 @@ async function request<T>(options: RequestOptions): Promise<T> {
         method,
         headers: {
           'content-type': 'application/json',
+          'x-vipex-client': 'mobile',
+          ...(credential
+            ? { 'x-vipex-device-id': credential.id, 'x-vipex-device-secret': credential.secret }
+            : {}),
           ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
         },
         body: options.body ? JSON.stringify(options.body) : undefined,
@@ -276,6 +287,23 @@ async function request<T>(options: RequestOptions): Promise<T> {
   }
 
   throw lastError ?? new Error('Network request failed');
+}
+
+export async function registerMobileDevice(email: string, password: string) {
+  if (await loadDeviceCredential()) return getMobileDeviceStatus();
+  const result = await request<{ id: string; secret: string; status: DeviceStatus }>({
+    path: '/auth/devices/register',
+    method: 'POST',
+    body: { email, password, ...getMobileDeviceMetadata() },
+  });
+  await saveDeviceCredential({ id: result.id, secret: result.secret });
+  return result.status;
+}
+
+export async function getMobileDeviceStatus(): Promise<DeviceStatus | null> {
+  if (!(await loadDeviceCredential())) return null;
+  const result = await request<{ status: DeviceStatus }>({ path: '/auth/devices/status' });
+  return result.status;
 }
 
 export function mobileApiGet<T>(input: {

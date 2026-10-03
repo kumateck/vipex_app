@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { loadDeviceCredential, type DeviceCredential } from '@mobile/lib/device-registration';
 import {
   handleSocketMessage,
   logMobileSocketError,
@@ -12,6 +13,7 @@ export function useCommunicationSocket(
   options: UseCommunicationSocketOptions = {},
 ) {
   const [isConnected, setIsConnected] = useState(false);
+  const [deviceCredential, setDeviceCredential] = useState<DeviceCredential | null>(null);
   const optionsRef = useRef(options);
   const socketRef = useRef<WebSocket | null>(null);
 
@@ -19,8 +21,12 @@ export function useCommunicationSocket(
     optionsRef.current = options;
   }, [options]);
 
+  useEffect(() => {
+    void loadDeviceCredential().then(setDeviceCredential);
+  }, []);
+
   const socketUrls = useMemo(() => {
-    if (!accessToken?.trim()) return [];
+    if (!accessToken?.trim() || !deviceCredential) return [];
     return resolveSocketCandidates().map((base) => {
       const url = new URL(base);
       url.searchParams.delete('token');
@@ -28,10 +34,10 @@ export function useCommunicationSocket(
       url.searchParams.set('token', accessToken.trim());
       return url.toString();
     });
-  }, [accessToken]);
+  }, [accessToken, deviceCredential]);
 
   useEffect(() => {
-    if (!socketUrls.length) return;
+    if (!socketUrls.length || !deviceCredential) return;
 
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let pingTimer: ReturnType<typeof setInterval> | null = null;
@@ -44,7 +50,18 @@ export function useCommunicationSocket(
       if (!targetUrl) return;
       const endpointUrl = sanitizeSocketUrl(targetUrl);
 
-      const socket = new WebSocket(targetUrl);
+      const NativeWebSocket = WebSocket as unknown as new (
+        url: string,
+        protocols?: string | string[],
+        options?: { headers: Record<string, string> },
+      ) => WebSocket;
+      const socket = new NativeWebSocket(targetUrl, undefined, {
+        headers: {
+          'x-vipex-client': 'mobile',
+          'x-vipex-device-id': deviceCredential.id,
+          'x-vipex-device-secret': deviceCredential.secret,
+        },
+      });
       socketRef.current = socket;
       let opened = false;
 
@@ -99,7 +116,7 @@ export function useCommunicationSocket(
       socketRef.current?.close();
       socketRef.current = null;
     };
-  }, [socketUrls]);
+  }, [socketUrls, deviceCredential]);
 
   const joinCall = useCallback((callId: string) => {
     const socket = socketRef.current;

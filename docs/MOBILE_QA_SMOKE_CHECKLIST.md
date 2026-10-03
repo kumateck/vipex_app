@@ -10,6 +10,10 @@ Last updated: 2026-09-21
 
 ## Pre-check
 
+Before mobile sign-in, register the installation and obtain head-office approval. Confirm a
+pending or revoked installation cannot use existing sessions. Full transition, cross-company,
+and reinstall checks are in [Native Device Registration](DEVICE_REGISTRATION.md).
+
 1. Login with a user that has all mobile-related permissions.
 2. Login with a restricted user for each role path:
    - Queue-only user

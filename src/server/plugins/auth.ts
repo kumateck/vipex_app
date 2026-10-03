@@ -9,6 +9,9 @@ import { verifyAccessToken } from '../utils/jwt';
 import { Unauthorized as UnauthorizedError } from '../utils/http-error';
 import { Forbidden } from '../utils/http-error';
 import { ensureCompanyModuleEnabledSvc } from '../features/company-modules/service';
+import { getDeviceByCredentialSvc } from '../features/auth/device.service';
+import { readDeviceCredential, readNativeClient } from '../features/auth/device-headers';
+import { UserStatus } from '@/db/schemas/enums';
 
 export type AuthUser = {
   sub: string;
@@ -40,6 +43,21 @@ export const authPlugin = (app: Elysia) =>
         if (refreshTokenRow.revokedAt) return { user: null as AuthUser | null };
         if (refreshTokenRow.expiresAt.getTime() <= Date.now())
           return { user: null as AuthUser | null };
+        if (readNativeClient(request) && !refreshTokenRow.deviceId)
+          return { user: null as AuthUser | null };
+        if (refreshTokenRow.deviceId) {
+          const credential = readDeviceCredential(request);
+          const device = credential ? await getDeviceByCredentialSvc(credential) : null;
+          if (
+            !device ||
+            device.id !== refreshTokenRow.deviceId ||
+            device.userId !== refreshTokenRow.userId ||
+            device.status !== 'approved' ||
+            device.userStatus !== UserStatus.ACTIVE
+          ) {
+            return { user: null as AuthUser | null };
+          }
+        }
         return {
           user: {
             sub: payload.sub,
@@ -61,6 +79,7 @@ export const authPlugin = (app: Elysia) =>
         };
       }
 
+      if (readNativeClient(request)) return { user: null as AuthUser | null };
       const userRow = await getUserByIdRepo(payload.sub);
       if (!userRow?.id || !userRow.email) return { user: null as AuthUser | null };
       const permissions = await listRolePermissionKeysRepo(userRow.roleId, userRow.companyId);

@@ -11,22 +11,40 @@ import {
   updateCurrentUserProfileSvc,
   verifyCurrentUserPasswordSvc,
 } from './service';
+import type { DeviceCredential } from './device.service';
 
 export async function loginCtrl(input: {
   email: string;
   password: string;
   ua?: string;
   ip?: string;
+  client?: 'mobile' | 'desktop' | null;
+  deviceCredential?: DeviceCredential | null;
 }) {
-  const result = await loginSvc(input.email, input.password, input.ua, input.ip);
+  const result = await loginSvc(
+    input.email,
+    input.password,
+    input.ua,
+    input.ip,
+    input.client,
+    input.deviceCredential,
+  );
   return {
     ...result,
     permissions: result.user.permissions ?? [],
   };
 }
 
-export async function refreshCtrl(refreshToken: string) {
-  const { accessToken, refreshToken: nextRefreshToken, user } = await refreshSvc(refreshToken);
+export async function refreshCtrl(
+  refreshToken: string,
+  deviceCredential?: DeviceCredential | null,
+  client?: 'mobile' | 'desktop' | null,
+) {
+  const {
+    accessToken,
+    refreshToken: nextRefreshToken,
+    user,
+  } = await refreshSvc(refreshToken, deviceCredential, client);
   return {
     tokens: {
       accessToken,

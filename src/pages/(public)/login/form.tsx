@@ -15,11 +15,13 @@ import ThrowErrorMessage from '@/lib/throw-error';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui';
 import { PasswordField } from '@/features/auth/components/password-field';
+import { useDesktopDeviceRegistration } from '@/features/auth/device-registration';
 
 export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) {
   const [login, { isLoading }] = useLoginMutation();
   const navigate = useNavigate();
   const location = useLocation();
+  const device = useDesktopDeviceRegistration();
 
   const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/';
 
@@ -27,6 +29,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
     register,
     handleSubmit,
     watch,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
@@ -37,6 +40,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
     mode: 'onSubmit',
   });
   const emailValue = watch('email');
+  const passwordValue = watch('password');
 
   const onSubmit = async (data: LoginSchema) => {
     // replace with your auth call
@@ -108,6 +112,34 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
                   {isSubmitting ? 'Logging in...' : 'Login'}
                 </Button>
               </Field>
+              {device.isDesktop ? (
+                <Field>
+                  <FieldDescription>
+                    This desktop must be approved before you can sign in.
+                    {device.status ? ` Status: ${device.status.replaceAll('_', ' ')}.` : ''}
+                  </FieldDescription>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={device.loading || !emailValue || !passwordValue}
+                      onClick={() =>
+                        void device.register(getValues('email'), getValues('password'))
+                      }
+                    >
+                      Register this desktop
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={device.loading}
+                      onClick={() => void device.check()}
+                    >
+                      Check approval
+                    </Button>
+                  </div>
+                </Field>
+              ) : null}
             </FieldGroup>
           </form>
         </CardContent>

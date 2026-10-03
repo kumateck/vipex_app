@@ -13,6 +13,13 @@ The API reference is split by domain:
 
 Public parcel tracking is documented in [Public parcel tracking API](PUBLIC_PARCEL_TRACKING_API.md).
 
+Native device registration is documented in [Native device registration](DEVICE_REGISTRATION.md).
+`POST /v1/auth/devices/register` verifies staff credentials and returns a pending device ID and
+one-time secret. `GET /v1/auth/devices/status` accepts device credential headers. Head-office
+users with `CanUpdateUsers` use `GET /v1/auth/devices/` and
+`POST /v1/auth/devices/:id/review` to approve, revoke, block, unblock, or permanently deny.
+Native login/refresh and bound authenticated requests require the matching approved credential.
+
 `POST /v1/self-service/drafts/:id/complete` accepts optional boolean `callSender`. The completed
 parcel uses that explicit officer choice; if omitted, it keeps the customer's draft value. The
 existing completion permission, branch ownership, state, and charge validation still apply. Web

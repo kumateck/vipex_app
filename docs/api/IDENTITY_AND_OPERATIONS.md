@@ -5,6 +5,7 @@ All paths are relative to `/v1`.
 ## Identity and Master Data
 
 - `/auth`: login, refresh, logout, invitation setup, forgot/reset password, change password, and current-password verification.
+- `/auth/devices`: native device registration/status and head-office review. See [Native Device Registration](../DEVICE_REGISTRATION.md) for credential headers, status transitions, error cases, and migration order.
 - `/users`: user list/detail/create/update, invitation flows, password-management options, and System Admin password assignment.
 - `/rbac`: roles, permissions, and permission assignment.
 - `/branches`: branch master data and pickup/receiver OTP controls.
@@ -21,6 +22,10 @@ Mobile receiving evidence uses `POST /shipments/parcels/discrepancies/:id/eviden
 Security-sensitive identity methods include:
 
 - `POST /auth/login`
+- `POST /auth/devices/register`
+- `GET /auth/devices/status`
+- `GET /auth/devices/`
+- `POST /auth/devices/:id/review`
 - `POST /auth/refresh`
 - `POST /auth/logout`
 - `POST /auth/forgot-password`

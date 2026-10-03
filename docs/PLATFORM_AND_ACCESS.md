@@ -35,6 +35,11 @@ New features must define:
 
 The route inventory is maintained in [Route and Permission Matrix](ROUTE_PERMISSION_MATRIX.md).
 
+Native mobile and Electron desktop device registration, approval, revocation, and rollout
+constraints are defined in [Native Device Registration](DEVICE_REGISTRATION.md). The
+head-office review page uses `CanUpdateUsers`; device gating complements, but does not replace,
+account status, role permissions, or company scope.
+
 ## Company Modules
 
 Company modules determine which product areas are enabled for a tenant. A disabled module should be absent from navigation and denied by the server. Module availability must not override a missing user permission.
