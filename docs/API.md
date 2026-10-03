@@ -20,6 +20,11 @@ users with `CanUpdateUsers` use `GET /v1/auth/devices/` and
 `POST /v1/auth/devices/:id/review` to approve, revoke, block, unblock, or permanently deny.
 Native login/refresh and bound authenticated requests require the matching approved credential.
 
+`GET /v1/reports/daily-parcel-audit?date=YYYY-MM-DD` provides the current payment and delivery
+state for parcels created on that Ghana calendar date. Head office may add `branchId`; other users
+are scoped to their own branch. It requires `CanViewReportParcelsDailyAudit`. See
+[Reporting](api/REPORTING.md) for response and failure behavior.
+
 `POST /v1/self-service/drafts/:id/complete` accepts optional boolean `callSender`. The completed
 parcel uses that explicit officer choice; if omitted, it keeps the customer's draft value. The
 existing completion permission, branch ownership, state, and charge validation still apply. Web

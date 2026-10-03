@@ -74,6 +74,7 @@ Financial, operational, people, customer, parcel, inventory, and audit report ro
 | `/reports/customers/inactive`          | `CanViewReportCustomersInactive`         |
 | `/reports/parcels/bookings`            | `CanViewReportParcelsBookings`           |
 | `/reports/parcels/register`            | `CanViewReportParcelsRegister`           |
+| `/reports/parcels/daily-audit`         | `CanViewReportParcelsDailyAudit`         |
 | `/reports/parcels/tracking`            | `CanViewReportParcelsTracking`           |
 | `/reports/parcels/in-transit-out`      | `CanViewReportParcelsInTransitOutgoing`  |
 | `/reports/parcels/in-transit-in`       | `CanViewReportParcelsInTransitIncoming`  |

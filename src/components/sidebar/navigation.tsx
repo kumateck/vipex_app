@@ -1690,6 +1690,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanViewReportParcelsRegister,
           },
           {
+            title: 'Daily Parcel Audit',
+            url: '/reports/parcels/daily-audit',
+            permissionKey: PermissionKeys.CanViewReportParcelsDailyAudit,
+          },
+          {
             title: 'Parcel Tracking',
             url: '/reports/parcels/tracking',
             permissionKey: PermissionKeys.CanViewReportParcelsTracking,
