@@ -64,6 +64,32 @@ group, the newest effective received date is first; creation time is the fallbac
 without a received timestamp. Paid rows omit a zero To be paid line, To Be Paid rows omit a zero
 Paid line, and Partial rows show both balances.
 
+Shelf Picker Update and Call Center Assignment (sidebar **Parcel Assignment**) also show a
+**Content** column with the parcel content recorded at creation (`-` when empty), next to
+**Details**. Under the receiver, a row with a second receiver shows `2nd: <name> (<telephone>)`.
+
+Both pages let staff add or change a parcel's second receiver without recording a call outcome.
+Shelf Picker Update offers **Add Second Receiver** / **Change Second Receiver** in the row action
+menu; Parcel Assignment shows an **Add 2nd Receiver** / **Change 2nd Receiver** button beside
+Assign. The action appears only for parcels in Arrived at Destination, Customer Contacted,
+Returned to Office, Awaiting Pickup, or Home Delivery Requested; parcels with a rider, delivered,
+or returning to source do not offer it. The dialog requires a name and a ten-digit telephone that
+differs from the main receiver's, and is prefilled with the current second receiver when one
+exists. The telephone is resolved like other second-receiver entries: an existing company
+customer with that primary or secondary telephone is linked as-is (its name is not changed);
+otherwise a new customer is created. Saving a different second receiver clears second-receiver ID
+card details and expires any pickup OTP or unused OTP verification issued for the previous second
+receiver; the main receiver, status, call-center call state, and assignments are unchanged. An
+audit event `PARCEL_SECOND_RECEIVER_SET` is recorded. Saving the same customer again changes
+nothing. Requires `CanUpdateParcelShelfPicker` or `CanAssignCallCenterParcels`; the server rejects
+parcels outside the staff member's company and destination branch. Removing a second receiver is
+still done through the existing call outcome or handover flows. Web only; mobile has no equivalent
+page. QA: add a second receiver on each page and confirm it appears under the receiver and in
+Waiting for Pickup; change it and confirm the old second receiver's OTP no longer verifies; enter
+an existing customer's telephone and confirm that customer is linked unchanged; enter the main
+receiver's telephone and a nine-digit number and confirm both are rejected; confirm a dispatched
+parcel offers no action and a direct request for another branch's parcel returns 404.
+
 All Parcels Super Search uses the same payment legend and places the matching colored indicator in
 each Payment cell. A fully paid parcel shows only its **Paid** amount; a fully unpaid parcel shows
 only its **To be paid** amount; a partial parcel shows both amounts. Zero rows for the inapplicable

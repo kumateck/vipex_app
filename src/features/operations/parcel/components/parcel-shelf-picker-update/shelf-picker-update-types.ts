@@ -10,6 +10,8 @@ export type ParcelRow = {
   receiverId: string;
   receiverName: string | null;
   receiverPhone: string | null;
+  secondReceiverName?: string | null;
+  secondReceiverPhone?: string | null;
   parcelDetails: string;
   parcelContent: string;
   chargePsw: number;

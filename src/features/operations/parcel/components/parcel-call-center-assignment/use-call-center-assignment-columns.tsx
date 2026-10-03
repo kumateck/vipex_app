@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatDateTime } from '@/lib/dates';
+import { canEditSecondReceiver } from '@/shared/shipments/second-receiver';
 import { CallCenterAssignmentPaymentCell } from './call-center-assignment-payment-cell';
 import type { ParcelRow } from './call-center-assignment-types';
 
@@ -17,12 +18,14 @@ function formatReceivedAt(value: string | null) {
 
 export function useCallCenterAssignmentColumns({
   onOpenAssignDialog,
+  onEditSecondReceiver,
   selectedParcelIds,
   onToggleParcel,
   rows,
   onToggleAll,
 }: {
   onOpenAssignDialog: (parcel: ParcelRow) => void;
+  onEditSecondReceiver: (parcel: ParcelRow) => void;
   selectedParcelIds: Set<string>;
   onToggleParcel: (parcelId: string) => void;
   rows: ParcelRow[];
@@ -75,6 +78,12 @@ export function useCallCenterAssignmentColumns({
           <div className="text-xs text-muted-foreground">
             {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
           </div>
+          {row.original.secondReceiverName ? (
+            <div className="text-xs text-muted-foreground">
+              2nd: {row.original.secondReceiverName}
+              {row.original.secondReceiverPhone ? ` (${row.original.secondReceiverPhone})` : ''}
+            </div>
+          ) : null}
         </div>
       ),
     },
@@ -94,6 +103,11 @@ export function useCallCenterAssignmentColumns({
       cell: ({ row }) => <div className="text-sm">{row.original.parcelDetails}</div>,
     },
     {
+      accessorKey: 'parcelContent',
+      header: 'Content',
+      cell: ({ row }) => <div className="text-sm">{row.original.parcelContent || '-'}</div>,
+    },
+    {
       accessorKey: 'callCenterAssignedToUserName',
       header: 'Assigned To',
       cell: ({ row }) => (
@@ -110,9 +124,16 @@ export function useCallCenterAssignmentColumns({
       id: 'actions',
       header: 'Action',
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" onClick={() => onOpenAssignDialog(row.original)}>
-          {row.original.callCenterAssignedToUserName ? 'Reassign' : 'Assign'}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => onOpenAssignDialog(row.original)}>
+            {row.original.callCenterAssignedToUserName ? 'Reassign' : 'Assign'}
+          </Button>
+          {canEditSecondReceiver(row.original.status) ? (
+            <Button variant="outline" size="sm" onClick={() => onEditSecondReceiver(row.original)}>
+              {row.original.secondReceiverName ? 'Change 2nd Receiver' : 'Add 2nd Receiver'}
+            </Button>
+          ) : null}
+        </div>
       ),
     },
   ];
