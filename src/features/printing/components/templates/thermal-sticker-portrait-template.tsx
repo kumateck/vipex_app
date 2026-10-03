@@ -22,7 +22,6 @@ export function ThermalStickerPortraitTemplate({
   hasToBePaid,
   qrValue,
 }: PreparedThermalStickerTemplateProps) {
-  const statusRowHeight = hasToBePaid ? '12.5mm' : '10.5mm';
   const receiverNameFontSize = portraitReceiverNameFontSize(receiverName);
 
   return (
@@ -36,8 +35,10 @@ export function ThermalStickerPortraitTemplate({
         padding: '1.2mm',
         fontFamily: 'Arial, sans-serif',
         display: 'grid',
-        gridTemplateRows: `25mm ${statusRowHeight} 18mm minmax(0, 1fr)`,
-        gap: '0.5mm',
+        // Status and receiver blocks size to their content so text is never clipped;
+        // the remaining height goes to the destination/sender/parcel rows.
+        gridTemplateRows: '22mm auto auto minmax(0, 1fr)',
+        gap: '0.7mm',
         overflow: 'hidden',
       }}
     >
@@ -45,7 +46,7 @@ export function ThermalStickerPortraitTemplate({
         style={{
           minWidth: 0,
           display: 'grid',
-          gridTemplateColumns: '11mm 1fr 23mm',
+          gridTemplateColumns: '11mm 1fr 22mm',
           alignItems: 'center',
           columnGap: '2mm',
         }}
@@ -60,15 +61,15 @@ export function ThermalStickerPortraitTemplate({
           }}
         />
         <ThermalStickerWordmark />
-        <div className="self-start justify-self-end">
+        <div className="justify-self-end">
           <BrandedQrCode
             value={qrValue}
             size={180}
             variant="print"
             ariaLabel="Parcel tracking QR code"
             style={{
-              width: '22mm',
-              height: '22mm',
+              width: '21mm',
+              height: '21mm',
               backgroundColor: '#ffffff',
             }}
           />
@@ -79,25 +80,27 @@ export function ThermalStickerPortraitTemplate({
         style={{
           border: '0.35mm solid #111',
           display: 'grid',
-          placeItems: hasToBePaid ? 'start center' : 'center',
+          placeItems: 'center',
+          minHeight: hasToBePaid ? undefined : '10mm',
           textAlign: 'center',
-          padding: hasToBePaid ? '0.45mm 0.25mm 0.9mm' : '0.25mm',
-          overflow: 'hidden',
+          padding: '0.7mm 0.5mm',
         }}
       >
         <div>
           <div
-            style={{ fontSize: hasToBePaid ? '4.4mm' : '5.4mm', fontWeight: 900, lineHeight: 1 }}
+            style={{ fontSize: hasToBePaid ? '4.2mm' : '5.4mm', fontWeight: 900, lineHeight: 1.1 }}
           >
             {statusLabel}
           </div>
           {statusAmountLabel ? (
-            <div style={{ marginTop: '0.1mm', fontSize: '3.7mm', fontWeight: 900, lineHeight: 1 }}>
+            <div style={{ marginTop: '0.3mm', fontSize: '4mm', fontWeight: 900, lineHeight: 1.1 }}>
               {statusAmountLabel}
             </div>
           ) : null}
           {hasToBePaid ? (
-            <div style={{ marginTop: '0.35mm', fontSize: '1.9mm', fontWeight: 700, lineHeight: 1 }}>
+            <div
+              style={{ marginTop: '0.6mm', fontSize: '1.9mm', fontWeight: 700, lineHeight: 1.2 }}
+            >
               {PAYMENT_DUE_NOTE}
             </div>
           ) : null}
@@ -109,11 +112,11 @@ export function ThermalStickerPortraitTemplate({
           position: 'relative',
           border: '0.35mm solid #111',
           display: 'grid',
-          gridTemplateRows: 'auto minmax(0, 1fr) auto',
+          gridTemplateRows: 'auto auto auto',
+          rowGap: '0.5mm',
           minWidth: 0,
-          overflow: 'hidden',
           textAlign: 'center',
-          padding: '0.3mm 1mm',
+          padding: '0.8mm 1mm',
         }}
       >
         {callSender ? <ThermalStickerCallSenderMark /> : null}
@@ -122,7 +125,7 @@ export function ThermalStickerPortraitTemplate({
             fontSize: '1.8mm',
             fontWeight: 700,
             textTransform: 'uppercase',
-            lineHeight: 1,
+            lineHeight: 1.15,
           }}
         >
           Receiver
@@ -130,14 +133,10 @@ export function ThermalStickerPortraitTemplate({
         <div
           style={{
             minWidth: 0,
-            minHeight: 0,
-            marginTop: '0.25mm',
-            display: 'grid',
-            placeItems: 'center',
-            overflow: 'hidden',
+            padding: '0 4.5mm',
             fontSize: receiverNameFontSize,
             fontWeight: 900,
-            lineHeight: 0.95,
+            lineHeight: 1.1,
             overflowWrap: 'anywhere',
           }}
         >
@@ -145,10 +144,9 @@ export function ThermalStickerPortraitTemplate({
         </div>
         <div
           style={{
-            marginTop: '0.3mm',
             fontSize: '3.9mm',
             fontWeight: 900,
-            lineHeight: 1,
+            lineHeight: 1.15,
           }}
         >
           {receiverTelephones}
@@ -159,7 +157,7 @@ export function ThermalStickerPortraitTemplate({
         style={{
           minHeight: 0,
           display: 'grid',
-          gridTemplateRows: '10.5mm 6.5mm 6.5mm minmax(11mm, 1fr)',
+          gridTemplateRows: 'auto auto auto minmax(0, 1fr)',
           gap: 0,
           overflow: 'hidden',
         }}

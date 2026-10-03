@@ -10,6 +10,8 @@ import { useWaitingPickupColumns } from '../components/parcel-waiting-pickup/use
 test('all four parcel operation tables keep one combined date column', () => {
   const assignmentColumns = useCallCenterAssignmentColumns({
     onOpenAssignDialog: () => {},
+    onEditSecondReceiver: () => {},
+    canManageSecondReceiver: false,
     selectedParcelIds: new Set(),
     onToggleParcel: () => {},
     rows: [],
@@ -18,6 +20,8 @@ test('all four parcel operation tables keep one combined date column', () => {
   const shelfPickerColumns = useShelfPickerUpdateColumns({
     onOpenUpdateDialog: () => {},
     onEdit: () => {},
+    onEditSecondReceiver: () => {},
+    canManageSecondReceiver: false,
     onRequestDelivery: async () => {},
     isRequestingDelivery: false,
     canRequestDelivery: false,

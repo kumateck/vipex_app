@@ -19,6 +19,7 @@ import { usersRoutes } from './features/users/routes';
 import { customersRoutes } from './features/customers/routes';
 import { bookingsRoutes } from './features/shipments/bookings.routes';
 import { parcelsRoutes } from './features/shipments/parcels.routes';
+import { parcelSecondReceiverRoutes } from './features/shipments/parcel-second-receiver.routes';
 import { consignmentsRoutes } from './features/shipments/consignments.routes';
 import { autoGroupingRoutes } from './features/consignments/auto-grouping.routes';
 import { cashiersRoutes } from './features/cashiers/routes';
@@ -96,7 +97,7 @@ export const app = new Elysia()
         (s) =>
           s
             .group('/bookings', (r) => r.use(bookingsRoutes).use(bookingWithParcelsRoutes))
-            .group('/parcels', (r) => r.use(parcelsRoutes))
+            .group('/parcels', (r) => r.use(parcelsRoutes).use(parcelSecondReceiverRoutes))
             .group('/parcel-internal-transfers', (r) => r.use(parcelInternalTransfersRoutes))
             .group('/consignments', (r) => r.use(consignmentsRoutes))
             .group('/auto-grouping', (r) => r.use(autoGroupingRoutes)),

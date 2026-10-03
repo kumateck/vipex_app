@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,8 @@ import { EMPTY_META } from './call-center-assignment-types';
 import { AssignParcelDialog } from './assign-parcel-dialog';
 import { BulkAssignParcelsDialog } from './bulk-assign-parcels-dialog';
 import { PaymentStatusLegend } from '../parcel-processed-consignment';
+import { ParcelSecondReceiverDialog } from '../../dialogs/parcel-second-receiver-dialog';
+import { useParcelSecondReceiver } from '../../hooks/use-parcel-second-receiver';
 
 export function ParcelCallCenterAssignmentPage() {
   const workflow = useCallCenterAssignmentWorkflow();
@@ -22,9 +24,14 @@ export function ParcelCallCenterAssignmentPage() {
   const [selectedParcelIds, setSelectedParcelIds] = useState<Set<string>>(new Set());
   const [isBulkSaving, setIsBulkSaving] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const refetchList = table.listQuery.refetch;
+  const refreshList = useCallback(() => void refetchList(), [refetchList]);
+  const secondReceiver = useParcelSecondReceiver(refreshList);
 
   const columns = useCallCenterAssignmentColumns({
     onOpenAssignDialog: table.openAssignDialog,
+    onEditSecondReceiver: secondReceiver.open,
+    canManageSecondReceiver: secondReceiver.canManage,
     selectedParcelIds,
     onToggleParcel: (parcelId) =>
       setSelectedParcelIds((current) => {
@@ -150,6 +157,8 @@ export function ParcelCallCenterAssignmentPage() {
             table.handleSearchSubmit(searchInput);
           }}
         />
+
+        <ParcelSecondReceiverDialog state={secondReceiver} />
 
         <BulkAssignParcelsDialog
           open={bulkOpen}

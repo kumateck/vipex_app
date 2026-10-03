@@ -19,6 +19,22 @@ regenerate `apps/mobile/src/features/parcel-create/services/sticker-logo-data-ur
 `src/assets/logo.png`. QA: print a mobile sticker and confirm the emblem appears in the preview
 and on paper for one and multiple copies; check that the QR code and header remain legible.
 
+### Portrait sticker layout
+
+The 90 x 92 mm portrait sticker (browser/desktop and mobile print dialog) sizes its payment
+status and receiver blocks to their content, and the destination, sender, sender telephone,
+and parcel details rows to their content, so no value is clipped by a border line. Every label
+and value line has at least 1.1x line spacing and about 0.5 mm padding from the borders. The
+receiver name prints at 5 mm for names up to 12 characters, stepping down to 4.4 mm, 3.8 mm,
+and 3.2 mm for longer names, so the receiver telephone always prints in full beneath it. The
+to-be-paid amount prints at 4 mm with space above the payment note. Location names longer than
+10 characters print smaller so two-word locations usually fit on one line. The header is 22 mm
+with a 21 mm QR code. Landscape stickers are unchanged.
+QA: print portrait to-be-paid and paid stickers with a short receiver name (`ADU EVANS`), a
+long receiver name (23+ characters), a long sender name, a two-word location, and a long
+destination, with and without the CS mark; confirm no text touches or is cut by a border line
+on browser, desktop, and mobile output.
+
 ## Documents
 
 | Document                 | Purpose                                                                                                  |
@@ -62,16 +78,22 @@ payments do not reduce the balance.
 
 On **Rider Assigned Parcels**, staff select one rider and a Current, History, or All view,
 then choose **Print List** to print an A4 list of every parcel returned for that rider and
-view. The list includes booking and tracking codes, parcel details, receiver and phone,
-to-be-paid amount, delivery fee, status, rider name, print date, parcel count, and column
-totals. It is independent of the table's page size. The button is disabled until the
+view. Each row prints the booking code (the tracking code is not printed), parcel details,
+receiver and phone, the collected home (doorstep drop-off) address, to-be-paid amount,
+delivery fee, and an empty **Delivered** checkbox for the rider or dispatcher to tick by pen
+when the delivery succeeds. Delivery status is not printed; the checkbox is a paper record
+only and does not change any delivery state. A parcel with no collected address prints `-`.
+The sheet header shows the rider name, view, print date, and parcel count, and the footer
+shows column totals. It is independent of the table's page size. The button is disabled until the
 selected rider's data has loaded and contains at least one parcel. This uses the existing
 rider list response and `report-a4` browser or desktop print route; it makes no parcel or
 payment changes. The per-parcel A5 **Print** action remains available. Mobile has no
 rider assignment list print action.
 
 QA: assign more than ten parcels to one rider and verify the printed list contains every
-booking, not only the first table page. Switch between Current, History, and All and
+booking, not only the first table page. Verify each row shows the booking code without the
+tracking code, the collected home address (or `-`), and an unticked checkbox large enough to
+tick by pen, and that no status column is printed. Switch between Current, History, and All and
 verify the printed mode, statuses, count, and totals. Switch riders and verify the
 previous rider's parcels do not appear. Confirm empty or loading lists cannot print,
 and check browser and desktop A4 output across multiple pages.
