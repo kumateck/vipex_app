@@ -533,6 +533,13 @@
       "when": 1790000600000,
       "tag": "0074_delivery_confirmation_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1791000000000,
+      "tag": "0075_registered_devices",
+      "breakpoints": true
     }
   ]
 }

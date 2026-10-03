@@ -1029,6 +1029,11 @@ const BASE_ROUTES: Route[] = [
             url: '/users/password-management',
             permissionKey: PermissionKeys.CanSetUserPassword,
           },
+          {
+            title: 'Registered Devices',
+            url: '/users/devices',
+            permissionKey: PermissionKeys.CanUpdateUsers,
+          },
         ],
       },
       {
@@ -1683,6 +1688,11 @@ const BASE_ROUTES: Route[] = [
             title: 'Parcel Register',
             url: '/reports/parcels/register',
             permissionKey: PermissionKeys.CanViewReportParcelsRegister,
+          },
+          {
+            title: 'Daily Parcel Audit',
+            url: '/reports/parcels/daily-audit',
+            permissionKey: PermissionKeys.CanViewReportParcelsDailyAudit,
           },
           {
             title: 'Parcel Tracking',

@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
+import { ParcelTimestampsCell } from '../parcel-timestamps';
 import {
   formatCurrency,
   formatDateTime,
@@ -119,8 +120,14 @@ export function useParcelReceiverCashierColumns({
       },
       {
         id: 'receivedAt',
-        header: 'Received',
+        header: 'Dates',
         accessorFn: (row) => formatDateTime(row.receivedAt),
+        cell: ({ row }) => (
+          <ParcelTimestampsCell
+            createdAt={row.original.createdAt}
+            receivedAt={row.original.receivedAt}
+          />
+        ),
       },
       {
         id: 'amounts',

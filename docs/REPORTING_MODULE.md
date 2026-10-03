@@ -7,6 +7,7 @@ The reporting module provides a shared read layer for operational reports that s
 UI entry points:
 
 - `/reports`
+- `/reports/parcels/daily-audit`
 - `/accounting/reports`
 
 Backend entry points:
@@ -83,6 +84,7 @@ Implemented:
 - `GET /v1/reports/daily-cashier-sales/cashiers`
 - `GET /v1/reports/accounting/storage-waivers`
 - `GET /v1/reports/sticker-print-usage`
+- `GET /v1/reports/daily-parcel-audit`
 
 Report notes:
 
@@ -96,6 +98,29 @@ Report notes:
   recalculates on-screen and printed summaries without widening server authorization or issuing a
   second report request; To Be Paid rows appear only in All or Sender views.
 - Sticker Print Usage reports successful sticker-print events and copy totals by date, branch, actor, booking, tracking number, and parcel.
+- Daily Parcel Audit selects non-deleted parcels created on the chosen Ghana calendar date at
+  their source branch. Head office can choose a branch or all branches; branch staff are locked
+  to their own branch. Receiver-to-pay and sender-paid views use the same loaded cohort. The
+  receiver view can filter paid, credited, partial, or unpaid principal; either view can filter
+  delivered or pending delivery. Payment status is calculated from non-voided principal payments,
+  with separately identified delivery-posted principal credit; delivery uses the parcel's current
+  delivered state and delivery record, never a payment timestamp. Expected receiver principal is
+  the parcel's current To Be Paid balance plus recorded receiver principal payments; outstanding
+  subtracts recognized delivery credit from that current balance, floored at zero. Sender
+  payments and delivery fees are shown separately and are not treated as receiver collections.
+  The summary's delivery rate uses delivered/displayed parcels; its cash collection rate uses
+  receiver principal payments divided by receiver expected principal (credit is separate).
+  Totals, summary, CSV, and print all use the displayed view. The Analytics tab uses those same
+  filtered rows without an additional request. It charts receiver payment state (receiver view),
+  delivery state, principal amounts in GHS, source-branch parcel counts (top seven plus other),
+  and creation time in Ghana four-hour bands. Credit and cash are separate bars, and delivery
+  state is not inferred from payment. Empty filtered results show no charts. Charts are on-screen
+  only; CSV and print remain the detail export. This is a current-state audit of a
+  creation-date cohort, not a historical as-of snapshot or a transactions-on-that-day report.
+  QA: verify split, fully sender-paid, fully receiver-paid, partial, credited, voided-payment,
+  delivered-but-unpaid, undelivered-but-paid, deleted, and cross-branch cases; compare CSV and
+  print totals with the on-screen filtered rows; verify chart counts and GHS values against
+  those same rows after switching payment view, payment status, delivery status, and branch.
 
 ## Known Cashier Filter Defect
 
@@ -115,6 +140,7 @@ Examples:
 - parcel status summary requires `CanViewReportParcelsStatusSummary`
 - daily cashier sales requires `CanViewReportCashierShifts`; cashier-option loading must use a compatible report-scoped authorization model
 - sticker print usage requires `CanViewReportStickerPrintUsage`
+- daily parcel audit requires `CanViewReportParcelsDailyAudit`
 
 Where the report depends on a company-scoped module, module gating also applies:
 

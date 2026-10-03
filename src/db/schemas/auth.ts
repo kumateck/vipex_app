@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, varchar, index, uniqueIndex, jsonb } from 'drizzle-orm/pg-core';
-import { users } from './core';
+import { companies, users } from './core';
 import { createId } from '@paralleldrive/cuid2';
 
 // Refresh tokens
@@ -12,6 +12,7 @@ export const refreshTokens = pgTable(
     userId: varchar('user_id', { length: 25 })
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    deviceId: varchar('device_id', { length: 25 }).references(() => registeredDevices.id),
     tokenHash: varchar('token_hash', { length: 64 }).notNull(),
     expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
@@ -25,6 +26,43 @@ export const refreshTokens = pgTable(
     byUser: index('rt_user_idx').on(t.userId),
     byExpires: index('rt_expires_idx').on(t.expiresAt),
     tokenUnique: uniqueIndex('rt_token_hash_uq').on(t.tokenHash),
+  }),
+);
+
+export const registeredDevices = pgTable(
+  'registered_devices',
+  {
+    id: varchar('id', { length: 25 })
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: varchar('user_id', { length: 25 })
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    companyId: varchar('company_id', { length: 25 })
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    kind: varchar('kind', { length: 16 }).notNull(),
+    secretHash: varchar('secret_hash', { length: 64 }).notNull(),
+    status: varchar('status', { length: 24 }).notNull().default('pending'),
+    deviceName: varchar('device_name', { length: 160 }).notNull(),
+    model: varchar('model', { length: 120 }),
+    osName: varchar('os_name', { length: 40 }).notNull(),
+    osVersion: varchar('os_version', { length: 80 }),
+    appVersion: varchar('app_version', { length: 80 }),
+    userAgent: text('user_agent'),
+    requestedIp: varchar('requested_ip', { length: 64 }),
+    createdAt: timestamp('created_at', { mode: 'date' }).defaultNow().notNull(),
+    reviewedAt: timestamp('reviewed_at', { mode: 'date' }),
+    reviewedBy: varchar('reviewed_by', { length: 25 }).references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    reviewReason: text('review_reason'),
+    lastSeenAt: timestamp('last_seen_at', { mode: 'date' }),
+  },
+  (t) => ({
+    byCompanyStatus: index('registered_devices_company_status_idx').on(t.companyId, t.status),
+    byUser: index('registered_devices_user_idx').on(t.userId),
+    secretUnique: uniqueIndex('registered_devices_secret_hash_uq').on(t.secretHash),
   }),
 );
 

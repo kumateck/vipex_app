@@ -93,6 +93,7 @@ Current dependency graph includes:
 - `it_support` -> none
 - `bi_executive_dashboard` -> `accounting`
 - `partner_agent_portal` -> `shipments`, `customers`, `payments`
+- `device_verification` -> none
 
 Behavior:
 
@@ -134,6 +135,12 @@ The company settings page shows one card per module with:
 - enable / disable action button
 
 This UI is intentionally simple and uses action buttons instead of a switch component.
+
+`device_verification` appears as **Device Verification** and starts disabled for each company.
+Enabling it makes native mobile/desktop sign-in and sessions require an approved registration;
+disabling it allows native users to proceed without that check. The Registered Devices review
+page and review APIs are available only while enabled. See [Native Device Registration](DEVICE_REGISTRATION.md)
+for enforcement, client behavior, and rollout cautions.
 
 Additionally:
 

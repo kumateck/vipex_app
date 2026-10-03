@@ -39,6 +39,11 @@ type DesktopNetworkDiagnostics = {
 };
 
 contextBridge.exposeInMainWorld('api', {
+  device: {
+    status: async () => ipcRenderer.invoke('device:status'),
+    register: async (email: string, password: string) =>
+      ipcRenderer.invoke('device:register', { email, password }),
+  },
   platform: async () => process.platform,
   ping: async () => 'pong',
   retryDesktopLoad: async () => ipcRenderer.invoke('app:retry-load'),

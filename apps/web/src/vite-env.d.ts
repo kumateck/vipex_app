@@ -54,6 +54,10 @@ declare global {
 
   interface Window {
     api?: {
+      device?: {
+        status: () => Promise<string | null>;
+        register: (email: string, password: string) => Promise<string | null>;
+      };
       platform: () => Promise<NodeJS.Platform>;
       ping: () => Promise<string>;
       getNetworkDiagnostics: () => Promise<DesktopNetworkDiagnostics>;

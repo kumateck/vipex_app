@@ -1,7 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import { clearSession, loadSession, saveSession } from '@mobile/lib/storage';
-import { authorizedRequestWithRefresh, login as loginRequest } from '@mobile/lib/api';
+import {
+  authorizedRequestWithRefresh,
+  getMobileDeviceAccess,
+  login as loginRequest,
+} from '@mobile/lib/api';
 import type { SessionState } from '@mobile/types/auth';
 
 type AuthContextValue = {
@@ -26,6 +30,9 @@ function isSessionExpiredError(error: unknown) {
     message.includes('token revoked') ||
     message.includes('invalid refresh token') ||
     message.includes('session expired') ||
+    message.includes('device blocked') ||
+    message.includes('device revoked') ||
+    message.includes('device permanently denied') ||
     message.includes('unauthorized') ||
     message.includes('(401)')
   );
@@ -39,9 +46,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     loadSession()
-      .then((stored) => {
+      .then(async (stored) => {
+        if (stored.accessToken || stored.refreshToken || stored.user) {
+          const allowed = stored.accessToken
+            ? await getMobileDeviceAccess(stored.accessToken).catch(() => false)
+            : false;
+          if (!allowed) {
+            await clearSession();
+            setSessionState(EMPTY_SESSION);
+            return;
+          }
+        }
         setSessionState(stored);
       })
+      .catch(() => setSessionState(EMPTY_SESSION))
       .finally(() => setBootstrapped(true));
   }, []);
 
