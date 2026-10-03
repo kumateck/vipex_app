@@ -13,6 +13,7 @@ import {
 } from './repository';
 
 export const MODULE_DEPENDENCIES: Record<string, string[]> = {
+  device_verification: [],
   payroll: ['hr'],
   procurement: ['accounting'],
   fleet_transport: ['shipments'],
@@ -110,6 +111,10 @@ export async function setCompanyModuleStateSvc(input: {
   }
 
   const result = await upsertCompanyModuleRepo(input);
+  if (input.moduleCode === 'device_verification' && input.isEnabled) {
+    const { disconnectCommunicationCompanySockets } = await import('../communication/realtime');
+    disconnectCommunicationCompanySockets(input.companyId);
+  }
   if (input.moduleCode === 'accounting') {
     await updateCompanyAccountingFlagRepo({
       companyId: input.companyId,

@@ -2,21 +2,21 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { api, clearApiInFlightRequests } from '@/services/api';
 import { store } from '@/store';
 import { useAuthStore } from '@/stores/auth-store';
+import { hasDesktopDeviceAccess } from '../services/device-access.api';
 
 export function DesktopDeviceGate({ children }: { children: ReactNode }) {
   const accessToken = useAuthStore((state) => state.accessToken);
   const [verifiedToken, setVerifiedToken] = useState<string | null>(null);
-  const deviceApi = typeof window !== 'undefined' ? window.api?.device : undefined;
   const isDesktopRuntime =
     typeof navigator !== 'undefined' && navigator.userAgent.includes('Electron/');
 
   useEffect(() => {
-    if (!deviceApi || !accessToken) return;
+    if (!isDesktopRuntime || !accessToken) return;
     let active = true;
     const check = async () => {
-      const status = await deviceApi.status().catch(() => null);
+      const access = await hasDesktopDeviceAccess(accessToken).catch(() => false);
       if (!active) return;
-      if (status !== 'approved') {
+      if (!access) {
         clearApiInFlightRequests();
         store.dispatch(api.util.resetApiState());
         useAuthStore.getState().logout();
@@ -33,13 +33,10 @@ export function DesktopDeviceGate({ children }: { children: ReactNode }) {
       window.clearInterval(timer);
       window.removeEventListener('focus', onFocus);
     };
-  }, [accessToken, deviceApi]);
+  }, [accessToken, isDesktopRuntime]);
 
-  if (isDesktopRuntime && !deviceApi) {
-    return <div className="p-6 text-sm text-destructive">Desktop security bridge unavailable.</div>;
-  }
-  if (deviceApi && accessToken && verifiedToken !== accessToken) {
-    return <div className="p-6 text-sm">Checking desktop device approval…</div>;
+  if (isDesktopRuntime && accessToken && verifiedToken !== accessToken) {
+    return <div className="p-6 text-sm">Checking company device policy…</div>;
   }
   return children;
 }

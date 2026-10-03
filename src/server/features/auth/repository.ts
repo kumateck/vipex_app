@@ -118,6 +118,15 @@ export async function findRefreshTokenByIdRepo(id: string) {
   return rt ?? null;
 }
 
+export async function getUserDevicePolicyContextRepo(userId: string) {
+  const [user] = await db
+    .select({ companyId: users.companyId, status: users.status })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return user ?? null;
+}
+
 export async function rotateRefreshTokenRepo(
   prevHash: string,
   nextHash: string,

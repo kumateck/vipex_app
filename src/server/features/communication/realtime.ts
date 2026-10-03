@@ -6,6 +6,7 @@ import { findDeviceByCredentialRepo } from '@/server/features/auth/device.reposi
 import { readDeviceCredential, readNativeClient } from '@/server/features/auth/device-headers';
 import { sha256HexAsync } from '@/server/utils/otp';
 import { UserStatus } from '@/db/schemas/enums';
+import { isDeviceVerificationRequired } from '@/server/features/auth/device-policy';
 import type { CommunicationMessagesItem } from './messages/dto';
 import type { CommunicationCallsItem } from './calls/dto';
 import { createCommunicationPresenceRepo } from './presence/repository';
@@ -104,6 +105,12 @@ export function disconnectCommunicationDeviceSockets(deviceId: string) {
     for (const socket of sockets) {
       if (socket.data.deviceId === deviceId) socket.close(1008, 'Device access removed');
     }
+  }
+}
+
+export function disconnectCommunicationCompanySockets(companyId: string) {
+  for (const socket of companySockets.get(companyId) ?? []) {
+    socket.close(1008, 'Company access policy changed');
   }
 }
 
@@ -266,10 +273,21 @@ export async function upgradeCommunicationSocket(
     ) {
       return new Response('Session expired', { status: 401 });
     }
-    if (readNativeClient(request) && !session.deviceId) {
+    const userRecord = userId ? await getUserByIdRepo(userId) : null;
+    const companyId = userRecord?.companyId ?? '';
+    if (!userId || !companyId) {
+      return new Response('Invalid token context', { status: 403 });
+    }
+    const nativeClient = readNativeClient(request);
+    if ((nativeClient || session.deviceId) && userRecord?.status !== UserStatus.ACTIVE) {
+      return new Response('Account unavailable', { status: 401 });
+    }
+    const verificationRequired =
+      Boolean(nativeClient || session.deviceId) && (await isDeviceVerificationRequired(companyId));
+    if (verificationRequired && nativeClient && !session.deviceId) {
       return new Response('Native session requires device registration', { status: 401 });
     }
-    if (session.deviceId) {
+    if (verificationRequired && session.deviceId) {
       const credential = readDeviceCredential(request);
       const device = credential
         ? await findDeviceByCredentialRepo(credential.id, await sha256HexAsync(credential.secret))
@@ -284,12 +302,6 @@ export async function upgradeCommunicationSocket(
         return new Response('Device access denied', { status: 401 });
       }
     }
-    const userRecord = userId ? await getUserByIdRepo(userId) : null;
-    const companyId = userRecord?.companyId ?? '';
-    if (!userId || !companyId) {
-      return new Response('Invalid token context', { status: 403 });
-    }
-
     await ensureCompanyModuleEnabledSvc(companyId, 'communication_internal');
 
     const upgraded = server.upgrade(request, {

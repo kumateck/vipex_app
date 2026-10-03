@@ -28,6 +28,7 @@ import {
 } from './repository.tokens';
 import { requireApprovedDeviceSvc, type DeviceCredential } from './device.service';
 import { touchDeviceRepo } from './device.repository';
+import { isDeviceVerificationRequired } from './device-policy';
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -57,9 +58,10 @@ export async function loginSvc(
     throw new HttpError(HttpStatus.FORBIDDEN, 'Account disabled');
   const ok = await verifyPassword(password, user?.password);
   if (!ok) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
-  const device = client
-    ? await requireApprovedDeviceSvc(deviceCredential ?? null, user.id, client)
-    : null;
+  const device =
+    client && (await isDeviceVerificationRequired(user.companyId))
+      ? await requireApprovedDeviceSvc(deviceCredential ?? null, user.id, client)
+      : null;
   if (device) await touchDeviceRepo(device.id);
   const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
   const refreshPlain = generateOpaqueToken(32);
@@ -124,10 +126,17 @@ export async function refreshSvc(
   if (current.revokedAt) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token revoked');
   if (current.expiresAt.getTime() <= Date.now())
     throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token expired');
-  if (client && !current.deviceId) {
+  const user = await getUserByIdRepo(current.userId);
+  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
+  if ((client || current.deviceId) && user.status !== UserStatus.ACTIVE) {
+    throw new HttpError(HttpStatus.UNAUTHORIZED, 'Account unavailable');
+  }
+  const verificationRequired =
+    Boolean(client || current.deviceId) && (await isDeviceVerificationRequired(user.companyId));
+  if (verificationRequired && client && !current.deviceId) {
     throw new HttpError(HttpStatus.UNAUTHORIZED, 'Native session requires device registration');
   }
-  if (current.deviceId) {
+  if (verificationRequired && current.deviceId) {
     const device = await requireApprovedDeviceSvc(deviceCredential ?? null, current.userId);
     if (device.id !== current.deviceId) {
       throw new HttpError(HttpStatus.UNAUTHORIZED, 'Device session mismatch');
@@ -135,8 +144,6 @@ export async function refreshSvc(
     await touchDeviceRepo(device.id);
   }
 
-  const user = await getUserByIdRepo(current.userId);
-  if (!user) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid refresh token');
   const permissionKeys =
     Array.isArray(current.permissionsSnapshot) && current.permissionsSnapshot.length > 0
       ? current.permissionsSnapshot

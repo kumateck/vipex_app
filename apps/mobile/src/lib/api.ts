@@ -306,6 +306,14 @@ export async function getMobileDeviceStatus(): Promise<DeviceStatus | null> {
   return result.status;
 }
 
+export async function getMobileDeviceAccess(accessToken: string): Promise<boolean> {
+  const result = await request<{ required: boolean }>({
+    path: '/auth/devices/access',
+    token: accessToken,
+  });
+  return typeof result.required === 'boolean';
+}
+
 export function mobileApiGet<T>(input: {
   path: string;
   token: string;

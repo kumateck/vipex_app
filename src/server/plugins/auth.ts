@@ -2,6 +2,7 @@ import type { Elysia } from 'elysia';
 import { BranchType } from '@/db/schemas/enums';
 import {
   findRefreshTokenByIdRepo,
+  getUserDevicePolicyContextRepo,
   getUserByIdRepo,
   listRolePermissionKeysRepo,
 } from '@/server/features/auth/repository';
@@ -12,6 +13,7 @@ import { ensureCompanyModuleEnabledSvc } from '../features/company-modules/servi
 import { getDeviceByCredentialSvc } from '../features/auth/device.service';
 import { readDeviceCredential, readNativeClient } from '../features/auth/device-headers';
 import { UserStatus } from '@/db/schemas/enums';
+import { isDeviceVerificationRequired } from '../features/auth/device-policy';
 
 export type AuthUser = {
   sub: string;
@@ -40,12 +42,27 @@ export const authPlugin = (app: Elysia) =>
       if (payload.sid && payload.email) {
         const refreshTokenRow = await findRefreshTokenByIdRepo(payload.sid);
         if (!refreshTokenRow) return { user: null as AuthUser | null };
+        if (refreshTokenRow.userId !== payload.sub) return { user: null as AuthUser | null };
         if (refreshTokenRow.revokedAt) return { user: null as AuthUser | null };
         if (refreshTokenRow.expiresAt.getTime() <= Date.now())
           return { user: null as AuthUser | null };
-        if (readNativeClient(request) && !refreshTokenRow.deviceId)
+        const nativeClient = readNativeClient(request);
+        const policyUser =
+          nativeClient || refreshTokenRow.deviceId
+            ? await getUserDevicePolicyContextRepo(refreshTokenRow.userId)
+            : null;
+        if ((nativeClient || refreshTokenRow.deviceId) && !policyUser) {
           return { user: null as AuthUser | null };
-        if (refreshTokenRow.deviceId) {
+        }
+        if (policyUser?.status !== undefined && policyUser.status !== UserStatus.ACTIVE) {
+          return { user: null as AuthUser | null };
+        }
+        const verificationRequired =
+          Boolean(nativeClient || refreshTokenRow.deviceId) &&
+          (await isDeviceVerificationRequired(policyUser?.companyId));
+        if (verificationRequired && nativeClient && !refreshTokenRow.deviceId)
+          return { user: null as AuthUser | null };
+        if (verificationRequired && refreshTokenRow.deviceId) {
           const credential = readDeviceCredential(request);
           const device = credential ? await getDeviceByCredentialSvc(credential) : null;
           if (
@@ -79,9 +96,12 @@ export const authPlugin = (app: Elysia) =>
         };
       }
 
-      if (readNativeClient(request)) return { user: null as AuthUser | null };
+      const nativeClient = readNativeClient(request);
       const userRow = await getUserByIdRepo(payload.sub);
       if (!userRow?.id || !userRow.email) return { user: null as AuthUser | null };
+      if (nativeClient && (await isDeviceVerificationRequired(userRow.companyId))) {
+        return { user: null as AuthUser | null };
+      }
       const permissions = await listRolePermissionKeysRepo(userRow.roleId, userRow.companyId);
 
       return {

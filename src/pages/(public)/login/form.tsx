@@ -115,7 +115,8 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
               {device.isDesktop ? (
                 <Field>
                   <FieldDescription>
-                    This desktop must be approved before you can sign in.
+                    If your company requires device verification, this desktop must be approved
+                    before you can sign in.
                     {device.status ? ` Status: ${device.status.replaceAll('_', ' ')}.` : ''}
                   </FieldDescription>
                   <div className="flex flex-wrap gap-2">

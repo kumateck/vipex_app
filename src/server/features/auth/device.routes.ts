@@ -3,11 +3,13 @@ import {
   authPlugin,
   requireAuth,
   requireHeadOffice,
+  requireModuleEnabled,
   requirePermissions,
 } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { Forbidden } from '@/server/utils/http-error';
 import { readDeviceCredential } from './device-headers';
+import { isDeviceVerificationRequired } from './device-policy';
 import {
   getDeviceStatusSvc,
   listDevicesSvc,
@@ -54,6 +56,17 @@ export const deviceRoutes = new Elysia({ name: 'registered-devices' })
         },
       )
       .get(
+        '/access',
+        async ({ user }) => ({
+          required: await isDeviceVerificationRequired(user?.companyId),
+        }),
+        {
+          beforeHandle: requireAuth(),
+          response: t.Object({ required: t.Boolean() }),
+          detail: { tags: ['Auth'], summary: 'Check native device access policy' },
+        },
+      )
+      .get(
         '/status',
         async ({ request }) => {
           const credential = readDeviceCredential(request);
@@ -76,6 +89,7 @@ export const deviceRoutes = new Elysia({ name: 'registered-devices' })
             requireAuth(),
             requireHeadOffice(),
             requirePermissions(PermissionKeys.CanUpdateUsers),
+            requireModuleEnabled('device_verification'),
           ],
           detail: { tags: ['Auth'], summary: 'List registered devices for company' },
         },
@@ -109,6 +123,7 @@ export const deviceRoutes = new Elysia({ name: 'registered-devices' })
             requireAuth(),
             requireHeadOffice(),
             requirePermissions(PermissionKeys.CanUpdateUsers),
+            requireModuleEnabled('device_verification'),
           ],
           detail: { tags: ['Auth'], summary: 'Approve, revoke, block, or deny a device' },
         },

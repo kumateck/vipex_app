@@ -164,3 +164,7 @@ and reinstall checks are in [Native Device Registration](DEVICE_REGISTRATION.md)
 4. Confirm a missing, altered, or expired mobile-update download signature returns 401 and does not stream the APK.
 5. Login, forgot, reset, and set password screens still render correctly.
 6. Home quick-access links only show modules user has permission for.
+7. With the company device-verification module off, sign in and restore a saved native session
+   without a device credential. With it on, confirm a pending or revoked device cannot sign in or
+   restore a session, and an approved device can. See
+   [Native Device Registration](DEVICE_REGISTRATION.md).

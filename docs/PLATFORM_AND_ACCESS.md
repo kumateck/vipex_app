@@ -37,6 +37,7 @@ The route inventory is maintained in [Route and Permission Matrix](ROUTE_PERMISS
 
 Native mobile and Electron desktop device registration, approval, revocation, and rollout
 constraints are defined in [Native Device Registration](DEVICE_REGISTRATION.md). The
+`device_verification` company module controls whether native device approval is required. The
 head-office review page uses `CanUpdateUsers`; device gating complements, but does not replace,
 account status, role permissions, or company scope.
 

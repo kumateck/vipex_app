@@ -12,8 +12,9 @@ Vipex has three user-facing clients sharing the same server domain rules.
 
 The API is mounted under `/v1`. The server, not a client, is the authority for permissions, tenant scope, validation, pricing, payments, and status transitions.
 
-Mobile and Electron desktop sign-in now use approved device registrations; browser sign-in is
-unchanged. See [Native Device Registration](DEVICE_REGISTRATION.md) for the native credential,
+Mobile and Electron desktop sign-in use approved device registrations only when the company's
+`device_verification` module is enabled; browser sign-in is unchanged. See
+[Native Device Registration](DEVICE_REGISTRATION.md) for the native credential,
 approval, revocation, migration, and rollout limits.
 
 ## Web Application

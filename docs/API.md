@@ -15,10 +15,13 @@ Public parcel tracking is documented in [Public parcel tracking API](PUBLIC_PARC
 
 Native device registration is documented in [Native device registration](DEVICE_REGISTRATION.md).
 `POST /v1/auth/devices/register` verifies staff credentials and returns a pending device ID and
-one-time secret. `GET /v1/auth/devices/status` accepts device credential headers. Head-office
+one-time secret. `GET /v1/auth/devices/status` accepts device credential headers.
+`GET /v1/auth/devices/access` requires a bearer token and returns whether the company's
+`device_verification` module is enabled after checking native access. Head-office
 users with `CanUpdateUsers` use `GET /v1/auth/devices/` and
 `POST /v1/auth/devices/:id/review` to approve, revoke, block, unblock, or permanently deny.
-Native login/refresh and bound authenticated requests require the matching approved credential.
+Native login/refresh and bound authenticated requests require the matching approved credential
+only while that company module is enabled; otherwise native sign-in proceeds without registration.
 
 `GET /v1/reports/daily-parcel-audit?date=YYYY-MM-DD` provides the current payment and delivery
 state for parcels created on that Ghana calendar date. Head office may add `branchId`; other users

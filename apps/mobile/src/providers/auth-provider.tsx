@@ -3,7 +3,7 @@ import type { PropsWithChildren } from 'react';
 import { clearSession, loadSession, saveSession } from '@mobile/lib/storage';
 import {
   authorizedRequestWithRefresh,
-  getMobileDeviceStatus,
+  getMobileDeviceAccess,
   login as loginRequest,
 } from '@mobile/lib/api';
 import type { SessionState } from '@mobile/types/auth';
@@ -48,8 +48,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     loadSession()
       .then(async (stored) => {
         if (stored.accessToken || stored.refreshToken || stored.user) {
-          const status = await getMobileDeviceStatus().catch(() => null);
-          if (status !== 'approved') {
+          const allowed = stored.accessToken
+            ? await getMobileDeviceAccess(stored.accessToken).catch(() => false)
+            : false;
+          if (!allowed) {
             await clearSession();
             setSessionState(EMPTY_SESSION);
             return;

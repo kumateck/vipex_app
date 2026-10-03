@@ -113,7 +113,7 @@ export function LoginForm({
       </Pressable>
       <View style={styles.deviceActions}>
         <Text style={[styles.helper, { color: theme.colors.textSubtle }]}>
-          This phone needs approval before sign-in.
+          If your company requires device verification, this phone needs approval before sign-in.
         </Text>
         {deviceStatus ? (
           <Text style={[styles.helper, { color: theme.colors.text }]}>
