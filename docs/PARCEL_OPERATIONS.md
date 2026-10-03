@@ -44,9 +44,10 @@ is **Paid**, amber is **To Be Paid**, and blue is **Partial**. A Paid parcel sho
 amount, a To Be Paid parcel shows only its balance due, and a Partial parcel shows both. The
 indicator is informational and does not change assignment behavior.
 
-Shelf Picker Update lists unassigned parcels first across the full paginated result. Every row
-shows **Received D&T** from the parcel's recorded receipt timestamp; older rows without a valid
-receipt timestamp show `-`. This display does not change assignment order. Assigned parcels follow.
+Shelf Picker Update lists unassigned parcels first across the full paginated result. Its existing
+date column shows **Created** from the parcel creation timestamp and **Received** from its recorded
+receipt timestamp in the same cell; missing or invalid timestamps show `-`. This display does not
+change assignment order. Assigned parcels follow.
 Within each group, branches using pickup queues retain queue-number order when
 there is no search; other results retain creation order. The server considers both the parcel's
 stored shelf-picker assignment and a legacy pickup-queue assignment when determining whether a
@@ -54,15 +55,21 @@ parcel is assigned. A failed list request leaves the current table error visible
 change any assignment. QA: check Paid, To Be Paid, and Partial rows for the correct amount lines;
 assign a picker to a parcel on page one, refresh, and verify that it moves below all unassigned
 rows, including those on later pages; repeat on a branch with pickup queues enabled.
-Verify Received D&T for a newly received parcel and the `-` fallback for a legacy row without a
+Verify both date lines for a newly received parcel and the `-` fallback for a legacy row without a
 receipt timestamp.
 
 Call Center Assignment shows sender and receiver names with every available telephone, payment
-status and applicable balances, parcel details, received date and time, and the current assignee.
+status and applicable balances, parcel details, creation and received date/time together in the
+existing date column, and the current assignee. Invalid or missing timestamps show `-`.
 Unassigned parcels appear before assigned parcels across the full paginated result. Within each
 group, the newest effective received date is first; creation time is the fallback for legacy rows
 without a received timestamp. Paid rows omit a zero To be paid line, To Be Paid rows omit a zero
 Paid line, and Partial rows show both balances.
+Waiting for Pickup (Awaiting Pickup parcels) and Receiver Cashier also show **Created** and
+**Received** together in their existing date column. Each uses the parcel's `createdAt` and
+`receivedAt` from the current list response; no new endpoint or sort order is introduced.
+QA: compare Created on all four pages to the parcel record, confirm Received is unchanged, and
+verify a missing receipt timestamp displays `-` without affecting sorting or actions.
 
 All Parcels Super Search uses the same payment legend and places the matching colored indicator in
 each Payment cell. A fully paid parcel shows only its **Paid** amount; a fully unpaid parcel shows

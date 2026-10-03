@@ -2,18 +2,12 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { formatDateTime } from '@/lib/dates';
+import { ParcelTimestampsCell } from '../parcel-timestamps';
 import { CallCenterAssignmentPaymentCell } from './call-center-assignment-payment-cell';
 import type { ParcelRow } from './call-center-assignment-types';
 
 const formatPhones = (primary?: string | null, secondary?: string | null) =>
   [primary, secondary].filter(Boolean).join(' / ') || '-';
-
-function formatReceivedAt(value: string | null) {
-  if (!value) return '-';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : formatDateTime(date);
-}
 
 export function useCallCenterAssignmentColumns({
   onOpenAssignDialog,
@@ -85,8 +79,13 @@ export function useCallCenterAssignmentColumns({
     },
     {
       accessorKey: 'receivedAt',
-      header: 'Received D&T',
-      cell: ({ row }) => <div className="text-sm">{formatReceivedAt(row.original.receivedAt)}</div>,
+      header: 'Dates',
+      cell: ({ row }) => (
+        <ParcelTimestampsCell
+          createdAt={row.original.createdAt}
+          receivedAt={row.original.receivedAt}
+        />
+      ),
     },
     {
       accessorKey: 'parcelDetails',
