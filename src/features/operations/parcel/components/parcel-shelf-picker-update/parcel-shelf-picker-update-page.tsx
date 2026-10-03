@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,14 +13,21 @@ import { EMPTY_META } from './shelf-picker-update-types';
 import { UpdateShelfPickerDialog } from './update-shelf-picker-dialog';
 import { PaymentStatusLegend } from '../parcel-processed-consignment';
 import { EditIncomingTransitParcelDialog } from '../parcel-in-transit/edit-incoming-transit-parcel-dialog';
+import { ParcelSecondReceiverDialog } from '../../dialogs/parcel-second-receiver-dialog';
+import { useParcelSecondReceiver } from '../../hooks/use-parcel-second-receiver';
 
 export function ParcelShelfPickerUpdatePage() {
   const workflow = useShelfPickerUpdateWorkflow();
   const { context, table, dialog, edit } = workflow;
+  const refetchList = table.listQuery.refetch;
+  const refreshList = useCallback(() => void refetchList(), [refetchList]);
+  const secondReceiver = useParcelSecondReceiver(refreshList);
 
   const columns = useShelfPickerUpdateColumns({
     onOpenUpdateDialog: table.openUpdateDialog,
     onEdit: table.openEditDialog,
+    onEditSecondReceiver: secondReceiver.open,
+    canManageSecondReceiver: secondReceiver.canManage,
     onRequestDelivery: table.handleRequestDelivery,
     isRequestingDelivery: table.isRequestingDelivery,
     canRequestDelivery: table.canRequestDelivery,
@@ -100,6 +108,8 @@ export function ParcelShelfPickerUpdatePage() {
             }
           }}
         />
+
+        <ParcelSecondReceiverDialog state={secondReceiver} />
 
         <EditIncomingTransitParcelDialog
           open={Boolean(edit.editingParcel)}
