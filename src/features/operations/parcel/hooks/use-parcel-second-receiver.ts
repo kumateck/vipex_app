@@ -2,8 +2,12 @@ import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
-import { canEditSecondReceiver } from '@/shared/shipments/second-receiver';
-import { useSetParcelSecondReceiverMutation } from '../api/parcel-second-receiver.api';
+import { PermissionKeys } from '@/shared/permissions/constants';
+import { useAuthStore } from '@/stores/auth-store';
+import {
+  useRemoveParcelSecondReceiverMutation,
+  useSetParcelSecondReceiverMutation,
+} from '../api/parcel-second-receiver.api';
 
 export type SecondReceiverParcel = {
   id: string;
@@ -16,18 +20,33 @@ export type SecondReceiverParcel = {
 };
 
 export function useParcelSecondReceiver(onSaved: () => void) {
+  const canManage = useAuthStore((state) =>
+    (state.user?.permissions ?? []).includes(PermissionKeys.CanManageParcelSecondReceiver),
+  );
   const [parcel, setParcel] = useState<SecondReceiverParcel | null>(null);
   const [fullname, setFullname] = useState('');
   const [telephone, setTelephone] = useState('');
-  const [setSecondReceiver, { isLoading: isSaving }] = useSetParcelSecondReceiverMutation();
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [setSecondReceiver, { isLoading: isSetting }] = useSetParcelSecondReceiverMutation();
+  const [removeSecondReceiver, { isLoading: isRemoving }] = useRemoveParcelSecondReceiverMutation();
 
   const open = useCallback((next: SecondReceiverParcel) => {
     setParcel(next);
     setFullname(next.secondReceiverName ?? '');
     setTelephone(normalizePhoneDigits(next.secondReceiverPhone));
+    setConfirmingRemove(false);
   }, []);
 
   const close = useCallback(() => setParcel(null), []);
+
+  const finish = useCallback(
+    (message: string) => {
+      toast.success(message);
+      setParcel(null);
+      onSaved();
+    },
+    [onSaved],
+  );
 
   const save = useCallback(async () => {
     if (!parcel) return;
@@ -51,25 +70,36 @@ export function useParcelSecondReceiver(onSaved: () => void) {
         fullname: name,
         telephone: phone,
       }).unwrap();
-      toast.success(result.changed ? 'Second receiver saved' : 'Second receiver unchanged');
-      setParcel(null);
-      onSaved();
+      finish(result.changed ? 'Second receiver saved' : 'Second receiver unchanged');
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to save second receiver'));
     }
-  }, [fullname, onSaved, parcel, setSecondReceiver, telephone]);
+  }, [finish, fullname, parcel, setSecondReceiver, telephone]);
+
+  const remove = useCallback(async () => {
+    if (!parcel) return;
+    try {
+      const result = await removeSecondReceiver({ id: parcel.id }).unwrap();
+      finish(result.changed ? 'Second receiver removed' : 'Parcel had no second receiver');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to remove second receiver'));
+    }
+  }, [finish, parcel, removeSecondReceiver]);
 
   return {
+    canManage,
     parcel,
     fullname,
     setFullname,
     telephone,
     setTelephone,
-    isSaving,
+    confirmingRemove,
+    setConfirmingRemove,
+    isSaving: isSetting || isRemoving,
     open,
     close,
     save,
-    canEdit: canEditSecondReceiver,
+    remove,
   };
 }
 

@@ -8,9 +8,14 @@ export type SetParcelSecondReceiverInput = {
 
 export type SetParcelSecondReceiverResponse = {
   id: string;
-  secondReceiverId: string;
+  secondReceiverId: string | null;
   changed: boolean;
 };
+
+const invalidatesTags = [
+  { type: 'Bookings' as const, id: 'LIST' },
+  { type: 'Customers' as const, id: 'LIST' },
+];
 
 export const parcelSecondReceiverApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -23,12 +28,17 @@ export const parcelSecondReceiverApi = api.injectEndpoints({
         method: 'PUT',
         body,
       }),
-      invalidatesTags: [
-        { type: 'Bookings', id: 'LIST' },
-        { type: 'Customers', id: 'LIST' },
-      ],
+      invalidatesTags,
+    }),
+    removeParcelSecondReceiver: builder.mutation<SetParcelSecondReceiverResponse, { id: string }>({
+      query: ({ id }) => ({
+        url: `/shipments/parcels/${id}/second-receiver`,
+        method: 'DELETE',
+      }),
+      invalidatesTags,
     }),
   }),
 });
 
-export const { useSetParcelSecondReceiverMutation } = parcelSecondReceiverApi;
+export const { useSetParcelSecondReceiverMutation, useRemoveParcelSecondReceiverMutation } =
+  parcelSecondReceiverApi;

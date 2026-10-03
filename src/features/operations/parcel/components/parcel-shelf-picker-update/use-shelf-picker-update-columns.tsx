@@ -40,6 +40,7 @@ export function useShelfPickerUpdateColumns({
   onOpenUpdateDialog,
   onEdit,
   onEditSecondReceiver,
+  canManageSecondReceiver,
   onRequestDelivery,
   isRequestingDelivery,
   canRequestDelivery,
@@ -47,6 +48,7 @@ export function useShelfPickerUpdateColumns({
   onOpenUpdateDialog: (parcel: ParcelRow) => void;
   onEdit: (parcel: ParcelRow) => void;
   onEditSecondReceiver: (parcel: ParcelRow) => void;
+  canManageSecondReceiver: boolean;
   onRequestDelivery: (parcel: ParcelRow) => Promise<void>;
   isRequestingDelivery: boolean;
   canRequestDelivery: boolean;
@@ -143,7 +145,7 @@ export function useShelfPickerUpdateColumns({
               Update
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
-            {canEditSecondReceiver(row.original.status) ? (
+            {canManageSecondReceiver && canEditSecondReceiver(row.original.status) ? (
               <DropdownMenuItem onClick={() => onEditSecondReceiver(row.original)}>
                 {row.original.secondReceiverName ? 'Change Second Receiver' : 'Add Second Receiver'}
               </DropdownMenuItem>

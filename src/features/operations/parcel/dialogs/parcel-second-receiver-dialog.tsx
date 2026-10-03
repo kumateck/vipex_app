@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { PHONE_DIGITS, limitPhoneDigits } from '@/lib/phone';
 import type { ParcelSecondReceiverState } from '../hooks/use-parcel-second-receiver';
+import { ParcelSecondReceiverRemoveConfirm } from './parcel-second-receiver-remove-confirm';
 
 export function ParcelSecondReceiverDialog({ state }: { state: ParcelSecondReceiverState }) {
   const { parcel, isSaving } = state;
@@ -65,14 +66,31 @@ export function ParcelSecondReceiverDialog({ state }: { state: ParcelSecondRecei
             </p>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={state.close} disabled={isSaving}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? <Spinner /> : null}
-              Save Second Receiver
-            </Button>
+          {state.confirmingRemove ? <ParcelSecondReceiverRemoveConfirm state={state} /> : null}
+
+          <DialogFooter className="gap-2 sm:justify-between">
+            {hasExisting ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-destructive hover:text-destructive"
+                onClick={() => state.setConfirmingRemove(true)}
+                disabled={isSaving || state.confirmingRemove}
+              >
+                Remove Second Receiver
+              </Button>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={state.close} disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSaving || state.confirmingRemove}>
+                {isSaving ? <Spinner /> : null}
+                Save Second Receiver
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

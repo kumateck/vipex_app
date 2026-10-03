@@ -110,17 +110,22 @@ authorization. Web and mobile use the same endpoints.
 - `POST /shipments/parcels/:id/update-shelf-picker`: persist the selected shelf-picker staff on the
   parcel and, when present, mirror it to the active pickup queue. This endpoint works independently
   of the branch `usePickupQueue` setting and requires `CanUpdateParcelShelfPicker`.
-- `PUT /shipments/parcels/:id/second-receiver`: require `CanUpdateParcelShelfPicker` or
-  `CanAssignCallCenterParcels`; body has `fullname` (1-255 characters) and `telephone` (normalized
-  to exactly ten digits). The parcel must belong to the caller's company and destination branch,
-  not be deleted, and be Arrived at Destination, Customer Contacted, Returned to Office, Awaiting
-  Pickup, or Home Delivery Requested. Resolves the telephone like `resolve-second-receiver`, then
-  sets `secondReceiverId`, clears `secondCardId`/`secondCardNumber`, and expires active or
-  verified-but-unused `second` receiver OTPs. Returns `{ id, secondReceiverId, changed }`;
-  `changed` is false and nothing is written when the customer is already the second receiver.
-  Missing or out-of-scope parcels return 404; ineligible status, the main receiver as second
-  receiver, or a concurrent change return 409; invalid name or telephone return 400. Records audit
-  event `PARCEL_SECOND_RECEIVER_SET`. Used by Shelf Picker Update and Parcel Assignment.
+- `PUT /shipments/parcels/:id/second-receiver`: require `CanManageParcelSecondReceiver`; body has
+  `fullname` (1-255 characters) and `telephone` (normalized to exactly ten digits). The parcel must
+  belong to the caller's company and destination branch, not be deleted, and be Arrived at
+  Destination, Customer Contacted, Returned to Office, Awaiting Pickup, or Home Delivery Requested.
+  Resolves the telephone like `resolve-second-receiver`, then sets `secondReceiverId`, clears
+  `secondCardId`/`secondCardNumber`, and expires active or verified-but-unused `second` receiver
+  OTPs. Returns `{ id, secondReceiverId, changed }`; `changed` is false and nothing is written when
+  the customer is already the second receiver. Missing or out-of-scope parcels return 404;
+  ineligible status, the main receiver as second receiver, or a concurrent change return 409;
+  invalid name or telephone return 400; a missing permission returns 403. Sends no SMS or email.
+  Records audit event `PARCEL_SECOND_RECEIVER_SET`. Used by Shelf Picker Update and Parcel
+  Assignment.
+- `DELETE /shipments/parcels/:id/second-receiver`: same permission, scope, and status rules as the
+  `PUT`. Clears `secondReceiverId` and the second ID card fields and expires `second` receiver
+  OTPs. Returns `{ id, secondReceiverId: null, changed }`; `changed` is false when the parcel had
+  no second receiver. Sends no SMS or email. Records audit event `PARCEL_SECOND_RECEIVER_REMOVED`.
 - `GET /shipments/parcels/shelf-picker`: require `CanReadShelfPickerUpdate` and list awaiting-pickup
   parcels for the authenticated company and destination branch. Unassigned shelf-picker parcels
   precede assigned parcels before pagination, considering both parcel and legacy pickup-queue

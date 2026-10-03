@@ -39,14 +39,16 @@ function renderCell(columns: ColumnDef<ParcelRow>[], key: string, row: ParcelRow
   );
 }
 
-const columns = useCallCenterAssignmentColumns({
+const columnOptions = {
   onOpenAssignDialog: () => {},
   onEditSecondReceiver: () => {},
-  selectedParcelIds: new Set(),
+  canManageSecondReceiver: true,
+  selectedParcelIds: new Set<string>(),
   onToggleParcel: () => {},
   rows: [parcel],
   onToggleAll: () => {},
-});
+};
+const columns = useCallCenterAssignmentColumns(columnOptions);
 
 describe('parcel assignment columns', () => {
   test('shows parcel content and the current second receiver', () => {
@@ -68,5 +70,15 @@ describe('parcel assignment columns', () => {
     expect(
       renderCell(columns, 'actions', { ...parcel, status: ParcelStatus.DISPATCHED }),
     ).not.toContain('2nd Receiver');
+  });
+
+  test('hides the second receiver action without CanManageParcelSecondReceiver', () => {
+    const withoutPermission = useCallCenterAssignmentColumns({
+      ...columnOptions,
+      canManageSecondReceiver: false,
+    });
+    const actions = renderCell(withoutPermission, 'actions', parcel);
+    expect(actions).toContain('Assign');
+    expect(actions).not.toContain('2nd Receiver');
   });
 });

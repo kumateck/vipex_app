@@ -31,6 +31,7 @@ export function ParcelCallCenterAssignmentPage() {
   const columns = useCallCenterAssignmentColumns({
     onOpenAssignDialog: table.openAssignDialog,
     onEditSecondReceiver: secondReceiver.open,
+    canManageSecondReceiver: secondReceiver.canManage,
     selectedParcelIds,
     onToggleParcel: (parcelId) =>
       setSelectedParcelIds((current) => {

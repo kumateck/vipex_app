@@ -27,6 +27,7 @@ export function ParcelShelfPickerUpdatePage() {
     onOpenUpdateDialog: table.openUpdateDialog,
     onEdit: table.openEditDialog,
     onEditSecondReceiver: secondReceiver.open,
+    canManageSecondReceiver: secondReceiver.canManage,
     onRequestDelivery: table.handleRequestDelivery,
     isRequestingDelivery: table.isRequestingDelivery,
     canRequestDelivery: table.canRequestDelivery,

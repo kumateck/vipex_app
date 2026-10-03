@@ -19,6 +19,7 @@ function formatReceivedAt(value: string | null) {
 export function useCallCenterAssignmentColumns({
   onOpenAssignDialog,
   onEditSecondReceiver,
+  canManageSecondReceiver,
   selectedParcelIds,
   onToggleParcel,
   rows,
@@ -26,6 +27,7 @@ export function useCallCenterAssignmentColumns({
 }: {
   onOpenAssignDialog: (parcel: ParcelRow) => void;
   onEditSecondReceiver: (parcel: ParcelRow) => void;
+  canManageSecondReceiver: boolean;
   selectedParcelIds: Set<string>;
   onToggleParcel: (parcelId: string) => void;
   rows: ParcelRow[];
@@ -128,7 +130,7 @@ export function useCallCenterAssignmentColumns({
           <Button variant="outline" size="sm" onClick={() => onOpenAssignDialog(row.original)}>
             {row.original.callCenterAssignedToUserName ? 'Reassign' : 'Assign'}
           </Button>
-          {canEditSecondReceiver(row.original.status) ? (
+          {canManageSecondReceiver && canEditSecondReceiver(row.original.status) ? (
             <Button variant="outline" size="sm" onClick={() => onEditSecondReceiver(row.original)}>
               {row.original.secondReceiverName ? 'Change 2nd Receiver' : 'Add 2nd Receiver'}
             </Button>
