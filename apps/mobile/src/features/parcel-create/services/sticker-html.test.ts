@@ -43,6 +43,12 @@ describe('mobile to-be-paid sticker', () => {
     expect(long).not.toContain('grid-template-rows:25mm 12.5mm 18mm');
   });
 
+  test('prints the escaped cashier name in the header only when provided', () => {
+    const html = buildMobileStickerHtml({ ...sticker, cashierName: 'Grace <Mensah>', copies: 1 });
+    expect(html).toContain('<div class="cashier">Cashier: Grace &lt;Mensah&gt;</div>');
+    expect(buildMobileStickerHtml({ ...sticker, copies: 1 })).not.toContain('class="cashier"');
+  });
+
   test.each([0, -1, 1.5, Number.POSITIVE_INFINITY])('rejects invalid copy count', (copies) => {
     expect(() => buildMobileStickerHtml({ ...sticker, copies })).toThrow();
   });

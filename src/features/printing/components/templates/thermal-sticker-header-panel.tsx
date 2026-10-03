@@ -1,7 +1,8 @@
 import logoPng from '@/assets/logo.png';
+import { ThermalStickerCashierLine } from './thermal-sticker-cashier-line';
 import { ThermalStickerWordmark } from './thermal-sticker-wordmark';
 
-export function ThermalStickerHeaderPanel() {
+export function ThermalStickerHeaderPanel({ cashierName }: { cashierName?: string | null }) {
   return (
     <section
       style={{
@@ -16,7 +17,10 @@ export function ThermalStickerHeaderPanel() {
         alt="Vipex emblem"
         style={{ width: '20mm', height: '20mm', objectFit: 'contain' }}
       />
-      <ThermalStickerWordmark size="landscape" />
+      <div style={{ minWidth: 0 }}>
+        <ThermalStickerWordmark size="landscape" />
+        <ThermalStickerCashierLine cashierName={cashierName} size="landscape" />
+      </div>
     </section>
   );
 }

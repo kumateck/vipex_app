@@ -29,7 +29,17 @@ receiver name prints at 5 mm for names up to 12 characters, stepping down to 4.4
 and 3.2 mm for longer names, so the receiver telephone always prints in full beneath it. The
 to-be-paid amount prints at 4 mm with space above the payment note. Location names longer than
 10 characters print smaller so two-word locations usually fit on one line. The header is 22 mm
-with a 21 mm QR code. Landscape stickers are unchanged.
+with a 21 mm QR code.
+
+Portrait and landscape stickers (browser/desktop) and the mobile to-be-paid sticker print
+`Cashier: <name>` directly under the VIPEX PARCEL wordmark. The name is the full name of the
+signed-in user who prints the sticker, the same value the A5 receipt prints as Cashier, so a
+reprint shows the user who reprinted it, not necessarily the original cashier. A name too long for
+the header is truncated with an ellipsis on one line; when no name is available the line is
+omitted. The name is escaped in mobile print HTML.
+QA: print an original and a reprinted sticker as different users and confirm each shows the
+printing user; print with a 35+ character name and confirm the header, wordmark, and QR code do
+not overlap; print from mobile and confirm the cashier line appears for each copy.
 QA: print portrait to-be-paid and paid stickers with a short receiver name (`ADU EVANS`), a
 long receiver name (23+ characters), a long sender name, a two-word location, and a long
 destination, with and without the CS mark; confirm no text touches or is cut by a border line

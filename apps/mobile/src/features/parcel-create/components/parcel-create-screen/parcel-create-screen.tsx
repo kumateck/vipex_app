@@ -186,6 +186,7 @@ function ParcelCreateForm({
           parcelDetails: parcelDetails.trim(),
           amountCedis: paymentResponsibility === PaymentResponsibility.RECIPIENT ? chargeAmount : 0,
           callSender,
+          cashierName: session.user?.fullname ?? null,
           copies,
         };
         printCompleted = await stickerPrint.print(sticker);

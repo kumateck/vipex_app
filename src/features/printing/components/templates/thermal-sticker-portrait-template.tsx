@@ -2,6 +2,7 @@ import logoPng from '@/assets/logo.png';
 import { BrandedQrCode } from '@/components/ui/branded-qr-code';
 import { PAYMENT_DUE_NOTE } from './thermal-sticker-copy';
 import { ThermalStickerCallSenderMark } from './thermal-sticker-call-sender-mark';
+import { ThermalStickerCashierLine } from './thermal-sticker-cashier-line';
 import { portraitReceiverNameFontSize } from './thermal-sticker-font-size.utils';
 import { DestinationRow } from './thermal-sticker-portrait-sections';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
@@ -9,6 +10,7 @@ import { StickerRow } from './thermal-sticker-template-utils';
 import { ThermalStickerWordmark } from './thermal-sticker-wordmark';
 
 export function ThermalStickerPortraitTemplate({
+  printedByName,
   senderName,
   senderTelephones,
   receiverName,
@@ -60,7 +62,10 @@ export function ThermalStickerPortraitTemplate({
             objectFit: 'contain',
           }}
         />
-        <ThermalStickerWordmark />
+        <div style={{ minWidth: 0 }}>
+          <ThermalStickerWordmark />
+          <ThermalStickerCashierLine cashierName={printedByName} />
+        </div>
         <div className="justify-self-end">
           <BrandedQrCode
             value={qrValue}

@@ -46,4 +46,23 @@ describe('ThermalStickerTemplate', () => {
       expect(unmarked).not.toContain('>CS</span>');
     },
   );
+
+  test.each(['portrait', 'landscape'] as const)(
+    'prints the cashier name in the %s header and omits the line without one',
+    (orientation) => {
+      const named = renderToStaticMarkup(
+        <ThermalStickerTemplate
+          {...baseProps}
+          printedByName="Grace Mensah"
+          orientation={orientation}
+        />,
+      );
+      const unnamed = renderToStaticMarkup(
+        <ThermalStickerTemplate {...baseProps} printedByName="  " orientation={orientation} />,
+      );
+
+      expect(named).toMatch(/Cashier: (<!-- -->)?Grace Mensah/);
+      expect(unnamed).not.toContain('Cashier:');
+    },
+  );
 });

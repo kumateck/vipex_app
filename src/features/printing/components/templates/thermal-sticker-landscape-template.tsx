@@ -7,6 +7,7 @@ import { ThermalStickerCallSenderMark } from './thermal-sticker-call-sender-mark
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
 
 export function ThermalStickerLandscapeTemplate({
+  printedByName,
   senderName,
   senderTelephones,
   receiverName,
@@ -37,7 +38,7 @@ export function ThermalStickerLandscapeTemplate({
         gap: '2.5mm',
       }}
     >
-      <ThermalStickerHeaderPanel />
+      <ThermalStickerHeaderPanel cashierName={printedByName} />
 
       <main
         style={{
