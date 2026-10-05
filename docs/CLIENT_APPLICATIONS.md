@@ -16,6 +16,11 @@ Mobile and Electron desktop sign-in use approved device registrations only when 
 `device_verification` module is enabled; browser sign-in is unchanged. See
 [Native Device Registration](DEVICE_REGISTRATION.md) for the native credential,
 approval, revocation, migration, and rollout limits.
+On desktop, a temporary policy-check outage (including a refresh during that check) blocks the
+protected workspace with Retry instead of clearing the saved login. A temporary refresh failure
+on an ordinary API request preserves the login and returns a retryable error; the next device
+check blocks the workspace if verification remains unavailable. Confirmed invalid sessions and
+denied devices still require a new sign-in. Web and desktop API calls share one refresh in flight.
 
 ## Web Application
 
