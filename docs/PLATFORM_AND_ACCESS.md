@@ -73,6 +73,8 @@ Rules:
 
 The web client can lock an idle authenticated screen and require the current password to resume. This is not a new login and does not replace server session expiration. Tokens, passwords, OTPs, and provider secrets must never appear in logs or AI context.
 
+Access JWTs expire after 8 hours by default when `JWT_ACCESS_EXPIRES` is unset. An explicit environment value overrides that default; refresh-token lifetime remains controlled separately by `JWT_REFRESH_EXPIRES` (30 days by default). Expired access tokens require a valid refresh session; an expired, revoked, or otherwise invalid refresh token requires a new login. This applies to web, mobile, and desktop clients.
+
 ## Branch Operational Controls
 
 Branch settings include independent controls for pickup OTP and receiver OTP. Both default to enabled for new or legacy-compatible branch records unless deliberately disabled. These settings change handover validation, not the user's underlying permissions.
@@ -116,6 +118,7 @@ Important events include:
 
 ## Verification Scenarios
 
+- With `JWT_ACCESS_EXPIRES` unset, verify a newly issued access JWT expires 8 hours after issue; with an explicit value, verify that value takes precedence. Confirm an expired access JWT can be refreshed only while its refresh session is valid.
 - Direct API request without navigation access.
 - User with module enabled but permission denied, and the reverse.
 - Cross-company and cross-branch identifier attempts.
