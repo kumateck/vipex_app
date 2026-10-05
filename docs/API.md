@@ -22,6 +22,10 @@ users with `CanUpdateUsers` use `GET /v1/auth/devices/` and
 `POST /v1/auth/devices/:id/review` to approve, revoke, block, unblock, or permanently deny.
 Native login/refresh and bound authenticated requests require the matching approved credential
 only while that company module is enabled; otherwise native sign-in proceeds without registration.
+Desktop clients retry `GET /v1/auth/devices/access` after refreshing an expired access token.
+They block protected content, but keep the saved session for Retry, when this check or its refresh
+request is temporarily unavailable. A confirmed invalid refresh session or denied device clears
+the local login. The same refresh operation is shared with ordinary web/desktop API requests.
 
 `GET /v1/reports/daily-parcel-audit?date=YYYY-MM-DD` provides the current payment and delivery
 state for parcels created on that Ghana calendar date. Head office may add `branchId`; other users

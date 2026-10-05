@@ -39,9 +39,17 @@ separate from device blocking.
 
 On mobile startup, a saved session is restored only after authenticated policy/access checking;
 an offline check fails closed. The Electron shell checks the same access policy before showing
-an authenticated page and again every minute or when focused. When enabled, communication
-WebSocket handshakes validate the device credential, and local open sockets close when access
-is removed. Enabling the module closes local company sockets so they reconnect under the new
+an authenticated page and again every minute or when focused. If its access token has expired,
+the desktop client performs one shared refresh and retries the policy check with the new token.
+Normal web/desktop API requests share that refresh operation, so simultaneous 401 responses do
+not rotate the same refresh token twice. A confirmed invalid refresh session or denied device
+clears the desktop login. A network failure, 10-second request timeout, 5xx response, or malformed
+policy response instead hides authenticated content and shows a Retry action without deleting
+the saved login; an unavailable refresh likewise retains the login for retry. This is fail-closed
+for protected content, not a bypass of device approval. Mobile keeps its existing native session
+behavior. When enabled, communication WebSocket handshakes validate the device credential, and
+local open sockets close when access is removed. Enabling the module closes local company sockets
+so they reconnect under the new
 policy. For multiple backend instances, cross-instance socket disconnection is not yet
 coordinated; a remote socket closes on its next reconnect or server-side termination.
 Desktop registration and status checks use the web origin actually loaded by the shell, including
@@ -61,6 +69,9 @@ desktop header allow-list also covers matching `ws://`/`wss://` communication up
   `{ "required": true | false }`. It succeeds without a device credential when the module is
   disabled; when enabled, the native session and credential are checked first. Invalid sessions
   receive 401. Native clients fail closed if this check fails.
+- Desktop clients retry this check after a shared refresh on 401. A second 401 or a confirmed
+  invalid refresh session ends access. A temporary connection/server failure blocks the screen
+  with Retry and keeps local credentials; it must not be interpreted as revocation.
 - Review by a user outside head office or without `CanUpdateUsers`: 403. Cross-company or
   missing device: 404. Self-approval: 403. Invalid/stale status transition: 409. Missing reason
   for revoke/block/permanent denial: 400. Review/list routes return 403 when the module is off.
@@ -112,3 +123,10 @@ future requests still require explicit approval. Do not describe this as biometr
     require an approved device; disable it again and verify new sign-ins proceed normally.
 12. Enable the module while a native user has an unbound session. Protected requests and refresh
     must fail immediately, and local communication sockets must reconnect under the new policy.
+13. Leave desktop idle beyond the access-token lifetime (15 minutes by default), then focus it.
+    Verify one refresh, a successful policy retry, and no login prompt; repeat with simultaneous
+    protected API 401 responses and verify only one refresh token rotation.
+14. While desktop is signed in, interrupt the network or return 503 from the policy or refresh
+    endpoint. Verify protected content is hidden, Retry is available, and credentials remain.
+    Restore connectivity and verify Retry succeeds without another login. Repeat with a revoked
+    device or invalid refresh token and verify access remains denied and login is cleared.
