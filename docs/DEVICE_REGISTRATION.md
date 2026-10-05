@@ -123,7 +123,7 @@ future requests still require explicit approval. Do not describe this as biometr
     require an approved device; disable it again and verify new sign-ins proceed normally.
 12. Enable the module while a native user has an unbound session. Protected requests and refresh
     must fail immediately, and local communication sockets must reconnect under the new policy.
-13. Leave desktop idle beyond the access-token lifetime (15 minutes by default), then focus it.
+13. Leave desktop idle beyond the access-token lifetime (8 hours by default), then focus it.
     Verify one refresh, a successful policy retry, and no login prompt; repeat with simultaneous
     protected API 401 responses and verify only one refresh token rotation.
 14. While desktop is signed in, interrupt the network or return 503 from the policy or refresh
