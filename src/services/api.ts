@@ -8,12 +8,12 @@ import type {
 } from '@reduxjs/toolkit/query';
 import { useAuthStore } from '@/stores/auth-store';
 import { TheAduseiErrorResponse } from '@/lib/TheAduseiErrorResponse';
+import { refreshAuthSession } from '@/features/auth/session';
 
 type QueryMeta = FetchBaseQueryMeta;
 type QueryResult = QueryReturnValue<unknown, FetchBaseQueryError, QueryMeta>;
 
 const inFlightRequests = new Map<string, Promise<QueryResult>>();
-let inFlightTokenRefresh: Promise<QueryResult> | null = null;
 
 export function clearApiInFlightRequests() {
   inFlightRequests.clear();
@@ -97,73 +97,46 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
   apiContext,
   extraOptions,
 ) => {
-  const runTokenRefresh = async (refreshToken: string): Promise<QueryResult> => {
-    if (inFlightTokenRefresh) return inFlightTokenRefresh;
-
-    const refreshRequest = Promise.resolve(
-      baseQuery(
-        {
-          url: '/auth/refresh',
-          method: 'POST',
-          body: { refreshToken },
-        },
-        apiContext,
-        extraOptions,
-      ),
-    );
-
-    inFlightTokenRefresh = refreshRequest.finally(() => {
-      inFlightTokenRefresh = null;
-    });
-
-    return refreshRequest;
-  };
-
   const requestArgs = sanitizeFetchArgs(args);
 
   const runRequest = async (): Promise<QueryResult> => {
+    const sentSession = useAuthStore.getState();
+    const sentAccessToken = sentSession.accessToken;
+    const sentUserId = sentSession.user?.id;
     let result = await baseQuery(requestArgs, apiContext, extraOptions);
 
     // If we get a 401, try to refresh the token
     if (result.error && result.error.status === 401) {
-      const refreshToken = useAuthStore.getState().refreshToken;
-
-      if (refreshToken) {
-        // Collapse concurrent 401 recoveries into one refresh call.
-        const refreshResult = await runTokenRefresh(refreshToken);
-
-        if (refreshResult.data) {
-          // Successfully refreshed - update auth state
-          const data = refreshResult.data as
-            | { tokens: { accessToken: string; refreshToken: string } }
-            | { accessToken: string; refreshToken: string };
-          const nextAccessToken = 'tokens' in data ? data.tokens.accessToken : data.accessToken;
-          const nextRefreshToken = 'tokens' in data ? data.tokens.refreshToken : data.refreshToken;
-          const currentUser = useAuthStore.getState().user;
-
-          if (currentUser) {
-            useAuthStore.getState().setAuth({
-              user: currentUser,
-              accessToken: nextAccessToken,
-              refreshToken: nextRefreshToken,
-            });
-
-            // Retry the original request with new token
+      if (sentUserId && useAuthStore.getState().user?.id !== sentUserId) {
+        return {
+          error: { status: 'CUSTOM_ERROR', error: 'Session changed. Please retry.' },
+        };
+      }
+      if (sentAccessToken && useAuthStore.getState().accessToken !== sentAccessToken) {
+        result = await baseQuery(requestArgs, apiContext, extraOptions);
+      } else {
+        const refreshResult = await refreshAuthSession();
+        if (refreshResult.status === 'refreshed' || refreshResult.status === 'superseded') {
+          if (
+            useAuthStore.getState().user?.id === sentUserId &&
+            useAuthStore.getState().accessToken
+          ) {
             result = await baseQuery(requestArgs, apiContext, extraOptions);
           }
-        } else {
-          // Refresh failed - logout user
+        } else if (refreshResult.status === 'invalid') {
+          // Only a confirmed invalid refresh session clears local credentials.
           clearApiInFlightRequests();
           apiContext.dispatch(api.util.resetApiState());
           useAuthStore.getState().logout();
-          TheAduseiErrorResponse(refreshResult.error ?? 'Session expired');
+          TheAduseiErrorResponse('Your session has expired. Please log in again.');
+        } else {
+          result = {
+            error: {
+              status: 'CUSTOM_ERROR',
+              error: 'Connection interrupted while renewing your session. Please retry.',
+            },
+          };
         }
-      } else {
-        // No refresh token available - logout user
-        clearApiInFlightRequests();
-        apiContext.dispatch(api.util.resetApiState());
-        useAuthStore.getState().logout();
-        TheAduseiErrorResponse('Your session has expired. Please log in again.');
       }
     }
 

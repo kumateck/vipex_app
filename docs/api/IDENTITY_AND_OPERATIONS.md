@@ -37,6 +37,12 @@ Security-sensitive identity methods include:
 - `GET /users/password-management/options`
 - `PUT /users/:id/password`
 
+`POST /auth/refresh` returns a rotated access/refresh token pair and the current user on
+success. Expired, revoked, or invalid refresh sessions return 401; a temporarily unavailable
+server may return 5xx. Web and desktop clients preserve their saved login after a network/5xx
+failure, but clear it after a confirmed invalid session. Desktop policy checks retry their first
+401 once after this refresh, and never display protected content while the check is unavailable.
+
 System Admin password assignment revokes the target user's active sessions and writes an audit event.
 
 ## Shipments
