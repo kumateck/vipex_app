@@ -59,6 +59,16 @@ rows, including those on later pages; repeat on a branch with pickup queues enab
 Verify both date lines for a newly received parcel and the `-` fallback for a legacy row without a
 receipt timestamp.
 
+On **Shelf Picker Update**, typing in the search field changes only the draft text; it no longer
+fetches parcels or staff on each keystroke. Pressing **Search** commits the trimmed term and
+loads the matching parcel list. Pagination keeps that submitted term, and pressing **Search**
+again with the same term refreshes the list. The branch staff options load once per signed-in
+session/branch change, not on every list refresh. A staff-option failure displays an error toast
+without suppressing an otherwise successful parcel list. This affects web and Electron desktop;
+mobile uses its own screens. QA: type a long query and verify zero requests until submit, then
+one parcel-list request; paginate and verify the term persists without another staff-directory
+request; submit the same term to refresh, and verify list and staff failures are independent.
+
 Call Center Assignment shows sender and receiver names with every available telephone, payment
 status and applicable balances, parcel details, creation and received date/time together in the
 existing date column, and the current assignee. Invalid or missing timestamps show `-`.
