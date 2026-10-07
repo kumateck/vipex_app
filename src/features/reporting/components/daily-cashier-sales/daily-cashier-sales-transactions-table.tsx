@@ -46,6 +46,7 @@ export function DailyCashierSalesTransactionsTable({
               <TableHead>#</TableHead>
               <TableHead>Payment Time</TableHead>
               <TableHead>Booking</TableHead>
+              <TableHead>Route</TableHead>
               <TableHead>Parcel</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Who Paid</TableHead>
@@ -84,6 +85,10 @@ function renderRows({
       <TableCell>{index + 1}</TableCell>
       <TableCell>{formatDateTime(row.receivedAt)}</TableCell>
       <TableCell>{row.bookingCode}</TableCell>
+      <TableCell className="whitespace-nowrap">
+        {row.sourceBranchName || row.sourceBranchId} →{' '}
+        {row.destinationBranchName || row.destinationBranchId}
+      </TableCell>
       <TableCell>
         <p className="font-medium">{row.parcelDetails || '-'}</p>
         <p className="text-muted-foreground text-xs">{row.parcelContent || '-'}</p>
@@ -118,7 +123,7 @@ function AmountPaidCell({ transaction }: { transaction: DailyCashierSalesDisplay
 function EmptyRow({ children }: { children: string }) {
   return (
     <TableRow>
-      <TableCell colSpan={8} className="text-center text-muted-foreground">
+      <TableCell colSpan={9} className="text-center text-muted-foreground">
         {children}
       </TableCell>
     </TableRow>

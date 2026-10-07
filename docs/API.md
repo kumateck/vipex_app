@@ -165,19 +165,30 @@ conflict, rate-limit, or business-rule message with a generic “failed” messa
 Web query failures are surfaced by the shared API boundary, while mutation screens add their own
 contextual toast through the same parser. Duplicate identical global messages are suppressed.
 
-The shared API rate limit is per route and client identity (bearer credential for authenticated
-requests, client IP otherwise). It uses a fixed window beginning with the first request; a
-rejected request does not extend that window. The default quota is 120 requests per 60 seconds
-unless deployment settings override it. Once the original window expires, the next request is
-accepted with a fresh quota. A `429 RATE_LIMITED` response retains the message above, so web,
-Electron desktop, and mobile clients can display it. The client should avoid immediate repeated
-retries; a fresh request after the window is the recovery path.
+The shared API rate limit is per HTTP method, route, and client identity (valid signed access
+token when present, client IP otherwise). It uses a fixed window beginning with the first request; a
+rejected request does not extend that window. The standard default remains 120 requests per 60
+seconds. Staff API `GET` requests with a valid, unexpired signed access token have a 5× read allowance (600 per
+60 seconds by default) so routine list/search work is not throttled. This does **not** grant
+access: route authentication and permissions still apply. Authenticated `/auth/me/*` reads use
+the staff-read allowance. Public tracking, sign-in/refresh,
+self-service, application-update routes, anonymous requests, and non-GET methods keep the
+standard limit even if a bearer header is supplied. `OPTIONS` preflights do not consume quota.
+`RATE_LIMIT_MAX_REQUESTS`, `RATE_LIMIT_WINDOW_SECONDS`, and
+`RATE_LIMIT_STAFF_READ_MULTIPLIER` configure these limits. Response headers report the applied
+limit, remaining count, window, and policy; `429 RATE_LIMITED` also carries `Retry-After` and
+the message above for web, Electron desktop, and mobile clients. Once the original window
+expires, the next request starts a fresh quota. The first rejected request per window is logged
+with method, path, policy, and limit but without credentials or client IP. Clients should avoid
+immediate repeated retries.
 
 QA scenarios:
 
 1. Return `429 RATE_LIMITED` from any authenticated list request and verify the web and mobile UI
    shows “Too many requests. Please retry shortly.”
    Repeat requests while limited and verify the original window still expires on time.
+   Verify a staff `GET` receives the configured read allowance, while a write, public tracking,
+   sign-in, and preflight retain their respective standard or exempt treatment.
 2. Return a nested validation error from a mutation and verify its first actionable validation
    message is displayed.
 3. Return a plain-text error body and verify direct-fetch screens show that text.

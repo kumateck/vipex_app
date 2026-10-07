@@ -48,5 +48,11 @@ Accounting financial-statement endpoints remain under `/accounting/reports/*`.
   Receiver, and Delivery cashier modules. The client may narrow the returned report after loading;
   this presentation filter does not alter the endpoint's company, branch, location, or cashier
   authorization scope.
+- Daily Cashier Sales payment transactions include `sourceBranchId`, `sourceBranchName`,
+  `destinationBranchId`, and `destinationBranchName` from their parcels. The client groups only
+  returned, non-voided payments by branch-ID pair for the Sales by Route display and printout;
+  sender, receiver, and delivery subtotals depend on cashier type and payer. A missing branch name
+  falls back to its ID. Outstanding To Be Paid rows are excluded, and an empty result has no route
+  rows. Existing permission and cashier/branch restrictions apply before any route aggregation.
 
 See [Reporting Module](../REPORTING_MODULE.md) and the [Report Route Permission Matrix](../permissions/ROUTE_PERMISSION_REPORTS.md).

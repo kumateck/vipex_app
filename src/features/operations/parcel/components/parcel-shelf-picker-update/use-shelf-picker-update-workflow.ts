@@ -8,7 +8,8 @@ import { ParcelStatus } from '@/db/schemas/enums';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useUpdateParcelMutation } from '../../api/parcel.api';
 import type { PaginationMeta } from '@/server/types/pagination.types';
-import type { ParcelRow, StaffOption } from './shelf-picker-update-types';
+import type { ParcelRow } from './shelf-picker-update-types';
+import { useListShelfPickerStaffQuery } from './services';
 
 type ParcelListResponse = { data: ParcelRow[]; meta: PaginationMeta };
 
@@ -46,7 +47,10 @@ export function useShelfPickerUpdateWorkflow() {
       hasPreviousPage: false,
     },
   });
-  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
+  const { currentData: staffOptions = [] } = useListShelfPickerStaffQuery(
+    { companyId, branchId, userId },
+    { skip: !companyId || !branchId || !userId || !accessToken },
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [editingParcel, setEditingParcel] = useState<ParcelRow | null>(null);
   const [editParcelDetails, setEditParcelDetails] = useState('');
@@ -55,36 +59,27 @@ export function useShelfPickerUpdateWorkflow() {
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [updateCustomer, { isLoading: isUpdatingCustomer }] = useUpdateCustomerMutation();
   const fetchData = useCallback(async () => {
-    if (!companyId || !branchId) return;
+    if (!companyId || !branchId || !accessToken) return;
     setIsLoading(true);
     try {
       const params = new URLSearchParams({
         page: String(query.page ?? 1),
         pageSize: String(query.pageSize ?? 20),
-        ...(searchInput && { search: searchInput }),
+        ...(query.search && { search: query.search }),
       });
-      const [parcelsRes, staffRes] = await Promise.all([
-        fetch(`/v1/shipments/parcels/shelf-picker?${params}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-        fetch('/v1/shipments/parcels/shelf-picker-staff', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }),
-      ]);
+      const parcelsRes = await fetch(`/v1/shipments/parcels/shelf-picker?${params}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       if (!parcelsRes.ok) {
         throw await getResponseError(parcelsRes, 'Failed to fetch shelf picker parcels');
       }
-      if (!staffRes.ok) {
-        throw await getResponseError(staffRes, 'Failed to fetch shelf picker staff');
-      }
       setListData(await parcelsRes.json());
-      setStaffOptions(await staffRes.json());
     } catch (error) {
       toast.error(getErrorMessage(error, 'Failed to fetch shelf picker data'));
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, branchId, companyId, query.page, query.pageSize, searchInput]);
+  }, [accessToken, branchId, companyId, query.page, query.pageSize, query.search]);
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
@@ -92,7 +87,12 @@ export function useShelfPickerUpdateWorkflow() {
   const listQuery = { data: listData, isLoading, isFetching: isLoading, refetch: fetchData };
 
   const handleSearchSubmit = () => {
-    setQuery((prev) => ({ ...prev, page: 1 }));
+    const search = searchInput.trim();
+    if ((query.page ?? 1) === 1 && (query.search ?? '') === search) {
+      void fetchData();
+      return;
+    }
+    setQuery((prev) => ({ ...prev, page: 1, search }));
   };
 
   const handleRequestDelivery = async (parcel: ParcelRow) => {

@@ -118,6 +118,27 @@ shows an empty result with zero recalculated totals. This behavior applies to th
 report; mobile does not expose this report page. Permissions and server branch/cashier scope are
 unchanged by the post-load filter.
 
+The **Payments** view and its printed report show **Sales by Route**, grouped by each paid
+parcel's existing source and destination branch IDs (displaying branch names). For example, a
+receiving Accra cashier sees Kumasi → Accra and Sunyani → Accra separately; an Accra sender
+cashier sees Accra → Kumasi and Accra → Sunyani separately. Each row shows payment count,
+sender/receiver/delivery gross amounts, cash versus non-cash amounts, and the route total.
+The transaction list and printout also show the route for audit tracing. Only non-voided payment
+transactions already included in the selected cashier/date/session scope contribute; outstanding
+To Be Paid parcels are not sales. Non-cash includes mobile money and credit, so the Cash column
+is the physical-cash portion. The post-load module filter recalculates the route rows from its
+visible transactions; the total across routes must equal the filtered Gross Sales. Missing branch
+names fall back to the branch ID, without merging distinct branches with the same name. Empty
+payment results show no route rows. Existing `CanViewReportCashierShifts` and cashier/branch
+scoping apply to both cashier self-view and authorized accounts-officer selection.
+
+QA: for one Accra receiver cashier, collect payments on parcels from Kumasi and Sunyani and
+verify distinct route totals and matching payment rows. Repeat with sender-paid parcels sent
+from Accra to both branches. Include Full Cashier, Delivery Cashier, split, cash, mobile-money,
+credit, and voided payments; verify the gross and cash/non-cash totals, module-filter behavior,
+and printed route summary. Verify unpaid To Be Paid rows, unauthorized cashier/branch selection,
+and missing branch display names do not distort the breakdown.
+
 ### Known Access and Selection Defect
 
 The current web page can be opened with the cashier-shift report permission, while reading the cashier directory is guarded by an accounting-read permission. When a Delivery Supervisor such as `vipexdelivery5@gmail.com` can view the report but cannot read selectable cashier assignments, the UI falls back to the signed-in account and displays it as the cashier. This makes the Cashier Type and Cashier controls appear locked or incorrectly selected even though the role itself is not a cashier.
