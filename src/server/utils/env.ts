@@ -84,6 +84,7 @@ const EnvSchema = z.object({
   REDIS_URL: z.string().url().optional(),
   RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
+  RATE_LIMIT_STAFF_READ_MULTIPLIER: z.coerce.number().int().positive().default(5),
   // LiveKit (optional)
   LIVEKIT_URL: z.string().url().optional(),
   LIVEKIT_PUBLIC_URL: z.string().url().optional(),
