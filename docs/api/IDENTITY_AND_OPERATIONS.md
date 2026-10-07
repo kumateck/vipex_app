@@ -74,6 +74,25 @@ authorization. Web and mobile use the same endpoints.
 
 - `/shipments/bookings`: booking creation and query, including booking-with-parcels operations.
 - `/shipments/parcels`: parcel search, detail, lifecycle actions, corrections, and receiver OTP-related operations.
+- `POST /deliveries/dd/:parcelId/returned`: the assigned rider returns a dispatched parcel;
+  parcel status becomes `RETURNED_TO_OFFICE` (displayed as **Returned by Rider**), with a
+  recorded delivery return time. A wrong rider or non-dispatched parcel returns 409; a missing
+  parcel/delivery returns 404. Requires `CanCompleteDoorstepDelivery`.
+- `GET /deliveries/dd/returned?page=&pageSize=&search=`: paginated, searchable rider returns
+  at the authenticated company's destination branch. Requires `CanDispatchForDelivery`; callers
+  cannot choose another company, branch, or status. Only parcels with a completed delivery
+  return appear; manually marked or incomplete records are excluded. The parcel row includes
+  `riderReturnedAt`.
+- `GET /deliveries/dd/returned/riders`: active riders at the authenticated company and branch;
+  returns only ID and name for the redispatch picker. Requires `CanDispatchForDelivery`, not
+  directory administration permission.
+- `POST /deliveries/dd/:parcelId/returned-to-pickup`: moves a returned parcel to Awaiting Pickup
+  after checking company, destination branch, status, and completed delivery return. Out-of-scope
+  parcels return 404; stale or invalid return state returns 409. Requires `CanDispatchForDelivery`.
+  `POST /deliveries/dd/:parcelId/redispatch-return` requires an active rider in the same company
+  and branch, a completed return, and no open reconciliation hold. It atomically redispatches
+  the parcel and delivery and notifies the rider. Missing or out-of-scope parcels return 404;
+  stale return state or invalid rider selection returns 409. Both actions use the same permission.
 - `POST /payments/collect-receiver-and-deliver`: returns separate principal `payment` and ageing
   `storagePayment` records when collected. When storage is collected, `receiptTaxBreakdown` is
   calculated from the sum of both collected amounts using the company tax profile or default

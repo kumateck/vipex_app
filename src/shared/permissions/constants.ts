@@ -807,6 +807,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/parcels/delivery-reversal': PermissionKeys.CanReverseParcelDelivery,
   '/parcels/financial-repair': PermissionKeys.CanRepairParcelFinancialState,
   '/parcels/home-delivery/dispatch': PermissionKeys.CanDispatchForDelivery,
+  '/parcels/home-delivery/returned': PermissionKeys.CanDispatchForDelivery,
   '/parcels/home-delivery/rider-assigned': PermissionKeys.CanDispatchForDelivery,
   '/parcels/delivery-cashier': PermissionKeys.CanCompleteDoorstepDelivery,
   '/parcels/status': PermissionKeys.CanReadCallCenterParcelStatus,

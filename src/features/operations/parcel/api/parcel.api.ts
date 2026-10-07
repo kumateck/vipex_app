@@ -135,6 +135,7 @@ export type ParcelSearchRow = {
   secondReceiverPhone?: string | null;
   secondReceiverPhone2?: string | null;
   dropoffAddress?: string | null;
+  riderReturnedAt?: string | null;
   deliveryFeePsw?: number | null;
   riderUserId?: string | null;
   riderName?: string | null;

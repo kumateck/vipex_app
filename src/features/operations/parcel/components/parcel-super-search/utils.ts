@@ -10,6 +10,18 @@ export function formatParcelDate(value: string | null | undefined) {
   return formatDateTime(date);
 }
 
+export function resolveParcelDeliveredAt(input: {
+  status: number;
+  deliveredAt?: string | null;
+  confirmedAt?: string | null;
+}) {
+  const delivered =
+    input.status === ParcelStatus.DELIVERED_BY_OFFICE ||
+    input.status === ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER ||
+    input.status === ParcelStatus.DELIVERED_AT_HOME;
+  return delivered ? (input.deliveredAt ?? input.confirmedAt ?? null) : null;
+}
+
 export function paymentMethodLabel(method: number) {
   const label = PaymentMethod[method];
   return typeof label === 'string' ? label : String(method);

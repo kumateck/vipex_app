@@ -1,6 +1,6 @@
 # Route Permission Matrix
 
-Last generated: 2026-09-29
+Last generated: 2026-10-06
 
 Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`).
 

@@ -15,6 +15,11 @@ receiver names, packaging and contents, parcel value, receiver amount due, total
 status, and a status timeline.
 The money fields include numeric Ghana cedis for parcel value, receiver amount due, sender-paid
 amount, and total charge. Dates are ISO 8601 strings or `null` when the event has not happened.
+Timeline events are returned in timestamp order, including inferred destination arrival events.
+If the latest status has no audit event, the current parcel status and update time are included
+so the timeline still reflects the latest state.
+For a rider-returned parcel, the current status label is **Returned by rider to office** until
+staff reprocess it for pickup or redispatch. This is distinct from a return to the sender/source.
 Internal user IDs, payment records, audit metadata, delivery signatures, and cashier/session data
 are never returned.
 
@@ -39,3 +44,5 @@ it belongs in the server response.
 6. Confirm the canonical route is registered while legacy aliases return `Route not found`.
 7. After deploying the server build, repeat the lookup on the production host; local route tests do
    not verify which image is currently serving production.
+8. Return a dispatched parcel from its rider and verify tracking shows **Returned by rider to
+   office**; after pickup reprocessing or redispatch, verify the current status changes.

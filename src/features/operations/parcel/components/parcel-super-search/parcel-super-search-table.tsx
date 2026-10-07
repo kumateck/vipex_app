@@ -19,7 +19,7 @@ import { PaymentStatusLegend } from '../parcel-processed-consignment/payment-sta
 import { EMPTY_META, PARCEL_STATUS_LABELS } from './constants';
 import { ParcelSuperSearchPaymentCell } from './parcel-super-search-payment-cell';
 import type { ParcelSuperSearchFilters } from './types';
-import { formatParcelDate } from './utils';
+import { formatParcelDate, resolveParcelDeliveredAt } from './utils';
 
 type ParcelSuperSearchTableProps = {
   companyId: string | null;
@@ -88,7 +88,7 @@ export function ParcelSuperSearchTable({
             </p>
             <p>
               <span className="text-muted-foreground">Delivered D&T:</span>{' '}
-              {formatParcelDate(row.original.deliveredAt)}
+              {formatParcelDate(resolveParcelDeliveredAt(row.original))}
             </p>
           </div>
         ),
