@@ -46,9 +46,15 @@ export class MemoryCacheStore implements CacheStore {
   }
 
   async incr(key: string, ttlSeconds?: number): Promise<number> {
-    const current = await this.get(key);
-    const next = (current ? Number.parseInt(current, 10) : 0) + 1;
-    await this.set(key, String(next), { ttlSeconds });
+    const entry = this.map.get(key);
+    const activeEntry = entry && !this.isExpired(entry) ? entry : null;
+    const next = (activeEntry ? Number.parseInt(activeEntry.value, 10) : 0) + 1;
+    this.map.set(key, {
+      value: String(next),
+      // A rate-limit window starts with the first increment. Later requests must
+      // not extend it, including requests that have already exceeded the limit.
+      expiresAtMs: activeEntry ? activeEntry.expiresAtMs : this.toExpiresAtMs(ttlSeconds),
+    });
     return next;
   }
 }

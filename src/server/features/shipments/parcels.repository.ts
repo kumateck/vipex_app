@@ -109,6 +109,7 @@ export type ListParcelsParams = {
   locationId?: string | null;
   status?: number | null;
   statuses?: number[] | null;
+  riderReturnedOnly?: boolean;
   senderPaid?: boolean | null;
   paymentType?: 'paid' | 'to_be_paid' | 'partial' | null;
   hasPickupQueue?: boolean | null;
@@ -148,6 +149,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     secondReceiverPhone: string | null;
     secondReceiverPhone2: string | null;
     dropoffAddress: string | null;
+    riderReturnedAt: Date | null;
     deliveryFeePsw: number | null;
     riderUserId: string | null;
     riderName: string | null;
@@ -198,6 +200,10 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     whereParts.push(inArray(parcels.status, p.statuses));
   } else if (p.status != null) {
     whereParts.push(eq(parcels.status, p.status));
+  }
+  if (p.riderReturnedOnly) {
+    whereParts.push(eq(deliveries.status, 'RETURNED_TO_OFFICE'));
+    whereParts.push(isNotNull(deliveries.returnedAt));
   }
   if (p.received === true) whereParts.push(isNotNull(parcels.receivedAt));
   if (p.received === false) whereParts.push(isNull(parcels.receivedAt));
@@ -481,6 +487,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       secondReceiverPhone: sr.telephone,
       secondReceiverPhone2: sr.telephone2,
       dropoffAddress: deliveries.dropoffAddress,
+      riderReturnedAt: deliveries.returnedAt,
       deliveryFeePsw: deliveries.chargePsw,
       riderUserId: deliveries.riderUserId,
       riderName: rider.fullname,

@@ -58,7 +58,7 @@ export function ParcelHomeDeliveryDispatch() {
     filters: {
       companyId,
       destinationId: branchId,
-      statuses: [ParcelStatus.ADDRESS_COLLECTED, ParcelStatus.RETURNED_TO_OFFICE],
+      statuses: [ParcelStatus.ADDRESS_COLLECTED],
     },
   });
   const listQuery = useSearchParcelsQuery(query, { skip: !companyId || !branchId });
@@ -78,7 +78,7 @@ export function ParcelHomeDeliveryDispatch() {
       filters: {
         companyId,
         destinationId: branchId,
-        statuses: [ParcelStatus.ADDRESS_COLLECTED, ParcelStatus.RETURNED_TO_OFFICE],
+        statuses: [ParcelStatus.ADDRESS_COLLECTED],
       },
     }));
   }, [companyId, branchId]);
@@ -150,7 +150,8 @@ export function ParcelHomeDeliveryDispatch() {
           <CardHeader>
             <CardTitle>Home Delivery Dispatch</CardTitle>
             <CardDescription>
-              Load address-collected and returned parcels, then dispatch/reassign to rider by area.
+              Load address-collected parcels, then dispatch them to a rider by area. Rider returns
+              are reprocessed on the Rider Returns page.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -199,7 +200,7 @@ export function ParcelHomeDeliveryDispatch() {
               serverFilters={{
                 companyId,
                 destinationId: branchId,
-                statuses: [ParcelStatus.ADDRESS_COLLECTED, ParcelStatus.RETURNED_TO_OFFICE],
+                statuses: [ParcelStatus.ADDRESS_COLLECTED],
               }}
               onRequestChange={(next) =>
                 setQuery((prev) => ({
@@ -209,7 +210,7 @@ export function ParcelHomeDeliveryDispatch() {
                   filters: {
                     companyId,
                     destinationId: branchId,
-                    statuses: [ParcelStatus.ADDRESS_COLLECTED, ParcelStatus.RETURNED_TO_OFFICE],
+                    statuses: [ParcelStatus.ADDRESS_COLLECTED],
                   },
                 }))
               }

@@ -16,7 +16,7 @@ const STATUS_LABELS: Record<number, string> = {
   [ParcelStatus.DISPATCHED]: 'Dispatched for delivery',
   [ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER]: 'Given to customer',
   [ParcelStatus.DELIVERED_AT_HOME]: 'Delivered at home',
-  [ParcelStatus.RETURNED_TO_OFFICE]: 'Returned to office',
+  [ParcelStatus.RETURNED_TO_OFFICE]: 'Returned by rider to office',
   [ParcelStatus.RETURNED_TO_SENDER]: 'Returned to sender',
   [ParcelStatus.CANCELLED]: 'Cancelled',
   [ParcelStatus.DISCREPANCY]: 'Processing exception',
@@ -49,6 +49,10 @@ export function toPublicTrackingResponse(
     .filter((event): event is { status: number; occurredAt: Date } => event.status !== null);
   const processedEvent = statusEvents.find((event) => event.status === ParcelStatus.PROCESSED);
   const sentEvent = statusEvents.find((event) => event.status === ParcelStatus.IN_TRANSIT);
+  const latestRecordedStatus = statusEvents.at(-1)?.status;
+  const hasInferredArrival =
+    Boolean(row.receivedAt) &&
+    !statusEvents.some((event) => event.status === ParcelStatus.ARRIVED_AT_DESTINATION);
 
   return {
     trackingCode: row.trackingCode,
@@ -84,8 +88,7 @@ export function toPublicTrackingResponse(
         label: STATUS_LABELS[event.status],
         occurredAt: iso(event.occurredAt),
       })),
-      ...(row.receivedAt &&
-      !statusEvents.some((event) => event.status === ParcelStatus.ARRIVED_AT_DESTINATION)
+      ...(row.receivedAt && hasInferredArrival
         ? [
             {
               status: ParcelStatus.ARRIVED_AT_DESTINATION,
@@ -94,7 +97,18 @@ export function toPublicTrackingResponse(
             },
           ]
         : []),
-    ],
+      ...(row.status !== ParcelStatus.CREATED &&
+      latestRecordedStatus !== row.status &&
+      !(row.status === ParcelStatus.ARRIVED_AT_DESTINATION && hasInferredArrival)
+        ? [
+            {
+              status: row.status,
+              label: STATUS_LABELS[row.status] ?? 'Unknown',
+              occurredAt: iso(row.updatedAt),
+            },
+          ]
+        : []),
+    ].toSorted((a, b) => (a.occurredAt ?? '').localeCompare(b.occurredAt ?? '')),
   };
 }
 

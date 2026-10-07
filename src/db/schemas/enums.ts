@@ -442,7 +442,7 @@ export enum ParcelStatus {
   DISPATCHED = 9, // Parcel dispatched to delivery agent
   RIDER_GIVEN_PARCEL_TO_CUSTOMER = 10, //  Rider successfully delivered parcel to customer and got confirmation (e.g. photo, OTP, signature)
   DELIVERED_AT_HOME = 11, // Parcel delivered to customer's home
-  RETURNED_TO_OFFICE = 12, // Parcel returned to branch office
+  RETURNED_TO_OFFICE = 12, // Rider returned parcel to destination branch for reprocessing
   RETURNED_TO_SENDER = 13, // Parcel returned to sender/source
   CANCELLED = 14, // Parcel order cancelled
   DISCREPANCY = 15, // Parcel has a reported issue or discrepancy

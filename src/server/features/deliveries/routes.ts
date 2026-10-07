@@ -24,12 +24,14 @@ import {
 } from './controller';
 import { riderDailyAnalyticsRoutes } from './rider-daily-analytics.routes';
 import { riderHandoverRoutes } from './rider-handover.routes';
+import { riderReturnProcessingRoutes } from './rider-return-processing.routes';
 import { deliveryChangeRequestRoutes } from './delivery-change-request.routes';
 
 export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
   .use(authPlugin)
   .use(riderDailyAnalyticsRoutes)
   .use(riderHandoverRoutes)
+  .use(riderReturnProcessingRoutes)
   .use(deliveryChangeRequestRoutes)
   .post(
     '/',

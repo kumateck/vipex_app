@@ -23,7 +23,7 @@ export const PARCEL_STATUS_LABELS: Record<number, string> = {
   [ParcelStatus.DISPATCHED]: 'Dispatched',
   [ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER]: 'Rider Given Parcel To Customer',
   [ParcelStatus.DELIVERED_AT_HOME]: 'Delivered at Home',
-  [ParcelStatus.RETURNED_TO_OFFICE]: 'Returned to Office',
+  [ParcelStatus.RETURNED_TO_OFFICE]: 'Returned by Rider',
   [ParcelStatus.RETURNED_TO_SENDER]: 'Returned to Sender',
   [ParcelStatus.RETURN_TO_SOURCE]: 'Return to Source',
   [ParcelStatus.CANCELLED]: 'Cancelled',

@@ -315,6 +315,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanDispatchForDelivery,
           },
           {
+            title: 'Rider Returns',
+            url: '/parcels/home-delivery/returned',
+            permissionKey: PermissionKeys.CanDispatchForDelivery,
+          },
+          {
             title: 'Rider Assigned',
             url: '/parcels/home-delivery/rider-assigned',
             permissionKey: PermissionKeys.CanDispatchForDelivery,
