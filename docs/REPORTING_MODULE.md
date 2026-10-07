@@ -93,6 +93,7 @@ Report notes:
 - To-be-paid outstanding shows unpaid receiver principal after direct principal payments.
 - To-be-paid collections reconciliation extends that view by combining direct principal payments with delivery-posted customer credit charges to show recognized collections versus remaining exposure.
 - Daily Cashier Sales summarizes sessions, gross and responsibility-specific sales, payment methods, transactions, and to-be-paid items for the selected date and authorized branch/cashier scope.
+- Its Payments view and printed report also break collected sales down by each parcel's source → destination branch route, with sender, receiver, delivery, cash, non-cash, and total amounts. Outstanding To Be Paid is excluded from collected route sales.
 - After Daily Cashier Sales loads, users can filter the returned result to Sender only, Receiver
   only, or Delivery Cashier only. Full Cashier scope loads all three modules. The post-load filter
   recalculates on-screen and printed summaries without widening server authorization or issuing a

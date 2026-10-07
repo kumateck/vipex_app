@@ -26,6 +26,7 @@ import {
   CASHIER_MODULE_LABELS,
   filterDailyCashierSalesReport,
 } from './daily-cashier-sales-module-filter';
+import { summarizeCashierSalesByRoute } from './daily-cashier-sales-route-summary';
 
 export function useDailyCashierSales() {
   const user = useAuthStore((state) => state.user);
@@ -113,6 +114,10 @@ export function useDailyCashierSales() {
   const report = useMemo(
     () => filterDailyCashierSalesReport(loadedReport, moduleFilter),
     [loadedReport, moduleFilter],
+  );
+  const routeSummary = useMemo(
+    () => summarizeCashierSalesByRoute(report?.transactions ?? []),
+    [report?.transactions],
   );
 
   const { currentData: cashierOptions = [], isFetching: isCashierOptionsFetching } =
@@ -245,6 +250,7 @@ export function useDailyCashierSales() {
     cashierOptions,
     isCashierOptionsFetching,
     report,
+    routeSummary,
     isFetching,
     isUninitialized,
     filters,
