@@ -119,6 +119,15 @@ original payment plan; delivery fees, storage charges, and voided payments do no
 If a delivered parcel has no recorded principal payer, the cell shows `Paid by: -`. Non-delivered
 and returned parcels do not show payer badges. Badge titles spell out Sender and Receiver.
 
+In Super Search, **Delivered D&T** shows the delivery record's completion time when available.
+Office handovers and rider-given parcels may have no delivery completion record, so the page
+uses the parcel's confirmation time for those delivered statuses. The same value appears in
+parcel details. Non-delivered, returned, or reversed parcels show no delivered time, even if an
+older delivery record retains a timestamp. If neither timestamp exists, the page shows `-`
+rather than inventing a delivery time. QA: check office handover, rider handover before cashier
+finalization, completed home delivery, a reversed/returned parcel, and a legacy delivered parcel
+without either timestamp.
+
 Call-center assignment list and mutation failures display the message returned by the API, including
 validation, permission, and rate-limit messages. If the response cannot be decoded, the web client
 uses an operation-specific fallback. Authenticated rate limits are isolated by bearer credential,
