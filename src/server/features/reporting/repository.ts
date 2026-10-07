@@ -306,6 +306,10 @@ export type DailyCashierSalesTransactionRow = {
   parcelId: string;
   bookingCode: string;
   trackingCode: string;
+  sourceBranchId: string;
+  sourceBranchName: string | null;
+  destinationBranchId: string;
+  destinationBranchName: string | null;
   parcelDetails: string;
   parcelContent: string;
   senderName: string | null;
@@ -465,6 +469,8 @@ export async function listDailyCashierSalesTransactionsRepo(input: {
 
   const sender = alias(customers, 'daily_cashier_sales_sender');
   const receiver = alias(customers, 'daily_cashier_sales_receiver');
+  const sourceBranch = alias(branches, 'daily_cashier_sales_source_branch');
+  const destinationBranch = alias(branches, 'daily_cashier_sales_destination_branch');
   const paymentTypes = getDailyCashierSalesPaymentTypes(input.cashierType);
   const cashierTypeFilter = paymentTypes ? [inArray(payments.cashierType, paymentTypes)] : [];
 
@@ -475,6 +481,10 @@ export async function listDailyCashierSalesTransactionsRepo(input: {
       parcelId: payments.parcelId,
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
+      sourceBranchId: parcels.sourceId,
+      sourceBranchName: sourceBranch.name,
+      destinationBranchId: parcels.destinationId,
+      destinationBranchName: destinationBranch.name,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
       senderName: sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname}, '')`,
@@ -494,6 +504,8 @@ export async function listDailyCashierSalesTransactionsRepo(input: {
     .from(payments)
     .innerJoin(cashierSessions, eq(cashierSessions.cashierId, payments.cashierUserId))
     .innerJoin(parcels, eq(parcels.id, payments.parcelId))
+    .leftJoin(sourceBranch, eq(sourceBranch.id, parcels.sourceId))
+    .leftJoin(destinationBranch, eq(destinationBranch.id, parcels.destinationId))
     .leftJoin(sender, eq(sender.id, parcels.senderId))
     .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
     .where(
