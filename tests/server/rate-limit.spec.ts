@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import { Elysia } from 'elysia';
 import { createRateLimitPlugin } from '../../src/server/middlewares/rate-limit';
 import { MemoryCacheStore } from '../../src/server/services/cache/memory-cache';
@@ -65,5 +65,22 @@ describe('Rate limit middleware', () => {
 
     expect((await call(sharedIp, 'user-a-token')).status).toBe(HttpStatus.TOO_MANY_REQUESTS);
     expect((await call(sharedIp, 'user-b-token')).status).toBe(HttpStatus.OK);
+  });
+
+  test('allows a previously limited client after the original window ends', async () => {
+    const clock = spyOn(Date, 'now');
+    const ip = '10.0.0.5';
+    try {
+      clock.mockReturnValue(1_000);
+      expect((await call(ip)).status).toBe(HttpStatus.OK);
+      clock.mockReturnValue(59_000);
+      await call(ip);
+      await call(ip);
+      expect((await call(ip)).status).toBe(HttpStatus.TOO_MANY_REQUESTS);
+      clock.mockReturnValue(61_000);
+      expect((await call(ip)).status).toBe(HttpStatus.OK);
+    } finally {
+      clock.mockRestore();
+    }
   });
 });

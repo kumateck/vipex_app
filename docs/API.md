@@ -165,10 +165,19 @@ conflict, rate-limit, or business-rule message with a generic “failed” messa
 Web query failures are surfaced by the shared API boundary, while mutation screens add their own
 contextual toast through the same parser. Duplicate identical global messages are suppressed.
 
+The shared API rate limit is per route and client identity (bearer credential for authenticated
+requests, client IP otherwise). It uses a fixed window beginning with the first request; a
+rejected request does not extend that window. The default quota is 120 requests per 60 seconds
+unless deployment settings override it. Once the original window expires, the next request is
+accepted with a fresh quota. A `429 RATE_LIMITED` response retains the message above, so web,
+Electron desktop, and mobile clients can display it. The client should avoid immediate repeated
+retries; a fresh request after the window is the recovery path.
+
 QA scenarios:
 
 1. Return `429 RATE_LIMITED` from any authenticated list request and verify the web and mobile UI
    shows “Too many requests. Please retry shortly.”
+   Repeat requests while limited and verify the original window still expires on time.
 2. Return a nested validation error from a mutation and verify its first actionable validation
    message is displayed.
 3. Return a plain-text error body and verify direct-fetch screens show that text.
