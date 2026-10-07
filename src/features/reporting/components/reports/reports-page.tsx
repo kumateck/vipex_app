@@ -211,7 +211,7 @@ const PARCEL_STATUS_LABELS: Record<number, string> = {
   [ParcelStatus.DISPATCHED]: 'Dispatched',
   [ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER]: 'Rider gave parcel to customer',
   [ParcelStatus.DELIVERED_AT_HOME]: 'Delivered at home',
-  [ParcelStatus.RETURNED_TO_OFFICE]: 'Returned to office',
+  [ParcelStatus.RETURNED_TO_OFFICE]: 'Returned by rider',
   [ParcelStatus.RETURNED_TO_SENDER]: 'Returned to sender',
   [ParcelStatus.RETURN_TO_SOURCE]: 'Return to source',
   [ParcelStatus.CANCELLED]: 'Cancelled',

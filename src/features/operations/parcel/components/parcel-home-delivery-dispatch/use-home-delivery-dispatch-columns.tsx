@@ -61,9 +61,7 @@ export function useHomeDeliveryDispatchColumns(input: {
         id: 'statusLabel',
         header: 'Status',
         accessorFn: (row) =>
-          row.status === ParcelStatus.ADDRESS_COLLECTED
-            ? 'Address Collected'
-            : 'Returned To Office',
+          row.status === ParcelStatus.ADDRESS_COLLECTED ? 'Address Collected' : 'Returned by Rider',
       },
       {
         id: 'addressCollection',

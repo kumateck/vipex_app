@@ -385,6 +385,32 @@ status and audit entry. Repeat from Awaiting Pickup and Returned to Office. Veri
 wrong-branch, in-transit, dispatched, delivered, open-case, and repeat requests fail.
 Attempt office pickup and receiver cashier delivery after return; both must fail.
 
+### Rider returns and reprocessing
+
+When an assigned rider returns a dispatched parcel, the rider action sets the parcel to
+**Returned by Rider** (`RETURNED_TO_OFFICE`, status 12) and records the delivery return time.
+It no longer makes the parcel immediately available for office pickup. The return is atomic:
+if either parcel or delivery update fails, neither state changes. A different rider, a parcel
+that is no longer dispatched, or a missing delivery is rejected. The existing delivery fee is
+cleared on return; staff should confirm the fee with the customer before another handover.
+Return and reprocessing status changes are recorded in parcel audit history.
+
+Staff with `CanDispatchForDelivery` use **Last Mile Delivery → Rider Returns** to search and
+page through returns at their own company's destination branch. The page shows the original
+rider and return time. Staff can move a returned parcel to **Awaiting Pickup** for office
+collection, or choose a rider and redispatch it. Successful reprocessing removes the parcel
+from the active return list; old delivery return history remains. Address-collected parcels
+continue to use **Dispatch Parcels**. The return list is separate from **Returns to Source**,
+which is a different branch-to-branch decision. Web and Electron desktop share this page and
+API; mobile riders can record returns but do not have the reprocessing page.
+
+QA: return a dispatched parcel from its assigned rider and verify status 12, return time,
+removal from the rider's current list, and presence only in the destination branch's return
+queue. Verify wrong-rider and repeated returns fail without partial updates. Move one return
+to pickup and redispatch another; both should disappear from the return list and appear in
+their corresponding workflows. Verify searching, paging, cross-company/branch isolation,
+permission denial, missing rider selection, and a stale return that was already reprocessed.
+
 ### Reconciliation hold on delivery
 
 A parcel with a requested or approved parcel reconciliation case cannot be handed to a

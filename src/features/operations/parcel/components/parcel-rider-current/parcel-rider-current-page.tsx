@@ -84,7 +84,7 @@ export function ParcelRiderCurrentPage() {
   const handleReturn = async (row: RiderDoorstepRecord) => {
     try {
       await riderReturned({ parcelId: row.parcelId, riderUserId }).unwrap();
-      toast.success('Parcel returned to branch pickup');
+      toast.success('Parcel marked Returned by Rider for branch reprocessing');
     } catch (error) {
       toast.error(getApplicationErrorMessage(error, '') || 'Failed to return parcel');
     }

@@ -13,6 +13,12 @@ The API reference is split by domain:
 
 Public parcel tracking is documented in [Public parcel tracking API](PUBLIC_PARCEL_TRACKING_API.md).
 
+Rider returns use `POST /v1/deliveries/dd/:parcelId/returned`; dispatch staff list and
+reprocess them through `GET /v1/deliveries/dd/returned` and
+`POST /v1/deliveries/dd/:parcelId/returned-to-pickup` and
+`POST /v1/deliveries/dd/:parcelId/redispatch-return`.
+See [Identity and parcel operations](api/IDENTITY_AND_OPERATIONS.md) for scope and failure rules.
+
 Native device registration is documented in [Native device registration](DEVICE_REGISTRATION.md).
 `POST /v1/auth/devices/register` verifies staff credentials and returns a pending device ID and
 one-time secret. `GET /v1/auth/devices/status` accepts device credential headers.
