@@ -6,6 +6,10 @@ import {
   listDesktopPrinters,
   setPrinterPreferenceMapping,
 } from '@/features/printing';
+import {
+  normalizeReceiptPaperFormat,
+  type ReceiptPaperFormat,
+} from '@/shared/printing/receipt-paper';
 
 function normalizePrinterNames(printers: Array<{ name?: string | null }>) {
   return printers
@@ -22,6 +26,7 @@ export function useDesktopPrinterRouting() {
   const stickerPrinter = printerMapping.stickerPrinter ?? '';
   const invoicePrinter = printerMapping.invoicePrinter ?? '';
   const a4Printer = printerMapping.a4Printer ?? '';
+  const receiptPaperFormat = normalizeReceiptPaperFormat(printerMapping.receiptPaperFormat);
 
   const refreshPrinters = useCallback(async () => {
     try {
@@ -45,6 +50,7 @@ export function useDesktopPrinterRouting() {
       stickerPrinter: stickerPrinter || undefined,
       invoicePrinter: invoicePrinter || undefined,
       a4Printer: a4Printer || undefined,
+      receiptPaperFormat,
     });
     toast.success('Printer routing saved');
   }
@@ -71,5 +77,8 @@ export function useDesktopPrinterRouting() {
     setStickerPrinter: (stickerPrinter: string) =>
       setPrinterMapping((current) => ({ ...current, stickerPrinter })),
     stickerPrinter,
+    receiptPaperFormat,
+    setReceiptPaperFormat: (receiptPaperFormat: ReceiptPaperFormat) =>
+      setPrinterMapping((current) => ({ ...current, receiptPaperFormat })),
   };
 }

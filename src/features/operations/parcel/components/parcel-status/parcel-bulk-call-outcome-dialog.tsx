@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import type { ContactOutcome } from './types';
+import { ParcelCallNotificationFields } from './parcel-call-notification-fields';
 
 const outcomeOptions: Array<{ value: ContactOutcome; label: string; status: string }> = [
   { value: 'follow_up', label: 'Customer will get back', status: 'Awaiting Pickup' },
@@ -23,6 +24,8 @@ export function ParcelBulkCallOutcomeDialog({
   onClose,
   onSave,
   isSaving,
+  sendSms,
+  onSendSmsChange,
 }: {
   parcels: ParcelSearchRow[] | null;
   outcome: ContactOutcome;
@@ -30,6 +33,8 @@ export function ParcelBulkCallOutcomeDialog({
   onClose: () => void;
   onSave: () => Promise<void>;
   isSaving: boolean;
+  sendSms: boolean;
+  onSendSmsChange: (value: boolean) => void;
 }) {
   const selected = outcomeOptions.find((option) => option.value === outcome)!;
 
@@ -57,6 +62,13 @@ export function ParcelBulkCallOutcomeDialog({
               </Button>
             ))}
           </div>
+          <ParcelCallNotificationFields
+            idPrefix="bulk-call"
+            sendSms={sendSms}
+            onSendSmsChange={onSendSmsChange}
+            disabled={isSaving}
+            smsDescription="Send each selected parcel’s customer the SMS for this outcome after the statuses are saved."
+          />
           <p className="text-sm">
             New status: <strong>{selected.status}</strong>
           </p>
@@ -80,7 +92,9 @@ export function ParcelBulkCallOutcomeDialog({
             onClick={() => void onSave()}
             disabled={isSaving || !parcels?.length}
           >
-            {isSaving ? 'Saving...' : `Save ${parcels?.length ?? 0} Outcomes`}
+            {isSaving
+              ? 'Saving...'
+              : `Save ${parcels?.length ?? 0} Outcomes${sendSms ? ' & Send SMS' : ''}`}
           </Button>
         </DialogFooter>
       </DialogContent>

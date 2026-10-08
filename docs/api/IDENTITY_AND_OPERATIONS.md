@@ -182,8 +182,14 @@ authorization. Web and mobile use the same endpoints.
   to the authenticated call agent in their company and destination branch. The body contains
   `parcelIds` and `outcome` (`follow_up`, `pickup`, or `delivery`). The server validates every parcel,
   then updates them together in one transaction. Missing, deleted, reassigned, out-of-scope,
-  ineligible, or concurrently changed parcels reject the batch without partial updates. No SMS or
-  email is sent. Each parcel is marked called, so it leaves the assigned call queue. The response
+  ineligible, or concurrently changed parcels reject the batch without partial updates. This endpoint
+  itself sends no SMS or email. When **Send SMS** is checked in the web bulk form, the client follows
+  a successful batch with `POST /notification-hub/events/parcel-status-call` per returned parcel ID,
+  using the saved `outcome`, `sendSms: true`, `sendEmail: false`, and `includeSecondReceiver: false`.
+  Notification requests run with a maximum concurrency of four, retain the existing module and
+  permission gates, and return individual sent/failed counts. A notification failure leaves the
+  saved outcomes intact and is not retried automatically. Each parcel is marked called, so it
+  leaves the assigned call queue. The response
   returns `parcelIds`, `updatedCount`, and the resulting `status`. Both `follow_up` and
   `pickup` result in Awaiting Pickup; `delivery` results in Home Delivery Requested.
 - `POST /shipments/parcels/:id/call-center/contact`: requires `CanReadCallCenterParcelStatus` and

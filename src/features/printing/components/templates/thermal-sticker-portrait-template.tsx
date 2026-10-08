@@ -1,4 +1,4 @@
-import logoPng from '@/assets/logo.png';
+import { PRINT_LOGO_DATA_URI } from '@/shared/printing/print-logo';
 import { BrandedQrCode } from '@/components/ui/branded-qr-code';
 import { PAYMENT_DUE_NOTE } from './thermal-sticker-copy';
 import { ThermalStickerCallSenderMark } from './thermal-sticker-call-sender-mark';
@@ -52,7 +52,7 @@ export function ThermalStickerPortraitTemplate({
         }}
       >
         <img
-          src={logoPng}
+          src={PRINT_LOGO_DATA_URI}
           alt="Vipex logo"
           style={{
             width: '11mm',
