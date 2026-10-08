@@ -12,6 +12,14 @@ export function hasRequiredPermissionForPath(
   if (!requiredPermission) return true;
 
   const granted = new Set(grantedPermissions);
+  if (requiredPermission === PermissionKeys.CanReadParcelStorageClearances) {
+    return [
+      PermissionKeys.CanReadParcelStorageClearances,
+      PermissionKeys.CanRequestParcelStorageClearance,
+      PermissionKeys.CanApproveParcelStorageClearance,
+      PermissionKeys.CanExecuteParcelStorageClearance,
+    ].some((permission) => granted.has(permission));
+  }
   if (requiredPermission === PermissionKeys.CanReadReportsHub) {
     return ReportPermissionKeys.some((permissionKey) => granted.has(permissionKey));
   }

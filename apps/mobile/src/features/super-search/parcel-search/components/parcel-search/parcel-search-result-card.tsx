@@ -5,6 +5,7 @@ import { ParcelStatus } from '@mobile/constants/parcel-status';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import type { ParcelSearchRow } from '@mobile/types/parcels';
+import { StorageFeeBadge } from './storage-fee-badge';
 
 export function ParcelSearchResultCard({
   parcel,
@@ -71,6 +72,7 @@ export function ParcelSearchResultCard({
             {parcel.isDeleted ? 'Deleted' : 'Void'}
           </Text>
         ) : null}
+        <StorageFeeBadge storageChargePsw={parcel.storageChargePsw} />
       </View>
 
       <Pressable

@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { ParcelInternalHolderBadge } from '../parcel-internal-holder-badge';
 
 type UseParcelInternalTransfersSearchColumnsOptions = {
@@ -23,7 +24,16 @@ export function useParcelInternalTransfersSearchColumns({
 }: UseParcelInternalTransfersSearchColumnsOptions) {
   return useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        id: 'booking',
+        header: 'Booking',
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <span>{row.original.bookingCode}</span>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+          </div>
+        ),
+      },
       { accessorKey: 'receiverName', header: 'Receiver' },
       { accessorKey: 'parcelDetails', header: 'Parcel' },
       {

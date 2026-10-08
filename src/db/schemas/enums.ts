@@ -469,6 +469,14 @@ export enum ParcelReconciliationCaseStatus {
   REJECTED = 3,
 }
 
+export enum ParcelStorageClearanceStatus {
+  PENDING_APPROVAL = 0,
+  APPROVED_FOR_FINANCE = 1,
+  RETURNED_FOR_REVIEW = 2,
+  REJECTED = 3,
+  EXECUTED = 4,
+}
+
 export enum ParcelReconciliationCaseType {
   SHORTAGE = 0,
   OVERAGE = 1,

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ParcelTimestampsCell } from '../parcel-timestamps';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { canEditSecondReceiver } from '@/shared/shipments/second-receiver';
 import { CallCenterAssignmentPaymentCell } from './call-center-assignment-payment-cell';
 import type { ParcelRow } from './call-center-assignment-types';
@@ -51,7 +52,12 @@ export function useCallCenterAssignmentColumns({
     {
       accessorKey: 'bookingCode',
       header: 'Booking Code',
-      cell: ({ row }) => <div className="font-mono font-medium">{row.original.bookingCode}</div>,
+      cell: ({ row }) => (
+        <div className="space-y-1">
+          <div className="font-mono font-medium">{row.original.bookingCode}</div>
+          <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+        </div>
+      ),
     },
     {
       accessorKey: 'senderName',

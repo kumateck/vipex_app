@@ -185,6 +185,32 @@ const BASE_ROUTES: Route[] = [
         ],
       },
       {
+        title: 'Storage Fee Clearance',
+        icon: 'ClipboardCheck',
+        items: [
+          {
+            title: 'Storage Fee Clearances',
+            url: '/parcels/storage-clearances',
+            permissionKey: PermissionKeys.CanReadParcelStorageClearances,
+          },
+          {
+            title: 'Create Storage Clearance',
+            url: '/parcels/storage-clearances/new',
+            permissionKey: PermissionKeys.CanRequestParcelStorageClearance,
+          },
+          {
+            title: 'Storage Clearance Approvals',
+            url: '/parcels/storage-clearances/approvals',
+            permissionKey: PermissionKeys.CanApproveParcelStorageClearance,
+          },
+          {
+            title: 'Storage Clearance Execution',
+            url: '/parcels/storage-clearances/execution',
+            permissionKey: PermissionKeys.CanExecuteParcelStorageClearance,
+          },
+        ],
+      },
+      {
         title: 'Parcel Receiving',
         icon: 'PackageCheck',
         permissionKey: PermissionKeys.CanReadParcelReceivingModule,
@@ -262,6 +288,11 @@ const BASE_ROUTES: Route[] = [
             title: 'Shelf Picker Update',
             url: '/parcels/shelf-picker-update',
             permissionKey: PermissionKeys.CanReadShelfPickerUpdate,
+          },
+          {
+            title: 'Reassign Shelf Pickup',
+            url: '/parcels/shelf-pickup-reassignment',
+            permissionKey: PermissionKeys.CanUpdateParcelShelfPicker,
           },
           {
             title: 'Pickup Queue',

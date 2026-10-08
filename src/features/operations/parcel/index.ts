@@ -9,6 +9,10 @@ export { ParcelDeliveryReversalPage } from './pages/parcel-delivery-reversal-pag
 export { ParcelFinancialRepairPage } from './pages/parcel-financial-repair-page';
 export { ParcelDiscrepanciesPage } from './pages/parcel-discrepancies-page';
 export { ParcelReconciliationCasesPage } from './pages/parcel-reconciliation-cases-page';
+export { ParcelStorageClearancesPage } from './pages/parcel-storage-clearances-page';
+export { ParcelStorageClearanceCreatePage } from './pages/parcel-storage-clearance-create-page';
+export { ParcelStorageClearanceApprovalsPage } from './pages/parcel-storage-clearance-approvals-page';
+export { ParcelStorageClearanceExecutionPage } from './pages/parcel-storage-clearance-execution-page';
 export { ParcelReturnToSourcePage } from './pages/parcel-return-to-source-page';
 export { ParcelStatusPage } from './pages/parcel-status-page';
 export { ParcelPickupQueuePage } from './pages/parcel-pickup-queue-page';
@@ -24,6 +28,7 @@ export { ParcelRiderHistoryPage } from './pages/parcel-rider-history-page';
 export { ParcelDeliveryCashierPage } from './pages/parcel-delivery-cashier-page';
 export { ParcelCallCenterAssignmentPage } from './components/parcel-call-center-assignment';
 export { ParcelShelfPickerUpdatePage } from './components/parcel-shelf-picker-update';
+export { ParcelShelfPickupReassignmentPage } from './pages/parcel-shelf-pickup-reassignment-page';
 export {
   IncomingConsignmentsPage,
   ConsignmentReceivingSessionPage,

@@ -45,6 +45,7 @@ import { EditIncomingTransitParcelDialog } from './edit-incoming-transit-parcel-
 import { LogDiscrepancyDialog } from './log-discrepancy-dialog';
 import { ParcelDetailsDialog } from './parcel-details-dialog';
 import { ParcelTransitRouteCell } from './parcel-transit-route-cell';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import {
   IncomingTransitFilters,
   type IncomingTransitFilterValues,
@@ -299,6 +300,7 @@ export function ParcelInTransitPage({ view }: { view: InTransitView }) {
                   className={`h-2.5 w-2.5 shrink-0 rounded-full ${paymentStatus.dotClassName}`}
                 />
                 <p className="font-medium">{row.original.bookingCode}</p>
+                <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
               </div>
               <p className="pl-[18px] text-muted-foreground text-xs">
                 Sent {formatDate(row.original.consignmentCreatedAt)}

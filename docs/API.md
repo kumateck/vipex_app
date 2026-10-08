@@ -2,7 +2,7 @@
 
 Base URL: `/v1`
 
-Last audited at the mounted route-group level: 2026-08-27.
+Last audited at the mounted route-group level: 2026-10-08.
 
 The API reference is split by domain:
 
@@ -70,6 +70,72 @@ deleted, or out-of-scope parcels return 404; ineligible state/date or unavailabl
 returns 400. Unauthenticated/unauthorized callers receive 401/403. This read-only endpoint serves
 web and desktop receipt duplicates, with no mobile UI. See [Parcel printing](PARCEL_PRINTING.md)
 for the existing original-storage-tax mismatch and QA scenarios.
+
+Parcel list/search responses include the ageing snapshot fields `storageChargePsw`,
+`storageChargeDays`, `storageChargeStartAt`, `isParcelAgeingEligible`, and `isParcelAged` when
+the row is eligible for storage accrual, including aged-warehouse parcels. `storageChargePsw` is the currently accrued storage fee
+in pesewas and is used by web and mobile search results to show the storage-fee indicator. It is
+informational; outstanding collection continues to use the server-side cashier eligibility and
+settlement rules, including recorded storage payments and waivers.
+
+Storage fee clearance reconciliation uses the parcel prefix `/v1/shipments/parcels`:
+
+| Method and suffix                                | Behavior / permission                                                                                                                                   |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /storage-clearances`                        | Paginated requests, search and status filters; accepts read, request, approve, or execute clearance permission.                                         |
+| `GET /storage-clearances/:id`                    | Current unpaid/total accrued days, rate, outstanding/paid/waived amount, remaining days, request and audit history; same read permissions.              |
+| `GET /storage-clearances/parcel-search`          | Scoped parcel search with `search` (2–255 characters), `page`, `pageSize` (1–100); requires request permission.                                         |
+| `GET /storage-clearances/parcels/:id`            | Current unpaid accrual for creating a request; requires request permission.                                                                             |
+| `POST /storage-clearances`                       | Creates Pending Approval with `parcelId`, `requestedDays` or `clearAll`, `reason`, optional `evidenceUrl`; requires `CanRequestParcelStorageClearance`. |
+| `POST /storage-clearances/:id/resubmit`          | Original requester revises a returned request; refreshes snapshot, clears approval, returns to Pending Approval; requires request permission.           |
+| `POST /storage-clearances/:id/approve`           | Pending → Approved for Finance; optional `note`; requires `CanApproveParcelStorageClearance`.                                                           |
+| `POST /storage-clearances/:id/reject`            | Required `note`; pending stage requires approve permission, approved stage requires execute permission. Closes request; restart requires a new request. |
+| `POST /storage-clearances/:id/return-for-review` | Approved → Returned for Review, required `note`; requires execute permission.                                                                           |
+| `POST /storage-clearances/:id/execute`           | Finance final step, optional `note`; requires `CanExecuteParcelStorageClearance`. Returns `id`, `executedDays`, `executedAmountPsw`.                    |
+
+The authenticated company and branch determine scope; supplied list company/branch IDs cannot
+widen access. Agency scope includes source or destination parcels; head office is company-wide.
+Wrong company/branch, deleted parcels or unknown records return 404; missing authentication or
+permissions returns 401/403. The requester cannot approve or execute their own request (409).
+Creation/resubmission needs unpaid accrual and a positive whole day count (1–2147483647),
+reason (3–1000 characters), and optional evidence reference (up to 2000 characters). Invalid
+input returns 400/422; absent accrual, an existing open request or an invalid transition returns 409. Days above current unpaid accrual are accepted for review. Clear All snapshots exact unpaid
+balance after existing payments/clearances; its days are outstanding / rate, rounded up.
+
+Approval checks for remaining accrual. Execution checks current unpaid balance/rate: no accrual,
+changed Clear All days or amount, changed rate, or requested amount above balance returns 409
+with no financial changes. Finance can return it for review; resubmission requires approval again.
+Execution commits waiver, accounting posting (when enabled), status and audit atomically under
+row locks; repeats/concurrent calls create one waiver. Missing active accounting accounts or
+posting/audit errors roll back the transaction. No clearance action collects a payment or changes
+parcel delivery status. The former `POST /:id/storage-waivers` route is no longer mounted (404).
+See [Parcel operations](PARCEL_OPERATIONS.md#storage-fee-clearance-reconciliation) for migration,
+client differences and QA scenarios.
+
+Shelf pickup reassignment is available under `/v1/shipments/parcels`:
+
+- `GET /shelf-picker-reassignments` requires `CanUpdateParcelShelfPicker`; accepts `search`,
+  `page`, and `pageSize` (1–100). Returns the standard paginated parcel response, limited to
+  assigned, undeleted Awaiting Pickup parcels at the actor's company and destination branch.
+  `pickerStaffId`/`pickerStaffName` resolve the parcel's picker or latest active ticket picker.
+  Historical tickets do not duplicate rows or supply an assignment by themselves.
+- `GET /shelf-picker-staff` accepts `CanReadShelfPickerUpdate` or `CanUpdateParcelShelfPicker`.
+  Returns active staff at the authenticated company/branch, limited to the actor's location
+  when present. Without a location it returns active branch staff, rather than an empty list.
+- `POST /:id/update-shelf-picker` requires `CanUpdateParcelShelfPicker`. Body: `userId`
+  (replacement staff ID), optional `expectedPickerStaffId` (current picker ID or null).
+  Returns `{ success: true, parcelId, pickerStaffId, changed }`. Both initial assignment and
+  reassignment use this endpoint. Supplied company/branch IDs cannot widen scope.
+
+Missing authentication/permission returns 401/403. Wrong company/branch, unknown or deleted
+parcels return 404; inactive, foreign-branch or wrong-location staff returns 400. A parcel that
+is no longer awaiting pickup or is already confirmed, an inconsistent ticket scope, or a changed
+expected picker returns 409 with no changes. Parcel, active tickets and audit are committed
+atomically under locks; an audit/database failure rolls back all changes. Ended tickets, queue
+codes/numbers, payments and delivery status are unchanged. Repeating the current assignment
+returns `changed: false` without another audit event. Optional expected picker preserves existing
+client compatibility; the dedicated web/desktop page always sends it. Mobile has no reassignment
+page. See [Shelf pickup reassignment](PARCEL_OPERATIONS.md#shelf-pickup-reassignment) for QA.
 
 ## Current Mounted Roots
 
