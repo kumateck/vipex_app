@@ -28,6 +28,21 @@ The web client contains the complete sidebar workspace and feature modules. It u
 
 Pages are thin route wrappers. Feature UI, hooks, services, types, and dialogs live in their domain feature folders according to `AGENTS.md`.
 
+The web and Electron routers use `src/routes/generated.tsx`, generated from the page wrappers
+under `src/pages`. Adding a page or sidebar link requires regenerating this router; an outdated
+router produces **404 · Not Found** even when the page source exists. `bun run dev:web` now
+generates routes before starting Vite and watches page additions/removals while it runs.
+`bun run build:web` generates routes before bundling. The same behavior applies when running
+the `dev` and `build` scripts directly in `apps/web`. Route generation failure stops startup or
+the build. The generated file remains ignored by Git; do not edit it manually.
+
+After adding pages, run `bun run routes:generate` before route tests. The client registration
+test `tests/utils/client-page-routes.spec.ts` checks that shelf pickup reassignment and all four
+storage clearance pages resolve through React Router inside the protected layout, including
+reassignment links with booking searches. Manual QA: navigate from the sidebar, open each new
+URL directly, and refresh it. Existing deployed bundles require rebuilding and deployment to
+include new pages; local generation does not update an already deployed application.
+
 Production HTML and SPA fallback responses use `no-store/no-cache`; content-hashed files under
 `/assets/` use a one-year immutable cache. If navigation hits the short deployment interval and a
 lazy import reports **Failed to fetch dynamically imported module**, both the global handler and the

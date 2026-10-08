@@ -81,6 +81,11 @@ permission-only page/API access, and duplicate-free scoped search. Manual QA: op
 page and each handover link, submit searches, select a replacement, save, then verify the current
 picker in Shelf Picker Update, Waiting for Pickup and Receiver Cashier.
 
+Client route registration is verified by `tests/utils/client-page-routes.spec.ts` for this page
+and all four storage clearance pages. Web development and builds regenerate the router
+automatically; see [Client Applications](CLIENT_APPLICATIONS.md#web-application). A missing route
+in an older bundle requires rebuilding and serving the updated web application.
+
 The Call Center Assignment and Shelf Picker Update tables show a Payment column and legend: green
 is **Paid**, amber is **To Be Paid**, and blue is **Partial**. A Paid parcel shows only its paid
 amount, a To Be Paid parcel shows only its balance due, and a Partial parcel shows both. The
