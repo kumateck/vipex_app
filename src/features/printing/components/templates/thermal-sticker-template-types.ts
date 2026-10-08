@@ -3,6 +3,7 @@ export type ThermalStickerOrientation = 'landscape' | 'portrait';
 export type ThermalStickerTemplateProps = {
   bookingCode: string;
   issuedAtLabel: string;
+  duplicate?: boolean;
   printedByName?: string | null;
   printedByBranchName?: string | null;
   printedByLocationName?: string | null;
@@ -25,6 +26,7 @@ export type ThermalStickerTemplateProps = {
 
 export type PreparedThermalStickerTemplateProps = {
   issuedAtLabel: string;
+  duplicate?: boolean;
   printedByName?: string | null;
   printedByBranchName?: string | null;
   printedByLocationName?: string | null;

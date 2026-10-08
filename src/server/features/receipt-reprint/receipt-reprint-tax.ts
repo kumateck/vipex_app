@@ -19,7 +19,11 @@ export function summarizeSenderReceiptPayments(rows: ReceiptPayment[]) {
   );
   if (!principal.length) return null;
 
-  const totals = principal.reduce(
+  return sumRecordedReceiptPayments(principal);
+}
+
+export function sumRecordedReceiptPayments(rows: ReceiptPayment[]) {
+  const totals = rows.reduce(
     (sum, row) => ({
       grossAmountPsw: sum.grossAmountPsw + row.grossAmountPsw,
       vatPsw: sum.vatPsw + row.vatPsw,

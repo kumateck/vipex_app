@@ -7,3 +7,4 @@ export * from './principal-settlement';
 export * from './scan-code';
 export * from './tracking-url';
 export { resolveShelfPickerStaffId } from './resolve-shelf-picker-staff-id';
+export { buildReceiverReceiptData } from './build-receiver-receipt-data';

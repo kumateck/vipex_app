@@ -99,6 +99,7 @@ export function PreviousConsignmentsPage() {
         </Card>
       </ScrollableWrapper>
       <ConsignmentPrintController
+        duplicate
         payload={state.printPayload}
         onPrinted={() => state.setPrintPayload(null)}
       />

@@ -47,3 +47,12 @@ Parcel, cashier, and human-capital route overrides.
 | `/hr/leave/requests`                    | `CanReadLeaveRequests`            |
 | `/hr/leave/history`                     | `CanReadLeaveRequests`            |
 | `/hr/leave/types`                       | `CanReadLeaveTypes`               |
+
+Receiver Cashier's Delivered receipt action uses
+`GET /v1/shipments/parcels/:id/receiver-receipt-reprint`, requiring
+`CanCreateReceiverPayments` and the authenticated company/destination branch. It cannot read
+receipts across branches, even with broad parcel read permission. Parcel search retains its
+existing read permission, and printing retains the active cashier-session gate. Only
+non-deleted office-delivered parcels with recorded receiver payments are eligible. Web and
+desktop support the action; mobile does not. QA: test cashier permission, missing permission,
+other company/branch, deleted parcel, and a reversed delivery; denied requests must not print.
