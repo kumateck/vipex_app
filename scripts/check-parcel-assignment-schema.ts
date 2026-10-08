@@ -48,6 +48,13 @@ try {
       SELECT table_schema FROM information_schema.tables WHERE table_name = 'parcels'
       ORDER BY table_schema
     `);
+    const pickupQueueIndexes = await tx.unsafe(`
+      SELECT i.relname AS name, x.indisunique AS unique, x.indisvalid AS valid,
+        pg_get_indexdef(x.indexrelid) AS definition
+      FROM pg_index x JOIN pg_class i ON i.oid = x.indexrelid
+      WHERE x.indrelid = to_regclass('public.pickup_queues')
+      ORDER BY i.relname
+    `);
     const [ledgerTable] = await tx.unsafe(`
       SELECT to_regclass('drizzle.__drizzle_migrations') IS NOT NULL AS exists
     `);
@@ -66,6 +73,7 @@ try {
         (name) => !columns.some((column) => column.column_name === name),
       ),
       assignmentForeignKeys: constraints,
+      pickupQueueIndexes,
       migrationLedgerExists: ledgerTable?.exists ?? false,
       latestLedgerEntries: ledger,
       pendingMigrationTags: journal.entries

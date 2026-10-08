@@ -93,6 +93,30 @@ route or API payload is introduced.
 
 ### Shelf pickup reassignment
 
+Pickup ticket history follows daily uniqueness: one active ticket per parcel and queue date,
+and one queue number per branch/location/date. Ended tickets and tickets on different dates can
+share a parcel. The legacy lifetime key `pickup_queues_parcel_uq` conflicts with this behavior
+and causes duplicate-key failures in the reassignment history tests. Migration `0011` originally
+removed it, but some databases retained it after their migration ledger advanced.
+
+Forward repair `0079_pickup_queue_legacy_uniqueness` removes only that obsolete key. It first
+checks that the legacy key has the expected parcel-only definition and that both replacement
+daily unique indexes are valid, ready and have compatible columns/predicates. Missing or
+incompatible replacements stop the migration without relaxing uniqueness. It preserves all
+ticket rows and replacement index identities; it does not recreate indexes or change parcel,
+payment or delivery data. Dependent foreign keys cause an error rather than being removed.
+The repair uses a 3-second lock timeout and 15-second statement timeout, with atomic rollback.
+An already aligned database makes no change and takes no queue table lock. Read-only preflight
+`scripts/check-parcel-assignment-schema.ts` now includes pickup queue index definitions.
+
+QA: `tests/server/pickup-queue-uniqueness-migration.spec.ts` covers history preservation,
+repeated runs, both retained daily protections, missing/wrong replacement definitions,
+lock-timeout rollback, and constraint-backed/standalone legacy indexes. Reassignment fixtures
+use midnight UTC queue dates and increasing ticket numbers so they obey daily queue uniqueness.
+Run `bun run migrate:test`, then `bun run test:prepush`; do not skip the hook or remove uniqueness
+from tests to hide the failure. Production repair requires verifying that environment's current
+indexes; applying this migration to the local test database does not update production.
+
 **Pickup & Collection → Reassign Shelf Pickup** opens the separate page at
 `/parcels/shelf-pickup-reassignment`. It requires the existing
 `CanUpdateParcelShelfPicker` permission; `CanReadShelfPickerUpdate` alone does not allow

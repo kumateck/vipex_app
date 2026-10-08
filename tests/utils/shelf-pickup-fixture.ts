@@ -83,10 +83,15 @@ export async function createShelfPickupFixture() {
       .returning();
     return row!;
   };
+  let ticketNumber = 0;
   const ticket = async (
     parcelId: string,
     options: { ended?: boolean; day?: number; picker?: string } = {},
   ) => {
+    const now = new Date();
+    const queueDate = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (options.day ?? 0)),
+    );
     const [row] = await db
       .insert(pickupQueues)
       .values({
@@ -96,8 +101,8 @@ export async function createShelfPickupFixture() {
         parcelId,
         pickerStaffId: options.picker ?? oldPicker,
         paymentBucket: 'RP',
-        queueDate: new Date(Date.now() - (options.day ?? 0) * 86400000),
-        queueNumber: 1,
+        queueDate,
+        queueNumber: ++ticketNumber,
         queueCode: createId(),
         queuedBy: actor,
         endedAt: options.ended ? new Date() : null,

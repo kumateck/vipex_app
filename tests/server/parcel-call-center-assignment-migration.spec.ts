@@ -19,15 +19,19 @@ describe.skipIf(!databaseUrl)('call-center assignment migration safety', () => {
 
   test('the standard migrator applies the registered repair after the previous journal entry', async () => {
     const journal = await Bun.file('drizzle/meta/_journal.json').json();
-    const previous = journal.entries.at(-2);
+    const previous = journal.entries.find(
+      (entry: { tag: string }) => entry.tag === '0077_parcel_storage_clearance',
+    );
     await sql.unsafe(`CREATE SCHEMA drizzle;
       CREATE TABLE drizzle.__drizzle_migrations (id serial PRIMARY KEY, hash text NOT NULL, created_at bigint);`);
     await sql`INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('fixture-baseline', ${previous.when})`;
     await migrate(drizzle(sql), { migrationsFolder: './drizzle' });
     const ledger =
       await sql`SELECT created_at FROM drizzle.__drizzle_migrations ORDER BY created_at`;
-    expect(ledger).toHaveLength(2);
-    expect(Number(ledger[1]?.created_at)).toBe(journal.entries.at(-1).when);
+    expect(ledger).toHaveLength(
+      journal.entries.filter((entry: { when: number }) => entry.when >= previous.when).length,
+    );
+    expect(Number(ledger.at(-1)?.created_at)).toBe(journal.entries.at(-1).when);
     const [parcel] = await sql`SELECT call_center_assigned_to_user_id FROM public.parcels`;
     expect(parcel?.call_center_assigned_to_user_id).toBeNull();
   });
