@@ -1,4 +1,10 @@
-export type PrintLayout = 'thermal-sticker' | 'invoice-a5' | 'invoice-a5-receipt' | 'report-a4';
+export type PrintLayout =
+  | 'thermal-sticker'
+  | 'invoice-a5'
+  | 'invoice-a5-receipt'
+  | 'receipt-80mm'
+  | 'receipt-58mm'
+  | 'report-a4';
 
 export type DesktopPrintRequest = {
   html: string;

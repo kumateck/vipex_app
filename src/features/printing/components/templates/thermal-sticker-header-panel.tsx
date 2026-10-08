@@ -1,4 +1,4 @@
-import logoPng from '@/assets/logo.png';
+import { PRINT_LOGO_DATA_URI } from '@/shared/printing/print-logo';
 import { ThermalStickerWordmark } from './thermal-sticker-wordmark';
 
 export function ThermalStickerHeaderPanel() {
@@ -12,7 +12,7 @@ export function ThermalStickerHeaderPanel() {
       }}
     >
       <img
-        src={logoPng}
+        src={PRINT_LOGO_DATA_URI}
         alt="Vipex emblem"
         style={{ width: '20mm', height: '20mm', objectFit: 'contain' }}
       />

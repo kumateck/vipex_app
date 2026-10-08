@@ -26,6 +26,11 @@ describe('ThermalStickerTemplate', () => {
       );
 
       expect(markup).toContain('Parcel tracking QR code');
+      expect(markup).not.toContain('<canvas');
+      expect(markup).toMatch(/<path d="M[^"]+" fill="#000"/);
+      expect(markup).toMatch(
+        /<img[^>]*src="data:image\/png;base64,[^"]+"[^>]*alt="Vipex (?:logo|emblem)"/,
+      );
       expect(markup).not.toContain(baseProps.bookingCode);
     },
   );

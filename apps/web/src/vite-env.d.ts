@@ -1,6 +1,12 @@
 /// <reference types="vite/client" />
 
-type PrintLayout = 'thermal-sticker' | 'invoice-a5' | 'invoice-a5-receipt' | 'report-a4';
+type PrintLayout =
+  | 'thermal-sticker'
+  | 'invoice-a5'
+  | 'invoice-a5-receipt'
+  | 'receipt-80mm'
+  | 'receipt-58mm'
+  | 'report-a4';
 
 type DesktopPrinterInfo = {
   name: string;

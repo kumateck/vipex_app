@@ -2,6 +2,8 @@ import { BrandedQrCode } from '@/components/ui/branded-qr-code';
 import { InvoiceA5Header } from './invoice-a5-header';
 import { InvoiceA5Terms } from './invoice-a5-terms';
 import { InvoiceTaxSummary } from './invoice-tax-summary';
+import { useReceiptPaperFormat } from '../../hooks/use-receipt-paper-format';
+import { HomeDeliveryReceiptRollTemplate } from './home-delivery-receipt-roll-template';
 
 export type HomeDeliveryReceiptA5Props = {
   cashierName?: string | null;
@@ -42,6 +44,9 @@ function AmountLine({ label, amountPsw }: { label: string; amountPsw: number }) 
 }
 
 export function HomeDeliveryReceiptA5Template(props: HomeDeliveryReceiptA5Props) {
+  const paperFormat = useReceiptPaperFormat();
+  if (paperFormat !== 'a5')
+    return <HomeDeliveryReceiptRollTemplate {...props} paperFormat={paperFormat} />;
   return (
     <div
       className="invoice-a5-root bg-white text-black"
