@@ -580,6 +580,37 @@ waived by the cashier workflow. This eligibility is calculated by the API from t
 ageing policy, non-voided storage payments, and recorded storage waivers, so web clients cannot
 bypass the routing rule with local filters.
 
+### Delivered receiver receipt reprinting
+
+On web and desktop, **Receiver Cashier → Delivered** searches office-delivered parcels at the
+cashier's destination branch. Use the existing tracking, booking, telephone, or receiver-name
+search, then select **Action → Reprint Receipt**. Awaiting Pickup remains the default and retains
+its outstanding-principal/storage and pickup-queue eligibility rules. The Delivered view removes
+those eligibility filters so completed parcels remain searchable after the queue has ended. At
+branches without a pickup queue, a search term is required, as in the existing cashier workflow.
+Delivered rows show the office confirmation timestamp and offer only receipt reprinting, with no
+payment, edit, or handover action.
+
+Printing requires the existing active cashier session. The receipt data endpoint requires
+`CanCreateReceiverPayments` and enforces company and destination-branch scope. Parcel search
+retains its existing `CanReadParcels` permission. Missing/deleted/out-of-scope parcels, parcels
+that are no longer office-delivered, a missing confirmation timestamp, or missing/voided receiver
+payments cannot produce a receipt. Doorstep delivery receipts are outside this workflow. Mobile
+has no delivered receiver receipt reprint screen.
+
+The duplicate includes recorded non-voided receiver principal and storage payments, the office
+handover date, receiver contact details, and a **DUPLICATE** label. It does not collect money,
+change delivery state, or calculate new tax. See [Parcel printing](PARCEL_PRINTING.md) for the
+existing storage-tax limitation and print failure behavior.
+
+QA: deliver receiver-paid and partially sender-paid parcels, switch to Delivered, and search by
+tracking/booking/phone/name. Verify the receipt total includes paid storage, excludes sender
+payments and delivery fees, and prints DUPLICATE in browser and desktop output. Test storage-only
+collection on a sender-paid parcel, ended pickup queues, pickup-queue-disabled branches,
+pagination, and switching back to Awaiting Pickup. Verify unrelated companies/branches, missing
+payments, reversed deliveries, and closed cashier sessions cannot print. A cancelled/failed print
+must leave payments and delivery state unchanged.
+
 ## Internal Transfers
 
 Internal transfers provide a custody trail when a parcel moves between internal actors or locations. Creation and acknowledgement are distinct operations. History must preserve the sender, receiver, time, parcel, and resulting state.

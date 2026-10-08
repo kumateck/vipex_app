@@ -19,6 +19,21 @@ const baseProps = {
 
 describe('ThermalStickerTemplate', () => {
   test.each(['portrait', 'landscape'] as const)(
+    'marks all reprinted %s stickers as duplicate',
+    (orientation) => {
+      const original = renderToStaticMarkup(
+        <ThermalStickerTemplate {...baseProps} orientation={orientation} />,
+      );
+      const duplicate = renderToStaticMarkup(
+        <ThermalStickerTemplate {...baseProps} orientation={orientation} duplicate />,
+      );
+      expect(original).not.toContain('DUPLICATE');
+      expect(duplicate).toContain('DUPLICATE');
+      expect(duplicate).toContain('Parcel tracking QR code');
+    },
+  );
+
+  test.each(['portrait', 'landscape'] as const)(
     'does not print a human-readable code beneath the %s QR',
     (orientation) => {
       const markup = renderToStaticMarkup(

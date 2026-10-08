@@ -1,5 +1,4 @@
 import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
-import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
 import {
@@ -21,12 +20,9 @@ import { confirmReceiverDelivery } from './confirm-receiver-delivery';
 import { useReceiverCashierDialogState } from './use-receiver-cashier-dialog-state';
 import { useReceiverCashierEdit } from './use-receiver-cashier-edit';
 import { useReceiverCashierInitialization } from './use-receiver-cashier-initialization';
-import {
-  type ParcelReceiverQuery,
-  useReceiverCashierResources,
-} from './use-receiver-cashier-resources';
+import { useReceiverCashierResources } from './use-receiver-cashier-resources';
 import { useReceiverOtpActions } from './use-receiver-otp-actions';
-import { getQueueFilterBySearch } from './receiver-cashier-utils';
+import { useReceiverCashierTable } from '../../hooks';
 import { getDialogLoadState, getDialogResourceState } from '../../utils';
 
 export function useParcelReceiverCashierWorkflow() {
@@ -45,19 +41,8 @@ export function useParcelReceiverCashierWorkflow() {
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
   const isReceiverOtpRequired = currentBranch?.requireReceiverOtp ?? true;
 
-  const [searchInput, setSearchInput] = useState('');
-  const [query, setQuery] = useState<ParcelReceiverQuery>({
-    page: 1,
-    pageSize: 20,
-    sort: [{ field: 'pickupQueueNumber', direction: 'asc' }],
-    filters: {
-      companyId,
-      destinationId: branchId,
-      status: ParcelStatus.AWAITING_PICKUP,
-      cashierCollectionRequired: true,
-      hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled),
-    },
-  });
+  const receiverTable = useReceiverCashierTable({ companyId, branchId, isPickupQueueEnabled });
+  const { query } = receiverTable;
 
   const dialog = useReceiverCashierDialogState();
   const selectedParcel = dialog.selectedParcel;
@@ -121,21 +106,6 @@ export function useParcelReceiverCashierWorkflow() {
     setPickerStaffId: dialog.setPickerStaffId,
   });
 
-  useEffect(() => {
-    setQuery((prev) => ({
-      ...prev,
-      page: 1,
-      sort: [{ field: 'pickupQueueNumber', direction: 'asc' }],
-      filters: {
-        companyId,
-        destinationId: branchId,
-        status: ParcelStatus.AWAITING_PICKUP,
-        cashierCollectionRequired: true,
-        hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, prev.search),
-      },
-    }));
-  }, [branchId, companyId, isPickupQueueEnabled]);
-
   const isSaving =
     isAddingCard ||
     isCreatingCustomer ||
@@ -143,23 +113,6 @@ export function useParcelReceiverCashierWorkflow() {
     isUpdatingParcel ||
     isWaivingStorage ||
     edit.isSaving;
-
-  const handleSearchSubmit = () => {
-    const term = searchInput.trim();
-    setQuery((prev) => ({
-      ...prev,
-      page: 1,
-      sort: [{ field: 'pickupQueueNumber', direction: 'asc' }],
-      search: term.length > 0 ? term : undefined,
-      filters: {
-        companyId,
-        destinationId: branchId,
-        status: ParcelStatus.AWAITING_PICKUP,
-        cashierCollectionRequired: true,
-        hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, term),
-      },
-    }));
-  };
 
   const handleRequestDelivery = async (parcel: ParcelSearchRow) => {
     try {
@@ -246,13 +199,9 @@ export function useParcelReceiverCashierWorkflow() {
       isReceiverOtpRequired,
     },
     table: {
-      query,
-      setQuery,
-      searchInput,
-      setSearchInput,
+      ...receiverTable,
       rows,
       listQuery,
-      handleSearchSubmit,
       handleRequestDelivery,
       openParcelDialog: dialog.openParcelDialog,
       openEditDialog: (parcel: ParcelSearchRow) => {

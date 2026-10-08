@@ -4,7 +4,12 @@ import { useGetCurrentActiveSessionQuery } from '@/features/cashiers/api/cashier
 import { PAGE_STYLES } from '@/features/printing/constants/page-styles';
 import { useManagedReactPrint } from '@/features/printing/hooks/use-managed-react-print';
 import { useAuthStore } from '@/stores/auth-store';
-import { useParcelInvoicePrintAction, useParcelReceiptTax, useStickerPrintModule } from '../hooks';
+import {
+  useParcelInvoicePrintAction,
+  useParcelReceiptTax,
+  useStickerPrintModule,
+  useParcelPrintCompletion,
+} from '../hooks';
 import { buildParcelTrackingUrl } from '../utils/tracking-url';
 import {
   normalizeStickerCopies,
@@ -35,8 +40,9 @@ export function ParcelReceiptActions({
   mode = 'default',
   showSelectionMenu = false,
   stickerCopies = 1,
-  onAutoPrintComplete,
+  onAutoPrintComplete: onPrintComplete,
 }: ParcelReceiptActionsProps) {
+  const { hasPrinted, onAutoPrintComplete } = useParcelPrintCompletion(onPrintComplete);
   const user = useAuthStore((state) => state.user);
   const cashierType = user?.cashierType ?? null;
   const isCashier = cashierType !== null && cashierType !== undefined;
@@ -256,7 +262,7 @@ export function ParcelReceiptActions({
           totalTax: tax.totalTax,
           taxComponentKeys: tax.taxComponentKeys,
         }}
-        isDuplicate={mode === 'reprint'}
+        isDuplicate={mode === 'reprint' || showSelectionMenu || hasPrinted}
       />
 
       <ParcelReceiptPrintControls

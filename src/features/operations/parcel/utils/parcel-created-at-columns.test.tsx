@@ -45,6 +45,7 @@ test('all four parcel operation tables keep one combined date column', () => {
       isPickupQueueEnabled: false,
       isSaving: false,
       onOpenParcelDialog: () => {},
+      onReprintReceipt: () => {},
       onEdit: () => {},
       onRequestDelivery: () => {},
     });

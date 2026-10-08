@@ -179,7 +179,7 @@ gross and tax amounts are summed and used for the reprint; delivery fees and rec
 not included. The tax rows reflect the components actually charged on those payments, rather than
 the tax profile currently active. A reprint carries a conspicuous `DUPLICATE` label below the
 document title, including when the document is a to-be-paid acknowledgement note. The original
-receipt and sticker-only reprints are unchanged. If a paid receipt's recorded payment or tax data
+receipt is unchanged. Sticker reprints also carry `DUPLICATE`. If a paid receipt's recorded payment or tax data
 cannot be loaded, reprinting is cancelled with an error instead of producing a receipt with missing
 tax. A no-payment acknowledgement note can still be reprinted. The receipt's original issue date
 is retained; no new payment or tax calculation is saved.
@@ -187,13 +187,45 @@ is retained; no new payment or tax calculation is saved.
 QA: Render the shared A5 template with sender- and receiver-paid data in original and duplicate
 mode, including a payment response without component keys, and compare each nonzero tax row with
 the payment record. The current Processed Parcels and Outgoing In Transit reprint actions cover
-sender principal payments; receiver-paid printing occurs in the cashier delivery flow. Reprint a
+sender principal payments; delivered receiver-paid receipts can also be reprinted from Receiver Cashier. Reprint a
 sender-paid and partial-payment receipt and compare gross, net, and each tax row with
 the non-voided payment records. Confirm `DUPLICATE` appears in browser and desktop A5 output, but
 not on the original. Change the active tax profile and confirm an existing receipt still shows its
 recorded nonzero components. Reprint a to-be-paid note and confirm the label appears. Deny the tax
 request or remove the payment from a paid parcel and confirm no incomplete receipt prints. Verify
 sticker-only reprints still work.
+
+**Receiver Cashier → Delivered → Reprint Receipt** prints a duplicate of the recorded receiver
+principal and storage collection for an office-delivered parcel at the cashier's branch. It uses
+the saved non-voided payment gross amounts and tax columns; sender payments, delivery fees, and
+other miscellaneous charges are excluded from the receipt total. The office confirmation date is
+retained. A missing/voided payment, missing confirmation date, failed request, or ineligible parcel
+cancels printing visibly. No payment, delivery, or tax write occurs. The existing cashier-session
+and desktop receipt-paper routing apply; mobile has no equivalent screen.
+
+**Existing storage-tax mismatch:** the original receiver handover flow computes a combined
+principal-plus-storage tax box for printing but does not persist that combined breakdown.
+Storage payments are recorded as `OTHER` with zero tax. Therefore storage-inclusive duplicates
+show the tax actually saved on the payments, which can differ from the tax box on the original
+print. Historical combined tax cannot be recovered exactly from those records; reprinting does
+not substitute the currently active tax profile. The collected storage and gross total remain
+available. Second-receiver handover names are used when second-card evidence was saved; without
+that evidence, the main receiver name is shown because the handover target is not persisted.
+
+All explicit parcel reprint actions mark the output **DUPLICATE**: paid receipts, unpaid
+acknowledgement notes, portrait/landscape stickers (including every selected copy), and saved
+consignment manifests from Previous Consignments. Original prints retain their existing labels.
+The shared receipt selection menu always renders duplicate output. Printing again from the
+latest-booking receipt card also marks the copy once the first print completes. Browser and desktop
+print paths share the marking; 58/80 mm roll receipt layouts retain the duplicate header.
+
+QA: reprint receiver principal-only and storage-inclusive receipts and compare each amount and tax
+column with the active payment records. Test fully sender-paid parcels with storage-only
+collection and missing/voided receiver payments. Verify the original handover date, DUPLICATE on
+both sticker orientations and all copies, sender and receiver receipts, acknowledgement notes,
+and saved consignment manifests. Print again from the latest-booking card and verify DUPLICATE.
+Confirm original documents remain unmarked. Check A5 and
+58/80 mm receipt output, cancellation, offline printers, and retry behavior on branch hardware.
 
 All A5 payment receipts and receiver acknowledgement notes print the authenticated cashier's name
 in the header. This applies to sender payment, receiver payment, to-be-paid acknowledgement, and

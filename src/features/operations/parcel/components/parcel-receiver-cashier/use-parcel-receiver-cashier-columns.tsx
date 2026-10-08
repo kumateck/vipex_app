@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { ParcelStatus } from '@/db/schemas/enums';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ type UseParcelReceiverCashierColumnsOptions = {
   page: number;
   pageSize: number;
   onOpenParcelDialog: (parcel: ParcelSearchRow) => void;
+  onReprintReceipt: (parcel: ParcelSearchRow) => void;
   onEdit: (parcel: ParcelSearchRow) => void;
   onRequestDelivery: (parcel: ParcelSearchRow) => void;
 };
@@ -36,6 +38,7 @@ export function useParcelReceiverCashierColumns({
   pageSize,
   onOpenParcelDialog,
   onEdit,
+  onReprintReceipt,
   onRequestDelivery,
 }: UseParcelReceiverCashierColumnsOptions) {
   return useMemo<ColumnDef<ParcelSearchRow>[]>(() => {
@@ -126,6 +129,11 @@ export function useParcelReceiverCashierColumns({
           <ParcelTimestampsCell
             createdAt={row.original.createdAt}
             receivedAt={row.original.receivedAt}
+            deliveredAt={
+              row.original.status === ParcelStatus.DELIVERED_BY_OFFICE
+                ? row.original.confirmedAt
+                : undefined
+            }
           />
         ),
       },
@@ -172,13 +180,21 @@ export function useParcelReceiverCashierColumns({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onOpenParcelDialog(row.original)}>
-              Receive + Deliver
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onRequestDelivery(row.original)}>
-              Request Delivery
-            </DropdownMenuItem>
+            {row.original.status === ParcelStatus.DELIVERED_BY_OFFICE ? (
+              <DropdownMenuItem onClick={() => onReprintReceipt(row.original)}>
+                Reprint Receipt
+              </DropdownMenuItem>
+            ) : (
+              <>
+                <DropdownMenuItem onClick={() => onOpenParcelDialog(row.original)}>
+                  Receive + Deliver
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onRequestDelivery(row.original)}>
+                  Request Delivery
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -190,6 +206,7 @@ export function useParcelReceiverCashierColumns({
     isSaving,
     onOpenParcelDialog,
     onEdit,
+    onReprintReceipt,
     onRequestDelivery,
     page,
     pageSize,

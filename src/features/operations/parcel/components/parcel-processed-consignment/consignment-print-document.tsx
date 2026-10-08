@@ -8,6 +8,7 @@ export type ConsignmentPrintPayload = {
 
 type ConsignmentPrintDocumentProps = {
   payload: ConsignmentPrintPayload | null;
+  duplicate?: boolean;
 };
 
 function formatMoney(amountPsw?: number | null) {
@@ -22,7 +23,10 @@ function getPaidAmountPsw(parcel: ConsignmentPrintItem) {
   return Math.max(Number(parcel.chargePsw ?? 0) - Number(parcel.plannedToBePaidPsw ?? 0), 0);
 }
 
-export function ConsignmentPrintDocument({ payload }: ConsignmentPrintDocumentProps) {
+export function ConsignmentPrintDocument({
+  payload,
+  duplicate = false,
+}: ConsignmentPrintDocumentProps) {
   if (!payload) return null;
 
   const destinationBranchName = payload.destinationName?.trim() || '-';
@@ -30,7 +34,10 @@ export function ConsignmentPrintDocument({ payload }: ConsignmentPrintDocumentPr
   return (
     <div className="consignment-print-sheet">
       <div className="consignment-print-header">
-        <h1>Consignment No: {payload.consignmentCode}</h1>
+        <h1>
+          Consignment No: {payload.consignmentCode}
+          {duplicate ? <span> — DUPLICATE</span> : null}
+        </h1>
         <p>
           <strong>Destination Branch:</strong> {destinationBranchName}
         </p>
