@@ -20,10 +20,11 @@ const receipt: ReceiptPrintData = {
   issuedAt: '2026-10-01T12:00:00.000Z',
 };
 
-function renderReceipt(data: ReceiptPrintData) {
+function renderReceipt(data: ReceiptPrintData, isDuplicate = false) {
   return renderToStaticMarkup(
     <ParcelReceiptPrintContent
       data={data}
+      isDuplicate={isDuplicate}
       desktopStickerRef={createRef<HTMLDivElement>()}
       stickerRef={createRef<HTMLDivElement>()}
       invoiceRef={createRef<HTMLDivElement>()}
@@ -44,5 +45,26 @@ describe('parcel sticker CS propagation', () => {
 
   test('does not mark unflagged parcel stickers', () => {
     expect(renderReceipt(receipt)).not.toContain('>CS</span>');
+  });
+});
+
+describe('parcel duplicate printing', () => {
+  test('marks both sticker outputs and the receiver receipt', () => {
+    const html = renderReceipt(
+      {
+        ...receipt,
+        payerType: 'receiver',
+        receiverToPayCedis: 0,
+        amountPaidCedis: 30,
+        payerName: 'Receiver',
+        payerTelephone: '0500000000',
+      },
+      true,
+    );
+    expect(html.match(/DUPLICATE/g)).toHaveLength(3);
+    expect(html).toContain('Receiver Info');
+  });
+  test('leaves original printouts unmarked', () => {
+    expect(renderReceipt(receipt)).not.toContain('DUPLICATE');
   });
 });

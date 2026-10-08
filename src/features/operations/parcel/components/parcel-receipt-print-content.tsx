@@ -52,6 +52,7 @@ export function ParcelReceiptPrintContent({
   );
   const stickerTemplateProps = {
     bookingCode: data.bookingCode,
+    duplicate: isDuplicate,
     issuedAtLabel: formatDate(data.issuedAt),
     printedByName,
     printedByBranchName,

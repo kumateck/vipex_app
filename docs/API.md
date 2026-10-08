@@ -58,6 +58,19 @@ parcels return 404. The endpoint is read-only and is used by web and desktop rep
 by mobile or the original payment print flow. See [Parcel printing](PARCEL_PRINTING.md) for the
 failure and QA behavior.
 
+`GET /v1/shipments/parcels/:id/receiver-receipt-reprint` requires authentication and
+`CanCreateReceiverPayments`. It is restricted to non-deleted parcels in the authenticated company
+and destination branch, with status `DELIVERED_BY_OFFICE` and a saved confirmation timestamp.
+It returns non-voided receiver principal and storage gross totals (`receiverPrincipalPsw`,
+`storageChargePsw`, `grossAmountPsw`), sender principal paid (`senderPaidPsw`), recorded
+`vatPsw`/`getfundPsw`/`nhilPsw`/`covidPsw`/`taxTotalPsw`, `taxComponentKeys`, `issuedAt`, and
+`receivedByName`. Monetary values are pesewas. Storage is recognized by the `OTHER` component
+and `STORAGE_CHARGE` note prefix. Delivery fees and unrelated charges are excluded. Missing,
+deleted, or out-of-scope parcels return 404; ineligible state/date or unavailable receiver payment
+returns 400. Unauthenticated/unauthorized callers receive 401/403. This read-only endpoint serves
+web and desktop receipt duplicates, with no mobile UI. See [Parcel printing](PARCEL_PRINTING.md)
+for the existing original-storage-tax mismatch and QA scenarios.
+
 ## Current Mounted Roots
 
 `auth`, `users`, `branches`, `locations`, `warehouses`, `customers`, `cards`, `uploads`, `cashiers`, `shipments`, `payments`, `deliveries`, `pickup-queues`, `accounting`, `inventory`, `shifts`, `company-modules`, `module-workspace`, `procurement`, `fleet-transport`, `customer-wallet-credit`, `reconciliation`, `notification-hub`, `momo`, `self-service`, `desktop-updates`, `mobile-updates`, `communication`, `customer-service`, `help-assistant`, `executive-insights`, `fleet-anomaly-brief`, `operations-exceptions-brief`, `management-daily-brief`, `ai-chat`, `it-support`, `reports`, `audit`, `hr`, `payroll`, `rbac`, and `geolocation`.

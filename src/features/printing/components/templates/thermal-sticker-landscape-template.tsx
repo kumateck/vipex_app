@@ -17,6 +17,7 @@ export function ThermalStickerLandscapeTemplate({
   parcelContent,
   parcelDetails,
   statusLabel,
+  duplicate,
   statusAmountLabel,
   hasToBePaid,
   qrValue,
@@ -96,6 +97,9 @@ export function ThermalStickerLandscapeTemplate({
           }}
         >
           <div>
+            {duplicate ? (
+              <div style={{ fontSize: '2.8mm', marginBottom: '0.4mm' }}>DUPLICATE</div>
+            ) : null}
             <div>{statusLabel}</div>
             {statusAmountLabel ? (
               <div style={{ marginTop: '0.8mm', fontSize: '4.7mm' }}>{statusAmountLabel}</div>
