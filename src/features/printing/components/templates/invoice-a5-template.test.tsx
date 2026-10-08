@@ -36,6 +36,9 @@ const receipt: InvoiceA5TemplateProps = {
 describe('A5 receipt reprint', () => {
   test('marks duplicate and prints recorded tax components', () => {
     const html = renderToStaticMarkup(<InvoiceA5Template {...receipt} duplicate />);
+    expect(html).not.toContain('<canvas');
+    expect(html).toMatch(/<path d="M[^"]+" fill="#000"/);
+    expect(html).toMatch(/<img src="data:image\/png;base64,[^"]+" alt="Vipex logo"/);
     expect(html).toContain('DUPLICATE');
     expect(html).toMatch(/<img src="data:image\/png;base64,[^"]+" alt="Vipex logo"/);
     expect(html).toContain('GETFUND:');

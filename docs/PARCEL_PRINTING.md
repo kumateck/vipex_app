@@ -35,6 +35,59 @@ long receiver name (23+ characters), a long sender name, a two-word location, an
 destination, with and without the CS mark; confirm no text touches or is cut by a border line
 on browser, desktop, and mobile output.
 
+## QR codes and logos in print documents
+
+All web/desktop receipt and parcel-sticker QR codes use inline SVG with a white quiet zone and
+black modules. Their artwork survives HTML serialization for desktop single, parallel, automatic,
+home-delivery, and duplicate/reprint jobs; a canvas element alone does not carry its pixels into a
+separate document. Tracking URLs and existing QR dimensions remain unchanged. The on-screen
+branded QR variant retains its existing rendering.
+
+Receipt, sticker, and printable-report headers embed the existing Vipex PNG artwork as a data URI.
+The print window does not need to resolve a relative web asset path or fetch the logo over the
+network. Browser and desktop printing wait for image/font readiness. A missing/broken image or
+10-second loading timeout fails the print preparation instead of silently printing without artwork.
+Native checks run before roll-height measurement and before dispatching a physical print job.
+
+QA: preview and serialize paid/unpaid A5 receipts, partial payments, duplicates, home delivery,
+58/80 mm roll receipts, and portrait/landscape stickers; assert each QR has vector modules and each
+header has an embedded logo. Open the serialized document without an app origin and verify logo
+loading and scan each QR to the exact tracking URL. Test failed and delayed image loads. Physical
+printer/driver and QR-scan acceptance still require a branch hardware test. Mobile native sticker
+artwork already uses embedded logos/QR markup and is unaffected by this fix.
+
+## Xprinter vertical receipts
+
+In desktop **Settings → Printer Routing**, select the installed Xprinter under **Invoice /
+Receipt Printer**, choose **Xprinter — 80 mm vertical receipt** or **Xprinter — 58 mm vertical
+receipt** under **Receipt Paper Format**, then save. Choose the paper width loaded in the printer;
+printer names come from the operating system rather than a hard-coded model list. Install the
+correct Xprinter driver and matching roll width in the operating system first.
+
+The format is saved on this workstation. Existing workstations default to the A5 landscape
+receipt. Paid invoices, unpaid acknowledgement notes, original/duplicate reprints, and home-delivery
+receipts use a vertical roll layout with the existing recorded customer/payment/tax data, branding,
+QR code, and terms. It reflows the content instead of rotating or shrinking the A5 sheet. The
+80 mm layout has a 72 mm content area; the 58 mm layout has a 48 mm content area. Main/secondary
+phone values and long names wrap without cropping. No payment or parcel state changes occur.
+
+Desktop single and parallel receipt jobs use the selected receipt printer, a matching 80/58 mm
+portrait custom paper size, no page margins, and 100% scaling. The native print window measures the
+rendered receipt to set its roll length, adds 4 mm clearance, and prints all pages; invalid/missing
+content or receipts longer than 2 m fail visibly rather than truncate. Browser print CSS uses the
+selected receipt profile when present and the user selects the physical printer in the system
+print dialog; its default sheet length is 297 mm. Stickers, ordinary A5 documents, A4 reports,
+permissions, cashier-session gates, and sticker copy routing retain their existing behavior.
+Mobile native printing does not use this desktop receipt profile.
+
+QA: select an installed Xprinter and save each width; reload and verify selection persists. Print
+an unpaid acknowledgement, sender/receiver payment, storage receipt, partial payment, duplicate,
+and home-delivery receipt. Verify names/phones, all amounts/taxes, QR scan, orientation, and no
+clipping or extra A5-width output. Test a parallel sticker/receipt job and ensure only the receipt
+uses the roll format. Select A5 again and verify the existing landscape receipt. Clear routing and
+verify A5 defaults. Confirm missing/offline printer and cancellation failures do not reprint or
+alter recorded payments. Physical output still needs acceptance on each branch's printer/driver.
+
 ## Documents
 
 | Document                 | Purpose                                                                                                  |

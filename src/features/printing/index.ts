@@ -1,4 +1,7 @@
 export * from './types';
+export * from './hooks/use-receipt-paper-format';
+export * from './components/templates/receipt-roll-template';
+export * from './components/templates/home-delivery-receipt-roll-template';
 export * from './constants/page-styles';
 export * from './hooks/use-managed-react-print';
 export * from './hooks/use-print-scenarios';
