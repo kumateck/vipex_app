@@ -40,6 +40,57 @@ disabled. When an active pickup queue exists, the server mirrors the assignment 
 `pickup_queues.picker_staff_id` for compatibility. The server enforces these permissions
 independently of sidebar visibility.
 
+### Call-center assignment schema compatibility
+
+The application stores call-center assignments in the nullable
+`public.parcels.call_center_assigned_to_user_id varchar(25)` column referencing `public.users(id)`.
+The field previously existed in TypeScript without a committed migration, so a database built
+only from migrations could raise **column does not exist** when searching or creating parcels.
+Migration `0078_parcel_call_center_assignment` repairs that omission. It preserves existing
+assignments and equivalent foreign keys, including differently named constraints. It does not
+change parcel rows, statuses, payment amounts, storage accruals or historical staff assignments.
+When the column is absent, existing parcels receive NULL (unassigned); there is no staff backfill.
+
+The repair checks column type/nullability and foreign-key compatibility before proceeding.
+Unexpected definitions fail for manual review rather than replacing them. An aligned database
+performs no ALTER TABLE. A missing column/FK requires a brief table lock; the migration has a
+3-second lock timeout and 15-second statement timeout, and failure rolls back the transaction.
+New foreign keys use `NOT VALID` to enforce new writes without scanning old parcel rows while
+the ALTER lock is held. After migration commits, validate a newly created constraint separately:
+
+```sql
+BEGIN;
+SET LOCAL lock_timeout = '3s';
+SET LOCAL statement_timeout = '60s';
+ALTER TABLE public.parcels
+  VALIDATE CONSTRAINT parcels_call_center_assigned_to_user_id_users_id_fk;
+COMMIT;
+```
+
+Run this validation only when that constraint was newly created. Existing equivalent validated
+constraints retain their names and validation state. Validation failure can indicate pre-existing
+orphan staff IDs; review those records instead of deleting assignments automatically. `NOT VALID`
+does not defer checking new assignments. Validation scans existing rows, so schedule it separately
+and retry after lock contention or a statement timeout.
+
+Read-only preflight: `bun run scripts/check-parcel-assignment-schema.ts`. It uses `CHECK_DATABASE_URL`
+or `.env`/environment `DATABASE_URL`, connects with read-only transactions, and reports database
+identity/search path, parcel schemas, required column definitions, FK validation state and pending
+migration tags. It does not apply migrations, create databases, or print credentials/customer data.
+`CHECK_DATABASE_URL` can point to another environment without changing the application's settings.
+The production check on 2026-10-08 found the column and its validated FK already present, with
+migrations through `0077` applied. The configured local `vipex_test` database lacked this column;
+it also had `0077` pending. Production was not modified during this check. An error still occurring
+on another server requires checking that server's actual database/schema before applying a repair.
+
+Migration QA (`tests/server/parcel-call-center-assignment-migration.spec.ts`) uses a dedicated
+empty local `vipex_call_center_migration_test` database via `MIGRATION_TEST_DATABASE_URL`.
+It covers missing-column repair, preserved parcel/payment data and assignments, repeated runs,
+equivalent validated FK preservation, concurrent writes on an aligned schema, lock-timeout
+rollback, incompatible types/conflicting FKs, and deferred validation of pre-existing orphans.
+These shared database rules affect web, desktop, mobile and backend jobs; no new permission,
+route or API payload is introduced.
+
 ### Shelf pickup reassignment
 
 **Pickup & Collection → Reassign Shelf Pickup** opens the separate page at

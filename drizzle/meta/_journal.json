@@ -547,6 +547,13 @@
       "when": 1791472793211,
       "tag": "0077_parcel_storage_clearance",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1791478884245,
+      "tag": "0078_parcel_call_center_assignment",
+      "breakpoints": true
     }
   ]
 }

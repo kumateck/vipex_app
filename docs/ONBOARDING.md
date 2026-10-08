@@ -39,6 +39,17 @@ Example values:
 bun run migrate
 ```
 
+For an existing production database, check the actual database identity, schema and pending
+migrations before running this command. The migrator applies **all** pending journal entries
+in a transaction; approving one additive migration does not establish the safety of unrelated
+pending changes. `bun run scripts/check-parcel-assignment-schema.ts` provides a read-only preflight
+for parcel assignment schema drift. See [Parcel schema compatibility](PARCEL_OPERATIONS.md#call-center-assignment-schema-compatibility)
+for repair migration `0078`, lock limits, and separate foreign-key validation.
+
+Do not use `bun run generate`, `db:fresh`, database resets or `db:push:unsafe` to repair production.
+The current `generate` command rebuilds migration history from a baseline. Add a forward migration
+and its journal/snapshot entry instead; never edit already applied migrations.
+
 6. Run required seeds for an existing database with users (in order):
 
 ```bash
