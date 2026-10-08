@@ -144,9 +144,11 @@ export function useShelfPickerUpdateColumns({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onOpenUpdateDialog(row.original)}>
-              Update
-            </DropdownMenuItem>
+            {canRequestDelivery ? (
+              <DropdownMenuItem onClick={() => onOpenUpdateDialog(row.original)}>
+                {row.original.pickerStaffId ? 'Reassign Shelf Pickup' : 'Assign Shelf Picker'}
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
             {canManageSecondReceiver && canEditSecondReceiver(row.original.status) ? (
               <DropdownMenuItem onClick={() => onEditSecondReceiver(row.original)}>

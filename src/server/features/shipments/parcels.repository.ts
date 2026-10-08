@@ -106,6 +106,7 @@ export type ListParcelsParams = {
   companyId?: string | null;
   sourceId?: string | null;
   destinationId?: string | null;
+  scopedBranchId?: string | null;
   locationId?: string | null;
   status?: number | null;
   statuses?: number[] | null;
@@ -126,6 +127,7 @@ export type ListParcelsParams = {
   callCenterAssignmentOrder?: boolean;
   callCenterUncalledOnly?: boolean;
   shelfPickerAssignmentOrder?: boolean;
+  shelfPickerAssigned?: boolean;
   sentDate?: string | null;
   consignmentNumber?: string | null;
   sort?: SortField[] | null;
@@ -192,6 +194,14 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   if (p.companyId) whereParts.push(eq(parcels.companyId, p.companyId));
   if (p.sourceId) whereParts.push(eq(parcels.sourceId, p.sourceId));
   if (p.destinationId) whereParts.push(eq(parcels.destinationId, p.destinationId));
+  if (p.shelfPickerAssigned)
+    whereParts.push(
+      sql`coalesce(${parcels.shelfPickerStaffId}, ${pickupQueues.pickerStaffId}) is not null`,
+    );
+  if (p.scopedBranchId)
+    whereParts.push(
+      or(eq(parcels.sourceId, p.scopedBranchId), eq(parcels.destinationId, p.scopedBranchId))!,
+    );
   if (p.assignedToUserId) {
     whereParts.push(eq(parcels.callCenterAssignedToUserId, p.assignedToUserId));
   }
@@ -393,7 +403,19 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(ci, and(eq(ci.parcelId, parcels.id), isNull(ci.removedAt)))
     .leftJoin(cg, eq(cg.id, ci.consignmentId))
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
-    .leftJoin(pickupQueues, eq(pickupQueues.parcelId, parcels.id))
+    .leftJoin(
+      pickupQueues,
+      and(
+        eq(pickupQueues.parcelId, parcels.id),
+        p.shelfPickerAssigned
+          ? sql`${pickupQueues.id} = (
+        select pq_latest.id from pickup_queues pq_latest
+        where pq_latest.parcel_id = ${parcels.id} and pq_latest.ended_at is null
+        order by pq_latest.queued_at desc, pq_latest.id desc limit 1
+      )`
+          : undefined,
+      ),
+    )
     .where(
       whereParts.length || p.search
         ? and(
@@ -527,7 +549,19 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(cg, eq(cg.id, ci.consignmentId))
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
     .leftJoin(rider, eq(rider.id, deliveries.riderUserId))
-    .leftJoin(pickupQueues, eq(pickupQueues.parcelId, parcels.id))
+    .leftJoin(
+      pickupQueues,
+      and(
+        eq(pickupQueues.parcelId, parcels.id),
+        p.shelfPickerAssigned
+          ? sql`${pickupQueues.id} = (
+        select pq_latest.id from pickup_queues pq_latest
+        where pq_latest.parcel_id = ${parcels.id} and pq_latest.ended_at is null
+        order by pq_latest.queued_at desc, pq_latest.id desc limit 1
+      )`
+          : undefined,
+      ),
+    )
     .leftJoin(
       picker,
       eq(

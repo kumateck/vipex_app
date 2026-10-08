@@ -1,5 +1,4 @@
-import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
-import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +12,7 @@ import {
 } from '@/components/ui/select-searchable';
 import { PaymentMethod } from '@/db/schemas/enums';
 import { MomoRequestToPayPanel } from '@/features/operations/momo/components/momo-request-to-pay-panel';
+import { ShelfPickupReassignmentLink } from '../parcel-shelf-pickup-reassignment';
 import { PAYMENT_METHOD_OPTIONS } from './receiver-cashier-constants';
 import { formatCurrency, formatDateTime, formatStorageCharge } from './receiver-cashier-utils';
 import type { useParcelReceiverCashierWorkflow } from './use-parcel-receiver-cashier-workflow';
@@ -35,7 +35,7 @@ export function ReceiverPaymentPrimarySections({
       <StorageChargeSummary dialog={dialog} parcel={parcel} />
       <ParcelSummary dialog={dialog} parcel={parcel} />
       <PaymentInputs dialog={dialog} parcel={parcel} />
-      <StorageWaiver context={context} dialog={dialog} />
+      <StorageWaiver context={context} dialog={dialog} parcel={parcel} />
       <PickerAndMomo context={context} dialog={dialog} parcel={parcel} />
     </>
   );
@@ -154,39 +154,30 @@ function PaymentInputs({ dialog, parcel }: { dialog: WorkflowDialog; parcel: Sel
   );
 }
 
-function StorageWaiver({ context, dialog }: { context: WorkflowContext; dialog: WorkflowDialog }) {
-  if (dialog.storageOutstandingPsw <= 0 || !context.canWaiveStorageAccrual) return null;
+function StorageWaiver({
+  context,
+  dialog,
+  parcel,
+}: {
+  context: WorkflowContext;
+  dialog: WorkflowDialog;
+  parcel: SelectedParcel;
+}) {
+  if (dialog.storageOutstandingPsw <= 0 || !context.canRequestStorageClearance) return null;
   return (
     <div className="space-y-2 rounded-md border p-3">
-      <Label>Waive Storage Accrual</Label>
-      <Input
-        inputMode="decimal"
-        value={dialog.waiveStorageAmount}
-        onChange={(event) => dialog.setWaiveStorageAmount(event.target.value)}
-        placeholder="Waive amount (GHS)"
-      />
-      <Input
-        value={dialog.waiveStorageReason}
-        onChange={(event) => dialog.setWaiveStorageReason(event.target.value)}
-        placeholder="Waiver reason (required)"
-      />
+      <Label>Storage Fee Clearance</Label>
+      <p className="text-sm text-muted-foreground">
+        Submit the accrued days for approval. Finance execution reduces the storage balance.
+        Remaining storage fees must be settled before handover.
+      </p>
       <div className="flex justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={async () => {
-            try {
-              await dialog.handleWaiveStorageAccrual();
-              toast.success('Storage accrual waived');
-            } catch (error) {
-              toast.error(
-                getApplicationErrorMessage(error, '') || 'Failed to waive storage accrual',
-              );
-            }
-          }}
-          disabled={dialog.isSaving}
-        >
-          Waive Storage
+        <Button asChild type="button" variant="outline">
+          <Link
+            to={`/parcels/storage-clearances/new?search=${encodeURIComponent(parcel.bookingCode)}`}
+          >
+            Request Clearance
+          </Link>
         </Button>
       </div>
     </div>
@@ -229,6 +220,10 @@ function PickerAndMomo({
           ? `Only active staff assigned to ${context.cashierLocationName} are shown.`
           : 'Your user account needs an assigned location before staff can be selected.'}
       </p>
+      {dialog.parcelDetails?.parcel.shelfPickerStaffId ||
+      dialog.parcelDetails?.pickupQueue?.pickerStaffId ? (
+        <ShelfPickupReassignmentLink bookingCode={parcel.bookingCode} disabled={dialog.isSaving} />
+      ) : null}
       {dialog.paymentMethod === String(PaymentMethod.MTN) ? (
         <MomoRequestToPayPanel
           parcelId={parcel.id}

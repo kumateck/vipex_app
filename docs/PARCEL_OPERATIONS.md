@@ -40,6 +40,47 @@ disabled. When an active pickup queue exists, the server mirrors the assignment 
 `pickup_queues.picker_staff_id` for compatibility. The server enforces these permissions
 independently of sidebar visibility.
 
+### Shelf pickup reassignment
+
+**Pickup & Collection → Reassign Shelf Pickup** opens the separate page at
+`/parcels/shelf-pickup-reassignment`. It requires the existing
+`CanUpdateParcelShelfPicker` permission; `CanReadShelfPickerUpdate` alone does not allow
+reassignment. Shelf Picker Update now offers **Assign Shelf Picker** for unassigned parcels and
+**Reassign Shelf Pickup** for assigned parcels. Reassignment opens the dedicated page. Assigned
+pickers in Waiting for Pickup and Receiver Cashier have a permission-gated link to that page;
+unsaved handover/payment forms are not submitted by following it.
+
+The page lists only assigned, undeleted parcels awaiting pickup at the signed-in user's
+company and destination branch, including both paid and to-be-paid parcels. Users can search
+booking/tracking codes, names and telephones, and paginate the results. A legacy assignment from
+the latest active pickup ticket is included when the parcel itself has no picker; ended tickets
+alone do not make a parcel eligible. Only one row per parcel appears in this page's results,
+even when older tickets exist. Selecting a parcel shows its current picker and an inline form for
+choosing an active replacement. Staff must belong to the same company and branch and, when the
+operator has a location, that location. An operator without a location can select active branch
+staff. The currently assigned staff cannot be saved as a new reassignment. Staff/list load failures
+show a retry action; typing a search does not fetch until Search is pressed.
+
+Saving changes the parcel picker and all active pickup tickets in one transaction. Ended tickets,
+queue numbers/codes, parcel status, payments and delivery confirmation are preserved. Each
+successful change records the acting user, previous/new picker IDs, affected active ticket IDs,
+and timestamp in parcel audit history. An audit failure rolls back the assignment. A duplicate
+save of the current assignment makes no further change or audit event. The page sends the picker
+shown when selecting the parcel as `expectedPickerStaffId`; if another user changes it first,
+the server returns 409 and the user must select it again from refreshed results. Delivered,
+confirmed, deleted or wrong-branch parcels cannot be reassigned.
+
+This page is available in web and Electron desktop. Mobile has no dedicated reassignment screen;
+the shared endpoint now enforces these server checks for every client. No new database migration
+or permission key is required. Existing integrations can omit the optional expected picker for
+compatibility, but still require company/branch/staff validation. QA is covered by
+`shelf-pickup-reassignment.service.spec.ts` and `.routes.spec.ts`: parcel/ticket synchronization,
+ended-ticket preservation, no-queue and legacy assignments, stale/concurrent updates, audit
+rollback, inactive/wrong-location/wrong-branch staff, delivered/deleted parcels, read-only denial,
+permission-only page/API access, and duplicate-free scoped search. Manual QA: open the sidebar
+page and each handover link, submit searches, select a replacement, save, then verify the current
+picker in Shelf Picker Update, Waiting for Pickup and Receiver Cashier.
+
 The Call Center Assignment and Shelf Picker Update tables show a Payment column and legend: green
 is **Paid**, amber is **To Be Paid**, and blue is **Partial**. A Paid parcel shows only its paid
 amount, a To Be Paid parcel shows only its balance due, and a Partial parcel shows both. The
@@ -629,6 +670,68 @@ after the grace period. Verify the amber indicator and exact GHS amount match th
 including a parcel with a storage payment or waiver. Verify zero-charge, created, in-transit, and
 delivered rows do not show a stale indicator, and verify pagination and empty results preserve the
 existing search behavior.
+
+### Storage fee clearance reconciliation
+
+Web and desktop provide four separate pages under the **Storage Fee Clearance** menu:
+
+| Page                                | Route                                   | Action permission                            |
+| ----------------------------------- | --------------------------------------- | -------------------------------------------- |
+| Storage Fee Clearance Requests      | `/parcels/storage-clearances`           | Read, request, approve, or execute clearance |
+| Create Storage Fee Clearance        | `/parcels/storage-clearances/new`       | `CanRequestParcelStorageClearance`           |
+| Storage Clearance Approvals         | `/parcels/storage-clearances/approvals` | `CanApproveParcelStorageClearance`           |
+| Finance Storage Clearance Execution | `/parcels/storage-clearances/execution` | `CanExecuteParcelStorageClearance`           |
+
+The requester enters positive whole days, a required reason (3–1000 characters), and optional
+evidence (a link or reference, up to 2000 characters; this feature does not upload attachments).
+The form shows current unpaid days, the daily rate, requested amount, and remaining days.
+Days above the current unpaid balance are accepted for human review and shown with an advisory.
+A parcel without unpaid storage accrual cannot start or resubmit a request. Only one open request
+is allowed per parcel, including returned requests. Company and branch scope come from the
+signed-in user: agency users can work with their branch's source or destination parcels; head
+office can work company-wide. Deleted parcels are excluded.
+
+**Clear all accrued days** snapshots the current unpaid storage balance, after previous valid
+storage payments and clearances. Unpaid days are rounded up from outstanding amount / daily
+rate; when a payment leaves part of a day unpaid, Clear All clears the exact remaining amount.
+Entered days use days × daily rate. A partial clearance reduces the outstanding balance; further
+storage continues to accrue normally until the parcel stops being eligible.
+
+Creation moves the request to Pending Approval. An approver reviews it and moves it to Approved
+for Finance. The requester cannot approve or execute their own request. Finance has a separate
+final execution step. Approval does not change the fee balance. Finance can return an approved
+request with a required review reason; only the original requester can edit and resubmit it,
+which resets approval and sends it through the flow again. Approvers can reject pending requests;
+Finance can reject approved requests. Rejection requires a reason and closes the request. A new
+request must be created to start again.
+
+Approval checks that unpaid accrual still exists. Finance execution rechecks the latest balance,
+rate, and requested amount. Changed Clear All days/amount, a changed rate, an amount above the
+remaining balance, or no remaining accrual returns HTTP 409 without posting. Finance can return
+the request for correction; execution never silently increases or reduces the approved amount.
+Additional days do not block execution of an affordable partial request.
+
+Execution locks the request and parcel and commits the waiver, accounting posting (when enabled),
+executed status, and audit together. Concurrent or repeated execution cannot create a second
+waiver. Missing required active accounting accounts (1300 receivable / 5180 waiver expense) or a
+posting/audit failure rolls back execution and leaves the request approved. Searching, reviewing,
+approving, returning, and reprinting do not deliver a parcel, collect payment, or post a waiver.
+History retains actors, timestamps, reasons/notes, evidence, day/amount snapshots, and prior
+approval cycles. Receipt reprints retain the documented DUPLICATE behavior.
+
+Migration `0077_parcel_storage_clearance.sql` adds `parcel_storage_clearance_requests` and its
+company/status/date, parcel/date, and unique-open-request indexes. Assign the new permissions
+before users work with the pages. The former direct storage-waiver API and cashier action are
+removed. Mobile has no clearance screens; cashier settlement and storage indicators continue to
+use the shared backend balance. This change does not apply the migration to deployed databases.
+
+Automated QA: `parcel-storage-clearance.workflow.spec.ts`, `.finance.spec.ts`, `.routes.spec.ts`,
+`.path-access.spec.ts`, and the clearance rules unit tests cover partial/above-balance requests,
+no-accrual rejection, company/branch scope, requester separation, return/resubmit/reapproval,
+rejection/restart, Clear All after prior clearance, subsequent accrual, stale execution conflicts,
+permissions, the removed bypass endpoint, concurrent execution, balanced posting, and rollback
+on accounting failure. Manual QA: check each page, search and pagination, evidence links,
+current/unpaid/requested/remaining days, returned-request editing, and desktop navigation.
 
 ## Internal Transfers
 

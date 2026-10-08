@@ -14,7 +14,6 @@ import {
   useRequestReceiverOtpMutation,
   useUpdateParcelMutation,
   useVerifyReceiverOtpMutation,
-  useWaiveParcelStorageAccrualMutation,
 } from '../../api/parcel.api';
 import { confirmReceiverDelivery } from './confirm-receiver-delivery';
 import { useReceiverCashierDialogState } from './use-receiver-cashier-dialog-state';
@@ -31,8 +30,8 @@ export function useParcelReceiverCashierWorkflow() {
   const branchId = user?.branch?.id ?? null;
   const cashierLocationId = user?.location?.id ?? user?.locationId ?? null;
   const cashierLocationName = user?.location?.name ?? user?.locationName ?? null;
-  const canWaiveStorageAccrual = (user?.permissions ?? []).includes(
-    PermissionKeys.CanWaiveParcelStorageAccrual,
+  const canRequestStorageClearance = (user?.permissions ?? []).includes(
+    PermissionKeys.CanRequestParcelStorageClearance,
   );
   const currentBranchQuery = useGetBranchOperationsSettingsQuery(branchId ?? '', {
     skip: !branchId,
@@ -52,8 +51,6 @@ export function useParcelReceiverCashierWorkflow() {
     useResolveSecondReceiverMutation();
   const [collectReceiverAndDeliver, { isLoading: isCollectingPayment }] =
     useCollectReceiverAndDeliverMutation();
-  const [waiveParcelStorageAccrual, { isLoading: isWaivingStorage }] =
-    useWaiveParcelStorageAccrualMutation();
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [requestReceiverOtp] = useRequestReceiverOtpMutation();
   const [verifyReceiverOtp] = useVerifyReceiverOtpMutation();
@@ -107,12 +104,7 @@ export function useParcelReceiverCashierWorkflow() {
   });
 
   const isSaving =
-    isAddingCard ||
-    isCreatingCustomer ||
-    isCollectingPayment ||
-    isUpdatingParcel ||
-    isWaivingStorage ||
-    edit.isSaving;
+    isAddingCard || isCreatingCustomer || isCollectingPayment || isUpdatingParcel || edit.isSaving;
 
   const handleRequestDelivery = async (parcel: ParcelSearchRow) => {
     try {
@@ -124,24 +116,6 @@ export function useParcelReceiverCashierWorkflow() {
         getApplicationErrorMessage(error, '') || 'Failed to move parcel to home delivery',
       );
     }
-  };
-
-  const handleWaiveStorageAccrual = async () => {
-    if (!selectedParcel) return;
-    const reason = dialog.waiveStorageReason.trim();
-    if (!reason) throw new Error('Enter waiver reason');
-    const amount = Number(dialog.waiveStorageAmount || 0);
-    if (Number.isNaN(amount) || amount <= 0) throw new Error('Enter waiver amount');
-
-    await waiveParcelStorageAccrual({
-      id: selectedParcel.id,
-      reason,
-      waivedAmountCedis: amount,
-    }).unwrap();
-
-    dialog.setWaiveStorageReason('');
-    dialog.setStoragePaymentAmount('0.00');
-    dialog.setWaiveStorageAmount('0.00');
   };
 
   const handleConfirmDelivered = async () => {
@@ -159,7 +133,7 @@ export function useParcelReceiverCashierWorkflow() {
       storagePaymentAmount: dialog.storagePaymentAmount,
       receiverDuePsw,
       storageOutstandingPsw,
-      canWaiveStorageAccrual,
+      canWaiveStorageAccrual: false,
       handoverTarget: dialog.handoverTarget,
       mainCardMode: dialog.mainCardMode,
       mainExistingCardRecordId: dialog.mainExistingCardRecordId,
@@ -194,7 +168,8 @@ export function useParcelReceiverCashierWorkflow() {
       companyId,
       branchId,
       cashierLocationName,
-      canWaiveStorageAccrual,
+      canWaiveStorageAccrual: false,
+      canRequestStorageClearance,
       isPickupQueueEnabled,
       isReceiverOtpRequired,
     },
@@ -220,7 +195,6 @@ export function useParcelReceiverCashierWorkflow() {
       mainReceiverCards,
       secondReceiverCards,
       handleConfirmDelivered,
-      handleWaiveStorageAccrual,
       handleRequestOtp,
       handleVerifyOtp,
       isSaving,
