@@ -36,6 +36,9 @@ export type ParcelSearchRow = {
   pickupQueuedAt?: string | null;
   isDeleted?: boolean;
   deletedAt?: string | null;
+  storageChargePsw?: number;
+  storageChargeDays?: number;
+  storageChargeStartAt?: string | null;
 };
 
 export type PickupQueueCard = {

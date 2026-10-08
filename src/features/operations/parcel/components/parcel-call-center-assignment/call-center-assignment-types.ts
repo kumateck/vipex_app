@@ -25,6 +25,7 @@ export type ParcelRow = {
   callCenterAssignedToUserName: string | null;
   createdAt: string;
   receivedAt: string | null;
+  storageChargePsw?: number | null;
 };
 
 export const EMPTY_META = {

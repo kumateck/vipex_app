@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { ParcelTimestampsCell } from '../parcel-timestamps';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { canEditSecondReceiver } from '@/shared/shipments/second-receiver';
 import { CallCenterAssignmentPaymentCell } from '../parcel-call-center-assignment/call-center-assignment-payment-cell';
 import type { ParcelRow } from './shelf-picker-update-types';
@@ -57,7 +58,12 @@ export function useShelfPickerUpdateColumns({
     {
       accessorKey: 'bookingCode',
       header: 'Booking Code',
-      cell: ({ row }) => <div className="font-mono font-medium">{row.original.bookingCode}</div>,
+      cell: ({ row }) => (
+        <div className="space-y-1">
+          <div className="font-mono font-medium">{row.original.bookingCode}</div>
+          <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+        </div>
+      ),
     },
     {
       accessorKey: 'receiverName',
@@ -138,9 +144,11 @@ export function useShelfPickerUpdateColumns({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onOpenUpdateDialog(row.original)}>
-              Update
-            </DropdownMenuItem>
+            {canRequestDelivery ? (
+              <DropdownMenuItem onClick={() => onOpenUpdateDialog(row.original)}>
+                {row.original.pickerStaffId ? 'Reassign Shelf Pickup' : 'Assign Shelf Picker'}
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
             {canManageSecondReceiver && canEditSecondReceiver(row.original.status) ? (
               <DropdownMenuItem onClick={() => onEditSecondReceiver(row.original)}>

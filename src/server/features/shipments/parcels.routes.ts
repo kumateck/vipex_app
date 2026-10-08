@@ -1,3 +1,5 @@
+import { parcelStorageClearanceRoutes } from './parcel-storage-clearance.routes';
+import { shelfPickerReassignmentRoutes } from './shelf-picker-reassignment.routes';
 import { Elysia, t } from 'elysia';
 import {
   authPlugin,
@@ -29,7 +31,6 @@ import {
   markIncomingParcelsArrivedCtrl,
   recordParcelDispositionActionCtrl,
   updateParcelShelfPickerCtrl,
-  waiveParcelStorageAccrualCtrl,
   requestParcelReconciliationCaseCtrl,
   resolveParcelDiscrepancyCtrl,
   setPlannedToBePaidCtrl,
@@ -132,6 +133,8 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       detail: { tags: ['Shipments'], summary: 'Repair parcel To Be Paid amount' },
     },
   )
+  .use(parcelStorageClearanceRoutes)
+  .use(shelfPickerReassignmentRoutes)
   .get(
     '/return-to-source',
     async ({ query, user }) => {
@@ -316,15 +319,22 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
     '/shelf-picker-staff',
     async ({ user }) => {
       const authUser = user as AuthUser;
-      if (!authUser.locationId) return [];
+      if (!authUser.companyId || !authUser.branchId) return [];
       return listUserOptionsRepo({
         companyId: authUser.companyId ?? null,
+        branchId: authUser.branchId,
         locationId: authUser.locationId ?? null,
         status: UserStatus.ACTIVE,
       });
     },
     {
-      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadShelfPickerUpdate)],
+      beforeHandle: [
+        requireAuth(),
+        requireAnyPermissions(
+          PermissionKeys.CanReadShelfPickerUpdate,
+          PermissionKeys.CanUpdateParcelShelfPicker,
+        ),
+      ],
       detail: { tags: ['Shipments'], summary: 'List active shelf picker staff' },
     },
   )
@@ -511,29 +521,6 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateParcels)],
       detail: { tags: ['Shipments'], summary: 'Record parcel disposition action' },
-    },
-  )
-  .post(
-    '/:id/storage-waivers',
-    async ({ params, body, user }) =>
-      waiveParcelStorageAccrualCtrl({
-        parcelId: params.id,
-        actorUserId: (user as AuthUser).sub,
-        reason: (body as { reason: string }).reason,
-        waivedAmountCedis:
-          (body as { waivedAmountCedis?: number | string | null }).waivedAmountCedis ?? null,
-      }),
-    {
-      params: t.Object({ id: UUID }),
-      body: t.Object({
-        reason: t.String({ minLength: 3, maxLength: 1000 }),
-        waivedAmountCedis: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
-      }),
-      beforeHandle: [
-        requireAuth(),
-        requirePermissions(PermissionKeys.CanWaiveParcelStorageAccrual),
-      ],
-      detail: { tags: ['Shipments'], summary: 'Waive parcel storage accrual with reason' },
     },
   )
   .post(
@@ -1186,14 +1173,23 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
   )
   .post(
     '/:id/update-shelf-picker',
-    async ({ params, body }) =>
+    async ({ params, body, user }) =>
       updateParcelShelfPickerCtrl({
         parcelId: params.id,
         userId: (body as { userId: string }).userId,
+        companyId: (user as AuthUser).companyId ?? '',
+        branchId: (user as AuthUser).branchId ?? '',
+        locationId: (user as AuthUser).locationId,
+        actorUserId: (user as AuthUser).sub,
+        expectedPickerStaffId: (body as { expectedPickerStaffId?: string | null })
+          .expectedPickerStaffId,
       }),
     {
       params: t.Object({ id: UUID }),
-      body: t.Object({ userId: t.String() }),
+      body: t.Object({
+        userId: UUID,
+        expectedPickerStaffId: t.Optional(t.Union([UUID, t.Null()])),
+      }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateParcelShelfPicker)],
       detail: { tags: ['Shipments'], summary: 'Update shelf picker for parcel' },
     },

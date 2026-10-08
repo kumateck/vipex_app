@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { shelfPickupReassignmentLink } from '../parcel-shelf-pickup-reassignment';
 import { toast } from 'sonner';
 import { getErrorMessage, getResponseError } from '@/lib/TheAduseiErrorResponse';
 import { useAuthStore } from '@/stores/auth-store';
@@ -21,6 +23,7 @@ type TableQuery = {
 };
 
 export function useShelfPickerUpdateWorkflow() {
+  const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
   const [query, setQuery] = useState<TableQuery>({ page: 1, pageSize: 20 });
@@ -119,14 +122,17 @@ export function useShelfPickerUpdateWorkflow() {
   };
 
   const handleUpdateShelfPicker = async () => {
-    if (!selectedParcel || !selectedStaffId) return;
+    if (!selectedParcel || !selectedStaffId || isSaving) return;
 
     setIsSaving(true);
     try {
       const res = await fetch(`/v1/shipments/parcels/${selectedParcel.id}/update-shelf-picker`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ userId: selectedStaffId }),
+        body: JSON.stringify({
+          userId: selectedStaffId,
+          expectedPickerStaffId: selectedParcel.pickerStaffId,
+        }),
       });
 
       if (!res.ok) {
@@ -219,6 +225,11 @@ export function useShelfPickerUpdateWorkflow() {
       rows: listData.data,
       listQuery,
       openUpdateDialog: (parcel: ParcelRow) => {
+        if (!canRequestDelivery) return;
+        if (parcel.pickerStaffId) {
+          navigate(shelfPickupReassignmentLink(parcel.bookingCode));
+          return;
+        }
         setSelectedParcel(parcel);
         setSelectedStaffId(parcel.pickerStaffId || '');
       },

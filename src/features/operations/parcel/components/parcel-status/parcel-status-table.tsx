@@ -16,6 +16,7 @@ import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import { CallSenderBadge } from '../call-sender-badge';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { STATUS_LABELS } from './constants';
 import { PaymentTypeFilter, type PaymentType } from './payment-type-filter';
 import { ParcelStatusSearch } from './parcel-status-search';
@@ -55,7 +56,6 @@ type ParcelStatusTableProps = {
   paymentType: PaymentType;
   onPaymentTypeChange: (value: PaymentType) => void;
 };
-
 export function ParcelStatusTable({
   rows,
   loading,
@@ -122,6 +122,7 @@ export function ParcelStatusTable({
             <p className="text-muted-foreground text-xs">
               Received {formatReceivedAt(row.original.receivedAt)}
             </p>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
           </div>
         ),
       },
@@ -252,7 +253,6 @@ export function ParcelStatusTable({
       selectedParcelIds,
     ],
   );
-
   return (
     <ScrollableWrapper>
       <Card>

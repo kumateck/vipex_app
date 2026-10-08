@@ -17,6 +17,7 @@ import { formatDateTime } from '@/lib/dates';
 import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { EMPTY_META } from './constants';
 import { formatMoney, formatPhones } from './utils';
 
@@ -53,7 +54,16 @@ export function DeliveryCashierTable({
 }: DeliveryCashierTableProps) {
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        id: 'booking',
+        header: 'Booking',
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <span>{row.original.bookingCode}</span>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+          </div>
+        ),
+      },
       {
         id: 'receiver',
         header: 'Receiver',

@@ -7,8 +7,8 @@
     "@tailwindcss/vite": "^4.1.11"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "bun run --cwd ../.. routes:generate && concurrently --kill-others \"bun run --cwd ../.. routes:watch\" \"vite\"",
+    "build": "bun run --cwd ../.. routes:generate && vite build",
     "preview": "vite preview"
   }
 }

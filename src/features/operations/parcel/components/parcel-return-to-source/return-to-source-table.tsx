@@ -10,6 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 
 type Props = {
   rows: ParcelSearchRow[];
@@ -82,6 +83,7 @@ export function ReturnToSourceTable(props: Props) {
                     <TableCell>
                       <div className="font-medium">{row.bookingCode}</div>
                       <div className="text-xs text-muted-foreground">{row.trackingCode}</div>
+                      <ParcelStorageFeeBadge storageChargePsw={row.storageChargePsw} />
                     </TableCell>
                     <TableCell>
                       {row.destinationName ?? '-'} → {row.sourceName ?? '-'}
