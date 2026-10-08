@@ -112,6 +112,14 @@ permission and an assignment to the caller at the destination branch. The call t
 the action is audited, and the parcel leaves the active calling queue. Other PATCH payloads
 remain ordinary parcel updates.
 
+The web bulk outcome form saves through `POST /v1/shipments/parcels/bulk-call-outcome` first.
+Its **Send SMS** checkbox defaults on; when checked, it then uses the existing
+`POST /v1/notification-hub/events/parcel-status-call` for each server-confirmed parcel ID, with
+SMS enabled, email disabled, and second receivers excluded. No bulk endpoint body/schema changes
+are required. The UI reports SMS sent/failed/skipped counts independently of the saved outcome;
+failed/unknown sends do not resubmit the status update or retry SMS automatically. See
+[parcel operations](PARCEL_OPERATIONS.md#failure-and-recovery) for workflow and QA cases.
+
 `GET /v1/shipments/parcels/financial-repair/preview?search=<booking-or-tracking-code>` and
 `POST /v1/shipments/parcels/financial-repair/execute` require
 `CanRepairParcelFinancialState`. Both use the authenticated company and branch and only match an

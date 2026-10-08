@@ -8,3 +8,4 @@ export * from './use-receipt-reprint-tax';
 export * from './use-parcel-receipt-tax';
 export * from './use-parcel-invoice-print-action';
 export * from './use-parcel-second-receiver';
+export * from './use-parcel-status';

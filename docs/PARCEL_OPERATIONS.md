@@ -606,10 +606,20 @@ Recent correction support includes original-session amount corrections so adjust
 - Partial multi-parcel failure must show which parcels succeeded and which require retry.
 
 Bulk call outcomes on the web Call Receivers page show the selected booking preview and resulting
-status. One request saves the selected outcome for all parcels on the server. The bulk action sends
-no SMS or email and does not change second-receiver assignments. A failed batch retains its selection
-for correction or retry. The single-parcel Call Outcome action retains its notification and optional
-second-receiver controls.
+status. **Send SMS** is enabled by default, matching the single-parcel Call Outcome form. Staff
+may uncheck it to save only the outcomes. One request validates and saves all selected statuses;
+only after success, the web client calls the existing parcel-status notification endpoint once
+per saved parcel, with at most four requests in flight. Each main customer receives the configured
+SMS for that parcel and outcome, including its booking/tracking and branch variables. Bulk outcomes
+do not send email, notify second receivers, or change receiver assignments.
+
+A failed batch retains its selection and sends no SMS. Notification failure does not undo saved
+outcomes: the dialog closes, selection clears, and the list refreshes after notification attempts.
+The result reports sent, failed (including unknown response failures), and skipped counts; missing
+customer phone numbers are skipped. Failed/unknown notifications are not automatically retried.
+The existing notification-hub module gate, provider settings, templates, permissions, dispatch
+history, and audit apply. Mobile and single-parcel workflows retain their existing behavior;
+desktop clients using the web page receive the same bulk SMS controls.
 
 Call Center Assignment sets newly assigned arrived, returned, or follow-up parcels to **Awaiting
 Pickup** as a provisional customer pickup choice. Assignment and reassignment clear the separate
@@ -657,6 +667,10 @@ be completed without collection.
   rows before assigned rows across pages, and newest received rows first within each group.
 - Bulk call outcome success for each of the three statuses, unauthorized request, out-of-scope or
   reassigned parcel, stale status, and concurrent change with no partial updates or notifications.
+- Bulk SMS checked and unchecked; each outcome uses its configured single-parcel SMS template.
+  Verify one request per selected saved parcel, main customer only, a maximum of four concurrent
+  sends, and disabled form controls while sending. Missing phones, disabled notification hub,
+  provider rejection, and lost responses show counts without undoing or resubmitting the batch.
 - Mobile call-center receiver and sender call actions open the appropriate primary number, disable
   cleanly when absent, and do not substitute one party's number for the other.
 - A paid parcel with outstanding storage appears in Receiver Cashier and not Waiting Pickup; after
