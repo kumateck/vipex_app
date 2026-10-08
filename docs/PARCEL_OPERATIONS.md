@@ -611,6 +611,25 @@ pagination, and switching back to Awaiting Pickup. Verify unrelated companies/br
 payments, reversed deliveries, and closed cashier sessions cannot print. A cancelled/failed print
 must leave payments and delivery state unchanged.
 
+### Storage fee indicator in parcel searches
+
+Every web and mobile parcel search result backed by the parcel list API shows a
+`Storage fee · GHS X.XX` indicator when the API reports an accrued storage charge greater than
+zero. This includes Super Search, status, receive, transit, pickup, waiting pickup, receiver
+cashier, delivery cashier, call-center assignment, shelf-picker update, home-delivery queues,
+internal-transfer search, sender payments, uncollected, returned, and mobile Super Search results.
+The amount is the current accrued charge from the company ageing policy and received timestamp,
+including parcels moved to the aged-warehouse status; it is informational and does not by itself
+mean the amount is still outstanding after a payment or waiver. Search rows with no accrued charge
+remain unchanged. The indicator is rendered from the search response, so clients do not calculate
+or mutate storage fees locally.
+
+QA: search the same parcel in each applicable web result and in mobile Super Search before and
+after the grace period. Verify the amber indicator and exact GHS amount match the API response,
+including a parcel with a storage payment or waiver. Verify zero-charge, created, in-transit, and
+delivered rows do not show a stale indicator, and verify pagination and empty results preserve the
+existing search behavior.
+
 ## Internal Transfers
 
 Internal transfers provide a custody trail when a parcel moves between internal actors or locations. Creation and acknowledgement are distinct operations. History must preserve the sender, receiver, time, parcel, and resulting state.

@@ -12,6 +12,7 @@ import {
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
 import { ParcelTimestampsCell } from '../parcel-timestamps';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import {
   formatCurrency,
   formatDateTime,
@@ -98,6 +99,7 @@ export function useParcelReceiverCashierColumns({
             <p className="text-muted-foreground text-xs">
               {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
             </p>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
           </div>
         ),
       },

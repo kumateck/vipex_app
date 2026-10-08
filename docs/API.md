@@ -71,6 +71,13 @@ returns 400. Unauthenticated/unauthorized callers receive 401/403. This read-onl
 web and desktop receipt duplicates, with no mobile UI. See [Parcel printing](PARCEL_PRINTING.md)
 for the existing original-storage-tax mismatch and QA scenarios.
 
+Parcel list/search responses include the ageing snapshot fields `storageChargePsw`,
+`storageChargeDays`, `storageChargeStartAt`, `isParcelAgeingEligible`, and `isParcelAged` when
+the row is eligible for storage accrual, including aged-warehouse parcels. `storageChargePsw` is the currently accrued storage fee
+in pesewas and is used by web and mobile search results to show the storage-fee indicator. It is
+informational; outstanding collection continues to use the server-side cashier eligibility and
+settlement rules, including recorded storage payments and waivers.
+
 ## Current Mounted Roots
 
 `auth`, `users`, `branches`, `locations`, `warehouses`, `customers`, `cards`, `uploads`, `cashiers`, `shipments`, `payments`, `deliveries`, `pickup-queues`, `accounting`, `inventory`, `shifts`, `company-modules`, `module-workspace`, `procurement`, `fleet-transport`, `customer-wallet-credit`, `reconciliation`, `notification-hub`, `momo`, `self-service`, `desktop-updates`, `mobile-updates`, `communication`, `customer-service`, `help-assistant`, `executive-insights`, `fleet-anomaly-brief`, `operations-exceptions-brief`, `management-daily-brief`, `ai-chat`, `it-support`, `reports`, `audit`, `hr`, `payroll`, `rbac`, and `geolocation`.

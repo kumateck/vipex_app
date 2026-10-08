@@ -15,6 +15,7 @@ import { ParcelStatus } from '@/db/schemas/enums';
 import { Spinner } from '@/components/ui/spinner';
 import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import type { SenderCashierParcel } from '../../api/parcel.api';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { EMPTY_META, PAYMENT_TYPE_LEGEND, SENDER_PAYMENTS_DEFAULT_SORT } from './constants';
 import {
   formatCurrency,
@@ -72,6 +73,7 @@ export function SenderPaymentsTable({
             <div className="inline-flex items-center gap-2">
               <span className={`h-2.5 w-2.5 rounded-full ${paymentType.dotClassName}`} />
               <span>{row.original.bookingCode}</span>
+              <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
             </div>
           );
         },

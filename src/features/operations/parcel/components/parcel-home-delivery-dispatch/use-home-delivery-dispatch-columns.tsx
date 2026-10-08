@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ParcelStatus } from '@/db/schemas/enums';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 
 const money = (amountPsw: number | null | undefined) =>
   `GHS ${((amountPsw ?? 0) / 100).toFixed(2)}`;
@@ -49,7 +50,16 @@ export function useHomeDeliveryDispatchColumns(input: {
           />
         ),
       },
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        id: 'booking',
+        header: 'Booking',
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <span>{row.original.bookingCode}</span>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+          </div>
+        ),
+      },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       {
         id: 'receiver',

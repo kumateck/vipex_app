@@ -67,6 +67,9 @@ export type SenderCashierParcel = {
   currentHolderLocationName?: string | null;
   currentHolderWarehouseId?: string | null;
   currentHolderWarehouseName?: string | null;
+  storageChargePsw?: number;
+  storageChargeDays?: number;
+  storageChargeStartAt?: string | null;
 };
 
 export type ProcessedParcel = SenderCashierParcel;

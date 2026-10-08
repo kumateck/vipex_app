@@ -156,7 +156,7 @@ async function getCompanyParcelAgeingPolicy(companyId: string): Promise<ParcelAg
     : DEFAULT_PARCEL_AGEING_POLICY;
 }
 
-function computeParcelAgeingSnapshot(input: {
+export function computeParcelAgeingSnapshot(input: {
   status: number;
   receivedAt: Date | null;
   policy: ParcelAgeingPolicy;
@@ -164,7 +164,8 @@ function computeParcelAgeingSnapshot(input: {
 }) {
   const isCollectionStatus =
     input.status === ParcelStatus.AWAITING_PICKUP ||
-    input.status === ParcelStatus.HOME_DELIVERY_REQUESTED;
+    input.status === ParcelStatus.HOME_DELIVERY_REQUESTED ||
+    input.status === ParcelStatus.AGED_IN_WAREHOUSE;
 
   if (!isCollectionStatus || !input.receivedAt) {
     return {

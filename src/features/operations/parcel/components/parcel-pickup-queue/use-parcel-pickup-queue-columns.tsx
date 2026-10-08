@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { formatPhones, getPaymentBucketLabel } from './parcel-pickup-queue-utils';
 
 type UseParcelPickupQueueColumnsOptions = {
@@ -19,7 +20,16 @@ type UseParcelPickupQueueColumnsOptions = {
 export function useParcelPickupQueueColumns({ onViewQueue }: UseParcelPickupQueueColumnsOptions) {
   return useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        id: 'booking',
+        header: 'Booking',
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <span>{row.original.bookingCode}</span>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+          </div>
+        ),
+      },
       {
         id: 'receiver',
         header: 'Receiver',

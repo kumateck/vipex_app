@@ -12,6 +12,7 @@ import type { ParcelSearchRow } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
 import { formatDateTime } from '../parcel-receiver-cashier/receiver-cashier-utils';
 import { ParcelTimestampsCell } from '../parcel-timestamps';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 
 function formatCurrency(amountPsw: number) {
   return `GHS ${(amountPsw / 100).toFixed(2)}`;
@@ -76,6 +77,7 @@ export function useWaitingPickupColumns({
             <p className="text-muted-foreground text-xs">
               {formatPhones(row.original.senderPhone, row.original.senderPhone2)}
             </p>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
           </div>
         ),
       },
