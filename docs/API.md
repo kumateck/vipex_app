@@ -16,7 +16,8 @@ Public parcel tracking is documented in [Public parcel tracking API](PUBLIC_PARC
 Rider returns use `POST /v1/deliveries/dd/:parcelId/returned`; dispatch staff list and
 reprocess them through `GET /v1/deliveries/dd/returned` and
 `POST /v1/deliveries/dd/:parcelId/returned-to-pickup` and
-`POST /v1/deliveries/dd/:parcelId/redispatch-return`.
+`POST /v1/deliveries/dd/:parcelId/redispatch-return`, or assign several at once through
+`POST /v1/deliveries/dd/returned/redispatch-bulk`.
 See [Identity and parcel operations](api/IDENTITY_AND_OPERATIONS.md) for scope and failure rules.
 
 Native device registration is documented in [Native device registration](DEVICE_REGISTRATION.md).

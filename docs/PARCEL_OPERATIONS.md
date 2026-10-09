@@ -536,20 +536,46 @@ cleared on return; staff should confirm the fee with the customer before another
 Return and reprocessing status changes are recorded in parcel audit history.
 
 Staff with `CanDispatchForDelivery` use **Last Mile Delivery → Rider Returns** to search and
-page through returns at their own company's destination branch. The page shows the original
-rider and return time. Staff can move a returned parcel to **Awaiting Pickup** for office
-collection, or choose a rider and redispatch it. Successful reprocessing removes the parcel
-from the active return list; old delivery return history remains. Address-collected parcels
-continue to use **Dispatch Parcels**. The return list is separate from **Returns to Source**,
-which is a different branch-to-branch decision. Web and Electron desktop share this page and
-API; mobile riders can record returns but do not have the reprocessing page.
+page through returns at their own company's destination branch. The list groups each return
+into five columns: **Parcel** (booking code, parcel details, parcel content), **Recipient**
+(receiver name, telephone, home address), **Payment** (delivery fee, to-be-paid amount, and the
+status rendered from the parcel status as `RETURNED_TO_OFFICE`), **Previous Assigned Rider**
+(the rider who brought the parcel back, shown as `—` when none), and **Action** (a kebab menu
+with **Move to Pickup** and **Redispatch**). Tracking code and return timestamp are no longer
+shown as columns; the return time remains in parcel audit history. **Redispatch**
+is disabled in the menu, with a hint to select a rider, until a rider is chosen in the **Rider
+for redispatch** selector; **Move to Pickup** stays available either way. Staff can move a
+returned parcel to **Awaiting Pickup** for office collection, or choose a rider and redispatch
+it. Every row has a checkbox, and the header checkbox selects or clears the whole page (showing
+a partial state when only some rows are selected). Selecting rows reveals a bulk bar with the
+count, **Redispatch N to rider**, and **Clear selection**. The bulk button stays disabled, with
+a hint, until a rider is chosen in **Rider for redispatch**; it calls
+`POST /deliveries/dd/returned/redispatch-bulk`, which validates the rider once and then applies
+the single-parcel redispatch rules to each selected parcel. The response reports partial
+success: parcels that are stale, out of scope, missing a completed return, or held by an open
+reconciliation case come back in `failed` with a reason and stay selected for review, while a
+toast summarises how many were redispatched. Selection clears when the page or search changes.
+Successful reprocessing removes the parcel from the active return list; old delivery return
+history remains. Address-collected parcels continue to use **Dispatch Parcels**. The return list
+is separate from **Returns to Source**, which is a different branch-to-branch decision. Web and
+Electron desktop share this page and API; mobile riders can record returns but do not have the
+reprocessing page.
 
 QA: return a dispatched parcel from its assigned rider and verify status 12, return time,
 removal from the rider's current list, and presence only in the destination branch's return
-queue. Verify wrong-rider and repeated returns fail without partial updates. Move one return
+queue. Verify wrong-rider and repeated returns fail without partial updates. Confirm the row
+groups show booking code, parcel details, parcel content, receiver name, telephone, home
+address, delivery fee, to-be-paid amount, `RETURNED_TO_OFFICE`, and the previous assigned
+rider, and that the **Redispatch** menu item is disabled with a rider-selection hint until a
+rider is chosen. Move one return
 to pickup and redispatch another; both should disappear from the return list and appear in
 their corresponding workflows. Verify searching, paging, cross-company/branch isolation,
 permission denial, missing rider selection, and a stale return that was already reprocessed.
+Bulk: select several returns and confirm the count, the header checkbox partial state, and that
+**Redispatch N to rider** stays disabled with a hint until a rider is chosen. Run a bulk
+redispatch with one already-reprocessed parcel mixed in, and confirm the eligible parcels leave
+the list and are audited and pushed to the rider, while the stale parcel stays selected with a
+failure message. Clear selection, then change the page or search and confirm selection resets.
 
 ### Reconciliation hold on delivery
 

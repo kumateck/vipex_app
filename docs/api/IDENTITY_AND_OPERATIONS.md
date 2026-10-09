@@ -93,6 +93,15 @@ authorization. Web and mobile use the same endpoints.
   and branch, a completed return, and no open reconciliation hold. It atomically redispatches
   the parcel and delivery and notifies the rider. Missing or out-of-scope parcels return 404;
   stale return state or invalid rider selection returns 409. Both actions use the same permission.
+- `POST /deliveries/dd/returned/redispatch-bulk` accepts `{ parcelIds: string[], riderUserId }`
+  with 1-100 unique parcel IDs and requires `CanDispatchForDelivery`. The active-branch-rider
+  check runs once up front and returns 409 before anything changes if the rider is missing,
+  inactive, or in another company or branch. Each parcel is then redispatched through the same
+  rules as `POST /deliveries/dd/:parcelId/redispatch-return`, and the 200 response reports
+  partial success: `succeeded: string[]` holds the redispatched parcel IDs and
+  `failed: { parcelId, message }[]` explains parcels that were stale, out of scope, missing a
+  completed return, or held by an open reconciliation case. Every successful parcel gets its own
+  audit entry and rider assignment notification.
 - `POST /payments/collect-receiver-and-deliver`: returns separate principal `payment` and ageing
   `storagePayment` records when collected. When storage is collected, `receiptTaxBreakdown` is
   calculated from the sum of both collected amounts using the company tax profile or default
