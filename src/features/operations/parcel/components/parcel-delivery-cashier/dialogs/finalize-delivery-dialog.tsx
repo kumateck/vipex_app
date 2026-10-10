@@ -1,3 +1,4 @@
+import { DeliveryFeeEditButton } from '@/features/operations/delivery-fee';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,8 +27,8 @@ import {
   SelectValue,
 } from '@/components/ui/select-searchable';
 import { PaymentMethod } from '@/db/schemas/enums';
-import type { ParcelSearchRow } from '../../api/parcel.api';
-import { formatMoney, formatPhones } from './utils';
+import type { ParcelSearchRow } from '../../../api/parcel.api';
+import { formatMoney, formatPhones } from '../utils';
 
 type FinalizeDeliveryDialogProps = {
   parcel: ParcelSearchRow | null;
@@ -45,6 +46,7 @@ type FinalizeDeliveryDialogProps = {
   paymentMethod: string;
   onPaymentMethodChange: (value: string) => void;
   isFinalizing: boolean;
+  isRefreshing: boolean;
   isFinalizeConfirmOpen: boolean;
   onFinalizeConfirmOpenChange: (open: boolean) => void;
   onClose: () => void;
@@ -67,6 +69,7 @@ export function FinalizeDeliveryDialog({
   paymentMethod,
   onPaymentMethodChange,
   isFinalizing,
+  isRefreshing,
   isFinalizeConfirmOpen,
   onFinalizeConfirmOpenChange,
   onClose,
@@ -118,6 +121,13 @@ export function FinalizeDeliveryDialog({
           <p className="text-sm">
             <strong>Delivery Fee:</strong> {formatMoney(configuredDeliveryFeePsw)}
           </p>
+          {parcel ? (
+            <DeliveryFeeEditButton
+              parcelId={parcel.id}
+              bookingCode={parcel.bookingCode}
+              disabled={isFinalizing || isRefreshing}
+            />
+          ) : null}
           <p className="text-sm">
             <strong>Outstanding To Be Paid:</strong> {formatMoney(outstanding.principalPsw)}
           </p>
@@ -165,7 +175,10 @@ export function FinalizeDeliveryDialog({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={() => onFinalizeConfirmOpenChange(true)} disabled={isFinalizing}>
+          <Button
+            onClick={() => onFinalizeConfirmOpenChange(true)}
+            disabled={isFinalizing || isRefreshing}
+          >
             {isFinalizing ? 'Finalizing...' : 'Confirm Delivered At Home'}
           </Button>
         </DialogFooter>
@@ -179,8 +192,11 @@ export function FinalizeDeliveryDialog({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isFinalizing}>Cancel</AlertDialogCancel>
-              <AlertDialogAction disabled={isFinalizing} onClick={() => void onFinalize()}>
+              <AlertDialogCancel disabled={isFinalizing || isRefreshing}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={isFinalizing || isRefreshing}
+                onClick={() => void onFinalize()}
+              >
                 {isFinalizing ? 'Finalizing...' : 'Finalize Delivery'}
               </AlertDialogAction>
             </AlertDialogFooter>

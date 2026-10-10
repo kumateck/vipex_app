@@ -50,6 +50,20 @@ export async function reprocessRiderReturnForPickupSvc(input: {
   return { id: result.id };
 }
 
+async function assertActiveBranchRider(riderUserId: string, companyId: string, branchId: string) {
+  const rider = await getUserRepo(riderUserId);
+  if (
+    !rider ||
+    rider.companyId !== companyId ||
+    rider.branchId !== branchId ||
+    rider.userType !== UserType.RIDER ||
+    rider.status !== UserStatus.ACTIVE
+  ) {
+    throw Conflict('Select an active rider at this branch');
+  }
+  return rider;
+}
+
 export async function redispatchRiderReturnSvc(input: {
   parcelId: string;
   riderUserId: string;
@@ -57,16 +71,7 @@ export async function redispatchRiderReturnSvc(input: {
   branchId: string;
   actorUserId: string;
 }) {
-  const rider = await getUserRepo(input.riderUserId);
-  if (
-    !rider ||
-    rider.companyId !== input.companyId ||
-    rider.branchId !== input.branchId ||
-    rider.userType !== UserType.RIDER ||
-    rider.status !== UserStatus.ACTIVE
-  ) {
-    throw Conflict('Select an active rider at this branch');
-  }
+  const rider = await assertActiveBranchRider(input.riderUserId, input.companyId, input.branchId);
   const result = await db.transaction(async (tx) => {
     await tx
       .select({ id: parcels.id })
@@ -115,4 +120,35 @@ export async function redispatchRiderReturnSvc(input: {
     parcelIds: [result.id],
   });
   return { id: result.id };
+}
+
+export async function redispatchRiderReturnsBulkSvc(input: {
+  parcelIds: string[];
+  riderUserId: string;
+  companyId: string;
+  branchId: string;
+  actorUserId: string;
+}) {
+  await assertActiveBranchRider(input.riderUserId, input.companyId, input.branchId);
+  const parcelIds = [...new Set(input.parcelIds)];
+  const succeeded: string[] = [];
+  const failed: Array<{ parcelId: string; message: string }> = [];
+  for (const parcelId of parcelIds) {
+    try {
+      await redispatchRiderReturnSvc({
+        parcelId,
+        riderUserId: input.riderUserId,
+        companyId: input.companyId,
+        branchId: input.branchId,
+        actorUserId: input.actorUserId,
+      });
+      succeeded.push(parcelId);
+    } catch (error) {
+      failed.push({
+        parcelId,
+        message: error instanceof Error ? error.message : 'Failed to redispatch parcel',
+      });
+    }
+  }
+  return { succeeded, failed };
 }

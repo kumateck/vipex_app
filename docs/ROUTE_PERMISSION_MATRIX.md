@@ -31,3 +31,9 @@ See [Shelf pickup reassignment](PARCEL_OPERATIONS.md#shelf-pickup-reassignment).
 Mobile routes use the same exact permission constants but have their own native route names and UI guards. The current mapping for self-service completion, call-center follow-up, receiving discrepancies, delivery-change review, and customer lookup is maintained in [Mobile Frontline Workflows](MOBILE_FRONTLINE_WORKFLOWS.md). Server authorization remains authoritative for every mobile request.
 
 When `RoutePermissionOverrides` changes, regenerate every table and update the generation date in the same change.
+
+The shared delivery fee editor on Rider Returns and Delivery Cashier uses
+`GET/PATCH /deliveries/dd/:parcelId/fee`. It accepts `CanDispatchForDelivery`,
+`CanMarkDoorstepCalled`, or `CanCompleteDoorstepDelivery`, plus active non-rider account,
+company and destination-branch checks. Riders retain the reviewed change-request workflow.
+No page permission override changes. See [Editing delivery fees](PARCEL_OPERATIONS.md#editing-delivery-fees-and-manually-repairing-cleared-fees).

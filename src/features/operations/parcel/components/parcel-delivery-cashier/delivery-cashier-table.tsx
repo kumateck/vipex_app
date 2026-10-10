@@ -1,3 +1,4 @@
+import { DeliveryFeeEditButton } from '@/features/operations/delivery-fee';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
@@ -127,16 +128,24 @@ export function DeliveryCashierTable({
         id: 'action',
         header: 'Action',
         cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="outline" className="h-8 w-8">
-                <EllipsisVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onFinalize(row.original)}>Finalize</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="outline" className="h-8 w-8">
+                  <EllipsisVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onFinalize(row.original)}>
+                  Finalize
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DeliveryFeeEditButton
+              parcelId={row.original.id}
+              bookingCode={row.original.bookingCode}
+            />
+          </div>
         ),
       },
     ],

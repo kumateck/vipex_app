@@ -8,6 +8,7 @@ import { PermissionKeys } from '@/shared/permissions/constants';
 import {
   reprocessRiderReturnForPickupSvc,
   redispatchRiderReturnSvc,
+  redispatchRiderReturnsBulkSvc,
 } from './rider-return-processing.service';
 
 export const riderReturnProcessingRoutes = new Elysia({ name: 'rider-return-processing' })
@@ -108,6 +109,30 @@ export const riderReturnProcessingRoutes = new Elysia({ name: 'rider-return-proc
       detail: {
         tags: ['Deliveries'],
         summary: 'Redispatch a rider return to an active branch rider',
+      },
+    },
+  )
+  .post(
+    '/dd/returned/redispatch-bulk',
+    ({ body, user }) => {
+      const actor = user as AuthUser;
+      return redispatchRiderReturnsBulkSvc({
+        parcelIds: body.parcelIds,
+        riderUserId: body.riderUserId,
+        companyId: actor.companyId ?? '',
+        branchId: actor.branchId ?? '',
+        actorUserId: actor.sub,
+      });
+    },
+    {
+      body: t.Object({
+        parcelIds: t.Array(UUID, { minItems: 1, maxItems: 100 }),
+        riderUserId: UUID,
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanDispatchForDelivery)],
+      detail: {
+        tags: ['Deliveries'],
+        summary: 'Redispatch rider returns to an active branch rider in bulk',
       },
     },
   );

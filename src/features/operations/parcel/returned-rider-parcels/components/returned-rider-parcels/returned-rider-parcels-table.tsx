@@ -1,5 +1,6 @@
-import { Badge } from '@/components/ui/badge';
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -17,9 +18,21 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { ReturnedRiderParcelsTableProps } from '../../types';
-import { formatRiderReturnDate } from '../../utils';
+import { ReturnedRiderParcelsActionsCell } from './returned-rider-parcels-actions-cell';
+import { ReturnedRiderParcelsBulkBar } from './returned-rider-parcels-bulk-bar';
+import {
+  ReturnedRiderParcelCell,
+  ReturnedRiderPaymentCell,
+  ReturnedRiderRecipientCell,
+} from './returned-rider-parcels-group-cells';
 
 export function ReturnedRiderParcelsTable(props: ReturnedRiderParcelsTableProps) {
+  const selectedSet = useMemo(() => new Set(props.selectedParcelIds), [props.selectedParcelIds]);
+  const pageIds = useMemo(() => props.rows.map((row) => row.id), [props.rows]);
+  const selectedOnPage = pageIds.filter((id) => selectedSet.has(id)).length;
+  const allSelected = pageIds.length > 0 && selectedOnPage === pageIds.length;
+  const rowsLocked = props.busyParcelId !== null || props.isBulkRedispatching;
+
   return (
     <div className="space-y-4">
       <form
@@ -54,59 +67,68 @@ export function ReturnedRiderParcelsTable(props: ReturnedRiderParcelsTableProps)
           </SelectContent>
         </Select>
       </div>
+      <ReturnedRiderParcelsBulkBar
+        count={selectedOnPage}
+        riderUserId={props.riderUserId}
+        isBusy={props.isBulkRedispatching}
+        onBulkRedispatch={props.onBulkRedispatch}
+        onClear={props.onClearSelection}
+      />
       <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Tracking</TableHead>
-              <TableHead>Booking</TableHead>
+              <TableHead className="w-10">
+                <Checkbox
+                  aria-label="Select all parcels on this page"
+                  checked={allSelected ? true : selectedOnPage > 0 ? 'indeterminate' : false}
+                  disabled={pageIds.length === 0 || rowsLocked}
+                  onCheckedChange={(checked) => props.onPageSelectionChange(checked === true)}
+                />
+              </TableHead>
               <TableHead>Parcel</TableHead>
-              <TableHead>Receiver</TableHead>
-              <TableHead>Delivery address</TableHead>
-              <TableHead>Rider</TableHead>
-              <TableHead>Returned</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Reprocess</TableHead>
+              <TableHead>Recipient</TableHead>
+              <TableHead>Payment</TableHead>
+              <TableHead>Previous Assigned Rider</TableHead>
+              <TableHead>Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {props.rows.map((row) => (
               <TableRow key={row.id}>
-                <TableCell>{row.trackingCode}</TableCell>
-                <TableCell>{row.bookingCode}</TableCell>
-                <TableCell>{row.parcelDetails}</TableCell>
-                <TableCell>
-                  {row.receiverName ?? '—'}
-                  {row.receiverPhone ? ` (${row.receiverPhone})` : ''}
+                <TableCell className="align-top">
+                  <Checkbox
+                    aria-label={`Select ${row.bookingCode}`}
+                    checked={selectedSet.has(row.id)}
+                    disabled={rowsLocked}
+                    onCheckedChange={(checked) =>
+                      props.onToggleParcelSelected(row.id, checked === true)
+                    }
+                  />
                 </TableCell>
-                <TableCell>{row.dropoffAddress ?? '—'}</TableCell>
-                <TableCell>{row.riderName ?? '—'}</TableCell>
-                <TableCell>{formatRiderReturnDate(row.riderReturnedAt)}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">Returned by Rider</Badge>
+                <TableCell className="align-top">
+                  <ReturnedRiderParcelCell row={row} />
                 </TableCell>
-                <TableCell className="whitespace-nowrap space-x-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={props.busyParcelId !== null}
-                    onClick={() => props.onReprocess(row, 'pickup')}
-                  >
-                    Move to Pickup
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={props.busyParcelId !== null || !props.riderUserId}
-                    onClick={() => props.onReprocess(row, 'redispatch')}
-                  >
-                    Redispatch
-                  </Button>
+                <TableCell className="align-top">
+                  <ReturnedRiderRecipientCell row={row} />
+                </TableCell>
+                <TableCell className="align-top">
+                  <ReturnedRiderPaymentCell row={row} />
+                </TableCell>
+                <TableCell className="align-top">{row.riderName ?? '—'}</TableCell>
+                <TableCell className="align-top">
+                  <ReturnedRiderParcelsActionsCell
+                    row={row}
+                    riderUserId={props.riderUserId}
+                    isBusy={rowsLocked}
+                    onReprocess={props.onReprocess}
+                  />
                 </TableCell>
               </TableRow>
             ))}
             {props.rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center">
+                <TableCell colSpan={6} className="text-center">
                   {props.hasError
                     ? 'Could not load rider returns.'
                     : props.isFetching

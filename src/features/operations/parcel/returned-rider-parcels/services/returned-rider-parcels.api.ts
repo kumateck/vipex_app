@@ -33,6 +33,17 @@ export const returnedRiderParcelsApi = api.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    redispatchRiderReturnsBulk: builder.mutation<
+      { succeeded: string[]; failed: Array<{ parcelId: string; message: string }> },
+      { parcelIds: string[]; riderUserId: string }
+    >({
+      query: (body) => ({
+        url: '/deliveries/dd/returned/redispatch-bulk',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
   }),
 });
 
@@ -41,4 +52,5 @@ export const {
   useListReturnRedispatchRidersQuery,
   useReprocessRiderReturnForPickupMutation,
   useRedispatchRiderReturnMutation,
+  useRedispatchRiderReturnsBulkMutation,
 } = returnedRiderParcelsApi;
