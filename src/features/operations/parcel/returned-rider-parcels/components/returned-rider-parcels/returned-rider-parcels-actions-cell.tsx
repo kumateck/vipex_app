@@ -1,4 +1,5 @@
 import { EllipsisVertical } from 'lucide-react';
+import { DeliveryFeeEditButton } from '@/features/operations/delivery-fee';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -26,38 +27,41 @@ export function ReturnedRiderParcelsActionsCell({
   const canRedispatch = Boolean(riderUserId);
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          size="icon"
-          variant="outline"
-          className="h-8 w-8"
-          disabled={isBusy}
-          aria-label={`Actions for ${row.bookingCode}`}
-        >
-          <EllipsisVertical className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel className="text-xs text-muted-foreground">Reprocess</DropdownMenuLabel>
-        <DropdownMenuItem disabled={isBusy} onClick={() => onReprocess(row, 'pickup')}>
-          Move to Pickup
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          disabled={isBusy || !canRedispatch}
-          onClick={() => onReprocess(row, 'redispatch')}
-        >
-          Redispatch
-        </DropdownMenuItem>
-        {canRedispatch ? null : (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-              Select a rider above to redispatch
-            </DropdownMenuLabel>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-2">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="icon"
+            variant="outline"
+            className="h-8 w-8"
+            disabled={isBusy}
+            aria-label={`Actions for ${row.bookingCode}`}
+          >
+            <EllipsisVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel className="text-xs text-muted-foreground">Reprocess</DropdownMenuLabel>
+          <DropdownMenuItem disabled={isBusy} onClick={() => onReprocess(row, 'pickup')}>
+            Move to Pickup
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={isBusy || !canRedispatch}
+            onClick={() => onReprocess(row, 'redispatch')}
+          >
+            Redispatch
+          </DropdownMenuItem>
+          {canRedispatch ? null : (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Select a rider above to redispatch
+              </DropdownMenuLabel>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <DeliveryFeeEditButton parcelId={row.id} bookingCode={row.bookingCode} disabled={isBusy} />
+    </div>
   );
 }

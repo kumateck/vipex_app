@@ -60,6 +60,22 @@ The payment service supports:
 
 Atomic collection operations must not leave a successful payment with a failed parcel transition, or a completed parcel with no required payment.
 
+Delivery cashier completion uses the configured doorstep fee saved on the delivery record.
+Rider returns and reassignment preserve this fee, so it remains visible when the rider hands
+the parcel to the customer and the cashier finalizes it. The outstanding fee is the configured
+fee minus non-voided delivery fee payments, floored at zero. Rider-recorded collections remain
+pending cashier reconciliation and do not count as posted payments. Moving a returned parcel
+to office pickup excludes the doorstep fee from the required settlement. Web and Electron
+desktop share the cashier dialog; web and mobile riders use the same preserved fee.
+Use **Edit Delivery Fee** in the Delivery Cashier table or finalization dialog to restore or
+correct the confirmed charge. The same dialog is available on Rider Returns. Enter the new
+fee and reason; the fee and outstanding-payment defaults refresh after saving. This does not
+record a collection or change delivery status. The server blocks stale edits, fees below
+posted payments or rider collections, pending change requests, and completed deliveries.
+Fees erased by the old return behavior are restored manually using confirmed amounts;
+this workflow does not reconstruct historical amounts. See [Rider returns and reprocessing](PARCEL_OPERATIONS.md#rider-returns-and-reprocessing)
+for recovery constraints and QA scenarios.
+
 ## Amount and Tax Rules
 
 - The server validates the expected charge and allowed settlement.

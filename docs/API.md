@@ -18,6 +18,13 @@ reprocess them through `GET /v1/deliveries/dd/returned` and
 `POST /v1/deliveries/dd/:parcelId/returned-to-pickup` and
 `POST /v1/deliveries/dd/:parcelId/redispatch-return`, or assign several at once through
 `POST /v1/deliveries/dd/returned/redispatch-bulk`.
+Returning and redispatching preserve the configured delivery fee. Rider responses expose
+`deliveryFeePsw`, and parcel details expose `delivery.chargePsw` for delivery cashier completion;
+existing non-voided delivery fee payments reduce the outstanding balance. Historically erased
+fees are manually restored through the shared Edit Delivery Fee dialog and are not automatically
+backfilled. `GET/PATCH /v1/deliveries/dd/:parcelId/fee` reads/updates the configured fee using
+authenticated branch scope, optimistic concurrency and a required reason; it does not collect
+payment or change parcel status.
 See [Identity and parcel operations](api/IDENTITY_AND_OPERATIONS.md) for scope and failure rules.
 
 Native device registration is documented in [Native device registration](DEVICE_REGISTRATION.md).
