@@ -15,4 +15,10 @@ export type ReturnedRiderParcelsTableProps = {
   page: number;
   hasNextPage: boolean;
   onPageChange: (page: number) => void;
+  selectedParcelIds: string[];
+  onToggleParcelSelected: (parcelId: string, selected: boolean) => void;
+  onPageSelectionChange: (selected: boolean) => void;
+  onClearSelection: () => void;
+  onBulkRedispatch: () => void;
+  isBulkRedispatching: boolean;
 };

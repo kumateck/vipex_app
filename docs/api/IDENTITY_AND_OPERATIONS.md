@@ -76,8 +76,29 @@ authorization. Web and mobile use the same endpoints.
 - `/shipments/parcels`: parcel search, detail, lifecycle actions, corrections, and receiver OTP-related operations.
 - `POST /deliveries/dd/:parcelId/returned`: the assigned rider returns a dispatched parcel;
   parcel status becomes `RETURNED_TO_OFFICE` (displayed as **Returned by Rider**), with a
-  recorded delivery return time. A wrong rider or non-dispatched parcel returns 409; a missing
+  recorded delivery return time. It preserves `deliveries.chargePsw` and the dropoff address.
+  Single/bulk redispatch and dispatch reassignment retain that fee. Rider list responses expose
+  it as `deliveryFeePsw`; parcel details expose `delivery.chargePsw` for cashier completion.
+  Outstanding fee calculations subtract non-voided delivery fee payments, never the parcel's
+  principal charge. Existing fees erased by the previous return implementation are not backfilled.
+  A wrong rider or non-dispatched parcel returns 409; a missing
   parcel/delivery returns 404. Requires `CanCompleteDoorstepDelivery`.
+- `GET/PATCH /deliveries/dd/:parcelId/fee`: active non-rider staff with any of
+  `CanDispatchForDelivery`, `CanMarkDoorstepCalled`, or `CanCompleteDoorstepDelivery` read/edit
+  a configured doorstep fee at their own company and destination branch. GET returns
+  `{ parcelId, bookingCode, chargePsw, paidFeePsw, riderCollectedFeePsw, updatedAt }`; monetary
+  values are pesewas. PATCH accepts `{ deliveryFeeCedis, expectedChargePsw, expectedUpdatedAt,
+reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 trimmed characters;
+  the GHS fee must be non-negative, at most GHS 100,000, with at most two decimal places and
+  cannot be less than non-voided fee payments or the rider's recorded collection. Only home
+  requested/address-collected/dispatched/returned/rider-handover states with one active
+  doorstep record are editable. Out-of-scope/deleted parcels return 404; invalid input returns
+  400; inactive/rider accounts return 403; stale values, pending requests, completed/office or
+  other invalid state, ambiguous delivery records and reconciliation holds return 409.
+  Authentication/permission failures return 401/403. Fee and audit update atomically. This
+  powers the shared web/desktop dialog on Rider Returns and Delivery Cashier, including the
+  cashier finalization dialog. Mobile riders see the new fee when refreshed. It does not
+  create payments, change address/status/assignment, or reopen completed deliveries.
 - `GET /deliveries/dd/returned?page=&pageSize=&search=`: paginated, searchable rider returns
   at the authenticated company's destination branch. Requires `CanDispatchForDelivery`; callers
   cannot choose another company, branch, or status. Only parcels with a completed delivery
@@ -93,6 +114,15 @@ authorization. Web and mobile use the same endpoints.
   and branch, a completed return, and no open reconciliation hold. It atomically redispatches
   the parcel and delivery and notifies the rider. Missing or out-of-scope parcels return 404;
   stale return state or invalid rider selection returns 409. Both actions use the same permission.
+- `POST /deliveries/dd/returned/redispatch-bulk` accepts `{ parcelIds: string[], riderUserId }`
+  with 1-100 unique parcel IDs and requires `CanDispatchForDelivery`. The active-branch-rider
+  check runs once up front and returns 409 before anything changes if the rider is missing,
+  inactive, or in another company or branch. Each parcel is then redispatched through the same
+  rules as `POST /deliveries/dd/:parcelId/redispatch-return`, and the 200 response reports
+  partial success: `succeeded: string[]` holds the redispatched parcel IDs and
+  `failed: { parcelId, message }[]` explains parcels that were stale, out of scope, missing a
+  completed return, or held by an open reconciliation case. Every successful parcel gets its own
+  audit entry and rider assignment notification.
 - `POST /payments/collect-receiver-and-deliver`: returns separate principal `payment` and ageing
   `storagePayment` records when collected. When storage is collected, `receiptTaxBreakdown` is
   calculated from the sum of both collected amounts using the company tax profile or default

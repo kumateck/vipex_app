@@ -26,6 +26,7 @@ import { riderDailyAnalyticsRoutes } from './rider-daily-analytics.routes';
 import { riderHandoverRoutes } from './rider-handover.routes';
 import { riderReturnProcessingRoutes } from './rider-return-processing.routes';
 import { deliveryChangeRequestRoutes } from './delivery-change-request.routes';
+import { deliveryFeeRoutes } from './delivery-fee.routes';
 
 export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
   .use(authPlugin)
@@ -33,6 +34,7 @@ export const deliveriesRoutes = new Elysia({ name: 'deliveries' })
   .use(riderHandoverRoutes)
   .use(riderReturnProcessingRoutes)
   .use(deliveryChangeRequestRoutes)
+  .use(deliveryFeeRoutes)
   .post(
     '/',
     async ({ body, set }) => {

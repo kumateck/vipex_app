@@ -32,6 +32,12 @@ export function ReturnedRiderParcels() {
               page={list.page}
               hasNextPage={list.meta?.hasNextPage ?? false}
               onPageChange={list.setPage}
+              selectedParcelIds={list.selectedParcelIds}
+              onToggleParcelSelected={list.toggleParcelSelected}
+              onPageSelectionChange={list.setPageSelected}
+              onClearSelection={list.clearSelection}
+              onBulkRedispatch={list.bulkRedispatch}
+              isBulkRedispatching={list.isBulkRedispatching}
             />
           </CardContent>
         </Card>

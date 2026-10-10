@@ -525,31 +525,132 @@ status and audit entry. Repeat from Awaiting Pickup and Returned to Office. Veri
 wrong-branch, in-transit, dispatched, delivered, open-case, and repeat requests fail.
 Attempt office pickup and receiver cashier delivery after return; both must fail.
 
+### Editing delivery fees and manually repairing cleared fees
+
+Web and Electron desktop use the same **Edit Delivery Fee** button and dialog on Rider
+Returns and Delivery Cashier. Cashiers can also open it inside the finalization dialog. Open
+it, review the current configured fee and recorded payment/collection amounts, enter the
+confirmed new fee in GHS and a reason, and select **Save Delivery Fee**. Saving changes only
+the configured delivery charge; it does not record money received, change the address,
+reassign a rider, or move the parcel to another status. Lists and the selected cashier parcel
+refresh after saving, and the cashier payment defaults recalculate from the outstanding
+balance. Finalization is disabled while parcel details are loading, refreshing, or unavailable.
+Mobile has no staff fee-edit dialog; its rider screens read the updated charge on their next
+refresh. Riders continue to request a reviewed address/fee change instead of editing directly.
+
+`GET/PATCH /deliveries/dd/:parcelId/fee` requires an active non-rider staff account at the
+parcel's company and destination branch, with `CanDispatchForDelivery`, `CanMarkDoorstepCalled`,
+or `CanCompleteDoorstepDelivery`. The server derives company, branch, and actor from the
+session. Eligible parcel states are Home Delivery Requested, Address Collected, Dispatched,
+Returned by Rider, and Rider Given Parcel to Customer, with exactly one active doorstep
+record. Missing/deleted or foreign-branch parcels, office delivery mode, completed/pickup or
+other ineligible states, an open reconciliation hold, or a pending rider change request block
+editing. Resolve the pending request before trying again.
+
+Fees must be finite non-negative values with at most two decimal places, up to GHS 100,000;
+a reason of 3–500 trimmed characters is required. The fee cannot fall below either the sum
+of non-voided delivery fee payments or the rider's recorded delivery fee collection. The
+request includes the fee and delivery update timestamp originally read by the dialog. A stale
+value returns 409; use **Reload Fee**, review it, then save again. Updates lock the parcel and
+delivery and write `DELIVERY_FEE_UPDATED` with old/new amounts, parcel ID and reason in the
+same transaction. Audit failure rolls back the fee. An unchanged fee is a no-op.
+
+Production inspection on 2026-10-10 found 40 zero-fee doorstep records with return history:
+20 were still Returned by Rider, 3 awaited cashier finalization, 5 awaited office pickup,
+10 were delivered by office, and 2 were delivered at home. These are candidates, not proof
+of the original amount; approved fee-change records and rider collection fields contained no
+recoverable amount for these candidates. The agreed repair is manual through the app for the
+23 eligible active records, using customer/staff-confirmed amounts. No blanket fee or automatic
+production mutation was applied. Deploy the fee-preservation fix and edit workflow first so
+later returns do not erase restored amounts again. Office pickup does not require a doorstep
+fee. Completed home deliveries need the existing supervised delivery-reversal/reconciliation
+workflow before any fee correction; this dialog does not reopen them or alter posted payments.
+
+`scripts/delivery-fee-repair/inspect.ts` runs read-only against `PRODUCTION_DATABASE_URL`,
+then `MIGRATE_DATABASE_URL`, then `DATABASE_URL`, using the repository environment files.
+It prints candidate counts/evidence keys and writes an inspection snapshot to
+`/tmp/vipex-cleared-delivery-fees-2026-10-10.json`. The report contains booking/record IDs,
+branch, state, current fee and paid fee, not an inferred replacement fee. Keep production
+reports out of Git. Inspection does not change deliveries or payments.
+
+QA: restore a zero-fee return to GHS 25, redispatch it, then verify rider and cashier amounts.
+Restore a zero fee after rider handover directly from Delivery Cashier and collect it. Repeat
+from its finalization dialog and verify refreshed payment defaults. Edit to zero when nothing
+has been paid/collected, reject a reduction below paid or collected amounts, reject blank,
+negative, excessive and over-precision inputs, require a reason, and verify concurrent edits
+cannot overwrite each other. Verify wrong-branch, rider, missing-permission, deleted, office,
+completed, pending-change and reconciliation-held cases are blocked. Cancel must save nothing.
+Automated coverage: `tests/server/delivery-fee-edit.service.spec.ts` and
+`tests/server/rider-return-delivery-fee.service.spec.ts`.
+
 ### Rider returns and reprocessing
 
 When an assigned rider returns a dispatched parcel, the rider action sets the parcel to
 **Returned by Rider** (`RETURNED_TO_OFFICE`, status 12) and records the delivery return time.
 It no longer makes the parcel immediately available for office pickup. The return is atomic:
 if either parcel or delivery update fails, neither state changes. A different rider, a parcel
-that is no longer dispatched, or a missing delivery is rejected. The existing delivery fee is
-cleared on return; staff should confirm the fee with the customer before another handover.
+that is no longer dispatched, or a missing delivery is rejected. The configured delivery fee
+and address are preserved on return and on single or bulk redispatch/reassignment. The new
+rider receives the saved fee and its unpaid balance; the delivery cashier sees the same fee
+when finalizing the rider's customer handover. Previous non-voided delivery fee payments reduce
+the outstanding amount, so returning a parcel does not create another fee or payment. An
+explicit address/fee update still replaces the configured fee. Moving a return to office
+pickup preserves delivery fee history but excludes the doorstep fee from office settlement.
+This applies to web and desktop cashiers and web/mobile riders through the shared backend.
+Fees already erased by the previous return behavior are not automatically restored: the
+old return audit did not record their amount. Staff confirm and restore the amount through **Edit Delivery Fee** on Rider Returns or
+Delivery Cashier; address collection remains another option before dispatch. Do not infer
+the original fee from principal charges or rider collections.
 Return and reprocessing status changes are recorded in parcel audit history.
 
 Staff with `CanDispatchForDelivery` use **Last Mile Delivery → Rider Returns** to search and
-page through returns at their own company's destination branch. The page shows the original
-rider and return time. Staff can move a returned parcel to **Awaiting Pickup** for office
-collection, or choose a rider and redispatch it. Successful reprocessing removes the parcel
-from the active return list; old delivery return history remains. Address-collected parcels
-continue to use **Dispatch Parcels**. The return list is separate from **Returns to Source**,
-which is a different branch-to-branch decision. Web and Electron desktop share this page and
-API; mobile riders can record returns but do not have the reprocessing page.
+page through returns at their own company's destination branch. The list groups each return
+into five columns: **Parcel** (booking code, parcel details, parcel content), **Recipient**
+(receiver name, telephone, home address), **Payment** (delivery fee, to-be-paid amount, and the
+status rendered from the parcel status as `RETURNED_TO_OFFICE`), **Previous Assigned Rider**
+(the rider who brought the parcel back, shown as `—` when none), and **Action** (a kebab menu
+with **Move to Pickup** and **Redispatch**). Tracking code and return timestamp are no longer
+shown as columns; the return time remains in parcel audit history. **Redispatch**
+is disabled in the menu, with a hint to select a rider, until a rider is chosen in the **Rider
+for redispatch** selector; **Move to Pickup** stays available either way. Staff can move a
+returned parcel to **Awaiting Pickup** for office collection, or choose a rider and redispatch
+it. Every row has a checkbox, and the header checkbox selects or clears the whole page (showing
+a partial state when only some rows are selected). Selecting rows reveals a bulk bar with the
+count, **Redispatch N to rider**, and **Clear selection**. The bulk button stays disabled, with
+a hint, until a rider is chosen in **Rider for redispatch**; it calls
+`POST /deliveries/dd/returned/redispatch-bulk`, which validates the rider once and then applies
+the single-parcel redispatch rules to each selected parcel. The response reports partial
+success: parcels that are stale, out of scope, missing a completed return, or held by an open
+reconciliation case come back in `failed` with a reason and stay selected for review, while a
+toast summarises how many were redispatched. Selection clears when the page or search changes.
+Successful reprocessing removes the parcel from the active return list; old delivery return
+history remains. Address-collected parcels continue to use **Dispatch Parcels**. The return list
+is separate from **Returns to Source**, which is a different branch-to-branch decision. Web and
+Electron desktop share this page and API; mobile riders can record returns but do not have the
+reprocessing page.
 
 QA: return a dispatched parcel from its assigned rider and verify status 12, return time,
 removal from the rider's current list, and presence only in the destination branch's return
-queue. Verify wrong-rider and repeated returns fail without partial updates. Move one return
+queue. Set a GHS 25 delivery fee, return and redispatch to a different rider, then hand over
+to the customer: verify GHS 25 on the rider list and cashier completion dialog and collect
+it successfully. Repeat through bulk redispatch and Dispatch Parcels reassignment, including
+a second return. With GHS 10 already paid, verify the fee remains GHS 25 and only GHS 15
+is collectable. Verify zero-fee deliveries remain zero, an explicit fee change survives a
+later return, and Move to Pickup excludes the saved doorstep fee from settlement.
+Automated coverage: `tests/server/rider-return-delivery-fee.service.spec.ts`.
+Verify wrong-rider and repeated returns fail without partial updates or fee changes. Confirm the row
+groups show booking code, parcel details, parcel content, receiver name, telephone, home
+address, delivery fee, to-be-paid amount, `RETURNED_TO_OFFICE`, and the previous assigned
+rider, and that the **Redispatch** menu item is disabled with a rider-selection hint until a
+rider is chosen. Move one return
 to pickup and redispatch another; both should disappear from the return list and appear in
 their corresponding workflows. Verify searching, paging, cross-company/branch isolation,
 permission denial, missing rider selection, and a stale return that was already reprocessed.
+Bulk: select several returns and confirm the count, the header checkbox partial state, and that
+**Redispatch N to rider** stays disabled with a hint until a rider is chosen. Run a bulk
+redispatch with one already-reprocessed parcel mixed in, and confirm the eligible parcels leave
+the list and are audited and pushed to the rider, while the stale parcel stays selected with a
+failure message. Clear selection, then change the page or search and confirm selection resets.
 
 ### Reconciliation hold on delivery
 
