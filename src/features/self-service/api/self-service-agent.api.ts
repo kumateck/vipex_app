@@ -30,6 +30,7 @@ export type CompleteSelfServiceDraftInput = {
   pickupLocationId?: string | null;
   parcelDetails: string;
   chargeCedis: number | string;
+  chargeAgentUserId?: string | null;
   paymentResponsibility: 'SENDER' | 'RECEIVER' | 'SPLIT';
   senderSettlementMode: 'PAY_NOW' | 'CREDIT';
   senderPartialPaymentCedis?: number | string | null;

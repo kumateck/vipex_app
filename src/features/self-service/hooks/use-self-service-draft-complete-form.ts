@@ -31,6 +31,7 @@ function buildFormValues(draft?: SelfServiceDraft): ParcelBookingFormValues {
         parcelContent: draft?.parcelContent ?? '',
         parcelValue: draft ? String(draft.parcelValuePsw / 100) : '0',
         charge: '',
+        chargeAgentUserId: '',
         paymentResponsibility: 'SENDER',
         senderSettlementMode: 'PAY_NOW',
         senderPartialPayment: '',

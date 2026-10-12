@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia';
 import { UUID } from '../../schemas/common';
 import { authPlugin, requireAuth, requirePermissions } from '@/server/plugins/auth';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { listParcelChargeAgentOptionsSvc } from '../shipments/parcel-charge-agents.service';
 import {
   cancelSelfServiceDraftCtrl,
   claimSelfServiceDraftCtrl,
@@ -12,6 +13,13 @@ import {
 
 export const selfServiceAgentRoutes = new Elysia({ name: 'self-service-agent' })
   .use(authPlugin)
+  .get('/charge-agent-options', ({ user }) => listParcelChargeAgentOptionsSvc(user!), {
+    beforeHandle: [
+      requireAuth(),
+      requirePermissions(PermissionKeys.CanCompleteSelfServiceBookings),
+    ],
+    detail: { tags: ['Self-Service'], summary: 'List active charge agents at my branch' },
+  })
   .get('/drafts', async ({ user }) => listSelfServiceDraftsCtrl(user!), {
     beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadSelfServiceBookings)],
     detail: { tags: ['Self-Service'], summary: 'List self-service drafts for my branch' },
@@ -53,6 +61,7 @@ export const selfServiceAgentRoutes = new Elysia({ name: 'self-service-agent' })
           t.Union([t.Number({ minimum: 0 }), t.String(), t.Null()]),
         ),
         callSender: t.Optional(t.Boolean()),
+        chargeAgentUserId: t.Optional(t.Union([UUID, t.Null()])),
       }),
       beforeHandle: [
         requireAuth(),

@@ -6,6 +6,7 @@ const databaseUrl = process.env.CHECK_DATABASE_URL || process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('CHECK_DATABASE_URL or DATABASE_URL is required');
 
 const expectedColumns = [
+  'charge_agent_user_id',
   'call_center_assigned_to_user_id',
   'call_center_called_at',
   'shelf_picker_staff_id',
@@ -42,7 +43,8 @@ try {
       SELECT conname AS name, convalidated AS validated, pg_get_constraintdef(oid) AS definition
       FROM pg_constraint
       WHERE conrelid = to_regclass('public.parcels') AND contype = 'f'
-        AND pg_get_constraintdef(oid) LIKE '%call_center_assigned_to_user_id%'
+        AND (pg_get_constraintdef(oid) LIKE '%call_center_assigned_to_user_id%'
+          OR pg_get_constraintdef(oid) LIKE '%charge_agent_user_id%')
     `);
     const parcelTables = await tx.unsafe(`
       SELECT table_schema FROM information_schema.tables WHERE table_name = 'parcels'

@@ -16,6 +16,7 @@ export type ParcelFormValues = {
   parcelContent: string;
   parcelValue: string;
   charge: string;
+  chargeAgentUserId: string;
   paymentResponsibility: PaymentResponsibility;
   senderSettlementMode: SenderSettlementMode;
   senderPartialPayment: string;

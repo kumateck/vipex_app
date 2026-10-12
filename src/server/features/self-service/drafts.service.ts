@@ -68,6 +68,7 @@ export type CompleteSelfServiceDraftInput = {
   senderSettlementMode: 'PAY_NOW' | 'CREDIT';
   senderPartialPaymentCedis?: number | string | null;
   callSender?: boolean;
+  chargeAgentUserId?: string | null;
 };
 
 export async function completeSelfServiceDraftSvc(
@@ -154,6 +155,7 @@ export async function completeSelfServiceDraftSvc(
         parcelContent: draft.parcelContent,
         parcelValueCedis: fromPesewas(BigInt(draft.parcelValuePsw)),
         chargeCedis,
+        chargeAgentUserId: agentInput.chargeAgentUserId ?? null,
         plannedToBePaidCedis,
         method,
         senderPaymentCedis: 0,
