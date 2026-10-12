@@ -16,6 +16,7 @@ import {
 } from '@/db/schemas';
 import { sanitizeString } from '@/lib/utils';
 import { generateBookingCode, generateTrackingCode } from '@/server/utils/codegen';
+import { assertParcelChargeAgentsRepo } from './parcel-charge-agents.repository';
 
 export type CreatedParcelRef = { id: string; trackingCode: string; bookingCode: string };
 export type CreatedPaymentRef = { id: string };
@@ -48,6 +49,7 @@ export type CreateBookingWithParcelsInput = {
     senderPaymentPsw?: number; // pesewas, optional
     senderPaymentMethod?: PaymentMethod; // fallback to parcel.method if not provided
     cashierUserId: string; // sending cashier user id for this parcel
+    chargeAgentUserId?: string | null;
     processedBy?: string | null;
     branchId: string; // branch taking the cash
     callSender?: boolean; // sender must be called before parcel is given to receiver
@@ -142,6 +144,7 @@ export async function createBookingWithParcelsAndPaymentsRepo(
   },
 ): Promise<CreateBookingWithParcelsOutput> {
   return db.transaction(async (tx) => {
+    await assertParcelChargeAgentsRepo(input, tx);
     // Get branch name from authenticated cashier (createdBy)
     const branchName = await getCashierBranchName(tx, input.createdBy);
 
@@ -186,6 +189,7 @@ export async function createBookingWithParcelsAndPaymentsRepo(
         method: p.method,
         callSender: p.callSender ?? false,
         createdBy: input.createdBy,
+        chargeAgentUserId: p.chargeAgentUserId ?? null,
         processedBy: p.processedBy ?? null,
         cashierSessionId: input.cashierSessionId ?? null,
       };

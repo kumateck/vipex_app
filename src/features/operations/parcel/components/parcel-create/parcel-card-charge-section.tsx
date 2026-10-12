@@ -19,10 +19,14 @@ import { sanitizeNumber, sanitizeString } from '@/lib/utils';
 import { getParcelChargeValidationError } from '@/shared/shipments/parcel-charge-policy';
 import { BufferedParcelField } from './buffered-parcel-field';
 import type { ParcelBookingFormValues } from './parcel-form.types';
+import { ParcelChargeAgentField } from './parcel-charge-agent-field';
+import type { ParcelChargeAgentSource } from '../../types';
 
 type ParcelCardChargeSectionProps = {
   control: Control<ParcelBookingFormValues>;
   parcelChargeName: FieldPathByValue<ParcelBookingFormValues, string>;
+  parcelChargeAgentName: FieldPathByValue<ParcelBookingFormValues, string>;
+  chargeAgentSource?: ParcelChargeAgentSource;
   parcelPaymentName: FieldPathByValue<ParcelBookingFormValues, string>;
   parcelSettlementName: FieldPathByValue<ParcelBookingFormValues, string>;
   senderPartialPaymentName: FieldPathByValue<ParcelBookingFormValues, string>;
@@ -42,6 +46,8 @@ const parseCurrency = (value: string | number | null | undefined) => {
 export function ParcelCardChargeSection({
   control,
   parcelChargeName,
+  parcelChargeAgentName,
+  chargeAgentSource,
   parcelPaymentName,
   parcelSettlementName,
   senderPartialPaymentName,
@@ -56,6 +62,11 @@ export function ParcelCardChargeSection({
         <CardDescription className="text-xs">Set how much is paid and by whom.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        <ParcelChargeAgentField
+          control={control}
+          name={parcelChargeAgentName}
+          source={chargeAgentSource}
+        />
         <BufferedParcelField
           control={control}
           name={parcelChargeName}

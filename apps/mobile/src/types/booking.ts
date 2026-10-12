@@ -32,6 +32,7 @@ export type CreateBookingWithParcelsInput = {
     method: number;
     parcelValueCedis?: number;
     chargeCedis?: number;
+    chargeAgentUserId?: string | null;
     plannedToBePaidCedis?: number;
     senderPaymentCedis?: number;
     paymentResponsibility?: number;

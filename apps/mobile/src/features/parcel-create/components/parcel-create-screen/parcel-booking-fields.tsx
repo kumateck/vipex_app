@@ -7,6 +7,7 @@ import { mobileTextStyles } from '@mobile/theme/layout';
 import { AppCard, AppInput, AppLabel, AppSelectField } from '@mobile/components/ui/mobile';
 import type { MobilePaymentResponsibility } from '../../mobile-parcel-payment-plan';
 import { StickerPrintChoice } from './sticker-print-choice';
+import { ParcelChargeAgentField } from './parcel-charge-agent-field';
 
 const PAYMENT_RESPONSIBILITY_OPTIONS = [
   { value: String(PaymentResponsibility.SENDER), label: 'Sender pay — complete at cashier' },
@@ -23,6 +24,7 @@ type ParcelBookingFieldsProps = {
   parcelContent: string;
   parcelValue: string;
   charge: string;
+  chargeAgent: React.ComponentProps<typeof ParcelChargeAgentField>;
   callSender: boolean;
   paymentResponsibility: MobilePaymentResponsibility;
   printSticker: boolean;
@@ -51,6 +53,7 @@ export function ParcelBookingFields({
   parcelContent,
   parcelValue,
   charge,
+  chargeAgent,
   callSender,
   paymentResponsibility,
   printSticker,
@@ -131,6 +134,7 @@ export function ParcelBookingFields({
           placeholder="0.00"
           keyboardType="decimal-pad"
         />
+        <ParcelChargeAgentField {...chargeAgent} />
         <AppLabel>Charge (GHS)</AppLabel>
         <AppInput
           value={charge}

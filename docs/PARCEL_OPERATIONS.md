@@ -2,7 +2,79 @@
 
 ## Scope
 
-Parcel operations cover booking, parcel creation, payment responsibility, physical movement, custody transfer, receiving, pickup, delivery, and exception handling. The main implementation areas are:
+Parcel operations cover booking, parcel creation, payment responsibility, physical movement, custody transfer, receiving, pickup, delivery, and exception handling.
+
+### Agent Who Charged the Parcel
+
+Staff select **Agent who charged the parcel** for each parcel while entering its charge. Web,
+desktop, and mobile booking forms require an explicit selection and start with no agent selected.
+The same selector is required when an officer prices and completes a self-service draft. It records
+the person responsible for the quoted parcel charge, which may differ from the logged-in creator,
+the officer completing the draft, or the cashier collecting payment. It does not collect payment
+or change the charge, payment responsibility, tax, printing, cashier session, or parcel status rules.
+
+The server lists only active users in the authenticated company and source branch, returning
+`{ id, fullname }`. Booking options require `CanCreateBookingWithParcels`; self-service options
+require `CanCompleteSelfServiceBookings`. Neither requires `CanReadUsers`. Head-office and missing
+branch/company contexts are rejected. Different parcels in the same booking may have different
+agents. The booking transaction rechecks and locks selected user rows until commit, rejecting
+unknown, inactive, wrong-company, wrong-branch, and empty-string IDs with a parcel-indexed error.
+Rejected selections create no booking, parcel, or payment records; a self-service draft remains
+uncompleted. A failed agent lookup offers Retry; no available agent prevents form completion.
+
+Attribution is stored in nullable `parcels.charge_agent_user_id varchar(25)` referencing `users(id)`.
+Booking audit metadata also records `chargeAgentUserIds` in parcel order. For compatibility with
+installed mobile/desktop clients, API requests may omit `chargeAgentUserId` or send `null`; these
+produce NULL attribution rather than guessing an agent. Existing historical parcels remain NULL.
+The public customer self-service form does not choose a staff agent.
+
+#### Production Rollout
+
+Migration `0080_parcel_charge_agent` is additive and idempotent. It preserves existing rows, amounts,
+statuses, and any existing attribution. It adds a nullable column without a default or backfill,
+checks schema drift, and adds an absent FK as `NOT VALID` so existing rows are not scanned under
+the ALTER lock. Equivalent FKs retain their name and validation state. Conflicting definitions
+fail for manual review. Lock acquisition is limited to 3 seconds and each statement to 15 seconds;
+failure rolls back. An aligned schema performs no ALTER.
+
+1. Run read-only `bun run scripts/check-parcel-assignment-schema.ts` against the intended database
+   and review every pending migration, including earlier entries.
+2. Apply the vetted migrations with the existing migration runner before deploying the backend
+   that reads/writes the new column. Retry at a quieter time if lock acquisition times out.
+3. Deploy backend and updated clients. The previous clients continue to submit without attribution.
+4. After commit, separately validate a newly added FK during an appropriate operational window:
+
+```sql
+BEGIN;
+SET LOCAL lock_timeout = '3s';
+SET LOCAL statement_timeout = '60s';
+ALTER TABLE public.parcels
+  VALIDATE CONSTRAINT parcels_charge_agent_user_id_users_id_fk;
+COMMIT;
+```
+
+Only use this constraint name if `0080` created it. Validation scans existing rows, so it is a
+separate step; review pre-existing orphan values if validation fails. Application rollback can
+leave the additive column/FK in place without changing parcel data. This change does not run a
+production migration automatically.
+
+Read-only preflight on 2026-10-12 confirmed the configured production database has migrations
+through `0078` applied and lacks `charge_agent_user_id`. Both
+`0079_pickup_queue_legacy_uniqueness` and `0080_parcel_charge_agent` are pending. Production
+still has the legacy parcel-only pickup queue unique index alongside the valid daily indexes;
+review that earlier repair before invoking the migration runner. No production writes were
+performed for this check.
+
+QA covers multi-parcel selections, independent creator/cashier attribution, inactive/wrong-branch/
+wrong-company rejection, unchanged payments and amounts, empty selection, failed lookup/retry,
+form reset, and legacy NULL requests. Repeat ordinary creation and self-service pricing on web,
+desktop, and mobile. Automated booking tests use `CHARGE_AGENT_BOOKING_TEST=1` with a dedicated
+local `vipex_charge_agent_booking_test` database in `TEST_DATABASE_URL`. Migration tests use
+`CHARGE_AGENT_MIGRATION_TEST_DATABASE_URL` pointing only to an empty local
+`vipex_charge_agent_migration_test` database, covering normal migrator registration, preservation,
+idempotency, schema drift, FK enforcement, and lock-timeout rollback.
+The migration suite also reproduces production's pending `0079` + `0080` batch, checking preserved
+parcel/ticket data and complete batch rollback when the new column cannot acquire its lock.
 
 When a staff member enters a second receiver during a call outcome, office pickup, receiver
 cashier handover, or rider handover, web and mobile resolve the exact telephone against active

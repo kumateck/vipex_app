@@ -65,8 +65,12 @@ Authenticated agents use permission-controlled routes to:
 
 1. List available self-service drafts.
 2. Open a draft and inspect its submitted details.
-3. Claim it so another agent cannot complete it concurrently.
+3. Claim it to reserve the draft in the staff queue.
 4. Confirm or add operational details and calculate the charge.
+   Select **Agent who charged the parcel** from active staff at the source branch. This is an
+   explicit required selection on web, desktop, and mobile; it may differ from the completing
+   officer. The resulting parcel stores `chargeAgentUserId`, separate from `createdBy` and
+   `processedBy`. The public draft form does not select a staff agent.
    The officer can keep or change the draft's CS checkbox while entering the charge. Omitted CS
    on older completion clients retains the customer's draft choice; an explicit `false` clears it.
 5. Choose payment responsibility: sender, receiver, or split.
@@ -89,6 +93,15 @@ eligibility and cashier-session context. See
 [Mobile Frontline Workflows](MOBILE_FRONTLINE_WORKFLOWS.md).
 Both web and mobile completion forms expose the editable CS choice, prefilled from the draft.
 
+`GET /v1/self-service/charge-agent-options` requires `CanCompleteSelfServiceBookings` and returns
+only `{ id, fullname }` for active users in the authenticated company and source branch. It does
+not require `CanReadUsers`. Completion accepts optional `chargeAgentUserId` for older-client
+compatibility: omitted/null values remain unassigned. Supplied IDs must be active and in that
+company/branch; invalid selections reject the booking transaction and leave the draft uncompleted.
+Current clients require a selection, offer retry after lookup failure, and block completion when
+there are no available agents. See [Parcel Operations](PARCEL_OPERATIONS.md#agent-who-charged-the-parcel)
+for migration `0080`, deploy order, historical NULL attribution, and production validation.
+
 ## Draft States
 
 | State     | Meaning                                                      |
@@ -101,6 +114,11 @@ Both web and mobile completion forms expose the editable CS choice, prefilled fr
 
 Claim and completion operations must be concurrency-safe. A second agent must receive an explicit conflict rather than create a duplicate booking.
 
+Implementation limitation: the claim transition is conditional, but completion currently accepts
+pending or claimed drafts without checking the claim owner. It commits the booking before marking
+the draft completed. Concurrency-safe completion above is a requirement, not a current guarantee;
+charge-agent attribution does not resolve that existing limitation.
+
 ## Security and Abuse Controls
 
 - Bind the temporary session to one company and branch.
@@ -112,7 +130,10 @@ Claim and completion operations must be concurrency-safe. A second agent must re
 
 ## Payment and Printing
 
-Completion uses the same server payment and parcel rules as agent-created parcels. A pay-now sender flow requires an eligible cashier session. Receiver, split, credit, and partial choices remain permission- and validation-controlled.
+Completion uses the shared booking service with `requireActiveCashierSession: false`, no sender
+payment, and initial `CREATED` status. Pay-now bookings are queued for sender cashier completion;
+credit remains subject to sender eligibility and limit validation. This current behavior supersedes
+the previous documentation's claim that self-service completion immediately requires a cashier session.
 
 Sticker copies must follow [Parcel Printing](PARCEL_PRINTING.md): the user enters any positive whole number with no application-defined maximum. A print failure after successful completion must not create a second parcel when retried.
 
@@ -125,6 +146,12 @@ Sticker copies must follow [Parcel Printing](PARCEL_PRINTING.md): the user enter
 - Successful completion with failed printing offers reprint from the created parcel.
 
 ## Verification Scenarios
+
+- Web/desktop/mobile officers must select the agent alongside the authoritative charge; verify
+  the parcel stores that agent while `createdBy`/draft `completedBy` still identify the submitting officer.
+- Invalid, inactive, wrong-company, and wrong-branch agents reject completion without creating a
+  booking/parcel/payment; the draft stays available for correction. Verify failed lookup, retry,
+  no available staff, and older requests with no agent producing NULL attribution.
 
 - Valid QR/session creation and wrong-branch or expired-session rejection.
 - Localhost print preview contains the development host LAN address, while production QR URLs keep
