@@ -24,6 +24,7 @@ export type CompleteSelfServiceDraftInput = {
   pickupLocationId: string | null;
   parcelDetails: string;
   chargeCedis: string;
+  chargeAgentUserId?: string | null;
   paymentResponsibility: 'SENDER' | 'RECEIVER' | 'SPLIT';
   senderSettlementMode: 'PAY_NOW';
   senderPartialPaymentCedis: string | null;

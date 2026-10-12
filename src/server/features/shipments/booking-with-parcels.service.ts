@@ -39,6 +39,7 @@ export type CreateBookingWithParcelsBody = {
     senderPaymentMethod?: PaymentMethod;
     paymentResponsibility?: PaymentResponsibility;
     cashierUserId: string;
+    chargeAgentUserId?: string | null;
     branchId: string;
     callSender?: boolean;
   }>;
@@ -195,6 +196,7 @@ export async function createBookingWithParcelsSvc(
           p.senderPaymentCedis != null ? Number(toPesewas(p.senderPaymentCedis)) : 0,
         senderPaymentMethod: p.senderPaymentMethod ?? undefined,
         cashierUserId: p.cashierUserId,
+        chargeAgentUserId: p.chargeAgentUserId ?? null,
         processedBy: status === ParcelStatus.PROCESSED ? p.cashierUserId : null,
         branchId: p.branchId,
         callSender: p.callSender ?? false,
@@ -227,6 +229,7 @@ export async function createBookingWithParcelsSvc(
       sourceId: body.sourceId,
       parcelsCount: body.parcels.length,
       paymentCount: created.payments.length,
+      chargeAgentUserIds: body.parcels.map((parcel) => parcel.chargeAgentUserId ?? null),
       processedByCashierId: body.parcels[0]?.cashierUserId ?? null,
     },
   });

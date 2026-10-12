@@ -2,6 +2,15 @@
 
 Base URL: `/v1`
 
+Parcel creation and self-service completion accept optional nullable `chargeAgentUserId`.
+Current staff clients require the selection next to the parcel charge; older clients may omit it.
+`GET /v1/shipments/bookings/charge-agent-options` and
+`GET /v1/self-service/charge-agent-options` list active source-branch agents under their respective
+booking-create and self-service-complete permissions. See
+[Identity and parcel operations](api/IDENTITY_AND_OPERATIONS.md) and
+[Parcel Operations](PARCEL_OPERATIONS.md#agent-who-charged-the-parcel) for scope, rejection rules,
+and production rollout of migration `0080`.
+
 Last audited at the mounted route-group level: 2026-10-08.
 
 The API reference is split by domain:

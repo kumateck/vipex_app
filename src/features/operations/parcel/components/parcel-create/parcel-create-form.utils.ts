@@ -10,6 +10,7 @@ export const createEmptyParcel = (): ParcelFormValues => ({
   parcelContent: '',
   parcelValue: '0',
   charge: '',
+  chargeAgentUserId: '',
   paymentResponsibility: 'SENDER',
   senderSettlementMode: 'PAY_NOW',
   senderPartialPayment: '',

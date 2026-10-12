@@ -4,6 +4,12 @@ Last generated: 2026-10-08
 
 Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`).
 
+Charge-agent selectors use existing workflow permissions: booking options at
+`GET /shipments/bookings/charge-agent-options` require `CanCreateBookingWithParcels`; self-service
+options at `GET /self-service/charge-agent-options` require `CanCompleteSelfServiceBookings`.
+Both are authenticated and company/source-branch scoped. No user-administration permission or
+new page permission is required. See [Parcel Operations](PARCEL_OPERATIONS.md#agent-who-charged-the-parcel).
+
 The matrix is split by domain so each reference remains readable:
 
 - [Operations and people](permissions/ROUTE_PERMISSION_OPERATIONS.md)

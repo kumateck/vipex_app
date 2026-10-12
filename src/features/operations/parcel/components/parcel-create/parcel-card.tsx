@@ -238,6 +238,7 @@ export function ParcelCard({
               <ParcelCardChargeSection
                 control={control}
                 parcelChargeName={parcelChargeName}
+                parcelChargeAgentName={`parcels.${index}.chargeAgentUserId`}
                 parcelPaymentName={parcelPaymentName}
                 parcelSettlementName={parcelSettlementName}
                 senderPartialPaymentName={senderPartialPaymentName}

@@ -47,6 +47,22 @@ System Admin password assignment revokes the target user's active sessions and w
 
 ## Shipments
 
+`GET /shipments/bookings/charge-agent-options` requires `CanCreateBookingWithParcels`.
+`GET /self-service/charge-agent-options` requires `CanCompleteSelfServiceBookings`. Both require
+staff authentication and return an array of `{ id, fullname }` for active users in the caller's
+company and source branch. Client-supplied company/branch values cannot widen the scope. A missing
+company/branch or head-office context returns 403; `CanReadUsers` is not required.
+
+Each parcel in `POST /shipments/bookings/create-with-parcels` may include optional nullable
+`chargeAgentUserId`; `POST /self-service/drafts/:id/complete` accepts the same field for its parcel.
+The quoted-charge agent may differ from the creator and payment cashier. Supplied IDs are checked
+inside the booking transaction against active company/source-branch users and saved in
+`parcels.charge_agent_user_id`. Empty-string IDs fail identifier validation; unknown, inactive,
+wrong-company, or wrong-branch IDs return 400 and create no partial booking/parcel/payment records.
+Omitted/null IDs store NULL for older-client compatibility. Current web/desktop/mobile staff forms
+require an explicit agent selection; the public draft form does not expose it. Existing responses
+and financial calculations remain unchanged. Deploy migration `0080` before the updated backend.
+
 `POST /shipments/bookings/create-with-parcels` accepts `completeToBePaid: true` only for fully
 receiver-paid parcels with no sender payment. It requires `CanCreateBookingWithParcels` and an
 active sender/full cashier session owned by the caller or delegated to the caller. The server
