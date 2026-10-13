@@ -10,7 +10,7 @@ export function ParcelTransitRouteCell({
   destinationBranchFallback?: string;
 }) {
   return (
-    <div className="space-y-0.5 leading-tight">
+    <div className="w-56 max-w-full space-y-0.5 leading-tight whitespace-normal [overflow-wrap:anywhere]">
       <p>
         <span className="text-muted-foreground">From:</span>{' '}
         <span className="font-medium">{parcel.sourceName ?? sourceBranchFallback ?? '-'}</span>

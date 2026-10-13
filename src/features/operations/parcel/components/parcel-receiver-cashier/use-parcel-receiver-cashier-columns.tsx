@@ -10,13 +10,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { ParcelSearchRow } from '../../api/parcel.api';
-import { CallSenderBadge } from '../call-sender-badge';
+import { ParcelCustomerCell, ParcelRouteCell } from '../parcel-party-route-cells';
 import { ParcelTimestampsCell } from '../parcel-timestamps';
-import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import {
   formatCurrency,
   formatDateTime,
-  formatPhones,
   formatStorageCharge,
   getPaymentType,
 } from './receiver-cashier-utils';
@@ -74,54 +72,14 @@ export function useParcelReceiverCashierColumns({
         ),
       },
       {
-        id: 'sender',
-        header: 'Sender',
-        cell: ({ row }) => (
-          <div className="leading-tight">
-            <p className="font-medium">{row.original.senderName ?? '-'}</p>
-            <p className="text-muted-foreground text-xs">
-              {formatPhones(row.original.senderPhone, row.original.senderPhone2)}
-            </p>
-          </div>
-        ),
+        id: 'customer',
+        header: 'Customer',
+        cell: ({ row }) => <ParcelCustomerCell parcel={row.original} />,
       },
       {
-        id: 'receiver',
-        header: 'Receiver',
-        cell: ({ row }) => (
-          <div className="leading-tight">
-            <div className="flex items-center gap-1.5">
-              <p className="font-medium">{row.original.receiverName ?? '-'}</p>
-              {row.original.callSender ? (
-                <CallSenderBadge className="h-5 px-1.5 text-[10px]" />
-              ) : null}
-            </div>
-            <p className="text-muted-foreground text-xs">
-              {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
-            </p>
-            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
-          </div>
-        ),
-      },
-      {
-        id: 'source',
-        header: 'Source',
-        cell: ({ row }) => (
-          <div className="leading-tight">
-            <p className="font-medium">{row.original.sourceLocationName ?? '-'}</p>
-            <p className="text-muted-foreground text-xs">{row.original.sourceName ?? '-'}</p>
-          </div>
-        ),
-      },
-      {
-        id: 'destination',
-        header: 'Destination',
-        cell: ({ row }) => (
-          <div className="leading-tight">
-            <p className="font-medium">{row.original.pickupLocationName ?? '-'}</p>
-            <p className="text-muted-foreground text-xs">{row.original.destinationName ?? '-'}</p>
-          </div>
-        ),
+        id: 'route',
+        header: 'Route',
+        cell: ({ row }) => <ParcelRouteCell parcel={row.original} />,
       },
       {
         id: 'receivedAt',
@@ -177,7 +135,13 @@ export function useParcelReceiverCashierColumns({
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="icon" variant="outline" className="h-8 w-8" disabled={isSaving}>
+            <Button
+              aria-label="Parcel actions"
+              size="icon"
+              variant="outline"
+              className="h-8 w-8"
+              disabled={isSaving}
+            >
               <EllipsisVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>

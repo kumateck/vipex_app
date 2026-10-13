@@ -16,6 +16,7 @@ export function createLocationColumns(): ColumnDef<Location>[] {
   return [
     {
       accessorKey: 'name',
+      id: 'locationName',
       header: 'Name',
     },
     {
@@ -32,7 +33,12 @@ export function createLocationColumns(): ColumnDef<Location>[] {
         <PermissionGuard permissionKey={PermissionKeys.CanUpdateLocations}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-8 w-8">
+              <Button
+                aria-label="Location actions"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+              >
                 <EllipsisVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

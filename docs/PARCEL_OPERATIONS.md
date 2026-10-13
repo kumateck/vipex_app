@@ -513,6 +513,78 @@ parcel records the replacement customer's name at that change. Removing a second
 clears its stored name. Phone numbers and other customer contact fields still come from the
 linked customer record.
 
+#### Correcting a receiver from a parcel
+
+The **Edit** action on incoming in-transit parcels, Waiting for Pickup, Receiver Cashier,
+and Shelf Picker Update saves a deliberate receiver-name correction on the selected parcel
+and the linked customer in one transaction. The receiver ID stays associated with the same
+customer. Other parcels for that customer retain their recorded names, including sender and
+second-receiver names. Editing through Customer Management still changes only the customer
+profile; it does not rewrite parcel history. Telephone-only edits preserve both the recorded
+parcel name and any newer customer profile name. Contact telephone changes remain shared
+across parcels because contact fields come from the customer record.
+
+Web and desktop use `POST /v1/shipments/parcels/:id/edit-information`; mobile's incoming
+receive-process screen uses the same operation. Parcel details/content changes and supplied
+receiver corrections are atomic, including their audit records. The server scopes the parcel
+to the authenticated company and destination branch, rejects deleted parcels and a stale
+receiver ID, and requires the existing workflow permission plus `CanUpdateCustomers` when
+receiver fields are supplied. Invalid/blank names, malformed phones, a duplicate telephone
+in either customer phone field, or a database write failure leave the entire edit unsaved.
+Details-only edits do not require customer-update permission. No status, payment, receiver
+association, second-receiver authorization, or shelf assignment change is part of this operation.
+
+**Deployment requirement:** apply migration `0081_parcel_receiver_name_corrections` before
+deploying the new endpoint and clients. It replaces the existing capture function so explicit
+main-receiver snapshot corrections can persist, while ordinary parcel updates preserve the
+snapshot and receiver-ID changes still capture the new customer's name. It does not backfill
+or rewrite historical parcels. The migration has been validated locally. Live verification on
+2026-10-13 confirmed migration `0081` in the ledger, an enabled parcel-name trigger, and a
+function matching the migration exactly; no migrations remain pending on that verified database.
+Session-only synthetic records confirmed that a parcel correction saves both receiver name and
+details, other parcel names remain unchanged, and Customer Management renames preserve history.
+No real parcel or customer records were changed during verification. Other environments must
+apply `0081` before deploying the endpoint. Older clients still using customer-only PATCH calls cannot correct
+a parcel's saved name and need the updated web/desktop bundle or mobile build.
+
+If the new endpoint is running before migration `0081`, the old trigger discards the supplied
+receiver-name correction. The endpoint returns 409 (`Receiver name correction could not be
+saved; contact support`) and rolls back customer, parcel details/content, and audit writes.
+This is a database/code rollout mismatch; retrying the same combined edit cannot succeed
+until the capture function supports corrections. The read-only
+`bun run scripts/check-parcel-assignment-schema.ts` check reports
+`receiverNameCorrectionsSupported`, the active name-snapshot trigger, and pending migration tags.
+Check the backend's actual database target: a localhost web URL does not imply a local database.
+The former UI sent separate `PATCH /shipments/parcels/:id` and `PATCH /customers/:receiverId`
+requests; that customer-only write did not correct a populated parcel receiver snapshot.
+
+QA: create two parcels for one receiver, correct the name from one parcel, and confirm only
+that parcel and the customer change. Rename again from Customer Management and confirm both
+parcels retain their names in lists, detail, receipts, consignments, reports, and name search.
+Try a phone-only edit after a customer rename; the profile name must remain unchanged. Repeat
+on all four web/desktop edit screens and mobile receiving. Reject missing permissions, another
+company/branch, deleted parcels, a changed receiver ID, duplicate primary/secondary phones,
+and invalid names/phones. A failed parcel write must roll back customer changes and audits.
+Automated coverage is in `tests/server/parcel-information-edit*.spec.ts` and
+`tests/utils/parcel-information-edit.spec.ts`. Persistence tests require
+`PARCEL_INFORMATION_EDIT_TEST=1` and `TEST_DATABASE_URL` pointing to the empty local
+`vipex_parcel_information_edit_test` database; they refuse other database targets.
+
+#### Compact parcel tables
+
+Shelf Picker Update stacks details above content in **Parcel**, and status above the shelf
+picker in **Status / Shelf Picker**. Waiting for Pickup and Receiver Cashier combine parties
+in **Customer**: receiver name, receiver phone(s), sender name, sender phone(s), in that order.
+Multiple phones use `/`. **Route** shows source branch, source location, destination branch,
+and destination location. Call-sender and storage-fee indicators, dates, payment amounts, and
+actions remain available. These layouts apply to web and desktop; mobile keeps its native cards.
+Location/route text wraps within a bounded column across shared data tables and native shared
+tables, including report and attendance pages. See [Appearance System](APPEARANCE_SYSTEM.md).
+QA: check long multiword and unbroken location names at narrow and wide window sizes, the
+four-line party/route ordering, missing names/phones, both phone numbers, shelf assignments,
+payment badges, and table actions. Automated layout coverage is in
+`tests/utils/parcel-table-layout.spec.tsx`.
+
 Parcel search matches the stored sender, main receiver, and second receiver names, case
 insensitively and by partial name, as well as booking/tracking codes and customer phone
 numbers. Searching the name recorded on an older parcel returns that parcel after the

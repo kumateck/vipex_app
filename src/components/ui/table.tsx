@@ -3,6 +3,8 @@
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
+import { isLocationColumn } from '@/lib/location-display';
+import './location-table.css';
 
 function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
@@ -60,6 +62,7 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
   return (
     <th
       data-slot="table-head"
+      data-location-column={isLocationColumn('', props.children) || undefined}
       className={cn(
         'h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-inherit [&:has([role=checkbox])]:pr-0',
         className,

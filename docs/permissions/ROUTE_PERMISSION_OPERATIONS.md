@@ -61,3 +61,15 @@ existing read permission, and printing retains the active cashier-session gate. 
 non-deleted office-delivered parcels with recorded receiver payments are eligible. Web and
 desktop support the action; mobile does not. QA: test cashier permission, missing permission,
 other company/branch, deleted parcel, and a reversed delivery; denied requests must not print.
+
+## Parcel information edits
+
+`POST /v1/shipments/parcels/:id/edit-information` accepts one of `CanUpdateParcels`,
+`CanReadParcelIncoming`, `CanCompleteOfficePickup`, `CanCreateReceiverPayments`,
+`CanReadParcelScan`, or `CanReadShelfPickerUpdate`. A receiver payload additionally requires
+`CanUpdateCustomers`. All writes use the authenticated company and destination branch;
+client-supplied company/branch scope is not accepted. Customer Management PATCH routes keep
+their existing `CanUpdateCustomers` gate and never update parcel snapshots.
+QA: with each workflow grant, verify details-only edits succeed, receiver edits fail without
+the customer grant and succeed with it, customer permission alone fails, and another branch
+or company cannot edit the parcel. See `tests/server/parcel-information-edit-access.spec.ts`.

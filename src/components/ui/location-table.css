@@ -1,0 +1,271 @@
+/* Keep location/route text bounded in all shared tables, including native report tables. */
+:is(
+  table[data-slot='table']:has(> thead > tr > th:nth-child(1)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(1):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(2)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(2):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(3)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(3):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(4)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(4):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(5)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(5):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(6)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(6):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(7)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(7):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(8)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(8):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(9)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(9):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(10)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(10):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(11)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(11):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(12)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(12):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(13)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(13):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(14)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(14):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(15)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(15):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(16)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(16):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(17)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(17):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(18)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(18):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(19)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(19):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(20)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(20):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(21)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(21):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(22)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(22):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(23)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(23):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(24)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(24):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(25)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(25):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(26)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(26):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(27)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(27):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(28)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(28):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(29)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(29):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(30)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(30):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(31)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(31):not([colspan]),
+  table[data-slot='table']:has(> thead > tr > th:nth-child(32)[data-location-column])
+    > tbody
+    > tr
+    > td:nth-child(32):not([colspan])
+) {
+  max-width: 15rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+:is(
+    table[data-slot='table']:has(> thead > tr > th:nth-child(1)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(1):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(2)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(2):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(3)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(3):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(4)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(4):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(5)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(5):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(6)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(6):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(7)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(7):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(8)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(8):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(9)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(9):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(10)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(10):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(11)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(11):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(12)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(12):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(13)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(13):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(14)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(14):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(15)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(15):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(16)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(16):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(17)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(17):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(18)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(18):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(19)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(19):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(20)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(20):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(21)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(21):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(22)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(22):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(23)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(23):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(24)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(24):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(25)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(25):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(26)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(26):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(27)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(27):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(28)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(28):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(29)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(29):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(30)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(30):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(31)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(31):not([colspan]),
+    table[data-slot='table']:has(> thead > tr > th:nth-child(32)[data-location-column])
+      > tbody
+      > tr
+      > td:nth-child(32):not([colspan])
+  )
+  > * {
+  max-width: 14rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { isOptionalTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
-import { useUpdateCustomerMutation } from '@/features/customers/api';
+import { buildParcelInformationEdit } from '@/shared/shipments/parcel-information-edit';
+import { useEditParcelInformationMutation } from '../../services';
 import type { ParcelSearchRow } from '../../api/parcel.api';
-import { useUpdateParcelMutation } from '../../api/parcel.api';
 
 export function useWaitingPickUpEdit() {
   const [editingParcel, setEditingParcel] = useState<ParcelSearchRow | null>(null);
@@ -12,8 +12,7 @@ export function useWaitingPickUpEdit() {
   const [editReceiverPhone, setEditReceiverPhone] = useState('');
   const [refetchFn, setRefetchFn] = useState<(() => Promise<unknown>) | null>(null);
 
-  const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
-  const [updateCustomer, { isLoading: isUpdatingCustomer }] = useUpdateCustomerMutation();
+  const [editInformation, { isLoading: isSaving }] = useEditParcelInformationMutation();
 
   const openEditDialog = (parcel: ParcelSearchRow, refetch: () => Promise<unknown>) => {
     setEditingParcel(parcel);
@@ -43,37 +42,18 @@ export function useWaitingPickUpEdit() {
       return;
     }
 
-    const updates: Promise<unknown>[] = [];
-
-    if (nextParcelDetails !== (editingParcel.parcelDetails ?? '').trim()) {
-      updates.push(
-        updateParcel({
-          id: editingParcel.id,
-          parcelDetails: nextParcelDetails,
-        }).unwrap(),
-      );
-    }
-
-    if (
-      nextReceiverName !== (editingParcel.receiverName ?? '').trim() ||
-      nextReceiverPhone !== (editingParcel.receiverPhone ?? '').trim()
-    ) {
-      updates.push(
-        updateCustomer({
-          id: editingParcel.receiverId,
-          fullname: nextReceiverName,
-          telephone: nextReceiverPhone.length > 0 ? nextReceiverPhone : null,
-        }).unwrap(),
-      );
-    }
-
-    if (updates.length === 0) {
+    const patch = buildParcelInformationEdit(editingParcel, {
+      parcelDetails: nextParcelDetails,
+      receiverName: nextReceiverName,
+      receiverPhone: nextReceiverPhone,
+    });
+    if (!patch) {
       toast.message('No changes to save');
       setEditingParcel(null);
       return;
     }
 
-    await Promise.all(updates);
+    await editInformation(patch).unwrap();
     toast.success('Parcel updated');
     setEditingParcel(null);
     if (refetchFn) await refetchFn();
@@ -82,8 +62,7 @@ export function useWaitingPickUpEdit() {
     editParcelDetails,
     editReceiverName,
     editReceiverPhone,
-    updateParcel,
-    updateCustomer,
+    editInformation,
     refetchFn,
   ]);
 
@@ -98,6 +77,6 @@ export function useWaitingPickUpEdit() {
     setEditReceiverPhone,
     openEditDialog,
     handleSaveEdit,
-    isSaving: isUpdatingParcel || isUpdatingCustomer,
+    isSaving,
   };
 }
