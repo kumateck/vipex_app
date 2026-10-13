@@ -57,6 +57,18 @@ try {
       WHERE x.indrelid = to_regclass('public.pickup_queues')
       ORDER BY i.relname
     `);
+    const receiverNameFunctions = await tx.unsafe(`
+      SELECT pg_get_functiondef(p.oid) AS definition
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = 'set_parcel_customer_name_snapshots'
+        AND p.pronargs = 0
+    `);
+    const nameSnapshotTriggers = await tx.unsafe(`
+      SELECT tgname AS name, tgenabled AS enabled, pg_get_triggerdef(oid) AS definition
+      FROM pg_trigger
+      WHERE tgrelid = to_regclass('public.parcels') AND NOT tgisinternal
+        AND tgfoid = to_regprocedure('public.set_parcel_customer_name_snapshots()')
+    `);
     const [ledgerTable] = await tx.unsafe(`
       SELECT to_regclass('drizzle.__drizzle_migrations') IS NOT NULL AS exists
     `);
@@ -76,6 +88,12 @@ try {
       ),
       assignmentForeignKeys: constraints,
       pickupQueueIndexes,
+      receiverNameCorrectionsSupported: receiverNameFunctions.some((row) =>
+        /NEW\.receiver_name_snapshot\s+IS\s+DISTINCT\s+FROM\s+OLD\.receiver_name_snapshot/i.test(
+          row.definition,
+        ),
+      ),
+      nameSnapshotTriggers,
       migrationLedgerExists: ledgerTable?.exists ?? false,
       latestLedgerEntries: ledger,
       pendingMigrationTags: journal.entries

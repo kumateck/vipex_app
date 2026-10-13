@@ -1,5 +1,6 @@
-import { type ColumnDef, type Table, flexRender } from '@tanstack/react-table';
+import { type ColumnDef, type Table } from '@tanstack/react-table';
 import { TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { DataTableContentCell } from './index';
 
 interface DataTableBodyProps<TData, TValue> {
   table: Table<TData>;
@@ -44,9 +45,7 @@ export function DataTableBody<TData, TValue>({
       {rows.map((row) => (
         <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
           {row.getVisibleCells().map((cell) => (
-            <TableCell key={cell.id}>
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-            </TableCell>
+            <DataTableContentCell key={cell.id} cell={cell} />
           ))}
         </TableRow>
       ))}

@@ -1,6 +1,18 @@
 # Mobile QA Smoke Checklist
 
-Last updated: 2026-09-21
+Last updated: 2026-10-13
+
+## Incoming receiver corrections
+
+- In incoming receive-process, rename the receiver and save. The selected parcel and linked
+  customer must show the corrected name after reload; another parcel for that customer retains
+  its recorded name. Customer Management renames must preserve both parcel names.
+- Change only the telephone after a Customer Management rename; neither the customer's newer
+  name nor either recorded parcel name changes.
+- Missing customer-update permission, invalid/duplicate phone, a changed receiver association,
+  or a failed parcel write must leave the customer and parcel edit unsaved. Apply migration
+  `0081` and deploy the new backend before testing the updated mobile build. See
+  [Parcel Operations](PARCEL_OPERATIONS.md#correcting-a-receiver-from-a-parcel).
 
 ## Scope
 

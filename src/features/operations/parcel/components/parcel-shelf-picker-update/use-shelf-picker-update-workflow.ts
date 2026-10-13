@@ -5,10 +5,10 @@ import { toast } from 'sonner';
 import { getErrorMessage, getResponseError } from '@/lib/TheAduseiErrorResponse';
 import { useAuthStore } from '@/stores/auth-store';
 import { isOptionalTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
-import { useUpdateCustomerMutation } from '@/features/customers/api';
+import { buildParcelInformationEdit } from '@/shared/shipments/parcel-information-edit';
+import { useEditParcelInformationMutation } from '../../services';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { PermissionKeys } from '@/shared/permissions/constants';
-import { useUpdateParcelMutation } from '../../api/parcel.api';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ParcelRow } from './shelf-picker-update-types';
 import { useListShelfPickerStaffQuery } from './services';
@@ -59,8 +59,8 @@ export function useShelfPickerUpdateWorkflow() {
   const [editParcelDetails, setEditParcelDetails] = useState('');
   const [editReceiverName, setEditReceiverName] = useState('');
   const [editReceiverPhone, setEditReceiverPhone] = useState('');
-  const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
-  const [updateCustomer, { isLoading: isUpdatingCustomer }] = useUpdateCustomerMutation();
+  const [editInformation, { isLoading: isUpdatingInformation }] =
+    useEditParcelInformationMutation();
   const fetchData = useCallback(async () => {
     if (!companyId || !branchId || !accessToken) return;
     setIsLoading(true);
@@ -141,7 +141,7 @@ export function useShelfPickerUpdateWorkflow() {
 
       setSelectedParcel(null);
       setSelectedStaffId('');
-      await listQuery.refetch();
+      await fetchData();
     } finally {
       setIsSaving(false);
     }
@@ -167,48 +167,27 @@ export function useShelfPickerUpdateWorkflow() {
       return;
     }
 
-    const updates: Promise<unknown>[] = [];
-
-    if (nextParcelDetails !== (editingParcel.parcelDetails ?? '').trim()) {
-      updates.push(
-        updateParcel({
-          id: editingParcel.id,
-          parcelDetails: nextParcelDetails,
-        }).unwrap(),
-      );
-    }
-
-    if (
-      nextReceiverName !== (editingParcel.receiverName ?? '').trim() ||
-      nextReceiverPhone !== (editingParcel.receiverPhone ?? '').trim()
-    ) {
-      updates.push(
-        updateCustomer({
-          id: editingParcel.receiverId,
-          fullname: nextReceiverName,
-          telephone: nextReceiverPhone.length > 0 ? nextReceiverPhone : null,
-        }).unwrap(),
-      );
-    }
-
-    if (updates.length === 0) {
+    const patch = buildParcelInformationEdit(editingParcel, {
+      parcelDetails: nextParcelDetails,
+      receiverName: nextReceiverName,
+      receiverPhone: nextReceiverPhone,
+    });
+    if (!patch) {
       toast.message('No changes to save');
       setEditingParcel(null);
       return;
     }
-
-    await Promise.all(updates);
+    await editInformation(patch).unwrap();
     toast.success('Parcel updated');
     setEditingParcel(null);
-    await listQuery.refetch();
+    await fetchData();
   }, [
     editParcelDetails,
     editReceiverName,
     editReceiverPhone,
     editingParcel,
-    listQuery,
-    updateCustomer,
-    updateParcel,
+    fetchData,
+    editInformation,
   ]);
 
   return {
@@ -262,7 +241,7 @@ export function useShelfPickerUpdateWorkflow() {
       setEditReceiverName,
       editReceiverPhone,
       setEditReceiverPhone,
-      isSaving: isUpdatingParcel || isUpdatingCustomer,
+      isSaving: isUpdatingInformation,
       handleSaveEdit,
     },
   };
