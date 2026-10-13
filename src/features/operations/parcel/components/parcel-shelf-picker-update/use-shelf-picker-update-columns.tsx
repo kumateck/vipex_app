@@ -93,13 +93,13 @@ export function useShelfPickerUpdateColumns({
     },
     {
       accessorKey: 'parcelDetails',
-      header: 'Details',
-      cell: ({ row }) => <div className="text-sm">{row.original.parcelDetails}</div>,
-    },
-    {
-      accessorKey: 'parcelContent',
-      header: 'Content',
-      cell: ({ row }) => <div className="text-sm">{row.original.parcelContent || '-'}</div>,
+      header: 'Parcel',
+      cell: ({ row }) => (
+        <div className="space-y-1 text-sm">
+          <div className="font-medium">{row.original.parcelDetails || '-'}</div>
+          <div className="text-xs text-muted-foreground">{row.original.parcelContent || '-'}</div>
+        </div>
+      ),
     },
     {
       id: 'payment',
@@ -108,24 +108,16 @@ export function useShelfPickerUpdateColumns({
     },
     {
       accessorKey: 'status',
-      header: 'Status',
+      header: 'Status / Shelf Picker',
       cell: ({ row }) => (
-        <Badge variant={getStatusVariant(row.original.status)}>
-          {getStatusLabel(row.original.status)}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: 'pickerStaffName',
-      header: 'Shelf Picker',
-      cell: ({ row }) => (
-        <>
-          {row.original.pickerStaffName ? (
-            <Badge variant="outline">{row.original.pickerStaffName}</Badge>
-          ) : (
-            <Badge variant="secondary">Not Assigned</Badge>
-          )}
-        </>
+        <div className="flex flex-col items-start gap-1">
+          <Badge variant={getStatusVariant(row.original.status)}>
+            {getStatusLabel(row.original.status)}
+          </Badge>
+          <Badge variant={row.original.pickerStaffName ? 'outline' : 'secondary'}>
+            {row.original.pickerStaffName || 'Not Assigned'}
+          </Badge>
+        </div>
       ),
     },
     {
@@ -135,6 +127,7 @@ export function useShelfPickerUpdateColumns({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
+              aria-label="Parcel actions"
               size="icon"
               variant="outline"
               className="h-8 w-8"

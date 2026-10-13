@@ -570,6 +570,21 @@ Automated coverage is in `tests/server/parcel-information-edit*.spec.ts` and
 `PARCEL_INFORMATION_EDIT_TEST=1` and `TEST_DATABASE_URL` pointing to the empty local
 `vipex_parcel_information_edit_test` database; they refuse other database targets.
 
+#### Compact parcel tables
+
+Shelf Picker Update stacks details above content in **Parcel**, and status above the shelf
+picker in **Status / Shelf Picker**. Waiting for Pickup and Receiver Cashier combine parties
+in **Customer**: receiver name, receiver phone(s), sender name, sender phone(s), in that order.
+Multiple phones use `/`. **Route** shows source branch, source location, destination branch,
+and destination location. Call-sender and storage-fee indicators, dates, payment amounts, and
+actions remain available. These layouts apply to web and desktop; mobile keeps its native cards.
+Location/route text wraps within a bounded column across shared data tables and native shared
+tables, including report and attendance pages. See [Appearance System](APPEARANCE_SYSTEM.md).
+QA: check long multiword and unbroken location names at narrow and wide window sizes, the
+four-line party/route ordering, missing names/phones, both phone numbers, shelf assignments,
+payment badges, and table actions. Automated layout coverage is in
+`tests/utils/parcel-table-layout.spec.tsx`.
+
 Parcel search matches the stored sender, main receiver, and second receiver names, case
 insensitively and by partial name, as well as booking/tracking codes and customer phone
 numbers. Searching the name recorded on an older parcel returns that parcel after the
