@@ -17,6 +17,21 @@ The appearance system controls:
 
 All settings apply instantly across the app and persist in browser storage.
 
+## Location text in tables
+
+Web and desktop location, branch, workplace, source, destination, and route columns use a
+bounded width and wrap at spaces or within an unbroken name. The shared DataTable renderer
+applies this policy to both normal and virtualized rows; virtualized rows measure their actual
+height so wrapped text remains visible. Native tables using the shared `Table` primitives
+mark location-related string headers and apply the same wrapping to those columns, including
+reports and attendance. Non-location columns retain their existing layout. Location management
+lists identify the location-name column explicitly even though its header is **Name**.
+The policy changes table text layout, with no API, permission, print-template, or mobile-native
+layout change. QA: verify long names remain fully readable without widening the table across
+parcel lists, location/inventory lists, reports, attendance, and user workplaces; test both
+virtualized and nonvirtualized tables, narrow windows, and dark/light styles. See automated
+coverage in `tests/utils/parcel-table-layout.spec.tsx`.
+
 ## Source Files
 
 Core implementation files:

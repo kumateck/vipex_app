@@ -26,6 +26,7 @@ export function createInventoryLocationColumns(
   return [
     {
       accessorKey: 'name',
+      id: 'locationName',
       header: 'Name',
     },
     {
@@ -72,7 +73,12 @@ export function createInventoryLocationColumns(
         <PermissionGuard permissionKey={PermissionKeys.CanUpdateInventoryLocation}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-8 w-8">
+              <Button
+                aria-label="Location actions"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+              >
                 <EllipsisVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
