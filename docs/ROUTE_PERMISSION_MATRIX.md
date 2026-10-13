@@ -12,6 +12,12 @@ new page permission is required. See [Parcel Operations](PARCEL_OPERATIONS.md#ag
 
 The matrix is split by domain so each reference remains readable:
 
+Parcel information edits use a dedicated endpoint with authenticated company/destination-branch
+scope. A receiver correction requires both a supported parcel workflow permission and
+`CanUpdateCustomers`; customer management permission alone cannot rewrite a parcel name.
+Details-only edits retain the workflow permission without a customer-update grant. See
+[Operations endpoint permissions](permissions/ROUTE_PERMISSION_OPERATIONS.md#parcel-information-edits).
+
 - [Operations and people](permissions/ROUTE_PERMISSION_OPERATIONS.md)
 - [Platform and finance](permissions/ROUTE_PERMISSION_PLATFORM_FINANCE.md)
 - [Supply chain and fleet](permissions/ROUTE_PERMISSION_SUPPLY_FLEET.md)

@@ -201,6 +201,23 @@ pickup queue, consignment receiving, discrepancy, and report responses temporari
 the linked customer's current name, and list search matches that name.
 Once a snapshot is populated, it takes precedence over later customer profile changes.
 
+`POST /v1/shipments/parcels/:id/edit-information` atomically saves optional `parcelDetails`,
+`parcelContent`, and `receiver: { id, fullname?, telephone? }`. The receiver ID must still
+match the parcel; a supplied name updates both the customer and this parcel's main-receiver
+snapshot, without modifying other recorded parcel names. A phone-only patch does not rename
+either record. Omitted fields are preserved; telephone `null` clears the primary phone.
+Success returns `{ id }`. Authentication and one of `CanUpdateParcels`, `CanReadParcelIncoming`,
+`CanCompleteOfficePickup`, `CanCreateReceiverPayments`, `CanReadParcelScan`, or
+`CanReadShelfPickerUpdate` are required; any `receiver` payload also requires
+`CanUpdateCustomers`. Company/destination-branch scope comes from the session. Missing context
+or invalid names/phones/details return 400/422, missing authentication/permission 401/403,
+out-of-scope/deleted parcels or inactive/missing receiver customers 404, and a stale receiver
+ID, duplicate phone, or a database trigger that cannot persist the correction 409. Failure rolls back parcel, customer, and audit writes. Names must
+trim to 1–255 characters; non-null telephones must be exactly ten digits and distinct from
+the secondary phone and other active customers' primary/secondary phones. Migration `0081`
+must be applied before deploying this endpoint. Standard/CRM customer PATCH behavior remains
+profile-only. See [Parcel Operations](PARCEL_OPERATIONS.md#correcting-a-receiver-from-a-parcel).
+
 Call-center clients should use `POST /v1/shipments/parcels/:id/call-center/contact` to record
 a call outcome. For older clients, `PATCH /v1/shipments/parcels/:id` with exactly `status` 5 or
 7 and `secondReceiverId` is handled as the equivalent call outcome. It requires call-center
