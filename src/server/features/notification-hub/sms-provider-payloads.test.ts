@@ -10,7 +10,7 @@ describe('mNotify SMS payload', () => {
         message: 'Your code is 123456',
         smsType: 'otp',
       }),
-    ).toMatchObject({ sms_type: 'otp' });
+    ).toMatchObject({ recipient: ['0249667429'], sms_type: 'otp', is_schedule: false });
   });
 
   test('does not classify ordinary transactional messages as OTP', () => {
