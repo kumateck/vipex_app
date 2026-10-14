@@ -739,13 +739,59 @@ rider receives the saved fee and its unpaid balance; the delivery cashier sees t
 when finalizing the rider's customer handover. Previous non-voided delivery fee payments reduce
 the outstanding amount, so returning a parcel does not create another fee or payment. An
 explicit address/fee update still replaces the configured fee. Moving a return to office
-pickup preserves delivery fee history but excludes the doorstep fee from office settlement.
+pickup sets the active delivery fee to zero and preserves its previous value in audit history;
+the doorstep fee is excluded from office settlement.
 This applies to web and desktop cashiers and web/mobile riders through the shared backend.
 Fees already erased by the previous return behavior are not automatically restored: the
 old return audit did not record their amount. Staff confirm and restore the amount through **Edit Delivery Fee** on Rider Returns or
 Delivery Cashier; address collection remains another option before dispatch. Do not infer
 the original fee from principal charges or rider collections.
 Return and reprocessing status changes are recorded in parcel audit history.
+
+### Returning home delivery parcels to main-office pickup
+
+Web and desktop use the same **Return to Pickup** action from Home Delivery Address
+Collection, Home Delivery Dispatch and Delivery Cashier. Rider Returns retains its
+**Move to Pickup** label and uses the same operation. A rider handover mistakenly marked
+**Rider Given Parcel to Customer** can be returned by the delivery cashier before cashier
+finalization, including cases like booking `KO3567556U`. This is a software workflow;
+that specific booking has not been modified as part of this change.
+
+Success moves the parcel to **Awaiting Pickup** at its existing destination branch and
+sets the configured delivery fee to **zero**. It leaves the principal transport charge,
+to-be-paid amount and recorded payments unchanged. Any outstanding principal is handled
+by **Receiver Cashier** when the customer collects the parcel; this action does not collect
+money or mark the outstanding principal paid. Normal pickup readiness, storage charges,
+shelf-picker and receiver-verification requirements still apply.
+
+The action clears parcel/delivery handover confirmation timestamps and actors, the active
+rider completion timestamp, signature and declared rider collection fields. The previous
+handover, delivery fee and declared amounts are retained in an audit snapshot committed in
+the same transaction. The delivery retains its address and assigned rider as history and is
+marked Returned to Office. It disappears from the applicable home-delivery list; both parcel
+lists and cached parcel details refresh after success. Existing payments are neither voided
+nor refunded. A future home-delivery request needs its delivery fee configured again.
+
+The backend derives company and destination branch from the authenticated account and
+accepts only active branch staff. Riders cannot use this staff correction. Permissions are
+checked against the locked parcel state: `CanMarkDoorstepCalled` for Home Delivery Requested,
+`CanDispatchForDelivery` for Address Collected or a completed rider return, and
+`CanCompleteDoorstepDelivery` for an unfinalized rider handover. Wrong-company/branch,
+missing or deleted parcels are hidden; invalid, already-picked-up, dispatched, returned-to-source
+or finalized states are rejected. A completed delivery cannot be corrected through this action;
+use the existing reversal workflow first. The old rider-return pickup endpoint delegates to
+this implementation while retaining its Returned to Office status requirement. Mobile has no
+new staff action; its rider return workflow continues to record returns for staff processing.
+
+QA: exercise all four page actions and verify Awaiting Pickup, zero delivery fee, unchanged
+principal/to-be-paid amount, payment history and address. For an unfinalized mistaken handover,
+verify confirmation fields are cleared and its original signature/fee/declared collection are
+in audit history. Confirm Receiver Cashier still collects outstanding principal at pickup.
+Reject missing stage permission, rider accounts, foreign/deleted parcels, completed deliveries
+and repeated requests. Race cashier finalization with return and verify exactly one succeeds.
+Automated coverage: `home-delivery-pickup.rules.test.ts`,
+`tests/server/home-delivery-pickup.service.spec.ts` and
+`tests/server/rider-return-delivery-fee.service.spec.ts`.
 
 Staff with `CanDispatchForDelivery` use **Last Mile Delivery → Rider Returns** to search and
 page through returns at their own company's destination branch. The list groups each return
@@ -780,7 +826,7 @@ to the customer: verify GHS 25 on the rider list and cashier completion dialog a
 it successfully. Repeat through bulk redispatch and Dispatch Parcels reassignment, including
 a second return. With GHS 10 already paid, verify the fee remains GHS 25 and only GHS 15
 is collectable. Verify zero-fee deliveries remain zero, an explicit fee change survives a
-later return, and Move to Pickup excludes the saved doorstep fee from settlement.
+later return, and Move to Pickup nullifies the saved doorstep fee for office collection.
 Automated coverage: `tests/server/rider-return-delivery-fee.service.spec.ts`.
 Verify wrong-rider and repeated returns fail without partial updates or fee changes. Confirm the row
 groups show booking code, parcel details, parcel content, receiver name, telephone, home

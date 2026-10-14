@@ -33,6 +33,8 @@ export function ParcelDeliveryCashier() {
     setIsFinalizeConfirmOpen,
     closeFinalizeDialog,
     onFinalize,
+    onReturnToPickup,
+    isReturningToPickup,
   } = useDeliveryCashier();
   return (
     <div className="w-full space-y-4 p-4">
@@ -48,6 +50,8 @@ export function ParcelDeliveryCashier() {
           loading={listQuery.isLoading}
           onRequestChange={onRequestChange}
           onFinalize={setSelectedParcel}
+          onReturnToPickup={onReturnToPickup}
+          isReturningToPickup={isReturningToPickup}
         />
 
         <FinalizeDeliveryDialog

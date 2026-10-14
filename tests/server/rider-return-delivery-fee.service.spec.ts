@@ -145,11 +145,11 @@ describe('delivery fees across rider returns', () => {
     expect(await listPaymentsForParcelRepo(parcelId)).toHaveLength(1);
   });
 
-  test('moving to office pickup retains fee history but does not require a doorstep fee', async () => {
+  test('moving to office pickup nullifies the doorstep fee', async () => {
     const parcelId = await fixture.parcel();
     await returnParcel(parcelId);
     await reprocessRiderReturnForPickupSvc(staffInput(parcelId));
-    expect((await getDeliveryByParcelRepo(parcelId))?.chargePsw).toBe(2500);
+    expect((await getDeliveryByParcelRepo(parcelId))?.chargePsw).toBe(0);
     expect((await getParcelPaymentSettlement(parcelId)).requiredDeliveryFeePsw).toBe(0);
   });
 

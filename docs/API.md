@@ -27,7 +27,24 @@ reprocess them through `GET /v1/deliveries/dd/returned` and
 `POST /v1/deliveries/dd/:parcelId/returned-to-pickup` and
 `POST /v1/deliveries/dd/:parcelId/redispatch-return`, or assign several at once through
 `POST /v1/deliveries/dd/returned/redispatch-bulk`.
-Returning and redispatching preserve the configured delivery fee. Rider responses expose
+`POST /v1/deliveries/dd/:parcelId/return-to-pickup` is the shared staff action for Address
+Collection, Home Delivery Dispatch, Delivery Cashier and Rider Returns. It takes no body and
+returns `{ id }`. Scope comes from the authenticated company/destination branch; only active
+non-rider branch staff can execute it. The current parcel stage requires
+`CanMarkDoorstepCalled` (Home Delivery Requested), `CanDispatchForDelivery` (Address Collected
+or completed rider return), or `CanCompleteDoorstepDelivery` (Rider Given Parcel to Customer).
+Success atomically sets Awaiting Pickup, nullifies the configured delivery fee, clears the
+active handover/declared collection fields and records their previous values in audit history.
+Principal, to-be-paid amount and recorded payments are unchanged; Receiver Cashier collects
+outstanding principal at office pickup. No payment is created, voided or refunded. Missing,
+deleted or foreign parcels return 404; missing authentication/permission or rider/inactive
+actors return 401/403. Invalid or finalized states and incomplete rider returns return 409;
+repeated calls after success return 409. The existing `returned-to-pickup` endpoint delegates
+to the same implementation but only accepts completed rider returns. Web/desktop provide
+this action; mobile rider returns retain their existing flow.
+
+Returning **by the rider** and redispatching preserve the configured delivery fee.
+Staff moving a parcel to office pickup nullify that fee, retaining its old value in audit history. Rider responses expose
 `deliveryFeePsw`, and parcel details expose `delivery.chargePsw` for delivery cashier completion;
 existing non-voided delivery fee payments reduce the outstanding balance. Historically erased
 fees are manually restored through the shared Edit Delivery Fee dialog and are not automatically

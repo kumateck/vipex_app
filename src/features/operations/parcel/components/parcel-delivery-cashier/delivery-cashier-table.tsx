@@ -39,6 +39,8 @@ type DeliveryCashierTableProps = {
     }>,
   ) => void;
   onFinalize: (parcel: ParcelSearchRow) => void;
+  onReturnToPickup: (parcel: ParcelSearchRow) => void;
+  isReturningToPickup: boolean;
 };
 
 export function DeliveryCashierTable({
@@ -52,6 +54,8 @@ export function DeliveryCashierTable({
   loading,
   onRequestChange,
   onFinalize,
+  onReturnToPickup,
+  isReturningToPickup,
 }: DeliveryCashierTableProps) {
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
@@ -136,8 +140,17 @@ export function DeliveryCashierTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onFinalize(row.original)}>
+                <DropdownMenuItem
+                  disabled={isReturningToPickup}
+                  onClick={() => onFinalize(row.original)}
+                >
                   Finalize
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={isReturningToPickup}
+                  onClick={() => onReturnToPickup(row.original)}
+                >
+                  Return to Pickup
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -149,7 +162,7 @@ export function DeliveryCashierTable({
         ),
       },
     ],
-    [onFinalize],
+    [onFinalize, onReturnToPickup, isReturningToPickup],
   );
 
   return (
@@ -158,7 +171,8 @@ export function DeliveryCashierTable({
         <CardHeader>
           <CardTitle>Delivery Cashier Finalization</CardTitle>
           <CardDescription>
-            Receive rider money for successful handovers and finalize to delivered at home.
+            Receive rider money for successful handovers and finalize to delivered at home. Return
+            mistaken handovers to the main office for pickup.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
