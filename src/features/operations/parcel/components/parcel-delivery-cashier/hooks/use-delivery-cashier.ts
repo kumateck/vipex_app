@@ -1,3 +1,4 @@
+import { useHomeDeliveryPickup } from '../../../home-delivery-pickup';
 import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -14,6 +15,7 @@ import { getOutstandingPrincipalPsw } from '../../../utils';
 import type { PaginationRequestDto } from '@/server/types/pagination.types';
 
 export function useDeliveryCashier() {
+  const { onReturnToPickup, isReturningToPickup } = useHomeDeliveryPickup();
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
@@ -178,5 +180,7 @@ export function useDeliveryCashier() {
     setIsFinalizeConfirmOpen,
     closeFinalizeDialog,
     onFinalize,
+    onReturnToPickup,
+    isReturningToPickup,
   };
 }

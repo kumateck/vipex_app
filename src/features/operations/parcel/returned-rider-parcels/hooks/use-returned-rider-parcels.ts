@@ -1,3 +1,4 @@
+import { useHomeDeliveryPickup } from '../../home-delivery-pickup';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/TheAduseiErrorResponse';
@@ -6,7 +7,6 @@ import type { ParcelSearchRow } from '../../api/parcel.api';
 import {
   useListReturnedRiderParcelsQuery,
   useListReturnRedispatchRidersQuery,
-  useReprocessRiderReturnForPickupMutation,
   useRedispatchRiderReturnMutation,
   useRedispatchRiderReturnsBulkMutation,
 } from '../services';
@@ -31,7 +31,7 @@ export function useReturnedRiderParcels() {
   const [dispatch] = useRedispatchRiderReturnMutation();
   const [dispatchBulk, { isLoading: isBulkRedispatching }] =
     useRedispatchRiderReturnsBulkMutation();
-  const [moveToPickup] = useReprocessRiderReturnForPickupMutation();
+  const { onReturnToPickup } = useHomeDeliveryPickup();
 
   const rows = useMemo(() => list.data?.data ?? [], [list.data]);
   const selectedRows = useMemo(
@@ -51,8 +51,7 @@ export function useReturnedRiderParcels() {
     setBusyParcelId(row.id);
     try {
       if (action === 'pickup') {
-        await moveToPickup(row.id).unwrap();
-        toast.success('Parcel moved to Awaiting Pickup');
+        if (!(await onReturnToPickup(row))) return;
       } else {
         await dispatch({ parcelId: row.id, riderUserId }).unwrap();
         toast.success('Parcel redispatched to rider');

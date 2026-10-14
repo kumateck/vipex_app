@@ -1,3 +1,4 @@
+import { SelfServiceCustomerDialog } from '../../dialogs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -38,6 +39,9 @@ export function SelfServiceDraftComplete() {
     isSubmitting,
     onSubmit,
     onLocationNameChange,
+    isCustomerEditorOpen,
+    openCustomerEditor,
+    closeCustomerEditor,
   } = useSelfServiceDraftCompleteWorkflow();
 
   if (isLoading) {
@@ -59,6 +63,17 @@ export function SelfServiceDraftComplete() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <SelfServiceDraftSummaryCard draft={draft} />
+      <Button type="button" variant="outline" onClick={openCustomerEditor}>
+        Edit Customer Details
+      </Button>
+      {isCustomerEditorOpen ? (
+        <SelfServiceCustomerDialog
+          key={`${draft.id}:${draft.updatedAt}`}
+          draft={draft}
+          canEdit
+          onClose={closeCustomerEditor}
+        />
+      ) : null}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

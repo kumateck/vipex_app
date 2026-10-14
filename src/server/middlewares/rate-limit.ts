@@ -1,3 +1,4 @@
+import { isReceivingRequest } from './rate-limit-receiving';
 import { Elysia } from 'elysia';
 import { createHash } from 'node:crypto';
 import { HttpStatus } from '../utils/http-status';
@@ -66,6 +67,7 @@ export function createRateLimitPlugin(options: RateLimitOptions) {
 
     const authorization = request.headers.get('authorization');
     const signedAccessToken = await isSignedAccessToken(authorization);
+    if (await isReceivingRequest(request, signedAccessToken)) return;
     const staffRead = isStaffRead(path, request.method, signedAccessToken);
     const maxRequests = staffRead
       ? options.maxRequests * (options.staffReadMultiplier ?? 5)

@@ -44,6 +44,7 @@ export async function listSelfServiceDestinationLocationsSvc(input: {
   return listLocationOptionsRepo({
     companyId: source.companyId,
     branchId: input.destinationBranchId,
+    canReceive: true,
   });
 }
 
@@ -76,6 +77,7 @@ export async function validateSelfServiceDestinationSvc(input: {
   const locationOptions = await listLocationOptionsRepo({
     companyId: input.companyId,
     branchId: destination.id,
+    canReceive: true,
   });
   const matchedLocation = locationOptions.find(
     (location) => location.id === input.destinationLocationId,

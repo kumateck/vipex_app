@@ -106,7 +106,7 @@ const EnvSchema = z.object({
 
   // mNotify SMS API (optional — used as a fallback when a company's SMS
   // provider configJson doesn't set its own apiUrl/apiKey/senderId)
-  MNOTIFY_API_URL: z.string().url().optional(),
+  MNOTIFY_API_URL: z.string().url().default('https://api.mnotify.com/api'),
   MNOTIFY_API_KEY: z.string().optional(),
   MNOTIFY_SENDER_ID: z.string().optional(),
 

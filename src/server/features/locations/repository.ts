@@ -16,6 +16,8 @@ export type LocationOptionRow = {
   id: string;
   name: string;
   branchId: string;
+  canSend: boolean;
+  canReceive: boolean;
 };
 
 export async function listLocationsRepo(p: ListLocationParams) {
@@ -53,6 +55,8 @@ export async function listLocationsRepo(p: ListLocationParams) {
         name: branches.name,
       },
       name: locations.name,
+      canSend: locations.canSend,
+      canReceive: locations.canReceive,
       isDeleted: locations.isDeleted,
       createdBy: locations.createdBy,
       createdAt: locations.createdAt,
@@ -79,6 +83,8 @@ export async function getLocationRepo(id: string) {
         name: branches.name,
       },
       name: locations.name,
+      canSend: locations.canSend,
+      canReceive: locations.canReceive,
       isDeleted: locations.isDeleted,
       createdBy: locations.createdBy,
       createdAt: locations.createdAt,
@@ -95,18 +101,24 @@ export async function listLocationOptionsRepo(p: {
   companyId?: string | null;
   branchId?: string | null;
   search?: string | null;
+  canSend?: boolean;
+  canReceive?: boolean;
   includeDeleted?: boolean | null;
 }): Promise<LocationOptionRow[]> {
   const where = [];
   if (p.companyId) where.push(eq(locations.companyId, p.companyId));
   if (p.branchId) where.push(eq(locations.branchId, p.branchId));
   if (!p.includeDeleted) where.push(eq(locations.isDeleted, false));
+  if (p.canSend !== undefined) where.push(eq(locations.canSend, p.canSend));
+  if (p.canReceive !== undefined) where.push(eq(locations.canReceive, p.canReceive));
   if (p.search) where.push(sql`${locations.name} ILIKE ${`%${p.search}%`}`);
 
   return db
     .select({
       id: locations.id,
       name: locations.name,
+      canSend: locations.canSend,
+      canReceive: locations.canReceive,
       branchId: locations.branchId,
     })
     .from(locations)

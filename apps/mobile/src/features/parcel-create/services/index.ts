@@ -6,3 +6,4 @@ export {
   type MobileChargeAgentOption,
   type ChargeAgentSource,
 } from './parcel-charge-agents.service';
+export { listReceivingLocations } from './receiving-locations.service';

@@ -178,6 +178,35 @@ OTP SMS events are explicitly classified at the event-definition level. The
 field to custom webhook providers). Ordinary queue, parcel-status, template, and bulk messages do
 not include `sms_type`. Account setup and password-reset OTP delivery is currently email-only.
 
+Pickup OTP delivery uses the BMS/mNotify quick-SMS endpoint with `recipient` as an array,
+`sms_type: "otp"` and the JSON boolean `is_schedule: false`, matching
+[BMS OTP documentation](https://bms.africa/otp). The OTP flag uses the provider's main wallet,
+which is billed separately from SMS credit bundles. The app's SMS-balance lookup does not
+verify that main-wallet balance. Enabling a branch's OTP requirement does not select or
+configure an SMS provider: the company still needs an active default SMS provider, an enabled
+API key and an approved sender ID.
+
+A pickup OTP request only succeeds after SMS dispatch reports provider acceptance. Missing
+configuration, no default provider, provider rejection or a dispatch exception returns HTTP 503
+and expires the newly generated undelivered OTP, so a fresh attempt is possible. The failed
+notification dispatch remains visible with its error for diagnosis. A failed forced resend does
+not invalidate a previous successfully sent OTP. Existing code expiry/verification rules and
+parcel/payment state remain unchanged. Provider acceptance is not proof of handset delivery;
+use BMS delivery reports to investigate messages accepted but not received. `log_only` remains
+a simulation provider and does not send a real SMS.
+
+Previously, the pickup OTP endpoint discarded the SMS dispatch result and could return success
+for a failed send. This is corrected in the application source; production delivery and current
+wallet/provider settings must be checked separately. Codes created by the previous behavior
+retain their five-minute expiry or can be replaced through the existing forced-resend action.
+
+QA: mock missing/default-provider/configuration errors, provider rejection and thrown transport
+errors; expect HTTP 503, failed-code expiry and no parcel/payment changes. Retry after fixing
+configuration; verify success only after provider acceptance. Force resend with an existing valid
+OTP and a failed replacement; verify only the replacement is expired. Confirm OTP requests use
+boolean `is_schedule: false` and `sms_type: "otp"`; ordinary SMS keeps the OTP flag absent.
+Coverage: `otp-sms-delivery.test.ts` and `sms-provider-payloads.test.ts`.
+
 Reusable templates and new bulk SMS messages support `{{senderName}}`, `{{senderPhone}}`,
 `{{recipientName}}`, `{{recipientPhone}}`, `{{branch}}`, `{{location}}`, and `{{date}}`.
 Sender, branch, and location values resolve from the user dispatching the campaign; recipient values

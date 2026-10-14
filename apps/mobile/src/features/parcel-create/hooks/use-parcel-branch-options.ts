@@ -1,6 +1,7 @@
+import { listReceivingLocations } from '../services';
 import { useEffect, useState } from 'react';
 import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
-import { listBranchOptions, listLocationOptions } from '@mobile/lib/api';
+import { listBranchOptions } from '@mobile/lib/api';
 import { notifyError } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
 import type { BranchOption, LocationOption } from '@mobile/types/booking';
@@ -46,7 +47,7 @@ export function useParcelBranchOptions(
     }
     let cancelled = false;
     setIsLoadingLocations(true);
-    withAuth((token) => listLocationOptions(token, { companyId, branchId: destinationBranchId }))
+    withAuth((token) => listReceivingLocations(token, { companyId, branchId: destinationBranchId }))
       .then((options) => {
         if (!cancelled) setLocationOptions(options);
       })

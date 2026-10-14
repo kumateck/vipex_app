@@ -20,7 +20,7 @@ export function ParcelChargeAgentField({
   return (
     <>
       <AppSelectField
-        label="Agent who charged the parcel"
+        label="Agent who charged the parcel (required)"
         value={value}
         onValueChange={onChange}
         options={options}

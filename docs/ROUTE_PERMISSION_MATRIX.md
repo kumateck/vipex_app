@@ -49,3 +49,19 @@ The shared delivery fee editor on Rider Returns and Delivery Cashier uses
 `CanMarkDoorstepCalled`, or `CanCompleteDoorstepDelivery`, plus active non-rider account,
 company and destination-branch checks. Riders retain the reviewed change-request workflow.
 No page permission override changes. See [Editing delivery fees](PARCEL_OPERATIONS.md#editing-delivery-fees-and-manually-repairing-cleared-fees).
+
+The shared staff pickup action `POST /deliveries/dd/:parcelId/return-to-pickup` checks the
+current locked parcel state: `CanMarkDoorstepCalled` for Home Delivery Requested,
+`CanDispatchForDelivery` for Address Collected/Returned to Office, or
+`CanCompleteDoorstepDelivery` for Rider Given Parcel to Customer. It derives company and
+destination-branch scope from authentication and rejects rider/inactive accounts. No page
+permission overrides change. The legacy `returned-to-pickup` endpoint retains its dispatch
+permission and completed-return-only constraint. See
+[Returning home delivery parcels to main-office pickup](PARCEL_OPERATIONS.md#returning-home-delivery-parcels-to-main-office-pickup).
+
+Self-service **View / Edit** permits inspection with `CanReadSelfServiceBookings`;
+`PATCH /self-service/drafts/:id/customers` requires `CanCompleteSelfServiceBookings`.
+Saved matching customer profile changes additionally require `CanUpdateCustomers`.
+Edits are company/branch scoped and reject another officer's claim or a stale draft.
+No page override changes. Location capability controls retain the existing location
+create/update/read permissions. Receiving quota exemptions do not bypass any route guard.

@@ -19,6 +19,8 @@ export interface LocationOption {
   id: string;
   name: string;
   branchId: string;
+  canSend: boolean;
+  canReceive: boolean;
 }
 
 export const locationsApi = api.injectEndpoints({
@@ -42,6 +44,8 @@ export const locationsApi = api.injectEndpoints({
         companyId?: string | null;
         branchId?: string | null;
         search?: string;
+        canSend?: boolean;
+        canReceive?: boolean;
         includeDeleted?: boolean;
       } | void
     >({
@@ -60,6 +64,7 @@ export const locationsApi = api.injectEndpoints({
       }),
       invalidatesTags: (_result, _err, { id }) => [
         { type: 'Locations', id },
+        { type: 'Locations', id: 'OPTIONS' },
         ...invalidateEntityListTag('Locations'),
       ],
     }),
@@ -77,7 +82,10 @@ export const locationsApi = api.injectEndpoints({
           }) satisfies LocationCreatePayload,
         };
       },
-      invalidatesTags: invalidateEntityListTag('Locations'),
+      invalidatesTags: [
+        ...invalidateEntityListTag('Locations'),
+        { type: 'Locations', id: 'OPTIONS' },
+      ],
     }),
 
     deleteLocation: builder.mutation<void, string>({
@@ -87,6 +95,7 @@ export const locationsApi = api.injectEndpoints({
       }),
       invalidatesTags: (_result, _err, id) => [
         { type: 'Locations', id },
+        { type: 'Locations', id: 'OPTIONS' },
         ...invalidateEntityListTag('Locations'),
       ],
     }),

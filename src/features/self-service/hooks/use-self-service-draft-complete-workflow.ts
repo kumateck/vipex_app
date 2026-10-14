@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/TheAduseiErrorResponse';
@@ -10,6 +11,7 @@ import {
 import { useSelfServiceDraftCompleteForm } from './use-self-service-draft-complete-form';
 
 export function useSelfServiceDraftCompleteWorkflow() {
+  const [isCustomerEditorOpen, setIsCustomerEditorOpen] = useState(false);
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: draft, isLoading, isError } = useGetSelfServiceDraftQuery(id, { skip: !id });
@@ -46,5 +48,16 @@ export function useSelfServiceDraftCompleteWorkflow() {
       formState.locationOptions.find((location) => location.id === locationId)?.name ?? '';
     formState.setValue('parcels.0.destinationLocationName', name, { shouldDirty: true });
   };
-  return { ...formState, draft, isLoading, isError, isSubmitting, onSubmit, onLocationNameChange };
+  return {
+    ...formState,
+    draft,
+    isLoading,
+    isError,
+    isSubmitting,
+    onSubmit,
+    onLocationNameChange,
+    isCustomerEditorOpen,
+    openCustomerEditor: () => setIsCustomerEditorOpen(true),
+    closeCustomerEditor: () => setIsCustomerEditorOpen(false),
+  };
 }

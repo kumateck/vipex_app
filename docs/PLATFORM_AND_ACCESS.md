@@ -79,6 +79,43 @@ Access JWTs expire after 8 hours by default when `JWT_ACCESS_EXPIRES` is unset. 
 
 Branch settings include independent controls for pickup OTP and receiver OTP. Both default to enabled for new or legacy-compatible branch records unless deliberately disabled. These settings change handover validation, not the user's underlying permissions.
 
+## Location Sending and Receiving Services
+
+Location create/edit forms on web and desktop have independent **Sends parcels** and
+**Receives parcels** checkboxes. The location table shows both flags. A location can offer
+both services, sending only, receiving only, or neither. Existing and newly created locations
+default to both for compatibility; staff must explicitly switch off unsupported services.
+Existing create/update/read location permissions continue to apply.
+
+Forward migration `0082_location_service_capabilities` adds non-null boolean
+`locations.can_send` and `locations.can_receive`, both defaulting to true. It is idempotent.
+**Deployment requirement:** apply this migration before deploying code that selects these
+columns. The migration is included in this change; it has not been applied to a live database.
+No locations have been classified automatically.
+
+`GET /locations/options` accepts optional `canSend` and `canReceive` boolean filters and
+returns both flags. Without those filters it still returns all active locations for staff,
+reporting and administration. Parcel creation on web/mobile, public self-service destination
+selection, self-service staff completion and processed-parcel destination editing request
+receiving locations only. Receiving-disabled locations are absent from those destination
+menus. Changing a capability invalidates cached location options.
+
+Booking creation validates selected locations inside the booking transaction: an assigned
+source location must be active, in the source branch/company and allow sending; a pickup
+location must be active, in the destination branch/company and allow receiving. Invalid
+selections reject before any booking/payment is created. Branch-level bookings without a
+location retain their existing behavior. Historical parcels and their assigned locations
+are not rewritten when a service flag changes. Other operational location selectors are
+not automatically restricted by these flags.
+
+QA: create and edit all four service combinations; verify defaults on existing locations,
+false values surviving rename/save, destination menus on all affected clients, and option
+cache refresh after disabling receiving. Attempt direct booking requests using sending-only
+destinations, receiving-only sources, foreign/deleted locations, and an optional empty
+location. Check that rejected requests create no bookings or payments.
+Coverage: `location-capability.rules.test.ts`, `location-payload.test.ts` and
+`tests/server/location-capability.booking.spec.ts`.
+
 ## Platform Configuration
 
 Administrators can configure, according to permission and module availability:

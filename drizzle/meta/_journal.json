@@ -575,6 +575,13 @@
       "when": 1791849600000,
       "tag": "0081_parcel_receiver_name_corrections",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1791936000000,
+      "tag": "0082_location_service_capabilities",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,4 @@
+import { useReceivingLocationOptions } from '@/features/locations';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -56,7 +57,6 @@ export function EditParcelDetailsDialog({
   editDestinationOptions,
   editPickupLocationId,
   onEditPickupLocationIdChange,
-  editLocationOptions,
   editSenderPhone,
   onEditSenderPhoneChange,
   editSenderPhone2,
@@ -69,6 +69,8 @@ export function EditParcelDetailsDialog({
   onClose,
   onSave,
 }: EditParcelDetailsDialogProps) {
+  const { data: receivingOptions = [] } = useReceivingLocationOptions(editDestinationId, open);
+
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? onClose() : null)}>
       <DialogContent>
@@ -120,7 +122,7 @@ export function EditParcelDetailsDialog({
                 <SelectValue placeholder="Select pickup location" />
               </SelectTrigger>
               <SelectContent>
-                {editLocationOptions.map((location) => (
+                {receivingOptions.map((location) => (
                   <SelectItem key={location.id} value={location.id}>
                     {location.name}
                   </SelectItem>

@@ -10,7 +10,7 @@ export function buildMnotifySmsPayload(input: {
     recipient: [input.recipient],
     sender: input.sender,
     message: input.message,
-    is_schedule: 'false',
+    is_schedule: false,
     schedule_date: '',
     ...(input.smsType ? { sms_type: input.smsType } : {}),
   };
