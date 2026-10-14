@@ -14,3 +14,4 @@ export { listDoorstepByRiderSvc, riderBranchBenchmarkSvc } from './rider-benchma
 export { doorToDoorReturnToOfficeSvc } from './rider-return.service';
 export { doorToDoorFinalizeAtOfficeSvc } from './doorstep-finalization.service';
 export { getDeliveryFeeSvc, updateDeliveryFeeSvc } from './delivery-fee.service';
+export { returnHomeDeliveryToPickupSvc } from './home-delivery-pickup.service';

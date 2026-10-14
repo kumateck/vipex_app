@@ -1,3 +1,4 @@
+import { assertBookingLocationCapabilitiesRepo } from '../locations';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '@/db/config';
 import {
@@ -144,6 +145,7 @@ export async function createBookingWithParcelsAndPaymentsRepo(
   },
 ): Promise<CreateBookingWithParcelsOutput> {
   return db.transaction(async (tx) => {
+    await assertBookingLocationCapabilitiesRepo(input, tx);
     await assertParcelChargeAgentsRepo(input, tx);
     // Get branch name from authenticated cashier (createdBy)
     const branchName = await getCashierBranchName(tx, input.createdBy);

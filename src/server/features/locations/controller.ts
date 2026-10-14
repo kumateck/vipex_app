@@ -16,6 +16,8 @@ function toLocationDto(l: {
   branchId: string;
   branch: { id: string | null; name: string | null } | null;
   name: string;
+  canSend: boolean;
+  canReceive: boolean;
   isDeleted: boolean;
   createdBy: string;
   createdAt: Date | string | null;
@@ -27,6 +29,8 @@ function toLocationDto(l: {
     branchId: l.branchId,
     branch: l.branch?.id && l.branch?.name ? { id: l.branch.id, name: l.branch.name } : null,
     name: l.name,
+    canSend: l.canSend,
+    canReceive: l.canReceive,
     isDeleted: !!l.isDeleted,
     createdBy: l.createdBy,
     createdAt:
@@ -77,6 +81,8 @@ export async function listLocationOptionsCtrl(filters: {
   companyId?: string | null;
   branchId?: string | null;
   search?: string | null;
+  canSend?: boolean;
+  canReceive?: boolean;
   includeDeleted?: boolean | null;
 }) {
   const rows = await listLocationOptionsSvc(filters);
@@ -84,6 +90,8 @@ export async function listLocationOptionsCtrl(filters: {
     id: row.id,
     name: row.name,
     branchId: row.branchId,
+    canSend: row.canSend,
+    canReceive: row.canReceive,
   }));
 }
 

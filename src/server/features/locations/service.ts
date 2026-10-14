@@ -17,6 +17,8 @@ export async function listLocationOptionsSvc(p: {
   companyId?: string | null;
   branchId?: string | null;
   search?: string | null;
+  canSend?: boolean;
+  canReceive?: boolean;
   includeDeleted?: boolean | null;
 }) {
   return listLocationOptionsRepo(p);
@@ -31,17 +33,27 @@ export async function createLocationSvc(input: {
   branchId: string;
   name: string;
   createdBy: string;
+  canSend?: boolean;
+  canReceive?: boolean;
 }) {
   const dup = await findLocationByNameRepo(input.branchId, input.name);
   if (dup && !dup.isDeleted) throw Conflict('Location name already exists for this branch');
   if (dup && dup.isDeleted) {
-    const row = await updateLocationRepo(dup.id, { name: input.name, isDeleted: false });
+    const row = await updateLocationRepo(dup.id, {
+      name: input.name,
+      isDeleted: false,
+      canSend: input.canSend ?? true,
+      canReceive: input.canReceive ?? true,
+    });
     return { id: row?.id ?? dup.id };
   }
   const created = await createLocationRepo({ ...input, isDeleted: false });
   return { id: created?.id };
 }
-export async function updateLocationSvc(id: string, patch: { name?: string }) {
+export async function updateLocationSvc(
+  id: string,
+  patch: { name?: string; canSend?: boolean; canReceive?: boolean },
+) {
   const cur = await getLocationRepo(id);
   if (!cur) throw NotFound('Location not found');
   if (patch.name && patch.name !== cur.name) {

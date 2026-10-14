@@ -1,3 +1,5 @@
+import { PermissionKeys } from '@/shared/permissions/constants';
+import { returnHomeDeliveryToPickupSvc } from './index';
 import { db } from '@/db/config';
 import { parcels } from '@/db/schemas';
 import { recordAuditLog } from '@/server/features/audit/logger';
@@ -17,37 +19,11 @@ export async function reprocessRiderReturnForPickupSvc(input: {
   branchId: string;
   actorUserId: string;
 }) {
-  const result = await db.transaction(async (tx) => {
-    await tx
-      .select({ id: parcels.id })
-      .from(parcels)
-      .where(eq(parcels.id, input.parcelId))
-      .for('update');
-    const parcel = await getParcelRepo(input.parcelId, tx);
-    const delivery = await getDeliveryByParcelRepo(input.parcelId, tx);
-    assertRiderReturnReadyForPickup({
-      parcel,
-      delivery,
-      companyId: input.companyId,
-      branchId: input.branchId,
-    });
-    if (!parcel) throw NotFound('Returned parcel not found at this branch');
-    await updateParcelRepo(parcel.id, { status: ParcelStatus.AWAITING_PICKUP }, tx);
-    return { id: parcel.id, trackingCode: parcel.trackingCode };
+  return returnHomeDeliveryToPickupSvc({
+    ...input,
+    permissions: [PermissionKeys.CanDispatchForDelivery],
+    expectedStatus: ParcelStatus.RETURNED_TO_OFFICE,
   });
-  await recordAuditLog({
-    companyId: input.companyId,
-    actorUserId: input.actorUserId,
-    entityType: 'parcel',
-    entityId: result.id,
-    action: 'PARCEL_UPDATED',
-    message: `Rider return ${result.trackingCode} moved to office pickup`,
-    metadata: {
-      patch: { status: ParcelStatus.AWAITING_PICKUP },
-      previous: { status: ParcelStatus.RETURNED_TO_OFFICE },
-    },
-  });
-  return { id: result.id };
 }
 
 async function assertActiveBranchRider(riderUserId: string, companyId: string, branchId: string) {

@@ -1,3 +1,4 @@
+import { draftCustomerRoutes } from './draft-customer.routes';
 import { Elysia, t } from 'elysia';
 import { UUID } from '../../schemas/common';
 import { authPlugin, requireAuth, requirePermissions } from '@/server/plugins/auth';
@@ -13,6 +14,7 @@ import {
 
 export const selfServiceAgentRoutes = new Elysia({ name: 'self-service-agent' })
   .use(authPlugin)
+  .use(draftCustomerRoutes)
   .get('/charge-agent-options', ({ user }) => listParcelChargeAgentOptionsSvc(user!), {
     beforeHandle: [
       requireAuth(),

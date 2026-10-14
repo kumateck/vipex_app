@@ -16,6 +16,8 @@ export const locationsRoutes = new Elysia({ name: 'locations' })
         companyId: query.companyId ?? null,
         branchId: query.branchId ?? null,
         search: query.search ?? null,
+        canSend: query.canSend,
+        canReceive: query.canReceive,
         includeDeleted: query.includeDeleted ?? null,
       }),
     {
@@ -23,6 +25,8 @@ export const locationsRoutes = new Elysia({ name: 'locations' })
         companyId: t.Optional(UUID),
         branchId: t.Optional(UUID),
         search: t.Optional(t.String()),
+        canSend: t.Optional(t.Boolean()),
+        canReceive: t.Optional(t.Boolean()),
         includeDeleted: t.Optional(t.Boolean()),
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadLocations)],
@@ -72,14 +76,25 @@ export const locationsRoutes = new Elysia({ name: 'locations' })
       return res;
     },
     {
-      body: t.Object({ companyId: UUID, branchId: UUID, name: NonEmpty255, createdBy: UUID }),
+      body: t.Object({
+        companyId: UUID,
+        branchId: UUID,
+        name: NonEmpty255,
+        createdBy: UUID,
+        canSend: t.Optional(t.Boolean()),
+        canReceive: t.Optional(t.Boolean()),
+      }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateLocations)],
       detail: { tags: ['Locations'], summary: 'Create location', operationId: 'createLocation' },
     },
   )
   .patch('/:id', async ({ params, body }) => updateLocationSvc(params.id, body), {
     params: t.Object({ id: UUID }),
-    body: t.Object({ name: t.Optional(NonEmpty255) }),
+    body: t.Object({
+      name: t.Optional(NonEmpty255),
+      canSend: t.Optional(t.Boolean()),
+      canReceive: t.Optional(t.Boolean()),
+    }),
     beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanUpdateLocations)],
     detail: { tags: ['Locations'], summary: 'Update location', operationId: 'updateLocation' },
   })

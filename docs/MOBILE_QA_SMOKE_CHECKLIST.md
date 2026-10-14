@@ -180,3 +180,18 @@ and reinstall checks are in [Native Device Registration](DEVICE_REGISTRATION.md)
    without a device credential. With it on, confirm a pending or revoked device cannot sign in or
    restore a session, and an approved device can. See
    [Native Device Registration](DEVICE_REGISTRATION.md).
+
+## Location Services, Charge Agent and Receiving Quotas
+
+- Apply migration `0082` to the test database; verify old locations default to both services.
+- Disable receiving on a sending-only location and confirm it disappears from mobile pickup
+  options, web parcel creation, public self-service and staff completion destination lists.
+- Attempt booking from a receiving-only assigned source; expect a clear error and no new parcel.
+- Enter a charge and select the required charging agent; retry failed agent lookup, reset the
+  form, and confirm missing/foreign/inactive agents cannot submit a valid attributed booking.
+- Scan, search and receive above the request quota, including consignment receive/close;
+  verify authentication, scope, permissions and duplicate scan prevention still work.
+- Verify invalid-token traffic and unrelated parcel updates remain rate limited.
+- On web/desktop Self-Service Bookings, search names/phones/content/status, scroll and paginate;
+  view without completion rights, correct customer details, test saved-profile permissions and
+  stale edits, and verify pricing survives contact edits and completion uses corrected contacts.

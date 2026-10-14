@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { ParcelSearchRow } from '../../api/parcel.api';
+import type { ParcelSearchRow } from '../../../api/parcel.api';
 
 const formatCurrency = (amountPsw: number) => `GHS ${(amountPsw / 100).toFixed(2)}`;
 
