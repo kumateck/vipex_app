@@ -499,6 +499,16 @@ Mobile discrepancy capture supports an expected system parcel that is physically
 - Request, verification, and final action are separate server operations.
 - Verification must be tied to the intended parcel and action; a valid code must not authorize another parcel.
 - OTP failure must leave the parcel and payment state unchanged.
+- The BMS/mNotify integration sends pickup OTP messages with `sms_type: "otp"` and the
+  unscheduled JSON boolean `is_schedule: false`. The company's active default SMS provider
+  and BMS main-wallet funds are separate from branch OTP toggles and ordinary SMS credits.
+- Failed provider dispatch returns HTTP 503 instead of "OTP sent" and expires only the newly
+  generated code. Staff can retry; a previous valid code survives a failed forced resend.
+  Failed-send dispatch logs retain the diagnostic error. See
+  [SMS dispatch diagnostics](NOTIFICATION_HUB_MODULE.md#application-sms-definitions).
+- QA: test success, missing provider/configuration, provider rejection, transport exceptions,
+  retry and failed forced resend; verify unchanged parcel/payment state and five-minute expiry.
+  Automated coverage: `otp-sms-delivery.test.ts`, `sms-provider-payloads.test.ts`.
 
 ## Pickup and Last-Mile Delivery
 

@@ -86,3 +86,14 @@ export async function consumeOtpTokenRepo(id: string) {
     .set({ verificationToken: null, verificationTokenExpiresAt: null })
     .where(eq(parcelReceiverOtps.id, id));
 }
+
+export async function expireFailedParcelReceiverOtpRepo(id: string) {
+  await db
+    .update(parcelReceiverOtps)
+    .set({
+      expiresAt: new Date(),
+      verificationToken: null,
+      verificationTokenExpiresAt: null,
+    })
+    .where(eq(parcelReceiverOtps.id, id));
+}
