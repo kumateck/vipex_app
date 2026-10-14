@@ -331,3 +331,42 @@ QA scenarios:
    message is displayed.
 3. Return a plain-text error body and verify direct-fetch screens show that text.
 4. Simulate an offline or empty response and verify the relevant feature fallback is displayed.
+
+## Location Capabilities and Self-Service Customer Corrections
+
+Location create/update bodies accept optional booleans `canSend` and `canReceive`;
+create defaults to true for each, and omitted update fields retain existing values.
+Location DTOs/options return both flags. `GET /v1/locations/options` accepts optional
+`canSend`/`canReceive` filters. Destination booking clients request `canReceive=true`.
+Selected booking source/destination locations are validated in the booking transaction;
+invalid scope/deleted locations or disabled required services fail with HTTP 400 before
+creation. Migration `0082_location_service_capabilities` must be applied first. See
+[Location services](PLATFORM_AND_ACCESS.md#location-sending-and-receiving-services).
+
+`PATCH /v1/self-service/drafts/:id/customers` requires `CanCompleteSelfServiceBookings`,
+company/branch scope, `sender`/`receiver` (`fullname`, `phone`, nullable/optional `phone2`)
+and `expectedUpdatedAt`. It returns the updated draft. Updating a matching saved customer
+also requires `CanUpdateCustomers`. Invalid names/phones return 400/422, missing/expired
+or foreign drafts return 404, permission failures 401/403, and stale versions, another
+staff member's claim, conflicting customer numbers or finalized drafts return 409.
+Profile, draft and audit writes are atomic; no booking or payment is created. See
+[Staff customer corrections](SELF_SERVICE_BOOKING.md#staff-search-and-customer-corrections).
+
+Authenticated receiving requests bypass the shared request quota: in-transit parcel GET
+searches, parcel details, consignment receiving reads/receive/close, parcel mark-received,
+and PATCH arrival confirmation. Authentication and endpoint permissions still apply;
+other parcel updates and invalid/unsigned/public traffic keep their quotas. See
+[Receiving quotas](MOBILE_FRONTLINE_WORKFLOWS.md#scan-to-receive-request-quotas).
+
+## Receiver OTP Send Failures
+
+`POST /v1/payments/receiver-otp/request` still returns `{ expiresAt }` after successful SMS
+provider acceptance. It now returns HTTP 503 with a diagnostic error if dispatch fails,
+including no active default provider or invalid/missing SMS configuration. The failed newly
+created OTP is expired and cannot block the next request. A previously sent code is retained
+when its forced replacement fails. Existing HTTP 409 behavior for an active OTP without
+`force: true`, receiver/phone validation, branch OTP requirements and verification/payment
+rules are unchanged. This behavior applies to web, desktop and mobile clients using the
+shared endpoint. Notification dispatch logs retain the send failure. Tests:
+`src/server/features/parcel-receiver-otp/otp-sms-delivery.test.ts` and
+`src/server/features/notification-hub/sms-provider-payloads.test.ts`.

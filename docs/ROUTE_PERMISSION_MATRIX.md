@@ -58,3 +58,10 @@ destination-branch scope from authentication and rejects rider/inactive accounts
 permission overrides change. The legacy `returned-to-pickup` endpoint retains its dispatch
 permission and completed-return-only constraint. See
 [Returning home delivery parcels to main-office pickup](PARCEL_OPERATIONS.md#returning-home-delivery-parcels-to-main-office-pickup).
+
+Self-service **View / Edit** permits inspection with `CanReadSelfServiceBookings`;
+`PATCH /self-service/drafts/:id/customers` requires `CanCompleteSelfServiceBookings`.
+Saved matching customer profile changes additionally require `CanUpdateCustomers`.
+Edits are company/branch scoped and reject another officer's claim or a stale draft.
+No page override changes. Location capability controls retain the existing location
+create/update/read permissions. Receiving quota exemptions do not bypass any route guard.

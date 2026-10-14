@@ -102,6 +102,48 @@ Current clients require a selection, offer retry after lookup failure, and block
 there are no available agents. See [Parcel Operations](PARCEL_OPERATIONS.md#agent-who-charged-the-parcel)
 for migration `0080`, deploy order, historical NULL attribution, and production validation.
 
+## Staff Search and Customer Corrections
+
+On web and desktop, **Self-Service Bookings** uses the shared client-mode DataTable with
+search, sorting, pagination, horizontal table scrolling and a viewport-height scroll wrapper.
+The existing branch-scoped draft list is still loaded as an array; this change does not add
+server pagination. Search includes sender/receiver names, both phone numbers, content and
+status. Loading, request failure and empty results are distinct states.
+
+**View / Edit** opens the submitted sender/receiver names, primary phone, backup phone,
+parcel content and value without claiming the draft. Readers can inspect the dialog;
+`CanCompleteSelfServiceBookings` enables correction and the existing Complete action.
+The completion page also has **Edit Customer Details**. Saved corrections refresh the draft
+summary, queue and customer caches. Editing contacts preserves an in-progress charge,
+charge-agent selection, payment responsibility and destination on the completion form.
+Mobile keeps its existing inspection/completion workflow; no new native contact editor or
+DataTable is introduced by this change. The public customer form remains unchanged.
+
+`PATCH /v1/self-service/drafts/:id/customers` accepts `sender` and `receiver` objects
+(`fullname`, `phone`, optional/null `phone2`) plus the currently displayed `expectedUpdatedAt`.
+Names are trimmed and must contain 1–255 characters. Phone separators are removed and
+primary/filled backup numbers must contain exactly ten digits. Blank backup numbers become
+NULL. Corrections are restricted to unexpired Pending/Claimed drafts in the authenticated
+company and branch; another officer's claim, a stale timestamp, or a completed/cancelled
+draft is rejected. The same main number must have consistent sender/receiver details.
+
+An unchanged contact retains its customer link. A changed primary number is resolved against
+active customers in the same company; a new number detaches the previous customer and is
+resolved/created during normal completion. Existing matching customer profile corrections
+also require `CanUpdateCustomers` and update that customer's name/phone information. Numbers
+matching different customers are rejected. Draft and saved-profile changes, including audit
+records, commit or roll back together. There is no payment or parcel creation during editing.
+Historical parcel name snapshots retain their existing behavior.
+
+QA: search large queues and both phone fields; scroll and paginate; inspect without completion
+permission; correct new and saved contacts; verify customer-update permission denial rolls back
+all changes; change a primary number without rewriting the old profile; test invalid phones,
+foreign/expired/completed drafts, another officer's claim, conflicting phone ownership and
+stale edits. Save contacts after entering pricing and verify those fields stay filled. Complete
+and confirm the corrected contacts are attached to the new parcel.
+Coverage: `draft-customer.rules.test.ts`, `self-service-draft-customer.service.spec.ts`.
+The existing completion-orchestration concurrency limitation below remains unchanged.
+
 ## Draft States
 
 | State     | Meaning                                                      |

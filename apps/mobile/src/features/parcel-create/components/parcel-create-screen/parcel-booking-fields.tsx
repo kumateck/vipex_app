@@ -134,7 +134,6 @@ export function ParcelBookingFields({
           placeholder="0.00"
           keyboardType="decimal-pad"
         />
-        <ParcelChargeAgentField {...chargeAgent} />
         <AppLabel>Charge (GHS)</AppLabel>
         <AppInput
           value={charge}
@@ -142,6 +141,7 @@ export function ParcelBookingFields({
           placeholder="0.00"
           keyboardType="decimal-pad"
         />
+        <ParcelChargeAgentField {...chargeAgent} />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ flex: 1 }}>
             <AppLabel>CS — Call Sender before deliver to Receiver</AppLabel>
