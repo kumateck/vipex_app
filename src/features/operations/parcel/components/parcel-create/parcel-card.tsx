@@ -87,7 +87,9 @@ export function ParcelCard({
   const previousBranchId = useRef(destinationBranchId);
 
   const { data: locationOptions = [], isLoading: isLoadingLocations } = useListLocationOptionsQuery(
-    destinationBranchId && companyId ? { companyId, branchId: destinationBranchId } : undefined,
+    destinationBranchId && companyId
+      ? { companyId, branchId: destinationBranchId, canReceive: true }
+      : undefined,
     { skip: !destinationBranchId || !companyId },
   );
 

@@ -25,6 +25,16 @@ export function createLocationColumns(): ColumnDef<Location>[] {
       header: 'Branch',
     },
     {
+      id: 'canSend',
+      header: 'Sending',
+      accessorFn: (row) => (row.canSend === false ? 'No' : 'Yes'),
+    },
+    {
+      id: 'canReceive',
+      header: 'Receiving',
+      accessorFn: (row) => (row.canReceive === false ? 'No' : 'Yes'),
+    },
+    {
       id: 'actions',
       header: 'Action',
       size: 70,

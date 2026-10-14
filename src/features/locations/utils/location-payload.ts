@@ -16,6 +16,8 @@ export function toCreateLocationPayload(
 
   return {
     name: input.name.trim(),
+    canSend: input.canSend ?? true,
+    canReceive: input.canReceive ?? true,
     branchId,
     companyId: context.companyId,
     createdBy: context.createdBy,
@@ -25,5 +27,7 @@ export function toCreateLocationPayload(
 export function toUpdateLocationPayload(input: LocationMutationInput): LocationUpdatePayload {
   return {
     name: input.name.trim(),
+    ...(input.canSend !== undefined ? { canSend: input.canSend } : {}),
+    ...(input.canReceive !== undefined ? { canReceive: input.canReceive } : {}),
   };
 }
