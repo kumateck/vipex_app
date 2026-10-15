@@ -5,3 +5,4 @@ export {
   SELF_SERVICE_SELECT_TRIGGER_CLASS,
   SELF_SERVICE_TEXTAREA_CLASS,
 } from './self-service-field-styles';
+export { getSelfServiceParcelError } from './self-service-parcel-validation';

@@ -5,7 +5,7 @@ All paths are relative to `/v1`.
 ## Identity and Master Data
 
 - `/auth`: login, refresh, logout, invitation setup, forgot/reset password, change password, and current-password verification.
-- `/auth/devices`: native device registration/status, authenticated access-policy check, and head-office review. Approval enforcement follows the company's `device_verification` module; see [Native Device Registration](../DEVICE_REGISTRATION.md).
+- `/auth/devices`: native device registration/status, authenticated access-policy check, and review by `CanApproveRegisteredDevices` holders (head-office `CanUpdateUsers` fallback). Approval enforcement follows the company's `device_verification` module; see [Native Device Registration](../DEVICE_REGISTRATION.md).
 - `/users`: user list/detail/create/update, invitation flows, password-management options, and System Admin password assignment.
 - `/rbac`: roles, permissions, and permission assignment.
 - `/branches`: branch master data and pickup/receiver OTP controls.

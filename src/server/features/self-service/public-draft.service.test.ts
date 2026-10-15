@@ -9,7 +9,6 @@ const baseInput = {
   destinationBranchId: 'destination-id',
   parcelContent: 'Books',
   parcelValueCedis: 50,
-  callSender: false,
   sessionToken: 'session-token',
 };
 

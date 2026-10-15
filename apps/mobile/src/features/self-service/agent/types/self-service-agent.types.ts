@@ -1,5 +1,6 @@
 export type SelfServiceDraft = {
   id: string;
+  branchId: string;
   status: number;
   senderFullname: string;
   senderPhone: string;
@@ -16,6 +17,7 @@ export type SelfServiceDraft = {
   claimedBy: string | null;
   claimedAt: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 export type CompleteSelfServiceDraftInput = {
@@ -34,4 +36,17 @@ export type CompleteSelfServiceDraftInput = {
 export type CompleteSelfServiceDraftResponse = {
   bookingId: string;
   parcels: Array<{ id: string; trackingCode: string; bookingCode: string }>;
+};
+
+export type SelfServiceContactInput = { fullname: string; phone: string; phone2: string | null };
+
+export type UpdateSelfServiceDraftInput = {
+  id: string;
+  expectedUpdatedAt: string;
+  sender: SelfServiceContactInput;
+  receiver: SelfServiceContactInput;
+  destinationBranchId: string;
+  destinationLocationId: string | null;
+  parcelContent: string;
+  parcelValueCedis: string;
 };

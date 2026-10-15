@@ -8,11 +8,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { limitPhoneDigits } from '@/lib/phone';
 import type { SelfServiceDraft } from '../api/self-service-agent.api';
-import { useSelfServiceCustomerEditor } from '../hooks';
+import { useSelfServiceDraftEditor } from '../hooks';
 
-export function SelfServiceCustomerDialog({
+export function SelfServiceDraftDialog({
   draft,
   canEdit,
   onClose,
@@ -21,7 +22,8 @@ export function SelfServiceCustomerDialog({
   canEdit: boolean;
   onClose: () => void;
 }) {
-  const state = useSelfServiceCustomerEditor(draft, onClose);
+  const state = useSelfServiceDraftEditor(draft, onClose);
+  const disabled = !canEdit || state.isSaving;
   return (
     <Dialog
       open
@@ -31,11 +33,8 @@ export function SelfServiceCustomerDialog({
     >
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Customer Details</DialogTitle>
+          <DialogTitle>Booking Details</DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          {draft.parcelContent} · GH₵{(draft.parcelValuePsw / 100).toFixed(2)}
-        </p>
         {(['sender', 'receiver'] as const).map((role) => (
           <div key={role} className="space-y-3 rounded-md border p-3">
             <h3 className="font-medium">{role === 'sender' ? 'Sender' : 'Receiver'}</h3>
@@ -51,7 +50,7 @@ export function SelfServiceCustomerDialog({
                 <Input
                   id={`${role}-${field}`}
                   value={state[role][field]}
-                  disabled={!canEdit || state.isSaving}
+                  disabled={disabled}
                   maxLength={field === 'fullname' ? 255 : 10}
                   inputMode={field === 'fullname' ? 'text' : 'tel'}
                   onChange={(event) =>
@@ -68,9 +67,37 @@ export function SelfServiceCustomerDialog({
             ))}
           </div>
         ))}
+        <div className="space-y-3 rounded-md border p-3">
+          <h3 className="font-medium">Parcel</h3>
+          <div className="space-y-1">
+            <Label htmlFor="parcel-content">Contents</Label>
+            <Textarea
+              id="parcel-content"
+              value={state.parcel.content}
+              disabled={disabled}
+              maxLength={255}
+              onChange={(event) => state.onParcelChange('content', event.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="parcel-value">Declared value (GH₵)</Label>
+            <Input
+              id="parcel-value"
+              value={state.parcel.value}
+              disabled={disabled}
+              inputMode="decimal"
+              placeholder="0.00"
+              onChange={(event) => state.onParcelChange('value', event.target.value)}
+            />
+          </div>
+          {canEdit && state.parcelError ? (
+            <p className="text-xs text-destructive">{state.parcelError}</p>
+          ) : null}
+        </div>
         {canEdit ? (
           <p className="text-xs text-muted-foreground">
-            Changing an existing saved customer requires customer update permission.
+            Changing an existing saved customer requires customer update permission. The destination
+            is chosen on the completion form.
           </p>
         ) : null}
         <DialogFooter>
@@ -78,7 +105,10 @@ export function SelfServiceCustomerDialog({
             Close
           </Button>
           {canEdit ? (
-            <Button disabled={state.isSaving} onClick={() => void state.onSave()}>
+            <Button
+              disabled={state.isSaving || Boolean(state.parcelError)}
+              onClick={() => void state.onSave()}
+            >
               {state.isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
           ) : null}

@@ -1065,11 +1065,6 @@ const BASE_ROUTES: Route[] = [
             url: '/users/password-management',
             permissionKey: PermissionKeys.CanSetUserPassword,
           },
-          {
-            title: 'Registered Devices',
-            url: '/users/devices',
-            permissionKey: PermissionKeys.CanUpdateUsers,
-          },
         ],
       },
       {
@@ -1138,6 +1133,11 @@ const BASE_ROUTES: Route[] = [
             title: 'Printer Routing',
             url: '/settings/printer-routing',
             permissionKey: PermissionKeys.CanManagePrinterRouting,
+          },
+          {
+            title: 'Device Approvals',
+            url: '/settings/devices',
+            permissionKey: PermissionKeys.CanApproveRegisteredDevices,
           },
           {
             title: 'Branch Management',

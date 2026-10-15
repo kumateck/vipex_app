@@ -26,7 +26,11 @@ import {
   setPasswordAndActivateUserRepo,
   setUserResetTokenRepo,
 } from './repository.tokens';
-import { requireApprovedDeviceSvc, type DeviceCredential } from './device.service';
+import {
+  findApprovedDeviceSvc,
+  requireApprovedDeviceSvc,
+  type DeviceCredential,
+} from './device.service';
 import { touchDeviceRepo } from './device.repository';
 import { isDeviceVerificationRequired } from './device-policy';
 
@@ -58,10 +62,13 @@ export async function loginSvc(
     throw new HttpError(HttpStatus.FORBIDDEN, 'Account disabled');
   const ok = await verifyPassword(password, user?.password);
   if (!ok) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Invalid credentials');
-  const device =
-    client && (await isDeviceVerificationRequired(user.companyId))
+  // Enforced: an approved device is required. Not enforced: link an already-approved device so
+  // enabling the module later keeps this session, but never block sign-in.
+  const device = !client
+    ? null
+    : (await isDeviceVerificationRequired(user.companyId))
       ? await requireApprovedDeviceSvc(deviceCredential ?? null, user.id, client)
-      : null;
+      : await findApprovedDeviceSvc(deviceCredential ?? null, user.id, client);
   if (device) await touchDeviceRepo(device.id);
   const permissionKeys = await listRolePermissionKeysRepo(user.roleId, user.companyId);
   const refreshPlain = generateOpaqueToken(32);
@@ -143,6 +150,11 @@ export async function refreshSvc(
     }
     await touchDeviceRepo(device.id);
   }
+  // Not enforced yet: attach an approved device to an unlinked native session on refresh.
+  const bindDevice =
+    !verificationRequired && client && !current.deviceId
+      ? await findApprovedDeviceSvc(deviceCredential ?? null, current.userId, client)
+      : null;
 
   const permissionKeys =
     Array.isArray(current.permissionsSnapshot) && current.permissionsSnapshot.length > 0
@@ -154,7 +166,13 @@ export async function refreshSvc(
   const nextHash = await sha256HexAsync(nextPlain);
   const refreshExpSec = parseDurationToSeconds(env.JWT_REFRESH_EXPIRES);
   const nextExpiresAt = new Date(Date.now() + refreshExpSec * 1000);
-  const rotated = await rotateRefreshTokenRepo(hash, nextHash, nextExpiresAt, permissionKeys);
+  const rotated = await rotateRefreshTokenRepo(
+    hash,
+    nextHash,
+    nextExpiresAt,
+    permissionKeys,
+    bindDevice?.id,
+  );
   if (!rotated) throw new HttpError(HttpStatus.UNAUTHORIZED, 'Token revoked');
 
   const nextRefresh = await findRefreshTokenRepo(nextHash);

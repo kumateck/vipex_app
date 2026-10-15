@@ -148,6 +148,11 @@ and reinstall checks are in [Native Device Registration](DEVICE_REGISTRATION.md)
      expiry, and claim status.
    - With completion permission, open an available draft and confirm it is claimed before the
      completion form appears; with read-only permission, confirm opening does not claim it.
+   - Search by sender name, receiver name and a phone typed with spaces; confirm no-match text.
+   - With completion permission, tap **Edit booking details**, change contacts, destination
+     branch/location, contents and value, save, and confirm the summary and completed parcel use
+     the corrections while charge and CS choices are kept. Confirm invalid phones or value block
+     save, and that changing a saved customer without `CanUpdateCustomers` shows the server error.
    - Complete sender/receiver/split pay-now drafts.
    - Confirm concurrent claim and expired draft errors do not create bookings.
 6. Call center:
@@ -193,5 +198,6 @@ and reinstall checks are in [Native Device Registration](DEVICE_REGISTRATION.md)
   verify authentication, scope, permissions and duplicate scan prevention still work.
 - Verify invalid-token traffic and unrelated parcel updates remain rate limited.
 - On web/desktop Self-Service Bookings, search names/phones/content/status, scroll and paginate;
-  view without completion rights, correct customer details, test saved-profile permissions and
-  stale edits, and verify pricing survives contact edits and completion uses corrected contacts.
+  view without completion rights, correct customer details, contents and declared value, test
+  saved-profile permissions and stale edits, and verify pricing survives edits and completion uses
+  the corrected contacts, contents and value.

@@ -339,6 +339,19 @@ export function mobileApiPost<T>(input: {
   });
 }
 
+export function mobileApiPatch<T>(input: {
+  path: string;
+  token: string;
+  body: unknown;
+}): Promise<T> {
+  return request<T>({
+    path: input.path,
+    method: 'PATCH',
+    token: input.token,
+    body: input.body,
+  });
+}
+
 export function mobileApiDelete<T>(input: { path: string; token: string }): Promise<T> {
   return request<T>({ path: input.path, method: 'DELETE', token: input.token });
 }
