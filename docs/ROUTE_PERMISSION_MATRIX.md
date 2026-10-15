@@ -25,8 +25,10 @@ Details-only edits retain the workflow permission without a customer-update gran
 
 Each listed route is guarded by its exact override permission. Routes without an exact override use the application's shared path-access resolution and server endpoint authorization. Navigation visibility is not authorization: the server must still enforce permission, module, company, branch, and domain-assignment rules.
 
-`/users/devices` uses shared path-access resolution for `CanUpdateUsers`, requires the
-`device_verification` company module, and is restricted to head office by its page and API.
+`/settings/devices` (Device Approvals, under Platform Configuration) requires
+`CanApproveRegisteredDevices`; path access also admits `CanUpdateUsers` so the page can apply the
+temporary head-office fallback, which the page and API enforce. It does not require the
+`device_verification` module, so devices can be approved before verification is enabled. `/users/devices` redirects to `/settings/devices`.
 See [Native Device Registration](DEVICE_REGISTRATION.md).
 
 Storage clearance history at `/parcels/storage-clearances` also accepts request, approve, or

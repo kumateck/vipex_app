@@ -15,10 +15,10 @@ export function DeviceRow({ device, currentUserId, onAction }: Props) {
   );
   return (
     <div className="flex flex-wrap items-start justify-between gap-4 rounded-md border p-4">
-      <div className="space-y-1">
+      <div className="min-w-0 space-y-1 break-words">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-semibold">{device.deviceName}</span>
-          <Badge variant="outline">{device.kind}</Badge>
+          <Badge variant="outline">{device.kind === 'mobile' ? 'Mobile app' : 'Desktop app'}</Badge>
           <Badge variant={device.status === 'approved' ? 'default' : 'secondary'}>
             {device.status.replaceAll('_', ' ')}
           </Badge>

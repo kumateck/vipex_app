@@ -132,6 +132,7 @@ export async function rotateRefreshTokenRepo(
   nextHash: string,
   nextExpires: Date,
   permissionsSnapshot: string[],
+  bindDeviceId?: string | null,
 ) {
   return db.transaction(async (tx) => {
     const [previous] = await tx
@@ -142,7 +143,7 @@ export async function rotateRefreshTokenRepo(
     if (!previous) return false;
     await tx.insert(refreshTokens).values({
       userId: previous.userId,
-      deviceId: previous.deviceId,
+      deviceId: previous.deviceId ?? bindDeviceId ?? null,
       tokenHash: nextHash,
       expiresAt: nextExpires,
       permissionsSnapshot,

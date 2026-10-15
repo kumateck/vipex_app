@@ -57,9 +57,10 @@ Native device registration is documented in [Native device registration](DEVICE_
 `POST /v1/auth/devices/register` verifies staff credentials and returns a pending device ID and
 one-time secret. `GET /v1/auth/devices/status` accepts device credential headers.
 `GET /v1/auth/devices/access` requires a bearer token and returns whether the company's
-`device_verification` module is enabled after checking native access. Head-office
-users with `CanUpdateUsers` use `GET /v1/auth/devices/` and
-`POST /v1/auth/devices/:id/review` to approve, revoke, block, unblock, or permanently deny.
+`device_verification` module is enabled after checking native access. Users with
+`CanApproveRegisteredDevices` (or, as a temporary fallback, head-office users with
+`CanUpdateUsers`) use `GET /v1/auth/devices/` and `POST /v1/auth/devices/:id/review` to approve,
+revoke, block, unblock, or permanently deny; others receive 403.
 Native login/refresh and bound authenticated requests require the matching approved credential
 only while that company module is enabled; otherwise native sign-in proceeds without registration.
 Desktop clients retry `GET /v1/auth/devices/access` after refreshing an expired access token.

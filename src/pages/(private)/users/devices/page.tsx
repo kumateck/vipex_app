@@ -1,1 +1,5 @@
-export { DeviceManagementPage as default } from '@/features/security/device-management';
+import { Navigate } from 'react-router-dom';
+
+export default function RegisteredDevicesLegacyRedirectPage() {
+  return <Navigate to="/settings/devices" replace />;
+}

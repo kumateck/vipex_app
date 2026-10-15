@@ -7,7 +7,9 @@ test('device verification is an optional company module', () => {
   const module = DEFAULT_MODULE_CATALOG.find((entry) => entry.code === DEVICE_VERIFICATION_MODULE);
   expect(module?.isActive).toBe(true);
   expect(module?.isCore).toBe(false);
-  expect(inferRequiredModuleByPath('/users/devices')).toBe(DEVICE_VERIFICATION_MODULE);
+  // Approval pages stay open while verification is off so devices can be pre-approved.
+  expect(inferRequiredModuleByPath('/users/devices')).toBeFalsy();
+  expect(inferRequiredModuleByPath('/settings/devices')).toBeFalsy();
 });
 
 test('approval is required only for companies with the module enabled', async () => {

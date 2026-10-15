@@ -6,11 +6,36 @@
 with `CanManageCompanyModules` enables it in Company Modules. When disabled, mobile and desktop
 staff can sign in, refresh, and use authenticated APIs without a registered device; an existing
 blocked or pending credential does not prevent a new sign-in. When enabled, the approval checks
-below apply immediately. Registration can still be requested while the module is off to prepare
-for enablement, but its pending status does not gate access. Browser sign-in is unchanged in
-either state.
+below apply immediately. Browser sign-in is unchanged in either state.
 
-Mobile and Electron desktop installations present **Register this device** on the sign-in screen.
+### Pre-registration while the module is off
+
+Devices can be registered and reviewed at any time; nothing takes effect until the module is
+enabled. This lets a company register and approve every production device first, then enable
+verification without interrupting operations:
+
+- Registration, the Device Approvals page and the list/review API work whether the module is on
+  or off. A pending, revoked or blocked registration never affects sign-in while it is off.
+- While off, sign-in and refresh link the native session to the device only when the app sends a
+  credential that is already **approved** for that account and client kind. An unknown,
+  unapproved or mismatched credential is ignored, never rejected. Sessions linked this way keep
+  working when the module is enabled; native sessions without a linked approved device must sign
+  in again after enablement.
+- While off, revoke, block and permanent denial only record the status. They do not end refresh
+  sessions or close communication sockets; those cuts happen only while the module is enabled.
+  A linked session whose device is no longer approved is rejected as soon as the module is on.
+
+Signed-in users whose app has no stored device credential see a **register** icon in the header:
+in the desktop app it sits beside the sidebar (panel) toggle; in the mobile app it sits left of
+the dashboard menu button. Tapping it asks for the account password (email pre-filled, read-only)
+and registers the device. The icon disappears once a credential is stored, whatever its status.
+
+Only the mobile app (`kind = mobile`) and the Electron desktop app (`kind = desktop`) register;
+ordinary browsers never do. Mobile shows an outlined **Register this device** button under
+**Continue securely** on the sign-in card, enabled once email and password are entered, plus a
+**Check approval status** link. After registering or checking, the card explains the status in
+plain words (waiting for approval, approved, revoked, blocked or permanently denied). Electron
+desktop presents the same register and status actions on its sign-in screen.
 The staff member supplies their account email and password. The server verifies the account and
 creates a pending device registration, then returns a one-time opaque credential. Android/iOS
 store it in the OS keychain; Electron encrypts it with the OS secure-storage service in its
@@ -22,9 +47,17 @@ operating system/version, app version when available, request user-agent/IP, req
 reviewer, reason, and last sign-in or refresh time. Metadata is informational, not proof of
 device identity. Users can check approval status before signing in.
 
-The head-office `/users/devices` page is available only while the module is enabled, lists only
-the current company, and requires `CanUpdateUsers`. An approver cannot approve their own
-registration. Approval allows native sign-in while the module is enabled. Pending, revoked,
+**Platform Configuration → Device Approvals** (`/settings/devices`) is available whether the
+module is on or off and lists only the current company. It requires the dedicated
+`CanApproveRegisteredDevices` permission (Platform group, assigned in Manage Roles; no role
+receives it automatically). As a temporary fallback, head-office users with `CanUpdateUsers` keep
+access until administrators assign the new permission; the same rule
+(`canApproveRegisteredDevices` in `src/shared/permissions/device-approval.ts`) is enforced by the
+page and the list/review API. The old `/users/devices` URL redirects to `/settings/devices`.
+The page opens on **Pending** and has Pending, Approved, Revoked & blocked, and All tabs with
+counts; rows label each request **Mobile app** or **Desktop app** and wrap for narrow desktop
+windows. Approval is done on web or the desktop app; the mobile app has no approval screen.
+An approver cannot approve their own registration. Approval allows native sign-in while the module is enabled. Pending, revoked,
 blocked, and permanently denied registrations cannot sign in while it is enabled.
 An approved registration can be revoked or blocked. Revoked registrations can be approved again.
 Unblocking a blocked registration returns it to **pending**, not approved. Permanent denial is
@@ -72,9 +105,10 @@ desktop header allow-list also covers matching `ws://`/`wss://` communication up
 - Desktop clients retry this check after a shared refresh on 401. A second 401 or a confirmed
   invalid refresh session ends access. A temporary connection/server failure blocks the screen
   with Retry and keeps local credentials; it must not be interpreted as revocation.
-- Review by a user outside head office or without `CanUpdateUsers`: 403. Cross-company or
+- List/review without `CanApproveRegisteredDevices` and without the head-office `CanUpdateUsers`
+  fallback: 403 ("Registered device approval permission is required"). Cross-company or
   missing device: 404. Self-approval: 403. Invalid/stale status transition: 409. Missing reason
-  for revoke/block/permanent denial: 400. Review/list routes return 403 when the module is off.
+  for revoke/block/permanent denial: 400. Review/list routes work while the module is off.
 - Secure storage unavailable on desktop: registration fails closed; no plaintext fallback.
 - The device credential is not returned in list/review responses and must never be logged.
 
@@ -85,8 +119,10 @@ Publish the updated mobile and desktop binaries before enabling this module. Exi
 sessions issued while verification was off are not device-bound; enabling the module rejects
 them and requires a new login after approval. An older app without the new
 client header can still use the browser-style sign-in path. Revoke pre-rollout sessions during
-the enforcement cutover and retire unsupported native versions. Keep a head-office browser
-session available to approve the first native registrations after enabling; browser sign-in does
+the enforcement cutover and retire unsupported native versions. Recommended cutover: while the module is
+off, have staff register each device (header icon or sign-in screen), approve them on Device
+Approvals, let the apps sign in or refresh so sessions link to approved devices, then enable the
+module. Keep a browser session with approval rights available for late registrations; browser sign-in does
 not require device approval. The backend cannot establish
 that a client is truly native merely from a user-agent or header; a modified client can claim
 to be a browser. Physical-device prohibition across reinstall or copied credentials requires
@@ -98,8 +134,9 @@ future requests still require explicit approval. Do not describe this as biometr
 
 1. On both native clients, register with correct credentials; verify status is pending, no
    native login succeeds, and metadata appears only in the correct company queue.
-2. Approve from a different head-office user with `CanUpdateUsers`; verify login and protected
-   requests work. Attempt self-approval and cross-company review; both must fail.
+2. Approve from a different user holding `CanApproveRegisteredDevices` (from any branch) and,
+   separately, from a head-office `CanUpdateUsers` user (fallback); verify login and protected
+   requests work. A branch user with only `CanUpdateUsers` must get 403 and the permission notice. Attempt self-approval and cross-company review; both must fail.
 3. Revoke or block an active device and verify its next protected request and refresh fail
    without waiting for access-token expiry. Reapprove a revoked device; unblock a blocked one
    and verify it stays pending until approved.
@@ -130,3 +167,11 @@ future requests still require explicit approval. Do not describe this as biometr
     endpoint. Verify protected content is hidden, Retry is available, and credentials remain.
     Restore connectivity and verify Retry succeeds without another login. Repeat with a revoked
     device or invalid refresh token and verify access remains denied and login is cleared.
+15. Confirm Device Approvals appears under Platform Configuration (not User Management), that
+    `/users/devices` redirects to it, that tabs filter and count correctly, and that the mobile
+    Register button stays disabled until email and password are entered.
+16. With the module off, register mobile and desktop devices (login screen and header icon),
+    approve some and block one; confirm nobody is signed out and sign-in still works for all.
+    Sign in or let the app refresh, enable the module, and confirm approved linked sessions keep
+    working, unlinked or blocked ones must re-register or sign in again, and the header icon is
+    hidden on registered devices.

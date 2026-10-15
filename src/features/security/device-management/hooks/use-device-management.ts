@@ -1,20 +1,25 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { BranchType } from '@/db/schemas/enums';
-import { PermissionKeys } from '@/shared/permissions/constants';
+import { canApproveRegisteredDevices } from '@/shared/permissions/device-approval';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   useListRegisteredDevicesQuery,
   useReviewRegisteredDeviceMutation,
 } from '../services/device-management.api';
 import type { RegisteredDevice, ReviewAction } from '../types/device-management.types';
+import { countDevicesByFilter, filterDevices, type DeviceFilter } from '../utils/device-filters';
 
 export function useDeviceManagement() {
   const user = useAuthStore((state) => state.user);
-  const allowed =
-    user?.branch?.type === BranchType.HEADOFFICE &&
-    user.permissions?.includes(PermissionKeys.CanUpdateUsers);
+  const allowed = canApproveRegisteredDevices({
+    permissions: user?.permissions,
+    branchType: user?.branch?.type,
+  });
   const query = useListRegisteredDevicesQuery(undefined, { skip: !allowed });
+  const [filter, setFilter] = useState<DeviceFilter>('pending');
+  const allDevices = useMemo(() => query.data ?? [], [query.data]);
+  const devices = useMemo(() => filterDevices(allDevices, filter), [allDevices, filter]);
+  const counts = useMemo(() => countDevicesByFilter(allDevices), [allDevices]);
   const [review, mutation] = useReviewRegisteredDeviceMutation();
   const [selection, setSelection] = useState<{
     device: RegisteredDevice;
@@ -35,7 +40,10 @@ export function useDeviceManagement() {
   return {
     allowed,
     userId: user?.id,
-    devices: query.data ?? [],
+    devices,
+    counts,
+    filter,
+    setFilter,
     isLoading: query.isLoading,
     isError: query.isError,
     refetch: query.refetch,
