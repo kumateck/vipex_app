@@ -3,11 +3,13 @@ import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import {
   type SelfServiceDraft,
-  useUpdateSelfServiceDraftCustomersMutation,
+  useUpdateSelfServiceDraftMutation,
 } from '../api/self-service-agent.api';
+import { getSelfServiceParcelError } from '../utils';
 
 type Contact = { fullname: string; phone: string; phone2: string };
-export function useSelfServiceCustomerEditor(draft: SelfServiceDraft, onClose: () => void) {
+type Parcel = { content: string; value: string };
+export function useSelfServiceDraftEditor(draft: SelfServiceDraft, onClose: () => void) {
   const [sender, setSender] = useState<Contact>(() => ({
     fullname: draft.senderFullname,
     phone: draft.senderPhone,
@@ -18,23 +20,32 @@ export function useSelfServiceCustomerEditor(draft: SelfServiceDraft, onClose: (
     phone: draft.receiverPhone,
     phone2: draft.receiverPhone2 ?? '',
   }));
-  const [save, { isLoading: isSaving }] = useUpdateSelfServiceDraftCustomersMutation();
+  const [parcel, setParcel] = useState<Parcel>(() => ({
+    content: draft.parcelContent,
+    value: String(draft.parcelValuePsw / 100),
+  }));
+  const [save, { isLoading: isSaving }] = useUpdateSelfServiceDraftMutation();
+  const parcelError = getSelfServiceParcelError(parcel);
   const onChange = (role: 'sender' | 'receiver', field: keyof Contact, value: string) =>
     (role === 'sender' ? setSender : setReceiver)((current) => ({ ...current, [field]: value }));
+  const onParcelChange = (field: keyof Parcel, value: string) =>
+    setParcel((current) => ({ ...current, [field]: value }));
   const onSave = async () => {
-    if (isSaving) return;
+    if (isSaving || parcelError) return;
     try {
       await save({
         id: draft.id,
         expectedUpdatedAt: draft.updatedAt,
         sender: { ...sender, phone2: sender.phone2 || null },
         receiver: { ...receiver, phone2: receiver.phone2 || null },
+        parcelContent: parcel.content.trim(),
+        parcelValueCedis: parcel.value.replace(/,/g, '').trim(),
       }).unwrap();
-      toast.success('Customer details updated');
+      toast.success('Booking details updated');
       onClose();
     } catch (error) {
-      toast.error(getErrorMessage(error, '') || 'Failed to update customer details');
+      toast.error(getErrorMessage(error, '') || 'Failed to update booking details');
     }
   };
-  return { sender, receiver, onChange, onSave, isSaving };
+  return { sender, receiver, parcel, parcelError, onChange, onParcelChange, onSave, isSaving };
 }

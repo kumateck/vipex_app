@@ -8,9 +8,14 @@ import {
 } from '@mobile/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
-import type { CompleteSelfServiceDraftInput, SelfServiceDraft } from '../../types';
+import type {
+  CompleteSelfServiceDraftInput,
+  SelfServiceDraft,
+  UpdateSelfServiceDraftInput,
+} from '../../types';
 import { useSelfServiceCompletionForm } from '../../hooks';
 import { ParcelChargeAgentField } from '@mobile/features/parcel-create/components/parcel-create-screen';
+import { SelfServiceDraftSummary } from './self-service-draft-summary';
 
 type Props = {
   draft: SelfServiceDraft;
@@ -19,6 +24,7 @@ type Props = {
   onBack: () => void;
   onClaim: () => Promise<void>;
   onComplete: (input: CompleteSelfServiceDraftInput) => Promise<unknown>;
+  onUpdateDraft: (input: UpdateSelfServiceDraftInput) => Promise<boolean>;
 };
 
 const PAYMENT_OPTIONS = [
@@ -34,6 +40,7 @@ export function SelfServiceCompletionForm({
   onBack,
   onClaim,
   onComplete,
+  onUpdateDraft,
 }: Props) {
   const { theme } = useAppearance();
   const {
@@ -54,18 +61,12 @@ export function SelfServiceCompletionForm({
 
   return (
     <>
-      <AppCard>
-        <Text style={[styles.title, { color: theme.colors.text }]}>Complete booking</Text>
-        <Text style={[styles.text, { color: theme.colors.textMuted }]}>
-          Sender: {draft.senderFullname} · {draft.senderPhone}
-        </Text>
-        <Text style={[styles.text, { color: theme.colors.textMuted }]}>
-          Receiver: {draft.receiverFullname} · {draft.receiverPhone}
-        </Text>
-        <Text style={[styles.text, { color: theme.colors.textMuted }]}>
-          Declared value: GHS {(draft.parcelValuePsw / 100).toFixed(2)}
-        </Text>
-      </AppCard>
+      <SelfServiceDraftSummary
+        draft={draft}
+        saving={saving}
+        canEdit={canComplete && Boolean(draft.claimedBy)}
+        onUpdateDraft={onUpdateDraft}
+      />
 
       {!canComplete ? (
         <Text style={[styles.text, { color: theme.colors.textSubtle }]}>
@@ -99,7 +100,8 @@ export function SelfServiceCompletionForm({
             <View style={styles.callSenderText}>
               <AppLabel>CS — Call Sender before deliver to Receiver</AppLabel>
               <Text style={[styles.text, { color: theme.colors.textMuted }]}>
-                The receiver details stay on the sticker. Officers may change this choice.
+                Turn on if the sender asked to be called before the receiver gets the parcel. CS is
+                marked on the sticker.
               </Text>
             </View>
             <Switch value={callSender} onValueChange={setCallSender} />
@@ -137,7 +139,6 @@ export function SelfServiceCompletionForm({
 }
 
 const styles = StyleSheet.create({
-  title: { ...mobileTextStyles.title3 },
   text: { ...mobileTextStyles.subhead },
   spacer: { marginTop: mobileSpacing.xs },
   callSenderRow: { flexDirection: 'row', alignItems: 'center', gap: mobileSpacing.sm },

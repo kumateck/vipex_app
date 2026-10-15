@@ -1,8 +1,9 @@
-import { mobileApiGet, mobileApiPost } from '@mobile/lib/api';
+import { mobileApiGet, mobileApiPatch, mobileApiPost } from '@mobile/lib/api';
 import type {
   CompleteSelfServiceDraftInput,
   CompleteSelfServiceDraftResponse,
   SelfServiceDraft,
+  UpdateSelfServiceDraftInput,
 } from '../types/self-service-agent.types';
 
 export const listSelfServiceDrafts = (token: string) =>
@@ -15,6 +16,15 @@ export function completeSelfServiceDraft(token: string, input: CompleteSelfServi
   const { id, ...body } = input;
   return mobileApiPost<CompleteSelfServiceDraftResponse>({
     path: `/self-service/drafts/${id}/complete`,
+    token,
+    body,
+  });
+}
+
+export function updateSelfServiceDraft(token: string, input: UpdateSelfServiceDraftInput) {
+  const { id, ...body } = input;
+  return mobileApiPatch<SelfServiceDraft>({
+    path: `/self-service/drafts/${id}`,
     token,
     body,
   });

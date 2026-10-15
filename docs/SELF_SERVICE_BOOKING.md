@@ -37,10 +37,12 @@ A draft can contain:
 - Receiver identity and contact details.
 - Destination branch or location.
 - Parcel description, quantity, value, and other supported booking details.
-- The `callSender` operational instruction.
-- The customer-facing **CS — Call Sender before deliver to Receiver** option keeps the receiver's
-  name and telephone on the booking and sticker. It instructs staff to call the sender before
-  handover; it does not replace the receiver contact or block receiving.
+- The `callSender` operational instruction (**CS — Call Sender before deliver to Receiver**).
+  Customers do not choose CS on the public form. New public drafts are always stored with
+  `callSender = false`; the completing officer sets CS on the **Self-Service Bookings** completion
+  form. A `callSender` value sent by an older cached public client is accepted but ignored. CS keeps
+  the receiver's name and telephone on the booking and sticker. It instructs staff to call the
+  sender before handover; it does not replace the receiver contact or block receiving.
 - The accepted terms version and server-recorded acceptance time.
 - Branch and session attribution.
 - Creation and expiry timestamps.
@@ -71,8 +73,10 @@ Authenticated agents use permission-controlled routes to:
    explicit required selection on web, desktop, and mobile; it may differ from the completing
    officer. The resulting parcel stores `chargeAgentUserId`, separate from `createdBy` and
    `processedBy`. The public draft form does not select a staff agent.
-   The officer can keep or change the draft's CS checkbox while entering the charge. Omitted CS
-   on older completion clients retains the customer's draft choice; an explicit `false` clears it.
+   The officer ticks the CS checkbox (web) or switch (mobile) while entering the charge when the
+   sender asked to be called before handover; it starts unticked for new drafts. Drafts submitted
+   before customer CS was removed may still start ticked. Omitted CS on older completion clients
+   retains the draft value; an explicit `false` clears it.
 5. Choose payment responsibility: sender, receiver, or split.
 6. Choose settlement such as pay now or approved credit, including supported partial settlement.
 7. Complete the draft into the normal parcel workflow.
@@ -91,7 +95,8 @@ draft claims it before the completion form is shown. It supports sender, receive
 responsibility. Credit completion remains desktop-only until mobile exposes the same customer credit
 eligibility and cashier-session context. See
 [Mobile Frontline Workflows](MOBILE_FRONTLINE_WORKFLOWS.md).
-Both web and mobile completion forms expose the editable CS choice, prefilled from the draft.
+Both web and mobile completion forms expose the editable CS choice, prefilled from the stored draft
+value (false for drafts created after customer CS was removed).
 
 `GET /v1/self-service/charge-agent-options` requires `CanCompleteSelfServiceBookings` and returns
 only `{ id, fullname }` for active users in the authenticated company and source branch. It does
@@ -110,14 +115,33 @@ The existing branch-scoped draft list is still loaded as an array; this change d
 server pagination. Search includes sender/receiver names, both phone numbers, content and
 status. Loading, request failure and empty results are distinct states.
 
-**View / Edit** opens the submitted sender/receiver names, primary phone, backup phone,
-parcel content and value without claiming the draft. Readers can inspect the dialog;
-`CanCompleteSelfServiceBookings` enables correction and the existing Complete action.
-The completion page also has **Edit Customer Details**. Saved corrections refresh the draft
-summary, queue and customer caches. Editing contacts preserves an in-progress charge,
-charge-agent selection, payment responsibility and destination on the completion form.
-Mobile keeps its existing inspection/completion workflow; no new native contact editor or
-DataTable is introduced by this change. The public customer form remains unchanged.
+**View / Edit** opens the **Booking Details** dialog with the submitted sender/receiver names,
+primary phone, backup phone, parcel contents and declared value without claiming the draft.
+Readers can inspect the dialog; `CanCompleteSelfServiceBookings` enables correction and the
+existing Complete action. The completion page also has **Edit Booking Details**, opening the
+same dialog. Contents must not be blank and the declared value must be a non-negative number
+(commas allowed) before **Save Changes** is enabled. Web saves through
+`PATCH /v1/self-service/drafts/:id` without `destinationBranchId`, so the draft destination is
+kept; the destination is still chosen on the completion form. Saved corrections refresh the draft
+summary, queue and customer caches, and completion uses the corrected contents and value.
+Editing preserves an in-progress charge, charge-agent selection, payment responsibility and
+destination on the completion form.
+The public customer form remains unchanged.
+
+On mobile, **Self-Service Bookings** has a search field above the draft cards. It filters the
+already-loaded branch list on the device (no server search) by sender or receiver name
+(case-insensitive) and by any sender/receiver primary or backup phone, ignoring spaces and
+dashes, so `024 811` finds `0248111128`. A search with no match shows "No self-service bookings
+match your search"; an empty branch queue keeps the original empty message.
+
+After opening (and therefore claiming) a draft, a mobile completing agent can tap **Edit booking
+details** to correct everything the customer entered: sender and receiver name, phone and backup
+phone, destination branch, pickup location, parcel contents and declared value. Destination
+options exclude the source branch and head office; changing the branch clears the location. The
+form validates names, ten-digit phones, a destination branch, non-blank contents and a
+non-negative value before enabling **Save booking details**. Saving refreshes the completion
+summary and queue; charge, charge agent, CS and payment choices already entered on the
+completion form are kept. The CS switch remains on the completion form.
 
 `PATCH /v1/self-service/drafts/:id/customers` accepts `sender` and `receiver` objects
 (`fullname`, `phone`, optional/null `phone2`) plus the currently displayed `expectedUpdatedAt`.
@@ -133,6 +157,16 @@ resolved/created during normal completion. Existing matching customer profile co
 also require `CanUpdateCustomers` and update that customer's name/phone information. Numbers
 matching different customers are rejected. Draft and saved-profile changes, including audit
 records, commit or roll back together. There is no payment or parcel creation during editing.
+
+`PATCH /v1/self-service/drafts/:id` is the full draft correction used by mobile and web. It takes the same
+`sender`, `receiver` and `expectedUpdatedAt` fields with the same contact rules, plus required
+optional `destinationBranchId`, optional/null `destinationLocationId`, `parcelContent` (trimmed, 1–255
+characters) and `parcelValueCedis` (number or numeric string, commas allowed, not negative,
+stored as pesewas). The destination is re-validated like a public submission: same company, not
+the draft's source branch, not head office, and any location must be a receiving location of
+that branch. When `destinationBranchId` is omitted (web), the draft destination is kept and not
+re-validated. Contacts, destination, parcel fields and the audit record (previous values for all
+edited fields) commit together. Completion then uses the corrected draft contents and value.
 Historical parcel name snapshots retain their existing behavior.
 
 QA: search large queues and both phone fields; scroll and paginate; inspect without completion
@@ -202,10 +236,21 @@ Sticker copies must follow [Parcel Printing](PARCEL_PRINTING.md): the user enter
 - New and existing sender/receiver combinations.
 - Concurrent claim by two agents.
 - Sender, receiver, split, pay-now, credit, and partial settlement.
-- Customer selects or clears CS; web/mobile officers keep or change it during pricing; completed
-  parcel and portrait/landscape sticker reflect the final choice while showing receiver contacts.
+- The public form shows no CS option (parcel step and review step); a public submission that
+  still sends `callSender: true` stores the draft with `callSender = false`.
+- Web/mobile officers tick or leave CS during pricing; completed parcel and portrait/landscape
+  sticker reflect the officer's choice while showing receiver contacts.
 - Older completion requests without `callSender` retain the draft choice; explicit `false`
   clears a previously selected choice. A failed completion does not alter the draft.
+- Web Booking Details dialog: edit contents and declared value from View / Edit and from the
+  completion page; blank contents or invalid value disables save; read-only users see disabled
+  fields; the completed parcel uses the corrected contents and value.
+- Mobile search by sender/receiver name and primary/backup phone (with spaces), no-match and
+  empty-queue messages.
+- Mobile full draft edit: contacts, destination branch/location, contents and value; branch change
+  clears location; invalid phone/value blocks save; stale draft, another officer's claim, source
+  or head-office destination and foreign location are rejected; completed parcel uses the
+  corrected details while the officer's CS choice is kept.
 - Cancellation, expiry, and claim recovery.
 - Successful completion followed by print failure and reprint.
 - Mobile read-only access, claim permission denial, pay-now sender/receiver/split completion, and credit-option absence.

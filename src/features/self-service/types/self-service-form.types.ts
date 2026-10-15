@@ -17,7 +17,6 @@ export type SelfServiceBookingFormValues = {
   destinationLocationId: string;
   parcelContent: string;
   parcelValue: string;
-  callSender: boolean;
   acceptedTerms: boolean;
 };
 
@@ -28,7 +27,6 @@ export const createInitialSelfServiceFormValues = (): SelfServiceBookingFormValu
   destinationLocationId: '',
   parcelContent: '',
   parcelValue: '',
-  callSender: false,
   acceptedTerms: false,
 });
 

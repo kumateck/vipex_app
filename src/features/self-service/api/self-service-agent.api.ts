@@ -53,17 +53,19 @@ export const selfServiceAgentApi = api.injectEndpoints({
       query: (id) => ({ url: `/self-service/drafts/${id}` }),
       providesTags: (_result, _error, id) => [{ type: 'Bookings', id: `SELF_SERVICE_${id}` }],
     }),
-    updateSelfServiceDraftCustomers: builder.mutation<
+    updateSelfServiceDraft: builder.mutation<
       SelfServiceDraft,
       {
         id: string;
         expectedUpdatedAt: string;
         sender: { fullname: string; phone: string; phone2: string | null };
         receiver: { fullname: string; phone: string; phone2: string | null };
+        parcelContent: string;
+        parcelValueCedis: string;
       }
     >({
       query: ({ id, ...body }) => ({
-        url: `/self-service/drafts/${id}/customers`,
+        url: `/self-service/drafts/${id}`,
         method: 'PATCH',
         body,
       }),
@@ -116,7 +118,7 @@ export const {
   useListSelfServiceDraftsQuery,
   useGetSelfServiceDraftQuery,
   useClaimSelfServiceDraftMutation,
-  useUpdateSelfServiceDraftCustomersMutation,
+  useUpdateSelfServiceDraftMutation,
   useCompleteSelfServiceDraftMutation,
   useCancelSelfServiceDraftMutation,
 } = selfServiceAgentApi;

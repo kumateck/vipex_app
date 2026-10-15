@@ -63,7 +63,6 @@ export async function submitSelfServiceDraftSvc(input: {
   destinationLocationId?: string | null;
   parcelContent: string;
   parcelValueCedis: number | string;
-  callSender: boolean;
   termsAccepted: boolean;
   termsVersion: string;
   sessionToken: string;
@@ -155,7 +154,8 @@ export async function submitSelfServiceDraftSvc(input: {
     destinationLocationId: destination.destinationLocationId,
     parcelContent,
     parcelValuePsw,
-    callSender: Boolean(input.callSender),
+    // Customers no longer choose CS; staff set it when completing the draft.
+    callSender: false,
     termsVersion: SELF_SERVICE_TERMS_VERSION,
     termsAcceptedAt: new Date(now),
     expiresAt: new Date(now + DRAFT_TTL_MS),

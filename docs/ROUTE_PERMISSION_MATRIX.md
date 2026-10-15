@@ -62,7 +62,8 @@ permission and completed-return-only constraint. See
 [Returning home delivery parcels to main-office pickup](PARCEL_OPERATIONS.md#returning-home-delivery-parcels-to-main-office-pickup).
 
 Self-service **View / Edit** permits inspection with `CanReadSelfServiceBookings`;
-`PATCH /self-service/drafts/:id/customers` requires `CanCompleteSelfServiceBookings`.
+`PATCH /self-service/drafts/:id/customers` (legacy contacts-only) and the full web/mobile edit
+`PATCH /self-service/drafts/:id` require `CanCompleteSelfServiceBookings`.
 Saved matching customer profile changes additionally require `CanUpdateCustomers`.
 Edits are company/branch scoped and reject another officer's claim or a stale draft.
 No page override changes. Location capability controls retain the existing location

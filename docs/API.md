@@ -74,9 +74,11 @@ are scoped to their own branch. It requires `CanViewReportParcelsDailyAudit`. Se
 [Reporting](api/REPORTING.md) for response and failure behavior.
 
 `POST /v1/self-service/drafts/:id/complete` accepts optional boolean `callSender`. The completed
-parcel uses that explicit officer choice; if omitted, it keeps the customer's draft value. The
+parcel uses that explicit officer choice; if omitted, it keeps the stored draft value. The
 existing completion permission, branch ownership, state, and charge validation still apply. Web
-and mobile officer clients expose this checkbox; the public draft form remains separate. See
+and mobile officer clients expose this checkbox. The public `POST /v1/self-service/drafts` endpoint
+no longer sets CS: an optional `callSender` field is still accepted for stale clients but ignored,
+and the draft is stored with `callSender = false`. See
 [Self-Service Booking](SELF_SERVICE_BOOKING.md).
 
 Parcel list/search responses include `senderPaidPrincipalPsw` and `receiverPaidPrincipalPsw`,
@@ -352,6 +354,13 @@ or foreign drafts return 404, permission failures 401/403, and stale versions, a
 staff member's claim, conflicting customer numbers or finalized drafts return 409.
 Profile, draft and audit writes are atomic; no booking or payment is created. See
 [Staff customer corrections](SELF_SERVICE_BOOKING.md#staff-search-and-customer-corrections).
+
+`PATCH /v1/self-service/drafts/:id` (used by web and mobile) has the same permission, scope,
+contact validation, claim/stale checks and atomic audit behavior, and additionally requires
+`parcelContent` and `parcelValueCedis`, with optional `destinationBranchId` and optional/null
+`destinationLocationId`. Without `destinationBranchId` the draft destination is kept. It returns the updated draft. An invalid destination (source branch,
+head office, other company) or location not receiving for that branch, blank contents or a
+negative/non-numeric value returns 400; schema violations return 422.
 
 Authenticated receiving requests bypass the shared request quota: in-transit parcel GET
 searches, parcel details, consignment receiving reads/receive/close, parcel mark-received,
