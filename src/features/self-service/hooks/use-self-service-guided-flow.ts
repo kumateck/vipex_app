@@ -66,7 +66,6 @@ export function useSelfServiceGuidedFlow(
         destinationLocationId: values.destinationLocationId || null,
         parcelContent: values.parcelContent.trim(),
         parcelValueCedis,
-        callSender: values.callSender,
         termsAccepted: true,
         termsVersion: SELF_SERVICE_TERMS_VERSION,
       }).unwrap();

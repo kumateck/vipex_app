@@ -101,17 +101,22 @@ Coverage: `receiving-rate-limit.spec.ts`, existing `rate-limit.spec.ts` and char
 Mobile exposes **Self-Service Bookings** directly in the navigation drawer and in the Operations Hub
 when the user has `CanReadSelfServiceBookings`. It lists active drafts for the authenticated branch.
 Staff can inspect sender, receiver, declared contents, declared value, submission time, expiry, and
-claim status.
+claim status. A search field filters the list by sender or receiver name or phone (spaces and
+dashes ignored).
 
 An authorized completing agent can:
 
 1. Open an available draft; mobile claims it before displaying the completion form, matching the web
    workflow and preventing another agent from completing it concurrently.
-2. Confirm parcel details and the authoritative charge.
-   The officer may change the draft's CS switch, initially set to the customer's choice.
-3. Select sender, receiver, or split payment responsibility.
-4. Enter the sender portion for a split payment.
-5. Complete the draft through `POST /self-service/drafts/:id/complete`.
+2. Optionally tap **Edit booking details** to correct everything the customer entered: sender and
+   receiver contacts, destination branch and pickup location, contents and declared value. Saving
+   calls `PATCH /self-service/drafts/:id` and keeps the completion entries already made.
+3. Confirm parcel details and the authoritative charge.
+   The officer turns on the CS switch when the sender asked to be called before handover. It starts
+   off for new drafts because customers no longer choose CS on the public form.
+4. Select sender, receiver, or split payment responsibility.
+5. Enter the sender portion for a split payment.
+6. Complete the draft through `POST /self-service/drafts/:id/complete`.
 
 Mobile currently submits `PAY_NOW` settlement. Credit completion remains available on desktop until the mobile flow includes customer credit eligibility, credit-limit presentation, and cashier-session parity. The server rejects concurrent claims, expired drafts, invalid destinations, invalid charges, and unavailable payment/session combinations.
 

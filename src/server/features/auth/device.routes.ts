@@ -1,13 +1,7 @@
 import { Elysia, t } from 'elysia';
-import {
-  authPlugin,
-  requireAuth,
-  requireHeadOffice,
-  requireModuleEnabled,
-  requirePermissions,
-} from '@/server/plugins/auth';
-import { PermissionKeys } from '@/shared/permissions/constants';
-import { Forbidden } from '@/server/utils/http-error';
+import { authPlugin, requireAuth, type AuthUser } from '@/server/plugins/auth';
+import { canApproveRegisteredDevices } from '@/shared/permissions/device-approval';
+import { Forbidden, Unauthorized } from '@/server/utils/http-error';
 import { readDeviceCredential } from './device-headers';
 import { isDeviceVerificationRequired } from './device-policy';
 import {
@@ -16,6 +10,16 @@ import {
   registerDeviceSvc,
   reviewDeviceSvc,
 } from './device.service';
+
+const requireDeviceApprover =
+  () =>
+  ({ user }: { user: AuthUser | null }) => {
+    if (!user) throw Unauthorized();
+    if (
+      !canApproveRegisteredDevices({ permissions: user.permissions, branchType: user.branchType })
+    )
+      throw Forbidden('Registered device approval permission is required');
+  };
 
 const DeviceId = t.String({ minLength: 1, maxLength: 25 });
 const DeviceStatus = t.Union([
@@ -87,9 +91,8 @@ export const deviceRoutes = new Elysia({ name: 'registered-devices' })
         {
           beforeHandle: [
             requireAuth(),
-            requireHeadOffice(),
-            requirePermissions(PermissionKeys.CanUpdateUsers),
-            requireModuleEnabled('device_verification'),
+            // No module gate: devices can be reviewed before verification is enabled.
+            requireDeviceApprover(),
           ],
           detail: { tags: ['Auth'], summary: 'List registered devices for company' },
         },
@@ -121,9 +124,8 @@ export const deviceRoutes = new Elysia({ name: 'registered-devices' })
           response: t.Object({ id: DeviceId, status: DeviceStatus }),
           beforeHandle: [
             requireAuth(),
-            requireHeadOffice(),
-            requirePermissions(PermissionKeys.CanUpdateUsers),
-            requireModuleEnabled('device_verification'),
+            // No module gate: devices can be reviewed before verification is enabled.
+            requireDeviceApprover(),
           ],
           detail: { tags: ['Auth'], summary: 'Approve, revoke, block, or deny a device' },
         },

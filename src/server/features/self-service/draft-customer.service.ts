@@ -1,98 +1,25 @@
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '@/db/config';
-import { auditLogs, customers, selfServiceBookingDrafts } from '@/db/schemas';
+import { auditLogs, selfServiceBookingDrafts } from '@/db/schemas';
 import { SelfServiceDraftStatus } from '@/db/schemas/enums';
 import type { AuthUser } from '@/server/plugins/auth';
 import { BadRequest, Conflict, Forbidden, NotFound } from '@/server/utils/http-error';
-import { PermissionKeys } from '@/shared/permissions/constants';
+import { resolveDraftContact } from './draft-customer-resolve';
 import { normalizeDraftContact, type DraftContactInput } from './draft-customer.rules';
+import { normalizeDraftParcel, type DraftDetailsInput } from './draft-details.rules';
+import { validateSelfServiceDestinationSvc } from './destination.service';
 
-type Executor = Parameters<Parameters<typeof db.transaction>[0]>[0];
-async function resolveContact(
-  tx: Executor,
-  companyId: string,
-  actor: AuthUser,
-  input: ReturnType<typeof normalizeDraftContact>,
-  previous: { fullname: string; phone: string; phone2: string | null; customerId: string | null },
-) {
-  if (
-    input.fullname === previous.fullname &&
-    input.phone === previous.phone &&
-    input.phone2 === previous.phone2
-  )
-    return previous.customerId;
-  const matches = await tx
-    .select()
-    .from(customers)
-    .where(
-      and(
-        eq(customers.companyId, companyId),
-        eq(customers.isDeleted, false),
-        or(
-          eq(customers.telephone, input.phone),
-          eq(customers.telephone2, input.phone),
-          ...(input.phone2
-            ? [eq(customers.telephone, input.phone2), eq(customers.telephone2, input.phone2)]
-            : []),
-        ),
-      ),
-    )
-    .for('update');
-  if (matches.length > 1)
-    throw Conflict(
-      'More than one customer matches this number; resolve the customer records first',
-    );
-  const customer = matches.find(
-    (match) => match.telephone === input.phone || match.telephone2 === input.phone,
-  );
-  if (!customer && matches.length)
-    throw Conflict(
-      'Backup number belongs to a saved customer; select that customer or correct the number',
-    );
-  if (!customer) return null;
-  if (
-    customer.fullname === input.fullname &&
-    customer.telephone === input.phone &&
-    customer.telephone2 === input.phone2
-  )
-    return customer.id;
-  if (!actor.permissions?.includes(PermissionKeys.CanUpdateCustomers))
-    throw Forbidden('Customer update permission is required to change a saved customer');
-  await tx
-    .update(customers)
-    .set({
-      fullname: input.fullname,
-      telephone: input.phone,
-      telephone2: input.phone2,
-      updatedAt: new Date(),
-    })
-    .where(eq(customers.id, customer.id));
-  await tx.insert(auditLogs).values({
-    companyId,
-    actorUserId: actor.sub,
-    entityType: 'customer',
-    entityId: customer.id,
-    action: 'CUSTOMER_UPDATED',
-    message: 'Customer contact corrected from self-service booking',
-    metadata: {
-      previous: {
-        fullname: customer.fullname,
-        telephone: customer.telephone,
-        telephone2: customer.telephone2,
-      },
-      patch: { fullname: input.fullname, telephone: input.phone, telephone2: input.phone2 },
-    },
-  });
-  return customer.id;
-}
+type UpdateDraftInput = {
+  sender: DraftContactInput;
+  receiver: DraftContactInput;
+  expectedUpdatedAt: string;
+  // Omitted by the contacts-only route; the full draft edit sends destination and parcel too.
+  details?: DraftDetailsInput;
+};
 
-export async function updateSelfServiceDraftCustomersSvc(
+export async function updateSelfServiceDraftSvc(
   id: string,
-  input: {
-    sender: DraftContactInput;
-    receiver: DraftContactInput;
-    expectedUpdatedAt: string;
-  },
+  input: UpdateDraftInput,
   actor: AuthUser,
 ) {
   if (!actor.companyId || !actor.branchId) throw Forbidden('Branch context is required');
@@ -103,6 +30,7 @@ export async function updateSelfServiceDraftCustomersSvc(
     (sender.fullname !== receiver.fullname || sender.phone2 !== receiver.phone2)
   )
     throw BadRequest('The same customer number must have consistent sender and receiver details');
+  const parcel = input.details ? normalizeDraftParcel(input.details) : null;
   return db.transaction(async (tx) => {
     const [draft] = await tx
       .select()
@@ -123,14 +51,22 @@ export async function updateSelfServiceDraftCustomersSvc(
       throw Conflict('This draft is claimed by another officer');
     if (draft.updatedAt.toISOString() !== input.expectedUpdatedAt)
       throw Conflict('Booking draft changed; reload it before saving');
+    const destination = input.details?.destinationBranchId
+      ? await validateSelfServiceDestinationSvc({
+          sourceBranchId: draft.branchId,
+          companyId: draft.companyId,
+          destinationBranchId: input.details.destinationBranchId,
+          destinationLocationId: input.details.destinationLocationId,
+        })
+      : null;
     // Sequential: both roles may resolve to one customer; the receiver must see the sender correction.
-    const senderCustomerId = await resolveContact(tx, actor.companyId!, actor, sender, {
+    const senderCustomerId = await resolveDraftContact(tx, actor.companyId!, actor, sender, {
       fullname: draft.senderFullname,
       phone: draft.senderPhone,
       phone2: draft.senderPhone2,
       customerId: draft.senderCustomerId,
     });
-    const receiverCustomerId = await resolveContact(tx, actor.companyId!, actor, receiver, {
+    const receiverCustomerId = await resolveDraftContact(tx, actor.companyId!, actor, receiver, {
       fullname: draft.receiverFullname,
       phone: draft.receiverPhone,
       phone2: draft.receiverPhone2,
@@ -145,6 +81,8 @@ export async function updateSelfServiceDraftCustomersSvc(
       receiverPhone: receiver.phone,
       receiverPhone2: receiver.phone2,
       receiverCustomerId,
+      ...destination,
+      ...parcel,
       updatedAt: new Date(),
     };
     const [updated] = await tx
@@ -158,7 +96,9 @@ export async function updateSelfServiceDraftCustomersSvc(
       entityType: 'self_service_draft',
       entityId: id,
       action: 'SELF_SERVICE_DRAFT_UPDATED',
-      message: 'Self-service sender and receiver details corrected',
+      message: input.details
+        ? 'Self-service booking details corrected'
+        : 'Self-service sender and receiver details corrected',
       metadata: {
         previous: {
           senderFullname: draft.senderFullname,
@@ -167,6 +107,14 @@ export async function updateSelfServiceDraftCustomersSvc(
           receiverFullname: draft.receiverFullname,
           receiverPhone: draft.receiverPhone,
           receiverPhone2: draft.receiverPhone2,
+          ...(input.details
+            ? {
+                destinationBranchId: draft.destinationBranchId,
+                destinationLocationId: draft.destinationLocationId,
+                parcelContent: draft.parcelContent,
+                parcelValuePsw: draft.parcelValuePsw,
+              }
+            : {}),
         },
         patch,
       },
@@ -174,3 +122,9 @@ export async function updateSelfServiceDraftCustomersSvc(
     return updated!;
   });
 }
+
+export const updateSelfServiceDraftCustomersSvc = (
+  id: string,
+  input: Omit<UpdateDraftInput, 'details'>,
+  actor: AuthUser,
+) => updateSelfServiceDraftSvc(id, input, actor);

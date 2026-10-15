@@ -5,6 +5,7 @@ import { Link } from '@mobile/navigation/router-compat';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import type { LoginFormProps } from '../../types';
+import { LoginDeviceRegistration } from './login-device-registration';
 import { LoginField } from './login-field';
 
 export function LoginForm({
@@ -111,26 +112,13 @@ export function LoginForm({
           </>
         )}
       </Pressable>
-      <View style={styles.deviceActions}>
-        <Text style={[styles.helper, { color: theme.colors.textSubtle }]}>
-          If your company requires device verification, this phone needs approval before sign-in.
-        </Text>
-        {deviceStatus ? (
-          <Text style={[styles.helper, { color: theme.colors.text }]}>
-            Device: {deviceStatus.replaceAll('_', ' ')}
-          </Text>
-        ) : null}
-        <Pressable accessibilityRole="button" disabled={disabled} onPress={onRegisterDevice}>
-          <Text style={[styles.deviceLink, { color: theme.colors.secondary }]}>
-            Register this device
-          </Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" disabled={loading} onPress={onCheckDevice}>
-          <Text style={[styles.deviceLink, { color: theme.colors.secondary }]}>
-            Check approval status
-          </Text>
-        </Pressable>
-      </View>
+      <LoginDeviceRegistration
+        deviceStatus={deviceStatus}
+        registerDisabled={disabled}
+        checkDisabled={loading}
+        onRegister={onRegisterDevice}
+        onCheck={onCheckDevice}
+      />
     </View>
   );
 }
@@ -164,6 +152,4 @@ const styles = StyleSheet.create({
     gap: mobileSpacing.sm,
   },
   buttonText: { ...mobileTextStyles.headline },
-  deviceActions: { gap: mobileSpacing.sm },
-  deviceLink: { ...mobileTextStyles.footnote, fontWeight: '700' },
 });

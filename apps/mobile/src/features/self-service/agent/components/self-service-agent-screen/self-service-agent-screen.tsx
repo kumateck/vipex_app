@@ -15,6 +15,7 @@ import {
 import { useSelfServiceAgent } from '../../hooks';
 import { SelfServiceCompletionForm } from './self-service-completion-form';
 import { SelfServiceDraftCard } from './self-service-draft-card';
+import { SelfServiceDraftsSearch } from './self-service-drafts-search';
 
 export function SelfServiceAgentScreen() {
   const { session } = useAuth();
@@ -48,26 +49,34 @@ export function SelfServiceAgentScreen() {
           onBack={() => workflow.setSelected(null)}
           onClaim={workflow.claim}
           onComplete={workflow.complete}
+          onUpdateDraft={workflow.updateDraft}
         />
-      ) : workflow.loading ? (
-        <>
-          <AppSkeletonCard />
-          <AppSkeletonCard />
-        </>
-      ) : workflow.drafts.length ? (
-        workflow.drafts.map((draft) => (
-          <SelfServiceDraftCard
-            key={draft.id}
-            draft={draft}
-            disabled={workflow.saving}
-            opening={workflow.openingDraftId === draft.id}
-            onPress={() => void workflow.open(draft)}
-          />
-        ))
       ) : (
-        <Text style={{ color: theme.colors.textSubtle }}>
-          No pending self-service bookings for your branch.
-        </Text>
+        <>
+          <SelfServiceDraftsSearch value={workflow.search} onChange={workflow.setSearch} />
+          {workflow.loading ? (
+            <>
+              <AppSkeletonCard />
+              <AppSkeletonCard />
+            </>
+          ) : workflow.visibleDrafts.length ? (
+            workflow.visibleDrafts.map((draft) => (
+              <SelfServiceDraftCard
+                key={draft.id}
+                draft={draft}
+                disabled={workflow.saving}
+                opening={workflow.openingDraftId === draft.id}
+                onPress={() => void workflow.open(draft)}
+              />
+            ))
+          ) : (
+            <Text style={{ color: theme.colors.textSubtle }}>
+              {workflow.drafts.length
+                ? 'No self-service bookings match your search.'
+                : 'No pending self-service bookings for your branch.'}
+            </Text>
+          )}
+        </>
       )}
     </AppScreen>
   );

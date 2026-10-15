@@ -1,8 +1,6 @@
 import type { Control } from 'react-hook-form';
-import { Checkbox } from '@/components/ui/checkbox';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { sanitizeNumber, sanitizeString } from '@/lib/utils';
 import type { SelfServiceBookingFormValues } from '../types/self-service-form.types';
@@ -79,32 +77,6 @@ export function SelfServiceParcelFields({
             </p>
             <FormMessage />
           </FormItem>
-        )}
-      />
-      <FormField
-        control={control}
-        name="callSender"
-        render={({ field }) => (
-          <label
-            htmlFor="self-service-call-sender"
-            className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/12 bg-white/[0.05] p-4 transition-colors hover:bg-white/[0.08]"
-          >
-            <Checkbox
-              id="self-service-call-sender"
-              checked={field.value}
-              onCheckedChange={(value) => field.onChange(value === true)}
-              className="mt-0.5 size-5 border-white/30 data-checked:border-[#ef3340] data-checked:bg-[#ef3340]"
-            />
-            <span className="text-sm text-white">
-              <Label htmlFor="self-service-call-sender" className="font-semibold text-white">
-                Call Sender before deliver to Receiver (CS)
-              </Label>
-              <span className="mt-1 block leading-5 text-white/45">
-                Your receiver&apos;s name and number will still appear on the parcel. The CS mark
-                tells staff to call you before handing it to the receiver.
-              </span>
-            </span>
-          </label>
         )}
       />
     </div>

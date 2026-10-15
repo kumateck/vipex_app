@@ -2,7 +2,7 @@ import { DataTable } from '@/components/datatable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { useSelfServiceQueue } from '../../hooks';
-import { SelfServiceCustomerDialog } from '../../dialogs';
+import { SelfServiceDraftDialog } from '../../dialogs';
 import { useSelfServiceQueueColumns } from './use-self-service-queue-columns';
 
 export function SelfServiceQueue() {
@@ -34,7 +34,7 @@ export function SelfServiceQueue() {
         </Card>
       </ScrollableWrapper>
       {state.selectedDraft ? (
-        <SelfServiceCustomerDialog
+        <SelfServiceDraftDialog
           key={`${state.selectedDraft.id}:${state.selectedDraft.updatedAt}`}
           draft={state.selectedDraft}
           canEdit={state.canComplete}

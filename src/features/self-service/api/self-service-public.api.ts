@@ -27,7 +27,6 @@ export type SubmitSelfServiceDraftInput = {
   destinationLocationId?: string | null;
   parcelContent: string;
   parcelValueCedis: number | string;
-  callSender: boolean;
   termsAccepted: true;
   termsVersion: string;
 };
