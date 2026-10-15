@@ -23,6 +23,13 @@ export function hasRequiredPermissionForPath(
   if (requiredPermission === PermissionKeys.CanReadReportsHub) {
     return ReportPermissionKeys.some((permissionKey) => granted.has(permissionKey));
   }
+  if (requiredPermission === PermissionKeys.CanApproveRegisteredDevices) {
+    // Legacy fallback: head-office CanUpdateUsers holders; the page and API also check head office.
+    return (
+      granted.has(PermissionKeys.CanApproveRegisteredDevices) ||
+      granted.has(PermissionKeys.CanUpdateUsers)
+    );
+  }
   if (requiredPermission === PermissionKeys.CanPrintSelfServiceQrCode) {
     return (
       granted.has(PermissionKeys.CanPrintSelfServiceQrCode) ||

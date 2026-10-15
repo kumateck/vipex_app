@@ -27,6 +27,7 @@ Platform, user, dashboard, accounting, and other core route overrides.
 | `/settings/parcel-ageing`          | `CanManageParcelAgeingPolicy`       |
 | `/settings/app-updates`            | `CanManageDesktopUpdates`           |
 | `/settings/printer-routing`        | `CanManagePrinterRouting`           |
+| `/settings/devices`                | `CanApproveRegisteredDevices`       |
 | `/settings/appearance`             | `CanManageAppearance`               |
 | `/dashboard`                       | `CanReadDashboard`                  |
 | `/dashboard/accountant`            | `CanReadDashboard`                  |

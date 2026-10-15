@@ -1,4 +1,4 @@
-import { SelfServiceCustomerDialog } from '../../dialogs';
+import { SelfServiceDraftDialog } from '../../dialogs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -64,10 +64,10 @@ export function SelfServiceDraftComplete() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <SelfServiceDraftSummaryCard draft={draft} />
       <Button type="button" variant="outline" onClick={openCustomerEditor}>
-        Edit Customer Details
+        Edit Booking Details
       </Button>
       {isCustomerEditorOpen ? (
-        <SelfServiceCustomerDialog
+        <SelfServiceDraftDialog
           key={`${draft.id}:${draft.updatedAt}`}
           draft={draft}
           canEdit
@@ -118,8 +118,8 @@ export function SelfServiceDraftComplete() {
                 <div>
                   <FormLabel>CS — Call Sender before deliver to Receiver</FormLabel>
                   <p className="text-xs text-muted-foreground">
-                    Keep or change the customer&apos;s choice. The receiver details remain on the
-                    sticker, with CS marked when selected.
+                    Tick if the sender asked to be called before the receiver gets the parcel. The
+                    receiver details remain on the sticker, with CS marked when selected.
                   </p>
                 </div>
               </FormItem>

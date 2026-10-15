@@ -138,8 +138,9 @@ This UI is intentionally simple and uses action buttons instead of a switch comp
 
 `device_verification` appears as **Device Verification** and starts disabled for each company.
 Enabling it makes native mobile/desktop sign-in and sessions require an approved registration;
-disabling it allows native users to proceed without that check. The Registered Devices review
-page and review APIs are available only while enabled. See [Native Device Registration](DEVICE_REGISTRATION.md)
+disabling it allows native users to proceed without that check. The Device Approvals review
+page (`/settings/devices`) and review APIs are available whether it is enabled or not, so devices
+can be pre-registered and approved before enablement. See [Native Device Registration](DEVICE_REGISTRATION.md)
 for enforcement, client behavior, and rollout cautions.
 
 Additionally:

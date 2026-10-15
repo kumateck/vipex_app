@@ -4,6 +4,7 @@ import { generateOpaqueToken, sha256HexAsync } from '@/server/utils/otp';
 import { UserStatus } from '@/db/schemas/enums';
 import { recordAuditLog } from '@/server/features/audit/logger';
 import { disconnectCommunicationDeviceSockets } from '@/server/features/communication/realtime';
+import { isDeviceVerificationRequired } from './device-policy';
 import { getUserByEmailRepo } from './repository';
 import {
   findDeviceByCredentialRepo,
@@ -102,6 +103,23 @@ export async function requireApprovedDeviceSvc(
   return device;
 }
 
+// While device verification is off, sessions are linked to a device only if that device is
+// already approved for this account, so enabling the module later does not sign users out.
+// Never blocks sign-in: an unknown, unapproved or mismatched credential just returns null.
+export async function findApprovedDeviceSvc(
+  credential: DeviceCredential | null,
+  userId: string,
+  kind?: 'mobile' | 'desktop',
+) {
+  if (!credential) return null;
+  try {
+    const device = await getDeviceByCredentialSvc(credential);
+    return device && !deviceAccessFailure(device, userId, kind) ? device : null;
+  } catch {
+    return null;
+  }
+}
+
 const ALLOWED_TRANSITIONS: Record<DeviceStatus, readonly DeviceStatus[]> = {
   pending: ['approved', 'blocked', 'permanently_denied'],
   approved: ['revoked', 'blocked', 'permanently_denied'],
@@ -144,6 +162,9 @@ export async function reviewDeviceSvc(input: {
   if (!allowed) {
     throw Conflict(`Cannot ${input.action.replaceAll('_', ' ')} a ${current} device`);
   }
+  // Reviews may happen before the module is enabled (pre-registration). The status is always
+  // recorded, but sessions and sockets are only cut while verification is enforced.
+  const enforced = await isDeviceVerificationRequired(input.companyId);
   const updated = await transitionDeviceRepo({
     id: device.id,
     companyId: input.companyId,
@@ -151,9 +172,10 @@ export async function reviewDeviceSvc(input: {
     to: next,
     reviewerId: input.reviewerId,
     reason: input.reason?.trim(),
+    revokeSessions: enforced,
   });
   if (!updated) throw Conflict('Device status changed; reload and try again');
-  if (next !== 'approved') disconnectCommunicationDeviceSockets(updated.id);
+  if (enforced && next !== 'approved') disconnectCommunicationDeviceSockets(updated.id);
   await recordAuditLog({
     companyId: input.companyId,
     actorUserId: input.reviewerId,

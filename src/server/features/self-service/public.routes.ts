@@ -96,7 +96,6 @@ export const selfServicePublicRoutes = new Elysia({ name: 'self-service-public' 
         destinationLocationId: body.destinationLocationId,
         parcelContent: body.parcelContent,
         parcelValueCedis: body.parcelValueCedis,
-        callSender: body.callSender ?? false,
         termsAccepted: body.termsAccepted,
         termsVersion: body.termsVersion,
         requestIp: clientIp(request),
@@ -121,6 +120,7 @@ export const selfServicePublicRoutes = new Elysia({ name: 'self-service-public' 
         destinationLocationId: t.Optional(t.Union([UUID, t.Null()])),
         parcelContent: t.String({ minLength: 1, maxLength: 255 }),
         parcelValueCedis: t.Union([t.Number({ minimum: 0 }), t.String()]),
+        // Deprecated: CS is set by staff at completion; accepted only so stale clients still submit.
         callSender: t.Optional(t.Boolean()),
         termsAccepted: t.Literal(true),
         termsVersion: t.Literal(SELF_SERVICE_TERMS_VERSION),

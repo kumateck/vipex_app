@@ -75,6 +75,7 @@ export async function transitionDeviceRepo(input: {
   to: DeviceStatus;
   reviewerId: string;
   reason?: string | null;
+  revokeSessions: boolean;
 }) {
   return db.transaction(async (tx) => {
     const [row] = await tx
@@ -94,7 +95,7 @@ export async function transitionDeviceRepo(input: {
       )
       .returning();
     if (!row) return null;
-    if (input.to !== 'approved') {
+    if (input.revokeSessions && input.to !== 'approved') {
       await tx
         .update(refreshTokens)
         .set({ revokedAt: new Date() })

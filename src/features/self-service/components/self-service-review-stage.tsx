@@ -122,10 +122,6 @@ export function SelfServiceReviewStage({
         <ReviewSection title="Parcel" onEdit={() => onEdit('parcel')}>
           <ReviewRow label="Contents" value={sanitizeString(values.parcelContent) || '—'} />
           <ReviewRow label="Value" value={`GH₵${sanitizeString(values.parcelValue) || '0'}`} />
-          <ReviewRow
-            label="Call Sender before deliver to Receiver (CS)"
-            value={values.callSender ? 'Yes' : 'No'}
-          />
         </ReviewSection>
 
         <SelfServiceTermsConsent control={control} />
