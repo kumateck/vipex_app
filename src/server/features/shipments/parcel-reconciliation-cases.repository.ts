@@ -8,6 +8,7 @@ import {
   parcels,
   users,
 } from '@/db/schemas';
+import { ParcelReconciliationCaseStatus } from '@/db/schemas/enums';
 
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
@@ -77,7 +78,33 @@ export async function getOpenParcelReconciliationCaseByParcelRepo(
     .where(
       and(
         eq(parcelReconciliationCases.parcelId, parcelId),
-        inArray(parcelReconciliationCases.status, [0, 1]),
+        inArray(parcelReconciliationCases.status, [
+          ParcelReconciliationCaseStatus.REQUESTED,
+          ParcelReconciliationCaseStatus.APPROVED,
+        ]),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getOpenReconciliationCaseBlockingDeliveryRepo(
+  parcelId: string,
+  executor: DbExecutor = db,
+) {
+  const [row] = await executor
+    .select({ id: parcelReconciliationCases.id })
+    .from(parcelReconciliationCases)
+    .where(
+      and(
+        or(
+          eq(parcelReconciliationCases.parcelId, parcelId),
+          eq(parcelReconciliationCases.linkedParcelId, parcelId),
+        ),
+        inArray(parcelReconciliationCases.status, [
+          ParcelReconciliationCaseStatus.REQUESTED,
+          ParcelReconciliationCaseStatus.APPROVED,
+        ]),
       ),
     )
     .limit(1);
@@ -119,7 +146,9 @@ export async function listParcelReconciliationCasesRepo(input: {
   const where = and(
     eq(parcelReconciliationCases.companyId, input.companyId),
     input.statuses?.length ? inArray(parcelReconciliationCases.status, input.statuses) : undefined,
-    input.branchId ? eq(parcels.sourceId, input.branchId) : undefined,
+    input.branchId
+      ? or(eq(parcels.sourceId, input.branchId), eq(parcels.destinationId, input.branchId))
+      : undefined,
     input.search
       ? or(
           ilike(parcels.trackingCode, `%${input.search}%`),

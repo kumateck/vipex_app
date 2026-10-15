@@ -6,6 +6,7 @@ import { formatTelephones } from './thermal-sticker-template-utils';
 export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
   const {
     issuedAtLabel,
+    duplicate,
     printedByName,
     printedByBranchName,
     printedByLocationName,
@@ -17,6 +18,7 @@ export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
     receiverName,
     receiverTelephone,
     receiverTelephone2,
+    callSender,
     destinationBranchName,
     destinationLocationName,
     toBePaidCedis,
@@ -31,6 +33,7 @@ export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
   const receiverTelephones = formatTelephones(receiverTelephone, receiverTelephone2);
   const templateProps = {
     issuedAtLabel,
+    duplicate,
     printedByName,
     printedByBranchName,
     printedByLocationName,
@@ -38,6 +41,7 @@ export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
     senderTelephones,
     receiverName,
     receiverTelephones,
+    callSender,
     destinationBranchName,
     destinationLocationName,
     parcelContent,

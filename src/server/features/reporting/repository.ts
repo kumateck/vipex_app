@@ -237,7 +237,7 @@ export async function listDeliveryPerformanceReportRowsRepo(input: {
       riderName: rider.fullname,
       destinationBranchId: parcels.destinationId,
       destinationBranchName: destinationBranch.name,
-      receiverName: receiver.fullname,
+      receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       receiverPhone: receiver.telephone,
       trackingCode: parcels.trackingCode,
       bookingCode: parcels.bookingCode,
@@ -306,6 +306,10 @@ export type DailyCashierSalesTransactionRow = {
   parcelId: string;
   bookingCode: string;
   trackingCode: string;
+  sourceBranchId: string;
+  sourceBranchName: string | null;
+  destinationBranchId: string;
+  destinationBranchName: string | null;
   parcelDetails: string;
   parcelContent: string;
   senderName: string | null;
@@ -465,6 +469,8 @@ export async function listDailyCashierSalesTransactionsRepo(input: {
 
   const sender = alias(customers, 'daily_cashier_sales_sender');
   const receiver = alias(customers, 'daily_cashier_sales_receiver');
+  const sourceBranch = alias(branches, 'daily_cashier_sales_source_branch');
+  const destinationBranch = alias(branches, 'daily_cashier_sales_destination_branch');
   const paymentTypes = getDailyCashierSalesPaymentTypes(input.cashierType);
   const cashierTypeFilter = paymentTypes ? [inArray(payments.cashierType, paymentTypes)] : [];
 
@@ -475,11 +481,15 @@ export async function listDailyCashierSalesTransactionsRepo(input: {
       parcelId: payments.parcelId,
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
+      sourceBranchId: parcels.sourceId,
+      sourceBranchName: sourceBranch.name,
+      destinationBranchId: parcels.destinationId,
+      destinationBranchName: destinationBranch.name,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
-      senderName: sender.fullname,
+      senderName: sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname}, '')`,
       senderTelephone: sender.telephone,
-      receiverName: receiver.fullname,
+      receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       receiverTelephone: receiver.telephone,
       cashierType: payments.cashierType,
       method: payments.method,
@@ -494,6 +504,8 @@ export async function listDailyCashierSalesTransactionsRepo(input: {
     .from(payments)
     .innerJoin(cashierSessions, eq(cashierSessions.cashierId, payments.cashierUserId))
     .innerJoin(parcels, eq(parcels.id, payments.parcelId))
+    .leftJoin(sourceBranch, eq(sourceBranch.id, parcels.sourceId))
+    .leftJoin(destinationBranch, eq(destinationBranch.id, parcels.destinationId))
     .leftJoin(sender, eq(sender.id, parcels.senderId))
     .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
     .where(
@@ -537,9 +549,9 @@ export async function listDailyCashierSalesToBePaidRowsRepo(input: {
       bookingCode: parcels.bookingCode,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
-      senderName: sender.fullname,
+      senderName: sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname}, '')`,
       senderTelephone: sender.telephone,
-      receiverName: receiver.fullname,
+      receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       receiverTelephone: receiver.telephone,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       createdAt: parcels.createdAt,
@@ -1024,6 +1036,8 @@ export async function listParcelStatusReportRowsRepo(input: {
   to?: Date | null;
   branchId?: string | null;
 }) {
+  const sender = alias(customers, 'status_report_sender');
+  const receiver = alias(customers, 'status_report_receiver');
   return db
     .select({
       id: parcels.id,
@@ -1038,16 +1052,16 @@ export async function listParcelStatusReportRowsRepo(input: {
       sourceBranchName: sourceBranch.name,
       destinationBranchId: parcels.destinationId,
       destinationBranchName: destinationBranch.name,
-      senderName: sender.fullname,
-      receiverName: receiver.fullname,
+      senderName: sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname}, '')`,
+      receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       createdAt: parcels.createdAt,
       receivedAt: parcels.receivedAt,
     })
     .from(parcels)
-    .leftJoin(sourceBranch, eq(sourceBranch.id, parcels.sourceId))
-    .leftJoin(destinationBranch, eq(destinationBranch.id, parcels.destinationId))
     .leftJoin(sender, eq(sender.id, parcels.senderId))
     .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
+    .leftJoin(sourceBranch, eq(sourceBranch.id, parcels.sourceId))
+    .leftJoin(destinationBranch, eq(destinationBranch.id, parcels.destinationId))
     .where(
       and(
         eq(parcels.companyId, input.companyId),
@@ -1535,8 +1549,8 @@ export async function listToBePaidOutstandingReportRowsRepo(input: {
       sb.name AS source_branch_name,
       pr.destination_id AS destination_branch_id,
       dbb.name AS destination_branch_name,
-      s.fullname AS sender_name,
-      r.fullname AS receiver_name,
+      pr.sender_name_snapshot AS sender_name,
+      pr.receiver_name_snapshot AS receiver_name,
       pr.planned_tobepaid_psw,
       COALESCE(pp.paid_principal_psw, 0)::bigint AS paid_principal_psw,
       GREATEST(pr.planned_tobepaid_psw - COALESCE(pp.paid_principal_psw, 0), 0)::bigint AS outstanding_psw
@@ -1544,12 +1558,10 @@ export async function listToBePaidOutstandingReportRowsRepo(input: {
     LEFT JOIN principal_payments pp ON pp.parcel_id = pr.id
     LEFT JOIN branches sb ON sb.id = pr.source_id
     LEFT JOIN branches dbb ON dbb.id = pr.destination_id
-    LEFT JOIN customers s ON s.id = pr.sender_id
-    LEFT JOIN customers r ON r.id = pr.receiver_id
     WHERE pr.company_id = ${input.companyId}
       AND pr.is_deleted = false
       AND pr.planned_tobepaid_psw > 0
-      AND pr.status NOT IN (${ParcelStatus.DELIVERED_BY_OFFICE}, ${ParcelStatus.DELIVERED_AT_HOME}, ${ParcelStatus.RETURNED_TO_SENDER}, ${ParcelStatus.CANCELLED})
+      AND pr.status NOT IN (${ParcelStatus.DELIVERED_BY_OFFICE}, ${ParcelStatus.DELIVERED_AT_HOME}, ${ParcelStatus.RETURNED_TO_SENDER}, ${ParcelStatus.RETURN_TO_SOURCE}, ${ParcelStatus.CANCELLED})
       AND GREATEST(pr.planned_tobepaid_psw - COALESCE(pp.paid_principal_psw, 0), 0) > 0
       ${input.sourceBranchId ? sql`AND pr.source_id = ${input.sourceBranchId}` : sql``}
       ${input.destinationBranchId ? sql`AND pr.destination_id = ${input.destinationBranchId}` : sql``}
@@ -1641,8 +1653,8 @@ export async function listToBePaidCollectionsReconciliationReportRowsRepo(input:
       sb.name AS source_branch_name,
       pr.destination_id AS destination_branch_id,
       dbb.name AS destination_branch_name,
-      s.fullname AS sender_name,
-      r.fullname AS receiver_name,
+      pr.sender_name_snapshot AS sender_name,
+      pr.receiver_name_snapshot AS receiver_name,
       pr.planned_tobepaid_psw,
       COALESCE(pp.collected_principal_psw, 0)::bigint AS collected_principal_psw,
       COALESCE(dcp.credited_principal_psw, 0)::bigint AS credited_principal_psw,
@@ -1659,8 +1671,6 @@ export async function listToBePaidCollectionsReconciliationReportRowsRepo(input:
     LEFT JOIN delivery_credit_principal dcp ON dcp.parcel_id = pr.id
     LEFT JOIN branches sb ON sb.id = pr.source_id
     LEFT JOIN branches dbb ON dbb.id = pr.destination_id
-    LEFT JOIN customers s ON s.id = pr.sender_id
-    LEFT JOIN customers r ON r.id = pr.receiver_id
     WHERE pr.company_id = ${input.companyId}
       AND pr.is_deleted = false
       AND pr.planned_tobepaid_psw > 0
@@ -1697,5 +1707,3 @@ export async function listToBePaidCollectionsReconciliationReportRowsRepo(input:
 
 const sourceBranch = alias(branches, 'report_parcel_source_branch');
 const destinationBranch = alias(branches, 'report_parcel_destination_branch');
-const sender = alias(customers, 'report_parcel_sender');
-const receiver = alias(customers, 'report_parcel_receiver');

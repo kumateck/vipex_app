@@ -43,6 +43,7 @@ export function buildParcelCreateReceipt({
         parcelId: parcel.id,
         bookingCode: parcel.bookingCode ?? response.bookingId,
         trackingCode: parcel.trackingCode ?? '-',
+        callSender: formParcel?.callSender ?? false,
         parcelDetails: formParcel?.parcelDetails ?? '-',
         parcelContent: formParcel?.parcelContent ?? null,
         parcelValueCedis: amount?.value ?? 0,

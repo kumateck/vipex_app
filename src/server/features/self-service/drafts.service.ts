@@ -21,6 +21,7 @@ import {
   listSelfServiceDraftsForBranchRepo,
   markSelfServiceDraftCompletedRepo,
 } from './drafts.repository';
+import { resolveCompletedCallSender } from './draft-completion-call-sender';
 
 export async function listSelfServiceDraftsSvc(agentUser: AuthUser) {
   if (!agentUser.companyId || !agentUser.branchId) throw Forbidden('Branch context is required');
@@ -66,6 +67,8 @@ export type CompleteSelfServiceDraftInput = {
   paymentResponsibility: 'SENDER' | 'RECEIVER' | 'SPLIT';
   senderSettlementMode: 'PAY_NOW' | 'CREDIT';
   senderPartialPaymentCedis?: number | string | null;
+  callSender?: boolean;
+  chargeAgentUserId?: string | null;
 };
 
 export async function completeSelfServiceDraftSvc(
@@ -152,13 +155,14 @@ export async function completeSelfServiceDraftSvc(
         parcelContent: draft.parcelContent,
         parcelValueCedis: fromPesewas(BigInt(draft.parcelValuePsw)),
         chargeCedis,
+        chargeAgentUserId: agentInput.chargeAgentUserId ?? null,
         plannedToBePaidCedis,
         method,
         senderPaymentCedis: 0,
         paymentResponsibility,
         cashierUserId: agentUser.sub,
         branchId: draft.branchId,
-        callSender: draft.callSender,
+        callSender: resolveCompletedCallSender(draft.callSender, agentInput.callSender),
       },
     ],
   };

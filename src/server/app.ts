@@ -19,6 +19,8 @@ import { usersRoutes } from './features/users/routes';
 import { customersRoutes } from './features/customers/routes';
 import { bookingsRoutes } from './features/shipments/bookings.routes';
 import { parcelsRoutes } from './features/shipments/parcels.routes';
+import { parcelSecondReceiverRoutes } from './features/shipments/parcel-second-receiver.routes';
+import { parcelInformationEditRoutes } from './features/shipments/parcel-information-edit.routes';
 import { consignmentsRoutes } from './features/shipments/consignments.routes';
 import { autoGroupingRoutes } from './features/consignments/auto-grouping.routes';
 import { cashiersRoutes } from './features/cashiers/routes';
@@ -62,6 +64,8 @@ import { momoRoutes } from './features/momo/routes';
 import { selfServicePublicRoutes } from './features/self-service/public.routes';
 import { selfServiceAgentRoutes } from './features/self-service/agent.routes';
 import { startSelfServiceDraftExpirySweep } from './features/self-service/expiry-sweep';
+import { publicTrackingRoutes } from './features/public-tracking/public-tracking.routes';
+import { receiptReprintRoutes } from './features/receipt-reprint/receipt-reprint.routes';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -74,6 +78,8 @@ export const app = new Elysia()
   .use(auditTrail)
   .use(errorHandler)
   .use(health)
+  .use(publicTrackingRoutes)
+  .use(receiptReprintRoutes)
   // Mount dev routes BEFORE any catch-all
   .use(isDev ? devMailRoutes : (a: Elysia) => a)
   .group('/v1', (v1) =>
@@ -92,7 +98,9 @@ export const app = new Elysia()
         (s) =>
           s
             .group('/bookings', (r) => r.use(bookingsRoutes).use(bookingWithParcelsRoutes))
-            .group('/parcels', (r) => r.use(parcelsRoutes))
+            .group('/parcels', (r) =>
+              r.use(parcelsRoutes).use(parcelSecondReceiverRoutes).use(parcelInformationEditRoutes),
+            )
             .group('/parcel-internal-transfers', (r) => r.use(parcelInternalTransfersRoutes))
             .group('/consignments', (r) => r.use(consignmentsRoutes))
             .group('/auto-grouping', (r) => r.use(autoGroupingRoutes)),

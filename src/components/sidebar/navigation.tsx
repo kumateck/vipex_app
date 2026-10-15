@@ -185,6 +185,32 @@ const BASE_ROUTES: Route[] = [
         ],
       },
       {
+        title: 'Storage Fee Clearance',
+        icon: 'ClipboardCheck',
+        items: [
+          {
+            title: 'Storage Fee Clearances',
+            url: '/parcels/storage-clearances',
+            permissionKey: PermissionKeys.CanReadParcelStorageClearances,
+          },
+          {
+            title: 'Create Storage Clearance',
+            url: '/parcels/storage-clearances/new',
+            permissionKey: PermissionKeys.CanRequestParcelStorageClearance,
+          },
+          {
+            title: 'Storage Clearance Approvals',
+            url: '/parcels/storage-clearances/approvals',
+            permissionKey: PermissionKeys.CanApproveParcelStorageClearance,
+          },
+          {
+            title: 'Storage Clearance Execution',
+            url: '/parcels/storage-clearances/execution',
+            permissionKey: PermissionKeys.CanExecuteParcelStorageClearance,
+          },
+        ],
+      },
+      {
         title: 'Parcel Receiving',
         icon: 'PackageCheck',
         permissionKey: PermissionKeys.CanReadParcelReceivingModule,
@@ -198,6 +224,11 @@ const BASE_ROUTES: Route[] = [
             title: 'Discrepancies',
             url: '/parcels/discrepancies',
             permissionKey: PermissionKeys.CanReadParcelIncoming,
+          },
+          {
+            title: 'Returns to Source',
+            url: '/parcels/return-to-source',
+            permissionKey: PermissionKeys.CanReadParcels,
           },
           {
             title: 'Scan to Receive',
@@ -259,6 +290,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReadShelfPickerUpdate,
           },
           {
+            title: 'Reassign Shelf Pickup',
+            url: '/parcels/shelf-pickup-reassignment',
+            permissionKey: PermissionKeys.CanUpdateParcelShelfPicker,
+          },
+          {
             title: 'Pickup Queue',
             url: '/parcels/pickup-queue',
             permissionKey: PermissionKeys.CanCreatePickupQueue,
@@ -289,6 +325,11 @@ const BASE_ROUTES: Route[] = [
             permissionKey: PermissionKeys.CanReverseParcelDelivery,
           },
           {
+            title: 'Parcel Financial Repair',
+            url: '/parcels/financial-repair',
+            permissionKey: PermissionKeys.CanRepairParcelFinancialState,
+          },
+          {
             title: 'Aged & Uncollected',
             url: '/parcels/uncollected',
             permissionKey: PermissionKeys.CanViewReportParcelsUncollected,
@@ -302,6 +343,11 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'Dispatch Parcels',
             url: '/parcels/home-delivery/dispatch',
+            permissionKey: PermissionKeys.CanDispatchForDelivery,
+          },
+          {
+            title: 'Rider Returns',
+            url: '/parcels/home-delivery/returned',
             permissionKey: PermissionKeys.CanDispatchForDelivery,
           },
           {
@@ -1019,6 +1065,11 @@ const BASE_ROUTES: Route[] = [
             url: '/users/password-management',
             permissionKey: PermissionKeys.CanSetUserPassword,
           },
+          {
+            title: 'Registered Devices',
+            url: '/users/devices',
+            permissionKey: PermissionKeys.CanUpdateUsers,
+          },
         ],
       },
       {
@@ -1673,6 +1724,11 @@ const BASE_ROUTES: Route[] = [
             title: 'Parcel Register',
             url: '/reports/parcels/register',
             permissionKey: PermissionKeys.CanViewReportParcelsRegister,
+          },
+          {
+            title: 'Daily Parcel Audit',
+            url: '/reports/parcels/daily-audit',
+            permissionKey: PermissionKeys.CanViewReportParcelsDailyAudit,
           },
           {
             title: 'Parcel Tracking',

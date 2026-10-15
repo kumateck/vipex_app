@@ -13,6 +13,7 @@ export function inferRequiredPermissionByPath(pathname?: string): PermissionKey 
   if (pathname === '/locations/new') return PermissionKeys.CanCreateLocations;
   if (pathname.startsWith('/locations/edit/')) return PermissionKeys.CanUpdateLocations;
   if (pathname === '/users/new') return PermissionKeys.CanCreateUsers;
+  if (pathname === '/users/devices') return PermissionKeys.CanUpdateUsers;
   if (pathname.startsWith('/users/edit/')) return PermissionKeys.CanUpdateUsers;
   if (pathname === '/customers/new' || pathname === '/customers/create')
     return PermissionKeys.CanCreateCustomers;

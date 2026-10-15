@@ -55,6 +55,7 @@ const createRouteSurfacePolicy: Record<string, Surface> = {
   '/procurement/suppliers': 'page',
   '/reconciliation/bank-settlements': 'page',
   '/reconciliation/sessions': 'page',
+  '/(operations)/parcels/storage-clearances': 'page',
   '/users': 'page',
 };
 

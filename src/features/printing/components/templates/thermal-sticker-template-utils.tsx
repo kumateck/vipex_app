@@ -27,9 +27,8 @@ export function StickerRow({
       style={{
         minWidth: 0,
         borderTop: '0.35mm solid #111',
-        padding: emphasis ? '0.45mm 0.8mm' : '0.35mm 0',
+        padding: emphasis ? '0.5mm 0.8mm 0.6mm' : '0.4mm 0 0.5mm',
         boxSizing: 'border-box',
-        overflow: 'hidden',
       }}
     >
       <div style={{ minWidth: 0 }}>
@@ -37,7 +36,7 @@ export function StickerRow({
           style={{
             fontSize: emphasis ? '2.2mm' : '1.9mm',
             fontWeight: 700,
-            lineHeight: 1,
+            lineHeight: 1.15,
             textTransform: 'uppercase',
             letterSpacing: '0',
             textAlign: align,
@@ -49,7 +48,7 @@ export function StickerRow({
           style={{
             fontWeight: 700,
             fontSize: getValueFontSize(displayValue, emphasis),
-            lineHeight: 0.9,
+            lineHeight: 1.1,
             whiteSpace: noWrap ? 'nowrap' : 'normal',
             overflow: 'hidden',
             textOverflow: 'clip',
@@ -71,5 +70,5 @@ function getValueFontSize(value: string, emphasis: boolean) {
   if (value.length > 34) return emphasis ? '2.65mm' : '2.4mm';
   if (value.length > 26) return emphasis ? '3mm' : '2.75mm';
   if (value.length > 20) return emphasis ? '3.45mm' : '3.1mm';
-  return emphasis ? '4.2mm' : '3.65mm';
+  return emphasis ? '3.9mm' : '3.65mm';
 }

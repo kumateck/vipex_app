@@ -253,6 +253,10 @@ export async function getDailyCashierSalesReportSvc(input: {
         parcelId: transaction.parcelId,
         bookingCode: transaction.bookingCode,
         trackingCode: transaction.trackingCode,
+        sourceBranchId: transaction.sourceBranchId,
+        sourceBranchName: transaction.sourceBranchName,
+        destinationBranchId: transaction.destinationBranchId,
+        destinationBranchName: transaction.destinationBranchName,
         parcelDetails: transaction.parcelDetails,
         parcelContent: transaction.parcelContent,
         payerName:

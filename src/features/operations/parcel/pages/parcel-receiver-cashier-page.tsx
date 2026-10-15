@@ -1,1 +1,1 @@
-export * from '../components/parcel-receiver-cashier';
+export { ParcelReceiverCashierPage } from '../components/parcel-receiver-cashier';

@@ -1,4 +1,5 @@
 export const MODULE_ROUTE_PREFIXES: ReadonlyArray<{ moduleCode: string; prefix: string }> = [
+  { moduleCode: 'device_verification', prefix: '/users/devices' },
   { moduleCode: 'accounting', prefix: '/accounting' },
   { moduleCode: 'payroll', prefix: '/payroll' },
   { moduleCode: 'hr', prefix: '/hr' },

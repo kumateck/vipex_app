@@ -5,6 +5,7 @@ All paths are relative to `/v1`.
 ## Operational Report Endpoints
 
 - `GET /reports/daily-cashier-sales`
+- `GET /reports/daily-parcel-audit`
 - `GET /reports/daily-cashier-sales/cashiers`
 - `GET /reports/accounting/storage-waivers`
 - `GET /reports/daily-cash-confirmations`
@@ -34,6 +35,12 @@ Accounting financial-statement endpoints remain under `/accounting/reports/*`.
 - Reports use their underlying domain or dedicated report permission, not a single universal grant.
 - Company-module gating still applies to HR, payroll, accounting, and other module-backed reports.
 - Head-office and branch-scoped results are resolved on the server.
+- Daily Parcel Audit requires `date=YYYY-MM-DD` and optionally `branchId` for head-office users.
+  The server ignores a branch filter from branch staff and restricts them to their own branch.
+  Missing company or branch context, invalid date, and missing permission reject the request.
+  The response contains `filters`, `generatedAt`, and parcel `rows` with charge, sender/receiver
+  principal payments, recognized delivery credit, receiver outstanding, payment status, and
+  delivery/actor details. Empty cohorts return an empty `rows` array.
 - Export and print are presentations of the returned report; they do not grant broader data access.
 - Sticker Print Usage reads successful events recorded by `/shipments/parcels/sticker-prints`.
 - Daily Cashier Sales cashier options must not infer a cashier assignment from an ordinary account role.
@@ -41,5 +48,11 @@ Accounting financial-statement endpoints remain under `/accounting/reports/*`.
   Receiver, and Delivery cashier modules. The client may narrow the returned report after loading;
   this presentation filter does not alter the endpoint's company, branch, location, or cashier
   authorization scope.
+- Daily Cashier Sales payment transactions include `sourceBranchId`, `sourceBranchName`,
+  `destinationBranchId`, and `destinationBranchName` from their parcels. The client groups only
+  returned, non-voided payments by branch-ID pair for the Sales by Route display and printout;
+  sender, receiver, and delivery subtotals depend on cashier type and payer. A missing branch name
+  falls back to its ID. Outstanding To Be Paid rows are excluded, and an empty result has no route
+  rows. Existing permission and cashier/branch restrictions apply before any route aggregation.
 
 See [Reporting Module](../REPORTING_MODULE.md) and the [Report Route Permission Matrix](../permissions/ROUTE_PERMISSION_REPORTS.md).

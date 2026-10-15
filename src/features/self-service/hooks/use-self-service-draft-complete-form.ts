@@ -31,6 +31,7 @@ function buildFormValues(draft?: SelfServiceDraft): ParcelBookingFormValues {
         parcelContent: draft?.parcelContent ?? '',
         parcelValue: draft ? String(draft.parcelValuePsw / 100) : '0',
         charge: '',
+        chargeAgentUserId: '',
         paymentResponsibility: 'SENDER',
         senderSettlementMode: 'PAY_NOW',
         senderPartialPayment: '',
@@ -77,8 +78,12 @@ export function useSelfServiceDraftCompleteForm(draft: SelfServiceDraft | undefi
     mode: 'onSubmit',
   });
 
+  const initializedDraftId = useRef<string | null>(null);
   useEffect(() => {
-    if (draft) form.reset(buildFormValues(draft));
+    if (draft && initializedDraftId.current !== draft.id) {
+      form.reset(buildFormValues(draft));
+      initializedDraftId.current = draft.id;
+    }
   }, [draft, form]);
 
   const { control, clearErrors, setValue } = form;
@@ -105,7 +110,9 @@ export function useSelfServiceDraftCompleteForm(draft: SelfServiceDraft | undefi
   }, [draft]);
 
   const { data: locationOptions = [], isLoading: isLoadingLocations } = useListLocationOptionsQuery(
-    destinationBranchId && companyId ? { companyId, branchId: destinationBranchId } : undefined,
+    destinationBranchId && companyId
+      ? { companyId, branchId: destinationBranchId, canReceive: true }
+      : undefined,
     { skip: !destinationBranchId || !companyId },
   );
 

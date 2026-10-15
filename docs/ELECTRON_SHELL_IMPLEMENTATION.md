@@ -138,6 +138,7 @@ Exposed API:
 
 - `window.api.platform()`
 - `window.api.ping()`
+- `window.api.device.register()` and `window.api.device.status()` for native registration and approval checks
 - `window.api.printHtml()`
 - `window.api.printParallel()`
 - `window.api.listPrinters()`
@@ -146,6 +147,13 @@ Exposed API:
 - `window.api.updates.download()`
 - `window.api.updates.install()`
 - `window.api.updates.onStatus()`
+
+The Electron main process stores its device credential encrypted with OS secure storage and
+injects it only into same-app `/v1/` requests. A storage failure stops registration rather than
+falling back to plaintext. Device approval is enforced only while the company's
+`device_verification` module is enabled. The renderer checks that policy through the authenticated
+`/v1/auth/devices/access` endpoint, without an additional preload method. See
+[Native Device Registration](DEVICE_REGISTRATION.md).
 
 Typing added in:
 

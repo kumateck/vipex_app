@@ -6,7 +6,13 @@ import { type ParcelSearchRow, useGetParcelDetailsQuery } from '../../api/parcel
 import { ParcelInternalHolderBadge } from '../parcel-internal-holder-badge';
 import { ParcelSuperSearchDispositionCard } from './parcel-super-search-disposition-card';
 import { PARCEL_STATUS_LABELS } from './constants';
-import { formatCurrency, formatParcelDate, paymentMethodLabel } from './utils';
+import {
+  formatCurrency,
+  formatParcelDate,
+  paymentMethodLabel,
+  resolveParcelDeliveredAt,
+} from './utils';
+import { ReturnToSourceAction } from './return-to-source-action';
 
 type ParcelSuperSearchDetailsDialogProps = {
   parcelId: string | null;
@@ -14,6 +20,9 @@ type ParcelSuperSearchDetailsDialogProps = {
   branchNameById: Map<string, string>;
   selectedParcelRow?: ParcelSearchRow;
   onClose: () => void;
+  canRecordReturn: boolean;
+  branchId: string | null;
+  onReturnToSource: (parcel: { id: string; bookingCode: string; sourceName: string }) => void;
 };
 
 function detailRow(label: string, value: string | number | null | undefined) {
@@ -39,6 +48,9 @@ export function ParcelSuperSearchDetailsDialog({
   branchNameById,
   selectedParcelRow,
   onClose,
+  canRecordReturn,
+  branchId,
+  onReturnToSource,
 }: ParcelSuperSearchDetailsDialogProps) {
   const { data: parcelDetails, isFetching: isDetailsLoading } = useGetParcelDetailsQuery(
     parcelId ?? '',
@@ -61,6 +73,14 @@ export function ParcelSuperSearchDetailsDialog({
     { skip: !parcelId || !selectedParcelRow?.isDeleted },
   );
 
+  const deliveredAt = parcelDetails
+    ? resolveParcelDeliveredAt({
+        status: parcelDetails.parcel.status,
+        deliveredAt: parcelDetails.delivery?.deliveredAt,
+        confirmedAt: parcelDetails.parcel.confirmedAt,
+      })
+    : null;
+
   return (
     <Dialog open={Boolean(parcelId)} onOpenChange={(open) => (!open ? onClose() : null)}>
       <DialogContent className="max-h-[85vh] max-w-4xl overflow-y-auto">
@@ -72,6 +92,13 @@ export function ParcelSuperSearchDetailsDialog({
           <div className="py-10 text-center text-muted-foreground">Loading details...</div>
         ) : (
           <div className="space-y-6">
+            <ReturnToSourceAction
+              parcel={parcelDetails.parcel}
+              branchId={branchId}
+              sourceName={branchNameById.get(parcelDetails.parcel.sourceId) ?? 'source branch'}
+              canRecordReturn={canRecordReturn}
+              onReturnToSource={onReturnToSource}
+            />
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Parcel Information</CardTitle>
@@ -105,6 +132,11 @@ export function ParcelSuperSearchDetailsDialog({
                   </div>
                 ) : null}
                 {detailRow('Booking', parcelDetails.parcel.bookingCode)}
+                {detailRow('Sender', parcelDetails.parcel.senderNameSnapshot)}
+                {detailRow('Receiver', parcelDetails.parcel.receiverNameSnapshot)}
+                {parcelDetails.parcel.secondReceiverNameSnapshot
+                  ? detailRow('Second Receiver', parcelDetails.parcel.secondReceiverNameSnapshot)
+                  : null}
                 {detailRow(
                   'Status',
                   PARCEL_STATUS_LABELS[parcelDetails.parcel.status] ?? parcelDetails.parcel.status,
@@ -154,6 +186,7 @@ export function ParcelSuperSearchDetailsDialog({
                 {detailRow('Created At', formatParcelDate(parcelDetails.parcel.createdAt))}
                 {detailRow('Received At', formatParcelDate(parcelDetails.parcel.receivedAt))}
                 {detailRow('Confirmed At', formatParcelDate(parcelDetails.parcel.confirmedAt))}
+                {detailRow('Delivered At', formatParcelDate(deliveredAt))}
               </CardContent>
             </Card>
 
@@ -202,10 +235,7 @@ export function ParcelSuperSearchDetailsDialog({
                     {detailRow('Dropoff Address', parcelDetails.delivery.dropoffAddress)}
                     {detailRow('Delivery Charge', formatCurrency(parcelDetails.delivery.chargePsw))}
                     {detailRow('Amount Paid', formatCurrency(parcelDetails.delivery.amountPaidPsw))}
-                    {detailRow(
-                      'Delivered At',
-                      formatParcelDate(parcelDetails.delivery.deliveredAt),
-                    )}
+                    {detailRow('Delivered At', formatParcelDate(deliveredAt))}
                   </>
                 )}
               </CardContent>

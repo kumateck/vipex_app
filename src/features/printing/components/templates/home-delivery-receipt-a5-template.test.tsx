@@ -30,6 +30,9 @@ describe('home delivery A5 receipt', () => {
         qrValue="https://example.com/AA123"
       />,
     );
+    expect(html).not.toContain('<canvas');
+    expect(html).toMatch(/<path d="M[^"]+" fill="#000"/);
+    expect(html).toMatch(/<img src="data:image\/png;base64,[^"]+" alt="Vipex logo"/);
     expect(html).toContain('Tax Invoice');
     expect(html).toContain('Amount due on delivery');
     expect(html).toContain('GH₵ 15.00');

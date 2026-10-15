@@ -3,7 +3,8 @@ import { useListCardOptionsQuery, useListCustomerCardsQuery } from '@/features/c
 import { useGetLocationQuery } from '@/features/locations/api/locations.api';
 import { useListUserOptionsQuery } from '@/features/users/api/users.api';
 import { UserStatus } from '@/db/schemas/enums';
-import type { ServerListQuery } from '@/services/rtk-query';
+import type { ParcelReceiverQuery } from '../../types';
+export type { ParcelReceiverQuery } from '../../types';
 import {
   type ParcelSearchRow,
   useGetParcelDetailsQuery,
@@ -14,15 +15,6 @@ import {
   getDialogResourceState,
   getOutstandingPrincipalPsw,
 } from '../../utils';
-
-export type ParcelReceiverQuery = ServerListQuery<{
-  companyId?: string | null;
-  destinationId?: string | null;
-  status?: number | null;
-  senderPaid?: boolean | null;
-  cashierCollectionRequired?: boolean | null;
-  hasPickupQueue?: boolean | null;
-}>;
 
 type ReceiverCashierResourcesInput = {
   companyId: string | null;
@@ -86,7 +78,7 @@ export function useReceiverCashierResources({
     staffOptions: staffOptionsQuery.data ?? [],
     branchOptions: branchOptionsQuery.data ?? [],
     listQuery,
-    rows: listQuery.data?.data ?? [],
+    rows: listQuery.currentData?.data ?? [],
     parcelDetails,
     pickupLocation: pickupLocationQuery.data,
     mainReceiverCards: mainReceiverCardsQuery.data ?? [],

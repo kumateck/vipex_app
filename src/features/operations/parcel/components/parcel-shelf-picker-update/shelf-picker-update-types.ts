@@ -10,6 +10,8 @@ export type ParcelRow = {
   receiverId: string;
   receiverName: string | null;
   receiverPhone: string | null;
+  secondReceiverName?: string | null;
+  secondReceiverPhone?: string | null;
   parcelDetails: string;
   parcelContent: string;
   chargePsw: number;
@@ -20,6 +22,7 @@ export type ParcelRow = {
   pickerStaffName: string | null;
   createdAt: string;
   receivedAt: string | null;
+  storageChargePsw?: number | null;
 };
 
 export const EMPTY_META = {

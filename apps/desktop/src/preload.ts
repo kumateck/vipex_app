@@ -39,6 +39,11 @@ type DesktopNetworkDiagnostics = {
 };
 
 contextBridge.exposeInMainWorld('api', {
+  device: {
+    status: async () => ipcRenderer.invoke('device:status'),
+    register: async (email: string, password: string) =>
+      ipcRenderer.invoke('device:register', { email, password }),
+  },
   platform: async () => process.platform,
   ping: async () => 'pong',
   retryDesktopLoad: async () => ipcRenderer.invoke('app:retry-load'),
@@ -47,7 +52,13 @@ contextBridge.exposeInMainWorld('api', {
   openInBrowser: async (url: string) => ipcRenderer.invoke('app:open-external', url),
   printHtml: async (request: {
     html: string;
-    layout: 'thermal-sticker' | 'invoice-a5' | 'invoice-a5-receipt' | 'report-a4';
+    layout:
+      | 'thermal-sticker'
+      | 'invoice-a5'
+      | 'invoice-a5-receipt'
+      | 'receipt-80mm'
+      | 'receipt-58mm'
+      | 'report-a4';
     title?: string;
     silent?: boolean;
     deviceName?: string;
@@ -56,7 +67,13 @@ contextBridge.exposeInMainWorld('api', {
   printParallel: async (request: {
     jobs: Array<{
       html: string;
-      layout: 'thermal-sticker' | 'invoice-a5' | 'invoice-a5-receipt' | 'report-a4';
+      layout:
+        | 'thermal-sticker'
+        | 'invoice-a5'
+        | 'invoice-a5-receipt'
+        | 'receipt-80mm'
+        | 'receipt-58mm'
+        | 'report-a4';
       title?: string;
       silent?: boolean;
       deviceName?: string;

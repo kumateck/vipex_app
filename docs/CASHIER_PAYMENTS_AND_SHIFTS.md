@@ -60,6 +60,22 @@ The payment service supports:
 
 Atomic collection operations must not leave a successful payment with a failed parcel transition, or a completed parcel with no required payment.
 
+Delivery cashier completion uses the configured doorstep fee saved on the delivery record.
+Rider returns and reassignment preserve this fee, so it remains visible when the rider hands
+the parcel to the customer and the cashier finalizes it. The outstanding fee is the configured
+fee minus non-voided delivery fee payments, floored at zero. Rider-recorded collections remain
+pending cashier reconciliation and do not count as posted payments. Moving a returned parcel
+to office pickup excludes the doorstep fee from the required settlement. Web and Electron
+desktop share the cashier dialog; web and mobile riders use the same preserved fee.
+Use **Edit Delivery Fee** in the Delivery Cashier table or finalization dialog to restore or
+correct the confirmed charge. The same dialog is available on Rider Returns. Enter the new
+fee and reason; the fee and outstanding-payment defaults refresh after saving. This does not
+record a collection or change delivery status. The server blocks stale edits, fees below
+posted payments or rider collections, pending change requests, and completed deliveries.
+Fees erased by the old return behavior are restored manually using confirmed amounts;
+this workflow does not reconstruct historical amounts. See [Rider returns and reprocessing](PARCEL_OPERATIONS.md#rider-returns-and-reprocessing)
+for recovery constraints and QA scenarios.
+
 ## Amount and Tax Rules
 
 - The server validates the expected charge and allowed settlement.
@@ -74,6 +90,15 @@ Atomic collection operations must not leave a successful payment with a failed p
 ## Mobile Money
 
 Sender payment supports manual and automated MTN MoMo paths where configured. Automated collection must preserve provider references and an unambiguous pending, successful, failed, or timed-out result. A timeout must not be treated as failure if the provider status is still unknown; reconciliation must be possible.
+
+## Sender payment list refresh
+
+The web Sender Cashier Payments page polls for new or changed parcels every 15 minutes. Users
+can also use the **Refresh** button to request an immediate update. During an initial load,
+scheduled poll, or manual refresh, the page keeps the current rows visible and shows a
+`Refreshing payments...` indicator plus a spinning refresh button; the button is disabled until
+the request finishes. This applies to the web page only; mobile and desktop clients retain their
+existing refresh behavior.
 
 ## Printing
 
@@ -108,6 +133,27 @@ so Receiver-only and Delivery-only views do not show them. A module with no matc
 shows an empty result with zero recalculated totals. This behavior applies to the web and desktop
 report; mobile does not expose this report page. Permissions and server branch/cashier scope are
 unchanged by the post-load filter.
+
+The **Payments** view and its printed report show **Sales by Route**, grouped by each paid
+parcel's existing source and destination branch IDs (displaying branch names). For example, a
+receiving Accra cashier sees Kumasi → Accra and Sunyani → Accra separately; an Accra sender
+cashier sees Accra → Kumasi and Accra → Sunyani separately. Each row shows payment count,
+sender/receiver/delivery gross amounts, cash versus non-cash amounts, and the route total.
+The transaction list and printout also show the route for audit tracing. Only non-voided payment
+transactions already included in the selected cashier/date/session scope contribute; outstanding
+To Be Paid parcels are not sales. Non-cash includes mobile money and credit, so the Cash column
+is the physical-cash portion. The post-load module filter recalculates the route rows from its
+visible transactions; the total across routes must equal the filtered Gross Sales. Missing branch
+names fall back to the branch ID, without merging distinct branches with the same name. Empty
+payment results show no route rows. Existing `CanViewReportCashierShifts` and cashier/branch
+scoping apply to both cashier self-view and authorized accounts-officer selection.
+
+QA: for one Accra receiver cashier, collect payments on parcels from Kumasi and Sunyani and
+verify distinct route totals and matching payment rows. Repeat with sender-paid parcels sent
+from Accra to both branches. Include Full Cashier, Delivery Cashier, split, cash, mobile-money,
+credit, and voided payments; verify the gross and cash/non-cash totals, module-filter behavior,
+and printed route summary. Verify unpaid To Be Paid rows, unauthorized cashier/branch selection,
+and missing branch display names do not distort the breakdown.
 
 ### Known Access and Selection Defect
 

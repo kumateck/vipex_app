@@ -86,6 +86,7 @@ export async function getUserByIdRepo(id: string) {
 
 export async function insertRefreshTokenRepo(data: {
   userId: string;
+  deviceId?: string | null;
   tokenHash: string;
   expiresAt: Date;
   permissionsSnapshot: string[];
@@ -94,6 +95,7 @@ export async function insertRefreshTokenRepo(data: {
 }) {
   await db.insert(refreshTokens).values({
     userId: data.userId,
+    deviceId: data.deviceId ?? null,
     tokenHash: data.tokenHash,
     expiresAt: data.expiresAt,
     permissionsSnapshot: data.permissionsSnapshot,
@@ -116,31 +118,36 @@ export async function findRefreshTokenByIdRepo(id: string) {
   return rt ?? null;
 }
 
+export async function getUserDevicePolicyContextRepo(userId: string) {
+  const [user] = await db
+    .select({ companyId: users.companyId, status: users.status })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return user ?? null;
+}
+
 export async function rotateRefreshTokenRepo(
   prevHash: string,
   nextHash: string,
   nextExpires: Date,
   permissionsSnapshot: string[],
 ) {
-  // Mark previous as revoked and rotated, then insert new
-  await db.transaction(async (tx) => {
-    await tx
+  return db.transaction(async (tx) => {
+    const [previous] = await tx
       .update(refreshTokens)
       .set({ revokedAt: new Date(), replacedByHash: nextHash })
-      .where(eq(refreshTokens.tokenHash, prevHash));
-    const prev = await tx
-      .select({ userId: refreshTokens.userId })
-      .from(refreshTokens)
-      .where(eq(refreshTokens.tokenHash, prevHash))
-      .limit(1);
-    if (prev.length) {
-      await tx.insert(refreshTokens).values({
-        userId: prev[0]!.userId,
-        tokenHash: nextHash,
-        expiresAt: nextExpires,
-        permissionsSnapshot,
-      });
-    }
+      .where(and(eq(refreshTokens.tokenHash, prevHash), isNull(refreshTokens.revokedAt)))
+      .returning({ userId: refreshTokens.userId, deviceId: refreshTokens.deviceId });
+    if (!previous) return false;
+    await tx.insert(refreshTokens).values({
+      userId: previous.userId,
+      deviceId: previous.deviceId,
+      tokenHash: nextHash,
+      expiresAt: nextExpires,
+      permissionsSnapshot,
+    });
+    return true;
   });
 }
 

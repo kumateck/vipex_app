@@ -9,6 +9,7 @@ import { getPrinterPreferenceMapping } from '@/features/printing/services/printe
 import { formatDate } from '../parcel-receipt-formatters';
 import { buildParcelTrackingUrl } from '../../utils/tracking-url';
 import type { HomeDeliveryReceipt } from '../../api/parcel.api';
+import { useAuthStore } from '@/stores/auth-store';
 
 export function HomeDeliveryReceiptPrintController({
   receipt,
@@ -18,6 +19,7 @@ export function HomeDeliveryReceiptPrintController({
   onComplete: () => void;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const cashierName = useAuthStore((state) => state.user?.fullname ?? null);
   const started = useRef(false);
   const documentTitle = `home-delivery-receipt-${receipt.bookingCode}`;
   const browserPrint = useManagedReactPrint({
@@ -67,6 +69,7 @@ export function HomeDeliveryReceiptPrintController({
     <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '210mm' }}>
       <div ref={contentRef}>
         <HomeDeliveryReceiptA5Template
+          cashierName={cashierName}
           issuedAtLabel={formatDate(new Date().toISOString())}
           bookingCode={receipt.bookingCode}
           trackingCode={receipt.trackingCode}

@@ -1,3 +1,4 @@
+import { postParcelStorageWaiver } from './parcel-storage-waiver-posting.service';
 import { fromPesewas, toPesewas } from '@/server/utils/gh-money';
 import {
   ParcelHolderType,
@@ -8,7 +9,6 @@ import {
   ParcelStatus,
   PaymentComponent,
 } from '@/db/schemas';
-import { JournalSourceType } from '@/db/schemas/enums';
 import { auditLogs } from '@/db/schemas/audit';
 import { db } from '@/db/config';
 import { and, desc, eq, inArray } from 'drizzle-orm';
@@ -28,7 +28,7 @@ import { getBranchRepo } from '../branches/repository';
 import { recordAuditLog } from '../audit/logger';
 import { listConsignmentsForParcelRepo } from './consignments.repository';
 import { removeActiveConsignmentItemsByParcelRepo } from './consignments.repository';
-import { getPickupQueueByParcelRepo, updatePickupQueueRepo } from '../pickup-queues/repository';
+import { getPickupQueueByParcelRepo } from '../pickup-queues/repository';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
 import {
   getParcelInternalHolderByParcelRepo,
@@ -36,9 +36,6 @@ import {
   upsertParcelInternalHolderRepo,
 } from '../parcel-internal-transfers/repository';
 import { findCompanyModuleRepo } from '../company-modules/repository';
-import { postJournalEntrySvc } from '../accounting/posting.service';
-import { getAccountByCodeRepo } from '../accounting/repository';
-import { isAccountingEnabledForCompanySvc } from '../accounting/service';
 import {
   assertReceiverOtpVerifiedSvc,
   consumeReceiverOtpTokenSvc,
@@ -62,20 +59,20 @@ import {
 import {
   createParcelDispositionActionRepo,
   createParcelRepo,
-  createParcelStorageWaiverRepo,
   getParcelRepo,
   listParcelDispositionActionsRepo,
   listParcelStorageWaiversRepo,
   listParcelsRepo,
   listStuckParcelsRepo,
   sumParcelStorageWaiversPswRepo,
-  updateParcelStorageWaiverAccountingPostingRepo,
   updateParcelRepo,
   type ListParcelsParams,
   type ListStuckParcelsParams,
   type ParcelRow,
 } from './parcels.repository';
 import { assertParcelFullyPaid } from './parcel-payment-settlement';
+import { assertNoOpenParcelReconciliationCaseForDelivery } from './parcel-delivery-reconciliation-guard';
+import { isParcelEligibleForReconciliation } from './parcel-reconciliation-eligibility';
 import {
   assertNoOutstandingStorageForHandover,
   resolveAndValidateStorageWaiverAmountPsw,
@@ -125,10 +122,6 @@ function assertActionType(value: number): ParcelReconciliationActionType {
   throw BadRequest('Unsupported reconciliation action type');
 }
 
-function isReversalAllowedParcelStatus(status: number) {
-  return status !== ParcelStatus.DELIVERED_AT_HOME && status !== ParcelStatus.DELIVERED_BY_OFFICE;
-}
-
 function isAmountCorrectionCaseType(caseType: ParcelReconciliationCaseType) {
   return (
     caseType === ParcelReconciliationCaseType.WRONG_AMOUNT ||
@@ -142,8 +135,6 @@ function isOriginalSessionAmountCorrection(actionType: number | null | undefined
 
 const STORAGE_DAY_MS = 24 * 60 * 60 * 1000;
 const STORAGE_PAYMENT_NOTE_PREFIX = 'STORAGE_CHARGE';
-const STORAGE_WAIVER_RECEIVABLE_ACCOUNT_CODE = '1300';
-const STORAGE_WAIVER_EXPENSE_ACCOUNT_CODE = '5180';
 
 function addMonths(date: Date, months: number): Date {
   const result = new Date(date);
@@ -151,14 +142,14 @@ function addMonths(date: Date, months: number): Date {
   return result;
 }
 
-async function getCompanyParcelAgeingPolicy(companyId: string): Promise<ParcelAgeingPolicy> {
+export async function getCompanyParcelAgeingPolicy(companyId: string): Promise<ParcelAgeingPolicy> {
   const shipmentsModule = await findCompanyModuleRepo(companyId, 'shipments');
   return shipmentsModule?.settings
     ? getParcelAgeingPolicyFromModuleSettings(shipmentsModule.settings)
     : DEFAULT_PARCEL_AGEING_POLICY;
 }
 
-function computeParcelAgeingSnapshot(input: {
+export function computeParcelAgeingSnapshot(input: {
   status: number;
   receivedAt: Date | null;
   policy: ParcelAgeingPolicy;
@@ -166,7 +157,8 @@ function computeParcelAgeingSnapshot(input: {
 }) {
   const isCollectionStatus =
     input.status === ParcelStatus.AWAITING_PICKUP ||
-    input.status === ParcelStatus.HOME_DELIVERY_REQUESTED;
+    input.status === ParcelStatus.HOME_DELIVERY_REQUESTED ||
+    input.status === ParcelStatus.AGED_IN_WAREHOUSE;
 
   if (!isCollectionStatus || !input.receivedAt) {
     return {
@@ -350,6 +342,9 @@ export async function createParcelSvc(input: {
   ) {
     throw BadRequest('Missing required fields');
   }
+  if (input.status === ParcelStatus.RETURN_TO_SOURCE) {
+    throw BadRequest('Use the destination branch return action to record a return to source');
+  }
   const parcelValuePsw = input.parcelValueCedis != null ? toPesewas(input.parcelValueCedis) : 0n;
   const plannedToBePaidPsw =
     input.plannedToBePaidCedis != null ? toPesewas(input.plannedToBePaidCedis) : 0n;
@@ -408,7 +403,27 @@ export async function updateParcelSvc(
 ): Promise<{ id: string }> {
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
+  if (
+    patch.status === ParcelStatus.RETURN_TO_SOURCE &&
+    cur.status !== ParcelStatus.RETURN_TO_SOURCE
+  ) {
+    throw BadRequest('Use the destination branch return action to record a return to source');
+  }
+  if (
+    cur.status === ParcelStatus.RETURN_TO_SOURCE &&
+    patch.status !== undefined &&
+    patch.status !== ParcelStatus.RETURN_TO_SOURCE
+  ) {
+    throw Conflict('Parcel is marked for return to its source branch');
+  }
   let verifiedReceiverOtp: Awaited<ReturnType<typeof assertReceiverOtpVerifiedSvc>> | null = null;
+  if (
+    patch.status === ParcelStatus.DELIVERED_BY_OFFICE ||
+    patch.status === ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER ||
+    patch.status === ParcelStatus.DELIVERED_AT_HOME
+  ) {
+    await assertNoOpenParcelReconciliationCaseForDelivery(id);
+  }
   if (patch.status === ParcelStatus.DELIVERED_BY_OFFICE) {
     const destinationBranch = await getBranchRepo(cur.destinationId);
     if (!destinationBranch) throw NotFound('Destination branch not found');
@@ -503,6 +518,12 @@ export async function markParcelReceivedSvc(
 ) {
   const cur = await getParcelRepo(id);
   if (!cur) throw NotFound('Parcel not found');
+  if (input.status === ParcelStatus.RETURN_TO_SOURCE) {
+    throw BadRequest('Use the destination branch return action to record a return to source');
+  }
+  if (cur.status === ParcelStatus.RETURN_TO_SOURCE) {
+    throw Conflict('Parcel is marked for return to its source branch');
+  }
   if (cur.receivedAt) throw Conflict('Parcel already marked received');
   const patch: Partial<typeof cur> = {
     receivedBy: input.receivedBy,
@@ -641,7 +662,7 @@ export async function requestParcelReconciliationCaseSvc(input: {
   if (parcel.companyId !== input.companyId) throw NotFound('Parcel not found in company');
   if (parcel.isDeleted) throw BadRequest('Cannot open case for a deleted parcel');
 
-  if (!isReversalAllowedParcelStatus(parcel.status)) {
+  if (!isParcelEligibleForReconciliation(parcel.status)) {
     throw BadRequest('Delivered parcels require finance exception handling');
   }
 
@@ -655,6 +676,9 @@ export async function requestParcelReconciliationCaseSvc(input: {
       throw BadRequest('Linked parcel does not belong to this company');
     }
     if (linkedParcel.id === parcel.id) throw BadRequest('Linked parcel must be different');
+    if (!isParcelEligibleForReconciliation(linkedParcel.status)) {
+      throw BadRequest('Delivered parcels require finance exception handling');
+    }
   }
 
   if (caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY && !linkedParcel) {
@@ -815,6 +839,14 @@ export async function approveParcelReconciliationCaseSvc(input: {
   if (existing.requestedBy === input.actorUserId) {
     throw BadRequest('Requester cannot approve the same reconciliation case');
   }
+  const involvedParcels = await Promise.all(
+    [existing.parcelId, existing.linkedParcelId]
+      .filter((parcelId): parcelId is string => parcelId != null)
+      .map((parcelId) => getParcelSvc(parcelId)),
+  );
+  if (involvedParcels.some((parcel) => !isParcelEligibleForReconciliation(parcel.status))) {
+    throw BadRequest('Delivered parcels require finance exception handling');
+  }
   if (
     existing.caseType === ParcelReconciliationCaseType.DUPLICATE_ENTRY &&
     actionType !== ParcelReconciliationActionType.KEEP_ORIGINAL_VOID_DUPLICATE &&
@@ -883,6 +915,12 @@ export async function executeParcelReconciliationCaseSvc(input: {
     const linkedParcel = existing.linkedParcelId
       ? await getParcelSvc(existing.linkedParcelId, tx)
       : null;
+    if (
+      !isParcelEligibleForReconciliation(primaryParcel.status) ||
+      (linkedParcel != null && !isParcelEligibleForReconciliation(linkedParcel.status))
+    ) {
+      throw BadRequest('Delivered parcels require finance exception handling');
+    }
     const targetParcels: ParcelRow[] = [];
 
     if (isOriginalSessionAmountCorrection(actionType)) {
@@ -996,7 +1034,7 @@ export async function executeParcelReconciliationCaseSvc(input: {
 
     for (const targetParcel of targetParcels) {
       if (targetParcel.isDeleted) continue;
-      if (!isReversalAllowedParcelStatus(targetParcel.status)) {
+      if (!isParcelEligibleForReconciliation(targetParcel.status)) {
         throw BadRequest(`Parcel ${targetParcel.trackingCode} is already delivered`);
       }
 
@@ -1206,82 +1244,18 @@ export async function waiveParcelStorageAccrualSvc(input: {
     requestedPsw: requestedPswRaw,
   });
 
-  const posting = await db.transaction(async (tx) => {
-    const createdWaiver = await createParcelStorageWaiverRepo(
+  const posting = await db.transaction((tx) =>
+    postParcelStorageWaiver(
       {
-        companyId: parcel.companyId,
         parcelId: input.parcelId,
-        waivedAmountPsw: requestedPsw,
+        actorUserId: input.actorUserId,
         reason,
-        waivedBy: input.actorUserId,
-        waivedAt: new Date(),
+        amountPsw: requestedPsw,
+        parcel,
       },
       tx,
-    );
-    if (!createdWaiver) throw NotFound('Failed to record parcel storage waiver');
-
-    if (!(await isAccountingEnabledForCompanySvc(parcel.companyId, tx))) {
-      return null;
-    }
-
-    const [receivableAccount, expenseAccount] = await Promise.all([
-      getAccountByCodeRepo(parcel.companyId, STORAGE_WAIVER_RECEIVABLE_ACCOUNT_CODE, tx),
-      getAccountByCodeRepo(parcel.companyId, STORAGE_WAIVER_EXPENSE_ACCOUNT_CODE, tx),
-    ]);
-
-    if (!receivableAccount || !receivableAccount.active) {
-      throw Conflict(
-        `Accounting account ${STORAGE_WAIVER_RECEIVABLE_ACCOUNT_CODE} is required and must be active to post storage waivers`,
-      );
-    }
-    if (!expenseAccount || !expenseAccount.active) {
-      throw Conflict(
-        `Accounting account ${STORAGE_WAIVER_EXPENSE_ACCOUNT_CODE} is required and must be active to post storage waivers`,
-      );
-    }
-
-    const posted = await postJournalEntrySvc(
-      {
-        companyId: parcel.companyId,
-        sourceType: JournalSourceType.PAYMENT,
-        sourceId: createdWaiver.id,
-        description: `Parcel storage waiver: ${parcel.trackingCode}`,
-        memo: reason,
-        branchId: parcel.destinationId,
-        locationId: parcel.pickupLocationId ?? null,
-        recordedByUserId: input.actorUserId,
-        approvedByUserId: input.actorUserId,
-        postedBy: input.actorUserId,
-        lines: [
-          {
-            accountId: expenseAccount.id,
-            debitPsw: requestedPsw,
-            description: `Storage waiver expense for ${parcel.trackingCode}`,
-            metadata: { parcelId: input.parcelId, waiverId: createdWaiver.id },
-          },
-          {
-            accountId: receivableAccount.id,
-            creditPsw: requestedPsw,
-            description: `Storage receivable write-off for ${parcel.trackingCode}`,
-            metadata: { parcelId: input.parcelId, waiverId: createdWaiver.id },
-          },
-        ],
-      },
-      tx,
-    );
-
-    const postedAt = new Date();
-    await updateParcelStorageWaiverAccountingPostingRepo(
-      createdWaiver.id,
-      {
-        accountingJournalEntryId: posted.entryId,
-        accountingPostedAt: postedAt,
-      },
-      tx,
-    );
-
-    return { journalEntryId: posted.entryId, postedAt };
-  });
+    ),
+  );
 
   const after = await getParcelStorageSettlementSvc(input.parcelId);
 
@@ -1701,17 +1675,4 @@ export async function bulkAssignParcelsToCallCenterSvc(input: {
     await assignParcelToCallCenterSvc({ parcelId, userId: input.userId });
   }
   return { success: true, assignedCount: input.parcelIds.length };
-}
-
-export async function updateParcelShelfPickerSvc(input: { parcelId: string; userId: string }) {
-  const parcel = await getParcelRepo(input.parcelId);
-  if (!parcel) throw NotFound('Parcel not found');
-
-  const queue = await getPickupQueueByParcelRepo(input.parcelId);
-  await db.transaction(async (tx) => {
-    await updateParcelRepo(input.parcelId, { shelfPickerStaffId: input.userId }, tx);
-    if (queue) await updatePickupQueueRepo(queue.id, { pickerStaffId: input.userId }, tx);
-  });
-
-  return { success: true, parcelId: input.parcelId };
 }

@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { PHONE_DIGITS, limitPhoneDigits } from '@/lib/phone';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import type { ContactOutcome } from './types';
+import { ParcelCallNotificationFields } from './parcel-call-notification-fields';
 import { ParcelMainReceiverFields } from './parcel-main-receiver-fields';
 import type { ReturnTypeMainReceiverChange } from './parcel-main-receiver-types';
 
@@ -136,25 +136,13 @@ export function ParcelCallOutcomeDialog({
             </div>
           ) : null}
 
-          <div className="space-y-3 rounded-md border p-3">
-            <p className="text-sm font-medium">Send Notification</p>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="send-sms">Send SMS</Label>
-              <Checkbox
-                id="send-sms"
-                checked={sendSms}
-                onCheckedChange={(checked) => onSendSmsChange(checked === true)}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="send-email">Send Email</Label>
-              <Checkbox
-                id="send-email"
-                checked={sendEmail}
-                onCheckedChange={(checked) => onSendEmailChange(checked === true)}
-              />
-            </div>
-          </div>
+          <ParcelCallNotificationFields
+            sendSms={sendSms}
+            onSendSmsChange={onSendSmsChange}
+            sendEmail={sendEmail}
+            onSendEmailChange={onSendEmailChange}
+            disabled={isSaving}
+          />
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>

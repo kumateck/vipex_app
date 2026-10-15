@@ -22,6 +22,7 @@ export type SelfServiceDraft = {
   claimedBy: string | null;
   claimedAt: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 export type CompleteSelfServiceDraftInput = {
@@ -30,9 +31,11 @@ export type CompleteSelfServiceDraftInput = {
   pickupLocationId?: string | null;
   parcelDetails: string;
   chargeCedis: number | string;
+  chargeAgentUserId?: string | null;
   paymentResponsibility: 'SENDER' | 'RECEIVER' | 'SPLIT';
   senderSettlementMode: 'PAY_NOW' | 'CREDIT';
   senderPartialPaymentCedis?: number | string | null;
+  callSender?: boolean;
 };
 
 export type CompleteSelfServiceDraftResponse = {
@@ -49,6 +52,29 @@ export const selfServiceAgentApi = api.injectEndpoints({
     getSelfServiceDraft: builder.query<SelfServiceDraft, string>({
       query: (id) => ({ url: `/self-service/drafts/${id}` }),
       providesTags: (_result, _error, id) => [{ type: 'Bookings', id: `SELF_SERVICE_${id}` }],
+    }),
+    updateSelfServiceDraftCustomers: builder.mutation<
+      SelfServiceDraft,
+      {
+        id: string;
+        expectedUpdatedAt: string;
+        sender: { fullname: string; phone: string; phone2: string | null };
+        receiver: { fullname: string; phone: string; phone2: string | null };
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/self-service/drafts/${id}/customers`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: (_result, error, { id }) =>
+        error
+          ? []
+          : [
+              { type: 'Bookings', id: 'SELF_SERVICE_LIST' },
+              { type: 'Bookings', id: `SELF_SERVICE_${id}` },
+              'Customers',
+            ],
     }),
     claimSelfServiceDraft: builder.mutation<SelfServiceDraft, string>({
       query: (id) => ({ url: `/self-service/drafts/${id}/claim`, method: 'POST' }),
@@ -90,6 +116,7 @@ export const {
   useListSelfServiceDraftsQuery,
   useGetSelfServiceDraftQuery,
   useClaimSelfServiceDraftMutation,
+  useUpdateSelfServiceDraftCustomersMutation,
   useCompleteSelfServiceDraftMutation,
   useCancelSelfServiceDraftMutation,
 } = selfServiceAgentApi;

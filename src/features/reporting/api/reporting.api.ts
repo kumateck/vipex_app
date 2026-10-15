@@ -562,6 +562,10 @@ export interface DailyCashierSalesTransactionRow {
   parcelId: string;
   bookingCode: string;
   trackingCode: string;
+  sourceBranchId: string;
+  sourceBranchName: string | null;
+  destinationBranchId: string;
+  destinationBranchName: string | null;
   parcelDetails: string;
   parcelContent: string;
   payerName: string;

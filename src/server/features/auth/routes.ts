@@ -29,6 +29,8 @@ import {
   updateCurrentUserProfileCtrl,
   verifyCurrentUserPasswordCtrl,
 } from './controller';
+import { readDeviceCredential, readNativeClient } from './device-headers';
+import { BadRequest } from '@/server/utils/http-error';
 
 export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/auth', (app) =>
   app
@@ -36,6 +38,13 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
       '/login',
       async ({ body, request }) => {
         const ua = request.headers.get('user-agent') || undefined;
+        const client = readNativeClient(request);
+        if (
+          !client &&
+          (request.headers.has('x-vipex-device-id') || request.headers.has('x-vipex-device-secret'))
+        ) {
+          throw BadRequest('Device credential requires a native client type');
+        }
         const ip =
           (request.headers.get('x-forwarded-for') || '').split(',')[0]?.trim() || undefined;
         return await loginCtrl({
@@ -43,6 +52,8 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
           password: body.password,
           ua,
           ip,
+          client,
+          deviceCredential: readDeviceCredential(request),
         });
       },
       {
@@ -53,9 +64,13 @@ export const authRoutes = new Elysia({ name: 'auth' }).use(authPlugin).group('/a
     )
     .post(
       '/refresh',
-      async ({ body }) => {
+      async ({ body, request }) => {
         // Return controller result directly to match `response: t.Object({ tokens: TokenPair })`
-        return await refreshCtrl(body.refreshToken);
+        return await refreshCtrl(
+          body.refreshToken,
+          readDeviceCredential(request),
+          readNativeClient(request),
+        );
       },
       {
         body: RefreshBody,

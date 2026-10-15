@@ -1,3 +1,4 @@
+import { DeliveryFeeEditButton } from '@/features/operations/delivery-fee';
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
@@ -17,6 +18,7 @@ import { formatDateTime } from '@/lib/dates';
 import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { EMPTY_META } from './constants';
 import { formatMoney, formatPhones } from './utils';
 
@@ -37,6 +39,8 @@ type DeliveryCashierTableProps = {
     }>,
   ) => void;
   onFinalize: (parcel: ParcelSearchRow) => void;
+  onReturnToPickup: (parcel: ParcelSearchRow) => void;
+  isReturningToPickup: boolean;
 };
 
 export function DeliveryCashierTable({
@@ -50,10 +54,21 @@ export function DeliveryCashierTable({
   loading,
   onRequestChange,
   onFinalize,
+  onReturnToPickup,
+  isReturningToPickup,
 }: DeliveryCashierTableProps) {
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        id: 'booking',
+        header: 'Booking',
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <span>{row.original.bookingCode}</span>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+          </div>
+        ),
+      },
       {
         id: 'receiver',
         header: 'Receiver',
@@ -117,20 +132,37 @@ export function DeliveryCashierTable({
         id: 'action',
         header: 'Action',
         cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="outline" className="h-8 w-8">
-                <EllipsisVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onFinalize(row.original)}>Finalize</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="outline" className="h-8 w-8">
+                  <EllipsisVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  disabled={isReturningToPickup}
+                  onClick={() => onFinalize(row.original)}
+                >
+                  Finalize
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={isReturningToPickup}
+                  onClick={() => onReturnToPickup(row.original)}
+                >
+                  Return to Pickup
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DeliveryFeeEditButton
+              parcelId={row.original.id}
+              bookingCode={row.original.bookingCode}
+            />
+          </div>
         ),
       },
     ],
-    [onFinalize],
+    [onFinalize, onReturnToPickup, isReturningToPickup],
   );
 
   return (
@@ -139,7 +171,8 @@ export function DeliveryCashierTable({
         <CardHeader>
           <CardTitle>Delivery Cashier Finalization</CardTitle>
           <CardDescription>
-            Receive rider money for successful handovers and finalize to delivered at home.
+            Receive rider money for successful handovers and finalize to delivered at home. Return
+            mistaken handovers to the main office for pickup.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -114,14 +114,24 @@ export function useCreateReconciliationCase({
       return [];
     }
     try {
-      const response = await searchParcels({
-        page: 1,
-        pageSize: 50,
-        search,
-        filters: { companyId, sourceId: branchId, includeDeleted: false },
-      }).unwrap();
-      if (!response.data.length) toast.error('No matching parcel found');
-      return response.data;
+      const branches = branchId ? [{ sourceId: branchId }, { destinationId: branchId }] : [{}];
+      const responses = await Promise.all(
+        branches.map((branchFilter) =>
+          searchParcels({
+            page: 1,
+            pageSize: 50,
+            search,
+            filters: { companyId, ...branchFilter, includeDeleted: false },
+          }).unwrap(),
+        ),
+      );
+      const matches = Array.from(
+        new Map(
+          responses.flatMap((response) => response.data).map((parcel) => [parcel.id, parcel]),
+        ).values(),
+      );
+      if (!matches.length) toast.error('No matching parcel found');
+      return matches;
     } catch (error) {
       ThrowErrorMessage(error);
       return [];

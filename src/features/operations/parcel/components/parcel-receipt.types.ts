@@ -1,6 +1,7 @@
 export type ReceiptPrintData = {
   bookingCode: string;
   trackingCode: string;
+  callSender?: boolean;
   parcelDetails: string;
   parcelContent?: string | null;
   parcelValueCedis?: number | null;

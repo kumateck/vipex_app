@@ -1,7 +1,12 @@
 import type { Server, ServerWebSocket } from 'bun';
 import { verifyAccessToken } from '@/server/utils/jwt';
 import { ensureCompanyModuleEnabledSvc } from '@/server/features/company-modules/service';
-import { getUserByIdRepo } from '@/server/features/auth/repository';
+import { findRefreshTokenByIdRepo, getUserByIdRepo } from '@/server/features/auth/repository';
+import { findDeviceByCredentialRepo } from '@/server/features/auth/device.repository';
+import { readDeviceCredential, readNativeClient } from '@/server/features/auth/device-headers';
+import { sha256HexAsync } from '@/server/utils/otp';
+import { UserStatus } from '@/db/schemas/enums';
+import { isDeviceVerificationRequired } from '@/server/features/auth/device-policy';
 import type { CommunicationMessagesItem } from './messages/dto';
 import type { CommunicationCallsItem } from './calls/dto';
 import { createCommunicationPresenceRepo } from './presence/repository';
@@ -24,6 +29,7 @@ type CommunicationSocketData = {
   userId: string;
   companyId: string;
   userName: string;
+  deviceId?: string | null;
 };
 
 type CallParticipantState = {
@@ -93,6 +99,20 @@ type IncomingSocketMessage =
 const companySockets = new Map<string, Set<ServerWebSocket<CommunicationSocketData>>>();
 const callParticipantsByCompany = new Map<string, Map<string, Map<string, CallParticipantState>>>();
 const socketJoinedCalls = new WeakMap<ServerWebSocket<CommunicationSocketData>, Set<string>>();
+
+export function disconnectCommunicationDeviceSockets(deviceId: string) {
+  for (const sockets of companySockets.values()) {
+    for (const socket of sockets) {
+      if (socket.data.deviceId === deviceId) socket.close(1008, 'Device access removed');
+    }
+  }
+}
+
+export function disconnectCommunicationCompanySockets(companyId: string) {
+  for (const socket of companySockets.get(companyId) ?? []) {
+    socket.close(1008, 'Company access policy changed');
+  }
+}
 
 function addSocket(companyId: string, ws: ServerWebSocket<CommunicationSocketData>) {
   const set = companySockets.get(companyId) ?? new Set<ServerWebSocket<CommunicationSocketData>>();
@@ -244,12 +264,44 @@ export async function upgradeCommunicationSocket(
   try {
     const payload = await verifyAccessToken(token);
     const userId = payload.sub;
+    const session = payload.sid ? await findRefreshTokenByIdRepo(payload.sid) : null;
+    if (
+      !session ||
+      session.userId !== userId ||
+      session.revokedAt ||
+      session.expiresAt.getTime() <= Date.now()
+    ) {
+      return new Response('Session expired', { status: 401 });
+    }
     const userRecord = userId ? await getUserByIdRepo(userId) : null;
     const companyId = userRecord?.companyId ?? '';
     if (!userId || !companyId) {
       return new Response('Invalid token context', { status: 403 });
     }
-
+    const nativeClient = readNativeClient(request);
+    if ((nativeClient || session.deviceId) && userRecord?.status !== UserStatus.ACTIVE) {
+      return new Response('Account unavailable', { status: 401 });
+    }
+    const verificationRequired =
+      Boolean(nativeClient || session.deviceId) && (await isDeviceVerificationRequired(companyId));
+    if (verificationRequired && nativeClient && !session.deviceId) {
+      return new Response('Native session requires device registration', { status: 401 });
+    }
+    if (verificationRequired && session.deviceId) {
+      const credential = readDeviceCredential(request);
+      const device = credential
+        ? await findDeviceByCredentialRepo(credential.id, await sha256HexAsync(credential.secret))
+        : null;
+      if (
+        !device ||
+        device.id !== session.deviceId ||
+        device.userId !== userId ||
+        device.status !== 'approved' ||
+        device.userStatus !== UserStatus.ACTIVE
+      ) {
+        return new Response('Device access denied', { status: 401 });
+      }
+    }
     await ensureCompanyModuleEnabledSvc(companyId, 'communication_internal');
 
     const upgraded = server.upgrade(request, {
@@ -258,6 +310,7 @@ export async function upgradeCommunicationSocket(
         userId,
         companyId,
         userName: userRecord?.fullname ?? userRecord?.email ?? userId,
+        deviceId: session.deviceId,
       },
     });
     if (!upgraded) return new Response('Failed to upgrade websocket', { status: 426 });

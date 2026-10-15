@@ -1,5 +1,9 @@
 import type { RefObject } from 'react';
 import { useReactToPrint } from 'react-to-print';
+import { toast } from 'sonner';
+import { waitForPrintImages } from '@/shared/printing/wait-for-print-images';
+import { PAGE_STYLES } from '../constants/page-styles';
+import { useReceiptPaperFormat } from './use-receipt-paper-format';
 
 type UseManagedReactPrintOptions = {
   contentRef: RefObject<Element | Text | null>;
@@ -8,32 +12,24 @@ type UseManagedReactPrintOptions = {
   onAfterPrint?: () => void;
 };
 
-async function waitForImages(root: Element | Text | null) {
-  if (!root || !(root instanceof Element)) return;
-
-  const images = Array.from(root.querySelectorAll('img'));
-  await Promise.all(
-    images.map(async (image) => {
-      if (image.complete) return;
-      try {
-        await image.decode();
-      } catch {
-        // Best effort: broken image should not block printing.
-      }
-    }),
-  );
-}
-
 export function useManagedReactPrint(options: UseManagedReactPrintOptions) {
   const { contentRef, documentTitle, pageStyle, onAfterPrint } = options;
+  const paper = useReceiptPaperFormat();
+  const receiptStyle =
+    pageStyle === PAGE_STYLES['invoice-a5-receipt'] && paper !== 'a5'
+      ? PAGE_STYLES[paper === 'xprinter-58mm' ? 'receipt-58mm' : 'receipt-80mm']
+      : pageStyle;
 
   return useReactToPrint({
     contentRef,
     documentTitle,
-    pageStyle,
+    pageStyle: receiptStyle,
     onBeforePrint: async () => {
-      await waitForImages(contentRef.current);
+      const content = contentRef.current;
+      if (content instanceof Element) await waitForPrintImages(content);
     },
     onAfterPrint,
+    onPrintError: (_location, error) =>
+      toast.error(error.message || 'Print images could not be prepared'),
   });
 }

@@ -16,6 +16,7 @@ export type ParcelFormValues = {
   parcelContent: string;
   parcelValue: string;
   charge: string;
+  chargeAgentUserId: string;
   paymentResponsibility: PaymentResponsibility;
   senderSettlementMode: SenderSettlementMode;
   senderPartialPayment: string;
@@ -35,6 +36,7 @@ export type ReceiptSummary = {
     parcelId?: string;
     bookingCode: string;
     trackingCode: string;
+    callSender?: boolean;
     parcelDetails: string;
     parcelContent?: string | null;
     parcelValueCedis?: number | null;

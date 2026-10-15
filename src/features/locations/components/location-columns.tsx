@@ -16,12 +16,23 @@ export function createLocationColumns(): ColumnDef<Location>[] {
   return [
     {
       accessorKey: 'name',
+      id: 'locationName',
       header: 'Name',
     },
     {
       accessorFn: (row) => row.branch?.name ?? 'Unknown branch',
       id: 'branchName',
       header: 'Branch',
+    },
+    {
+      id: 'canSend',
+      header: 'Sending',
+      accessorFn: (row) => (row.canSend === false ? 'No' : 'Yes'),
+    },
+    {
+      id: 'canReceive',
+      header: 'Receiving',
+      accessorFn: (row) => (row.canReceive === false ? 'No' : 'Yes'),
     },
     {
       id: 'actions',
@@ -32,7 +43,12 @@ export function createLocationColumns(): ColumnDef<Location>[] {
         <PermissionGuard permissionKey={PermissionKeys.CanUpdateLocations}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-8 w-8">
+              <Button
+                aria-label="Location actions"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+              >
                 <EllipsisVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

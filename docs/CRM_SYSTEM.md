@@ -20,6 +20,13 @@ The CRM system currently provides:
   - `Business = 1`
 - Default customer type is always `Individual`.
 - Existing non-CRM customer creation/update flows remain unchanged.
+- Customer Management name edits through standard or CRM customer PATCH endpoints preserve
+  recorded parcel names. A deliberate name correction from a parcel's Edit action updates
+  that parcel's main-receiver name and the linked customer together; other parcel history is
+  preserved. Phone-only parcel edits do not overwrite a later profile rename. Contact phone
+  changes remain shared across parcels. See
+  [parcel receiver corrections](PARCEL_OPERATIONS.md#correcting-a-receiver-from-a-parcel) for
+  permissions, failure behavior, rollout requirements, and regression scenarios.
 - Second-receiver handovers and call outcomes use a dedicated resolve-or-create operation: an
   exact primary or secondary telephone match in the authenticated company links the active
   existing customer; otherwise a new individual customer is created. The existing record is not

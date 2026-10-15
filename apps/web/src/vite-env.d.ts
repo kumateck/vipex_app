@@ -1,6 +1,12 @@
 /// <reference types="vite/client" />
 
-type PrintLayout = 'thermal-sticker' | 'invoice-a5' | 'invoice-a5-receipt' | 'report-a4';
+type PrintLayout =
+  | 'thermal-sticker'
+  | 'invoice-a5'
+  | 'invoice-a5-receipt'
+  | 'receipt-80mm'
+  | 'receipt-58mm'
+  | 'report-a4';
 
 type DesktopPrinterInfo = {
   name: string;
@@ -54,6 +60,10 @@ declare global {
 
   interface Window {
     api?: {
+      device?: {
+        status: () => Promise<string | null>;
+        register: (email: string, password: string) => Promise<string | null>;
+      };
       platform: () => Promise<NodeJS.Platform>;
       ping: () => Promise<string>;
       getNetworkDiagnostics: () => Promise<DesktopNetworkDiagnostics>;

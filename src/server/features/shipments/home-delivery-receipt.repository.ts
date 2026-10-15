@@ -9,10 +9,10 @@ export async function getHomeDeliveryReceiptContactsRepo(parcelId: string) {
   const destination = alias(branches, 'receipt_destination');
   const [row] = await db
     .select({
-      senderName: sender.fullname,
+      senderName: parcels.senderNameSnapshot,
       senderPhone: sender.telephone,
       senderPhone2: sender.telephone2,
-      receiverName: receiver.fullname,
+      receiverName: parcels.receiverNameSnapshot,
       receiverPhone: receiver.telephone,
       receiverPhone2: receiver.telephone2,
       destinationName: destination.name,

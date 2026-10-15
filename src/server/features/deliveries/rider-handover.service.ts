@@ -1,3 +1,5 @@
+import { eq } from 'drizzle-orm';
+import { parcels } from '@/db/schemas';
 import { db } from '@/db/config';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { getParcelRepo, updateParcelRepo } from '@/server/features/shipments/parcels.repository';
@@ -6,6 +8,7 @@ import { toPesewas } from '@/server/utils/gh-money';
 import { getDeliveryByParcelRepo, updateDeliveryRepo } from './repository';
 import { hasPendingDeliveryChangeRequestRepo } from './delivery-change-request.repository';
 import { getParcelPaymentSettlement } from '@/server/features/shipments/parcel-payment-settlement';
+import { assertNoOpenParcelReconciliationCaseForDelivery } from '@/server/features/shipments/parcel-delivery-reconciliation-guard';
 
 export type RiderHandoverInput = {
   parcelId: string;
@@ -26,11 +29,17 @@ function hasPositiveAmount(value: number | string | null | undefined) {
 
 export async function doorToDoorRiderGivenToCustomerSvc(input: RiderHandoverInput) {
   return db.transaction(async (tx) => {
+    await tx
+      .select({ id: parcels.id })
+      .from(parcels)
+      .where(eq(parcels.id, input.parcelId))
+      .for('update');
     const parcel = await getParcelRepo(input.parcelId, tx);
     if (!parcel) throw NotFound('Parcel not found');
     if (parcel.status !== ParcelStatus.DISPATCHED) {
       throw Conflict('Parcel is not dispatched');
     }
+    await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId, tx);
 
     const delivery = await getDeliveryByParcelRepo(input.parcelId, tx);
     if (!delivery) throw NotFound('Delivery not found');

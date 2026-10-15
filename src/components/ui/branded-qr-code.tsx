@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { QRCode } from 'react-qrcode-logo';
 import logoPng from '@/assets/logo.png';
+import { PrintQrCode } from './print-qr-code';
 
 type BrandedQrCodeProps = {
   value: string;
@@ -32,21 +33,25 @@ export function BrandedQrCode({
       aria-label={ariaLabel}
       style={{ width: renderedSize, height: renderedSize, ...style }}
     >
-      <QRCode
-        value={value}
-        size={size}
-        quietZone={quietZone}
-        ecLevel={isPrintVariant ? 'Q' : 'H'}
-        bgColor="#ffffff"
-        fgColor="#000000"
-        logoImage={isPrintVariant ? undefined : logoPng}
-        logoWidth={logoSize}
-        logoHeight={logoSize}
-        logoPadding={logoPadding}
-        logoPaddingStyle="square"
-        removeQrCodeBehindLogo={!isPrintVariant}
-        style={{ display: 'block', width: '100%', height: '100%', imageRendering: 'pixelated' }}
-      />
+      {isPrintVariant ? (
+        <PrintQrCode value={value} size={size} quietZone={quietZone} />
+      ) : (
+        <QRCode
+          value={value}
+          size={size}
+          quietZone={quietZone}
+          ecLevel={isPrintVariant ? 'Q' : 'H'}
+          bgColor="#ffffff"
+          fgColor="#000000"
+          logoImage={isPrintVariant ? undefined : logoPng}
+          logoWidth={logoSize}
+          logoHeight={logoSize}
+          logoPadding={logoPadding}
+          logoPaddingStyle="square"
+          removeQrCodeBehindLogo={!isPrintVariant}
+          style={{ display: 'block', width: '100%', height: '100%', imageRendering: 'pixelated' }}
+        />
+      )}
     </div>
   );
 }

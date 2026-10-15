@@ -1,9 +1,14 @@
+import { receiptLayoutFromHtml } from '@/shared/printing/receipt-paper';
+import { PAGE_STYLES } from '../constants/page-styles';
+
 export function createPrintableHtmlDocument(input: {
   title: string;
   bodyHtml: string;
   pageStyle?: string;
 }) {
-  const { title, bodyHtml, pageStyle } = input;
+  const { title, bodyHtml } = input;
+  const receiptLayout = receiptLayoutFromHtml(bodyHtml);
+  const pageStyle = receiptLayout ? PAGE_STYLES[receiptLayout] : input.pageStyle;
 
   return `<!doctype html>
 <html>

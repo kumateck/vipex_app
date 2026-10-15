@@ -11,7 +11,7 @@ export const STATUS_LABELS: Record<number, string> = {
   9: 'Dispatched',
   10: 'Rider Delivered',
   11: 'Delivered at Home',
-  12: 'Returned to Office',
+  12: 'Returned by Rider',
   13: 'Returned to Sender',
   14: 'Cancelled',
 };

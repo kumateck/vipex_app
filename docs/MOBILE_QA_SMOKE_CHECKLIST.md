@@ -1,6 +1,18 @@
 # Mobile QA Smoke Checklist
 
-Last updated: 2026-09-21
+Last updated: 2026-10-13
+
+## Incoming receiver corrections
+
+- In incoming receive-process, rename the receiver and save. The selected parcel and linked
+  customer must show the corrected name after reload; another parcel for that customer retains
+  its recorded name. Customer Management renames must preserve both parcel names.
+- Change only the telephone after a Customer Management rename; neither the customer's newer
+  name nor either recorded parcel name changes.
+- Missing customer-update permission, invalid/duplicate phone, a changed receiver association,
+  or a failed parcel write must leave the customer and parcel edit unsaved. Apply migration
+  `0081` and deploy the new backend before testing the updated mobile build. See
+  [Parcel Operations](PARCEL_OPERATIONS.md#correcting-a-receiver-from-a-parcel).
 
 ## Scope
 
@@ -9,6 +21,10 @@ Last updated: 2026-09-21
 - Queue, Rider, Receive, Incoming Process, and frontline operations workflows.
 
 ## Pre-check
+
+Before mobile sign-in, register the installation and obtain head-office approval. Confirm a
+pending or revoked installation cannot use existing sessions. Full transition, cross-company,
+and reinstall checks are in [Native Device Registration](DEVICE_REGISTRATION.md).
 
 1. Login with a user that has all mobile-related permissions.
 2. Login with a restricted user for each role path:
@@ -138,7 +154,7 @@ Last updated: 2026-09-21
    - Confirm Assigned calls contains only the signed-in user's Arrived, Contacted, and Returned to Office assignments for the current branch.
    - Search by booking, tracking, receiver, and telephone; confirm an unassigned parcel cannot be found.
    - Open the device telephone app from an assigned parcel; verify a missing telephone disables the action.
-   - Save Customer will get back and confirm the parcel remains visible as Contacted.
+   - Save Customer will get back and confirm the parcel is Awaiting Pickup and searchable in the pickup and shelf picker queues; the call is recorded separately.
    - Save Customer will come and confirm the parcel moves to Awaiting Pickup and leaves the assigned queue.
    - Enable a second receiver, reject missing/short values, and save a valid ten-digit telephone when customer-create permission is present.
    - Save Customer wants delivery and confirm it enters Delivery addresses when that queue is permitted.
@@ -160,3 +176,22 @@ Last updated: 2026-09-21
 4. Confirm a missing, altered, or expired mobile-update download signature returns 401 and does not stream the APK.
 5. Login, forgot, reset, and set password screens still render correctly.
 6. Home quick-access links only show modules user has permission for.
+7. With the company device-verification module off, sign in and restore a saved native session
+   without a device credential. With it on, confirm a pending or revoked device cannot sign in or
+   restore a session, and an approved device can. See
+   [Native Device Registration](DEVICE_REGISTRATION.md).
+
+## Location Services, Charge Agent and Receiving Quotas
+
+- Apply migration `0082` to the test database; verify old locations default to both services.
+- Disable receiving on a sending-only location and confirm it disappears from mobile pickup
+  options, web parcel creation, public self-service and staff completion destination lists.
+- Attempt booking from a receiving-only assigned source; expect a clear error and no new parcel.
+- Enter a charge and select the required charging agent; retry failed agent lookup, reset the
+  form, and confirm missing/foreign/inactive agents cannot submit a valid attributed booking.
+- Scan, search and receive above the request quota, including consignment receive/close;
+  verify authentication, scope, permissions and duplicate scan prevention still work.
+- Verify invalid-token traffic and unrelated parcel updates remain rate limited.
+- On web/desktop Self-Service Bookings, search names/phones/content/status, scroll and paginate;
+  view without completion rights, correct customer details, test saved-profile permissions and
+  stale edits, and verify pricing survives contact edits and completion uses corrected contacts.

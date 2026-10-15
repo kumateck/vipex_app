@@ -57,6 +57,13 @@ export const DEFAULT_MODULE_CATALOG: ModuleCatalogDefinition[] = [
     description: 'Controls parcel sticker printing for each company',
   },
   {
+    code: 'device_verification',
+    name: 'Device Verification',
+    isCore: false,
+    isActive: true,
+    description: 'Require approval of mobile and desktop devices before staff can sign in',
+  },
+  {
     code: 'inventory',
     name: 'Inventory',
     isCore: true,

@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ReceiptPaperSelect } from './receipt-paper-select';
 import { useDesktopPrinterRouting } from '../../hooks/use-desktop-printer-routing';
 
 export function DesktopPrinterRoutingPage() {
@@ -25,6 +26,8 @@ export function DesktopPrinterRoutingPage() {
     setInvoicePrinter,
     setStickerPrinter,
     stickerPrinter,
+    receiptPaperFormat,
+    setReceiptPaperFormat,
   } = useDesktopPrinterRouting();
 
   return (
@@ -32,7 +35,8 @@ export function DesktopPrinterRoutingPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Printer Routing</h1>
         <p className="text-sm text-muted-foreground">
-          Route parcel stickers, A5 documents, and A4 reports to the correct desktop printers.
+          Route parcel stickers, receipts, A5 documents, and A4 reports to the correct desktop
+          printers.
         </p>
       </div>
 
@@ -66,7 +70,7 @@ export function DesktopPrinterRoutingPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="invoice-printer">Invoice Printer (A5)</Label>
+                    <Label htmlFor="invoice-printer">Invoice / Receipt Printer</Label>
                     <PrinterSelect
                       id="invoice-printer"
                       value={invoicePrinter}
@@ -89,6 +93,7 @@ export function DesktopPrinterRoutingPage() {
                   </div>
                 </div>
 
+                <ReceiptPaperSelect value={receiptPaperFormat} onChange={setReceiptPaperFormat} />
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" onClick={savePrinterMapping}>
                     Save Routing

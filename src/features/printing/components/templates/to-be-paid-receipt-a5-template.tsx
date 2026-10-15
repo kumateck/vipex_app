@@ -6,6 +6,8 @@ import type { InvoiceA5TemplateProps } from './invoice-a5-template.types';
 export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
   const {
     bookingCode,
+    cashierName,
+    duplicate,
     destinationBranchName,
     destinationLocationName,
     issuedAtLabel,
@@ -39,7 +41,12 @@ export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
         lineHeight: 1.2,
       }}
     >
-      <InvoiceA5Header issuedAtLabel={issuedAtLabel} title="ACKNOWLEDGEMENT NOTE" />
+      <InvoiceA5Header
+        issuedAtLabel={issuedAtLabel}
+        title="ACKNOWLEDGEMENT NOTE"
+        cashierName={cashierName}
+        duplicate={duplicate}
+      />
 
       <div
         style={{

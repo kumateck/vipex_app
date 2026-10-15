@@ -5,6 +5,7 @@ All paths are relative to `/v1`.
 ## Identity and Master Data
 
 - `/auth`: login, refresh, logout, invitation setup, forgot/reset password, change password, and current-password verification.
+- `/auth/devices`: native device registration/status, authenticated access-policy check, and head-office review. Approval enforcement follows the company's `device_verification` module; see [Native Device Registration](../DEVICE_REGISTRATION.md).
 - `/users`: user list/detail/create/update, invitation flows, password-management options, and System Admin password assignment.
 - `/rbac`: roles, permissions, and permission assignment.
 - `/branches`: branch master data and pickup/receiver OTP controls.
@@ -21,6 +22,11 @@ Mobile receiving evidence uses `POST /shipments/parcels/discrepancies/:id/eviden
 Security-sensitive identity methods include:
 
 - `POST /auth/login`
+- `POST /auth/devices/register`
+- `GET /auth/devices/status`
+- `GET /auth/devices/access`
+- `GET /auth/devices/`
+- `POST /auth/devices/:id/review`
 - `POST /auth/refresh`
 - `POST /auth/logout`
 - `POST /auth/forgot-password`
@@ -31,9 +37,31 @@ Security-sensitive identity methods include:
 - `GET /users/password-management/options`
 - `PUT /users/:id/password`
 
+`POST /auth/refresh` returns a rotated access/refresh token pair and the current user on
+success. Expired, revoked, or invalid refresh sessions return 401; a temporarily unavailable
+server may return 5xx. Web and desktop clients preserve their saved login after a network/5xx
+failure, but clear it after a confirmed invalid session. Desktop policy checks retry their first
+401 once after this refresh, and never display protected content while the check is unavailable.
+
 System Admin password assignment revokes the target user's active sessions and writes an audit event.
 
 ## Shipments
+
+`GET /shipments/bookings/charge-agent-options` requires `CanCreateBookingWithParcels`.
+`GET /self-service/charge-agent-options` requires `CanCompleteSelfServiceBookings`. Both require
+staff authentication and return an array of `{ id, fullname }` for active users in the caller's
+company and source branch. Client-supplied company/branch values cannot widen the scope. A missing
+company/branch or head-office context returns 403; `CanReadUsers` is not required.
+
+Each parcel in `POST /shipments/bookings/create-with-parcels` may include optional nullable
+`chargeAgentUserId`; `POST /self-service/drafts/:id/complete` accepts the same field for its parcel.
+The quoted-charge agent may differ from the creator and payment cashier. Supplied IDs are checked
+inside the booking transaction against active company/source-branch users and saved in
+`parcels.charge_agent_user_id`. Empty-string IDs fail identifier validation; unknown, inactive,
+wrong-company, or wrong-branch IDs return 400 and create no partial booking/parcel/payment records.
+Omitted/null IDs store NULL for older-client compatibility. Current web/desktop/mobile staff forms
+require an explicit agent selection; the public draft form does not expose it. Existing responses
+and financial calculations remain unchanged. Deploy migration `0080` before the updated backend.
 
 `POST /shipments/bookings/create-with-parcels` accepts `completeToBePaid: true` only for fully
 receiver-paid parcels with no sender payment. It requires `CanCreateBookingWithParcels` and an
@@ -62,6 +90,55 @@ authorization. Web and mobile use the same endpoints.
 
 - `/shipments/bookings`: booking creation and query, including booking-with-parcels operations.
 - `/shipments/parcels`: parcel search, detail, lifecycle actions, corrections, and receiver OTP-related operations.
+- `POST /deliveries/dd/:parcelId/returned`: the assigned rider returns a dispatched parcel;
+  parcel status becomes `RETURNED_TO_OFFICE` (displayed as **Returned by Rider**), with a
+  recorded delivery return time. It preserves `deliveries.chargePsw` and the dropoff address.
+  Single/bulk redispatch and dispatch reassignment retain that fee. Rider list responses expose
+  it as `deliveryFeePsw`; parcel details expose `delivery.chargePsw` for cashier completion.
+  Outstanding fee calculations subtract non-voided delivery fee payments, never the parcel's
+  principal charge. Existing fees erased by the previous return implementation are not backfilled.
+  A wrong rider or non-dispatched parcel returns 409; a missing
+  parcel/delivery returns 404. Requires `CanCompleteDoorstepDelivery`.
+- `GET/PATCH /deliveries/dd/:parcelId/fee`: active non-rider staff with any of
+  `CanDispatchForDelivery`, `CanMarkDoorstepCalled`, or `CanCompleteDoorstepDelivery` read/edit
+  a configured doorstep fee at their own company and destination branch. GET returns
+  `{ parcelId, bookingCode, chargePsw, paidFeePsw, riderCollectedFeePsw, updatedAt }`; monetary
+  values are pesewas. PATCH accepts `{ deliveryFeeCedis, expectedChargePsw, expectedUpdatedAt,
+reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 trimmed characters;
+  the GHS fee must be non-negative, at most GHS 100,000, with at most two decimal places and
+  cannot be less than non-voided fee payments or the rider's recorded collection. Only home
+  requested/address-collected/dispatched/returned/rider-handover states with one active
+  doorstep record are editable. Out-of-scope/deleted parcels return 404; invalid input returns
+  400; inactive/rider accounts return 403; stale values, pending requests, completed/office or
+  other invalid state, ambiguous delivery records and reconciliation holds return 409.
+  Authentication/permission failures return 401/403. Fee and audit update atomically. This
+  powers the shared web/desktop dialog on Rider Returns and Delivery Cashier, including the
+  cashier finalization dialog. Mobile riders see the new fee when refreshed. It does not
+  create payments, change address/status/assignment, or reopen completed deliveries.
+- `GET /deliveries/dd/returned?page=&pageSize=&search=`: paginated, searchable rider returns
+  at the authenticated company's destination branch. Requires `CanDispatchForDelivery`; callers
+  cannot choose another company, branch, or status. Only parcels with a completed delivery
+  return appear; manually marked or incomplete records are excluded. The parcel row includes
+  `riderReturnedAt`.
+- `GET /deliveries/dd/returned/riders`: active riders at the authenticated company and branch;
+  returns only ID and name for the redispatch picker. Requires `CanDispatchForDelivery`, not
+  directory administration permission.
+- `POST /deliveries/dd/:parcelId/returned-to-pickup`: moves a returned parcel to Awaiting Pickup
+  after checking company, destination branch, status, and completed delivery return. Out-of-scope
+  parcels return 404; stale or invalid return state returns 409. Requires `CanDispatchForDelivery`.
+  `POST /deliveries/dd/:parcelId/redispatch-return` requires an active rider in the same company
+  and branch, a completed return, and no open reconciliation hold. It atomically redispatches
+  the parcel and delivery and notifies the rider. Missing or out-of-scope parcels return 404;
+  stale return state or invalid rider selection returns 409. Both actions use the same permission.
+- `POST /deliveries/dd/returned/redispatch-bulk` accepts `{ parcelIds: string[], riderUserId }`
+  with 1-100 unique parcel IDs and requires `CanDispatchForDelivery`. The active-branch-rider
+  check runs once up front and returns 409 before anything changes if the rider is missing,
+  inactive, or in another company or branch. Each parcel is then redispatched through the same
+  rules as `POST /deliveries/dd/:parcelId/redispatch-return`, and the 200 response reports
+  partial success: `succeeded: string[]` holds the redispatched parcel IDs and
+  `failed: { parcelId, message }[]` explains parcels that were stale, out of scope, missing a
+  completed return, or held by an open reconciliation case. Every successful parcel gets its own
+  audit entry and rider assignment notification.
 - `POST /payments/collect-receiver-and-deliver`: returns separate principal `payment` and ageing
   `storagePayment` records when collected. When storage is collected, `receiptTaxBreakdown` is
   calculated from the sum of both collected amounts using the company tax profile or default
@@ -110,6 +187,22 @@ authorization. Web and mobile use the same endpoints.
 - `POST /shipments/parcels/:id/update-shelf-picker`: persist the selected shelf-picker staff on the
   parcel and, when present, mirror it to the active pickup queue. This endpoint works independently
   of the branch `usePickupQueue` setting and requires `CanUpdateParcelShelfPicker`.
+- `PUT /shipments/parcels/:id/second-receiver`: require `CanManageParcelSecondReceiver`; body has
+  `fullname` (1-255 characters) and `telephone` (normalized to exactly ten digits). The parcel must
+  belong to the caller's company and destination branch, not be deleted, and be Arrived at
+  Destination, Customer Contacted, Returned to Office, Awaiting Pickup, or Home Delivery Requested.
+  Resolves the telephone like `resolve-second-receiver`, then sets `secondReceiverId`, clears
+  `secondCardId`/`secondCardNumber`, and expires active or verified-but-unused `second` receiver
+  OTPs. Returns `{ id, secondReceiverId, changed }`; `changed` is false and nothing is written when
+  the customer is already the second receiver. Missing or out-of-scope parcels return 404;
+  ineligible status, the main receiver as second receiver, or a concurrent change return 409;
+  invalid name or telephone return 400; a missing permission returns 403. Sends no SMS or email.
+  Records audit event `PARCEL_SECOND_RECEIVER_SET`. Used by Shelf Picker Update and Parcel
+  Assignment.
+- `DELETE /shipments/parcels/:id/second-receiver`: same permission, scope, and status rules as the
+  `PUT`. Clears `secondReceiverId` and the second ID card fields and expires `second` receiver
+  OTPs. Returns `{ id, secondReceiverId: null, changed }`; `changed` is false when the parcel had
+  no second receiver. Sends no SMS or email. Records audit event `PARCEL_SECOND_RECEIVER_REMOVED`.
 - `GET /shipments/parcels/shelf-picker`: require `CanReadShelfPickerUpdate` and list awaiting-pickup
   parcels for the authenticated company and destination branch. Unassigned shelf-picker parcels
   precede assigned parcels before pagination, considering both parcel and legacy pickup-queue
@@ -135,15 +228,29 @@ authorization. Web and mobile use the same endpoints.
   to the authenticated call agent in their company and destination branch. The body contains
   `parcelIds` and `outcome` (`follow_up`, `pickup`, or `delivery`). The server validates every parcel,
   then updates them together in one transaction. Missing, deleted, reassigned, out-of-scope,
-  ineligible, or concurrently changed parcels reject the batch without partial updates. No SMS or
-  email is sent. Each parcel is marked called, so it leaves the assigned call queue. The response
-  returns `parcelIds`, `updatedCount`, and the resulting `status`.
+  ineligible, or concurrently changed parcels reject the batch without partial updates. This endpoint
+  itself sends no SMS or email. When **Send SMS** is checked in the web bulk form, the client follows
+  a successful batch with `POST /notification-hub/events/parcel-status-call` per returned parcel ID,
+  using the saved `outcome`, `sendSms: true`, `sendEmail: false`, and `includeSecondReceiver: false`.
+  Notification requests run with a maximum concurrency of four, retain the existing module and
+  permission gates, and return individual sent/failed counts. A notification failure leaves the
+  saved outcomes intact and is not retried automatically. Each parcel is marked called, so it
+  leaves the assigned call queue. The response
+  returns `parcelIds`, `updatedCount`, and the resulting `status`. Both `follow_up` and
+  `pickup` result in Awaiting Pickup; `delivery` results in Home Delivery Requested.
 - `POST /shipments/parcels/:id/call-center/contact`: requires `CanReadCallCenterParcelStatus` and
   the assigned caller in the destination branch. Empty body marks a parcel called without changing
   status. Optional `outcome` (`follow_up`, `pickup`, `delivery`) changes an eligible outcome and
   records the call; optional `secondReceiverId` updates the second receiver with that outcome.
+  The `follow_up` outcome retains Awaiting Pickup and sets `callCenterCalledAt`; it does not
+  persist Customer Contacted as the parcel status.
   Reject called, delivered, deleted, reassigned, or out-of-branch parcels. Outcome changes are
   rejected after address collection or dispatch, though a call can still be recorded.
+- `POST /shipments/parcels/:id/shelf-picker/request-delivery`: requires
+  `CanUpdateParcelShelfPicker` and an Awaiting Pickup parcel in the caller's company and
+  destination branch. Atomically sets Home Delivery Requested and ends an active pickup queue
+  ticket. Returns the parcel ID and status. Missing or out-of-scope parcels return 404; stale
+  statuses or concurrent changes return 409.
 - `GET /shipments/parcels/call-center/receiver-lookup/:telephone`: exact ten-digit lookup for an
   active customer in the authenticated company, matching either telephone field. Returns ID,
   name, and telephones or `null`. Requires `CanReadCallCenterParcelStatus`.

@@ -17,6 +17,7 @@ This directory is the canonical documentation set for the current Vipex applicat
 ## Operations and Parcels
 
 - [Parcel operations](PARCEL_OPERATIONS.md)
+- [Public parcel tracking API](PUBLIC_PARCEL_TRACKING_API.md)
 - [Parcel printing](PARCEL_PRINTING.md)
 - [Cashier, payments, and shifts](CASHIER_PAYMENTS_AND_SHIFTS.md)
 - [Parcel internal transfers](PARCEL_INTERNAL_TRANSFERS.md)
@@ -47,6 +48,7 @@ This directory is the canonical documentation set for the current Vipex applicat
 ## Platform, Access, and Intelligence
 
 - [Platform and access control](PLATFORM_AND_ACCESS.md)
+- [Native device registration](DEVICE_REGISTRATION.md)
 - [Company modules](COMPANY_MODULES.md)
 - [AI, help, and management insights](AI_HELP_AND_INSIGHTS.md)
 - [Communication suite](COMMUNICATION_SUITE_SPEC.md)

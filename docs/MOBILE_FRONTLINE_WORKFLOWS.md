@@ -49,6 +49,11 @@ numbers; match a secondary number; use the same customer for both roles; submit 
 lookup finishes; test concurrent duplicate creation, two numbers owned by different customers,
 lookup failure, and a booking creator without customer-directory permission.
 
+Every mobile parcel creation form includes an optional CS switch: **Call Sender before deliver to
+Receiver**. The selected value is saved with the parcel and appears as `CS` on the mobile printed
+sticker while receiver name and telephone remain visible. Resetting the form clears the switch.
+QA: create with CS on and off, including the receiver-paid print path and sticker retry.
+
 For fully receiver-paid bookings, staff may tick **Complete & print sticker**. A sender or full
 cashier must have an active session, or must have assigned the staff member to that active session
 from web session controls or the mobile cashier dashboard. The server completes the parcel in the
@@ -58,6 +63,38 @@ the screen offers a sticker retry without resubmitting it. Unticked bookings rem
 Sender Cashier Payments. The parcel's processed-by user is the cashier who owns the session;
 created-by and the audit retain the staff member who entered the booking. Sender-paid bookings
 cannot use this option.
+
+### Charge Agent and Receiving Location Selection
+
+Mobile parcel creation displays **Agent who charged the parcel (required)** immediately after
+**Charge (GHS)**. This selector already records `chargeAgentUserId`; its placement and label
+now make the required step explicit. It lists active staff at the authenticated source branch,
+permits a different staff member from the creator and blocks submission on an empty/invalid
+selection or unavailable agent list. The backend validates supplied agents; older omitted
+values retain the documented NULL compatibility behavior. Charge assignment creates no payment.
+
+Destination pickup options use `GET /locations/options?canReceive=true`. Sending-only/disabled
+receiving locations are omitted. Server booking validation also rejects non-receiving destination
+locations and non-sending assigned sources. Migration `0082_location_service_capabilities` is
+required before deploying these queries; existing locations default to both services.
+
+### Scan-to-Receive Request Quotas
+
+Authenticated receiving traffic is exempt from the shared backend request quota. This covers
+in-transit parcel searches, parcel details, receiving/closing consignments, mark-received
+endpoints and the mobile `PATCH /shipments/parcels/:id` arrival-status confirmation. The same
+shared endpoints benefit web and desktop receiving. Invalid/unsigned tokens, public traffic,
+unrelated searches and other parcel status updates keep their quotas. Endpoint authentication,
+receiving permissions, branch checks and duplicate/in-flight scan protections remain enforced.
+No per-hour/day parcel scan maximum is added on mobile. Network and validation failures still
+show the existing retry/error states.
+
+QA: scan/search/confirm more than the configured quota at one branch, including consignment
+receiving; verify no HTTP 429 from the shared limiter. Check unrelated status updates and
+unsigned/public traffic still receive 429 above their quota. Verify a repeated camera event
+still cannot submit the same in-flight scan twice. Cover source/destination service flags and
+required charge-agent selection, lookup failure/retry, and create-form reset.
+Coverage: `receiving-rate-limit.spec.ts`, existing `rate-limit.spec.ts` and charge-agent tests.
 
 ## Self-Service Completion
 
@@ -71,6 +108,7 @@ An authorized completing agent can:
 1. Open an available draft; mobile claims it before displaying the completion form, matching the web
    workflow and preventing another agent from completing it concurrently.
 2. Confirm parcel details and the authoritative charge.
+   The officer may change the draft's CS switch, initially set to the customer's choice.
 3. Select sender, receiver, or split payment responsibility.
 4. Enter the sender portion for a split payment.
 5. Complete the draft through `POST /self-service/drafts/:id/complete`.
@@ -92,7 +130,7 @@ When both permissions are present, mobile shows a native queue switch and defaul
 
 An assigned parcel card shows booking and received time, parcel and receiver details, route, receiver amount, contact state, and underlying parcel status. The Call Outcome sheet can open the device telephone application and records one of:
 
-- Customer will get back → Customer Contacted
+- Customer will get back → Awaiting Pickup (the call is recorded separately)
 - Customer will come → Awaiting Pickup
 - Customer wants delivery → Home Delivery Requested
 

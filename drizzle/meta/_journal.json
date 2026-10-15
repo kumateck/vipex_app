@@ -512,6 +512,76 @@
       "when": 1790000300000,
       "tag": "0071_parcel_call_center_called_at",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1790000400000,
+      "tag": "0072_contacted_parcels_awaiting_pickup",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1790000500000,
+      "tag": "0073_parcel_customer_name_snapshots",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1790000600000,
+      "tag": "0074_delivery_confirmation_snapshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1791000000000,
+      "tag": "0075_registered_devices",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1791472793211,
+      "tag": "0077_parcel_storage_clearance",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1791478884245,
+      "tag": "0078_parcel_call_center_assignment",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1791479939622,
+      "tag": "0079_pickup_queue_legacy_uniqueness",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1791763200000,
+      "tag": "0080_parcel_charge_agent",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1791849600000,
+      "tag": "0081_parcel_receiver_name_corrections",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1791936000000,
+      "tag": "0082_location_service_capabilities",
+      "breakpoints": true
     }
   ]
 }

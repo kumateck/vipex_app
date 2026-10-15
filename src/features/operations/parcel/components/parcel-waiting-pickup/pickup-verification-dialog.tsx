@@ -20,6 +20,7 @@ import { PickupMainCardSection } from './pickup-main-card-section';
 import { PickupOtpVerificationSection } from './pickup-otp-verification-section';
 import { PickupVerificationHandoverSection } from './pickup-verification-handover-section';
 import { PickupVerificationDialogSkeleton } from './pickup-verification-dialog-skeleton';
+import { ShelfPickupReassignmentLink } from '../parcel-shelf-pickup-reassignment';
 import type { PickupVerificationDialogProps } from './pickup-verification-dialog-types';
 export function PickupVerificationDialog({
   open,
@@ -128,6 +129,13 @@ export function PickupVerificationDialog({
                     ? `Only active staff assigned to ${staffLocationName} are shown.`
                     : 'Your user account needs an assigned location before staff can be selected.'}
                 </p>
+                {parcelDetails?.parcel.shelfPickerStaffId ||
+                parcelDetails?.pickupQueue?.pickerStaffId ? (
+                  <ShelfPickupReassignmentLink
+                    bookingCode={parcel.bookingCode}
+                    disabled={isSaving}
+                  />
+                ) : null}
               </div>
               <PickupMainCardSection
                 mode={mainCardMode}

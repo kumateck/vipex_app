@@ -213,6 +213,7 @@ export function useParcelCreateFormWorkflow() {
                 : PaymentMethod.CASH,
             parcelValueCedis: amounts[index]?.value,
             chargeCedis: amounts[index]?.charge,
+            chargeAgentUserId: parcel.chargeAgentUserId,
             callSender: parcel.callSender,
             senderPaymentCedis: 0,
             plannedToBePaidCedis:

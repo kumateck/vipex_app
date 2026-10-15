@@ -5,11 +5,13 @@ import {
   desc,
   eq,
   gt,
+  gte,
   ilike,
   inArray,
   isNull,
   isNotNull,
   lte,
+  lt,
   notInArray,
   or,
   sql,
@@ -33,7 +35,7 @@ import {
   parcelStorageWaivers,
   payments,
 } from '@/db/schemas';
-import { ParcelStatus, PaymentComponent } from '@/db/schemas/enums';
+import { ParcelStatus, Payer, PaymentComponent } from '@/db/schemas/enums';
 import type { SortField } from '@/server/types/pagination.types';
 import { extractScannedCode } from '@/server/utils/scan-code';
 import { incomingTransitSendDateBounds } from './incoming-transit-send-date';
@@ -63,8 +65,11 @@ export type ParcelRow = {
   bookingCode: string;
   trackingCode: string;
   senderId: string;
+  senderNameSnapshot: string;
   receiverId: string;
+  receiverNameSnapshot: string;
   secondReceiverId: string | null;
+  secondReceiverNameSnapshot: string | null;
   status: number;
   parcelDetails: string;
   parcelContent: string;
@@ -101,10 +106,13 @@ export type ListParcelsParams = {
   companyId?: string | null;
   sourceId?: string | null;
   destinationId?: string | null;
+  scopedBranchId?: string | null;
   locationId?: string | null;
   status?: number | null;
   statuses?: number[] | null;
+  riderReturnedOnly?: boolean;
   senderPaid?: boolean | null;
+  paymentType?: 'paid' | 'to_be_paid' | 'partial' | null;
   hasPickupQueue?: boolean | null;
   agedOnly?: boolean | null;
   storageChargeAccruing?: boolean | null;
@@ -119,6 +127,7 @@ export type ListParcelsParams = {
   callCenterAssignmentOrder?: boolean;
   callCenterUncalledOnly?: boolean;
   shelfPickerAssignmentOrder?: boolean;
+  shelfPickerAssigned?: boolean;
   sentDate?: string | null;
   consignmentNumber?: string | null;
   sort?: SortField[] | null;
@@ -142,6 +151,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     secondReceiverPhone: string | null;
     secondReceiverPhone2: string | null;
     dropoffAddress: string | null;
+    riderReturnedAt: Date | null;
     deliveryFeePsw: number | null;
     riderUserId: string | null;
     riderName: string | null;
@@ -166,6 +176,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     currentHolderWarehouseName: string | null;
     outstandingPrincipalPsw: number;
     paidPrincipalPsw: number;
+    senderPaidPrincipalPsw: number;
+    receiverPaidPrincipalPsw: number;
     outstandingDeliveryFeePsw: number;
   })[];
   totalRecords: number;
@@ -182,6 +194,14 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   if (p.companyId) whereParts.push(eq(parcels.companyId, p.companyId));
   if (p.sourceId) whereParts.push(eq(parcels.sourceId, p.sourceId));
   if (p.destinationId) whereParts.push(eq(parcels.destinationId, p.destinationId));
+  if (p.shelfPickerAssigned)
+    whereParts.push(
+      sql`coalesce(${parcels.shelfPickerStaffId}, ${pickupQueues.pickerStaffId}) is not null`,
+    );
+  if (p.scopedBranchId)
+    whereParts.push(
+      or(eq(parcels.sourceId, p.scopedBranchId), eq(parcels.destinationId, p.scopedBranchId))!,
+    );
   if (p.assignedToUserId) {
     whereParts.push(eq(parcels.callCenterAssignedToUserId, p.assignedToUserId));
   }
@@ -191,13 +211,33 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   } else if (p.status != null) {
     whereParts.push(eq(parcels.status, p.status));
   }
+  if (p.riderReturnedOnly) {
+    whereParts.push(eq(deliveries.status, 'RETURNED_TO_OFFICE'));
+    whereParts.push(isNotNull(deliveries.returnedAt));
+  }
   if (p.received === true) whereParts.push(isNotNull(parcels.receivedAt));
   if (p.received === false) whereParts.push(isNull(parcels.receivedAt));
   if (p.senderPaid === true) whereParts.push(lte(parcels.plannedToBePaidPsw, 0));
   if (p.senderPaid === false) whereParts.push(gt(parcels.plannedToBePaidPsw, 0));
+  if (p.paymentType === 'paid') whereParts.push(lte(parcels.plannedToBePaidPsw, 0));
+  if (p.paymentType === 'to_be_paid') {
+    whereParts.push(
+      and(gt(parcels.plannedToBePaidPsw, 0), gte(parcels.plannedToBePaidPsw, parcels.chargePsw))!,
+    );
+  }
+  if (p.paymentType === 'partial') {
+    whereParts.push(
+      and(gt(parcels.plannedToBePaidPsw, 0), lt(parcels.plannedToBePaidPsw, parcels.chargePsw))!,
+    );
+  }
   const s = alias(customers, 's');
   const r = alias(customers, 'r');
   const sr = alias(customers, 'sr');
+  const senderName = sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${s.fullname}, '')`;
+  const receiverName = sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${r.fullname}, '')`;
+  const secondReceiverName = sql<
+    string | null
+  >`coalesce(nullif(btrim(${parcels.secondReceiverNameSnapshot}), ''), ${sr.fullname})`;
   const rider = alias(users, 'rider');
   const picker = alias(users, 'picker');
   const callCenterAssignee = alias(users, 'call_center_assignee');
@@ -228,6 +268,22 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     from ${payments}
     where ${payments.parcelId} = ${parcels.id}
       and ${payments.component} = ${PaymentComponent.PRINCIPAL}
+      and ${payments.voidedAt} is null
+  ), 0)`;
+  const senderPaidPrincipalPsw = sql<number>`coalesce((
+    select sum(${payments.grossAmountPsw})
+    from ${payments}
+    where ${payments.parcelId} = ${parcels.id}
+      and ${payments.component} = ${PaymentComponent.PRINCIPAL}
+      and ${payments.payer} = ${Payer.SENDER}
+      and ${payments.voidedAt} is null
+  ), 0)`;
+  const receiverPaidPrincipalPsw = sql<number>`coalesce((
+    select sum(${payments.grossAmountPsw})
+    from ${payments}
+    where ${payments.parcelId} = ${parcels.id}
+      and ${payments.component} = ${PaymentComponent.PRINCIPAL}
+      and ${payments.payer} = ${Payer.RECIPIENT}
       and ${payments.voidedAt} is null
   ), 0)`;
   const paidDeliveryFeePsw = sql<number>`coalesce((
@@ -342,11 +398,24 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(bookings, eq(parcels.bookingId, bookings.id))
     .leftJoin(s, eq(parcels.senderId, s.id))
     .leftJoin(r, eq(parcels.receiverId, r.id))
+    .leftJoin(sr, eq(parcels.secondReceiverId, sr.id))
     .leftJoin(d, eq(parcels.destinationId, d.id))
     .leftJoin(ci, and(eq(ci.parcelId, parcels.id), isNull(ci.removedAt)))
     .leftJoin(cg, eq(cg.id, ci.consignmentId))
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
-    .leftJoin(pickupQueues, eq(pickupQueues.parcelId, parcels.id))
+    .leftJoin(
+      pickupQueues,
+      and(
+        eq(pickupQueues.parcelId, parcels.id),
+        p.shelfPickerAssigned
+          ? sql`${pickupQueues.id} = (
+        select pq_latest.id from pickup_queues pq_latest
+        where pq_latest.parcel_id = ${parcels.id} and pq_latest.ended_at is null
+        order by pq_latest.queued_at desc, pq_latest.id desc limit 1
+      )`
+          : undefined,
+      ),
+    )
     .where(
       whereParts.length || p.search
         ? and(
@@ -356,10 +425,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
                   or(
                     ilike(parcels.bookingCode, `%${p.search}%`),
                     ilike(parcels.trackingCode, `%${p.search}%`),
-                    ilike(s.fullname, `%${p.search}%`),
+                    ilike(senderName, `%${p.search}%`),
                     ilike(s.telephone, `%${p.search}%`),
                     ilike(s.telephone2, `%${p.search}%`),
-                    ilike(r.fullname, `%${p.search}%`),
+                    ilike(receiverName, `%${p.search}%`),
+                    ilike(secondReceiverName, `%${p.search}%`),
                     ilike(r.telephone, `%${p.search}%`),
                     ilike(r.telephone2, `%${p.search}%`),
                   ),
@@ -381,8 +451,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
       senderId: parcels.senderId,
+      senderNameSnapshot: senderName,
       receiverId: parcels.receiverId,
+      receiverNameSnapshot: receiverName,
       secondReceiverId: parcels.secondReceiverId,
+      secondReceiverNameSnapshot: secondReceiverName,
       status: parcels.status,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
@@ -396,6 +469,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       outstandingPrincipalPsw: outstandingPrincipalPsw.mapWith(Number),
       paidPrincipalPsw: paidPrincipalPsw.mapWith(Number),
+      senderPaidPrincipalPsw: senderPaidPrincipalPsw.mapWith(Number),
+      receiverPaidPrincipalPsw: receiverPaidPrincipalPsw.mapWith(Number),
       outstandingDeliveryFeePsw:
         sql<number>`greatest(coalesce(${deliveries.chargePsw}, 0) - ${paidDeliveryFeePsw}, 0)`.mapWith(
           Number,
@@ -424,16 +499,17 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       consignmentCode: cg.code,
       consignmentSerialForDay: cg.serialForDay,
       consignmentCreatedAt: cg.createdAt,
-      senderName: s.fullname,
+      senderName,
       senderPhone: s.telephone,
       senderPhone2: s.telephone2,
-      receiverName: r.fullname,
+      receiverName,
       receiverPhone: r.telephone,
       receiverPhone2: r.telephone2,
-      secondReceiverName: sr.fullname,
+      secondReceiverName,
       secondReceiverPhone: sr.telephone,
       secondReceiverPhone2: sr.telephone2,
       dropoffAddress: deliveries.dropoffAddress,
+      riderReturnedAt: deliveries.returnedAt,
       deliveryFeePsw: deliveries.chargePsw,
       riderUserId: deliveries.riderUserId,
       riderName: rider.fullname,
@@ -473,7 +549,19 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(cg, eq(cg.id, ci.consignmentId))
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
     .leftJoin(rider, eq(rider.id, deliveries.riderUserId))
-    .leftJoin(pickupQueues, eq(pickupQueues.parcelId, parcels.id))
+    .leftJoin(
+      pickupQueues,
+      and(
+        eq(pickupQueues.parcelId, parcels.id),
+        p.shelfPickerAssigned
+          ? sql`${pickupQueues.id} = (
+        select pq_latest.id from pickup_queues pq_latest
+        where pq_latest.parcel_id = ${parcels.id} and pq_latest.ended_at is null
+        order by pq_latest.queued_at desc, pq_latest.id desc limit 1
+      )`
+          : undefined,
+      ),
+    )
     .leftJoin(
       picker,
       eq(
@@ -495,10 +583,11 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
                   or(
                     ilike(parcels.bookingCode, `%${p.search}%`),
                     ilike(parcels.trackingCode, `%${p.search}%`),
-                    ilike(s.fullname, `%${p.search}%`),
+                    ilike(senderName, `%${p.search}%`),
                     ilike(s.telephone, `%${p.search}%`),
                     ilike(s.telephone2, `%${p.search}%`),
-                    ilike(r.fullname, `%${p.search}%`),
+                    ilike(receiverName, `%${p.search}%`),
+                    ilike(secondReceiverName, `%${p.search}%`),
                     ilike(r.telephone, `%${p.search}%`),
                     ilike(r.telephone2, `%${p.search}%`),
                   ),
@@ -518,6 +607,9 @@ export async function getParcelRepo(
   id: string,
   executor: DbExecutor = db,
 ): Promise<ParcelRow | null> {
+  const sender = alias(customers, 'parcel_sender');
+  const receiver = alias(customers, 'parcel_receiver');
+  const secondReceiver = alias(customers, 'parcel_second_receiver');
   const [row] = await executor
     .select({
       id: parcels.id,
@@ -529,8 +621,13 @@ export async function getParcelRepo(
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
       senderId: parcels.senderId,
+      senderNameSnapshot: sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname}, '')`,
       receiverId: parcels.receiverId,
+      receiverNameSnapshot: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       secondReceiverId: parcels.secondReceiverId,
+      secondReceiverNameSnapshot: sql<
+        string | null
+      >`coalesce(nullif(btrim(${parcels.secondReceiverNameSnapshot}), ''), ${secondReceiver.fullname})`,
       status: parcels.status,
       parcelDetails: parcels.parcelDetails,
       parcelContent: parcels.parcelContent,
@@ -561,6 +658,9 @@ export async function getParcelRepo(
       cashierSessionId: parcels.cashierSessionId,
     })
     .from(parcels)
+    .leftJoin(sender, eq(parcels.senderId, sender.id))
+    .leftJoin(receiver, eq(parcels.receiverId, receiver.id))
+    .leftJoin(secondReceiver, eq(parcels.secondReceiverId, secondReceiver.id))
     .where(eq(parcels.id, id))
     .limit(1);
   return row ?? null;
@@ -714,6 +814,7 @@ const STUCK_PARCEL_EXCLUDED_STATUSES = [
   ParcelStatus.DELIVERED_BY_OFFICE,
   ParcelStatus.DELIVERED_AT_HOME,
   ParcelStatus.RETURNED_TO_SENDER,
+  ParcelStatus.RETURN_TO_SOURCE,
   ParcelStatus.CANCELLED,
   ParcelStatus.DISPOSED_BY_SALE,
   ParcelStatus.DISPOSED_BY_DESTRUCTION,

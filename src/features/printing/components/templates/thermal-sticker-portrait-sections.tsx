@@ -1,4 +1,7 @@
-import { portraitDestinationFontSize } from './thermal-sticker-font-size.utils';
+import {
+  portraitDestinationFontSize,
+  portraitLocationFontSize,
+} from './thermal-sticker-font-size.utils';
 
 export function DestinationRow({
   branch,
@@ -12,9 +15,8 @@ export function DestinationRow({
       style={{
         minWidth: 0,
         borderTop: '0.35mm solid #111',
-        padding: '0.35mm 0',
+        padding: '0.5mm 0 0.6mm',
         boxSizing: 'border-box',
-        overflow: 'hidden',
       }}
     >
       <div
@@ -22,6 +24,7 @@ export function DestinationRow({
           display: 'grid',
           gridTemplateColumns: '1.25fr 0.75fr',
           gap: '1.2mm',
+          alignItems: 'start',
           minWidth: 0,
         }}
       >
@@ -45,9 +48,7 @@ function StickerRowContent({
   const fontSize =
     scale === 'large'
       ? portraitDestinationFontSize(displayValue)
-      : displayValue.length > 18
-        ? '3.3mm'
-        : '4.2mm';
+      : portraitLocationFontSize(displayValue);
 
   return (
     <div style={{ minWidth: 0 }}>
@@ -55,7 +56,7 @@ function StickerRowContent({
         style={{
           fontSize: '2mm',
           fontWeight: 700,
-          lineHeight: 1,
+          lineHeight: 1.15,
           textTransform: 'uppercase',
         }}
       >
@@ -65,7 +66,7 @@ function StickerRowContent({
         style={{
           fontSize,
           fontWeight: 800,
-          lineHeight: scale === 'large' ? 0.86 : 0.96,
+          lineHeight: scale === 'large' ? 1 : 1.1,
           overflowWrap: 'anywhere',
         }}
       >

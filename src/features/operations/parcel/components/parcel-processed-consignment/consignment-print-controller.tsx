@@ -64,9 +64,11 @@ const CONSIGNMENT_PAGE_STYLE = `
 export function ConsignmentPrintController({
   payload,
   onPrinted,
+  duplicate = false,
 }: {
   payload: ConsignmentPrintPayload | null;
   onPrinted: () => void;
+  duplicate?: boolean;
 }) {
   const printRef = useRef<HTMLDivElement>(null);
   const printConsignment = useRoutedDocumentPrint({
@@ -89,7 +91,7 @@ export function ConsignmentPrintController({
   return (
     <div className="hidden">
       <div ref={printRef}>
-        <ConsignmentPrintDocument payload={payload} />
+        <ConsignmentPrintDocument payload={payload} duplicate={duplicate} />
       </div>
     </div>
   );

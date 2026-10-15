@@ -15,6 +15,8 @@ export function ParcelSenderPaymentsPage() {
     canRequestReconciliation,
     data,
     isLoading,
+    isRefreshing,
+    refresh,
     selectedParcel,
     closeCollectPayment,
     amount,
@@ -65,11 +67,13 @@ export function ParcelSenderPaymentsPage() {
           data={data?.data ?? []}
           meta={data?.meta}
           loading={isLoading}
+          isRefreshing={isRefreshing}
           companyId={companyId}
           branchId={branchId}
           canDeleteParcel={canDeleteParcel}
           canRequestReconciliation={canRequestReconciliation}
           onRequestChange={setQuery}
+          onRefresh={() => void refresh()}
           onOpenCollectPayment={openCollectPayment}
           onOpenDeleteParcel={openDeleteParcel}
           onOpenReconciliationCase={openReconciliationCase}

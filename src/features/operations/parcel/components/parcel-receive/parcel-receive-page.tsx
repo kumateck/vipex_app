@@ -28,6 +28,7 @@ import {
 } from '../../api/parcel.api';
 import { extractScannedCode } from '../../utils/scan-code';
 import { ParcelInternalHolderBadge } from '../parcel-internal-holder-badge';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 
 type BarcodeDetectorLike = {
   detect: (source: CanvasImageSource) => Promise<Array<{ rawValue?: string }>>;
@@ -370,7 +371,16 @@ export function ParcelReceivePage() {
 
   const manualColumns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        id: 'booking',
+        header: 'Booking',
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <span>{row.original.bookingCode}</span>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+          </div>
+        ),
+      },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       { accessorKey: 'parcelContent', header: 'Parcel Content' },
       {

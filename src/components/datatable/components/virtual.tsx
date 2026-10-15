@@ -1,7 +1,8 @@
 import type React from 'react';
-import { type Table, flexRender } from '@tanstack/react-table';
+import { type Table } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { TableBody, TableRow } from '@/components/ui/table';
+import { DataTableContentCell } from './index';
 import { type TableSize } from '../types';
 
 interface DataTableVirtualBodyProps<TData> {
@@ -48,20 +49,20 @@ export function DataTableVirtualBody<TData>({
         return (
           <TableRow
             key={row?.id}
+            data-index={virtualRow.index}
+            ref={virtualizer.measureElement}
             data-state={row?.getIsSelected() && 'selected'}
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
               width: '100%',
-              height: `${virtualRow.size}px`,
+              minHeight: `${estimateSize()}px`,
               transform: `translateY(${virtualRow.start}px)`,
             }}
           >
             {row?.getVisibleCells().map((cell) => (
-              <TableCell key={cell.id}>
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </TableCell>
+              <DataTableContentCell key={cell.id} cell={cell} />
             ))}
           </TableRow>
         );

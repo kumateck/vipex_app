@@ -1,8 +1,16 @@
 import { BadRequest, Forbidden } from '../../utils/http-error';
 
-import { PaymentComponent, Payer, CashierType, PaymentMethod } from '@/db/schemas';
+import {
+  PaymentComponent,
+  Payer,
+  CashierType,
+  PaymentMethod,
+  parcels,
+  pickupQueues,
+} from '@/db/schemas';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { db } from '@/db/config';
+import { and, eq, isNull } from 'drizzle-orm';
 import {
   createPaymentRepo,
   listPaymentsForParcelRepo,
@@ -27,6 +35,7 @@ import {
   getParcelPaymentSettlement,
 } from '../shipments/parcel-payment-settlement';
 import { updateParcelRepo } from '../shipments/parcels.repository';
+import { assertNoOpenParcelReconciliationCaseForDelivery } from '../shipments/parcel-delivery-reconciliation-guard';
 import { endPickupQueueForParcelSvc } from '../pickup-queues/service';
 import { recordPaymentTaxJournalItemSvc } from '../accounting/service';
 import { getActiveTaxProfileWithComponentsRepo } from '../accounting/repository';
@@ -582,6 +591,43 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
       Number(input.storageAmountCedis) > 0;
 
     const result = await db.transaction(async (tx) => {
+      const [beforeDelivery] = await tx
+        .select({
+          status: parcels.status,
+          companyId: parcels.companyId,
+          destinationId: parcels.destinationId,
+          plannedToBePaidPsw: parcels.plannedToBePaidPsw,
+          confirmedAt: parcels.confirmedAt,
+          confirmedBy: parcels.confirmedBy,
+          secondReceiverId: parcels.secondReceiverId,
+          secondReceiverNameSnapshot: parcels.secondReceiverNameSnapshot,
+          cardId: parcels.cardId,
+          cardNumber: parcels.cardNumber,
+          secondCardId: parcels.secondCardId,
+          secondCardNumber: parcels.secondCardNumber,
+        })
+        .from(parcels)
+        .where(eq(parcels.id, input.parcelId))
+        .for('update');
+      if (
+        !beforeDelivery ||
+        beforeDelivery.companyId !== input.companyId ||
+        beforeDelivery.destinationId !== input.branchId
+      ) {
+        throw BadRequest('Parcel is not at this destination branch');
+      }
+      if (
+        beforeDelivery.status === ParcelStatus.DELIVERED_BY_OFFICE ||
+        beforeDelivery.status === ParcelStatus.DELIVERED_AT_HOME
+      ) {
+        throw BadRequest('Parcel is already delivered');
+      }
+      const [activeQueue] = await tx
+        .select({ id: pickupQueues.id })
+        .from(pickupQueues)
+        .where(and(eq(pickupQueues.parcelId, input.parcelId), isNull(pickupQueues.endedAt)))
+        .limit(1);
+      await assertNoOpenParcelReconciliationCaseForDelivery(input.parcelId, tx);
       let payment: PaymentCreateResponse | null = null;
       let storagePayment: PaymentCreateResponse | null = null;
       if (hasAmount) {
@@ -640,6 +686,26 @@ export async function collectReceiverPaymentAndDeliverSvc(input: {
         input.parcelId,
         {
           status: ParcelStatus.DELIVERED_BY_OFFICE,
+          deliveryConfirmationSnapshot: {
+            parcelStatus: beforeDelivery.status,
+            confirmedAt: beforeDelivery.confirmedAt?.toISOString() ?? null,
+            confirmedBy: beforeDelivery.confirmedBy,
+            plannedToBePaidPsw: beforeDelivery.plannedToBePaidPsw,
+            paymentIds: [payment?.id, storagePayment?.id].filter(
+              (id): id is string => typeof id === 'string' && !id.startsWith('auto-processed:'),
+            ),
+            creditChargeIds: [],
+            pickupQueueId: activeQueue?.id ?? null,
+            handover: {
+              secondReceiverId: beforeDelivery.secondReceiverId,
+              secondReceiverNameSnapshot: beforeDelivery.secondReceiverNameSnapshot,
+              cardId: beforeDelivery.cardId,
+              cardNumber: beforeDelivery.cardNumber,
+              secondCardId: beforeDelivery.secondCardId,
+              secondCardNumber: beforeDelivery.secondCardNumber,
+            },
+            delivery: null,
+          },
           confirmedBy: input.confirmedBy,
           confirmedAt: new Date(),
           secondReceiverId: input.secondReceiverId ?? null,

@@ -34,7 +34,7 @@ const EnvSchema = z.object({
   PASSWORD_COST: z.coerce.number().int().positive().default(10),
   DATABASE_URL: z.string().url().min(1, 'DATABASE_URL is required'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
-  JWT_ACCESS_EXPIRES: z.string().default('15m'),
+  JWT_ACCESS_EXPIRES: z.string().default('8h'),
   JWT_REFRESH_EXPIRES: z.string().default('30d'),
 
   // Observability (optional)
@@ -84,6 +84,7 @@ const EnvSchema = z.object({
   REDIS_URL: z.string().url().optional(),
   RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
+  RATE_LIMIT_STAFF_READ_MULTIPLIER: z.coerce.number().int().positive().default(5),
   // LiveKit (optional)
   LIVEKIT_URL: z.string().url().optional(),
   LIVEKIT_PUBLIC_URL: z.string().url().optional(),
@@ -105,7 +106,7 @@ const EnvSchema = z.object({
 
   // mNotify SMS API (optional — used as a fallback when a company's SMS
   // provider configJson doesn't set its own apiUrl/apiKey/senderId)
-  MNOTIFY_API_URL: z.string().url().optional(),
+  MNOTIFY_API_URL: z.string().url().default('https://api.mnotify.com/api'),
   MNOTIFY_API_KEY: z.string().optional(),
   MNOTIFY_SENDER_ID: z.string().optional(),
 

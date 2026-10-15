@@ -10,9 +10,14 @@ import { BranchType, PaymentResponsibility, UserType } from '@/db/schemas/enums'
 import { resolveToBePaidCompletionSessionSvc } from '../cashiers/delegates.service';
 import { BadRequest } from '@/server/utils/http-error';
 import { assertToBePaidCompletion } from './to-be-paid-completion';
+import { listParcelChargeAgentOptionsSvc } from './parcel-charge-agents.service';
 
 export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-parcels' })
   .use(authPlugin)
+  .get('/charge-agent-options', ({ user }) => listParcelChargeAgentOptionsSvc(user!), {
+    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateBookingWithParcels)],
+    detail: { tags: ['Shipments'], summary: 'List active charge agents at my branch' },
+  })
   .post(
     '/create-with-parcels',
     async ({ body, set, user }) => {
@@ -43,6 +48,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
           senderPaymentMethod?: number;
           paymentResponsibility?: number;
           callSender?: boolean;
+          chargeAgentUserId?: string | null;
         }>;
       };
       if (payload.completeToBePaid && payload.deferSenderCashierCompletion) {
@@ -110,6 +116,7 @@ export const bookingWithParcelsRoutes = new Elysia({ name: 'booking-create-with-
               ]),
             ),
             callSender: t.Optional(t.Boolean()),
+            chargeAgentUserId: t.Optional(t.Union([UUID, t.Null()])),
           }),
           { minItems: 1 },
         ),

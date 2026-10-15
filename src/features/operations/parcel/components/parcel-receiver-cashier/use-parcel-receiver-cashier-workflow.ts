@@ -1,5 +1,4 @@
 import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
-import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
 import {
@@ -15,18 +14,14 @@ import {
   useRequestReceiverOtpMutation,
   useUpdateParcelMutation,
   useVerifyReceiverOtpMutation,
-  useWaiveParcelStorageAccrualMutation,
 } from '../../api/parcel.api';
 import { confirmReceiverDelivery } from './confirm-receiver-delivery';
 import { useReceiverCashierDialogState } from './use-receiver-cashier-dialog-state';
 import { useReceiverCashierEdit } from './use-receiver-cashier-edit';
 import { useReceiverCashierInitialization } from './use-receiver-cashier-initialization';
-import {
-  type ParcelReceiverQuery,
-  useReceiverCashierResources,
-} from './use-receiver-cashier-resources';
+import { useReceiverCashierResources } from './use-receiver-cashier-resources';
 import { useReceiverOtpActions } from './use-receiver-otp-actions';
-import { getQueueFilterBySearch } from './receiver-cashier-utils';
+import { useReceiverCashierTable } from '../../hooks';
 import { getDialogLoadState, getDialogResourceState } from '../../utils';
 
 export function useParcelReceiverCashierWorkflow() {
@@ -35,8 +30,8 @@ export function useParcelReceiverCashierWorkflow() {
   const branchId = user?.branch?.id ?? null;
   const cashierLocationId = user?.location?.id ?? user?.locationId ?? null;
   const cashierLocationName = user?.location?.name ?? user?.locationName ?? null;
-  const canWaiveStorageAccrual = (user?.permissions ?? []).includes(
-    PermissionKeys.CanWaiveParcelStorageAccrual,
+  const canRequestStorageClearance = (user?.permissions ?? []).includes(
+    PermissionKeys.CanRequestParcelStorageClearance,
   );
   const currentBranchQuery = useGetBranchOperationsSettingsQuery(branchId ?? '', {
     skip: !branchId,
@@ -45,19 +40,8 @@ export function useParcelReceiverCashierWorkflow() {
   const isPickupQueueEnabled = currentBranch?.usePickupQueue ?? false;
   const isReceiverOtpRequired = currentBranch?.requireReceiverOtp ?? true;
 
-  const [searchInput, setSearchInput] = useState('');
-  const [query, setQuery] = useState<ParcelReceiverQuery>({
-    page: 1,
-    pageSize: 20,
-    sort: [{ field: 'pickupQueueNumber', direction: 'asc' }],
-    filters: {
-      companyId,
-      destinationId: branchId,
-      status: ParcelStatus.AWAITING_PICKUP,
-      cashierCollectionRequired: true,
-      hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled),
-    },
-  });
+  const receiverTable = useReceiverCashierTable({ companyId, branchId, isPickupQueueEnabled });
+  const { query } = receiverTable;
 
   const dialog = useReceiverCashierDialogState();
   const selectedParcel = dialog.selectedParcel;
@@ -67,8 +51,6 @@ export function useParcelReceiverCashierWorkflow() {
     useResolveSecondReceiverMutation();
   const [collectReceiverAndDeliver, { isLoading: isCollectingPayment }] =
     useCollectReceiverAndDeliverMutation();
-  const [waiveParcelStorageAccrual, { isLoading: isWaivingStorage }] =
-    useWaiveParcelStorageAccrualMutation();
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [requestReceiverOtp] = useRequestReceiverOtpMutation();
   const [verifyReceiverOtp] = useVerifyReceiverOtpMutation();
@@ -121,45 +103,8 @@ export function useParcelReceiverCashierWorkflow() {
     setPickerStaffId: dialog.setPickerStaffId,
   });
 
-  useEffect(() => {
-    setQuery((prev) => ({
-      ...prev,
-      page: 1,
-      sort: [{ field: 'pickupQueueNumber', direction: 'asc' }],
-      filters: {
-        companyId,
-        destinationId: branchId,
-        status: ParcelStatus.AWAITING_PICKUP,
-        cashierCollectionRequired: true,
-        hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, prev.search),
-      },
-    }));
-  }, [branchId, companyId, isPickupQueueEnabled]);
-
   const isSaving =
-    isAddingCard ||
-    isCreatingCustomer ||
-    isCollectingPayment ||
-    isUpdatingParcel ||
-    isWaivingStorage ||
-    edit.isSaving;
-
-  const handleSearchSubmit = () => {
-    const term = searchInput.trim();
-    setQuery((prev) => ({
-      ...prev,
-      page: 1,
-      sort: [{ field: 'pickupQueueNumber', direction: 'asc' }],
-      search: term.length > 0 ? term : undefined,
-      filters: {
-        companyId,
-        destinationId: branchId,
-        status: ParcelStatus.AWAITING_PICKUP,
-        cashierCollectionRequired: true,
-        hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, term),
-      },
-    }));
-  };
+    isAddingCard || isCreatingCustomer || isCollectingPayment || isUpdatingParcel || edit.isSaving;
 
   const handleRequestDelivery = async (parcel: ParcelSearchRow) => {
     try {
@@ -171,24 +116,6 @@ export function useParcelReceiverCashierWorkflow() {
         getApplicationErrorMessage(error, '') || 'Failed to move parcel to home delivery',
       );
     }
-  };
-
-  const handleWaiveStorageAccrual = async () => {
-    if (!selectedParcel) return;
-    const reason = dialog.waiveStorageReason.trim();
-    if (!reason) throw new Error('Enter waiver reason');
-    const amount = Number(dialog.waiveStorageAmount || 0);
-    if (Number.isNaN(amount) || amount <= 0) throw new Error('Enter waiver amount');
-
-    await waiveParcelStorageAccrual({
-      id: selectedParcel.id,
-      reason,
-      waivedAmountCedis: amount,
-    }).unwrap();
-
-    dialog.setWaiveStorageReason('');
-    dialog.setStoragePaymentAmount('0.00');
-    dialog.setWaiveStorageAmount('0.00');
   };
 
   const handleConfirmDelivered = async () => {
@@ -206,7 +133,7 @@ export function useParcelReceiverCashierWorkflow() {
       storagePaymentAmount: dialog.storagePaymentAmount,
       receiverDuePsw,
       storageOutstandingPsw,
-      canWaiveStorageAccrual,
+      canWaiveStorageAccrual: false,
       handoverTarget: dialog.handoverTarget,
       mainCardMode: dialog.mainCardMode,
       mainExistingCardRecordId: dialog.mainExistingCardRecordId,
@@ -241,18 +168,15 @@ export function useParcelReceiverCashierWorkflow() {
       companyId,
       branchId,
       cashierLocationName,
-      canWaiveStorageAccrual,
+      canWaiveStorageAccrual: false,
+      canRequestStorageClearance,
       isPickupQueueEnabled,
       isReceiverOtpRequired,
     },
     table: {
-      query,
-      setQuery,
-      searchInput,
-      setSearchInput,
+      ...receiverTable,
       rows,
       listQuery,
-      handleSearchSubmit,
       handleRequestDelivery,
       openParcelDialog: dialog.openParcelDialog,
       openEditDialog: (parcel: ParcelSearchRow) => {
@@ -271,7 +195,6 @@ export function useParcelReceiverCashierWorkflow() {
       mainReceiverCards,
       secondReceiverCards,
       handleConfirmDelivered,
-      handleWaiveStorageAccrual,
       handleRequestOtp,
       handleVerifyOtp,
       isSaving,

@@ -1,3 +1,4 @@
+import { requireOtpSmsDelivery } from './otp-sms-delivery';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { Conflict, NotFound, Unauthorized } from '@/server/utils/http-error';
 import { generateOpaqueToken, generateOtpCode, hashOtp } from '@/server/utils/otp';
@@ -7,6 +8,7 @@ import { dispatchSmsEventSvc } from '../notification-hub/service';
 import {
   consumeOtpTokenRepo,
   createParcelReceiverOtpRepo,
+  expireFailedParcelReceiverOtpRepo,
   getActiveParcelReceiverOtpRepo,
   getVerifiedOtpByTokenRepo,
   incrementOtpAttemptsRepo,
@@ -102,24 +104,28 @@ export async function requestReceiverOtpSvc(input: {
 
   if (!created) throw Conflict('Unable to create OTP right now. Please retry.');
 
-  await dispatchSmsEventSvc({
-    companyId: input.companyId,
-    eventCode: 'receiver_pickup_otp',
-    phone,
-    recipientType: input.targetReceiver === 'second' ? 'second_receiver' : 'receiver',
-    recipientName: name,
-    variables: {
-      receiverName: name,
-      otp,
-      expiresInMinutes: 5,
-      branch,
-      location,
-    },
-    metadataJson: {
-      parcelId: input.parcelId,
-      targetReceiver: input.targetReceiver,
-      phoneSlot: input.phoneSlot ?? 'primary',
-    },
+  await requireOtpSmsDelivery({
+    expireFailedOtp: () => expireFailedParcelReceiverOtpRepo(created.id),
+    send: () =>
+      dispatchSmsEventSvc({
+        companyId: input.companyId,
+        eventCode: 'receiver_pickup_otp',
+        phone,
+        recipientType: input.targetReceiver === 'second' ? 'second_receiver' : 'receiver',
+        recipientName: name,
+        variables: {
+          receiverName: name,
+          otp,
+          expiresInMinutes: 5,
+          branch,
+          location,
+        },
+        metadataJson: {
+          parcelId: input.parcelId,
+          targetReceiver: input.targetReceiver,
+          phoneSlot: input.phoneSlot ?? 'primary',
+        },
+      }),
   });
 
   return { expiresAt: expiresAt.toISOString() };

@@ -44,11 +44,11 @@ export interface DataTableServerProps<TData, TValue, TFilters = Record<string, u
   meta: PaginationMeta;
   serverFilters?: TFilters;
   defaultSort?: SortField[];
+  initialSearch?: string;
   onRequestChange?: (request: PaginationRequestDto<TFilters>) => void;
 }
 
-export interface DataTableClientProps<TData, TValue>
-  extends DataTableCommonProps<TData, TValue> {
+export interface DataTableClientProps<TData, TValue> extends DataTableCommonProps<TData, TValue> {
   mode: 'client';
   initialPageSize?: number;
 }

@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DailyCashierSalesFilters } from './daily-cashier-sales-filters';
 import { DailyCashierSalesPrintDocument } from './daily-cashier-sales-print-document';
 import { DailyCashierSalesResultFilter } from './daily-cashier-sales-result-filter';
+import { DailyCashierSalesRouteSummaryTable } from './daily-cashier-sales-route-summary-table';
 import { DailyCashierSalesSummary } from './daily-cashier-sales-summary';
 import { DailyCashierSalesToBePaidTable } from './daily-cashier-sales-tobepaid-table';
 import { DailyCashierSalesTransactionsTable } from './daily-cashier-sales-transactions-table';
@@ -75,6 +76,9 @@ export function DailyCashierSalesPage() {
             />
           ) : null}
           <DailyCashierSalesSummary report={sales.report} />
+          {sales.report && sales.activeReportTab === 'payments' ? (
+            <DailyCashierSalesRouteSummaryTable routes={sales.routeSummary} />
+          ) : null}
           <Tabs
             value={sales.activeReportTab}
             onValueChange={(value) =>
@@ -110,6 +114,7 @@ export function DailyCashierSalesPage() {
         generatedAt={sales.report?.generatedAt ?? new Date().toISOString()}
         filters={sales.filters}
         report={sales.report}
+        routeSummary={sales.routeSummary}
         activeTab={sales.activeReportTab}
       />
     </div>

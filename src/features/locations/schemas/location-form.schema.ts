@@ -4,11 +4,15 @@ const nonEmpty255 = z.string().min(1, 'Required').max(255);
 
 export const createLocationSchema = z.object({
   name: nonEmpty255,
+  canSend: z.boolean(),
+  canReceive: z.boolean(),
   branchId: nonEmpty255,
 });
 
 export const editLocationSchema = z.object({
   name: nonEmpty255,
+  canSend: z.boolean(),
+  canReceive: z.boolean(),
 });
 
 export type CreateLocationFormValues = z.infer<typeof createLocationSchema>;

@@ -122,7 +122,6 @@ src/server/features/it-support/tickets/repository.ts
 src/server/features/notification-hub/controller.ts
 src/server/features/notification-hub/repository.ts
 src/server/features/notification-hub/routes.ts
-src/server/features/notification-hub/service.ts
 src/server/features/parcel-internal-transfers/repository.ts
 src/server/features/parcel-internal-transfers/service.ts
 src/server/features/payments/calculation.service.ts

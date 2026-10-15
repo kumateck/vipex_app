@@ -19,7 +19,8 @@ import { PaymentStatusLegend } from '../parcel-processed-consignment/payment-sta
 import { EMPTY_META, PARCEL_STATUS_LABELS } from './constants';
 import { ParcelSuperSearchPaymentCell } from './parcel-super-search-payment-cell';
 import type { ParcelSuperSearchFilters } from './types';
-import { formatParcelDate } from './utils';
+import { formatParcelDate, resolveParcelDeliveredAt } from './utils';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 
 type ParcelSuperSearchTableProps = {
   companyId: string | null;
@@ -88,7 +89,7 @@ export function ParcelSuperSearchTable({
             </p>
             <p>
               <span className="text-muted-foreground">Delivered D&T:</span>{' '}
-              {formatParcelDate(row.original.deliveredAt)}
+              {formatParcelDate(resolveParcelDeliveredAt(row.original))}
             </p>
           </div>
         ),
@@ -169,9 +170,12 @@ export function ParcelSuperSearchTable({
         id: 'status',
         header: 'Status',
         cell: ({ row }) => (
-          <Badge variant="secondary">
-            {PARCEL_STATUS_LABELS[row.original.status] ?? `Status ${row.original.status}`}
-          </Badge>
+          <div className="space-y-1">
+            <Badge variant="secondary">
+              {PARCEL_STATUS_LABELS[row.original.status] ?? `Status ${row.original.status}`}
+            </Badge>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+          </div>
         ),
       },
       {

@@ -29,6 +29,7 @@ export async function changeMainReceiverWithCallOutcomeSvc(input: {
         id: parcels.id,
         bookingCode: parcels.bookingCode,
         receiverId: parcels.receiverId,
+        receiverNameSnapshot: parcels.receiverNameSnapshot,
         status: parcels.status,
         companyId: parcels.companyId,
         destinationId: parcels.destinationId,
@@ -108,7 +109,9 @@ export async function changeMainReceiverWithCallOutcomeSvc(input: {
     message: `Main receiver changed for ${result.parcel.bookingCode}`,
     metadata: {
       previousReceiverId: result.parcel.receiverId,
+      previousReceiverName: result.parcel.receiverNameSnapshot,
       receiverId: result.receiver.id,
+      receiverName: result.receiver.fullname,
       telephone,
       outcome: input.outcome,
       status: result.status,
