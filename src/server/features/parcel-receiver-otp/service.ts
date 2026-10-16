@@ -1,10 +1,11 @@
-import { requireOtpSmsDelivery } from './otp-sms-delivery';
+import { requireOtpSmsDelivery, type OtpDeliveryChannel } from './otp-sms-delivery';
 import { ParcelStatus } from '@/db/schemas/enums';
-import { Conflict, NotFound, Unauthorized } from '@/server/utils/http-error';
+import { BadRequest, Conflict, NotFound, Unauthorized } from '@/server/utils/http-error';
 import { generateOpaqueToken, generateOtpCode, hashOtp } from '@/server/utils/otp';
 import { getParcelSvc } from '../shipments/parcels.service';
 import { getParcelRecipientsRepo } from '../notification-hub/repository';
-import { dispatchSmsEventSvc } from '../notification-hub/service';
+import { dispatchSmsEventSvc, dispatchWhatsAppEventSvc } from '../notification-hub/service';
+import { getWhatsAppAvailabilitySvc } from '../whatsapp-messaging/availability.service';
 import {
   consumeOtpTokenRepo,
   createParcelReceiverOtpRepo,
@@ -26,6 +27,16 @@ async function assertOfficePickupParcel(parcelId: string) {
     throw Conflict('Receiver OTP verification is only available for parcels awaiting pickup');
   }
   return parcel;
+}
+
+async function assertWhatsAppAvailable(companyId: string) {
+  const availability = await getWhatsAppAvailabilitySvc(companyId);
+  if (!availability.moduleEnabled) {
+    throw BadRequest('WhatsApp Messaging is not enabled for this company');
+  }
+  if (!availability.configured) {
+    throw BadRequest('WhatsApp is not configured. Complete WhatsApp Settings or send by SMS.');
+  }
 }
 
 async function resolveTargetPhone(
@@ -71,8 +82,11 @@ export async function requestReceiverOtpSvc(input: {
   requestedBy: string;
   force?: boolean;
   phoneSlot?: PhoneSlot;
+  channel?: OtpDeliveryChannel;
 }) {
+  const channel = input.channel ?? 'sms';
   await assertOfficePickupParcel(input.parcelId);
+  if (channel === 'whatsapp') await assertWhatsAppAvailable(input.companyId);
   const { phone, name, branch, location } = await resolveTargetPhone(
     input.companyId,
     input.parcelId,
@@ -97,6 +111,7 @@ export async function requestReceiverOtpSvc(input: {
     parcelId: input.parcelId,
     targetReceiver: input.targetReceiver,
     phone,
+    channel,
     otpHash,
     expiresAt,
     createdBy: input.requestedBy,
@@ -104,31 +119,30 @@ export async function requestReceiverOtpSvc(input: {
 
   if (!created) throw Conflict('Unable to create OTP right now. Please retry.');
 
+  const recipient = {
+    companyId: input.companyId,
+    phone,
+    recipientType: input.targetReceiver === 'second' ? 'second_receiver' : 'receiver',
+    recipientName: name,
+    variables: { receiverName: name, otp, expiresInMinutes: 5, branch, location },
+    metadataJson: {
+      parcelId: input.parcelId,
+      targetReceiver: input.targetReceiver,
+      phoneSlot: input.phoneSlot ?? 'primary',
+      channel,
+    },
+  };
+
   await requireOtpSmsDelivery({
+    channel,
     expireFailedOtp: () => expireFailedParcelReceiverOtpRepo(created.id),
     send: () =>
-      dispatchSmsEventSvc({
-        companyId: input.companyId,
-        eventCode: 'receiver_pickup_otp',
-        phone,
-        recipientType: input.targetReceiver === 'second' ? 'second_receiver' : 'receiver',
-        recipientName: name,
-        variables: {
-          receiverName: name,
-          otp,
-          expiresInMinutes: 5,
-          branch,
-          location,
-        },
-        metadataJson: {
-          parcelId: input.parcelId,
-          targetReceiver: input.targetReceiver,
-          phoneSlot: input.phoneSlot ?? 'primary',
-        },
-      }),
+      channel === 'whatsapp'
+        ? dispatchWhatsAppEventSvc({ ...recipient, eventCode: 'receiver_pickup_otp' })
+        : dispatchSmsEventSvc({ ...recipient, eventCode: 'receiver_pickup_otp' }),
   });
 
-  return { expiresAt: expiresAt.toISOString() };
+  return { expiresAt: expiresAt.toISOString(), channel };
 }
 
 export async function verifyReceiverOtpSvc(input: {

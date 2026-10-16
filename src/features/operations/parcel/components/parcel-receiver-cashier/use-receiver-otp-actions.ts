@@ -27,6 +27,7 @@ export function useReceiverOtpActions({
         targetReceiver: 'main',
         force,
         phoneSlot: dialog.phoneSlot,
+        channel: dialog.otpChannel,
       }).unwrap();
       dialog.setOtpSentAt(new Date().toISOString());
       dialog.setOtpExpiresAt(result.expiresAt);

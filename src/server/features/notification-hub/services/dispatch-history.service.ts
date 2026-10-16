@@ -10,6 +10,13 @@ import {
 } from '../repository';
 import { dispatchSingleMessage } from './dispatch-message.service';
 import { assertDispatchCanBeRetried } from '../utils';
+import type { WhatsAppTemplateMessage } from '../providers';
+function storedWhatsAppTemplate(metadata: unknown): WhatsAppTemplateMessage | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const template = (metadata as { whatsappTemplate?: unknown }).whatsappTemplate;
+  return template && typeof template === 'object' ? (template as WhatsAppTemplateMessage) : null;
+}
+
 export async function listNotificationDispatchesSvc(params: ListNotificationDispatchesParams) {
   return listNotificationDispatchesRepo(params);
 }
@@ -32,6 +39,7 @@ export async function retryNotificationDispatchSvc(input: {
     recipientAddress: dispatch.recipientAddress,
     subject: dispatch.subject,
     body: dispatch.body,
+    whatsappMessage: storedWhatsAppTemplate(dispatch.metadataJson),
   });
 
   await updateNotificationDispatchResultRepo(input.id, input.companyId, {

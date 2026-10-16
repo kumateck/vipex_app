@@ -1133,12 +1133,13 @@ export const parcelApi = api.injectEndpoints({
       ],
     }),
     requestReceiverOtp: builder.mutation<
-      { expiresAt: string },
+      { expiresAt: string; channel?: 'sms' | 'whatsapp' },
       {
         parcelId: string;
         targetReceiver: 'main' | 'second';
         force?: boolean;
         phoneSlot?: 'primary' | 'secondary';
+        channel?: 'sms' | 'whatsapp';
       }
     >({
       query: (body) => ({

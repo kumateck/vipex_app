@@ -12,6 +12,7 @@ export * from './inventory';
 export * from './enums';
 export * from './payroll';
 export * from './receipts';
+export * from './receipt-share-links';
 export * from './payments-rules';
 export * from './shifts';
 export * from './audit';

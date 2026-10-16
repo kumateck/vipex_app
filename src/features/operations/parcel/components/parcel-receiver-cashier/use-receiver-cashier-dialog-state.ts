@@ -34,6 +34,8 @@ export function useReceiverCashierDialogState() {
   // unreachable. Defaults to the primary; only shown/used when a second
   // number exists.
   const [phoneSlot, setPhoneSlotState] = useState<'primary' | 'secondary'>('primary');
+  // SMS or WhatsApp for the next OTP send; a code already sent stays valid.
+  const [otpChannel, setOtpChannel] = useState<'sms' | 'whatsapp'>('sms');
   const [otpSentAt, setOtpSentAt] = useState<string | null>(null);
   const [otpExpiresAt, setOtpExpiresAt] = useState<string | null>(null);
   const [otpCode, setOtpCode] = useState('');
@@ -135,6 +137,8 @@ export function useReceiverCashierDialogState() {
     setSecondNewPhone,
     phoneSlot,
     setPhoneSlot,
+    otpChannel,
+    setOtpChannel,
     otpSentAt,
     otpExpiresAt,
     otpCode,

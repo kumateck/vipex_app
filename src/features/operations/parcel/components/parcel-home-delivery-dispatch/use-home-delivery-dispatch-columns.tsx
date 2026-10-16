@@ -26,6 +26,8 @@ export function useHomeDeliveryDispatchColumns(input: {
   isPrinting: boolean;
   onReturnToPickup: (parcel: ParcelSearchRow) => void;
   onPrint: (parcel: ParcelSearchRow) => void;
+  /** Present only when the Digital Receipts module is enabled. */
+  onSendReceipt?: (parcel: ParcelSearchRow) => void;
 }) {
   const {
     selectedIds,
@@ -34,6 +36,7 @@ export function useHomeDeliveryDispatchColumns(input: {
     isPrinting,
     onReturnToPickup,
     onPrint,
+    onSendReceipt,
   } = input;
   return useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
@@ -127,12 +130,25 @@ export function useHomeDeliveryDispatchColumns(input: {
                 >
                   Return to Pickup
                 </DropdownMenuItem>
+                {onSendReceipt ? (
+                  <DropdownMenuItem onClick={() => onSendReceipt(row.original)}>
+                    Send receipt
+                  </DropdownMenuItem>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         ),
       },
     ],
-    [selectedIds, setSelectedIds, isReturningToPickup, isPrinting, onReturnToPickup, onPrint],
+    [
+      selectedIds,
+      setSelectedIds,
+      isReturningToPickup,
+      isPrinting,
+      onReturnToPickup,
+      onPrint,
+      onSendReceipt,
+    ],
   );
 }

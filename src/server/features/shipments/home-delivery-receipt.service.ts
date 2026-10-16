@@ -21,6 +21,17 @@ export async function getHomeDeliveryReceiptSvc(input: {
   if (parcel.companyId !== input.companyId || parcel.destinationId !== input.branchId) {
     throw Forbidden('Parcel is outside your branch');
   }
+  return buildHomeDeliveryReceiptSvc(parcel, input.companyId);
+}
+
+/**
+ * Receipt amounts for a parcel already resolved and authorised by the caller
+ * (branch staff above, or a digital receipt link scoped to the company).
+ */
+export async function buildHomeDeliveryReceiptSvc(
+  parcel: NonNullable<Awaited<ReturnType<typeof getParcelRepo>>>,
+  companyId: string,
+) {
   if (!isHomeDeliveryReceiptStatus(parcel.status)) {
     throw BadRequest('Parcel is not available for a home delivery receipt');
   }
@@ -28,7 +39,7 @@ export async function getHomeDeliveryReceiptSvc(input: {
   const [delivery, payments, profile, contacts] = await Promise.all([
     getDeliveryByParcelRepo(parcel.id),
     listPaymentsForParcelRepo(parcel.id),
-    getActiveTaxProfileWithComponentsRepo({ companyId: input.companyId }),
+    getActiveTaxProfileWithComponentsRepo({ companyId }),
     getHomeDeliveryReceiptContactsRepo(parcel.id),
   ]);
   if (!delivery || delivery.isDeleted || delivery.mode !== DeliveryMode.DOORSTEP) {

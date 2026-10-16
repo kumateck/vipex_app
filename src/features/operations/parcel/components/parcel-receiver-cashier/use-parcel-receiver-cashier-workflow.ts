@@ -21,6 +21,7 @@ import { useReceiverCashierEdit } from './use-receiver-cashier-edit';
 import { useReceiverCashierInitialization } from './use-receiver-cashier-initialization';
 import { useReceiverCashierResources } from './use-receiver-cashier-resources';
 import { useReceiverOtpActions } from './use-receiver-otp-actions';
+import { useReceiptDelivery } from '@/features/digital-receipts/hooks';
 import { useReceiverCashierTable } from '../../hooks';
 import { getDialogLoadState, getDialogResourceState } from '../../utils';
 
@@ -103,6 +104,8 @@ export function useParcelReceiverCashierWorkflow() {
     setPickerStaffId: dialog.setPickerStaffId,
   });
 
+  const receiptDelivery = useReceiptDelivery(selectedParcel?.receiverId);
+
   const isSaving =
     isAddingCard || isCreatingCustomer || isCollectingPayment || isUpdatingParcel || edit.isSaving;
 
@@ -158,7 +161,11 @@ export function useParcelReceiverCashierWorkflow() {
       collectReceiverAndDeliver: (args) => collectReceiverAndDeliver(args).unwrap(),
     });
 
-    dialog.setLastPrintedReceipt(receipt);
+    // A digital receipt only exists when the receiver actually paid something.
+    if (receiverDuePsw > 0 || storageOutstandingPsw > 0) {
+      void receiptDelivery.deliver([selectedParcel.id], 'receiver_payment');
+    }
+    if (receiptDelivery.includesPhysical) dialog.setLastPrintedReceipt(receipt);
     dialog.setSelectedParcel(null);
     await listQuery.refetch();
   };
@@ -195,6 +202,7 @@ export function useParcelReceiverCashierWorkflow() {
       mainReceiverCards,
       secondReceiverCards,
       handleConfirmDelivered,
+      receiptDelivery,
       handleRequestOtp,
       handleVerifyOtp,
       isSaving,

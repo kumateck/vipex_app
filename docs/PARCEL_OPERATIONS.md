@@ -528,7 +528,26 @@ Mobile discrepancy capture supports an expected system parcel that is physically
   [SMS dispatch diagnostics](NOTIFICATION_HUB_MODULE.md#application-sms-definitions).
 - QA: test success, missing provider/configuration, provider rejection, transport exceptions,
   retry and failed forced resend; verify unchanged parcel/payment state and five-minute expiry.
-  Automated coverage: `otp-sms-delivery.test.ts`, `sms-provider-payloads.test.ts`.
+- **Channel choice (WhatsApp):** when the `whatsapp_messaging` module is enabled and configured, the
+  Receiver Cashier and Waiting for Pickup OTP sections show an SMS / WhatsApp toggle (default SMS).
+  The request sends `channel`; the channel is recorded on `parcel_receiver_otps.channel`. WhatsApp
+  delivery has the same accept-or-expire guarantee (503 if not accepted). Requesting WhatsApp while
+  the module is off or unconfigured returns 400 without creating a code. Mobile always uses SMS.
+  See [WhatsApp messaging](WHATSAPP_MESSAGING.md#pickup-otp-over-whatsapp).
+- OTP codes are generated with `crypto.randomInt`.
+
+## Digital Receipt Delivery
+
+With the `digital_receipts` module enabled, staff record how the customer wants the receipt
+(Physical, SMS, WhatsApp, Email; it defaults to the customer's last choice):
+
+- In the new-booking Receipts card, the Sender Cashier collect dialog, and the Receiver Cashier
+  payment dialog (when the receiver pays).
+- Home Delivery Dispatch has a per-row "Send receipt" action.
+
+Unticking Physical in the Sender/Receiver cashier dialogs skips the automatic print. Digital sends
+happen after the transaction succeeds and never roll it back. See [Digital receipts](DIGITAL_RECEIPTS.md).
+Automated coverage: `otp-sms-delivery.test.ts`, `sms-provider-payloads.test.ts`.
 
 ## Pickup and Last-Mile Delivery
 

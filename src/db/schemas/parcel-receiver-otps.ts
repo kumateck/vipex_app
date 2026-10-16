@@ -5,7 +5,7 @@ import { parcels } from './shipments';
 
 // Receiver identity verification for office pickup handover: a 6-digit code is
 // texted to the receiver (or second/alternate receiver) and must be verified
-// within 5 minutes. Once verified, a separate short-lived opaque
+// within 5 minutes. Staff choose whether the code goes by SMS or WhatsApp. Once verified, a separate short-lived opaque
 // verificationToken is minted so the cashier does not have to re-enter the OTP
 // again when finishing the payment dialog a few minutes later.
 export const parcelReceiverOtps = pgTable(
@@ -25,6 +25,7 @@ export const parcelReceiverOtps = pgTable(
       .references(() => parcels.id),
     targetReceiver: varchar('target_receiver', { length: 16 }).notNull(), // 'main' | 'second'
     phone: varchar('phone', { length: 32 }).notNull(),
+    channel: varchar('channel', { length: 16 }).notNull().default('sms'), // 'sms' | 'whatsapp'
     otpHash: varchar('otp_hash', { length: 64 }).notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: false }).notNull(),
     verifiedAt: timestamp('verified_at', { withTimezone: false }),

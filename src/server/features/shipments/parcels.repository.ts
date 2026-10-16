@@ -105,6 +105,7 @@ export type ListParcelsParams = {
   offset: number;
   parcelId?: string | null;
   companyId?: string | null;
+  ids?: string[] | null;
   sourceId?: string | null;
   destinationId?: string | null;
   scopedBranchId?: string | null;
@@ -195,6 +196,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   if (!p.includeDeleted) whereParts.push(eq(parcels.isDeleted, false));
   if (p.parcelId) whereParts.push(eq(parcels.id, p.parcelId));
   if (p.companyId) whereParts.push(eq(parcels.companyId, p.companyId));
+  if (p.ids?.length) whereParts.push(inArray(parcels.id, p.ids));
   if (p.sourceId) whereParts.push(eq(parcels.sourceId, p.sourceId));
   if (p.destinationId) whereParts.push(eq(parcels.destinationId, p.destinationId));
   if (p.shelfPickerAssigned)

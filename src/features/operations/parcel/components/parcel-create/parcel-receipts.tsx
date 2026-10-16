@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ReceiptSummary } from './parcel-form.types';
 import { getParcelCreationPrintSelection } from './parcel-create-print.utils';
 import { ParcelReceiptActions } from '../parcel-receipt-actions';
+import { BookingReceiptDelivery } from '@/features/digital-receipts';
 
 type ParcelReceiptsProps = {
   receipt: ReceiptSummary | null;
@@ -21,6 +22,15 @@ export function ParcelReceipts({ receipt, autoPrint = false }: ParcelReceiptsPro
     setActiveAutoPrintIndex(0);
   }, [autoPrint, receipt?.bookingId, receipt?.parcels.length]);
 
+  const deliveryParcels = useMemo(
+    () =>
+      (receipt?.parcels ?? []).map((parcel) => ({
+        parcelId: parcel.parcelId,
+        isPaid: Boolean(parcel.taxBreakdown) && parcel.senderPaidCedis > 0,
+      })),
+    [receipt?.parcels],
+  );
+
   if (!receipt) return null;
 
   return (
@@ -30,6 +40,11 @@ export function ParcelReceipts({ receipt, autoPrint = false }: ParcelReceiptsPro
         <CardDescription>Print stickers and receipts for the latest booking.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <BookingReceiptDelivery
+          key={receipt.bookingId}
+          customerId={receipt.senderId}
+          parcels={deliveryParcels}
+        />
         {receipt.parcels.map((parcel, index) => (
           <div
             key={parcel.parcelId ?? parcel.trackingCode}

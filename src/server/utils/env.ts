@@ -110,6 +110,18 @@ const EnvSchema = z.object({
   MNOTIFY_API_KEY: z.string().optional(),
   MNOTIFY_SENDER_ID: z.string().optional(),
 
+  // WhatsApp Cloud API (optional — used as a fallback when a company's
+  // whatsapp provider configJson doesn't set its own values)
+  WHATSAPP_API_VERSION: z.string().default('v21.0'),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_APP_SECRET: z.string().optional(),
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
+
+  // Public receipt page base (vipex_website). Receipt links are
+  // `${PUBLIC_RECEIPT_BASE_URL}/<token>`.
+  PUBLIC_RECEIPT_BASE_URL: z.string().url().default('https://vipexparcels.com/receipt'),
+
   // Help Assistant LLM providers (all optional — the assistant degrades
   // gracefully and falls back to plain guide browsing if none are set).
   // Each provider is tried in a per-tier priority order (see
