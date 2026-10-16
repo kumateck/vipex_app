@@ -232,12 +232,10 @@ export function useParcelCreateFormWorkflow() {
         }),
       }).unwrap();
 
-      const receipt = buildParcelCreateReceipt({
-        response,
-        values,
-        amounts,
-        branchOptions,
-      });
+      const receipt: ReceiptSummary = {
+        ...buildParcelCreateReceipt({ response, values, amounts, branchOptions }),
+        senderId: resolvedSenderId,
+      };
       // A cashier who can collect sender payments is always offered the chance to
       // complete payment now, regardless of whether they also want to print a receipt.
       // Parcels with nothing owed by the sender never reach this dialog — the backend

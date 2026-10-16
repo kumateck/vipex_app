@@ -962,6 +962,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/it-support/tickets/new': PermissionKeys.CanCreateItSupportTickets,
   '/settings/company': PermissionKeys.CanReadCompanyProfile,
   '/settings/sms': PermissionKeys.CanReadCompanyProfile,
+  '/settings/whatsapp': PermissionKeys.CanReadCompanyProfile,
   '/settings/modules': PermissionKeys.CanManageCompanyModules,
   '/settings/parcel-ageing': PermissionKeys.CanManageParcelAgeingPolicy,
   '/settings/app-updates': PermissionKeys.CanManageDesktopUpdates,

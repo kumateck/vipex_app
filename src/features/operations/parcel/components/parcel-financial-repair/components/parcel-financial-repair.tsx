@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useParcelFinancialRepair } from '../hooks/use-parcel-financial-repair';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 function money(amountPsw: number) {
   return `GHS ${(amountPsw / 100).toFixed(2)}`;
@@ -35,9 +36,12 @@ export function ParcelFinancialRepair() {
         </form>
         {state.preview ? (
           <section className="space-y-4 rounded-md border p-4" aria-label="Repair preview">
-            <div>
-              <h2 className="font-semibold">{state.preview.bookingCode}</h2>
-              <p className="text-sm text-muted-foreground">{state.preview.trackingCode}</p>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h2 className="font-semibold">{state.preview.bookingCode}</h2>
+                <p className="text-sm text-muted-foreground">{state.preview.trackingCode}</p>
+              </div>
+              <ViewParcelDetailsButton parcelId={state.preview.id} label="Full Details" />
             </div>
             <dl className="grid gap-3 text-sm sm:grid-cols-2">
               <div>

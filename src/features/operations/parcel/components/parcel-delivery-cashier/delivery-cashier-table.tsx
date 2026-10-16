@@ -21,6 +21,7 @@ import { CallSenderBadge } from '../call-sender-badge';
 import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { EMPTY_META } from './constants';
 import { formatMoney, formatPhones } from './utils';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 type DeliveryCashierTableProps = {
   companyId: string | null;
@@ -140,6 +141,7 @@ export function DeliveryCashierTable({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <ViewParcelDetailsMenuItem parcelId={row.original.id} />
                 <DropdownMenuItem
                   disabled={isReturningToPickup}
                   onClick={() => onFinalize(row.original)}

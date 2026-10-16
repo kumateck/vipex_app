@@ -1,18 +1,16 @@
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from '@mobile/navigation/router-compat';
 import { AppScreen } from '@mobile/components/screen';
 import { AppCard, MobileNoAccess } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { useAuth } from '@mobile/providers/auth-provider';
-import {
-  ParcelDetailsHeader,
-  ParcelFinancialSections,
-  ParcelHistorySections,
-  ParcelSummarySections,
-  useParcelRecordDetails,
-} from '@mobile/features/super-search/parcel-details';
 import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import { canViewParcelSearch } from '@mobile/lib/permissions';
+import { useParcelHistory, useParcelRecordDetails } from '../../hooks';
+import { ParcelDetailsHeader } from '../parcel-details-header';
+import { ParcelDetailTabs, type ParcelDetailTab } from '../parcel-detail-tabs';
+import { ParcelTabContent } from './parcel-tab-content';
 
 export function ParcelRecordDetailsScreen() {
   const { theme } = useAppearance();
@@ -23,11 +21,23 @@ export function ParcelRecordDetailsScreen() {
     parcelId: string;
     bookingCode?: string;
   }>();
+  const [tab, setTab] = useState<ParcelDetailTab>('overview');
   const { loading, details, row, relatedRows, loadError, load } = useParcelRecordDetails({
     parcelId: canView ? parcelId : undefined,
     companyId,
     withAuth,
   });
+  const history = useParcelHistory({ parcelId: canView ? parcelId : undefined, withAuth });
+  const branchNameById = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const entry of relatedRows) {
+      if (entry.sourceId && entry.sourceName) names.set(entry.sourceId, entry.sourceName);
+      if (entry.destinationId && entry.destinationName) {
+        names.set(entry.destinationId, entry.destinationName);
+      }
+    }
+    return names;
+  }, [relatedRows]);
 
   if (!canView) {
     return (
@@ -62,23 +72,23 @@ export function ParcelRecordDetailsScreen() {
     );
   }
 
-  const branchNameById = new Map<string, string>();
-  for (const entry of relatedRows) {
-    if (entry.sourceId && entry.sourceName) branchNameById.set(entry.sourceId, entry.sourceName);
-    if (entry.destinationId && entry.destinationName) {
-      branchNameById.set(entry.destinationId, entry.destinationName);
-    }
-  }
-
   return (
-    <AppScreen refreshing={loading} onRefresh={() => void load()}>
+    <AppScreen
+      refreshing={loading}
+      onRefresh={() => {
+        void load();
+        void history.reload();
+      }}
+    >
       <ParcelDetailsHeader bookingCode={bookingCode ?? row?.bookingCode} />
-      <ParcelSummarySections details={details} row={row} />
-      <ParcelFinancialSections details={details} />
-      <ParcelHistorySections
+      <ParcelDetailTabs value={tab} onChange={setTab} historyCount={history.events.length} />
+      <ParcelTabContent
+        tab={tab}
         details={details}
+        row={row}
         relatedRows={relatedRows}
         branchNameById={branchNameById}
+        history={history}
       />
     </AppScreen>
   );

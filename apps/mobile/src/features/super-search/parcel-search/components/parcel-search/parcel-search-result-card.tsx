@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { AppStatusChip } from '@mobile/components/ui/mobile';
-import { ParcelStatus } from '@mobile/constants/parcel-status';
+import { ParcelStatus, getParcelRiderLine } from '@mobile/constants/parcel-status';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import type { ParcelSearchRow } from '@mobile/types/parcels';
@@ -17,6 +17,7 @@ export function ParcelSearchResultCard({
   const { theme } = useAppearance();
   const cancelled = parcel.status === ParcelStatus.CANCELLED;
   const route = `${parcel.sourceName ?? 'Source'} → ${parcel.destinationName ?? 'Destination'}`;
+  const rider = getParcelRiderLine(parcel.status, parcel.riderName);
 
   return (
     <View style={[styles.card, mobileShadow.card, { backgroundColor: theme.colors.card }]}>
@@ -27,7 +28,17 @@ export function ParcelSearchResultCard({
             {parcel.bookingCode}
           </Text>
         </View>
-        <AppStatusChip label={parcel.status} />
+        <View style={styles.statusWrap}>
+          <AppStatusChip label={parcel.status} />
+          {rider ? (
+            <Text numberOfLines={2} style={[styles.rider, { color: theme.colors.textMuted }]}>
+              {rider.label}: {rider.name}
+            </Text>
+          ) : null}
+          <Text numberOfLines={2} style={[styles.rider, { color: theme.colors.textMuted }]}>
+            Created By: {parcel.createdByName ?? '-'}
+          </Text>
+        </View>
       </View>
 
       <View style={[styles.route, { backgroundColor: theme.colors.cardMuted }]}>
@@ -97,6 +108,8 @@ const styles = StyleSheet.create({
   card: { borderRadius: mobileRadius.xl, padding: mobileSpacing.lg, gap: mobileSpacing.md },
   topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: mobileSpacing.sm },
   bookingWrap: { flex: 1, minWidth: 0 },
+  statusWrap: { alignItems: 'flex-end', gap: 4, maxWidth: '50%' },
+  rider: { ...mobileTextStyles.caption1, fontWeight: '600', textAlign: 'right' },
   eyebrow: { ...mobileTextStyles.caption2, fontWeight: '700', letterSpacing: 0.5 },
   booking: { ...mobileTextStyles.title2 },
   route: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 13, padding: 11 },

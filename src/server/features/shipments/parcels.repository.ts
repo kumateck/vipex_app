@@ -38,7 +38,7 @@ import {
 import { ParcelStatus, Payer, PaymentComponent } from '@/db/schemas/enums';
 import type { SortField } from '@/server/types/pagination.types';
 import { extractScannedCode } from '@/server/utils/scan-code';
-import { incomingTransitSendDateBounds } from './incoming-transit-send-date';
+import { incomingTransitSendDateCondition } from './incoming-transit-send-date';
 type DbExecutor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 function effectiveParcelReceivedAt() {
@@ -103,7 +103,9 @@ export type ParcelRow = {
 export type ListParcelsParams = {
   limit: number;
   offset: number;
+  parcelId?: string | null;
   companyId?: string | null;
+  ids?: string[] | null;
   sourceId?: string | null;
   destinationId?: string | null;
   scopedBranchId?: string | null;
@@ -155,6 +157,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     deliveryFeePsw: number | null;
     riderUserId: string | null;
     riderName: string | null;
+    createdByName: string | null;
     pickupLocationName: string | null;
     pickupQueueId: string | null;
     pickupQueueCode: string | null;
@@ -191,7 +194,9 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     | ReturnType<typeof sql>
   )[] = [];
   if (!p.includeDeleted) whereParts.push(eq(parcels.isDeleted, false));
+  if (p.parcelId) whereParts.push(eq(parcels.id, p.parcelId));
   if (p.companyId) whereParts.push(eq(parcels.companyId, p.companyId));
+  if (p.ids?.length) whereParts.push(inArray(parcels.id, p.ids));
   if (p.sourceId) whereParts.push(eq(parcels.sourceId, p.sourceId));
   if (p.destinationId) whereParts.push(eq(parcels.destinationId, p.destinationId));
   if (p.shelfPickerAssigned)
@@ -239,6 +244,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     string | null
   >`coalesce(nullif(btrim(${parcels.secondReceiverNameSnapshot}), ''), ${sr.fullname})`;
   const rider = alias(users, 'rider');
+  const creator = alias(users, 'creator');
   const picker = alias(users, 'picker');
   const callCenterAssignee = alias(users, 'call_center_assignee');
   const d = alias(branches, 'd');
@@ -248,8 +254,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
   const ci = alias(consignmentItems, 'ci');
   const cg = alias(consignments, 'cg');
   if (p.sentDate) {
-    const { start, end } = incomingTransitSendDateBounds(p.sentDate);
-    whereParts.push(sql`${cg.createdAt} >= ${start} and ${cg.createdAt} < ${end}`);
+    whereParts.push(incomingTransitSendDateCondition(cg.createdAt, p.sentDate)!);
   }
   if (p.consignmentNumber?.trim()) {
     const term = p.consignmentNumber.trim();
@@ -392,55 +397,58 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
             .filter((value): value is ReturnType<typeof asc> => value !== null)
         : [asc(parcels.createdAt), asc(parcels.id)];
 
-  const [countRow] = await db
-    .select({ c: count() })
-    .from(parcels)
-    .leftJoin(bookings, eq(parcels.bookingId, bookings.id))
-    .leftJoin(s, eq(parcels.senderId, s.id))
-    .leftJoin(r, eq(parcels.receiverId, r.id))
-    .leftJoin(sr, eq(parcels.secondReceiverId, sr.id))
-    .leftJoin(d, eq(parcels.destinationId, d.id))
-    .leftJoin(ci, and(eq(ci.parcelId, parcels.id), isNull(ci.removedAt)))
-    .leftJoin(cg, eq(cg.id, ci.consignmentId))
-    .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
-    .leftJoin(
-      pickupQueues,
-      and(
-        eq(pickupQueues.parcelId, parcels.id),
-        p.shelfPickerAssigned
-          ? sql`${pickupQueues.id} = (
+  const pickupQueueJoin = and(
+    eq(pickupQueues.parcelId, parcels.id),
+    p.shelfPickerAssigned
+      ? sql`${pickupQueues.id} = (
         select pq_latest.id from pickup_queues pq_latest
         where pq_latest.parcel_id = ${parcels.id} and pq_latest.ended_at is null
         order by pq_latest.queued_at desc, pq_latest.id desc limit 1
       )`
-          : undefined,
-      ),
-    )
-    .where(
-      whereParts.length || p.search
-        ? and(
-            ...(whereParts as [(typeof whereParts)[number], ...(typeof whereParts)[number][]]),
-            ...(p.search
-              ? [
-                  or(
-                    ilike(parcels.bookingCode, `%${p.search}%`),
-                    ilike(parcels.trackingCode, `%${p.search}%`),
-                    ilike(senderName, `%${p.search}%`),
-                    ilike(s.telephone, `%${p.search}%`),
-                    ilike(s.telephone2, `%${p.search}%`),
-                    ilike(receiverName, `%${p.search}%`),
-                    ilike(secondReceiverName, `%${p.search}%`),
-                    ilike(r.telephone, `%${p.search}%`),
-                    ilike(r.telephone2, `%${p.search}%`),
-                  ),
-                ]
-              : []),
-          )
-        : undefined,
-    );
-  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
+      : undefined,
+  );
+  const whereClause =
+    whereParts.length || p.search
+      ? and(
+          ...(whereParts as [(typeof whereParts)[number], ...(typeof whereParts)[number][]]),
+          ...(p.search
+            ? [
+                or(
+                  ilike(parcels.bookingCode, `%${p.search}%`),
+                  ilike(parcels.trackingCode, `%${p.search}%`),
+                  ilike(senderName, `%${p.search}%`),
+                  ilike(s.telephone, `%${p.search}%`),
+                  ilike(s.telephone2, `%${p.search}%`),
+                  ilike(receiverName, `%${p.search}%`),
+                  ilike(secondReceiverName, `%${p.search}%`),
+                  ilike(r.telephone, `%${p.search}%`),
+                  ilike(r.telephone2, `%${p.search}%`),
+                ),
+              ]
+            : []),
+        )
+      : undefined;
 
-  const rows = await db
+  // The count joins only what its filters reference. Primary-key and partial-unique joins
+  // cannot change the row count; deliveries and pickup queues are kept because they can.
+  let countQuery = db.select({ c: count() }).from(parcels).$dynamic();
+  if (p.search) {
+    countQuery = countQuery
+      .leftJoin(s, eq(parcels.senderId, s.id))
+      .leftJoin(r, eq(parcels.receiverId, r.id))
+      .leftJoin(sr, eq(parcels.secondReceiverId, sr.id));
+  }
+  if (p.sentDate || p.consignmentNumber?.trim()) {
+    countQuery = countQuery
+      .leftJoin(ci, and(eq(ci.parcelId, parcels.id), isNull(ci.removedAt)))
+      .leftJoin(cg, eq(cg.id, ci.consignmentId));
+  }
+  const countPromise = countQuery
+    .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
+    .leftJoin(pickupQueues, pickupQueueJoin)
+    .where(whereClause);
+
+  const rowsPromise = db
     .select({
       id: parcels.id,
       companyId: parcels.companyId,
@@ -513,6 +521,7 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
       deliveryFeePsw: deliveries.chargePsw,
       riderUserId: deliveries.riderUserId,
       riderName: rider.fullname,
+      createdByName: creator.fullname,
       pickupLocationName: pl.name,
       pickupQueueId: pickupQueues.id,
       pickupQueueCode: pickupQueues.queueCode,
@@ -549,19 +558,8 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(cg, eq(cg.id, ci.consignmentId))
     .leftJoin(deliveries, eq(deliveries.parcelId, parcels.id))
     .leftJoin(rider, eq(rider.id, deliveries.riderUserId))
-    .leftJoin(
-      pickupQueues,
-      and(
-        eq(pickupQueues.parcelId, parcels.id),
-        p.shelfPickerAssigned
-          ? sql`${pickupQueues.id} = (
-        select pq_latest.id from pickup_queues pq_latest
-        where pq_latest.parcel_id = ${parcels.id} and pq_latest.ended_at is null
-        order by pq_latest.queued_at desc, pq_latest.id desc limit 1
-      )`
-          : undefined,
-      ),
-    )
+    .leftJoin(creator, eq(creator.id, parcels.createdBy))
+    .leftJoin(pickupQueues, pickupQueueJoin)
     .leftJoin(
       picker,
       eq(
@@ -574,31 +572,13 @@ export async function listParcelsRepo(p: ListParcelsParams): Promise<{
     .leftJoin(hb, eq(hb.id, parcelInternalHolders.branchId))
     .leftJoin(hl, eq(hl.id, parcelInternalHolders.locationId))
     .leftJoin(hw, eq(hw.id, parcelInternalHolders.warehouseId))
-    .where(
-      whereParts.length || p.search
-        ? and(
-            ...(whereParts as [(typeof whereParts)[number], ...(typeof whereParts)[number][]]),
-            ...(p.search
-              ? [
-                  or(
-                    ilike(parcels.bookingCode, `%${p.search}%`),
-                    ilike(parcels.trackingCode, `%${p.search}%`),
-                    ilike(senderName, `%${p.search}%`),
-                    ilike(s.telephone, `%${p.search}%`),
-                    ilike(s.telephone2, `%${p.search}%`),
-                    ilike(receiverName, `%${p.search}%`),
-                    ilike(secondReceiverName, `%${p.search}%`),
-                    ilike(r.telephone, `%${p.search}%`),
-                    ilike(r.telephone2, `%${p.search}%`),
-                  ),
-                ]
-              : []),
-          )
-        : undefined,
-    )
+    .where(whereClause)
     .orderBy(...orderBy)
     .limit(p.limit)
     .offset(p.offset);
+
+  const [[countRow], rows] = await Promise.all([countPromise, rowsPromise]);
+  const totalRecords = Number((countRow?.c as unknown as bigint) ?? 0n);
 
   return { data: rows, totalRecords };
 }

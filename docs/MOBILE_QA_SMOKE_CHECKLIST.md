@@ -172,6 +172,17 @@ and reinstall checks are in [Native Device Registration](DEVICE_REGISTRATION.md)
    - Approve, reject, handle already-reviewed conflict, and reject another branch.
 9. Customers:
    - Search, inspect read-only, update limited contact fields, and handle duplicate-phone conflict.
+10. Super Search parcel details (see [Parcel details and history](PARCEL_DETAILS.md#clients)):
+    - Open a home-delivered parcel; switch Overview, People, Payments, Delivery, History.
+    - Overview: status, rider line and Created By under it; a deleted parcel shows who deleted it
+      and why.
+    - People: sender/receiver phones, route, call-center agent, Handled By names.
+    - Payments: charges and paid/outstanding totals; each payment shows Received By, voids show
+      who voided and why.
+    - Delivery: rider, assigned/handed-over/returned times, front desk, confirmations.
+    - History: timeline newest first, grouped by day, each entry with user and branch; pull to
+      refresh reloads it. With the history endpoint unavailable, the other tabs still load and
+      History shows the error.
 
 ## Regression checks
 

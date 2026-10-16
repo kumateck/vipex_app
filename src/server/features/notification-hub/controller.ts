@@ -22,9 +22,16 @@ import {
   updateNotificationProviderSvc,
   updateNotificationTemplateSvc,
 } from './service';
+import { maskWhatsAppConfig } from './providers';
 
 function toIsoDate(value: Date | null) {
   return value ? value.toISOString() : null;
+}
+
+// WhatsApp credentials are write-only (managed from WhatsApp Settings); other
+// channels keep their existing response shape.
+function publicProviderConfig(channel: string, configJson: unknown) {
+  return channel === 'whatsapp' ? maskWhatsAppConfig(configJson) : configJson;
 }
 
 export async function listNotificationProvidersCtrl(
@@ -60,6 +67,7 @@ export async function listNotificationProvidersCtrl(
   return {
     data: data.map((row) => ({
       ...row,
+      configJson: publicProviderConfig(row.channel, row.configJson),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     })),
@@ -91,7 +99,7 @@ export async function getNotificationProviderCtrl(input: { id: string; companyId
     channel: row.channel,
     providerKey: row.providerKey,
     name: row.name,
-    configJson: row.configJson,
+    configJson: publicProviderConfig(row.channel, row.configJson),
     isActive: row.isActive,
     isDefault: row.isDefault,
     createdAt: row.createdAt.toISOString(),

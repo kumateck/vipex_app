@@ -30,6 +30,11 @@ describe('ThermalStickerTemplate', () => {
       expect(original).not.toContain('DUPLICATE');
       expect(duplicate).toContain('DUPLICATE');
       expect(duplicate).toContain('Parcel tracking QR code');
+      // Printed in the header under the wordmark, not inside the status/payment box.
+      const brandStart = duplicate.indexOf('data-sticker-brand');
+      expect(brandStart).toBeGreaterThanOrEqual(0);
+      expect(duplicate.indexOf('DUPLICATE')).toBeGreaterThan(brandStart);
+      expect(duplicate.match(/DUPLICATE/g)).toHaveLength(1);
     },
   );
 

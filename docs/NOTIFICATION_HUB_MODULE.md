@@ -133,7 +133,9 @@ Call-center event endpoint also allows existing call-center permission:
 
 Current behavior:
 
-- Default provider is resolved by company and channel (`sms` or `email`).
+- Default provider is resolved by company and channel (`sms`, `email`, or `whatsapp`).
+- `whatsapp` uses provider key `meta_cloud` and only sends Meta-approved templates. It is managed from WhatsApp Settings (module `whatsapp_messaging`), not from this page. WhatsApp secrets are masked (`••••••••`) in provider list/detail responses. Delivery status (`delivered`, `read`, `failed`) is updated by the public WhatsApp webhook. See [WhatsApp messaging](WHATSAPP_MESSAGING.md).
+- Digital receipt emails are sent through SMTP and logged here with `channel = 'email'`, `provider_key = 'smtp'`.
 - SMS providers are pluggable by `provider_key`.
 - Built-in SMS keys:
   - `log_only`
@@ -147,6 +149,8 @@ provider. Environment-backed providers such as `mnotify` are offered when their 
 variables are present; secrets are not returned to the client.
 
 ## Application SMS Definitions
+
+Digital receipt events (`digital_receipt_booking`, `digital_receipt_payment`, `digital_receipt_home_delivery`) appear in the definitions list and can be edited like other events. Their variables are `customerName`, `bookingCode`, `amountPaid`, `balance`, `destination`, `receiptUrl`, `branch` (destination branch), and `location` (pickup location, or drop-off address for home delivery). They are only dispatched when the `digital_receipts` module is enabled. See [Digital receipts](DIGITAL_RECEIPTS.md).
 
 Transactional SMS actions use a central event catalog and a company-specific template override:
 

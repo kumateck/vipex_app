@@ -31,6 +31,12 @@ temporary head-office fallback, which the page and API enforce. It does not requ
 `device_verification` module, so devices can be approved before verification is enabled. `/users/devices` redirects to `/settings/devices`.
 See [Native Device Registration](DEVICE_REGISTRATION.md).
 
+`/settings/whatsapp` (WhatsApp Settings) requires `CanReadCompanyProfile` and the
+`whatsapp_messaging` module (route-module mapped, so the sidebar hides it when the module is off).
+Saving the provider or templates additionally needs `CanManageNotificationProviders` /
+`CanManageNotificationTemplates` (or `CanManageCompanyModules`) on the server.
+See [WhatsApp Messaging](WHATSAPP_MESSAGING.md).
+
 Storage clearance history at `/parcels/storage-clearances` also accepts request, approve, or
 execute clearance permission through shared path-access resolution. Action pages keep their own
 exact permission. This permits workflow participants to follow returned requests and history

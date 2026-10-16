@@ -14,6 +14,7 @@ import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import type { ParcelDiscrepancyRow } from '../../api/parcel.api';
 import { discrepancyTypeLabel, formatDiscrepancyDate } from './utils';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 type ParcelDiscrepanciesTableProps = {
   data: ParcelDiscrepancyRow[];
@@ -98,6 +99,12 @@ export function ParcelDiscrepanciesTable({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {discrepancy.parcelId ? (
+                    <ViewParcelDetailsMenuItem
+                      parcelId={discrepancy.parcelId}
+                      label="View Parcel"
+                    />
+                  ) : null}
                   <DropdownMenuItem onClick={() => onView(discrepancy)}>
                     View detail
                   </DropdownMenuItem>

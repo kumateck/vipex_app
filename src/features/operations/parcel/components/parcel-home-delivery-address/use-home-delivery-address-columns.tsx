@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 const formatCurrency = (amountPsw: number) => `GHS ${(amountPsw / 100).toFixed(2)}`;
 
@@ -62,6 +63,7 @@ export function useHomeDeliveryAddressColumns({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <ViewParcelDetailsMenuItem parcelId={row.original.id} />
               <DropdownMenuItem onClick={() => onCollectAddress(row.original)}>
                 Collect Address
               </DropdownMenuItem>

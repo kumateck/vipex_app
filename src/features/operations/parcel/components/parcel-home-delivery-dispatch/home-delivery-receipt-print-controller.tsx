@@ -6,8 +6,7 @@ import { useManagedReactPrint } from '@/features/printing/hooks/use-managed-reac
 import { printViaDesktop } from '@/features/printing/services/desktop-print';
 import { createPrintableHtmlDocument } from '@/features/printing/services/html-document';
 import { getPrinterPreferenceMapping } from '@/features/printing/services/printer-preferences';
-import { formatDate } from '../parcel-receipt-formatters';
-import { buildParcelTrackingUrl } from '../../utils/tracking-url';
+import { buildHomeDeliveryReceiptA5Props } from '../../utils/build-home-delivery-receipt-props';
 import type { HomeDeliveryReceipt } from '../../api/parcel.api';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -69,29 +68,10 @@ export function HomeDeliveryReceiptPrintController({
     <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '210mm' }}>
       <div ref={contentRef}>
         <HomeDeliveryReceiptA5Template
-          cashierName={cashierName}
-          issuedAtLabel={formatDate(new Date().toISOString())}
-          bookingCode={receipt.bookingCode}
-          trackingCode={receipt.trackingCode}
-          senderName={receipt.senderName ?? ''}
-          senderPhone={[receipt.senderPhone, receipt.senderPhone2].filter(Boolean).join(', ')}
-          receiverName={receipt.receiverName ?? ''}
-          receiverPhone={[receipt.receiverPhone, receipt.receiverPhone2].filter(Boolean).join(', ')}
-          parcelDetails={receipt.parcelDetails}
-          parcelContent={receipt.parcelContent}
-          destinationName={receipt.destinationName ?? ''}
-          dropoffAddress={receipt.dropoffAddress ?? ''}
-          chargePsw={receipt.chargePsw}
-          deliveryFeePsw={receipt.deliveryFeePsw}
-          paidPrincipalPsw={receipt.paidPrincipalPsw}
-          paidDeliveryFeePsw={receipt.paidDeliveryFeePsw}
-          principalDuePsw={receipt.principalDuePsw}
-          deliveryFeeDuePsw={receipt.deliveryFeeDuePsw}
-          totalDuePsw={receipt.totalDuePsw}
-          grossPsw={receipt.grossPsw}
-          netPsw={receipt.netPsw}
-          taxRows={receipt.taxRows}
-          qrValue={buildParcelTrackingUrl(receipt.trackingCode)}
+          {...buildHomeDeliveryReceiptA5Props(receipt, {
+            cashierName,
+            issuedAt: new Date().toISOString(),
+          })}
         />
       </div>
     </div>

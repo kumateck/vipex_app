@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { AppCard, AppStatusChip } from '@/components/ui/mobile';
+import { getParcelRiderLine } from '@mobile/constants/parcel-status';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import type { ParcelFullDetails, ParcelSearchRow } from '@mobile/types/parcels';
 import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
@@ -44,13 +45,19 @@ export function ParcelSummarySections({
   const sourceLocationName = row?.sourceLocationName ?? '-';
   const destinationBranchName = row?.destinationName ?? '-';
   const destinationLocationName = row?.destinationLocationName ?? row?.pickupLocationName ?? '-';
+  const rider = getParcelRiderLine(
+    details.parcel.status,
+    details.delivery?.riderName ?? row?.riderName,
+  );
 
   return (
     <>
       <AppCard>
         <SectionHead title="Parcel" statusLabel={details.parcel.status} />
         <View style={styles.detailList}>
-          <DetailRow first label="Booking" value={details.parcel.bookingCode} />
+          {rider ? <DetailRow first label={rider.label} value={rider.name} /> : null}
+          <DetailRow first={!rider} label="Created By" value={row?.createdByName ?? '-'} />
+          <DetailRow label="Booking" value={details.parcel.bookingCode} />
           <DetailRow
             label="Source"
             value={branchLocationLabel(sourceBranchName, sourceLocationName)}
@@ -103,17 +110,6 @@ export function ParcelSummarySections({
             <DetailRow first label="Queue Code" value={details.pickupQueue.queueCode} />
             <DetailRow label="Queue Number" value={String(details.pickupQueue.queueNumber)} />
             <DetailRow label="Queued At" value={formatDate(details.pickupQueue.queuedAt)} />
-          </View>
-        </AppCard>
-      ) : null}
-
-      {details.delivery ? (
-        <AppCard>
-          <SectionHead title="Delivery" statusLabel={details.delivery.status} />
-          <View style={styles.detailList}>
-            <DetailRow first label="Address" value={details.delivery.dropoffAddress ?? '-'} />
-            <DetailRow label="Amount Paid" value={formatCedis(details.delivery.amountPaidPsw)} />
-            <DetailRow label="Delivered At" value={formatDate(details.delivery.deliveredAt)} />
           </View>
         </AppCard>
       ) : null}

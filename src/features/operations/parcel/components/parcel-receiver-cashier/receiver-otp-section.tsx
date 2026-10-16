@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { useParcelReceiverCashierWorkflow } from './use-parcel-receiver-cashier-workflow';
+import { OtpChannelToggle } from '../otp-channel-toggle';
 
 type WorkflowDialog = ReturnType<typeof useParcelReceiverCashierWorkflow>['dialog'];
 
@@ -102,6 +103,12 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
               </ToggleGroup>
             </div>
           ) : null}
+
+          <OtpChannelToggle
+            value={dialog.otpChannel}
+            onChange={dialog.setOtpChannel}
+            disabled={dialog.otpRequestPending}
+          />
 
           <div className="flex items-center gap-2">
             <Button

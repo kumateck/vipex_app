@@ -19,7 +19,7 @@ import { PaymentStatusLegend } from '../parcel-processed-consignment/payment-sta
 import { EMPTY_META, PARCEL_STATUS_LABELS } from './constants';
 import { ParcelSuperSearchPaymentCell } from './parcel-super-search-payment-cell';
 import type { ParcelSuperSearchFilters } from './types';
-import { formatParcelDate, resolveParcelDeliveredAt } from './utils';
+import { formatParcelDate, resolveParcelDeliveredAt, resolveParcelRider } from './utils';
 import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 
 type ParcelSuperSearchTableProps = {
@@ -169,14 +169,26 @@ export function ParcelSuperSearchTable({
       {
         id: 'status',
         header: 'Status',
-        cell: ({ row }) => (
-          <div className="space-y-1">
-            <Badge variant="secondary">
-              {PARCEL_STATUS_LABELS[row.original.status] ?? `Status ${row.original.status}`}
-            </Badge>
-            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
-          </div>
-        ),
+        cell: ({ row }) => {
+          const rider = resolveParcelRider(row.original);
+          return (
+            <div className="space-y-1">
+              <Badge variant="secondary">
+                {PARCEL_STATUS_LABELS[row.original.status] ?? `Status ${row.original.status}`}
+              </Badge>
+              {rider ? (
+                <p className="text-xs">
+                  <span className="text-muted-foreground">{rider.label}:</span> {rider.name}
+                </p>
+              ) : null}
+              <p className="text-xs">
+                <span className="text-muted-foreground">Created By:</span>{' '}
+                {row.original.createdByName ?? '-'}
+              </p>
+              <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+            </div>
+          );
+        },
       },
       {
         id: 'actions',

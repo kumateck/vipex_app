@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { PickupOtpVerification } from './use-pickup-otp-verification';
+import { OtpChannelToggle } from '../otp-channel-toggle';
 
 type PhoneSlot = 'primary' | 'secondary';
 
@@ -110,6 +111,12 @@ export function PickupOtpVerificationSection({
               </ToggleGroup>
             </div>
           ) : null}
+
+          <OtpChannelToggle
+            value={otp.otpChannel}
+            onChange={otp.setOtpChannel}
+            disabled={otp.otpRequestPending}
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             <Button

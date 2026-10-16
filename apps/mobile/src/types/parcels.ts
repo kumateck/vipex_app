@@ -34,6 +34,10 @@ export type ParcelSearchRow = {
   pickupQueueCode?: string | null;
   pickupQueueNumber?: number | null;
   pickupQueuedAt?: string | null;
+  riderUserId?: string | null;
+  riderName?: string | null;
+  createdBy?: string | null;
+  createdByName?: string | null;
   isDeleted?: boolean;
   deletedAt?: string | null;
   storageChargePsw?: number;
@@ -78,13 +82,31 @@ export type ParcelFullDetails = {
     createdAt: string;
     receivedAt: string | null;
     confirmedAt: string | null;
+    createdBy?: string | null;
+    processedBy?: string | null;
+    receivedBy?: string | null;
+    confirmedBy?: string | null;
+    shelfPickerStaffId?: string | null;
+    callSender?: boolean;
+    isDeleted?: boolean;
+    deletedBy?: string | null;
+    deletedAt?: string | null;
+    deleteReason?: string | null;
   };
+  /** The parcel as list/search rows show it (names, phones, payer totals, holder). */
+  summary?: (ParcelSearchRow & ParcelSummaryExtras) | null;
+  /** User id -> full name for every person referenced in these details. */
+  userNames?: Record<string, string>;
   pickupQueue: null | {
     id: string;
     queueCode: string;
     queueNumber: number;
     queuedAt: string;
     paymentBucket: string;
+    queuedBy?: string | null;
+    endedAt?: string | null;
+    endedBy?: string | null;
+    pickerStaffId?: string | null;
   };
   payments: Array<{
     id: string;
@@ -96,6 +118,7 @@ export type ParcelFullDetails = {
     cashierType?: number;
     grossAmountPsw: number;
     method: number;
+    cashierUserId?: string | null;
     receivedAt: string;
     receiptNo: string | null;
     notes?: string | null;
@@ -112,6 +135,18 @@ export type ParcelFullDetails = {
     chargePsw: number;
     amountPaidPsw: number;
     mode?: number;
+    riderUserId?: string | null;
+    riderName?: string | null;
+    riderAssignedAt?: string | null;
+    riderCompletedAt?: string | null;
+    returnedAt?: string | null;
+    frontDeskUserId?: string | null;
+    deliveryUserId?: string | null;
+    receiverCalledConfirmedBy?: string | null;
+    receiverCalledConfirmedAt?: string | null;
+    confirmedBy?: string | null;
+    confirmedAt?: string | null;
+    createdBy?: string | null;
   };
   consignments?: Array<{
     consignmentId: string;
@@ -217,4 +252,30 @@ export type RiderBenchmarkResponse = {
     ridersCount: number;
     samples: number;
   };
+};
+
+/** List-row fields the details `summary` adds beyond the search row mobile already uses. */
+export type ParcelSummaryExtras = {
+  senderPhone2?: string | null;
+  secondReceiverName?: string | null;
+  secondReceiverPhone?: string | null;
+  dropoffAddress?: string | null;
+  createdByName?: string | null;
+  riderName?: string | null;
+  paidPrincipalPsw?: number;
+  outstandingPrincipalPsw?: number;
+  senderPaidPrincipalPsw?: number;
+  receiverPaidPrincipalPsw?: number;
+  deliveryFeePsw?: number | null;
+  outstandingDeliveryFeePsw?: number;
+};
+
+export type ParcelHistoryEvent = {
+  id: string;
+  occurredAt: string;
+  category: string;
+  title: string;
+  description: string | null;
+  actorName: string | null;
+  branchName: string | null;
 };

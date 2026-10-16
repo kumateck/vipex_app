@@ -1,3 +1,4 @@
+import { getParcelHistorySvc } from './parcel-history/parcel-history.service';
 import { executeParcelStorageClearanceSvc } from './parcel-storage-clearance-execution.service';
 import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
@@ -114,9 +115,10 @@ export async function listParcelsCtrl(
 }
 
 export const getParcelByIdCtrl = getParcelSvc;
-export async function getParcelDetailsCtrl(id: string) {
-  const result = await getParcelFullDetailsSvc(id);
+export async function getParcelDetailsCtrl(id: string, scope: { companyId?: string | null } = {}) {
+  const result = await getParcelFullDetailsSvc(id, scope);
   return {
+    summary: result.summary,
     parcel: {
       ...result.parcel,
       createdAt: result.parcel.createdAt.toISOString(),
@@ -182,8 +184,10 @@ export async function getParcelDetailsCtrl(id: string) {
       createdAt: row.createdAt ? row.createdAt.toISOString() : null,
     })),
     storageSettlement: result.storageSettlement,
+    userNames: result.userNames,
   };
 }
+export const getParcelHistoryCtrl = getParcelHistorySvc;
 export const createParcelCtrl = createParcelSvc;
 export const updateParcelCtrl = updateParcelSvc;
 export const markParcelReceivedCtrl = markParcelReceivedSvc;
