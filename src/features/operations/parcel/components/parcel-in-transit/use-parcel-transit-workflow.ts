@@ -9,7 +9,6 @@ import { useIncomingParcelBatchArrival } from '../../hooks';
 import { useWaitingPickUpEdit } from '../parcel-waiting-pickup/use-waiting-pickup-edit';
 import {
   type ParcelSearchRow,
-  useGetParcelDetailsQuery,
   useLogParcelDiscrepancyMutation,
   useMarkParcelReceivedMutation,
   useSearchParcelsQuery,
@@ -133,13 +132,6 @@ export function useParcelTransitWorkflow(view: InTransitView) {
     },
     [serverFilters],
   );
-  const { data: details, isFetching: isDetailsLoading } = useGetParcelDetailsQuery(
-    selectedParcelId ?? '',
-    {
-      skip: !selectedParcelId,
-    },
-  );
-
   const { data: branchOptions = [] } = useListBranchOptionsQuery(
     { companyId },
     { skip: !companyId },
@@ -155,11 +147,6 @@ export function useParcelTransitWorkflow(view: InTransitView) {
       toast.error(getApplicationErrorMessage(error, '') || 'Failed to update parcel status');
     }
   }, [arrivalConfirmationParcel, batchArrival, handleMarkAsArrived, refetch]);
-  const rowById = useMemo(
-    () => new Map((data?.data ?? []).map((row) => [row.id, row])),
-    [data?.data],
-  );
-  const selectedParcelRow = selectedParcelId ? rowById.get(selectedParcelId) : undefined;
   const branchNameById = useMemo(
     () => new Map(branchOptions.map((branch) => [branch.id, branch.name])),
     [branchOptions],
@@ -269,11 +256,8 @@ export function useParcelTransitWorkflow(view: InTransitView) {
     batchArrival,
     handleSearchSubmit,
     handleRequestChange,
-    details,
-    isDetailsLoading,
     branchOptions,
     handleConfirmMarkAsArrived,
-    selectedParcelRow,
     branchNameById,
     rowNumberOffset,
     title,

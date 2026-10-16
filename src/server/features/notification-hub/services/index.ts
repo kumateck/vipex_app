@@ -25,6 +25,11 @@ export {
 } from './provider-management.service';
 export { sendSmsSvc, dispatchSmsEventSvc } from './sms-events.service';
 export {
+  WHATSAPP_CHANNEL,
+  dispatchWhatsAppEventSvc,
+  resolveWhatsAppTemplateSvc,
+} from './whatsapp-events.service';
+export {
   listNotificationTemplatesSvc,
   getNotificationTemplateSvc,
   listNotificationTemplateOptionsSvc,

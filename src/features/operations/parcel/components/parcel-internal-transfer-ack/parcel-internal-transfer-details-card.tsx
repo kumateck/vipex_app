@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import type { ParcelInternalTransferDetails } from '../../api/parcel.api';
 import { printParcelInternalTransferSlip } from '../../utils/internal-transfer-print';
 import { holderTypeLabel } from './parcel-internal-transfer-utils';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 type ParcelInternalTransferDetailsCardProps = {
   details: ParcelInternalTransferDetails | undefined;
@@ -69,7 +70,10 @@ export function ParcelInternalTransferDetailsCard({
             <div className="space-y-3">
               {details.items.map((item) => (
                 <div key={item.parcelId} className="rounded-lg border p-3 text-sm">
-                  <p className="font-medium">{item.bookingCode}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">{item.bookingCode}</p>
+                    <ViewParcelDetailsButton parcelId={item.parcelId} />
+                  </div>
                   <p className="text-muted-foreground">
                     {item.receiverName || '-'} • {item.parcelDetails}
                   </p>

@@ -142,6 +142,9 @@ export type ParcelSearchRow = {
   deliveryFeePsw?: number | null;
   riderUserId?: string | null;
   riderName?: string | null;
+  createdByName?: string | null;
+  callCenterAssignedToUserId?: string | null;
+  callCenterAssignedToUserName?: string | null;
   pickupQueueId?: string | null;
   pickupQueueCode?: string | null;
   pickupQueueNumber?: number | null;
@@ -387,6 +390,8 @@ export type HomeDeliveryReceipt = {
 };
 
 export type ParcelFullDetails = {
+  /** The parcel as list/search rows show it (names, phones, payer totals, rider, holder). */
+  summary?: ParcelSearchRow | null;
   parcel: {
     id: string;
     companyId: string;
@@ -421,6 +426,7 @@ export type ParcelFullDetails = {
     deletedAt: string | null;
     deleteReason: string | null;
     createdBy: string | null;
+    processedBy?: string | null;
     createdAt: string;
     receivedBy: string | null;
     receivedAt: string | null;
@@ -429,6 +435,8 @@ export type ParcelFullDetails = {
     updatedAt: string;
     cashierSessionId: string | null;
   };
+  /** Full names for every user id referenced in these details. */
+  userNames?: Record<string, string>;
   payments: Array<{
     id: string;
     companyId: string;
@@ -465,6 +473,10 @@ export type ParcelFullDetails = {
     frontDeskUserId: string | null;
     deliveryUserId: string | null;
     riderUserId: string | null;
+    riderName?: string | null;
+    riderAssignedAt?: string | null;
+    riderCompletedAt?: string | null;
+    returnedAt?: string | null;
     signatureImage: string | null;
     receiverCalledConfirmedBy: string | null;
     receiverCalledConfirmedAt: string | null;
@@ -1121,12 +1133,13 @@ export const parcelApi = api.injectEndpoints({
       ],
     }),
     requestReceiverOtp: builder.mutation<
-      { expiresAt: string },
+      { expiresAt: string; channel?: 'sms' | 'whatsapp' },
       {
         parcelId: string;
         targetReceiver: 'main' | 'second';
         force?: boolean;
         phoneSlot?: 'primary' | 'secondary';
+        channel?: 'sms' | 'whatsapp';
       }
     >({
       query: (body) => ({

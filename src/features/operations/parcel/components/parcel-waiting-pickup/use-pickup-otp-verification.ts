@@ -18,6 +18,8 @@ export function usePickupOtpVerification({
   const [otpCode, setOtpCode] = useState('');
   const [otpVerified, setOtpVerified] = useState(false);
   const [verificationToken, setVerificationToken] = useState('');
+  // SMS or WhatsApp for the next send; a code already sent stays valid.
+  const [otpChannel, setOtpChannel] = useState<'sms' | 'whatsapp'>('sms');
   const [requestOtp, { isLoading: otpRequestPending }] = useRequestReceiverOtpMutation();
   const [verifyOtp, { isLoading: otpVerifyPending }] = useVerifyReceiverOtpMutation();
 
@@ -32,14 +34,20 @@ export function usePickupOtpVerification({
   const request = useCallback(
     async (force = false) => {
       if (!parcelId) return;
-      const result = await requestOtp({ parcelId, targetReceiver, force, phoneSlot }).unwrap();
+      const result = await requestOtp({
+        parcelId,
+        targetReceiver,
+        force,
+        phoneSlot,
+        channel: otpChannel,
+      }).unwrap();
       setOtpSentAt(new Date().toISOString());
       setOtpExpiresAt(result.expiresAt);
       setOtpCode('');
       setOtpVerified(false);
       setVerificationToken('');
     },
-    [parcelId, requestOtp, targetReceiver, phoneSlot],
+    [parcelId, requestOtp, targetReceiver, phoneSlot, otpChannel],
   );
 
   const verify = useCallback(async () => {
@@ -52,6 +60,8 @@ export function usePickupOtpVerification({
   return {
     otpSentAt,
     otpExpiresAt,
+    otpChannel,
+    setOtpChannel,
     otpCode,
     setOtpCode,
     otpVerified,

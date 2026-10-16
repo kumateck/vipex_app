@@ -6,7 +6,7 @@ import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api'
 import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useGetParcelDetailsQuery } from '@/features/operations/parcel/api/parcel.api';
+import { useParcelDetailsViewer } from '@/features/operations/parcel-details';
 import {
   useAddCustomerCardMutation,
   useGetCustomerByIdQuery,
@@ -35,7 +35,6 @@ import {
   CustomerTransactionsTab,
   type CustomerDetailsTabKey,
   formatMoney,
-  ParcelTransactionDetailsDialog,
 } from '@/features/customers/components/details';
 import { useUploadImageMutation } from '@/features/uploads/api/uploads.api';
 import { useParams } from 'react-router-dom';
@@ -75,14 +74,14 @@ export default function CustomerDetailsPage() {
   const [cardNumber, setCardNumber] = useState('');
   const [cardFrontImageUrl, setCardFrontImageUrl] = useState<string | null>(null);
   const [cardBackImageUrl, setCardBackImageUrl] = useState<string | null>(null);
-  const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
+  const openParcelDetails = useParcelDetailsViewer((state) => state.open);
   const shouldLoadTransactions = activeTab === 'transactions';
   const shouldLoadPayments = activeTab === 'payments';
   const shouldLoadStatement = activeTab === 'statements';
   const shouldLoadCredits = activeTab === 'credits';
   const shouldLoadCards = activeTab === 'cards';
   const shouldLoadPaymentOpenItems = activeTab === 'payments' || activeTab === 'credits';
-  const shouldLoadBranches = shouldLoadTransactions || Boolean(selectedParcelId);
+  const shouldLoadBranches = shouldLoadTransactions;
 
   const { data: customer, isLoading: isLoadingCustomer } = useGetCustomerByIdQuery(id ?? '', {
     skip: !id,
@@ -172,9 +171,6 @@ export default function CustomerDetailsPage() {
     },
     { skip: !id || !shouldLoadPaymentOpenItems },
   );
-
-  const { data: selectedParcelDetails, isFetching: isLoadingParcelDetails } =
-    useGetParcelDetailsQuery(selectedParcelId ?? '', { skip: !selectedParcelId });
 
   const [postCreditPayment, { isLoading: isPostingPayment }] =
     usePostCustomerCreditPaymentMutation();
@@ -424,7 +420,7 @@ export default function CustomerDetailsPage() {
               txPage={txPage}
               onPrevPage={() => setTxPage((prev) => Math.max(1, prev - 1))}
               onNextPage={() => setTxPage((prev) => prev + 1)}
-              onViewParcel={setSelectedParcelId}
+              onViewParcel={openParcelDetails}
             />
           </TabsContent>
 
@@ -479,18 +475,6 @@ export default function CustomerDetailsPage() {
             />
           </TabsContent>
         </Tabs>
-
-        <ParcelTransactionDetailsDialog
-          open={Boolean(selectedParcelId)}
-          onOpenChange={(open) => {
-            if (!open) {
-              setSelectedParcelId(null);
-            }
-          }}
-          details={selectedParcelDetails}
-          isLoading={isLoadingParcelDetails}
-          branchNameById={branchNameById}
-        />
       </div>
     </ScrollableWrapper>
   );

@@ -24,6 +24,8 @@ import {
   softVoidPaymentsByIdsRepo,
 } from '../payments/repository';
 import { getDeliveryByParcelRepo } from '../deliveries/repository';
+import { listUserNamesByIdsRepo } from './parcel-actors.repository';
+import { collectParcelDetailsUserIds } from './parcel-details-actors';
 import { getBranchRepo } from '../branches/repository';
 import { recordAuditLog } from '../audit/logger';
 import { listConsignmentsForParcelRepo } from './consignments.repository';
@@ -266,10 +268,13 @@ export async function getParcelStorageSettlementSvc(
 }
 
 export async function listParcelsSvc(p: ListParcelsParams) {
-  const policy =
+  const policyCompanyId =
     p.companyId && (p.agedOnly || p.storageChargeAccruing || p.cashierCollectionRequired != null)
-      ? await getCompanyParcelAgeingPolicy(p.companyId)
-      : DEFAULT_PARCEL_AGEING_POLICY;
+      ? p.companyId
+      : null;
+  const policy = policyCompanyId
+    ? await getCompanyParcelAgeingPolicy(policyCompanyId)
+    : DEFAULT_PARCEL_AGEING_POLICY;
 
   const { data, totalRecords } = await listParcelsRepo({
     ...p,
@@ -280,12 +285,17 @@ export async function listParcelsSvc(p: ListParcelsParams) {
 
   const now = new Date();
   const companyIds = [...new Set(data.map((row) => row.companyId).filter(Boolean))];
-  const policyByCompany = new Map<string, ParcelAgeingPolicy>();
+  // Reuse the policy already loaded for the filtered company instead of a second round trip.
+  const policyByCompany = new Map<string, ParcelAgeingPolicy>(
+    policyCompanyId ? [[policyCompanyId, policy]] : [],
+  );
 
   await Promise.all(
-    companyIds.map(async (companyId) => {
-      policyByCompany.set(companyId, await getCompanyParcelAgeingPolicy(companyId));
-    }),
+    companyIds
+      .filter((companyId) => !policyByCompany.has(companyId))
+      .map(async (companyId) => {
+        policyByCompany.set(companyId, await getCompanyParcelAgeingPolicy(companyId));
+      }),
   );
 
   return {
@@ -1126,9 +1136,15 @@ export async function listParcelReconciliationCasesSvc(input: {
   return listParcelReconciliationCasesRepo(input);
 }
 
-export async function getParcelFullDetailsSvc(id: string) {
+export async function getParcelFullDetailsSvc(
+  id: string,
+  scope: { companyId?: string | null } = {},
+) {
   const parcel = await getParcelSvc(id);
+  // Same 404 as a missing parcel so other companies' parcel ids are not disclosed.
+  if (scope.companyId && parcel.companyId !== scope.companyId) throw NotFound('Parcel not found');
   const [
+    summary,
     payments,
     delivery,
     consignments,
@@ -1138,6 +1154,9 @@ export async function getParcelFullDetailsSvc(id: string) {
     storageWaivers,
     storageSettlement,
   ] = await Promise.all([
+    listParcelsSvc({ parcelId: id, includeDeleted: true, limit: 1, offset: 0 }).then(
+      (result) => result.data[0] ?? null,
+    ),
     (async () => {
       try {
         return await listPaymentsForParcelRepo(id);
@@ -1206,10 +1225,21 @@ export async function getParcelFullDetailsSvc(id: string) {
     })(),
   ]);
 
+  const userNames = await listUserNamesByIdsRepo(
+    collectParcelDetailsUserIds({ parcel, payments, delivery, pickupQueue }),
+  );
+
   return {
     parcel,
+    summary,
     payments,
-    delivery,
+    delivery: delivery
+      ? {
+          ...delivery,
+          riderName: delivery.riderUserId ? (userNames[delivery.riderUserId] ?? null) : null,
+        }
+      : null,
+    userNames,
     consignments,
     pickupQueue,
     internalHolder,

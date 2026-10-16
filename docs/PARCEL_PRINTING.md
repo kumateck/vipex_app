@@ -179,7 +179,9 @@ gross and tax amounts are summed and used for the reprint; delivery fees and rec
 not included. The tax rows reflect the components actually charged on those payments, rather than
 the tax profile currently active. A reprint carries a conspicuous `DUPLICATE` label below the
 document title, including when the document is a to-be-paid acknowledgement note. The original
-receipt is unchanged. Sticker reprints also carry `DUPLICATE`. If a paid receipt's recorded payment or tax data
+receipt is unchanged. Sticker reprints also carry `DUPLICATE`, printed in the header under the
+VIP PARCEL wordmark (portrait and landscape) rather than inside the status box, so it does not push
+the Parcel Details row off the sticker. If a paid receipt's recorded payment or tax data
 cannot be loaded, reprinting is cancelled with an error instead of producing a receipt with missing
 tax. A no-payment acknowledgement note can still be reprinted. The receipt's original issue date
 is retained; no new payment or tax calculation is saved.
@@ -339,6 +341,19 @@ The repository does not yet meet the intended rule everywhere.
 | Audit logging                     | Sticker usage endpoint accepts a copy count.   | Log the requested successful quantity consistently from every path. |
 
 This table is a documented implementation mismatch, not permission to retain the current cap.
+
+## Online Copies (Digital Receipts)
+
+Digital receipt links (module `digital_receipts`) show a server-rendered copy of the **same templates**:
+`InvoiceA5Template`, which falls back to `ToBePaidReceiptA5Template` for the unpaid acknowledgement
+note, and `HomeDeliveryReceiptA5Template`. They are rendered with the A5 landscape page style.
+
+Template props are produced by shared mappers used by both the print dialogs and the server:
+`buildInvoiceA5Props`, `computeParcelReceiptTax` and `buildHomeDeliveryReceiptA5Props`.
+Changing what a printed receipt shows therefore changes the online copy too.
+
+The online copy is always A5 (ignores the station's roll-paper preference), is not marked DUPLICATE,
+and shows no cashier name. See [Digital receipts](DIGITAL_RECEIPTS.md#parity-with-the-printed-copy).
 
 ## Browser Printing
 

@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { ParcelStorageFeeBadge } from '../../parcel-storage-fee-badge';
 import type { ShelfPickupParcel } from '../types';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 export function ShelfPickupReassignmentTable({
   rows,
@@ -38,9 +39,12 @@ export function ShelfPickupReassignmentTable({
               <td className="p-3">{parcel.parcelDetails}</td>
               <td className="p-3">{parcel.pickerStaffName ?? 'Assigned staff'}</td>
               <td className="p-3">
-                <Button size="sm" disabled={loading} onClick={() => onSelect(parcel)}>
-                  Reassign
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <ViewParcelDetailsButton parcelId={parcel.id} />
+                  <Button size="sm" disabled={loading} onClick={() => onSelect(parcel)}>
+                    Reassign
+                  </Button>
+                </div>
               </td>
             </tr>
           ))}

@@ -29,6 +29,7 @@ import {
 import { extractScannedCode } from '../../utils/scan-code';
 import { ParcelInternalHolderBadge } from '../parcel-internal-holder-badge';
 import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 type BarcodeDetectorLike = {
   detect: (source: CanvasImageSource) => Promise<Array<{ rawValue?: string }>>;
@@ -417,6 +418,7 @@ export function ParcelReceivePage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <ViewParcelDetailsMenuItem parcelId={row.original.id} />
               <DropdownMenuItem
                 onClick={async () => {
                   try {

@@ -14,6 +14,7 @@ import {
   MIN_STICKER_COPIES,
   normalizeStickerCopies,
 } from '../parcel-receipt-print-controls/sticker-copies';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 type ParcelReprintActionsProps = {
   parcel: ProcessedParcel;
@@ -38,6 +39,7 @@ export function ParcelReprintActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
+        <ViewParcelDetailsMenuItem parcelId={parcel.id} />
         <div className="space-y-1 px-2 py-1.5">
           <Label htmlFor={`sticker-copies-${parcel.id}`} className="text-xs">
             Sticker copies

@@ -7,6 +7,7 @@ import type {
   DailyParcelAuditView,
 } from '../../types/daily-parcel-audit.types';
 import { formatMoneyPsw } from '../../utils/daily-parcel-audit.utils';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 export function DailyParcelAuditTable({
   rows,
@@ -104,6 +105,12 @@ export function DailyParcelAuditTable({
             </div>
           </>
         ),
+      },
+      {
+        id: 'actions',
+        header: 'Action',
+        enableSorting: false,
+        cell: ({ row }) => <ViewParcelDetailsButton parcelId={row.original.parcelId} />,
       },
     ],
     [view],

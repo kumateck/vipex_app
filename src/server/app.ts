@@ -66,6 +66,8 @@ import { selfServiceAgentRoutes } from './features/self-service/agent.routes';
 import { startSelfServiceDraftExpirySweep } from './features/self-service/expiry-sweep';
 import { publicTrackingRoutes } from './features/public-tracking/public-tracking.routes';
 import { receiptReprintRoutes } from './features/receipt-reprint/receipt-reprint.routes';
+import { whatsappMessagingRoutes, whatsappWebhookRoutes } from './features/whatsapp-messaging';
+import { digitalReceiptRoutes, publicReceiptRoutes } from './features/digital-receipts';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -80,6 +82,8 @@ export const app = new Elysia()
   .use(health)
   .use(publicTrackingRoutes)
   .use(receiptReprintRoutes)
+  .use(whatsappWebhookRoutes)
+  .use(publicReceiptRoutes)
   // Mount dev routes BEFORE any catch-all
   .use(isDev ? devMailRoutes : (a: Elysia) => a)
   .group('/v1', (v1) =>
@@ -120,6 +124,8 @@ export const app = new Elysia()
       .group('/customer-wallet-credit', (r) => r.use(customerWalletCreditRoutes))
       .group('/reconciliation', (r) => r.use(reconciliationRoutes))
       .group('/notification-hub', (r) => r.use(notificationHubRoutes))
+      .group('/whatsapp', (r) => r.use(whatsappMessagingRoutes))
+      .group('/digital-receipts', (r) => r.use(digitalReceiptRoutes))
       .group('/momo', (r) => r.use(momoRoutes))
       .group('/self-service', (r) => r.use(selfServicePublicRoutes).use(selfServiceAgentRoutes))
       .group('/desktop-updates', (r) => r.use(desktopUpdatesRoutes))

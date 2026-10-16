@@ -16,6 +16,7 @@ import {
   useReceiveConsignmentItemMutation,
 } from '../../api/parcel.api';
 import { CloseWithExceptionsDialog } from './close-with-exceptions-dialog';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 function formatDate(value: string | null | undefined) {
   if (!value) return '-';
@@ -231,7 +232,10 @@ export function ConsignmentReceivingSessionPage() {
                       className="flex items-center justify-between gap-3 p-3 text-sm"
                     >
                       <div className="leading-tight">
-                        <p className="font-medium">{item.bookingCode}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium">{item.bookingCode}</p>
+                          <ViewParcelDetailsButton parcelId={item.parcelId} />
+                        </div>
                         <p className="text-muted-foreground text-xs">{item.receiverName}</p>
                       </div>
                       <div className="flex items-center gap-2 text-right">

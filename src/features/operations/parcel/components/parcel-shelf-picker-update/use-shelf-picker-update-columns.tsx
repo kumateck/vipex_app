@@ -14,6 +14,7 @@ import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { canEditSecondReceiver } from '@/shared/shipments/second-receiver';
 import { CallCenterAssignmentPaymentCell } from '../parcel-call-center-assignment/call-center-assignment-payment-cell';
 import type { ParcelRow } from './shelf-picker-update-types';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 const getStatusLabel = (status: number) => {
   switch (status) {
@@ -137,6 +138,7 @@ export function useShelfPickerUpdateColumns({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <ViewParcelDetailsMenuItem parcelId={row.original.id} />
             {canRequestDelivery ? (
               <DropdownMenuItem onClick={() => onOpenUpdateDialog(row.original)}>
                 {row.original.pickerStaffId ? 'Reassign Shelf Pickup' : 'Assign Shelf Picker'}

@@ -196,5 +196,6 @@ export const pickupQueues = pgTable(
     ),
     byBranchQueuedAt: index('pickup_queues_branch_queued_at_idx').on(t.branchId, t.queuedAt),
     byQueueCode: index('pickup_queues_code_idx').on(t.queueCode),
+    byParcel: index('pickup_queues_parcel_idx').on(t.parcelId),
   }),
 );

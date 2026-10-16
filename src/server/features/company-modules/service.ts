@@ -23,6 +23,8 @@ export const MODULE_DEPENDENCIES: Record<string, string[]> = {
   document_compliance: ['customers'],
   dispatch_optimization: ['shipments'],
   notification_hub: ['customers'],
+  whatsapp_messaging: ['notification_hub'],
+  digital_receipts: ['notification_hub'],
   communication_internal: [],
   communication_customer_service: ['customers', 'communication_internal'],
   communication_calls_livekit: ['communication_internal'],

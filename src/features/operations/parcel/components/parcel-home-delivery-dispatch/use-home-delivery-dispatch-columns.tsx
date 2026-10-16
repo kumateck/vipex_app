@@ -14,6 +14,7 @@ import {
 import { ParcelStatus } from '@/db/schemas/enums';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 const money = (amountPsw: number | null | undefined) =>
   `GHS ${((amountPsw ?? 0) / 100).toFixed(2)}`;
@@ -25,6 +26,8 @@ export function useHomeDeliveryDispatchColumns(input: {
   isPrinting: boolean;
   onReturnToPickup: (parcel: ParcelSearchRow) => void;
   onPrint: (parcel: ParcelSearchRow) => void;
+  /** Present only when the Digital Receipts module is enabled. */
+  onSendReceipt?: (parcel: ParcelSearchRow) => void;
 }) {
   const {
     selectedIds,
@@ -33,6 +36,7 @@ export function useHomeDeliveryDispatchColumns(input: {
     isPrinting,
     onReturnToPickup,
     onPrint,
+    onSendReceipt,
   } = input;
   return useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
@@ -119,18 +123,32 @@ export function useHomeDeliveryDispatchColumns(input: {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <ViewParcelDetailsMenuItem parcelId={row.original.id} />
                 <DropdownMenuItem
                   disabled={isReturningToPickup}
                   onClick={() => onReturnToPickup(row.original)}
                 >
                   Return to Pickup
                 </DropdownMenuItem>
+                {onSendReceipt ? (
+                  <DropdownMenuItem onClick={() => onSendReceipt(row.original)}>
+                    Send receipt
+                  </DropdownMenuItem>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         ),
       },
     ],
-    [selectedIds, setSelectedIds, isReturningToPickup, isPrinting, onReturnToPickup, onPrint],
+    [
+      selectedIds,
+      setSelectedIds,
+      isReturningToPickup,
+      isPrinting,
+      onReturnToPickup,
+      onPrint,
+      onSendReceipt,
+    ],
   );
 }

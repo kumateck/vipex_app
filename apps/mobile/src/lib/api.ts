@@ -22,6 +22,7 @@ import type {
 } from '@mobile/types/communication';
 import type {
   ParcelFullDetails,
+  ParcelHistoryEvent,
   RiderBenchmarkResponse,
   ParcelSearchRow,
   PickupQueueCard,
@@ -515,6 +516,17 @@ export async function getParcelDetails(
     storageWaivers: Array.isArray(details.storageWaivers) ? details.storageWaivers : [],
     storageSettlement: details.storageSettlement ?? null,
   };
+}
+
+export async function getParcelHistory(
+  accessToken: string,
+  parcelId: string,
+): Promise<ParcelHistoryEvent[]> {
+  const payload = await request<{ events?: ParcelHistoryEvent[] }>({
+    path: `/shipments/parcels/${parcelId}/history`,
+    token: accessToken,
+  });
+  return Array.isArray(payload?.events) ? payload.events : [];
 }
 
 export async function updateParcelStatus(

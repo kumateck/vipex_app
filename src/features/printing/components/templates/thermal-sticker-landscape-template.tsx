@@ -38,7 +38,7 @@ export function ThermalStickerLandscapeTemplate({
         gap: '2.5mm',
       }}
     >
-      <ThermalStickerHeaderPanel />
+      <ThermalStickerHeaderPanel duplicate={duplicate} />
 
       <main
         style={{
@@ -97,9 +97,6 @@ export function ThermalStickerLandscapeTemplate({
           }}
         >
           <div>
-            {duplicate ? (
-              <div style={{ fontSize: '2.8mm', marginBottom: '0.4mm' }}>DUPLICATE</div>
-            ) : null}
             <div>{statusLabel}</div>
             {statusAmountLabel ? (
               <div style={{ marginTop: '0.8mm', fontSize: '4.7mm' }}>{statusAmountLabel}</div>
