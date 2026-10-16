@@ -12,7 +12,10 @@ Mobile keeps its own Super Search details screen (see [Mobile differences](#clie
 - Both endpoints are company-scoped. A parcel belonging to another company returns `404 Parcel not
 found`, the same as a missing parcel, so parcel IDs from other companies are not disclosed.
   Before October 2026, `GET /shipments/parcels/:id/details` did not check the company.
-- The view is read-only. Page-specific actions stay on their pages: Super Search and Return to
+- Super Search offers **Send receipt** above the tabs when Digital Receipts is enabled, the
+  parcel is not deleted, and the user has a receipt API permission. The send dialog loads on demand;
+  closing it keeps parcel details open. See [Digital receipts](DIGITAL_RECEIPTS.md).
+- The parcel fields are read-only. Page-specific actions stay on their pages: Super Search and Return to
   Source show **Return to Source** above the tabs and disposition controls in an **Actions** tab.
 
 ## Where it opens

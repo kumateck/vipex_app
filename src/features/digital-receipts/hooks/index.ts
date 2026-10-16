@@ -4,6 +4,7 @@ export {
 } from './use-digital-receipts-module';
 export { useReceiptDelivery, type ReceiptDelivery } from './use-receipt-delivery';
 export { useSendReceiptDialog } from './use-send-receipt-dialog';
+export { useSendReceiptAction } from './use-send-receipt-action';
 export {
   useBookingReceiptDelivery,
   type BookingReceiptParcel,

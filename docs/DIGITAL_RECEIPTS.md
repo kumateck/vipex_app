@@ -57,7 +57,11 @@ Other details:
 
 The booking, sender payment and receiver payment are saved **before** any digital send. A failed digital send only shows a warning toast and never undoes the transaction.
 
-**Known gap:** a "Send receipt" action in the parcel super-search details is not added yet. The dialog component (`SendReceiptDialog`) is ready; it is deferred to avoid conflicting with in-flight changes to that dialog.
+Super Search → View Details also offers **Send receipt** for a non-deleted parcel when the
+module is enabled and the user has one of the receipt API permissions listed below. The dialog
+loads on demand and supports booking/sender, receiver payment, and home delivery receipts.
+Unavailable receipt kinds are rejected by the send API without sending a message. Sending or
+closing the receipt dialog leaves parcel details open.
 
 ## Sending
 
@@ -105,6 +109,9 @@ Guard for all four: auth + module + any of `CanCreateParcels`, `CanCreateSenderP
 - `recipients.test.ts`, `message-summary.test.ts` (booking code quoted, never the tracking code; all kinds have SMS + WhatsApp events)
 - `public.service.test.ts`: malformed token, hash lookup, expiry, module-disabled, view recording
 - Existing `parcel-receipt-print-content.test.tsx` covers the shared print mapping
+- `src/features/digital-receipts/components/send-receipt-action/send-receipt-action.test.tsx`:
+  Super Search send action visibility for authorized staff, disabled modules, missing permissions,
+  and deleted parcels
 
 ## QA scenarios
 
@@ -114,3 +121,8 @@ Guard for all four: auth + module + any of `CanCreateParcels`, `CanCreateSenderP
 4. Receiver cashier with a payment due: tick WhatsApp (module configured). The WhatsApp dispatch moves to `delivered` after the webhook.
 5. Open an expired or tampered link: 404 page.
 6. Disable `digital_receipts`: pickers disappear, the API returns 403, and old links return 404.
+7. Super Search → View Details → Send receipt: choose a receipt kind and available channels,
+   send/resend, and confirm the dispatch results and online copy. Close the send dialog and verify
+   parcel details remain open. An unavailable receiver/home delivery receipt shows an error.
+8. Verify the Super Search action is absent with the module disabled, without any receipt API
+   permission, and for a deleted parcel. Opening another parcel uses its own booking and recipients.

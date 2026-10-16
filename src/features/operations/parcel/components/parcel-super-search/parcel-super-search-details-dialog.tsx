@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { SendReceiptAction } from '@/features/digital-receipts';
 import { ParcelDetailsDialog } from '@/features/operations/parcel-details';
 import type { ParcelFullDetails, ParcelSearchRow } from '../../api/parcel.api';
 import { ParcelSuperSearchDispositionCard } from './parcel-super-search-disposition-card';
@@ -27,17 +28,25 @@ export function ParcelSuperSearchDetailsDialog({
 }: ParcelSuperSearchDetailsDialogProps) {
   const renderBanner = useCallback(
     (details: ParcelFullDetails) => (
-      <ReturnToSourceAction
-        parcel={details.parcel}
-        branchId={branchId}
-        sourceName={
-          details.summary?.sourceName ??
-          branchNameById.get(details.parcel.sourceId) ??
-          'source branch'
-        }
-        canRecordReturn={canRecordReturn}
-        onReturnToSource={onReturnToSource}
-      />
+      <>
+        <SendReceiptAction
+          key={details.parcel.id}
+          parcelId={details.parcel.id}
+          bookingCode={details.parcel.bookingCode}
+          isDeleted={details.parcel.isDeleted}
+        />
+        <ReturnToSourceAction
+          parcel={details.parcel}
+          branchId={branchId}
+          sourceName={
+            details.summary?.sourceName ??
+            branchNameById.get(details.parcel.sourceId) ??
+            'source branch'
+          }
+          canRecordReturn={canRecordReturn}
+          onReturnToSource={onReturnToSource}
+        />
+      </>
     ),
     [branchId, branchNameById, canRecordReturn, onReturnToSource],
   );
