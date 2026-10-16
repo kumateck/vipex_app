@@ -86,6 +86,19 @@ non-voided principal totals by payer in pesewas. Both are zero when that payer h
 payment. Super Search uses these fields only for delivered-parcel payer badges; see
 [Parcel operations](PARCEL_OPERATIONS.md). Delivery fees, storage, and voided payments are excluded.
 
+Parcel list/search responses include `riderUserId` and `riderName` from the parcel's delivery
+record (both `null` when there is none or no rider is assigned). `GET
+/v1/shipments/parcels/:id/details` includes `delivery.riderName` alongside `delivery.riderUserId`.
+Super Search uses these for its home-delivery rider line; see [Parcel operations](PARCEL_OPERATIONS.md).
+
+`GET /v1/shipments/parcels/:id/details` also returns `summary` (the parcel as list/search rows show
+it, or `null`), `userNames` (user ID to full name for every person referenced), and the delivery's
+`riderAssignedAt`, `riderCompletedAt` and `returnedAt`. `GET /v1/shipments/parcels/:id/history`
+returns `{ events }`, oldest first, each `{ id, occurredAt, category, title, description,
+actorName, branchName }`. Both require `CanReadParcels` and return 404 for a parcel outside the
+caller's company. Details were not company-checked before October 2026. See
+[Parcel details and history](PARCEL_DETAILS.md).
+
 `GET /v1/shipments/parcels/:id/receipt-reprint-tax` returns the summed, non-voided sender
 principal payment and recorded tax amounts for a receipt reprint, or `null` when no such payment
 exists. It requires authentication plus one of `CanReadConsignments`, `CanReadParcelOutgoing`, or

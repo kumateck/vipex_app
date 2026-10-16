@@ -27,14 +27,9 @@ import {
   formatPhones,
   formatReceivedAt,
 } from './utils';
-const DEFAULT_META: PaginationMeta = {
-  totalRecords: 0,
-  totalPages: 1,
-  page: 1,
-  pageSize: 20,
-  hasNextPage: false,
-  hasPreviousPage: false,
-};
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
+import { EMPTY_META as DEFAULT_META } from '../parcel-super-search/constants';
+
 type ParcelStatusTableProps = {
   rows: ParcelSearchRow[];
   loading: boolean;
@@ -224,6 +219,7 @@ export function ParcelStatusTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <ViewParcelDetailsMenuItem parcelId={row.original.id} />
               {canChangeCallOutcome(row.original.status) ? (
                 <DropdownMenuItem onClick={() => onCallOutcome(row.original)}>
                   Call Outcome

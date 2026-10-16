@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import type { RiderDoorstepRecord } from '../../api/parcel.api';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 const formatCurrency = (amountPsw: number | null | undefined) =>
   `GHS ${((amountPsw ?? 0) / 100).toFixed(2)}`;
@@ -36,14 +37,17 @@ export function useRiderAssignedColumns(
         header: 'Action',
         enableSorting: false,
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isPrinting}
-            onClick={() => void onPrint(row.original.parcelId)}
-          >
-            Print
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ViewParcelDetailsButton parcelId={row.original.parcelId} />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isPrinting}
+              onClick={() => void onPrint(row.original.parcelId)}
+            >
+              Print
+            </Button>
+          </div>
         ),
       },
     ],

@@ -12,6 +12,7 @@ import {
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { ParcelInternalHolderBadge } from '../parcel-internal-holder-badge';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 type UseParcelInternalTransfersSearchColumnsOptions = {
   selectedParcelIds: Set<string>;
@@ -80,6 +81,7 @@ export function useParcelInternalTransfersSearchColumns({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <ViewParcelDetailsMenuItem parcelId={row.original.id} />
               <DropdownMenuItem onClick={() => onAddParcel(row.original)}>
                 {selectedParcelIds.has(row.original.id) ? 'Selected' : 'Add'}
               </DropdownMenuItem>

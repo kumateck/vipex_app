@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { incomingTransitSendDateBounds } from './incoming-transit-send-date';
+import { PgDialect } from 'drizzle-orm/pg-core';
+import { consignments } from '@/db/schemas';
+import {
+  incomingTransitSendDateBounds,
+  incomingTransitSendDateCondition,
+} from './incoming-transit-send-date';
 
 describe('incoming transit send date', () => {
   test('covers the selected UTC calendar day', () => {
@@ -15,5 +20,14 @@ describe('incoming transit send date', () => {
     );
     expect(() => incomingTransitSendDateBounds('2026-02-29')).toThrow();
     expect(() => incomingTransitSendDateBounds('22-09-2026')).toThrow();
+  });
+
+  test('sends the day bounds to the driver as strings, not Date objects', () => {
+    const condition = incomingTransitSendDateCondition(consignments.createdAt, '2026-10-06');
+    const query = new PgDialect().sqlToQuery(condition!);
+    expect(query.sql).toBe(
+      '("consignments"."created_at" >= $1 and "consignments"."created_at" < $2)',
+    );
+    expect(query.params).toEqual(['2026-10-06T00:00:00.000Z', '2026-10-07T00:00:00.000Z']);
   });
 });

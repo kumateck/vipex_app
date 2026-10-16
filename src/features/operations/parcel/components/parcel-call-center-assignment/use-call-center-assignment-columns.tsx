@@ -7,6 +7,7 @@ import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { canEditSecondReceiver } from '@/shared/shipments/second-receiver';
 import { CallCenterAssignmentPaymentCell } from './call-center-assignment-payment-cell';
 import type { ParcelRow } from './call-center-assignment-types';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 const formatPhones = (primary?: string | null, secondary?: string | null) =>
   [primary, secondary].filter(Boolean).join(' / ') || '-';
@@ -132,6 +133,7 @@ export function useCallCenterAssignmentColumns({
       header: 'Action',
       cell: ({ row }) => (
         <div className="flex flex-wrap gap-2">
+          <ViewParcelDetailsButton parcelId={row.original.id} />
           <Button variant="outline" size="sm" onClick={() => onOpenAssignDialog(row.original)}>
             {row.original.callCenterAssignedToUserName ? 'Reassign' : 'Assign'}
           </Button>

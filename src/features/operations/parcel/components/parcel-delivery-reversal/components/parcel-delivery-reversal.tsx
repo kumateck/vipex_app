@@ -5,6 +5,7 @@ import { formatDateTime } from '@/lib/dates';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { useParcelDeliveryReversal } from '../hooks/use-parcel-delivery-reversal';
 import { ReverseDeliveryDialog } from '../dialogs/reverse-delivery-dialog';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 export function ParcelDeliveryReversal() {
   const state = useParcelDeliveryReversal();
@@ -62,9 +63,16 @@ export function ParcelDeliveryReversal() {
                     {row.confirmedAt ? formatDateTime(new Date(row.confirmedAt)) : '—'}
                   </td>
                   <td className="p-3">
-                    <Button variant="outline" size="sm" onClick={() => state.setSelectedId(row.id)}>
-                      Reverse
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <ViewParcelDetailsButton parcelId={row.id} />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => state.setSelectedId(row.id)}
+                      >
+                        Reverse
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}

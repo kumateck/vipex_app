@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/table';
 import type { DeliveryChangeRequest } from '../../types';
 import { formatDeliveryChangeMoney } from '../../utils';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 type Props = {
   requests: DeliveryChangeRequest[];
@@ -56,9 +57,12 @@ export function PendingDeliveryChangeRequestsCard({ requests, isLoading, onRevie
                   <TableCell>{formatDeliveryChangeMoney(request.requestedChargePsw)}</TableCell>
                   <TableCell>{request.reason ?? '-'}</TableCell>
                   <TableCell>
-                    <Button size="sm" onClick={() => onReview(request)}>
-                      Review
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <ViewParcelDetailsButton parcelId={request.parcelId} />
+                      <Button size="sm" onClick={() => onReview(request)}>
+                        Review
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

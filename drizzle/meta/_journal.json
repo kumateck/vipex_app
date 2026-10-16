@@ -582,6 +582,13 @@
       "when": 1791936000000,
       "tag": "0082_location_service_capabilities",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1792022400000,
+      "tag": "0083_parcel_search_indexes",
+      "breakpoints": true
     }
   ]
 }

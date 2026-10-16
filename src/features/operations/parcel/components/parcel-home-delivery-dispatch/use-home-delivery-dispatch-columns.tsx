@@ -14,6 +14,7 @@ import {
 import { ParcelStatus } from '@/db/schemas/enums';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 const money = (amountPsw: number | null | undefined) =>
   `GHS ${((amountPsw ?? 0) / 100).toFixed(2)}`;
@@ -119,6 +120,7 @@ export function useHomeDeliveryDispatchColumns(input: {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <ViewParcelDetailsMenuItem parcelId={row.original.id} />
                 <DropdownMenuItem
                   disabled={isReturningToPickup}
                   onClick={() => onReturnToPickup(row.original)}

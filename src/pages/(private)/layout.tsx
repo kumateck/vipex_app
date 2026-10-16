@@ -9,6 +9,8 @@ import { useAuthStore } from '@/stores/auth-store';
 import NoAccess from '@/components/permissions/no-access';
 import { hasRequiredPermissionForPath } from '@/shared/permissions/path-access';
 import { inferRequiredModuleByPath } from '@/shared/company-modules/route-modules';
+// Direct path (not the feature index) so the dialog stays out of the main bundle.
+import { ParcelDetailsHost } from '@/features/operations/parcel-details/components/parcel-details-dialog/parcel-details-host';
 
 type ModuleState = { code: string; isEnabled: boolean };
 
@@ -116,6 +118,7 @@ const MainLayout = () => {
   return (
     <AuthenticatedLayout>
       <Outlet />
+      <ParcelDetailsHost />
     </AuthenticatedLayout>
   );
 };

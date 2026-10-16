@@ -12,6 +12,7 @@ import type { ParcelSearchRow } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
 import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { formatPhones, getPaymentBucketLabel } from './parcel-pickup-queue-utils';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 type UseParcelPickupQueueColumnsOptions = {
   onViewQueue: (parcel: ParcelSearchRow) => void;
@@ -102,6 +103,7 @@ export function useParcelPickupQueueColumns({ onViewQueue }: UseParcelPickupQueu
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <ViewParcelDetailsMenuItem parcelId={row.original.id} />
               <DropdownMenuItem onClick={() => onViewQueue(row.original)}>
                 {row.original.pickupQueueCode ? 'View Queue' : 'Create Queue'}
               </DropdownMenuItem>

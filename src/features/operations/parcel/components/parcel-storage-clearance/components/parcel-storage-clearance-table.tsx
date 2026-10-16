@@ -2,6 +2,7 @@ import type { ParcelStorageClearanceRow } from '../types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatStorageClearanceStatus, formatStorageMoney } from '../utils';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 type Props = {
   rows: ParcelStorageClearanceRow[];
@@ -70,6 +71,7 @@ export function ParcelStorageClearanceTable({
               </td>
               <td className="p-3">
                 <div className="flex flex-wrap gap-2">
+                  <ViewParcelDetailsButton parcelId={row.parcelId} label="Parcel" />
                   {canApprove && row.status === 0 ? (
                     <>
                       <Button size="sm" onClick={() => onApprove?.(row)}>

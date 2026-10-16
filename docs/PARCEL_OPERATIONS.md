@@ -331,6 +331,26 @@ rather than inventing a delivery time. QA: check office handover, rider handover
 finalization, completed home delivery, a reversed/returned parcel, and a legacy delivered parcel
 without either timestamp.
 
+Super Search shows the rider for home-delivery statuses directly under the parcel status: under
+the status badge in the web table, under the status in the shared details view's Overview tab
+(every page; see [Parcel details and history](PARCEL_DETAILS.md)), under the status chip on mobile
+result cards, and as the first row under the Parcel status in mobile details. **Created By** (the
+parcel's creator) is shown under the status for every parcel in the same places. The rider is read
+from the parcel's delivery record (`deliveries.rider_user_id`):
+
+| Parcel status                                          | Label                   |
+| ------------------------------------------------------ | ----------------------- |
+| Home Delivery Requested, Address Collected, Dispatched | Assigned Rider          |
+| Rider Given Parcel To Customer, Delivered at Home      | D By (web), By (mobile) |
+| Returned by Rider                                      | Returned By             |
+
+If the delivery record has no rider, the line shows `Not assigned`. Office-delivery and all other
+statuses show no rider line. The rider shown is the one currently on the delivery record; if a
+delivery was reassigned, only the latest rider is shown (earlier assignments are in the audit
+log, not Super Search). QA: search a parcel in each status above and confirm the label and rider
+name on web and mobile; search a dispatched parcel with no rider and confirm `Not assigned`;
+search an office-delivered parcel and confirm no rider line.
+
 Call-center assignment list and mutation failures display the message returned by the API, including
 validation, permission, and rate-limit messages. If the response cannot be decoded, the web client
 uses an operation-specific fallback. Authenticated rate limits are isolated by bearer credential,
@@ -1033,6 +1053,48 @@ pagination, and switching back to Awaiting Pickup. Verify unrelated companies/br
 payments, reversed deliveries, and closed cashier sessions cannot print. A cancelled/failed print
 must leave payments and delivery state unchanged.
 
+### Parcel search performance
+
+All parcel list pages (Waiting for Pickup, Receiver Cashier, Super Search and the other
+`GET /v1/shipments/parcels` consumers) share one list query. In October 2026 a single search at
+the busiest branch took 11–26 s in production. Measured with `EXPLAIN ANALYZE`, PostgreSQL JIT
+compilation accounted for 5.0 s of a 5.7 s row query and 1.9 s of a 2.4 s count query, because
+the payment and storage subqueries inflate cost estimates past `jit_above_cost`. Current
+behavior:
+
+- The shared app connection (`src/db/config.ts`) starts every session with `jit=off`. No query
+  in the app recovers JIT's compile time; long reports that might benefit should set `jit` per
+  transaction.
+- The row query and the count query run in parallel.
+- The count query joins only the tables its filters reference: customers only when a search
+  term is present, consignment tables only for sent-date or consignment-number filters.
+  Deliveries and pickup queues are always joined because they are not unique per parcel and the
+  row query joins them, so the total stays equal to the rows returned.
+- When a filter needs the company's storage policy, the list loads it once and reuses it for the
+  storage snapshot.
+- Migration `0083_parcel_search_indexes` adds `parcels (company_id, destination_id, status)`
+  and `pickup_queues (parcel_id)`, then refreshes statistics for both tables. Before it,
+  branch/status lists scanned every branch's parcels in that status, and the pickup-queue join
+  had only a partial (open-ticket) index.
+
+Measured on production data (read-only, from a remote client, before the indexes): Awaiting
+Pickup and Receiver Cashier searches dropped from 11–26 s to about 1.4 s round trip, with about
+0.5 s of database time. Totals matched returned rows for status, cashier-collection, phone, name,
+booking, consignment-number, rider-returned, pickup-queue and shelf-picker filters.
+
+The Incoming in-transit **sent date** filter (`sentDate=YYYY-MM-DD`) matches parcels whose active
+consignment was created on that UTC calendar day (`>= 00:00` and `< 00:00` next day). Until
+October 2026 it failed before reaching the database with `ERR_INVALID_ARG_TYPE`: the day bounds
+were `Date` values inside a raw SQL fragment, which the driver rejects. The condition now comes
+from `incomingTransitSendDateCondition`, which uses typed column comparisons so the bounds are
+sent as ISO strings. Invalid or non-calendar dates still return 400. QA: filter Incoming by a
+day with sends and confirm results and total match; filter a day with none and confirm an empty
+list; enter an invalid date and confirm the validation message.
+
+QA: search a booking code, phone and name on Waiting for Pickup and Receiver Cashier at a busy
+branch and confirm results in under 2 s with an unchanged result count; page through results
+and confirm the total and page count stay consistent.
+
 ### Storage fee indicator in parcel searches
 
 Every web and mobile parcel search result backed by the parcel list API shows a
@@ -1228,6 +1290,8 @@ be completed without collection.
   non-voided sender/receiver principal payments. Check no-payment delivered, pre-delivery,
   returned, voided-only, delivery-fee-only, and split-payment cases; none may claim a payer that
   the active principal payment records do not support.
+- Super Search shows Assigned Rider / D By (mobile: By) / Returned By for home-delivery statuses on web
+  and mobile, `Not assigned` when the delivery record has no rider, and nothing for other statuses.
 - Mobile scan-to-receive with current tracking URL, bare code, legacy `QR-` payload, unreadable code, wrong branch, and non-in-transit status.
 - OTP enabled, disabled, expired, incorrect, alternate recipient, and alternate phone.
 - Pickup with and without receiver payment.

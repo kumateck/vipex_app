@@ -179,7 +179,9 @@ gross and tax amounts are summed and used for the reprint; delivery fees and rec
 not included. The tax rows reflect the components actually charged on those payments, rather than
 the tax profile currently active. A reprint carries a conspicuous `DUPLICATE` label below the
 document title, including when the document is a to-be-paid acknowledgement note. The original
-receipt is unchanged. Sticker reprints also carry `DUPLICATE`. If a paid receipt's recorded payment or tax data
+receipt is unchanged. Sticker reprints also carry `DUPLICATE`, printed in the header under the
+VIP PARCEL wordmark (portrait and landscape) rather than inside the status box, so it does not push
+the Parcel Details row off the sticker. If a paid receipt's recorded payment or tax data
 cannot be loaded, reprinting is cancelled with an error instead of producing a receipt with missing
 tax. A no-payment acknowledgement note can still be reprinted. The receipt's original issue date
 is retained; no new payment or tax calculation is saved.
