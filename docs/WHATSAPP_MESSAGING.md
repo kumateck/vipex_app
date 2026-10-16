@@ -111,6 +111,12 @@ Meta webhook URL to configure: `https://app.vipexparcels.com/v1/public/whatsapp/
 
 ## Operational notes
 
+- Apply the complete migration journal in order: `0083_parcel_search_indexes`,
+  `0084_whatsapp_messaging`, then `0085_digital_receipts`. The WhatsApp branch includes the
+  existing parcel-search index migration so a standalone deployment does not advance past it;
+  Drizzle skips older migrations once a later timestamp has been applied. QA: migrate a database
+  at `0082` and verify both parcel-search indexes, the OTP channel column, dispatch message index,
+  customer receipt preferences, and receipt share links exist.
 - One Meta app can serve several companies. Each company's provider row must carry its own `phoneNumberId` so webhooks map to the right company.
 - The public webhook is subject to the global IP rate limiter.
 - Meta charges per conversation/message. Authentication-category templates (OTP) are billed separately from utility templates (receipts).
