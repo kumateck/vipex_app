@@ -32,6 +32,8 @@ export type ParcelBookingFormValues = {
 
 export type ReceiptSummary = {
   bookingId: string;
+  /** Booking customer; used to offer digital receipt delivery. */
+  senderId?: string;
   parcels: Array<{
     parcelId?: string;
     bookingCode: string;

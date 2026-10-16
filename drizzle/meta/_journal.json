@@ -582,6 +582,20 @@
       "when": 1791936000000,
       "tag": "0082_location_service_capabilities",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1792108800000,
+      "tag": "0084_whatsapp_messaging",
+      "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1792195200000,
+      "tag": "0085_digital_receipts",
+      "breakpoints": true
     }
   ]
 }

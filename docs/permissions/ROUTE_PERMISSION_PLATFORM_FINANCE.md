@@ -23,6 +23,7 @@ Platform, user, dashboard, accounting, and other core route overrides.
 | `/accounting/journal-approvals`    | `CanApproveAccountingManualEntries` |
 | `/settings/company`                | `CanReadCompanyProfile`             |
 | `/settings/sms`                    | `CanReadCompanyProfile`             |
+| `/settings/whatsapp`               | `CanReadCompanyProfile`             |
 | `/settings/modules`                | `CanManageCompanyModules`           |
 | `/settings/parcel-ageing`          | `CanManageParcelAgeingPolicy`       |
 | `/settings/app-updates`            | `CanManageDesktopUpdates`           |

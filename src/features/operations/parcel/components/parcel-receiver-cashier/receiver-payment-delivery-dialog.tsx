@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select-searchable';
 import { PaymentMethod } from '@/db/schemas/enums';
 import { ReceiverOtpSection } from './receiver-otp-section';
+import { ReceiptDeliveryPicker } from '@/features/digital-receipts';
 import { ReceiverPaymentSecondarySections } from './receiver-payment-secondary-sections';
 import { ReceiverPaymentPrimarySections } from './receiver-payment-primary-sections';
 import { ReceiverPaymentDialogSkeleton } from './receiver-payment-dialog-skeleton';
@@ -141,6 +142,13 @@ export function ReceiverPaymentDeliveryDialog({
                   </p>
                 </div>
               )}
+
+              {dialog.receiverDuePsw > 0 || dialog.storageOutstandingPsw > 0 ? (
+                <ReceiptDeliveryPicker
+                  delivery={dialog.receiptDelivery}
+                  disabled={dialog.isSaving}
+                />
+              ) : null}
             </div>
           </div>
         ) : null}

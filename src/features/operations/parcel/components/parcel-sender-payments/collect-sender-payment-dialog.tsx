@@ -22,6 +22,7 @@ import { ParcelSenderPaymentSummary } from '../parcel-sender-payment-summary';
 import { PAYMENT_METHOD_OPTIONS } from './constants';
 import { isMtnPayment, type MtnPaymentFlow } from './sender-payment-method';
 import { getSenderDuePsw } from './utils';
+import { ReceiptDeliveryPicker, type ReceiptDelivery } from '@/features/digital-receipts';
 
 type CollectSenderPaymentDialogProps = {
   parcel: SenderCashierParcel | null;
@@ -35,6 +36,7 @@ type CollectSenderPaymentDialogProps = {
   momoTransactionId: string;
   onMomoConfirmed: (momoTransactionId: string) => void;
   isSubmitting: boolean;
+  receiptDelivery?: ReceiptDelivery;
   onClose: () => void;
   onSubmit: () => Promise<void>;
 };
@@ -51,6 +53,7 @@ export function CollectSenderPaymentDialog({
   momoTransactionId,
   onMomoConfirmed,
   isSubmitting,
+  receiptDelivery,
   onClose,
   onSubmit,
 }: CollectSenderPaymentDialogProps) {
@@ -161,6 +164,10 @@ export function CollectSenderPaymentDialog({
               Confirm that the customer has already sent the payment to the company MTN MoMo number.
               No payment request will be initiated.
             </p>
+          ) : null}
+
+          {receiptDelivery ? (
+            <ReceiptDeliveryPicker delivery={receiptDelivery} disabled={isSubmitting} />
           ) : null}
         </div>
 

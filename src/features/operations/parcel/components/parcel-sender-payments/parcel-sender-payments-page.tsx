@@ -58,6 +58,7 @@ export function ParcelSenderPaymentsPage() {
     pickupLocationName,
     lastPrintedReceipt,
     clearLastPrintedReceipt,
+    receiptDelivery,
   } = useSenderPaymentsWorkflow();
 
   return (
@@ -91,6 +92,7 @@ export function ParcelSenderPaymentsPage() {
           momoTransactionId={momoTransactionId}
           onMomoConfirmed={setMomoTransactionId}
           isSubmitting={isSubmitting}
+          receiptDelivery={receiptDelivery}
           onClose={closeCollectPayment}
           onSubmit={handleCollectPayment}
         />

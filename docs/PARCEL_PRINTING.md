@@ -340,6 +340,19 @@ The repository does not yet meet the intended rule everywhere.
 
 This table is a documented implementation mismatch, not permission to retain the current cap.
 
+## Online Copies (Digital Receipts)
+
+Digital receipt links (module `digital_receipts`) show a server-rendered copy of the **same templates**:
+`InvoiceA5Template`, which falls back to `ToBePaidReceiptA5Template` for the unpaid acknowledgement
+note, and `HomeDeliveryReceiptA5Template`. They are rendered with the A5 landscape page style.
+
+Template props are produced by shared mappers used by both the print dialogs and the server:
+`buildInvoiceA5Props`, `computeParcelReceiptTax` and `buildHomeDeliveryReceiptA5Props`.
+Changing what a printed receipt shows therefore changes the online copy too.
+
+The online copy is always A5 (ignores the station's roll-paper preference), is not marked DUPLICATE,
+and shows no cashier name. See [Digital receipts](DIGITAL_RECEIPTS.md#parity-with-the-printed-copy).
+
 ## Browser Printing
 
 Browser printing renders the sticker document into printable pages. For `N` copies, the sticker page must be repeated `N` times in the print document. The print preview remains the final browser-controlled confirmation.

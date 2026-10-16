@@ -30,6 +30,12 @@ export const customers = pgTable(
     telephone2: varchar('telephone2', { length: 255 }),
     address: varchar('address', { length: 255 }),
     email: varchar('email', { length: 255 }),
+    // Default receipt delivery choice (physical | sms | whatsapp | email); the
+    // last choice made at booking/payment is saved here as the next default.
+    receiptDeliveryChannels: text('receipt_delivery_channels')
+      .array()
+      .notNull()
+      .default(sql`'{physical}'::text[]`),
     customerType: smallint('customer_type').notNull().default(CustomerType.INDIVIDUAL),
     creditEligible: boolean('credit_eligible').notNull().default(false),
     creditLimitPsw: bigint('credit_limit_psw', { mode: 'number' }).notNull().default(0),

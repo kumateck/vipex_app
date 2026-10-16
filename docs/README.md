@@ -50,6 +50,8 @@ This directory is the canonical documentation set for the current Vipex applicat
 - [Platform and access control](PLATFORM_AND_ACCESS.md)
 - [Native device registration](DEVICE_REGISTRATION.md)
 - [Company modules](COMPANY_MODULES.md)
+- [WhatsApp messaging](WHATSAPP_MESSAGING.md)
+- [Digital receipts (SMS/WhatsApp/email receipt delivery)](DIGITAL_RECEIPTS.md)
 - [AI, help, and management insights](AI_HELP_AND_INSIGHTS.md)
 - [Communication suite](COMMUNICATION_SUITE_SPEC.md)
 - [Notification hub QA](NOTIFICATION_HUB_QA_CHECKLIST.md)

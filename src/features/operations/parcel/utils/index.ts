@@ -8,3 +8,8 @@ export * from './scan-code';
 export * from './tracking-url';
 export { resolveShelfPickerStaffId } from './resolve-shelf-picker-staff-id';
 export { buildReceiverReceiptData } from './build-receiver-receipt-data';
+export { buildInvoiceA5Props, computeParcelReceiptTax } from './build-invoice-a5-props';
+export {
+  buildHomeDeliveryReceiptA5Props,
+  type HomeDeliveryReceiptSource,
+} from './build-home-delivery-receipt-props';

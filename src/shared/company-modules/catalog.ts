@@ -136,6 +136,22 @@ export const DEFAULT_MODULE_CATALOG: ModuleCatalogDefinition[] = [
     description: 'Notification & Communication Hub module',
   },
   {
+    code: 'whatsapp_messaging',
+    name: 'WhatsApp Messaging',
+    isCore: false,
+    isActive: true,
+    description:
+      'WhatsApp Cloud API channel: provider settings, approved templates, and WhatsApp pickup OTPs',
+  },
+  {
+    code: 'digital_receipts',
+    name: 'Digital Receipts',
+    isCore: false,
+    isActive: true,
+    description:
+      'Send receipts by SMS, email, or WhatsApp with a secure link to the online copy of the printed receipt',
+  },
+  {
     code: 'communication_internal',
     name: 'Communication (Internal)',
     isCore: false,

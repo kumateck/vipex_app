@@ -176,7 +176,7 @@ page. See [Shelf pickup reassignment](PARCEL_OPERATIONS.md#shelf-pickup-reassign
 
 ## Current Mounted Roots
 
-`auth`, `users`, `branches`, `locations`, `warehouses`, `customers`, `cards`, `uploads`, `cashiers`, `shipments`, `payments`, `deliveries`, `pickup-queues`, `accounting`, `inventory`, `shifts`, `company-modules`, `module-workspace`, `procurement`, `fleet-transport`, `customer-wallet-credit`, `reconciliation`, `notification-hub`, `momo`, `self-service`, `desktop-updates`, `mobile-updates`, `communication`, `customer-service`, `help-assistant`, `executive-insights`, `fleet-anomaly-brief`, `operations-exceptions-brief`, `management-daily-brief`, `ai-chat`, `it-support`, `reports`, `audit`, `hr`, `payroll`, `rbac`, and `geolocation`.
+`auth`, `users`, `branches`, `locations`, `warehouses`, `customers`, `cards`, `uploads`, `cashiers`, `shipments`, `payments`, `deliveries`, `pickup-queues`, `accounting`, `inventory`, `shifts`, `company-modules`, `module-workspace`, `procurement`, `fleet-transport`, `customer-wallet-credit`, `reconciliation`, `notification-hub`, `whatsapp`, `digital-receipts`, `momo`, `self-service`, `desktop-updates`, `mobile-updates`, `communication`, `customer-service`, `help-assistant`, `executive-insights`, `fleet-anomaly-brief`, `operations-exceptions-brief`, `management-daily-brief`, `ai-chat`, `it-support`, `reports`, `audit`, `hr`, `payroll`, `rbac`, and `geolocation`.
 
 Parcel delivery, pickup, rider handover, and home-delivery dispatch endpoints return HTTP 409
 when the parcel (or the linked parcel in a duplicate-entry case) has a requested or approved
@@ -367,6 +367,20 @@ searches, parcel details, consignment receiving reads/receive/close, parcel mark
 and PATCH arrival confirmation. Authentication and endpoint permissions still apply;
 other parcel updates and invalid/unsigned/public traffic keep their quotas. See
 [Receiving quotas](MOBILE_FRONTLINE_WORKFLOWS.md#scan-to-receive-request-quotas).
+
+## WhatsApp Messaging and Digital Receipts
+
+- `GET /v1/whatsapp/availability`, `GET /v1/whatsapp/settings`, `PUT /v1/whatsapp/settings/provider`,
+  `PUT /v1/whatsapp/settings/events/:eventCode`, `POST /v1/whatsapp/settings/test`: see
+  [WhatsApp messaging](WHATSAPP_MESSAGING.md#api-summary). Secrets are never returned.
+- Public `GET|POST /v1/public/whatsapp/webhook`: Meta verify-token handshake and signed delivery
+  status callbacks (403 on a bad token or signature).
+- `GET|PUT /v1/digital-receipts/customers/:id/preference`, `GET /v1/digital-receipts/parcels/:id/options?kind=`,
+  `POST /v1/digital-receipts/parcels/:id/send`: see [Digital receipts](DIGITAL_RECEIPTS.md#other-api).
+- Public `GET /v1/public/receipts/:token`: `{ kind, bookingCode, issuedAt, summary, html }`. Unknown,
+  expired, malformed or module-disabled links all return 404.
+- `POST /v1/payments/receiver-otp/request` accepts optional `channel: 'sms' | 'whatsapp'` and
+  returns `{ expiresAt, channel }`.
 
 ## Receiver OTP Send Failures
 

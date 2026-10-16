@@ -163,6 +163,7 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
           targetReceiver: 'main' | 'second';
           force?: boolean;
           phoneSlot?: 'primary' | 'secondary';
+          channel?: 'sms' | 'whatsapp';
         }),
         companyId: authUser.companyId ?? '',
         branchId: authUser.branchId ?? '',
@@ -175,10 +176,11 @@ export const paymentsRoutes = new Elysia({ name: 'payments' })
         targetReceiver: t.Union([t.Literal('main'), t.Literal('second')]),
         force: t.Optional(t.Boolean()),
         phoneSlot: t.Optional(t.Union([t.Literal('primary'), t.Literal('secondary')])),
+        channel: t.Optional(t.Union([t.Literal('sms'), t.Literal('whatsapp')])),
       }),
       detail: {
         tags: ['Payments'],
-        summary: 'Send a receiver pickup verification OTP by SMS (5-minute expiry)',
+        summary: 'Send a receiver pickup verification OTP by SMS or WhatsApp (5-minute expiry)',
       },
       beforeHandle: [
         requireAuth(),
