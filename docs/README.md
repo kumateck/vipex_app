@@ -50,6 +50,7 @@ This directory is the canonical documentation set for the current Vipex applicat
 
 - [Platform and access control](PLATFORM_AND_ACCESS.md)
 - [Native device registration](DEVICE_REGISTRATION.md)
+- [Biometric (fingerprint) verification — planned](BIOMETRIC_VERIFICATION.md)
 - [Company modules](COMPANY_MODULES.md)
 - [WhatsApp messaging](WHATSAPP_MESSAGING.md)
 - [Digital receipts (SMS/WhatsApp/email receipt delivery)](DIGITAL_RECEIPTS.md)
