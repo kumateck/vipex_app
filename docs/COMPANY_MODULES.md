@@ -96,6 +96,7 @@ Current dependency graph includes:
 - `bi_executive_dashboard` -> `accounting`
 - `partner_agent_portal` -> `shipments`, `customers`, `payments`
 - `device_verification` -> none
+- `biometrics` -> `customers`
 
 Behavior:
 
@@ -213,6 +214,21 @@ Current backend route-module enforcement:
 - `digital_receipts`: receipt delivery picker and `/v1/digital-receipts/*`. The public `GET /v1/public/receipts/:token` returns 404 when the module is disabled. See [Digital receipts](DIGITAL_RECEIPTS.md).
 
 Both are off by default. Turning either off restores the previous SMS-only / print-only behaviour.
+
+## Biometric Verification Module
+
+- `biometrics` appears as **Biometric Verification**. It is off by default for each company and
+  needs `customers` enabled first.
+- **Off** means the company does not use fingerprints at all. **On** means the company may use
+  them, and branch policy decides where they are required.
+- **Implemented:** the catalog entry, the dependency rule, and enable/disable from
+  `/settings/company` (audit logged).
+- **Not implemented yet:** enabling the module currently changes no behaviour. No fingerprint
+  routes, screens, or pickup checks exist yet.
+- **Planned:** when fingerprint features ship, every one will be gated on this module. Disabling it
+  must restore today's OTP-only pickup and unverified-sender booking. Per-branch policy
+  (`otp` / `fingerprint` / `either` / `both`) will apply only while the module is enabled.
+- See [Biometric verification](BIOMETRIC_VERIFICATION.md).
 
 ## Recommended Use
 

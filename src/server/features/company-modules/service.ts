@@ -14,6 +14,7 @@ import {
 
 export const MODULE_DEPENDENCIES: Record<string, string[]> = {
   device_verification: [],
+  biometrics: ['customers'],
   payroll: ['hr'],
   procurement: ['accounting'],
   fleet_transport: ['shipments'],

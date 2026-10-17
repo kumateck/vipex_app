@@ -381,6 +381,14 @@ and PATCH arrival confirmation. Authentication and endpoint permissions still ap
 other parcel updates and invalid/unsigned/public traffic keep their quotas. See
 [Receiving quotas](MOBILE_FRONTLINE_WORKFLOWS.md#scan-to-receive-request-quotas).
 
+## Customer website messages
+
+Customer website messages use public `POST /v1/public/contact` and staff-only
+`GET /v1/customer-messages`, `GET/PATCH /v1/customer-messages/:id`. They use dedicated
+storage and read/manage permissions, separate from internal ticketing. See
+[Customer website messages](CUSTOMER_WEBSITE_MESSAGES.md) for payloads, limits,
+retry behavior, permissions and deployment requirements.
+
 ## WhatsApp Messaging and Digital Receipts
 
 - `GET /v1/whatsapp/availability`, `GET /v1/whatsapp/settings`, `PUT /v1/whatsapp/settings/provider`,

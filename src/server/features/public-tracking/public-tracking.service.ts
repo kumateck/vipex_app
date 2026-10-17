@@ -2,6 +2,7 @@ import { ParcelStatus } from '@/db/schemas/enums';
 import { fromPesewas } from '@/server/utils/gh-money';
 import { NotFound } from '@/server/utils/http-error';
 import { getPublicParcelByTrackingRepo } from './public-tracking.repository';
+import { maskReceiverName } from './mask-receiver-name';
 
 const STATUS_LABELS: Record<number, string> = {
   [ParcelStatus.CREATED]: 'Created',
@@ -57,24 +58,19 @@ export function toPublicTrackingResponse(
   return {
     trackingCode: row.trackingCode,
     receiptCode: row.receiptCode,
-    consignmentCode: row.consignmentCode,
     sourceBranch: row.sourceBranchName,
     destinationBranch: row.destinationBranchName,
     processingTime: iso(processedEvent?.occurredAt ?? row.createdAt),
     sentTime: iso(sentEvent?.occurredAt ?? row.sentAt),
     reachedDestinationAt: iso(row.receivedAt),
-    sender: { name: row.senderName },
-    receiver: { name: row.receiverName, secondName: row.secondReceiverName },
+    receiver: { name: maskReceiverName(row.receiverName) },
     packaging: row.parcelDetails,
-    contents: row.parcelContent,
-    parcelValueCedis: fromPesewas(BigInt(row.parcelValuePsw)),
     receiverToPayCedis: fromPesewas(BigInt(row.plannedToBePaidPsw)),
     senderPaidCedis: fromPesewas(
       BigInt(row.chargePsw) > BigInt(row.plannedToBePaidPsw)
         ? BigInt(row.chargePsw) - BigInt(row.plannedToBePaidPsw)
         : 0n,
     ),
-    totalChargeCedis: fromPesewas(BigInt(row.chargePsw)),
     status: { code: row.status, label: STATUS_LABELS[row.status] ?? 'Unknown' },
     updatedAt: iso(row.updatedAt),
     timeline: [

@@ -196,6 +196,11 @@ and reinstall checks are in [Native Device Registration](DEVICE_REGISTRATION.md)
    without a device credential. With it on, confirm a pending or revoked device cannot sign in or
    restore a session, and an approved device can. See
    [Native Device Registration](DEVICE_REGISTRATION.md).
+8. Typecheck alone does not prove imports resolve at runtime. Run a Metro bundle
+   (`npx react-native bundle --platform android --entry-file index.js --bundle-output <tmp>`) and
+   confirm no "Unable to resolve module" error. Then scan a parcel on Receive, open the incoming
+   receive process, edit the parcel details, and save. It must save without a "cannot find
+   module" error. The fix is that Metro now resolves `@/shared/*` from the root `src/`.
 
 ## Location Services, Charge Agent and Receiving Quotas
 
