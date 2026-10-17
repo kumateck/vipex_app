@@ -34,6 +34,12 @@ export const GROUP_DEFAULTS: Record<string, GroupDefault> = {
     subdomain: 'Customer Lifecycle',
     module: 'Customer Identification',
   },
+  // Website enquiries, complaints and feedback; separate from CS and IT tickets.
+  'Customer Messages': {
+    domain: 'Commercial',
+    subdomain: 'Customer Lifecycle',
+    module: 'Customer Website Messages',
+  },
   Shipments: { domain: 'Operations', subdomain: 'Parcel Lifecycle', module: 'Booking & Shipping' },
   Cashiers: {
     domain: 'Finance',
