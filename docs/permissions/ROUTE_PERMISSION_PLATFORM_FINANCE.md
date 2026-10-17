@@ -1,6 +1,6 @@
 # Route Permissions: Platform and Finance
 
-Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-10-08.
+Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-10-17.
 
 Platform, user, dashboard, accounting, and other core route overrides.
 
@@ -45,3 +45,4 @@ Platform, user, dashboard, accounting, and other core route overrides.
 | `/users/active`                    | `CanReadActiveUsers`                |
 | `/users/inactive`                  | `CanReadInactiveUsers`              |
 | `/users/invites`                   | `CanResendSetupInvite`              |
+| `/customer-messages`               | `CanReadCustomerMessages`           |

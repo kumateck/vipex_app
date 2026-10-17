@@ -1,6 +1,6 @@
 # Route Permissions: Reports
 
-Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-10-08.
+Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-10-17.
 
 Financial, operational, people, customer, parcel, inventory, and audit report route overrides.
 

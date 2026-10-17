@@ -99,6 +99,16 @@ Mobile navigation, destination screens, background loads, and mutations use the 
 
 New work follows the feature structure under `apps/mobile/src/features/<domain>/<feature>/`, separating components, dialogs, hooks, services, types, and utilities. Screen files are wrappers around feature components.
 
+Import aliases:
+
+- `@mobile/*` resolves only to `apps/mobile/src/*`.
+- `@/*` resolves to `apps/mobile/src/*` first, then to the root `src/*`. That is how mobile reuses
+  pure shared helpers such as `@/shared/shipments/parcel-information-edit`.
+- TypeScript (`apps/mobile/tsconfig.json` `paths`) and Metro (`resolveRequest` in
+  `apps/mobile/metro.config.js`) must keep the same order. If they differ, the code typechecks but
+  fails at runtime with "Unable to resolve module".
+- Only import root modules that have no web-only or server-only dependencies.
+
 Older route-compatible files under `apps/mobile/app` may remain during migration, but the active native entry point is `src/app`; the presence of those files does not make this an Expo managed app.
 
 ## Build and Run

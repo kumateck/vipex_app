@@ -64,6 +64,14 @@ export const DEFAULT_MODULE_CATALOG: ModuleCatalogDefinition[] = [
     description: 'Require approval of mobile and desktop devices before staff can sign in',
   },
   {
+    code: 'biometrics',
+    name: 'Biometric Verification',
+    isCore: false,
+    isActive: true,
+    description:
+      'Fingerprint enrollment and verification of parcel senders, receivers, and staff on fingerprint-enabled POS devices',
+  },
+  {
     code: 'inventory',
     name: 'Inventory',
     isCore: true,

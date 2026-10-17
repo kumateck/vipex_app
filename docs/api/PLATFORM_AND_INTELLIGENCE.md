@@ -27,6 +27,11 @@ each audience record. Missing values resolve to empty strings.
 
 ## Communication
 
+Customer website enquiries, complaints and feedback use a separate
+`/customer-messages` inbox and public `/public/contact` submission endpoint. They
+have independent storage and read/manage permissions, with no dependency on
+internal communication or IT ticketing. See [Customer website messages](../CUSTOMER_WEBSITE_MESSAGES.md).
+
 `/communication` includes threads, messages, channels, groups, engagement requests, approvals/declines, presence, and calls. Internal communication and LiveKit call capabilities have separate module gates.
 
 `/customer-service` includes conversations, tickets, feedback, and SLA records. It is gated by the customer-service communication module and relevant permissions.

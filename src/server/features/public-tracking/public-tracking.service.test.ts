@@ -1,17 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import { ParcelStatus } from '@/db/schemas/enums';
 import { toPublicTrackingResponse } from './public-tracking.service';
+import { maskReceiverName } from './mask-receiver-name';
 
 const trackingRow = {
   id: 'parcel-1',
   trackingCode: 'TRACK-1',
   receiptCode: 'RECEIPT-1',
-  senderName: 'Sender',
-  receiverName: 'Receiver',
-  secondReceiverName: null,
+  receiverName: 'Ama Owusu Mensah',
   parcelDetails: '1 M/BB',
-  parcelContent: 'Documents',
-  parcelValuePsw: 1000,
   chargePsw: 3000,
   plannedToBePaidPsw: 3000,
   status: ParcelStatus.ARRIVED_AT_DESTINATION,
@@ -21,7 +18,6 @@ const trackingRow = {
   sourceBranchName: 'Accra',
   destinationBranchName: 'Sunyani',
   sentAt: new Date('2026-01-01T12:00:00.000Z'),
-  consignmentCode: 'CON-1',
   events: [
     {
       metadata: { patch: { status: ParcelStatus.PROCESSED } },
@@ -46,6 +42,41 @@ describe('public parcel tracking response', () => {
     expect(response?.senderPaidCedis).toBe(0);
     expect(response?.status.label).toBe('Arrived at destination office');
     expect(response?.timeline).toHaveLength(4);
+  });
+
+  test('masks the receiver name and omits sender, contents, value and internal codes', () => {
+    const response = toPublicTrackingResponse(trackingRow);
+
+    expect(response?.receiver).toEqual({ name: 'Ama O**** M*****' });
+    expect(Object.keys(response ?? {}).sort()).toEqual(
+      [
+        'destinationBranch',
+        'packaging',
+        'processingTime',
+        'reachedDestinationAt',
+        'receiptCode',
+        'receiver',
+        'receiverToPayCedis',
+        'senderPaidCedis',
+        'sentTime',
+        'sourceBranch',
+        'status',
+        'timeline',
+        'trackingCode',
+        'updatedAt',
+      ].sort(),
+    );
+    expect(JSON.stringify(response)).not.toContain('Owusu');
+  });
+
+  test('masks single names and tolerates a blank receiver name', () => {
+    expect(maskReceiverName('Kwame')).toBe('Kw***');
+    expect(maskReceiverName('  Ama   Owusu ')).toBe('Ama O****');
+    expect(maskReceiverName(maskReceiverName('Ama Owusu'))).toBe('Ama O****');
+    expect(maskReceiverName(null)).toBeNull();
+    expect(toPublicTrackingResponse({ ...trackingRow, receiverName: '  ' })?.receiver).toEqual({
+      name: null,
+    });
   });
 
   test('describes a rider return distinctly from a return to sender', () => {

@@ -7,7 +7,7 @@ Status: implemented on branch `feature/whatsapp-receipts` (web + server). The pu
 Customers choose how they receive receipts: **Physical, SMS, WhatsApp, Email** (any combination). Digital receipts carry:
 
 - a short text summary quoting the **booking code** (not the tracking code), amount paid, balance and destination
-- a secure link to an online copy that is **identical to the printed receipt**: the A5 receipt, or the "to be paid" acknowledgement note when nothing was paid
+- a secure link to an online copy that matches the printed receipt (the A5 receipt, or the "to be paid" acknowledgement note when nothing was paid), except that **phone numbers are masked**
 
 ## Module
 
@@ -85,6 +85,14 @@ Link format: `${PUBLIC_RECEIPT_BASE_URL}/<token>` (env, default `https://vipexpa
 - The receipt is rebuilt from **current recorded data** each view, then the view is counted (`view_count`, `last_viewed_at`).
 - Malformed tokens, unknown or expired links, a disabled module, and a parcel no longer eligible for that kind all return the same 404: "Receipt not found or the link has expired".
 - `html` is a complete document; the website shows it in a sandboxed iframe with print/save-as-PDF.
+- **Contact masking:** anyone holding the link can open it, and links can be forwarded, so the
+  online copy masks every sender, receiver and payer phone number. Each number keeps its first
+  three and last two digits (`0244123456` → `024*****56`); both numbers in a "primary, secondary"
+  pair are masked, and placeholders such as `-` are unchanged. Names, booking/tracking codes,
+  amounts and the home-delivery address are not masked. Printed counter receipts and the in-app
+  print dialog still show full numbers. Implemented in
+  `src/server/features/digital-receipts/mask-receipt-contacts.ts`, applied only in
+  `getPublicReceiptSvc`.
 
 ## Other API
 

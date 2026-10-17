@@ -3,6 +3,7 @@ import { sha256HexAsync } from '@/server/utils/otp';
 import { findCompanyModuleRepo } from '../company-modules/repository';
 import { DIGITAL_RECEIPTS_MODULE_CODE } from './constants';
 import { buildReceiptSvc } from './receipt-document.service';
+import { maskReceiptDocumentContacts } from './mask-receipt-contacts';
 import { renderReceiptHtml } from './render/render-receipt-html';
 import { findReceiptShareLinkByTokenHashRepo, recordReceiptShareLinkViewRepo } from './repository';
 import type { ReceiptKind } from '@/shared/digital-receipts/channels';
@@ -40,6 +41,9 @@ export async function getPublicReceiptSvc(token: string) {
     bookingCode: receipt.bookingCode,
     issuedAt: receipt.issuedAt,
     summary: receipt.summary,
-    html: renderReceiptHtml(receipt.document, `receipt-${receipt.bookingCode}`),
+    html: renderReceiptHtml(
+      maskReceiptDocumentContacts(receipt.document),
+      `receipt-${receipt.bookingCode}`,
+    ),
   };
 }
