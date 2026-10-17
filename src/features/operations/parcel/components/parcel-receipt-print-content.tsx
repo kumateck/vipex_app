@@ -2,12 +2,8 @@ import type { RefObject } from 'react';
 import { InvoiceA5Template, ThermalStickerTemplate } from '@/features/printing';
 import type { ReceiptPrintData } from './parcel-receipt.types';
 import { buildParcelStickerQrValue } from '../utils/tracking-url';
-import {
-  formatDate,
-  formatMoney,
-  getPaymentModeLabel,
-  toAmountWords,
-} from './parcel-receipt-formatters';
+import { formatDate, formatMoney } from './parcel-receipt-formatters';
+import { buildInvoiceA5Props } from '../utils/build-invoice-a5-props';
 
 type ParcelReceiptPrintContentProps = {
   data: ReceiptPrintData;
@@ -46,10 +42,6 @@ export function ParcelReceiptPrintContent({
   isDuplicate = false,
 }: ParcelReceiptPrintContentProps) {
   const copies = Math.max(Math.trunc(stickerCopies), 1);
-  const payerTelephone = formatTelephonePair(
-    data.payerTelephone ?? data.senderTelephone,
-    data.payerType ? data.payerTelephone2 : data.senderTelephone2,
-  );
   const stickerTemplateProps = {
     bookingCode: data.bookingCode,
     duplicate: isDuplicate,
@@ -97,48 +89,16 @@ export function ParcelReceiptPrintContent({
       <div style={{ position: 'absolute', left: '-10000px', top: 0, width: '148mm' }}>
         <div ref={invoiceRef}>
           <InvoiceA5Template
-            bookingCode={data.bookingCode}
-            issuedAtLabel={formatDate(data.issuedAt)}
-            cashierName={printedByName}
-            duplicate={isDuplicate}
-            parcelDetails={data.parcelDetails}
-            parcelContent={data.parcelContent}
-            parcelValueCedis={data.parcelValueCedis}
-            receivedByName={data.receivedByName}
-            destinationBranchName={data.destinationBranchName}
-            destinationLocationName={data.destinationLocationName}
-            payerLabel={data.payerType === 'receiver' ? 'Receiver Info' : 'Sender Info'}
-            payerName={data.payerName ?? data.senderName}
-            payerTelephone={payerTelephone}
-            senderName={data.senderName}
-            senderTelephone={
-              data.senderTelephone2
-                ? `${data.senderTelephone}, ${data.senderTelephone2}`
-                : data.senderTelephone
-            }
-            receiverName={data.receiverName}
-            receiverTelephone={
-              data.receiverTelephone2
-                ? `${data.receiverTelephone}, ${data.receiverTelephone2}`
-                : data.receiverTelephone
-            }
-            paymentModeLabel={getPaymentModeLabel(data.senderPaidCedis, data.receiverToPayCedis)}
-            totalChargeCedis={data.totalChargeCedis}
-            senderPaidCedis={data.senderPaidCedis}
-            receiverToPayCedis={data.receiverToPayCedis}
-            amountPaidCedis={amountPaidCedis}
-            storageChargeCedis={data.storageChargeCedis}
-            amountInWords={toAmountWords(amountPaidCedis)}
-            tax={tax}
-            qrValue={qrUrl}
-            formatMoney={formatMoney}
+            {...buildInvoiceA5Props(data, {
+              amountPaidCedis,
+              tax,
+              qrUrl,
+              cashierName: printedByName,
+              isDuplicate,
+            })}
           />
         </div>
       </div>
     </>
   );
-}
-
-function formatTelephonePair(primary: string, secondary?: string | null) {
-  return secondary ? `${primary}, ${secondary}` : primary;
 }

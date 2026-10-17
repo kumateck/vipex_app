@@ -35,6 +35,18 @@ const catalog = [
   ['CanUpdateCards', 'Update cards', 'Cards'],
   ['CanDeleteCards', 'Delete cards', 'Cards'],
 
+  // Customer website inbox (independent of internal tickets)
+  [
+    'CanReadCustomerMessages',
+    'View customer website enquiries, complaints and feedback',
+    'Customer Messages',
+  ],
+  [
+    'CanManageCustomerMessages',
+    'Manage customer message status and internal notes',
+    'Customer Messages',
+  ],
+
   // Shipments / Parcels / Consignments / Grouping
   ['CanReadShipments', 'List shipments', 'Shipments'],
   ['CanCreateShipments', 'Create shipments', 'Shipments'],
@@ -797,6 +809,7 @@ export const AccountingSetupPermissionKeys = Object.freeze({
 });
 
 export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> = Object.freeze({
+  '/customer-messages': PermissionKeys.CanReadCustomerMessages,
   '/users/password-management': PermissionKeys.CanSetUserPassword,
   '/parcels/sender-payments': PermissionKeys.CanCreateSenderPayments,
   '/parcels/processed': PermissionKeys.CanReadConsignments,
@@ -962,6 +975,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/it-support/tickets/new': PermissionKeys.CanCreateItSupportTickets,
   '/settings/company': PermissionKeys.CanReadCompanyProfile,
   '/settings/sms': PermissionKeys.CanReadCompanyProfile,
+  '/settings/whatsapp': PermissionKeys.CanReadCompanyProfile,
   '/settings/modules': PermissionKeys.CanManageCompanyModules,
   '/settings/parcel-ageing': PermissionKeys.CanManageParcelAgeingPolicy,
   '/settings/app-updates': PermissionKeys.CanManageDesktopUpdates,

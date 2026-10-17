@@ -19,6 +19,17 @@ const PARCEL_STATUS_VARIABLES = [
   'location',
 ];
 
+const DIGITAL_RECEIPT_VARIABLES = [
+  'customerName',
+  'bookingCode',
+  'amountPaid',
+  'balance',
+  'destination',
+  'receiptUrl',
+  'branch',
+  'location',
+];
+
 export const SMS_EVENT_DEFINITIONS = [
   {
     code: 'pickup_queue_ticket',
@@ -89,6 +100,40 @@ export const SMS_EVENT_DEFINITIONS = [
     defaultBody:
       '{{receiverName}}, your parcel {{trackingCode}} (booking {{bookingCode}}) has been updated after our call.',
     variables: PARCEL_STATUS_VARIABLES,
+  },
+  {
+    code: 'digital_receipt_booking',
+    name: 'Digital receipt: booking',
+    description:
+      'Sends the booking receipt (or unpaid acknowledgement) with a link to the online copy.',
+    dispatchAction:
+      'Dispatched after a booking when the customer chose SMS for receipt delivery (Digital Receipts module).',
+    recipient: 'Sender (booking customer)',
+    defaultBody:
+      'Hello {{customerName}}, thank you for sending with VIPEX. Booking {{bookingCode}} to {{destination}}. Paid: {{amountPaid}}. Balance: {{balance}}. Receipt: {{receiptUrl}}',
+    variables: DIGITAL_RECEIPT_VARIABLES,
+  },
+  {
+    code: 'digital_receipt_payment',
+    name: 'Digital receipt: payment',
+    description: 'Sends the payment receipt with a link to the online copy.',
+    dispatchAction:
+      'Dispatched after a sender or receiver payment when the payer chose SMS for receipt delivery.',
+    recipient: 'Customer who paid',
+    defaultBody:
+      'Hello {{customerName}}, payment received for VIPEX booking {{bookingCode}} ({{destination}}). Paid: {{amountPaid}}. Balance: {{balance}}. Receipt: {{receiptUrl}}',
+    variables: DIGITAL_RECEIPT_VARIABLES,
+  },
+  {
+    code: 'digital_receipt_home_delivery',
+    name: 'Digital receipt: home delivery',
+    description: 'Sends the home delivery receipt with a link to the online copy.',
+    dispatchAction:
+      'Dispatched after a home delivery receipt is issued when SMS was chosen for receipt delivery.',
+    recipient: 'Delivery recipient and payer',
+    defaultBody:
+      'Hello {{customerName}}, VIPEX booking {{bookingCode}} delivered to {{destination}}. Paid: {{amountPaid}}. Balance: {{balance}}. Receipt: {{receiptUrl}}',
+    variables: DIGITAL_RECEIPT_VARIABLES,
   },
 ] as const satisfies readonly SmsEventDefinition[];
 

@@ -69,6 +69,8 @@ const EnvSchema = z.object({
   SMTP_CONNECTION_TIMEOUT: z.coerce.number().int().positive().default(10000), // ms
   SMTP_GREETING_TIMEOUT: z.coerce.number().int().positive().default(5000), // ms
   SMTP_DEBUG: toBoolean.default(false), // Log SMTP traffic (no credentials)
+  // Public customer inbox; no company may be selected by an anonymous request.
+  WEBSITE_CONTACT_COMPANY_ID: z.string().trim().min(1).max(25).optional(),
   // App URLs
   APP_BASE_URL: z.string().optional(),
   RESET_LINK_BASE_URL: z.string().optional(),
@@ -85,6 +87,9 @@ const EnvSchema = z.object({
   RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
   RATE_LIMIT_STAFF_READ_MULTIPLIER: z.coerce.number().int().positive().default(5),
+  // Anonymous parcel tracking lookups per IP, on top of the global quota (limits code guessing).
+  PUBLIC_TRACKING_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(600),
+  PUBLIC_TRACKING_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(60),
   // LiveKit (optional)
   LIVEKIT_URL: z.string().url().optional(),
   LIVEKIT_PUBLIC_URL: z.string().url().optional(),
@@ -109,6 +114,18 @@ const EnvSchema = z.object({
   MNOTIFY_API_URL: z.string().url().default('https://api.mnotify.com/api'),
   MNOTIFY_API_KEY: z.string().optional(),
   MNOTIFY_SENDER_ID: z.string().optional(),
+
+  // WhatsApp Cloud API (optional — used as a fallback when a company's
+  // whatsapp provider configJson doesn't set its own values)
+  WHATSAPP_API_VERSION: z.string().default('v21.0'),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_APP_SECRET: z.string().optional(),
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
+
+  // Public receipt page base (vipex_website). Receipt links are
+  // `${PUBLIC_RECEIPT_BASE_URL}/<token>`.
+  PUBLIC_RECEIPT_BASE_URL: z.string().url().default('https://vipexparcels.com/receipt'),
 
   // Help Assistant LLM providers (all optional — the assistant degrades
   // gracefully and falls back to plain guide browsing if none are set).

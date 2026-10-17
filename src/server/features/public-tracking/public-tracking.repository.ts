@@ -12,12 +12,9 @@ export async function getPublicParcelByTrackingRepo(trackingCode: string) {
       id: parcels.id,
       trackingCode: parcels.trackingCode,
       receiptCode: parcels.bookingCode,
-      senderName: parcels.senderNameSnapshot,
+      // Public and anonymous: select only what the response exposes (receiver name is masked).
       receiverName: parcels.receiverNameSnapshot,
-      secondReceiverName: parcels.secondReceiverNameSnapshot,
       parcelDetails: parcels.parcelDetails,
-      parcelContent: parcels.parcelContent,
-      parcelValuePsw: parcels.parcelValuePsw,
       chargePsw: parcels.chargePsw,
       plannedToBePaidPsw: parcels.plannedToBePaidPsw,
       status: parcels.status,
@@ -27,7 +24,6 @@ export async function getPublicParcelByTrackingRepo(trackingCode: string) {
       sourceBranchName: sourceBranch.name,
       destinationBranchName: destinationBranch.name,
       sentAt: consignments.createdAt,
-      consignmentCode: consignments.code,
     })
     .from(parcels)
     .innerJoin(sourceBranch, eq(sourceBranch.id, parcels.sourceId))

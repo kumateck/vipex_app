@@ -10,8 +10,24 @@ type ReceiverTaxBreakdown = {
   taxComponentKeys?: string[];
 };
 
+type ReceiptParcelFields = Pick<
+  ParcelSearchRow,
+  | 'bookingCode'
+  | 'trackingCode'
+  | 'callSender'
+  | 'parcelDetails'
+  | 'parcelContent'
+  | 'parcelValuePsw'
+  | 'senderName'
+  | 'senderPhone'
+  | 'senderPhone2'
+  | 'receiverName'
+  | 'receiverPhone'
+  | 'receiverPhone2'
+>;
+
 type BuildReceiverReceiptDataArgs = {
-  parcel: ParcelSearchRow;
+  parcel: ReceiptParcelFields;
   receivedByName: string;
   destinationBranchName: string;
   destinationLocationName: string;

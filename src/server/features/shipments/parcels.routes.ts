@@ -20,6 +20,7 @@ import {
   executeParcelReconciliationCaseCtrl,
   getParcelByIdCtrl,
   getParcelDetailsCtrl,
+  getParcelHistoryCtrl,
   listEligibleParcelCorrectionSessionsCtrl,
   listParcelReconciliationCasesCtrl,
   listParcelDispositionActionsCtrl,
@@ -466,14 +467,29 @@ export const parcelsRoutes = new Elysia({ name: 'parcels' })
     beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcels)],
     detail: { tags: ['Shipments'], summary: 'Get parcel' },
   })
-  .get('/:id/details', async ({ params }) => getParcelDetailsCtrl(params.id), {
-    params: t.Object({ id: UUID }),
-    beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcels)],
-    detail: {
-      tags: ['Shipments'],
-      summary: 'Get parcel full details (payments, delivery, consignments)',
+  .get(
+    '/:id/details',
+    async ({ params, user }) =>
+      getParcelDetailsCtrl(params.id, { companyId: (user as AuthUser).companyId ?? null }),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcels)],
+      detail: {
+        tags: ['Shipments'],
+        summary: 'Get parcel full details (payments, delivery, consignments)',
+      },
     },
-  })
+  )
+  .get(
+    '/:id/history',
+    async ({ params, user }) =>
+      getParcelHistoryCtrl(params.id, { companyId: (user as AuthUser).companyId ?? null }),
+    {
+      params: t.Object({ id: UUID }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadParcels)],
+      detail: { tags: ['Shipments'], summary: 'Get parcel history timeline (who did what, when)' },
+    },
+  )
   .get(
     '/:id/home-delivery-receipt',
     ({ params, user }) => {

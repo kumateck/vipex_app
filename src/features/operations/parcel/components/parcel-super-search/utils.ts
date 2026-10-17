@@ -22,6 +22,22 @@ export function resolveParcelDeliveredAt(input: {
   return delivered ? (input.deliveredAt ?? input.confirmedAt ?? null) : null;
 }
 
+const HOME_DELIVERY_RIDER_LABELS: Record<number, string> = {
+  [ParcelStatus.HOME_DELIVERY_REQUESTED]: 'Assigned Rider',
+  [ParcelStatus.ADDRESS_COLLECTED]: 'Assigned Rider',
+  [ParcelStatus.DISPATCHED]: 'Assigned Rider',
+  [ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER]: 'D By',
+  [ParcelStatus.DELIVERED_AT_HOME]: 'D By',
+  [ParcelStatus.RETURNED_TO_OFFICE]: 'Returned By',
+};
+
+/** Rider line for home-delivery statuses; null for statuses unrelated to home delivery. */
+export function resolveParcelRider(input: { status: number; riderName?: string | null }) {
+  const label = HOME_DELIVERY_RIDER_LABELS[input.status];
+  if (!label) return null;
+  return { label, name: input.riderName?.trim() || 'Not assigned' };
+}
+
 export function paymentMethodLabel(method: number) {
   const label = PaymentMethod[method];
   return typeof label === 'string' ? label : String(method);

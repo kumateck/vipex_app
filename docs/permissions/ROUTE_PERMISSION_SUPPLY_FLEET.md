@@ -1,6 +1,6 @@
 # Route Permissions: Supply Chain and Fleet
 
-Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-10-08.
+Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-10-17.
 
 Procurement, inventory, fleet, credit, reconciliation, notification, and IT-support route overrides.
 

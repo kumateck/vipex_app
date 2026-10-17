@@ -580,6 +580,11 @@ const BASE_ROUTES: Route[] = [
             url: '/customers',
             permissionKey: PermissionKeys.CanReadCustomers,
           },
+          {
+            title: 'Customer Messages',
+            url: '/customer-messages',
+            permissionKey: PermissionKeys.CanReadCustomerMessages,
+          },
           // {
           //   title: 'Add Customer',
           //   url: '/customers/create',
@@ -1117,6 +1122,11 @@ const BASE_ROUTES: Route[] = [
           {
             title: 'SMS Configuration',
             url: '/settings/sms',
+            permissionKey: PermissionKeys.CanReadCompanyProfile,
+          },
+          {
+            title: 'WhatsApp Settings',
+            url: '/settings/whatsapp',
             permissionKey: PermissionKeys.CanReadCompanyProfile,
           },
           {

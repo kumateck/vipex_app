@@ -7,6 +7,7 @@ const ROOT_DIR = '.';
 
 const SKIP_DIRS = new Set([
   '.git',
+  '.claude',
   'node_modules',
   'dist',
   'build',

@@ -17,6 +17,7 @@ import { companies, users } from './core';
 export const NotificationChannel = {
   SMS: 'sms',
   EMAIL: 'email',
+  WHATSAPP: 'whatsapp',
 } as const;
 
 export const NotificationCampaignStatus = {
@@ -170,6 +171,9 @@ export const notificationDispatches = pgTable(
       t.createdAt,
     ),
     byCampaign: index('notification_dispatches_campaign_idx').on(t.campaignId),
+    byProviderMessage: index('notification_dispatches_provider_message_idx')
+      .on(t.providerMessageId)
+      .where(sql`${t.providerMessageId} IS NOT NULL`),
     byCompanyStatus: index('notification_dispatches_company_status_idx').on(
       t.companyId,
       t.status,

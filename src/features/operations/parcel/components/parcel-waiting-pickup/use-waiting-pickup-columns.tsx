@@ -12,6 +12,7 @@ import type { ParcelSearchRow } from '../../api/parcel.api';
 import { ParcelCustomerCell, ParcelRouteCell } from '../parcel-party-route-cells';
 import { formatDateTime } from '../parcel-receiver-cashier/receiver-cashier-utils';
 import { ParcelTimestampsCell } from '../parcel-timestamps';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 function formatCurrency(amountPsw: number) {
   return `GHS ${(amountPsw / 100).toFixed(2)}`;
@@ -122,6 +123,7 @@ export function useWaitingPickupColumns({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <ViewParcelDetailsMenuItem parcelId={row.original.id} label="Full Details" />
             <DropdownMenuItem onClick={() => onOpen(row.original)}>View Details</DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
             <DropdownMenuItem onClick={() => void onRequestDelivery(row.original)}>

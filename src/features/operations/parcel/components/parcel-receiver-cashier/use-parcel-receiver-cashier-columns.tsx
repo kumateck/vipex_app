@@ -18,6 +18,7 @@ import {
   formatStorageCharge,
   getPaymentType,
 } from './receiver-cashier-utils';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 type UseParcelReceiverCashierColumnsOptions = {
   isPickupQueueEnabled: boolean;
@@ -146,6 +147,7 @@ export function useParcelReceiverCashierColumns({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <ViewParcelDetailsMenuItem parcelId={row.original.id} />
             {row.original.status === ParcelStatus.DELIVERED_BY_OFFICE ? (
               <DropdownMenuItem onClick={() => onReprintReceipt(row.original)}>
                 Reprint Receipt

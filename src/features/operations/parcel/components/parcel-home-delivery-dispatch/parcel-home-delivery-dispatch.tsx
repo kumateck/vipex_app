@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,10 +11,12 @@ import {
   SelectValue,
 } from '@/components/ui/select-searchable';
 import { ParcelStatus } from '@/db/schemas/enums';
+import type { ParcelSearchRow } from '../../api/parcel.api';
 import { EMPTY_META } from '../../home-delivery-pickup/utils';
 import { useHomeDeliveryDispatch } from './hooks';
 import { useHomeDeliveryDispatchColumns } from './use-home-delivery-dispatch-columns';
 import { HomeDeliveryReceiptPrintController } from './home-delivery-receipt-print-controller';
+import { SendReceiptDialog, useDigitalReceiptsModule } from '@/features/digital-receipts';
 
 export function ParcelHomeDeliveryDispatch() {
   const state = useHomeDeliveryDispatch();
@@ -34,7 +37,13 @@ export function ParcelHomeDeliveryDispatch() {
     onRequestChange,
     onPrintComplete,
   } = state;
-  const columns = useHomeDeliveryDispatchColumns(state);
+  const { isDigitalReceiptsEnabled } = useDigitalReceiptsModule();
+  const [sendReceiptFor, setSendReceiptFor] = useState<ParcelSearchRow | null>(null);
+  const closeSendReceipt = useCallback(() => setSendReceiptFor(null), []);
+  const columns = useHomeDeliveryDispatchColumns({
+    ...state,
+    onSendReceipt: isDigitalReceiptsEnabled ? setSendReceiptFor : undefined,
+  });
   return (
     <div className="w-full p-4 space-y-4">
       <ScrollableWrapper>
@@ -104,6 +113,14 @@ export function ParcelHomeDeliveryDispatch() {
           key={printData.trackingCode}
           receipt={printData}
           onComplete={onPrintComplete}
+        />
+      ) : null}
+      {sendReceiptFor ? (
+        <SendReceiptDialog
+          parcelId={sendReceiptFor.id}
+          bookingCode={sendReceiptFor.bookingCode}
+          initialKind="home_delivery"
+          onClose={closeSendReceipt}
         />
       ) : null}
     </div>

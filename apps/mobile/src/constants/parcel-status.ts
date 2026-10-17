@@ -49,3 +49,19 @@ const PARCEL_STATUS_LABELS: Record<number, string> = {
 export function getParcelStatusLabel(status: number): string {
   return PARCEL_STATUS_LABELS[status] ?? `Status ${status}`;
 }
+
+const HOME_DELIVERY_RIDER_LABELS: Record<number, string> = {
+  [ParcelStatus.HOME_DELIVERY_REQUESTED]: 'Assigned Rider',
+  [ParcelStatus.ADDRESS_COLLECTED]: 'Assigned Rider',
+  [ParcelStatus.DISPATCHED]: 'Assigned Rider',
+  [ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER]: 'By',
+  [ParcelStatus.DELIVERED_AT_HOME]: 'By',
+  [ParcelStatus.RETURNED_TO_OFFICE]: 'Returned By',
+};
+
+/** Rider line for home-delivery statuses; null for statuses unrelated to home delivery. */
+export function getParcelRiderLine(status: number, riderName?: string | null) {
+  const label = HOME_DELIVERY_RIDER_LABELS[status];
+  if (!label) return null;
+  return { label, name: riderName?.trim() || 'Not assigned' };
+}

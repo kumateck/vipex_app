@@ -6,7 +6,6 @@ export { CustomerPaymentsTab } from './customer-payments-tab';
 export { CustomerStatementsTab } from './customer-statements-tab';
 export { CustomerTabRangeFilter, type CustomerDetailsTabKey } from './customer-tab-range-filter';
 export { CustomerTransactionsTab } from './customer-transactions-tab';
-export { ParcelTransactionDetailsDialog } from './parcel-transaction-details-dialog';
 export {
   buildStatementRowsWithRunningBalance,
   formatMoney,

@@ -24,6 +24,7 @@ import {
   getPaymentType,
   getSenderDuePsw,
 } from './utils';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 type SenderPaymentsTableProps = {
   data: SenderCashierParcel[];
@@ -138,6 +139,7 @@ export function SenderPaymentsTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <ViewParcelDetailsMenuItem parcelId={row.original.id} />
               <DropdownMenuItem onClick={() => onOpenCollectPayment(row.original)}>
                 {getSenderDuePsw(row.original) > 0 ? 'Collect Payment' : 'Print Receipts'}
               </DropdownMenuItem>

@@ -64,6 +64,14 @@ export const DEFAULT_MODULE_CATALOG: ModuleCatalogDefinition[] = [
     description: 'Require approval of mobile and desktop devices before staff can sign in',
   },
   {
+    code: 'biometrics',
+    name: 'Biometric Verification',
+    isCore: false,
+    isActive: true,
+    description:
+      'Fingerprint enrollment and verification of parcel senders, receivers, and staff on fingerprint-enabled POS devices',
+  },
+  {
     code: 'inventory',
     name: 'Inventory',
     isCore: true,
@@ -134,6 +142,22 @@ export const DEFAULT_MODULE_CATALOG: ModuleCatalogDefinition[] = [
     isCore: false,
     isActive: true,
     description: 'Notification & Communication Hub module',
+  },
+  {
+    code: 'whatsapp_messaging',
+    name: 'WhatsApp Messaging',
+    isCore: false,
+    isActive: true,
+    description:
+      'WhatsApp Cloud API channel: provider settings, approved templates, and WhatsApp pickup OTPs',
+  },
+  {
+    code: 'digital_receipts',
+    name: 'Digital Receipts',
+    isCore: false,
+    isActive: true,
+    description:
+      'Send receipts by SMS, email, or WhatsApp with a secure link to the online copy of the printed receipt',
   },
   {
     code: 'communication_internal',

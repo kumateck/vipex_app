@@ -6,7 +6,7 @@ import { portraitReceiverNameFontSize } from './thermal-sticker-font-size.utils'
 import { DestinationRow } from './thermal-sticker-portrait-sections';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
 import { StickerRow } from './thermal-sticker-template-utils';
-import { ThermalStickerWordmark } from './thermal-sticker-wordmark';
+import { ThermalStickerBrand } from './thermal-sticker-brand';
 
 export function ThermalStickerPortraitTemplate({
   senderName,
@@ -61,7 +61,7 @@ export function ThermalStickerPortraitTemplate({
             objectFit: 'contain',
           }}
         />
-        <ThermalStickerWordmark />
+        <ThermalStickerBrand duplicate={duplicate} />
         <div className="justify-self-end">
           <BrandedQrCode
             value={qrValue}
@@ -91,9 +91,6 @@ export function ThermalStickerPortraitTemplate({
           <div
             style={{ fontSize: hasToBePaid ? '4.2mm' : '5.4mm', fontWeight: 900, lineHeight: 1.1 }}
           >
-            {duplicate ? (
-              <div style={{ fontSize: '2.8mm', marginBottom: '0.4mm' }}>DUPLICATE</div>
-            ) : null}
             {statusLabel}
           </div>
           {statusAmountLabel ? (

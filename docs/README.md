@@ -17,6 +17,7 @@ This directory is the canonical documentation set for the current Vipex applicat
 ## Operations and Parcels
 
 - [Parcel operations](PARCEL_OPERATIONS.md)
+- [Parcel details and history](PARCEL_DETAILS.md)
 - [Public parcel tracking API](PUBLIC_PARCEL_TRACKING_API.md)
 - [Parcel printing](PARCEL_PRINTING.md)
 - [Cashier, payments, and shifts](CASHIER_PAYMENTS_AND_SHIFTS.md)
@@ -29,6 +30,7 @@ This directory is the canonical documentation set for the current Vipex applicat
 
 - [Accounting](ACCOUNTING_MODULE.md)
 - [Customer and CRM](CRM_SYSTEM.md)
+- [Customer website enquiries, complaints and feedback](CUSTOMER_WEBSITE_MESSAGES.md)
 - [Customer wallet and credit](CUSTOMER_WALLET_CREDIT_MODULE.md)
 - [Customer wallet and credit QA](CUSTOMER_WALLET_CREDIT_QA_CHECKLIST.md)
 - [Reporting](REPORTING_MODULE.md)
@@ -49,7 +51,10 @@ This directory is the canonical documentation set for the current Vipex applicat
 
 - [Platform and access control](PLATFORM_AND_ACCESS.md)
 - [Native device registration](DEVICE_REGISTRATION.md)
+- [Biometric (fingerprint) verification — planned](BIOMETRIC_VERIFICATION.md)
 - [Company modules](COMPANY_MODULES.md)
+- [WhatsApp messaging](WHATSAPP_MESSAGING.md)
+- [Digital receipts (SMS/WhatsApp/email receipt delivery)](DIGITAL_RECEIPTS.md)
 - [AI, help, and management insights](AI_HELP_AND_INSIGHTS.md)
 - [Communication suite](COMMUNICATION_SUITE_SPEC.md)
 - [Notification hub QA](NOTIFICATION_HUB_QA_CHECKLIST.md)

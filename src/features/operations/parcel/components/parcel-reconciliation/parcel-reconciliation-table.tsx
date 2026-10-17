@@ -9,6 +9,7 @@ import type { ParcelReconciliationCaseRow } from '../../api/parcel.api';
 import { ACTION_OPTIONS, CASE_STATUS_LABEL, CASE_TYPE_OPTIONS } from './constants';
 import type { ParcelReconciliationFilters } from './types';
 import { formatMoneyPsw, formatReconciliationDate } from './utils';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 type ParcelReconciliationTableProps = {
   initialSearch: string;
@@ -101,6 +102,7 @@ export function ParcelReconciliationTable({
         enableSorting: false,
         cell: ({ row }) => (
           <div className="flex flex-wrap justify-end gap-2">
+            <ViewParcelDetailsButton parcelId={row.original.parcelId} label="Parcel" />
             {canApprove && row.original.status === 0 ? (
               <Button size="sm" onClick={() => onApproveCase(row.original)}>
                 Approve

@@ -5,7 +5,11 @@ import { updateNotificationDispatchResultRepo } from '../repository';
 import type { DeliveryResult, ProviderRow } from '../types';
 import type { SmsType } from '../sms-provider-payloads';
 import { normalizeChannel } from '../utils';
-import { sendSmsWithProvider } from '../providers';
+import {
+  sendSmsWithProvider,
+  sendWhatsAppTemplate,
+  type WhatsAppTemplateMessage,
+} from '../providers';
 async function sendEmailWithProvider(input: {
   to: string;
   subject: string;
@@ -43,6 +47,8 @@ export async function dispatchSingleMessage(input: {
   subject: string | null;
   body: string;
   smsType?: SmsType;
+  /** Required for the whatsapp channel: Meta only accepts approved templates. */
+  whatsappMessage?: WhatsAppTemplateMessage | null;
 }) {
   const channel = normalizeChannel(input.channel);
   const provider = input.provider;
@@ -69,6 +75,14 @@ export async function dispatchSingleMessage(input: {
         subject: input.subject ?? '',
         body: input.body,
       });
+    } else if (channel === 'whatsapp') {
+      result = input.whatsappMessage
+        ? await sendWhatsAppTemplate({
+            config: provider.configJson,
+            recipient: input.recipientAddress,
+            message: input.whatsappMessage,
+          })
+        : { status: 'failed', errorMessage: 'WhatsApp messages require an approved template' };
     } else {
       result = {
         status: 'failed',

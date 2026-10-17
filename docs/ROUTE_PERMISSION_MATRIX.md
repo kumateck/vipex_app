@@ -1,6 +1,11 @@
 # Route Permission Matrix
 
-Last generated: 2026-10-08
+Last generated: 2026-10-17
+
+`/customer-messages` requires `CanReadCustomerMessages`; handling changes additionally
+require `CanManageCustomerMessages`. The backend derives company scope from the
+authenticated user. Internal ticket permissions grant no inbox access. See
+[Customer website messages](CUSTOMER_WEBSITE_MESSAGES.md).
 
 Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`).
 
@@ -30,6 +35,12 @@ Each listed route is guarded by its exact override permission. Routes without an
 temporary head-office fallback, which the page and API enforce. It does not require the
 `device_verification` module, so devices can be approved before verification is enabled. `/users/devices` redirects to `/settings/devices`.
 See [Native Device Registration](DEVICE_REGISTRATION.md).
+
+`/settings/whatsapp` (WhatsApp Settings) requires `CanReadCompanyProfile` and the
+`whatsapp_messaging` module (route-module mapped, so the sidebar hides it when the module is off).
+Saving the provider or templates additionally needs `CanManageNotificationProviders` /
+`CanManageNotificationTemplates` (or `CanManageCompanyModules`) on the server.
+See [WhatsApp Messaging](WHATSAPP_MESSAGING.md).
 
 Storage clearance history at `/parcels/storage-clearances` also accepts request, approve, or
 execute clearance permission through shared path-access resolution. Action pages keep their own

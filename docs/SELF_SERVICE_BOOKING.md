@@ -115,6 +115,10 @@ The existing branch-scoped draft list is still loaded as an array; this change d
 server pagination. Search includes sender/receiver names, both phone numbers, content and
 status. Loading, request failure and empty results are distinct states.
 
+The Booking Details editor replaces the former customer-only dialog and hook; the obsolete
+customer-only frontend implementation has been removed. The compatibility customer-update API
+remains available for older clients.
+
 **View / Edit** opens the **Booking Details** dialog with the submitted sender/receiver names,
 primary phone, backup phone, parcel contents and declared value without claiming the draft.
 Readers can inspect the dialog; `CanCompleteSelfServiceBookings` enables correction and the

@@ -1,6 +1,6 @@
 # Route Permissions: Operations and People
 
-Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-10-08.
+Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-10-17.
 
 Parcel, cashier, and human-capital route overrides.
 
@@ -63,6 +63,11 @@ desktop support the action; mobile does not. QA: test cashier permission, missin
 other company/branch, deleted parcel, and a reversed delivery; denied requests must not print.
 
 ## Parcel information edits
+
+`GET /v1/shipments/parcels/:id/details` and `GET /v1/shipments/parcels/:id/history` require
+`CanReadParcels` and are company-scoped (404 outside the caller's company). The history is visible
+to anyone who can open the parcel; it does not require `CanListAuditLogs` or
+`CanGetEntityAuditHistory`. See [Parcel details and history](../PARCEL_DETAILS.md#access-and-scope).
 
 `POST /v1/shipments/parcels/:id/edit-information` accepts one of `CanUpdateParcels`,
 `CanReadParcelIncoming`, `CanCompleteOfficePickup`, `CanCreateReceiverPayments`,

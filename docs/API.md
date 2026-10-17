@@ -86,6 +86,19 @@ non-voided principal totals by payer in pesewas. Both are zero when that payer h
 payment. Super Search uses these fields only for delivered-parcel payer badges; see
 [Parcel operations](PARCEL_OPERATIONS.md). Delivery fees, storage, and voided payments are excluded.
 
+Parcel list/search responses include `riderUserId` and `riderName` from the parcel's delivery
+record (both `null` when there is none or no rider is assigned). `GET
+/v1/shipments/parcels/:id/details` includes `delivery.riderName` alongside `delivery.riderUserId`.
+Super Search uses these for its home-delivery rider line; see [Parcel operations](PARCEL_OPERATIONS.md).
+
+`GET /v1/shipments/parcels/:id/details` also returns `summary` (the parcel as list/search rows show
+it, or `null`), `userNames` (user ID to full name for every person referenced), and the delivery's
+`riderAssignedAt`, `riderCompletedAt` and `returnedAt`. `GET /v1/shipments/parcels/:id/history`
+returns `{ events }`, oldest first, each `{ id, occurredAt, category, title, description,
+actorName, branchName }`. Both require `CanReadParcels` and return 404 for a parcel outside the
+caller's company. Details were not company-checked before October 2026. See
+[Parcel details and history](PARCEL_DETAILS.md).
+
 `GET /v1/shipments/parcels/:id/receipt-reprint-tax` returns the summed, non-voided sender
 principal payment and recorded tax amounts for a receipt reprint, or `null` when no such payment
 exists. It requires authentication plus one of `CanReadConsignments`, `CanReadParcelOutgoing`, or
@@ -176,7 +189,7 @@ page. See [Shelf pickup reassignment](PARCEL_OPERATIONS.md#shelf-pickup-reassign
 
 ## Current Mounted Roots
 
-`auth`, `users`, `branches`, `locations`, `warehouses`, `customers`, `cards`, `uploads`, `cashiers`, `shipments`, `payments`, `deliveries`, `pickup-queues`, `accounting`, `inventory`, `shifts`, `company-modules`, `module-workspace`, `procurement`, `fleet-transport`, `customer-wallet-credit`, `reconciliation`, `notification-hub`, `momo`, `self-service`, `desktop-updates`, `mobile-updates`, `communication`, `customer-service`, `help-assistant`, `executive-insights`, `fleet-anomaly-brief`, `operations-exceptions-brief`, `management-daily-brief`, `ai-chat`, `it-support`, `reports`, `audit`, `hr`, `payroll`, `rbac`, and `geolocation`.
+`auth`, `users`, `branches`, `locations`, `warehouses`, `customers`, `cards`, `uploads`, `cashiers`, `shipments`, `payments`, `deliveries`, `pickup-queues`, `accounting`, `inventory`, `shifts`, `company-modules`, `module-workspace`, `procurement`, `fleet-transport`, `customer-wallet-credit`, `reconciliation`, `notification-hub`, `whatsapp`, `digital-receipts`, `momo`, `self-service`, `desktop-updates`, `mobile-updates`, `communication`, `customer-service`, `help-assistant`, `executive-insights`, `fleet-anomaly-brief`, `operations-exceptions-brief`, `management-daily-brief`, `ai-chat`, `it-support`, `reports`, `audit`, `hr`, `payroll`, `rbac`, and `geolocation`.
 
 Parcel delivery, pickup, rider handover, and home-delivery dispatch endpoints return HTTP 409
 when the parcel (or the linked parcel in a duplicate-entry case) has a requested or approved
@@ -367,6 +380,28 @@ searches, parcel details, consignment receiving reads/receive/close, parcel mark
 and PATCH arrival confirmation. Authentication and endpoint permissions still apply;
 other parcel updates and invalid/unsigned/public traffic keep their quotas. See
 [Receiving quotas](MOBILE_FRONTLINE_WORKFLOWS.md#scan-to-receive-request-quotas).
+
+## Customer website messages
+
+Customer website messages use public `POST /v1/public/contact` and staff-only
+`GET /v1/customer-messages`, `GET/PATCH /v1/customer-messages/:id`. They use dedicated
+storage and read/manage permissions, separate from internal ticketing. See
+[Customer website messages](CUSTOMER_WEBSITE_MESSAGES.md) for payloads, limits,
+retry behavior, permissions and deployment requirements.
+
+## WhatsApp Messaging and Digital Receipts
+
+- `GET /v1/whatsapp/availability`, `GET /v1/whatsapp/settings`, `PUT /v1/whatsapp/settings/provider`,
+  `PUT /v1/whatsapp/settings/events/:eventCode`, `POST /v1/whatsapp/settings/test`: see
+  [WhatsApp messaging](WHATSAPP_MESSAGING.md#api-summary). Secrets are never returned.
+- Public `GET|POST /v1/public/whatsapp/webhook`: Meta verify-token handshake and signed delivery
+  status callbacks (403 on a bad token or signature).
+- `GET|PUT /v1/digital-receipts/customers/:id/preference`, `GET /v1/digital-receipts/parcels/:id/options?kind=`,
+  `POST /v1/digital-receipts/parcels/:id/send`: see [Digital receipts](DIGITAL_RECEIPTS.md#other-api).
+- Public `GET /v1/public/receipts/:token`: `{ kind, bookingCode, issuedAt, summary, html }`. Unknown,
+  expired, malformed or module-disabled links all return 404.
+- `POST /v1/payments/receiver-otp/request` accepts optional `channel: 'sms' | 'whatsapp'` and
+  returns `{ expiresAt, channel }`.
 
 ## Receiver OTP Send Failures
 

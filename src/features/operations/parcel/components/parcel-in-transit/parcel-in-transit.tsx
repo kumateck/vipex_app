@@ -9,17 +9,11 @@ import { ConfirmMarkArrivedDialog } from './confirm-mark-arrived-dialog';
 import { ConfirmBulkArrivalDialog } from './confirm-bulk-arrival-dialog';
 import { EditIncomingTransitParcelDialog } from './edit-incoming-transit-parcel-dialog';
 import { LogDiscrepancyDialog } from './log-discrepancy-dialog';
-import { ParcelDetailsDialog } from './parcel-details-dialog';
+import { ParcelDetailsDialog } from '@/features/operations/parcel-details';
 import { IncomingTransitFilters } from './incoming-transit-filters';
 import { useParcelTransitWorkflow, type InTransitView } from './use-parcel-transit-workflow';
 import { useParcelTransitColumns } from './use-parcel-transit-columns';
-import {
-  EMPTY_META,
-  formatConsignmentLabel,
-  formatCurrency,
-  formatDate,
-  paymentMethodLabel,
-} from './parcel-transit.utils';
+import { EMPTY_META } from './parcel-transit.utils';
 
 export function ParcelInTransit({ view }: { view: InTransitView }) {
   const workflow = useParcelTransitWorkflow(view);
@@ -48,10 +42,6 @@ export function ParcelInTransit({ view }: { view: InTransitView }) {
     handleRequestChange,
     selectedParcelId,
     setSelectedParcelId,
-    details,
-    isDetailsLoading,
-    branchNameById,
-    selectedParcelRow,
     arrivalConfirmationParcel,
     isUpdatingStatus,
     setArrivalConfirmationParcel,
@@ -166,19 +156,7 @@ export function ParcelInTransit({ view }: { view: InTransitView }) {
         </Card>
       </ScrollableWrapper>
 
-      <ParcelDetailsDialog
-        open={Boolean(selectedParcelId)}
-        onClose={() => setSelectedParcelId(null)}
-        details={details}
-        isDetailsLoading={isDetailsLoading}
-        branchNameById={branchNameById}
-        selectedParcelRow={selectedParcelRow}
-        formatConsignmentLabel={formatConsignmentLabel}
-        formatCurrency={formatCurrency}
-        formatDate={formatDate}
-        paymentMethodLabel={paymentMethodLabel}
-        showQrCode={view === 'incoming'}
-      />
+      <ParcelDetailsDialog parcelId={selectedParcelId} onClose={() => setSelectedParcelId(null)} />
 
       <ConfirmMarkArrivedDialog
         parcel={arrivalConfirmationParcel}

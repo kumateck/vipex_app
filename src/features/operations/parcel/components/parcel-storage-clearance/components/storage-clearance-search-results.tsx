@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { formatStorageMoney } from '../utils';
 import type { StorageClearanceCreateState as State } from '../types';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 export function StorageClearanceSearchResults({ state }: { state: State }) {
   return (
@@ -12,18 +13,20 @@ export function StorageClearanceSearchResults({ state }: { state: State }) {
       ) : null}
       <div className="space-y-2">
         {(state.result.data?.data ?? []).map((parcel) => (
-          <button
-            key={parcel.id}
-            type="button"
-            className={`w-full rounded-md border p-3 text-left ${state.selected?.id === parcel.id ? 'border-primary' : ''}`}
-            onClick={() => state.setSelected(parcel)}
-          >
-            <strong>{parcel.bookingCode}</strong> · {parcel.trackingCode}
-            <p className="text-sm text-muted-foreground">
-              Accrued storage: {parcel.storageChargeDays ?? 0} days ·{' '}
-              {formatStorageMoney(parcel.storageChargePsw)}
-            </p>
-          </button>
+          <div key={parcel.id} className="flex items-center gap-2">
+            <button
+              type="button"
+              className={`w-full rounded-md border p-3 text-left ${state.selected?.id === parcel.id ? 'border-primary' : ''}`}
+              onClick={() => state.setSelected(parcel)}
+            >
+              <strong>{parcel.bookingCode}</strong> · {parcel.trackingCode}
+              <p className="text-sm text-muted-foreground">
+                Accrued storage: {parcel.storageChargeDays ?? 0} days ·{' '}
+                {formatStorageMoney(parcel.storageChargePsw)}
+              </p>
+            </button>
+            <ViewParcelDetailsButton parcelId={parcel.id} />
+          </div>
         ))}
       </div>
       {state.result.data && !state.result.data.data.length ? (
