@@ -1,6 +1,11 @@
 # Route Permission Matrix
 
-Last generated: 2026-10-08
+Last generated: 2026-10-17
+
+`/customer-messages` requires `CanReadCustomerMessages`; handling changes additionally
+require `CanManageCustomerMessages`. The backend derives company scope from the
+authenticated user. Internal ticket permissions grant no inbox access. See
+[Customer website messages](CUSTOMER_WEBSITE_MESSAGES.md).
 
 Source of truth: `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`).
 

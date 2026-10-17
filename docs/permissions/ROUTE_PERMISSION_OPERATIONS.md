@@ -1,6 +1,6 @@
 # Route Permissions: Operations and People
 
-Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-10-08.
+Generated from `src/shared/permissions/constants.ts` (`RoutePermissionOverrides`) on 2026-10-17.
 
 Parcel, cashier, and human-capital route overrides.
 

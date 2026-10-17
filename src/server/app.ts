@@ -64,6 +64,7 @@ import { momoRoutes } from './features/momo/routes';
 import { selfServicePublicRoutes } from './features/self-service/public.routes';
 import { selfServiceAgentRoutes } from './features/self-service/agent.routes';
 import { startSelfServiceDraftExpirySweep } from './features/self-service/expiry-sweep';
+import { publicContactRoutes, customerContactRoutes } from './features/public-contact';
 import { publicTrackingRoutes } from './features/public-tracking/public-tracking.routes';
 import { receiptReprintRoutes } from './features/receipt-reprint/receipt-reprint.routes';
 import { whatsappMessagingRoutes, whatsappWebhookRoutes } from './features/whatsapp-messaging';
@@ -81,6 +82,7 @@ export const app = new Elysia()
   .use(errorHandler)
   .use(health)
   .use(publicTrackingRoutes)
+  .use(publicContactRoutes)
   .use(receiptReprintRoutes)
   .use(whatsappWebhookRoutes)
   .use(publicReceiptRoutes)
@@ -94,6 +96,7 @@ export const app = new Elysia()
       .group('/locations', (r) => r.use(locationsRoutes))
       .group('/warehouses', (r) => r.use(warehousesRoutes))
       .group('/customers', (r) => r.use(customersRoutes))
+      .group('/customer-messages', (r) => r.use(customerContactRoutes))
       .group('/cards', (r) => r.use(cardsRoutes))
       .group('/uploads', (r) => r.use(uploadsRoutes))
       .group('/cashiers', (r) => r.use(cashiersRoutes))
