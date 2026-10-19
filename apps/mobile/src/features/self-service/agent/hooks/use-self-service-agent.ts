@@ -10,6 +10,7 @@ import {
 } from '../services/self-service-agent.service';
 import type {
   CompleteSelfServiceDraftInput,
+  CompletedSelfServiceBooking,
   SelfServiceDraft,
   UpdateSelfServiceDraftInput,
 } from '../types';
@@ -19,6 +20,9 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
   const { withAuth } = useAuth();
   const [drafts, setDrafts] = useState<SelfServiceDraft[]>([]);
   const [selected, setSelected] = useState<SelfServiceDraft | null>(null);
+  const [completedBooking, setCompletedBooking] = useState<CompletedSelfServiceBooking | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [openingDraftId, setOpeningDraftId] = useState<string | null>(null);
@@ -78,10 +82,11 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
 
   const complete = useCallback(
     async (input: CompleteSelfServiceDraftInput) => {
-      if (!canComplete) return null;
+      if (!canComplete || !selected || selected.id !== input.id) return null;
       setSaving(true);
       try {
         const result = await withAuth((token) => completeSelfServiceDraft(token, input));
+        setCompletedBooking({ draft: selected, input, result });
         notifySuccess(result.parcels[0]?.trackingCode ?? result.bookingId, 'Booking completed');
         setSelected(null);
         await load();
@@ -93,7 +98,7 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
         setSaving(false);
       }
     },
-    [canComplete, load, withAuth],
+    [canComplete, load, selected, withAuth],
   );
 
   const updateDraft = useCallback(
@@ -118,6 +123,8 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
 
   return {
     drafts,
+    completedBooking,
+    dismissCompletedBooking: () => setCompletedBooking(null),
     visibleDrafts,
     search,
     setSearch,

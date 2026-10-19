@@ -180,12 +180,16 @@ export function useParcelCreateWorkflow(initialPaymentResponsibility: MobilePaym
       setIsSubmitting(false);
     }
   };
+  const applyUpdatedCustomer = (customer: { id: string; fullname: string }) => {
+    sender.applyUpdatedCustomer(customer);
+    receiver.applyUpdatedCustomer(customer);
+  };
   return {
     canCreate,
     isHeadOffice,
     userBranchId,
-    sender,
-    receiver,
+    sender: { ...sender, applyUpdatedCustomer },
+    receiver: { ...receiver, applyUpdatedCustomer },
     destinationBranchId,
     setDestinationBranchId,
     pickupLocationId,

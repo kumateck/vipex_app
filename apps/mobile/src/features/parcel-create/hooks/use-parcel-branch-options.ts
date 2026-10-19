@@ -17,6 +17,7 @@ export function useParcelBranchOptions(
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
   const [locationOptions, setLocationOptions] = useState<LocationOption[]>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!companyId || !canCreate || isHeadOffice) return;
@@ -38,7 +39,7 @@ export function useParcelBranchOptions(
     return () => {
       cancelled = true;
     };
-  }, [companyId, canCreate, isHeadOffice, withAuth]);
+  }, [companyId, canCreate, isHeadOffice, withAuth, reloadKey]);
 
   useEffect(() => {
     if (!companyId || !destinationBranchId) {
@@ -63,7 +64,13 @@ export function useParcelBranchOptions(
     return () => {
       cancelled = true;
     };
-  }, [companyId, destinationBranchId, withAuth]);
+  }, [companyId, destinationBranchId, withAuth, reloadKey]);
 
-  return { branchOptions, isLoadingBranches, locationOptions, isLoadingLocations };
+  return {
+    branchOptions,
+    isLoadingBranches,
+    locationOptions,
+    isLoadingLocations,
+    retry: () => setReloadKey((current) => current + 1),
+  };
 }

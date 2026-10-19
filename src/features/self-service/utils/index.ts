@@ -1,3 +1,13 @@
+export { buildSelfServiceCompletionReceipt } from './build-self-service-completion-receipt';
+export { getSelfServiceSessionScreen } from './self-service-session-screen';
+export {
+  readSelfServiceSession,
+  hasSelfServiceScanLimit,
+  setSelfServiceScanLimit,
+  clearSelfServiceSession,
+  saveSelfServiceSession,
+  selfServiceSessionKey,
+} from './self-service-session-storage';
 export {
   SELF_SERVICE_INPUT_CLASS,
   SELF_SERVICE_LABEL_CLASS,

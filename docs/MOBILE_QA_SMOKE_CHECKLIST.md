@@ -1,6 +1,20 @@
 # Mobile QA Smoke Checklist
 
-Last updated: 2026-10-13
+Last updated: 2026-10-19
+
+## Self-service completion and stickers
+
+- Open a claimed draft with contents filled. Parcel details must be blank and completion blocked
+  until the officer enters operational details. Edit the customer contents without overwriting
+  those details; open another draft and confirm the officer's form resets.
+- Complete sender/receiver/split bookings. The completed panel must retain the saved booking and
+  tracking codes and allow manual sticker printing with 1, 2 or 25 copies; reject blank, zero,
+  fractional, negative and unsafe quantities. Verify destination, contacts, CS and officer details.
+- Sender-only labels show PENDING rather than PAID. Receiver/split show the planned receiver due.
+  Printing creates no payment and does not bypass the usual cashier processing.
+- Cancel/fail native printing and retry without a second completion request. Fail usage logging
+  and use Retry Print Log without another label. Fail destination loading and retry it in place.
+  Verify physical 90 × 92 mm output with the branch's Android/iOS print service and printer.
 
 ## Incoming receiver corrections
 
@@ -108,6 +122,16 @@ and reinstall checks are in [Native Device Registration](DEVICE_REGISTRATION.md)
 2. Rider:
    - Search parcel
    - Open details
+   - Cashier with `CanManageParcelSecondReceiver`: on web Delivery Cashier, search an Address
+     Collected/Dispatched booking; add, replace and remove a second receiver. Verify same-company
+     phone reuse, ten-digit/name validation, main receiver rejection and destination-branch scope.
+   - Refresh mobile Assigned Deliveries and confirm saved second name/phone appears. Select main
+     or second; confirm switching clears the signature, and only the selected recipient signs.
+     A rider with no customer-create/manage permission can select but cannot enter a new contact.
+   - With no second receiver, verify that choice is disabled and directs the rider to the cashier.
+   - Replace/remove the contact after the rider opens confirmation: stale second selection must
+     fail without changing status, collections or signature; refresh and try again. Verify a
+     completed handover cannot be edited by the cashier and receiver selection appears in audit.
    - Mark given
    - Mark returned
 3. Receive:
@@ -217,3 +241,27 @@ and reinstall checks are in [Native Device Registration](DEVICE_REGISTRATION.md)
   view without completion rights, correct customer details, contents and declared value, test
   saved-profile permissions and stale edits, and verify pricing survives edits and completion uses
   the corrected contacts, contents and value.
+
+Public self-service in a phone browser: submit a booking, use **New booking** to open a blank
+form, and repeat up to 10 total successful bookings for one scan. Verify completed count,
+receiver/content isolation, the shared 15-minute server deadline and no New booking button after 10. Refresh after the limit and require a rescan; rescan and start a fresh batch. This applies to
+the public QR website; the staff mobile completion/print workflow is unchanged.
+
+Self-service duplicate prevention: double-tap Submit, retry after a lost response, and send two
+concurrent requests with the same token/details. Verify one draft ID, one count increment and the
+same success response. Retry changed contents under the used token and require 409. Retry a
+failed database save and verify the original token still works. Refresh the success page and
+confirm it does not re-POST the previous form.
+
+Delivery cashier shift sales: receive GHS 30 principal and GHS 60 delivery fee, open Sales Report
+from the shift, and confirm **To Be Paid received = GHS 30** and **Delivery fees received = GHS 60**.
+Keep **Payments = GHS 90**. Verify partial payments, multiple methods/parcels, zero collections,
+voided-payment exclusion after refresh, and that unrelated cashier payments and **Outstanding
+To Be Paid** are not included in either delivery subtotal. Compare with web and its printout.
+
+Parcel creation customer-name popup: for both sender and receiver, search an existing primary or
+secondary phone, select the correct match, tap the pencil and save a corrected name. Confirm ID
+and numbers stay unchanged, both roles refresh if the same customer is selected, and the newly
+processed parcel/sticker uses the saved name. Test failed updates, blank/overlong names, repeated
+Save taps, Cancel and missing `CanUpdateCustomers`. Existing parcel name snapshots must remain
+unchanged and no duplicate customer or premature booking should be created.

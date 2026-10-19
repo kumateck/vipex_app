@@ -12,6 +12,58 @@ A branch QR code or self-service link identifies the branch. The public client c
 
 Subsequent public requests send the issued value in the `x-self-service-session` header. The session is not an employee login and must not authorize staff routes.
 
+### Session lifetime and recovery
+
+One QR scan allows up to **10 successful bookings**, including the first booking, within the
+original 15-minute server deadline. Each token can submit only one draft. On success, bookings
+1–9 return a replacement one-use token for **New booking**; booking 10 returns no continuation
+and asks the customer to scan again. New booking opens a completely blank form and displays
+the completed count (for example, “3 of 10”). The server validates
+the branch and expiry on every public API request; consuming the token uses an atomic database
+delete in the draft-creation transaction, so only one concurrent submission may proceed.
+Draft persistence, token consumption and continuation creation commit or roll back together.
+A failed draft save leaves the token available for retry and does not advance the booking count.
+Each continuation retains its original issue/expiry timestamps; starting another form never
+extends the 15-minute window. The public form does not compare expiry
+against the phone's wall clock or expire itself on a phone-based timer. Restored sessions are
+revalidated with the server, including after refreshing the page; a device date/time set ahead
+or behind cannot immediately expire a newly issued session. Expiry is reported when the server
+validates the next request, rather than automatically removing the form after a local timer.
+
+The printed QR continues to include `?scan=1`, which explicitly starts a fresh session. A direct
+or older branch link without that flag starts a session if no usable token is stored. An expired,
+used or missing server token shows **Start a new booking**, with a **Start new booking** button;
+the customer does not need to scan again. This begins a fresh form, not a second submission of
+the previous form. Successful submission stores the continuation token when available. After
+booking 10 it clears the token and stores a branch-specific exhausted-scan marker, so refreshing
+shows the rescan message with no new-booking/retry button. Opening the QR's `?scan=1` entry clears
+that marker and starts a fresh batch. Browser storage being disabled does not block the current
+page's in-memory continuation, but persistence across reloads is unavailable. These are public
+static QR links: the service can bound each token chain, but cannot distinguish a camera scan
+from someone reopening that same scan URL.
+Creation failures retain the server message and a **Try again** action, including rate limiting
+(30 session starts per forwarded IP per 15 minutes); recovery does not bypass that limit.
+Draft submission abuse quotas are 50 attempts per sender telephone and 200 per forwarded IP
+per 24 hours, allowing a full ten-booking batch from the same sender. Rescanning does not reset
+these separate daily quotas; failures after acquiring a submission token may count toward them.
+
+Migration `0087_self_service_sessions` creates `self_service_sessions` with a SHA-256-derived
+token key, branch/timestamp/booking-number payload and indexed `expires_at`. The same table
+stores expiring submission receipts under separate hashed keys, containing draft/result metadata
+and a normalized request fingerprint, without raw customer contacts or continuation tokens. Raw tokens and customer details are
+not stored in this table. Sessions now use PostgreSQL independently of the optional Redis cache,
+so backend restarts and requests reaching another instance retain them. Expired rows are removed
+by the existing five-minute background sweep; request-time expiry still applies if the sweep is
+delayed. General cache/rate limiting uses `new Bun.RedisClient(REDIS_URL)` when configured, with
+no silent memory fallback for an unsupported Redis runtime. Without Redis, rate-limit counters
+remain process-local and reset on restart; configure shared Redis for multi-instance quotas.
+
+Deploy order: review pending migrations, apply `0087` before the new backend, replace/drain all
+old backend workers, then deploy the web client. No production migration has been applied by this change.
+Older cache-only tokens are not migrated and require one new session after deployment; older
+frontends may still instruct users to rescan, so deploy the web update too. A missing table or
+database outage must fail session creation visibly, never switch back to process memory.
+
 When the web application runs through Vite on `localhost`, the printable QR code replaces the
 loopback hostname with the development machine's detected LAN IPv4 address while preserving the web
 port. This lets a phone on the same network open the local self-service page. Set
@@ -97,6 +149,12 @@ eligibility and cashier-session context. See
 [Mobile Frontline Workflows](MOBILE_FRONTLINE_WORKFLOWS.md).
 Both web and mobile completion forms expose the editable CS choice, prefilled from the stored draft
 value (false for drafts created after customer CS was removed).
+
+The web/desktop completion page uses the shared viewport scroll wrapper, so every field and the
+**Complete Booking** button remain reachable on short screens. On all clients, **Parcel details**
+starts blank and requires the completing officer's own description. The customer's **Contents**
+remains separate in the summary and draft editor; editing contents does not replace operational
+parcel details already entered. Opening another mobile draft starts a fresh completion form.
 
 `GET /v1/self-service/charge-agent-options` requires `CanCompleteSelfServiceBookings` and returns
 only `{ id, fullname }` for active users in the authenticated company and source branch. It does
@@ -217,15 +275,58 @@ the previous documentation's claim that self-service completion immediately requ
 
 Sticker copies must follow [Parcel Printing](PARCEL_PRINTING.md): the user enters any positive whole number with no application-defined maximum. A print failure after successful completion must not create a second parcel when retried.
 
+After successful completion, web/desktop and mobile keep a **Booking completed** panel with the
+saved booking/tracking codes, sticker-copy input, **Print Sticker**, and a return-to-drafts action.
+Printing is manual, after the officer chooses the quantity. Web/desktop reuse the existing sticker
+module and cashier-session print gates and desktop printer routing; mobile uses the phone's native
+print dialog. This action prints a sticker only and creates no invoice or payment. The label uses
+the corrected contacts, chosen destination, officer-entered parcel details and final CS choice.
+Receiver/split labels show the planned receiver amount; a sender-only label shows **PENDING** or
+**CREDIT**, never a paid receipt, because completion records no sender payment.
+
+Failed/cancelled printing leaves the completed panel available for another print attempt without
+calling completion again. Mobile blocks invalid/unsafe copy counts and printing until destination
+names load, offers retry for failed destination loading, and exposes **Retry Print Log** when the
+print succeeded but usage logging failed. That log retry does not print again. The completion panel
+is held in the current screen's memory; after leaving it, use the existing parcel reprint workflow.
+
 ## Failure and Recovery
 
-- Expired or invalid public sessions require a fresh branch session.
+- Expired or invalid public sessions require a fresh branch session, available through **Start new booking**;
+  an exhausted ten-booking batch instead requires reopening the branch QR scan entry.
 - Invalid customer input keeps the draft form editable and does not leak account data.
 - A lost claim should become available according to the configured recovery policy or be released by an authorized agent.
 - Failed completion leaves the draft recoverable and does not create partial authoritative records.
 - Successful completion with failed printing offers reprint from the created parcel.
 
 ## Verification Scenarios
+
+- Scan a current QR and open an older/direct branch link without `scan=1`; both must start a
+  booking in a fresh browser. Refresh with a valid stored token and retain the same session.
+- Set the device date/time ahead/behind by a day; fresh and restored sessions must remain usable
+  until the server rejects them. Wait 15 server minutes or submit once, reopen that consumed token,
+  and use Start new booking without scanning; verify a new token and blank form.
+- Test blocked/corrupt sessionStorage, retry after session creation failure/429, cached 410
+  followed by a successful restart, a branch-link change, and repeated taps while starting.
+- Issue through one backend instance and validate through another or after restart. Concurrent
+  submission accepts one token consumer; identical retry requests return the saved draft/result
+  without another insert or count increment. Another branch cannot consume it. Verify expired rows
+  are swept and Redis TTL/single-use operations work when configured. Coverage:
+  `self-service-session.service.spec.ts`, `self-service-session-store.spec.ts`,
+  `self-service-session-storage.test.ts`, `self-service-session-screen.test.tsx`, and optional
+  `redis-cache.integration.spec.ts` with `REDIS_TEST_URL` pointing to disposable Redis.
+
+- On a short web/desktop viewport, scroll from the summary through destination, pricing, CS,
+  parcel details and Complete Booking; verify the final button remains reachable after resizing.
+- On mobile, contents such as "Books" must appear in the summary while Parcel details is blank.
+  Blank/whitespace details block completion; enter "1 sealed carton", edit customer contents, and
+  verify the officer's details survive. Open a second draft and confirm the details reset to blank.
+- Complete once on each client; print 1, 2 and 25 copies and verify the same saved tracking code,
+  destination, backup phones, operational details and CS mark on every copy. Verify sender pay-now,
+  receiver, split and web credit labels; no sender payment or paid receipt is created by printing.
+- Cancel/fail the print and retry: the same booking remains, no second completion request is sent.
+  On mobile, fail destination lookup and retry, then fail usage logging and retry only that log.
+  Check disabled web sticker module and cashier-without-session print gates.
 
 - Web/desktop/mobile officers must select the agent alongside the authoritative charge; verify
   the parcel stores that agent while `createdBy`/draft `completedBy` still identify the submitting officer.
@@ -263,3 +364,33 @@ Sticker copies must follow [Parcel Printing](PARCEL_PRINTING.md): the user enter
   cannot edit the branch; existing roles with `CanUpdateBranches` retain print access.
 - Terms dialog readability on mobile, unticked-by-default consent, blocked submission without
   consent, and server rejection of missing, false, or outdated terms versions.
+
+### Ten-booking continuation QA
+
+- Submit ten drafts using one scan and the same sender telephone. After submissions 1–9,
+  **New booking** opens a blank sender step, retaining only the branch and server-authorized
+  count. Each draft has distinct sender/receiver/content values and no prior form data leaks.
+- After the tenth, confirm **New booking** is absent, the count is 10 of 10 and rescan guidance
+  is shown. Refresh and confirm no new token is issued. Scan the branch QR again and confirm
+  a new batch starts at 1; an expired continuation recovers without pretending submission failed.
+- Duplicate/concurrent requests using a consumed token create only one draft and one continuation
+  and return that original successful response. Different details with the same consumed token
+  return 409 instead of creating another draft. Submission receipts last until the draft deadline
+  (one hour); expired/unknown tokens still return 410. A client submission guard blocks double taps.
+  Try a database failure while saving and confirm the token remains usable and count unchanged.
+  Restart or switch backend instance between bookings and verify the count/deadline persist.
+- Refresh between bookings and retain the next token/count; changing the phone's clock must not
+  reset the count or extend the original deadline. The 15-minute deadline can end a batch before 10.
+- Backend response adds `bookingsCompleted` and nullable `nextSession` (branch, token, original
+  timestamps, next `bookingNumber`). Existing stored payloads without a count start at 1.
+  Deploy the backend before the web update; no migration beyond the pending `0087` is required.
+  Automated coverage: `self-service-booking-continuation.spec.ts`,
+  `self-service-session.service.spec.ts` and `self-service-success-screen.test.tsx`.
+
+Idempotency is scoped to the submitted token: retries and network-loss recovery reuse the original
+draft ID and continuation, including across backend restarts. Draft insertion, receipt storage,
+continuation creation and token consumption share one database transaction. The request fingerprint
+normalizes names/phones/value and excludes changing request IP and server timestamps. Repeat
+submissions do not increment the booking count or daily counters. Using **New booking** intentionally
+starts another blank parcel form with its next token; the service does not merge separate intended
+parcels merely because they have the same sender or contents.

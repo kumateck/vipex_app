@@ -19,6 +19,38 @@ const baseProps = {
 
 describe('ThermalStickerTemplate', () => {
   test.each(['portrait', 'landscape'] as const)(
+    'keeps unpaid completion %s labels pending',
+    (orientation) => {
+      const pending = renderToStaticMarkup(
+        <ThermalStickerTemplate
+          {...baseProps}
+          orientation={orientation}
+          paymentStatusLabel="PENDING"
+        />,
+      );
+      const credit = renderToStaticMarkup(
+        <ThermalStickerTemplate
+          {...baseProps}
+          orientation={orientation}
+          paymentStatusLabel="CREDIT"
+        />,
+      );
+      const receiver = renderToStaticMarkup(
+        <ThermalStickerTemplate
+          {...baseProps}
+          orientation={orientation}
+          paymentStatusLabel="PENDING"
+          toBePaidCedis={30}
+        />,
+      );
+      expect(pending).toContain('PENDING');
+      expect(pending).not.toContain('>PAID<');
+      expect(credit).toContain('CREDIT');
+      expect(receiver).toContain('TO BE PAID');
+      expect(receiver).toContain('GHS 30.00');
+    },
+  );
+  test.each(['portrait', 'landscape'] as const)(
     'marks all reprinted %s stickers as duplicate',
     (orientation) => {
       const original = renderToStaticMarkup(

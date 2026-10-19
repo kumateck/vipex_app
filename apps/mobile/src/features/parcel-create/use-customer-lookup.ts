@@ -93,6 +93,15 @@ export function useCustomerLookup(withAuth: WithAuth) {
     return () => clearTimeout(timer);
   }, [lookup, telephone, telephone2]);
 
+  const applyUpdatedCustomer = (updated: { id: string; fullname: string }) => {
+    lookupVersion.current += 1;
+    setIsLookingUp(false);
+    setMatches((current) =>
+      current.map((row) => (row.id === updated.id ? { ...row, fullname: updated.fullname } : row)),
+    );
+    if (selectedCustomerId.current === updated.id) setFullname(updated.fullname);
+  };
+
   const reset = () => {
     lookupVersion.current += 1;
     setTelephoneRaw('');
@@ -119,6 +128,7 @@ export function useCustomerLookup(withAuth: WithAuth) {
     isExistingCustomer,
     isNewCustomer,
     selectMatch,
+    applyUpdatedCustomer,
     lookup,
     reset,
   };

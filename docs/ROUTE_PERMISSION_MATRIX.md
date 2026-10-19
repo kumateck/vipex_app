@@ -18,7 +18,7 @@ new page permission is required. See [Parcel Operations](PARCEL_OPERATIONS.md#ag
 The matrix is split by domain so each reference remains readable:
 
 Parcel information edits use a dedicated endpoint with authenticated company/destination-branch
-scope. A receiver correction requires both a supported parcel workflow permission and
+scope, extended to the source branch for actors with `CanUpdateParcels`. A receiver correction requires both a supported parcel workflow permission and
 `CanUpdateCustomers`; customer management permission alone cannot rewrite a parcel name.
 Details-only edits retain the workflow permission without a customer-update grant. See
 [Operations endpoint permissions](permissions/ROUTE_PERMISSION_OPERATIONS.md#parcel-information-edits).
@@ -79,3 +79,16 @@ Saved matching customer profile changes additionally require `CanUpdateCustomers
 Edits are company/branch scoped and reject another officer's claim or a stale draft.
 No page override changes. Location capability controls retain the existing location
 create/update/read permissions. Receiving quota exemptions do not bypass any route guard.
+
+Delivery Cashier's upcoming handovers section uses `CanManageParcelSecondReceiver` for
+`PUT/DELETE /shipments/parcels/:id/second-receiver`, scoped to the destination branch. The
+editable states now include Address Collected and Dispatched until rider handover. Mobile rider
+selection remains under `CanCompleteDoorstepDelivery`, without customer-create/manage rights.
+See [Parcel Operations](PARCEL_OPERATIONS.md) for validation and stale-selection behavior.
+
+Source-branch sender reassociation uses `GET /shipments/parcels/:id/sender-candidates` and
+`POST /shipments/parcels/:id/correct-sender`, requiring **both** `CanUpdateParcels` and
+`CanUpdateCustomers`. Authentication determines company and sending branch. Only an active
+existing customer matching the exact telephone can be selected; stale sender IDs and sender
+credit history are rejected. The change is audited and does not merge customer profiles or
+move payments. See [Parcel Operations](PARCEL_OPERATIONS.md) for the correction workflow.

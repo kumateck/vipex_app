@@ -286,8 +286,8 @@ roles that need it. Without it the action is hidden and the server returns 403. 
 Update offers **Add Second Receiver** / **Change Second Receiver** in the row action menu; Parcel
 Assignment shows an **Add 2nd Receiver** / **Change 2nd Receiver** button beside Assign. The
 action appears only for parcels in Arrived at Destination, Customer Contacted, Returned to Office,
-Awaiting Pickup, or Home Delivery Requested; parcels with a rider, delivered, or returning to
-source do not offer it.
+Awaiting Pickup, Home Delivery Requested, Address Collected, or Dispatched. Parcels already
+handed over by a rider, delivered, or returning to source do not offer it.
 
 The dialog requires a name and a ten-digit telephone that differs from the main receiver's, and is
 prefilled with the current second receiver when one exists. The telephone is resolved like other
@@ -303,13 +303,33 @@ email; customer notifications remain available only from the call outcome. The s
 parcels outside the staff member's company and destination branch. Web only; mobile has no
 equivalent page.
 
+Delivery Cashier also has **Upcoming handovers: second receivers**, showing Address Collected
+and Dispatched parcels at the cashier's destination branch. Search by booking/tracking or receiver,
+then use **Add Second Receiver** or **Change Second Receiver**. This uses the same permission,
+validation, customer reuse, removal, card clearing, OTP expiry and audit rules above, without
+requiring a separate `CanCreateCustomers` grant. The finalization queue remains separate and
+only contains completed rider handovers. Staff must save the contact before the rider confirms.
+
+On mobile, Assigned Deliveries → Confirm handover asks **Who is receiving the parcel?** and
+lets the rider select the main receiver or the cashier-added second receiver. Riders cannot
+create or edit this contact from the confirmation sheet; when absent, the second choice is
+disabled with instructions to contact the delivery cashier and refresh. Changing the choice
+clears the signature. Signed handover retains the parcel's authorized second receiver even
+when the main receiver collects. `CanCompleteDoorstepDelivery` authorizes confirmation;
+`CanCreateCustomers` and `CanManageParcelSecondReceiver` are not required for selection.
+The server rejects a selected second receiver that no longer matches the locked parcel with
+409, and rejects inactive or foreign-company customer IDs with 400. The rider must refresh,
+reselect and capture a fresh signature. `RIDER_HANDOVER_RECEIVER_SELECTED` audit metadata
+records the selected target and customer ID in the same transaction as signature and collection.
+Existing web handovers without the selection field retain their contact-entry behavior.
+
 QA: with a role lacking `CanManageParcelSecondReceiver`, confirm neither page shows the action;
 grant it and add a second receiver on each page and confirm it appears under the receiver and in
 Waiting for Pickup with no SMS sent; change it and confirm the old second receiver's OTP no longer
 verifies; remove it, confirm the prompt, and verify the row no longer shows a second receiver;
 enter an existing customer's telephone and confirm that customer is linked unchanged; enter the
 main receiver's telephone and a nine-digit number and confirm both are rejected; confirm a
-dispatched parcel offers no action and a direct request for another branch's parcel returns 404.
+dispatched parcel remains editable until handover and another branch's parcel returns 404.
 
 All Parcels Super Search uses the same payment legend and places the matching colored indicator in
 each Payment cell. A fully paid parcel shows only its **Paid** amount; a fully unpaid parcel shows
@@ -562,10 +582,78 @@ parcel records the replacement customer's name at that change. Removing a second
 clears its stored name. Phone numbers and other customer contact fields still come from the
 linked customer record.
 
+#### Editing customer names before parcel creation
+
+On web/desktop parcel creation, an existing **Sender** and each existing **Recipient** have a
+pencil icon in their card header. Enter a ten-digit telephone, select the matching customer,
+then use the icon to edit the customer name in a popup before creating/processing the parcel.
+Both primary and secondary telephone lookups are supported. Booking lookup uses the minimal
+`GET /customers/lookup/booking-by-telephone/:telephone` endpoint under
+`CanCreateBookingWithParcels`; it does not additionally require `CanReadCustomers`. Saving the
+popup requires `CanUpdateCustomers`. The existing customer ID and primary number are retained;
+web/desktop also retains its optional secondary-number editor. A name must trim to 1–255
+characters. Saving the popup cannot submit/process the parent booking form. Failure leaves the
+popup open and preserves the entered values; duplicate saves are blocked while pending.
+
+Mobile parcel creation now has the same pencil action for both the selected sender and receiver.
+Its popup edits the name only; customer ID and both telephone numbers stay unchanged. On save,
+the selected match and displayed name update, including both roles when the same customer is
+selected as sender and receiver. Failed updates keep the popup open. A missing
+`CanUpdateCustomers` grant hides the action on both clients; unmatched numbers remain the
+ordinary new-customer flow. The server continues to enforce company scope and record its
+existing customer-update audit. Updating a customer profile name does not rewrite existing
+parcel name snapshots. Future bookings capture the saved corrected name.
+
+QA: edit sender and receiver names on each client before processing, including a number found
+in the secondary-phone field and a customer selected for both roles. Confirm the new parcel and
+sticker use the saved name and original customer ID, without a duplicate customer. Verify web
+Save/Enter in the popup never creates a booking, a user without customer-directory permission can
+use booking lookup with the proper booking/customer-update grants, missing update permission
+hides the icon, and blank/long names or failed updates preserve the form.
+
+#### Correcting a processed parcel's sender association
+
+If a wrong sender telephone was used and the correct telephone already belongs to an existing
+customer, use **Edit → Correct sender customer** from the source-branch Processed Parcels /
+Consignment, In Transit Outgoing or Super Search flow. Enter the correct number, choose the
+matching existing customer explicitly, enter a reason (5–1000 trimmed characters), and select
+**Link selected sender**. Do not change the mistaken customer's telephone to a number already
+owned by the correct customer. Both customer profiles remain unchanged; only this selected
+parcel's `senderId` and saved sender name change. Other parcels, booking/tracking codes,
+receiver association, status, charges and posted payments are preserved. Reprint the saved
+parcel's sticker/receipt when an already-printed label needs the corrected sender.
+
+`CanUpdateParcels` and `CanUpdateCustomers` are required. Candidate lookup and correction are
+company-scoped and restricted to the authenticated source branch. A destination or third branch
+cannot use this action. Exact primary/secondary telephone matching returns only customer ID,
+name and the two numbers; no match requires checking the number, and multiple matches require
+an explicit choice. Deleted parcels or inactive/foreign-company customers are rejected. The
+server locks the parcel, checks `expectedSenderId`, verifies the selected customer still owns
+the entered number, and atomically writes the association, sender snapshot and
+`PARCEL_SENDER_CHANGED` audit with old/new IDs/names, number, reason and actor. A stale sender,
+changed number, missing snapshot support or audit failure leaves the correction unsaved.
+Selecting the current sender changes nothing.
+
+A parcel with sender customer-credit ledger history is rejected with an Accounts reconciliation
+message. This correction does not transfer debts, credit allocations or balances between
+customers; posted ordinary payment rows have no direct customer ID and remain attached to the
+same parcel. Existing sender-linked credit history must be reconciled through the accounting
+workflow before identity reassociation. The feature introduces no schema migration and uses the
+existing name-capture trigger. It is a web/desktop processed-parcel correction; mobile's name
+popup is for pre-booking profile edits.
+
+QA: correct a processed parcel to an existing primary or secondary phone customer and verify
+its sender name/ID, unchanged profiles/other parcels, amounts, status and audit. Reject a stale
+sender, deleted/inactive customer, foreign company, destination/third branch, missing permissions,
+wrong number or credit-linked sender. Verify an audit-write failure rolls back the association.
+Automated coverage: `parcel-sender-correction.spec.ts`,
+`parcel-sender-correction-access.spec.ts` and `existing-customer-edit-dialog.test.tsx`.
+
 #### Correcting a receiver from a parcel
 
 The **Edit** action on incoming in-transit parcels, Waiting for Pickup, Receiver Cashier,
-and Shelf Picker Update saves a deliberate receiver-name correction on the selected parcel
+and Shelf Picker Update, and on source-branch Processed Parcels / Consignment, In Transit
+Outgoing and Super Search parcel details, saves a deliberate receiver-name correction on the selected parcel
 and the linked customer in one transaction. The receiver ID stays associated with the same
 customer. Other parcels for that customer retain their recorded names, including sender and
 second-receiver names. Editing through Customer Management still changes only the customer
@@ -576,12 +664,30 @@ across parcels because contact fields come from the customer record.
 Web and desktop use `POST /v1/shipments/parcels/:id/edit-information`; mobile's incoming
 receive-process screen uses the same operation. Parcel details/content changes and supplied
 receiver corrections are atomic, including their audit records. The server scopes the parcel
-to the authenticated company and destination branch, rejects deleted parcels and a stale
-receiver ID, and requires the existing workflow permission plus `CanUpdateCustomers` when
+to the authenticated company and destination branch, or to the source branch when the actor has
+`CanUpdateParcels`. It rejects deleted parcels and a stale receiver ID, and requires the existing
+workflow permission plus `CanUpdateCustomers` when
 receiver fields are supplied. Invalid/blank names, malformed phones, a duplicate telephone
 in either customer phone field, or a database write failure leave the entire edit unsaved.
 Details-only edits do not require customer-update permission. No status, payment, receiver
 association, second-receiver authorization, or shelf assignment change is part of this operation.
+
+Source-branch staff use the row **Edit** action on **Processed Parcels / Consignment**
+(`/parcels/processed`) and **In Transit Outgoing**, or **Edit** in **Super Search** details.
+The shared form edits parcel details, receiver name and primary telephone. `CanUpdateParcels`
+is required for these source actions; without `CanUpdateCustomers`, receiver fields are read-only
+and details-only changes remain available. Both grants are needed to correct all three fields.
+The source branch remains authorized after dispatch: the current workflow has no additional
+status restriction. Source-branch read/incoming workflow grants alone do not authorize outgoing
+edits. Another company, a third branch or a deleted parcel remains outside scope.
+
+The former Processed Parcels routing/telephone dialog is retained under **Edit routing & contacts**
+for destination, pickup/source location, sender phone and secondary-phone maintenance. The new
+**Edit** submits the three requested fields in one atomic information-edit request. List/detail
+caches refresh through the existing mutation invalidation. The form saves only changed fields,
+retains entered values on failure, prevents repeated saves while a request is pending and keeps
+the form's original values if a background list refresh occurs. No new mobile outgoing or
+consignment editor is introduced; existing mobile destination receiving uses the same endpoint.
 
 **Deployment requirement:** apply migration `0081_parcel_receiver_name_corrections` before
 deploying the new endpoint and clients. It replaces the existing capture function so explicit
@@ -611,7 +717,10 @@ QA: create two parcels for one receiver, correct the name from one parcel, and c
 that parcel and the customer change. Rename again from Customer Management and confirm both
 parcels retain their names in lists, detail, receipts, consignments, reports, and name search.
 Try a phone-only edit after a customer rename; the profile name must remain unchanged. Repeat
-on all four web/desktop edit screens and mobile receiving. Reject missing permissions, another
+on destination web/desktop edit screens and mobile receiving, and repeat at the source branch
+from Processed Parcels / Consignment, In Transit Outgoing and Super Search. Verify details-only
+source edits with `CanUpdateParcels`, receiver corrections with both grants, and reject source
+read-only workflow grants. Reject missing permissions, another
 company/branch, deleted parcels, a changed receiver ID, duplicate primary/secondary phones,
 and invalid names/phones. A failed parcel write must roll back customer changes and audits.
 Automated coverage is in `tests/server/parcel-information-edit*.spec.ts` and
@@ -679,6 +788,11 @@ the parcel keeps the backfilled name.
 
 Destination staff with `CanUpdateParcels` can find a parcel in **All Parcels Super Search**,
 open its details, and select **Return to Source**. A reason of 5–500 characters is required.
+The action appears above the details tabs. If it is unavailable, Super Search shows the button
+disabled with the reason (missing Update Parcels permission, missing/wrong destination branch,
+deleted parcel, or ineligible status) instead of silently hiding it. This does not grant any new
+permission or bypass server checks. The source-branch Returns to Source history screen keeps
+its existing read-only behavior and does not offer this action.
 The server checks that the actor belongs to the parcel's destination branch, that the
 source and destination differ, and that the parcel is available at the destination.
 Eligible statuses are Arrived at Destination, Customer Contacted, Awaiting Pickup,
@@ -709,9 +823,12 @@ the list does not confirm physical receipt.
 QA: return a parcel from the destination and verify it appears only for its source
 branch. Search by booking code, review details, open reconciliation filtered to the
 booking, and start a new shipment. Check that users lacking the relevant action
-permissions do not see those actions, that pagination works, and that the original
+permissions cannot use those actions, that pagination works, and that the original
 return record remains after creating a new booking. A destination or unrelated branch
 must not see the source branch's list.
+In Super Search, verify an eligible destination officer sees the enabled return button above
+the tabs; source/unassigned branches, missing `CanUpdateParcels`, deleted and handed-over
+parcels show a disabled button and an accurate reason. Coverage: `return-to-source-action.test.tsx`.
 
 QA: mark a parcel arrived at its destination, record a reasoned return, and verify the
 status and audit entry. Repeat from Awaiting Pickup and Returned to Office. Verify
@@ -1084,6 +1201,17 @@ behavior:
 - The shared app connection (`src/db/config.ts`) starts every session with `jit=off`. No query
   in the app recovers JIT's compile time; long reports that might benefit should set `jit` per
   transaction.
+- App connections also use `max_parallel_workers_per_gather=0`. A production booking-code lookup
+  from the reconciliation dialog reproduced PostgreSQL `53100`: a parallel plan could not resize
+  an 8 MiB dynamic shared-memory segment (`No space left on device`), which the API correctly
+  concealed behind its generic 500 message. Running the same read-only lookup with parallel
+  workers disabled returned the expected parcel. This connection setting avoids that allocation
+  without changing search filters, amounts, permissions or database records. Application-level
+  row/count requests still run concurrently; only PostgreSQL parallel workers are disabled.
+  This applies to all clients using the shared backend connection. Large analytical queries
+  may run more slowly without parallel workers and should be measured separately. Deploy/restart
+  the backend to establish connections with this setting; a frontend/mobile update alone does
+  not apply it. No migration is needed.
 - The row query and the count query run in parallel.
 - The count query joins only the tables its filters reference: customers only when a search
   term is present, consignment tables only for sent-date or consignment-number filters.
@@ -1113,6 +1241,16 @@ list; enter an invalid date and confirm the validation message.
 QA: search a booking code, phone and name on Waiting for Pickup and Receiver Cashier at a busy
 branch and confirm results in under 2 s with an unchanged result count; page through results
 and confirm the total and page count stay consistent.
+
+For reconciliation, test booking-code searches for both source-branch and destination-branch
+matches and linked duplicate searches. Confirm the correct saved parcel/amounts are returned
+without a generic 500 or a PostgreSQL `53100` log. The read-only diagnostic
+`bun run scripts/check-parcel-booking-search.ts [booking-code] --serial` checks both query
+directions against `CHECK_DATABASE_URL` (or `DATABASE_URL`), enforces read-only connections and
+a 15-second statement timeout, and reports counts/errors without customer details. Omitting a
+code selects one existing non-deleted booking for the diagnostic. Without `--serial`, it uses
+the database's parallel-worker default for comparison. Never interpret a passing sample as
+verification of every production booking; repeat with the affected code when available.
 
 ### Storage fee indicator in parcel searches
 
@@ -1183,7 +1321,11 @@ approval cycles. Receipt reprints retain the documented DUPLICATE behavior.
 
 Migration `0077_parcel_storage_clearance.sql` adds `parcel_storage_clearance_requests` and its
 company/status/date, parcel/date, and unique-open-request indexes. Assign the new permissions
-before users work with the pages. The former direct storage-waiver API and cashier action are
+before users work with the pages. On the Permissions page all four appear together under
+**Operations → Parcel Lifecycle → Storage Fee Clearance**. `CanExecuteParcelStorageClearance`
+keeps its `Accounting` catalog group but is no longer listed under Finance → Financial
+Accounting. Permission search only covers the active tab, so search from the Operations tab.
+Only a System Admin role, or a role that already holds a permission, can grant it. The former direct storage-waiver API and cashier action are
 removed. Mobile has no clearance screens; cashier settlement and storage indicators continue to
 use the shared backend balance. This change does not apply the migration to deployed databases.
 

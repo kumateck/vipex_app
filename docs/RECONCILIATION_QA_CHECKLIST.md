@@ -40,3 +40,17 @@
 2. Confirm `/reconciliation/*` pages are blocked in private layout.
 3. Confirm reconciliation links are hidden in sidebar.
 4. Confirm `/v1/reconciliation/*` endpoints return module-disabled error.
+
+## Parcel reconciliation booking-code search
+
+This is the separate **Parcels → Reconciliation Cases** workflow, using the shared parcel search.
+
+1. After deploying/restarting the backend, open Create Reconciliation Case and search a known
+   booking code as an officer in its source branch, then its destination branch. Verify the
+   expected booking/tracking codes and amounts; repeat the search for a linked duplicate.
+2. Verify a missing booking produces an empty result, and company/branch filters remain applied.
+3. Confirm there is no generic "Something went wrong" response or PostgreSQL `53100` log under
+   concurrent searches. New app connections must have `max_parallel_workers_per_gather=0`.
+4. Use the read-only diagnostic described in [Parcel search performance](PARCEL_OPERATIONS.md#parcel-search-performance)
+   to compare a failing production code with serial execution. No schema/data repair is required
+   for the shared-memory failure reproduced on 2026-10-19.

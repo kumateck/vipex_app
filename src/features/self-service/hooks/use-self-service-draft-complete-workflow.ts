@@ -4,14 +4,18 @@ import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { sanitizeString } from '@/lib/utils';
 import type { ParcelBookingFormValues } from '@/features/operations/parcel/components/parcel-create';
+import type { ReceiptPrintData } from '@/features/operations/parcel/components/parcel-sticker-actions';
 import {
+  type CompleteSelfServiceDraftInput,
   useCompleteSelfServiceDraftMutation,
   useGetSelfServiceDraftQuery,
 } from '../api/self-service-agent.api';
 import { useSelfServiceDraftCompleteForm } from './use-self-service-draft-complete-form';
+import { buildSelfServiceCompletionReceipt } from '../utils';
 
 export function useSelfServiceDraftCompleteWorkflow() {
   const [isCustomerEditorOpen, setIsCustomerEditorOpen] = useState(false);
+  const [receipt, setReceipt] = useState<ReceiptPrintData | null>(null);
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: draft, isLoading, isError } = useGetSelfServiceDraftQuery(id, { skip: !id });
@@ -22,7 +26,7 @@ export function useSelfServiceDraftCompleteWorkflow() {
     const parcel = values.parcels[0];
     if (!draft || !parcel) return;
     try {
-      const response = await completeDraft({
+      const input: CompleteSelfServiceDraftInput = {
         id: draft.id,
         destinationId: parcel.destinationBranchId,
         pickupLocationId: parcel.destinationLocationId || null,
@@ -36,9 +40,22 @@ export function useSelfServiceDraftCompleteWorkflow() {
             ? sanitizeString(parcel.senderPartialPayment).replace(/,/g, '')
             : null,
         callSender: parcel.callSender,
-      }).unwrap();
+      };
+      const response = await completeDraft(input).unwrap();
+      setReceipt(
+        buildSelfServiceCompletionReceipt({
+          draft,
+          input,
+          response,
+          destinationBranchName:
+            formState.destinationBranchOptions.find((branch) => branch.id === input.destinationId)
+              ?.name ?? '-',
+          destinationLocationName:
+            formState.locationOptions.find((location) => location.id === input.pickupLocationId)
+              ?.name ?? '-',
+        }),
+      );
       toast.success(`Booking created: ${response.parcels[0]?.trackingCode ?? response.bookingId}`);
-      navigate('/parcels/self-service');
     } catch (error) {
       toast.error(getErrorMessage(error, '') || 'Failed to complete this booking');
     }
@@ -50,6 +67,8 @@ export function useSelfServiceDraftCompleteWorkflow() {
   };
   return {
     ...formState,
+    receipt,
+    onDone: () => navigate('/parcels/self-service'),
     draft,
     isLoading,
     isError,

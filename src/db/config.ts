@@ -25,7 +25,12 @@ function createSqlClient() {
     backoff: (retries) => Math.max(0.5, Math.min(0.5 * 2 ** retries, 30)),
     // JIT compilation cost seconds per request on parcel list/search queries (measured
     // 5.0s of a 5.7s query in production); OLTP queries here never recover that cost.
-    connection: { jit: 'off' },
+    connection: {
+      jit: 'off',
+      // Parallel hash plans exhausted production PostgreSQL shared memory (53100)
+      // during booking-code searches. Keep OLTP queries off dynamic shared memory.
+      max_parallel_workers_per_gather: 0,
+    },
   });
 }
 

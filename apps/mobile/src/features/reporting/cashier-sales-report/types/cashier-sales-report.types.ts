@@ -1,5 +1,7 @@
 export type CashierSalesPaymentRow = {
   paymentId: string;
+  cashierType: number;
+  component: number;
   parcelId: string;
   bookingCode: string;
   trackingCode: string;
@@ -27,6 +29,7 @@ export type CashierSalesToBePaidRow = {
 };
 
 export type CashierSalesReport = {
+  filters?: { cashierType?: number | null };
   generatedAt: string;
   totals: {
     sessions: number;

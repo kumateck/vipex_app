@@ -1,3 +1,4 @@
+import { useDeliveryCashierCollections } from './use-delivery-cashier-collections';
 import type { RefObject } from 'react';
 import type { DailyCashierSalesReport } from '@/features/reporting/api/reporting.api';
 import { PrintableReportDocument } from '@/features/reporting/components/printable-report-document';
@@ -33,6 +34,7 @@ export function DailyCashierSalesPrintDocument({
   activeTab,
 }: DailyCashierSalesPrintDocumentProps) {
   const isToBePaid = activeTab === 'tobepaid';
+  const collections = useDeliveryCashierCollections(report);
 
   return (
     <div className="hidden">
@@ -48,7 +50,9 @@ export function DailyCashierSalesPrintDocument({
         generatedAt={generatedAt}
         filters={filters}
         sections={
-          isToBePaid ? buildToBePaidSections(report) : buildPaymentSections(report, routeSummary)
+          isToBePaid
+            ? buildToBePaidSections(report)
+            : buildPaymentSections(report, routeSummary, collections)
         }
       />
     </div>
@@ -58,6 +62,7 @@ export function DailyCashierSalesPrintDocument({
 function buildPaymentSections(
   report: DailyCashierSalesReport | undefined,
   routeSummary: CashierSalesRouteSummary[],
+  collections: ReturnType<typeof useDeliveryCashierCollections>,
 ) {
   const transactions = groupDeliveryCashierTransactions(report?.transactions ?? []);
 
@@ -79,9 +84,21 @@ function buildPaymentSections(
       rows: [
         ['Sender', formatMoneyPsw(report?.cashierTypeTotals.senderPsw ?? 0)],
         ['Receiver', formatMoneyPsw(report?.cashierTypeTotals.receiverPsw ?? 0)],
-        ['Delivery', formatMoneyPsw(report?.cashierTypeTotals.deliveryPsw ?? 0)],
+        ['Delivery total', formatMoneyPsw(report?.cashierTypeTotals.deliveryPsw ?? 0)],
       ],
     },
+    ...(collections.visible
+      ? [
+          {
+            heading: 'Delivery cashier collections',
+            headers: ['Received component', 'Amount'],
+            rows: [
+              ['Delivery fees received', formatMoneyPsw(collections.deliveryFeeReceivedPsw)],
+              ['To Be Paid received', formatMoneyPsw(collections.toBePaidReceivedPsw)],
+            ],
+          },
+        ]
+      : []),
     {
       heading: 'Sales by Route',
       headers: [

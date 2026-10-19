@@ -1,3 +1,7 @@
+import {
+  ParcelInformationEditorDialog,
+  useParcelInformationEditor,
+} from '../../parcel-information-editor';
 import { EllipsisVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +22,7 @@ export function ParcelTransitActions({
   parcel: ParcelSearchRow;
   workflow: ReturnType<typeof useParcelTransitWorkflow>;
 }) {
+  const editor = useParcelInformationEditor(parcel);
   const {
     view,
     isUpdatingStatus,
@@ -35,66 +40,76 @@ export function ParcelTransitActions({
     setArrivalConfirmationParcel,
   } = workflow;
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          aria-label="Parcel actions"
-          size="icon"
-          variant="outline"
-          className="h-8 w-8"
-          disabled={isUpdatingStatus}
-        >
-          <EllipsisVertical className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setSelectedParcelId(parcel.id)}>
-          {view === 'incoming' ? 'View Details & QR Code' : 'View Details'}
-        </DropdownMenuItem>
-        {view === 'incoming' ? (
-          <DropdownMenuItem
-            onClick={() => {
-              edit.openEditDialog(parcel, refetch);
-            }}
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label="Parcel actions"
+            size="icon"
+            variant="outline"
+            className="h-8 w-8"
+            disabled={isUpdatingStatus}
           >
-            Edit
+            <EllipsisVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setSelectedParcelId(parcel.id)}>
+            {view === 'incoming' ? 'View Details & QR Code' : 'View Details'}
           </DropdownMenuItem>
-        ) : null}
-        {view === 'outgoing' ? (
-          <>
-            <div className="px-2 py-1.5" onKeyDown={(event) => event.stopPropagation()}>
-              <StickerCopiesInput
-                copies={stickerCopies}
-                onChange={(copies) => setStickerCopies(normalizeStickerCopies(copies))}
-              />
-            </div>
-            <DropdownMenuItem onClick={() => void printOutgoing(parcel, 'sticker', stickerCopies)}>
-              Print Sticker
+          {view === 'incoming' ? (
+            <DropdownMenuItem
+              onClick={() => {
+                edit.openEditDialog(parcel, refetch);
+              }}
+            >
+              Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => void printOutgoing(parcel, 'invoice')}>
-              Print Receipt
+          ) : null}
+          {view === 'outgoing' && editor.canEdit ? (
+            <DropdownMenuItem onClick={editor.begin}>Edit</DropdownMenuItem>
+          ) : null}
+          {view === 'outgoing' ? (
+            <>
+              <div className="px-2 py-1.5" onKeyDown={(event) => event.stopPropagation()}>
+                <StickerCopiesInput
+                  copies={stickerCopies}
+                  onChange={(copies) => setStickerCopies(normalizeStickerCopies(copies))}
+                />
+              </div>
+              <DropdownMenuItem
+                onClick={() => void printOutgoing(parcel, 'sticker', stickerCopies)}
+              >
+                Print Sticker
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void printOutgoing(parcel, 'invoice')}>
+                Print Receipt
+              </DropdownMenuItem>
+            </>
+          ) : null}
+          {view === 'incoming' ? (
+            <DropdownMenuItem
+              onClick={() => {
+                setDiscrepancyParcel(parcel);
+                setDiscrepancyDialogOpen(true);
+                setDiscrepancyNotes('');
+                setMissingTrackingCode(parcel.trackingCode);
+                setMissingBookingCode(parcel.bookingCode);
+              }}
+            >
+              Log Not Physical
             </DropdownMenuItem>
-          </>
-        ) : null}
-        {view === 'incoming' ? (
-          <DropdownMenuItem
-            onClick={() => {
-              setDiscrepancyParcel(parcel);
-              setDiscrepancyDialogOpen(true);
-              setDiscrepancyNotes('');
-              setMissingTrackingCode(parcel.trackingCode);
-              setMissingBookingCode(parcel.bookingCode);
-            }}
-          >
-            Log Not Physical
-          </DropdownMenuItem>
-        ) : null}
-        {view === 'incoming' ? (
-          <DropdownMenuItem onClick={() => setArrivalConfirmationParcel(parcel)}>
-            Mark Arrived
-          </DropdownMenuItem>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          ) : null}
+          {view === 'incoming' ? (
+            <DropdownMenuItem onClick={() => setArrivalConfirmationParcel(parcel)}>
+              Mark Arrived
+            </DropdownMenuItem>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {view === 'outgoing' ? (
+        <ParcelInformationEditorDialog editor={editor} bookingCode={parcel.bookingCode} />
+      ) : null}
+    </>
   );
 }

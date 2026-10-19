@@ -1,3 +1,4 @@
+import { PermissionKeys } from '@/shared/permissions/constants';
 import { and, eq, ne, or } from 'drizzle-orm';
 import { db } from '@/db/config';
 import { auditLogs, customers, parcels } from '@/db/schemas';
@@ -5,7 +6,12 @@ import type { ParcelInformationEdit } from '@/shared/shipments/parcel-informatio
 import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 
 export async function editParcelInformationSvc(
-  input: ParcelInformationEdit & { companyId: string; branchId: string; actorUserId: string },
+  input: ParcelInformationEdit & {
+    companyId: string;
+    branchId: string;
+    actorUserId: string;
+    actorPermissions?: readonly string[];
+  },
 ) {
   if (!input.companyId || !input.branchId) throw BadRequest('Company and branch are required');
   const fullname = input.receiver?.fullname?.trim();
@@ -28,7 +34,12 @@ export async function editParcelInformationSvc(
         and(
           eq(parcels.id, input.id),
           eq(parcels.companyId, input.companyId),
-          eq(parcels.destinationId, input.branchId),
+          or(
+            eq(parcels.destinationId, input.branchId),
+            input.actorPermissions?.includes(PermissionKeys.CanUpdateParcels)
+              ? eq(parcels.sourceId, input.branchId)
+              : undefined,
+          ),
           eq(parcels.isDeleted, false),
         ),
       )
@@ -99,6 +110,7 @@ export async function editParcelInformationSvc(
     if (fullname !== undefined && updated?.receiverName !== fullname) {
       throw Conflict('Receiver name correction could not be saved; contact support');
     }
+    const { actorPermissions: _actorPermissions, ...auditPatch } = input;
     await tx.insert(auditLogs).values({
       companyId: input.companyId,
       actorUserId: input.actorUserId,
@@ -106,7 +118,7 @@ export async function editParcelInformationSvc(
       entityId: parcel.id,
       action: 'PARCEL_INFORMATION_UPDATED',
       message: `Parcel information updated for ${parcel.bookingCode}`,
-      metadata: { previousReceiverName: parcel.receiverNameSnapshot, patch: input },
+      metadata: { previousReceiverName: parcel.receiverNameSnapshot, patch: auditPatch },
     });
     return { id: parcel.id };
   });

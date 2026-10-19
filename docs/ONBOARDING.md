@@ -6,6 +6,10 @@
 - PostgreSQL `>=14`
 - PostGIS extension for geospatial endpoints
 - Redis (optional; app has memory fallback for some features)
+- Public self-service booking tokens use PostgreSQL after migration `0087`, so they survive
+  backend restarts without Redis. Configure `REDIS_URL` for shared rate-limit counters when
+  running multiple instances. Bun Redis connections use `new Bun.RedisClient(url)`; a configured
+  Redis runtime/connection failure must be surfaced, not silently replaced with memory.
 
 ## 2. First-Time Setup (New Joiner)
 

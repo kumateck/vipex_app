@@ -203,6 +203,10 @@ export type RiderDoorstepRecord = {
   parcelContent?: string | null;
   receiverName?: string | null;
   receiverPhone?: string | null;
+  receiverId?: string;
+  secondReceiverId?: string | null;
+  secondReceiverName?: string | null;
+  secondReceiverPhone?: string | null;
   dropoffAddress?: string | null;
   deliveryStatus: string;
   deliveryFeePsw?: number;
