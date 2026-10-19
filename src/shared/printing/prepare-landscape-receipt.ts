@@ -14,10 +14,15 @@ export function prepareLandscapeReceipt(document: Document): number | undefined 
   const pixelsPerMm = 96 / 25.4;
   const paperWidth = 80 * pixelsPerMm;
   const printableWidth = 72 * pixelsPerMm;
-  const scale = Math.min(1, printableWidth / height);
+  // After rotation the artwork height spans the roll: fit that dimension exactly,
+  // including compact receipts, rather than leaving unused printable width.
+  const scale = printableWidth / height;
   const pageHeight = Math.ceil(width * scale + 4 * pixelsPerMm);
   if (pageHeight > 2000 * pixelsPerMm) throw new Error('Receipt exceeds the supported roll length');
-  const left = (paperWidth + height * scale) / 2;
+  const left = (paperWidth - height * scale) / 2;
+  // Counterclockwise rotation sends the artwork above its origin; move it down by
+  // its scaled width so all four corners remain inside the roll, with feed clearance.
+  const top = width * scale + 2 * pixelsPerMm;
   const style = document.createElement('style');
   style.textContent = `
     @page { size: 80mm ${pageHeight / pixelsPerMm}mm; margin: 0; }
@@ -33,7 +38,7 @@ export function prepareLandscapeReceipt(document: Document): number | undefined 
     top: '0',
     left: '0',
     transformOrigin: '0 0',
-    transform: `translate(${left}px, ${2 * pixelsPerMm}px) rotate(90deg) scale(${scale})`,
+    transform: `translate(${left}px, ${top}px) rotate(-90deg) scale(${scale})`,
   });
   return pageHeight;
 }

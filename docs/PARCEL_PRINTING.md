@@ -76,12 +76,19 @@ needed with this profile; in the browser dialog use the matching roll, no margin
 Paid invoices, unpaid acknowledgement notes, duplicate reprints and home-delivery receipts keep
 the original 198 mm wide artwork, including its header, bordered amounts and QR position. Once
 fonts and images load, browser and desktop use the same preparation: measure the artwork,
-rotate it 90 degrees across the roll and scale it to fit a 72 mm printable area, centered on
-80 mm paper. Long/wrapped content is measured before fitting. Roll length follows the scaled
+rotate it **90 degrees to the left (counterclockwise)** across the roll and scale it to fit a 72 mm printable area, centered on
+80 mm paper. Fitting is automatic in both clients: compact artwork is enlarged and taller artwork
+is reduced proportionally to fill the same 72 mm printable width. Long/wrapped content is measured
+before fitting. Roll length follows the scaled
 artwork width with 2 mm clearance at each end. Desktop uses the matching custom paper size,
 portrait orientation, no margins and 100% native scale, so the artwork is not scaled twice or
 centered on an A5-sized sheet outside the roll. Single and parallel receipt jobs both use this
 geometry. Missing/invalid artwork fails preparation; it never sends a cropped substitute.
+The transform translates the rotated artwork down by its scaled original width so the left
+rotation does not send the receipt above the page. Its four corners stay inside the printable
+area, with 4 mm side clearance and at least 2 mm feed clearance. This replaces the earlier
+clockwise rotation. Paper orientation stays portrait in the driver because the artwork itself
+is rotated. Update both the web client and desktop build to apply the shared preparation.
 
 The profile is local to web/desktop printing. Digital receipts remain A5; mobile sticker printing,
 sticker routing/copies, A4 reports, payments and permissions are unchanged. This change addresses
@@ -91,7 +98,10 @@ Windows driver behavior and physical output still require acceptance on the bran
 QA: save/reload this profile with XP-80C; print an unpaid acknowledgement matching the browser
 sample, paid invoice, partial payment, duplicate, storage and home-delivery receipt. Confirm the
 full border, logo, all customer/parcel/payment details and terms fit on one sheet, scan the QR,
-and compare browser and routed desktop output. Repeat with long names/details and a parallel
+and compare browser and routed desktop output. With the paper held in its feed direction,
+the receipt header must be along the left edge, matching a 90-degree left turn; no narrow strip
+of unrotated text or clockwise output is acceptable. Check compact and tall receipts both fill the
+72 mm printable width without cutting the border, preserving their proportions. Repeat with long names/details and a parallel
 sticker job; confirm only stickers receive their chosen copy count. Switch back to A5 and each
 vertical profile to verify their layouts. Test missing images, failed printer and cancellation;
 no parcel/payment is resubmitted. Automated geometry/render checks do not replace XP-80C hardware QA.

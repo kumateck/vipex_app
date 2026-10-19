@@ -96,6 +96,14 @@ non-voided principal totals by payer in pesewas. Both are zero when that payer h
 payment. Super Search uses these fields only for delivered-parcel payer badges; see
 [Parcel operations](PARCEL_OPERATIONS.md). Delivery fees, storage, and voided payments are excluded.
 
+`GET /v1/shipments/parcels` retains its case-insensitive search, company/branch filters and
+pagination response. To prevent PostgreSQL parallel-query shared-memory failures from producing
+500 responses, app connections send `max_parallel_workers_per_gather: '0'` as a **string**;
+the driver silently omits numeric `0`. Deploy/restart the backend to replace existing connections.
+No migration, permission change or parcel repair is required. The read-only booking-search
+diagnostic reports and verifies the effective session settings; see
+[Parcel search performance](PARCEL_OPERATIONS.md#parcel-search-performance) for failure cases and QA.
+
 Parcel list/search responses include `riderUserId` and `riderName` from the parcel's delivery
 record (both `null` when there is none or no rider is assigned). `GET
 /v1/shipments/parcels/:id/details` includes `delivery.riderName` alongside `delivery.riderUserId`.
