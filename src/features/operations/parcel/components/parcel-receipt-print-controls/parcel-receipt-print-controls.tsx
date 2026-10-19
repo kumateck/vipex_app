@@ -16,6 +16,7 @@ type ParcelReceiptPrintControlsProps = {
   showSelectionMenu: boolean;
   triggerLabel: string;
   stickerCopies: number;
+  stickerOnly?: boolean;
   onStickerCopiesChange: (copies: number) => void;
   onPrintBoth: () => void;
   onPrintInvoice: () => void;
@@ -31,12 +32,14 @@ export function ParcelReceiptPrintControls({
   showSelectionMenu,
   triggerLabel,
   stickerCopies,
+  stickerOnly = false,
   onStickerCopiesChange,
   onPrintBoth,
   onPrintInvoice,
   onPrintSticker,
 }: ParcelReceiptPrintControlsProps) {
   if (autoPrint) return null;
+  if (stickerOnly && !isStickerPrintEnabled) return null;
   if (!showSelectionMenu && !isStickerPrintEnabled && !hasPrintableReceipt) return null;
 
   return (
@@ -62,12 +65,18 @@ export function ParcelReceiptPrintControls({
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        <Button type="button" onClick={onPrintBoth} disabled={isLoading || !canPrintForSession}>
-          {hasPrintableReceipt
-            ? isStickerPrintEnabled
-              ? triggerLabel
-              : 'Print Invoice'
-            : 'Print Sticker'}
+        <Button
+          type="button"
+          onClick={stickerOnly ? onPrintSticker : onPrintBoth}
+          disabled={isLoading || !canPrintForSession}
+        >
+          {stickerOnly
+            ? 'Print Sticker'
+            : hasPrintableReceipt
+              ? isStickerPrintEnabled
+                ? triggerLabel
+                : 'Print Invoice'
+              : 'Print Sticker'}
         </Button>
       )}
     </div>

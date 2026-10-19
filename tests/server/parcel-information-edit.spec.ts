@@ -1,3 +1,4 @@
+import { PermissionKeys } from '@/shared/permissions/constants';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { eq } from 'drizzle-orm';
 import { db, sql, closeSql } from '@/db/config';
@@ -48,6 +49,50 @@ describe.skipIf(!process.env.PARCEL_INFORMATION_EDIT_TEST)(
       expect(await db.select().from(auditLogs)).toHaveLength(2);
     });
 
+    test('source branch corrects details, receiver snapshot and telephone atomically', async () => {
+      const before = await parcelRows();
+      await editParcelInformationSvc({
+        ...context,
+        branchId: 'source',
+        actorPermissions: [PermissionKeys.CanUpdateParcels, PermissionKeys.CanUpdateCustomers],
+        parcelDetails: 'Source corrected box',
+        receiver: { id: 'receiver', fullname: 'Source corrected name', telephone: '0200000010' },
+      });
+      const after = await parcelRows();
+      expect(after[0]!.parcelDetails).toBe('Source corrected box');
+      expect(after[0]!.receiverNameSnapshot).toBe('Source corrected name');
+      expect((await receiver()).telephone).toBe('0200000010');
+      expect(after[0]!.receiverId).toBe(before[0]!.receiverId);
+      expect(after[0]!.status).toBe(before[0]!.status);
+      expect(after[0]!.chargePsw).toBe(before[0]!.chargePsw);
+      expect(after[1]).toEqual(before[1]);
+      const audits = await db.select().from(auditLogs);
+      expect(audits).toHaveLength(2);
+      const parcelAudit = audits.find((row) => row.entityType === 'parcel');
+      expect((parcelAudit?.metadata as { patch?: object })?.patch).not.toHaveProperty(
+        'actorPermissions',
+      );
+    });
+    test('source branch read-only workflow grants do not authorize outgoing edits', async () => {
+      await expect(
+        editParcelInformationSvc({
+          ...context,
+          branchId: 'source',
+          actorPermissions: [PermissionKeys.CanReadParcelIncoming],
+          parcelDetails: 'Denied',
+        }),
+      ).rejects.toThrow('Parcel not found');
+    });
+    test('a third branch remains outside scope even with update permission', async () => {
+      await expect(
+        editParcelInformationSvc({
+          ...context,
+          branchId: 'other-branch',
+          actorPermissions: [PermissionKeys.CanUpdateParcels],
+          parcelDetails: 'Denied',
+        }),
+      ).rejects.toThrow('Parcel not found');
+    });
     test.each(['default', 'crm'] as const)(
       'a customer management rename in %s context leaves parcel history untouched',
       async (sourceContext) => {

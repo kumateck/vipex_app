@@ -1,3 +1,4 @@
+import { useDeliveryCollectionSummary } from '../../hooks';
 import { StyleSheet, Text, View } from 'react-native';
 import { AppCard } from '@mobile/components/ui';
 import { useAppearance } from '@mobile/providers/appearance-provider';
@@ -18,6 +19,7 @@ function Total({ label, value, accent }: { label: string; value: string; accent:
 }
 
 export function CashierReportSummary({ report }: { report: CashierSalesReport | null }) {
+  const collections = useDeliveryCollectionSummary(report);
   const { theme } = useAppearance();
   return (
     <AppCard>
@@ -34,7 +36,7 @@ export function CashierReportSummary({ report }: { report: CashierSalesReport | 
           accent={theme.colors.success}
         />
         <Total
-          label="To Be Paid"
+          label="Outstanding To Be Paid"
           value={formatReportMoney(report?.totals.toBePaidPsw)}
           accent={theme.colors.warning}
         />
@@ -49,6 +51,25 @@ export function CashierReportSummary({ report }: { report: CashierSalesReport | 
           accent={theme.colors.secondary}
         />
       </View>
+      {collections.visible ? (
+        <>
+          <Text style={[styles.title, { color: theme.colors.text, marginTop: mobileSpacing.md }]}>
+            Delivery cashier collections
+          </Text>
+          <View style={styles.grid}>
+            <Total
+              label="Delivery fees received"
+              value={formatReportMoney(collections.deliveryFeeReceivedPsw)}
+              accent={theme.colors.primary}
+            />
+            <Total
+              label="To Be Paid received"
+              value={formatReportMoney(collections.toBePaidReceivedPsw)}
+              accent={theme.colors.success}
+            />
+          </View>
+        </>
+      ) : null}
     </AppCard>
   );
 }

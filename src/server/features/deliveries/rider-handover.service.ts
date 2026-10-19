@@ -9,6 +9,7 @@ import { getDeliveryByParcelRepo, updateDeliveryRepo } from './repository';
 import { hasPendingDeliveryChangeRequestRepo } from './delivery-change-request.repository';
 import { getParcelPaymentSettlement } from '@/server/features/shipments/parcel-payment-settlement';
 import { assertNoOpenParcelReconciliationCaseForDelivery } from '@/server/features/shipments/parcel-delivery-reconciliation-guard';
+import { validateRiderSecondReceiver, auditRiderSecondReceiver } from './rider-second-receiver';
 
 export type RiderHandoverInput = {
   parcelId: string;
@@ -17,6 +18,7 @@ export type RiderHandoverInput = {
   principalAmountCedis?: number | string | null;
   deliveryFeeAmountCedis?: number | string | null;
   secondReceiverId?: string | null;
+  handoverTarget?: 'main' | 'second';
   cardId?: string | null;
   cardNumber?: string | null;
   secondCardId?: string | null;
@@ -49,6 +51,15 @@ export async function doorToDoorRiderGivenToCustomerSvc(input: RiderHandoverInpu
     if (await hasPendingDeliveryChangeRequestRepo(delivery.id, tx)) {
       throw Conflict('Delivery address and fee change request is awaiting review');
     }
+    const secondReceiver = await validateRiderSecondReceiver(
+      tx,
+      parcel,
+      input.secondReceiverId,
+      input.handoverTarget,
+    );
+    const secondReceiverChanged = Boolean(
+      secondReceiver && secondReceiver.id !== parcel.secondReceiverId,
+    );
 
     const signatureImage = input.signatureImage.trim();
     if (!signatureImage) throw BadRequest('Signature is required');
@@ -89,8 +100,9 @@ export async function doorToDoorRiderGivenToCustomerSvc(input: RiderHandoverInpu
         secondReceiverId: input.secondReceiverId ?? parcel.secondReceiverId,
         cardId: input.cardId ?? parcel.cardId,
         cardNumber: input.cardNumber ?? parcel.cardNumber,
-        secondCardId: input.secondCardId ?? parcel.secondCardId,
-        secondCardNumber: input.secondCardNumber ?? parcel.secondCardNumber,
+        secondCardId: input.secondCardId ?? (secondReceiverChanged ? null : parcel.secondCardId),
+        secondCardNumber:
+          input.secondCardNumber ?? (secondReceiverChanged ? null : parcel.secondCardNumber),
         confirmedBy: input.riderUserId,
         confirmedAt: completedAt,
       },
@@ -112,6 +124,13 @@ export async function doorToDoorRiderGivenToCustomerSvc(input: RiderHandoverInpu
       tx,
     );
 
+    await auditRiderSecondReceiver(
+      tx,
+      parcel,
+      input.riderUserId,
+      secondReceiver,
+      input.handoverTarget,
+    );
     return { id: delivery.id };
   });
 }

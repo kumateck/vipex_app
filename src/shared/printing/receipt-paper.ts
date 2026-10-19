@@ -1,8 +1,19 @@
-export type ReceiptPaperFormat = 'a5' | 'xprinter-80mm' | 'xprinter-58mm';
+export type VerticalReceiptPaperFormat = 'xprinter-80mm' | 'xprinter-58mm';
+export type ReceiptPaperFormat = 'a5' | VerticalReceiptPaperFormat | 'xprinter-80mm-landscape';
 export type RollReceiptLayout = 'receipt-80mm' | 'receipt-58mm';
 
 export function normalizeReceiptPaperFormat(value: string | null | undefined): ReceiptPaperFormat {
-  return value === 'xprinter-80mm' || value === 'xprinter-58mm' ? value : 'a5';
+  return value === 'xprinter-80mm' ||
+    value === 'xprinter-58mm' ||
+    value === 'xprinter-80mm-landscape'
+    ? value
+    : 'a5';
+}
+
+export function isVerticalReceiptPaper(
+  format: ReceiptPaperFormat,
+): format is VerticalReceiptPaperFormat {
+  return format === 'xprinter-80mm' || format === 'xprinter-58mm';
 }
 
 export function receiptPaperWidth(format: Exclude<ReceiptPaperFormat, 'a5'>) {
@@ -10,6 +21,7 @@ export function receiptPaperWidth(format: Exclude<ReceiptPaperFormat, 'a5'>) {
 }
 
 export function receiptLayoutFromHtml(html: string): RollReceiptLayout | undefined {
+  if (/data-receipt-paper="xprinter-80mm-landscape"/.test(html)) return 'receipt-80mm';
   if (/data-receipt-paper="xprinter-80mm"/.test(html)) return 'receipt-80mm';
   if (/data-receipt-paper="xprinter-58mm"/.test(html)) return 'receipt-58mm';
   return undefined;

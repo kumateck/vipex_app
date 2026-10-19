@@ -65,6 +65,17 @@ export const AssignedDeliveryDetails = memo(function AssignedDeliveryDetails(pro
           label="Drop-off address"
           value={props.delivery.dropoffAddress ?? '-'}
         />
+        {props.delivery.secondReceiverId ? (
+          <InfoRow
+            icon="person-add-outline"
+            label="Second receiver"
+            value={
+              [props.delivery.secondReceiverName, props.delivery.secondReceiverPhone]
+                .filter(Boolean)
+                .join(' · ') || '-'
+            }
+          />
+        ) : null}
       </View>
 
       <View style={[styles.breakdown, { backgroundColor: theme.colors.cardMuted }]}>

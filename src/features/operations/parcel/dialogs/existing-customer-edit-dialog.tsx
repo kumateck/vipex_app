@@ -40,6 +40,7 @@ export function ExistingCustomerEditDialog({
 }: ExistingCustomerEditDialogProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    event.stopPropagation();
     void onSave();
   };
 

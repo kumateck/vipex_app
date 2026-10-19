@@ -2,6 +2,7 @@ import type { RefObject } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { toast } from 'sonner';
 import { waitForPrintImages } from '@/shared/printing/wait-for-print-images';
+import { prepareLandscapeReceipt } from '@/shared/printing';
 import { PAGE_STYLES } from '../constants/page-styles';
 import { useReceiptPaperFormat } from './use-receipt-paper-format';
 
@@ -15,6 +16,8 @@ type UseManagedReactPrintOptions = {
 export function useManagedReactPrint(options: UseManagedReactPrintOptions) {
   const { contentRef, documentTitle, pageStyle, onAfterPrint } = options;
   const paper = useReceiptPaperFormat();
+  const landscapeRoll =
+    pageStyle === PAGE_STYLES['invoice-a5-receipt'] && paper === 'xprinter-80mm-landscape';
   const receiptStyle =
     pageStyle === PAGE_STYLES['invoice-a5-receipt'] && paper !== 'a5'
       ? PAGE_STYLES[paper === 'xprinter-58mm' ? 'receipt-58mm' : 'receipt-80mm']
@@ -24,6 +27,18 @@ export function useManagedReactPrint(options: UseManagedReactPrintOptions) {
     contentRef,
     documentTitle,
     pageStyle: receiptStyle,
+    print: landscapeRoll
+      ? async (iframe) => {
+          const document = iframe.contentDocument;
+          const printWindow = iframe.contentWindow;
+          if (!document || !printWindow) throw new Error('Print document is unavailable');
+          await waitForPrintImages(document);
+          if (prepareLandscapeReceipt(document) === undefined)
+            throw new Error('Landscape receipt content is missing');
+          printWindow.focus();
+          printWindow.print();
+        }
+      : undefined,
     onBeforePrint: async () => {
       const content = contentRef.current;
       if (content instanceof Element) await waitForPrintImages(content);

@@ -40,6 +40,12 @@ and `CanManageCustomerMessages`. IT-support permissions grant no access. Company
 scope always comes from the authenticated user. Access is company-wide for the
 staff roles explicitly granted these permissions.
 
+In **Roles → Permissions** both keys appear under **Commercial → Customer Lifecycle →
+Customer Website Messages** (group `Customer Messages`, mapped in
+`src/shared/permissions/ui-metadata-mapping.ts`). Every permission group needs an entry
+there: an unmapped group makes the web app throw "Permission UI metadata missing group
+mappings" when it loads. `src/shared/permissions/ui-metadata.test.ts` guards this.
+
 Statuses are `new`, `in_progress`, `resolved` and `spam`. Staff may reopen a message.
 Updates include the last `updatedAt` value; stale updates return 409 and require a
 refresh. Status changes and private notes are recorded atomically with the update,

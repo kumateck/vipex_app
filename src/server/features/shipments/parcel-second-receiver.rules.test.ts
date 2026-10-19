@@ -35,6 +35,8 @@ describe('second receiver rules', () => {
       ParcelStatus.RETURNED_TO_OFFICE,
       ParcelStatus.AWAITING_PICKUP,
       ParcelStatus.HOME_DELIVERY_REQUESTED,
+      ParcelStatus.ADDRESS_COLLECTED,
+      ParcelStatus.DISPATCHED,
     ]) {
       expect(() => assertSecondReceiverCandidate({ ...parcel, status }, context)).not.toThrow();
     }
@@ -53,9 +55,8 @@ describe('second receiver rules', () => {
     expect(() => assertSecondReceiverCandidate(null, context)).toThrow('not found');
   });
 
-  test('rejects parcels already with a rider, delivered, or returning to source', () => {
+  test('rejects parcels already handed over, delivered, or returning to source', () => {
     for (const status of [
-      ParcelStatus.DISPATCHED,
       ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER,
       ParcelStatus.DELIVERED_BY_OFFICE,
       ParcelStatus.DELIVERED_AT_HOME,

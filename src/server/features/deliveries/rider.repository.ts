@@ -36,6 +36,8 @@ export type RiderDeliveryRow = {
   receiverName: string | null;
   receiverPhone: string | null;
   secondReceiverId: string | null;
+  secondReceiverName: string | null;
+  secondReceiverPhone: string | null;
   callSender: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -113,6 +115,7 @@ export async function listDoorstepByRiderRepo(input: {
   parcelStatuses?: number[] | null;
 }): Promise<RiderDeliveryRow[]> {
   const receiver = alias(customers, 'r');
+  const secondReceiver = alias(customers, 'sr');
   const destination = alias(branches, 'd');
   const conditions = [
     eq(deliveries.riderUserId, input.riderUserId),
@@ -127,10 +130,15 @@ export async function listDoorstepByRiderRepo(input: {
       receiverId: parcels.receiverId,
       receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       receiverPhone: receiver.telephone,
+      secondReceiverName: sql<
+        string | null
+      >`coalesce(nullif(btrim(${parcels.secondReceiverNameSnapshot}), ''), ${secondReceiver.fullname})`,
+      secondReceiverPhone: secondReceiver.telephone,
     })
     .from(deliveries)
     .innerJoin(parcels, eq(parcels.id, deliveries.parcelId))
     .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
+    .leftJoin(secondReceiver, eq(secondReceiver.id, parcels.secondReceiverId))
     .leftJoin(destination, eq(destination.id, parcels.destinationId))
     .where(and(...conditions))
     .orderBy(desc(deliveries.updatedAt), asc(deliveries.id));
@@ -141,6 +149,7 @@ export async function listDoorstepByBranchRepo(input: {
   parcelStatuses?: number[] | null;
 }): Promise<RiderDeliveryRow[]> {
   const receiver = alias(customers, 'r');
+  const secondReceiver = alias(customers, 'sr');
   const destination = alias(branches, 'd');
   const conditions = [
     eq(parcels.destinationId, input.branchId),
@@ -156,10 +165,15 @@ export async function listDoorstepByBranchRepo(input: {
       receiverId: parcels.receiverId,
       receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       receiverPhone: receiver.telephone,
+      secondReceiverName: sql<
+        string | null
+      >`coalesce(nullif(btrim(${parcels.secondReceiverNameSnapshot}), ''), ${secondReceiver.fullname})`,
+      secondReceiverPhone: secondReceiver.telephone,
     })
     .from(deliveries)
     .innerJoin(parcels, eq(parcels.id, deliveries.parcelId))
     .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
+    .leftJoin(secondReceiver, eq(secondReceiver.id, parcels.secondReceiverId))
     .leftJoin(destination, eq(destination.id, parcels.destinationId))
     .where(and(...conditions))
     .orderBy(desc(deliveries.updatedAt), asc(deliveries.id));

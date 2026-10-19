@@ -90,6 +90,16 @@ authorization. Web and mobile use the same endpoints.
 
 - `/shipments/bookings`: booking creation and query, including booking-with-parcels operations.
 - `/shipments/parcels`: parcel search, detail, lifecycle actions, corrections, and receiver OTP-related operations.
+- `POST /deliveries/dd/:parcelId/rider-given`: requires `CanCompleteDoorstepDelivery` and an
+  assigned, Dispatched parcel with no pending delivery change/reconciliation block. Mobile sends
+  `handoverTarget: "main" | "second"`; second requires the currently linked `secondReceiverId`.
+  A missing/replaced/removed second choice returns 409 and instructs refresh. Main plus an explicit
+  second ID returns 400; inactive/foreign-company or main-customer second IDs return 400. Signature
+  and existing collection checks remain required. Selection does not create a customer or change
+  the cashier-authorized contact. `RIDER_HANDOVER_RECEIVER_SELECTED` audit records target and ID
+  atomically with handover. The optional field preserves existing web/desktop requests; legacy
+  explicit receiver changes are validated and audited. Rider list responses add
+  `secondReceiverName` (parcel snapshot, customer fallback) and `secondReceiverPhone`.
 - `POST /deliveries/dd/:parcelId/returned`: the assigned rider returns a dispatched parcel;
   parcel status becomes `RETURNED_TO_OFFICE` (displayed as **Returned by Rider**), with a
   recorded delivery return time. It preserves `deliveries.chargePsw` and the dropoff address.
@@ -190,7 +200,8 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
 - `PUT /shipments/parcels/:id/second-receiver`: require `CanManageParcelSecondReceiver`; body has
   `fullname` (1-255 characters) and `telephone` (normalized to exactly ten digits). The parcel must
   belong to the caller's company and destination branch, not be deleted, and be Arrived at
-  Destination, Customer Contacted, Returned to Office, Awaiting Pickup, or Home Delivery Requested.
+  Destination, Customer Contacted, Returned to Office, Awaiting Pickup, Home Delivery Requested,
+  Address Collected, or Dispatched. A completed rider handover is not editable.
   Resolves the telephone like `resolve-second-receiver`, then sets `secondReceiverId`, clears
   `secondCardId`/`secondCardNumber`, and expires active or verified-but-unused `second` receiver
   OTPs. Returns `{ id, secondReceiverId, changed }`; `changed` is false and nothing is written when
@@ -198,7 +209,8 @@ reason }` and returns `{ id, chargePsw, changed }`. The reason must be 3–500 t
   ineligible status, the main receiver as second receiver, or a concurrent change return 409;
   invalid name or telephone return 400; a missing permission returns 403. Sends no SMS or email.
   Records audit event `PARCEL_SECOND_RECEIVER_SET`. Used by Shelf Picker Update and Parcel
-  Assignment.
+  Assignment and Delivery Cashier's upcoming handovers section. No separate customer-create
+  permission is needed on this endpoint.
 - `DELETE /shipments/parcels/:id/second-receiver`: same permission, scope, and status rules as the
   `PUT`. Clears `secondReceiverId` and the second ID card fields and expires `second` receiver
   OTPs. Returns `{ id, secondReceiverId: null, changed }`; `changed` is false when the parcel had
@@ -312,6 +324,13 @@ Public, branch-bound temporary-session operations:
 - `POST /self-service/drafts`
 
 Public calls after session creation send `x-self-service-session`. Customer lookup is exact and returns a minimal result.
+Sessions are persisted in PostgreSQL after migration `0087`, shared across backend instances,
+expire after 15 server minutes and are consumed once by an atomic delete. Public session failures
+return 410 / `SELF_SERVICE_SESSION_EXPIRED`; a customer can start a new session from the same
+branch page. Browser clock skew does not determine expiry. The session-start IP quota remains
+30 starts per 15 minutes using Redis when configured, or process-local counters otherwise.
+See [Session lifetime and recovery](../SELF_SERVICE_BOOKING.md#session-lifetime-and-recovery)
+for deploy order, old-token behavior and the recovery QA scenarios.
 `POST /self-service/drafts` requires `termsAccepted: true` and the current `termsVersion`. Missing,
 false, or outdated consent returns a validation/bad-request response. Successful draft creation
 records the accepted version and server acceptance time for audit.
@@ -325,3 +344,35 @@ Authenticated agent operations:
 - `POST /self-service/drafts/:id/cancel`
 
 See [Parcel Operations](../PARCEL_OPERATIONS.md), [Cashier Payments and Shifts](../CASHIER_PAYMENTS_AND_SHIFTS.md), [Self-Service Booking](../SELF_SERVICE_BOOKING.md), and [Mobile Frontline Workflows](../MOBILE_FRONTLINE_WORKFLOWS.md).
+
+Self-service draft continuation: `POST /self-service/drafts` returns
+`{ draftId, expiresAt, bookingsCompleted, nextSession }`. `nextSession` is null after booking 10
+or when the original scan deadline has elapsed; otherwise it contains a fresh single-use token,
+branch identity, original `issuedAt`/`expiresAt`, and the next `bookingNumber`. The server derives
+that number from the consumed stored token, never from request body input. The consumed token,
+draft insert, next token insert and submission receipt are one transaction. Identical concurrent
+or retried submissions return the same successful response without another insert or counter
+increment. Different details under a consumed token return 409; unknown/expired tokens return 410. Receipt expiry matches the draft deadline; failed persistence rolls back consumption. Daily submission quotas are 50 attempts per sender phone and
+200 per forwarded IP; QR issuance remains 30 per IP per 15 minutes. See
+[Self-service booking](../SELF_SERVICE_BOOKING.md).
+
+Parcel sender correction (web/desktop source branch):
+
+- `GET /shipments/parcels/:id/sender-candidates?telephone=<10 digits>` requires both
+  `CanUpdateParcels` and `CanUpdateCustomers`, plus company/source-branch scope on the parcel.
+  Returns exact active primary/secondary phone matches as `{ id, fullname, telephone, telephone2 }[]`.
+- `POST /shipments/parcels/:id/correct-sender` uses the same guards and accepts
+  `{ expectedSenderId, customerId, telephone, reason }`. Reason trims to 5–1000 characters.
+  Reuses an existing matching customer and returns `{ id, changed }`, without modifying profiles,
+  amounts, status or payment rows. A missing/deleted/out-of-scope parcel returns 404; invalid
+  number/reason or inactive/nonmatching customer returns 400/422; stale sender, sender credit
+  history, or failed snapshot persistence returns 409. Sender ID/name update and
+  `PARCEL_SENDER_CHANGED` audit are one transaction. Same sender is a no-op. Credit ledger
+  history is not transferred by this endpoint.
+
+Parcel-creation customer pencil actions use the existing
+`GET /customers/lookup/booking-by-telephone/:telephone` and `PATCH /customers/:id`. Lookup needs
+`CanCreateBookingWithParcels` and returns minimal company-scoped identity; profile changes need
+`CanUpdateCustomers`. No `CanReadCustomers` grant is required for this booking lookup. Web can
+edit name and optional secondary number; mobile edits name only. The primary lookup number and
+selected customer ID remain unchanged, and existing parcel snapshots are preserved.

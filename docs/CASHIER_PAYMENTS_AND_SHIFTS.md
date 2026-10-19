@@ -155,6 +155,41 @@ credit, and voided payments; verify the gross and cash/non-cash totals, module-f
 and printed route summary. Verify unpaid To Be Paid rows, unauthorized cashier/branch selection,
 and missing branch display names do not distort the breakdown.
 
+### Delivery Cashier Received Summary
+
+The shift-session sales report shows a **Delivery cashier collections** section with two
+separate totals: **Delivery fees received** and **To Be Paid received**. The former sums posted
+Delivery Cashier `DELIVERY_FEE` payments; the latter sums posted Delivery Cashier `PRINCIPAL`
+payments (the gross principal actually collected, including its tax). A full or receiver cashier's
+principal collections are not counted as Delivery Cashier collections. `OTHER` components are
+not reclassified as fees or principal. Rider-recorded amounts awaiting cashier reconciliation
+are excluded until payments are posted. Existing report scope and voided-payment exclusion apply.
+
+The web/desktop summary replaces the combined Delivery Sales card with these two received
+totals; the Payments printout includes the same component summary while retaining a clearly
+labelled Delivery total in its responsibility summary. The mobile Cashier Sales Report reached
+from the active shift shows the same two received totals. **Outstanding To Be Paid** is the
+existing unpaid sending-parcel balance and is labelled explicitly to distinguish it from
+principal already received. Overall gross, payment-method and route totals are unchanged.
+
+The summary is calculated from the report's payment rows, so web's loaded module filter updates
+it without another request; a Delivery-only empty result shows zero for both components. Mixed
+or Full Cashier report scopes show the section when actual Delivery Cashier transactions are
+present. A receiving-only result does not show a delivery breakdown. No new permissions,
+endpoint fields, database schema, or collections are introduced. Older posted payments work
+using their existing `cashierType`, `component`, and `grossAmountPsw` fields.
+
+QA: in one delivery shift, collect GHS 30 To Be Paid and GHS 60 delivery fees. Confirm received
+principal is GHS 30 and received fees GHS 60 on web, mobile and the Payments printout, while gross
+remains GHS 90. Include several parcels, split payment methods and partial principal collections;
+only amounts received contribute. Add unrelated receiver/sender payments and an outstanding
+balance and confirm they do not enter either delivery subtotal. Void a payment, reload and confirm
+it is excluded. Switch all/sender/receiver/delivery loaded modules, test an empty delivery scope,
+and compare the printed summary. Existing permission and branch/date/session restrictions apply.
+Automated checks cover component classification, mixed scopes, zero results, module filtering
+and matching print totals in `delivery-cashier-collections.test.ts` and
+`daily-cashier-sales-collections.test.tsx`.
+
 ### Known Access and Selection Defect
 
 The current web page can be opened with the cashier-shift report permission, while reading the cashier directory is guarded by an accounting-read permission. When a Delivery Supervisor such as `vipexdelivery5@gmail.com` can view the report but cannot read selectable cashier assignments, the UI falls back to the signed-in account and displays it as the cashier. This makes the Cashier Type and Cashier controls appear locked or incorrectly selected even though the role itself is not a cashier.

@@ -27,7 +27,7 @@ export function ThermalStickerTemplate(props: ThermalStickerTemplateProps) {
     orientation = 'portrait',
   } = props;
   const hasToBePaid = typeof toBePaidCedis === 'number' && toBePaidCedis > 0;
-  const statusLabel = hasToBePaid ? 'TO BE PAID' : 'PAID';
+  const statusLabel = hasToBePaid ? 'TO BE PAID' : (props.paymentStatusLabel ?? 'PAID');
   const statusAmountLabel = hasToBePaid ? formatMoney(toBePaidCedis) : undefined;
   const senderTelephones = formatTelephones(senderTelephone, senderTelephone2);
   const receiverTelephones = formatTelephones(receiverTelephone, receiverTelephone2);

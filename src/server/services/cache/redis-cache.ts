@@ -3,12 +3,7 @@ import type { CacheSetOptions, CacheStore } from './cache.types';
 type RedisLike = {
   get(key: string): Promise<string | null>;
   getdel(key: string): Promise<string | null>;
-  set(
-    key: string,
-    value: string,
-    modeOrOptions?: 'EX' | { ex: number },
-    seconds?: number,
-  ): Promise<unknown>;
+  set(key: string, value: string, modeOrOptions?: 'EX', seconds?: number): Promise<unknown>;
   del(key: string): Promise<number>;
   incr(key: string): Promise<number>;
   expire(key: string, seconds: number): Promise<number>;

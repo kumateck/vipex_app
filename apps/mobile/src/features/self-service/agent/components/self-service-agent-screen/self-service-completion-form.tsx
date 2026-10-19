@@ -85,6 +85,7 @@ export function SelfServiceCompletionForm({
           <AppInput
             value={parcelDetails}
             onChangeText={setParcelDetails}
+            placeholder="Enter parcel details recorded by the completing officer"
             multiline
             maxLength={255}
           />

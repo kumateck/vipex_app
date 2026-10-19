@@ -57,6 +57,8 @@ The implemented validation, failure behavior, and QA cases are documented in [Mo
 - Assigned and current deliveries.
 - Delivery history.
 - Customer collection fields and signature capture.
+- Selection of the main or cashier-added second receiver at handover; changing the selection
+  clears the signature. Cashiers manage the contact in the web/desktop Delivery Cashier queue.
 - Delivery change requests.
 - Real-time assignment and delivery updates.
 
@@ -162,3 +164,8 @@ iOS distribution uses the approved iOS release process; an Android APK update mu
 - Android and iOS native build and device smoke tests.
 
 See [Mobile QA Smoke Checklist](MOBILE_QA_SMOKE_CHECKLIST.md) and [Client Applications](CLIENT_APPLICATIONS.md).
+
+Cashier Sales Report reached from a shift now separates Delivery Cashier **Delivery fees received**
+and **To Be Paid received**. Both use posted payment components in the selected report scope;
+**Outstanding To Be Paid** remains the unpaid sending-parcel balance. See
+[Cashier payments and shifts](CASHIER_PAYMENTS_AND_SHIFTS.md#delivery-cashier-received-summary).

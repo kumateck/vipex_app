@@ -159,7 +159,12 @@ export const KEY_OVERRIDES: Partial<Record<PermissionKey, Partial<GroupDefault>>
   CanReadParcelStorageClearances: { module: 'Storage Fee Clearance' },
   CanRequestParcelStorageClearance: { module: 'Storage Fee Clearance' },
   CanApproveParcelStorageClearance: { module: 'Storage Fee Clearance' },
-  CanExecuteParcelStorageClearance: { module: 'Storage Fee Clearance' },
+  // Catalog group stays Accounting; list it beside the other clearance permissions.
+  CanExecuteParcelStorageClearance: {
+    domain: 'Operations',
+    subdomain: 'Parcel Lifecycle',
+    module: 'Storage Fee Clearance',
+  },
   CanOverrideParcelReconciliationWindow: { module: 'Parcel Reconciliation' },
   CanReadAccountingAccounts: { module: 'Chart of Accounts' },
   CanCreateAccountingAccounts: { module: 'Chart of Accounts' },

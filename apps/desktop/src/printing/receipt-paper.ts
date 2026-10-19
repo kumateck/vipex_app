@@ -1,5 +1,5 @@
 import type { WebContents } from 'electron';
-import { rollWidthForLayout } from '../../../../src/shared/printing/receipt-paper';
+import { rollWidthForLayout, prepareLandscapeReceipt } from '../../../../src/shared/printing';
 
 export function receiptHeightMicrons(heightPixels: number) {
   if (!Number.isFinite(heightPixels) || heightPixels <= 0)
@@ -15,6 +15,15 @@ export async function prepareReceiptPaper(
 ) {
   const width = rollWidthForLayout(layout);
   if (!width) return undefined;
+  if (width === 80) {
+    const landscapeHeight: unknown = await contents.executeJavaScript(
+      `(${prepareLandscapeReceipt.toString()})(document)`,
+    );
+    if (typeof landscapeHeight === 'number') {
+      // The shared preparation already includes feed clearance and the matching @page rule.
+      return Math.ceil((landscapeHeight * 25400) / 96);
+    }
+  }
   const measured: unknown = await contents.executeJavaScript(`
     document.querySelector('.thermal-receipt-root')?.getBoundingClientRect().height
   `);

@@ -13,6 +13,7 @@ export type MobileSticker = {
   parcelDetails: string;
   amountCedis: number;
   callSender?: boolean;
+  paymentStatusLabel?: 'PENDING' | 'CREDIT';
   copies: number;
 };
 
@@ -82,6 +83,8 @@ export function buildMobileStickerHtml(sticker: MobileSticker) {
   if (!Number.isSafeInteger(copies) || copies < 1)
     throw new Error('Sticker copies must be a positive whole number');
   const display = (value: string) => escapeHtml(value.trim() || '-');
+  const hasReceiverPayment = !sticker.paymentStatusLabel || sticker.amountCedis > 0;
+  const paymentLabel = hasReceiverPayment ? 'TO BE PAID' : sticker.paymentStatusLabel;
   const row = (label: string, value: string) =>
     `<div class="row"><div class="label">${label}</div><div class="value" style="font-size:${valueFontSize(value, true)}">${display(value)}</div></div>`;
   const destination = (label: string, value: string, large = false) =>
@@ -98,7 +101,7 @@ export function buildMobileStickerHtml(sticker: MobileSticker) {
   </style></head><body>${Array.from(
     { length: copies },
     () => `<div class="sticker"><header class="top"><img class="logo" src="${stickerLogo.dataUri}" alt="Vipex logo"><div class="brand"><span class="brand-main">VIPEX</span><span class="brand-sub">PARCEL</span></div><div class="qr-panel">${qrTable(sticker.trackingCode)}</div></header>
-  <section class="due"><div><div class="due-title">TO BE PAID</div><div class="amount">GHS ${sticker.amountCedis.toFixed(2)}</div><div class="note">PLEASE NOTE: PAYMENT DUE UPON RECEIPT OF PARCEL.</div></div></section>
+  <section class="due"><div><div class="due-title">${paymentLabel}</div>${hasReceiverPayment ? `<div class="amount">GHS ${sticker.amountCedis.toFixed(2)}</div><div class="note">PLEASE NOTE: PAYMENT DUE UPON RECEIPT OF PARCEL.</div>` : ''}</div></section>
   <section class="receiver">${sticker.callSender ? '<span class="cs">CS</span>' : ''}<div class="label">Receiver</div><div class="receiver-name" style="font-size:${receiverNameFontSize(sticker.receiverName)}">${display(sticker.receiverName)}</div><div class="receiver-phone">${display(sticker.receiverPhone)}</div></section>
   <main class="main"><div class="destination">${destination('Destination', sticker.destinationBranch, true)}${destination('Location', sticker.destinationLocation)}</div>${row('Sender', sticker.senderName)}${row('Sender Tel', sticker.senderPhone)}${row('Parcel Details', sticker.parcelDetails)}</main>
   </div>`,
