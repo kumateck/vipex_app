@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -57,7 +58,7 @@ export function StockCountSessionsCreatePage() {
       toast.success('Stock count session created');
       navigate(`/inventory/stock-count-sessions/view/${result.id}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create session');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create session');
     }
   };
 

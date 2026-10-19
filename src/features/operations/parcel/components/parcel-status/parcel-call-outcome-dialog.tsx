@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +11,9 @@ import { Label } from '@/components/ui/label';
 import { PHONE_DIGITS, limitPhoneDigits } from '@/lib/phone';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import type { ContactOutcome } from './types';
+import { ParcelCallNotificationFields } from './parcel-call-notification-fields';
+import { ParcelMainReceiverFields } from './parcel-main-receiver-fields';
+import type { ReturnTypeMainReceiverChange } from './parcel-main-receiver-types';
 
 type ParcelCallOutcomeDialogProps = {
   selectedParcel: ParcelSearchRow | null;
@@ -30,6 +32,7 @@ type ParcelCallOutcomeDialogProps = {
   isSaving: boolean;
   onClose: () => void;
   onSave: () => Promise<void>;
+  mainReceiverChange: ReturnTypeMainReceiverChange;
 };
 
 export function ParcelCallOutcomeDialog({
@@ -49,6 +52,7 @@ export function ParcelCallOutcomeDialog({
   isSaving,
   onClose,
   onSave,
+  mainReceiverChange,
 }: ParcelCallOutcomeDialogProps) {
   return (
     <Dialog open={Boolean(selectedParcel)} onOpenChange={(open) => (!open ? onClose() : null)}>
@@ -88,7 +92,11 @@ export function ParcelCallOutcomeDialog({
             </div>
           </div>
 
-          {outcome === 'pickup' ? (
+          {selectedParcel && (
+            <ParcelMainReceiverFields parcel={selectedParcel} change={mainReceiverChange} />
+          )}
+
+          {outcome === 'pickup' && !mainReceiverChange.enabled ? (
             <div className="space-y-3 rounded-md border p-3">
               <Button
                 type="button"
@@ -128,31 +136,28 @@ export function ParcelCallOutcomeDialog({
             </div>
           ) : null}
 
-          <div className="space-y-3 rounded-md border p-3">
-            <p className="text-sm font-medium">Send Notification</p>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="send-sms">Send SMS</Label>
-              <Checkbox
-                id="send-sms"
-                checked={sendSms}
-                onCheckedChange={(checked) => onSendSmsChange(checked === true)}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="send-email">Send Email</Label>
-              <Checkbox
-                id="send-email"
-                checked={sendEmail}
-                onCheckedChange={(checked) => onSendEmailChange(checked === true)}
-              />
-            </div>
-          </div>
+          <ParcelCallNotificationFields
+            sendSms={sendSms}
+            onSendSmsChange={onSendSmsChange}
+            sendEmail={sendEmail}
+            onSendEmailChange={onSendEmailChange}
+            disabled={isSaving}
+          />
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
-          <Button type="button" onClick={() => void onSave()} disabled={isSaving}>
+          <Button
+            type="button"
+            onClick={() => void onSave()}
+            disabled={
+              isSaving ||
+              !mainReceiverChange.canSave ||
+              (mainReceiverChange.enabled &&
+                mainReceiverChange.existing?.id === selectedParcel?.receiverId)
+            }
+          >
             Save Outcome
           </Button>
         </DialogFooter>

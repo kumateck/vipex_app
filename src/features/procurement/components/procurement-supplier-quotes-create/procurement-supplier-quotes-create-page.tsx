@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -57,7 +58,7 @@ export function ProcurementSupplierQuotesCreatePage() {
       toast.success('Supplier quote created');
       navigate('/procurement/supplier-quotes');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create quote');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create quote');
     }
   };
 

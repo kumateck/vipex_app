@@ -3,19 +3,21 @@ import { ThermalStickerHeaderPanel } from './thermal-sticker-header-panel';
 import { landscapeReceiverNameFontSize } from './thermal-sticker-font-size.utils';
 import { InfoBlock, ParcelStack, SenderBlock } from './thermal-sticker-info-sections';
 import { PAYMENT_DUE_NOTE } from './thermal-sticker-copy';
+import { ThermalStickerCallSenderMark } from './thermal-sticker-call-sender-mark';
 import type { PreparedThermalStickerTemplateProps } from './thermal-sticker-template-types';
 
 export function ThermalStickerLandscapeTemplate({
-  bookingCode,
   senderName,
   senderTelephones,
   receiverName,
   receiverTelephones,
+  callSender,
   destinationBranchName,
   destinationLocationName,
   parcelContent,
   parcelDetails,
   statusLabel,
+  duplicate,
   statusAmountLabel,
   hasToBePaid,
   qrValue,
@@ -36,7 +38,7 @@ export function ThermalStickerLandscapeTemplate({
         gap: '2.5mm',
       }}
     >
-      <ThermalStickerHeaderPanel />
+      <ThermalStickerHeaderPanel duplicate={duplicate} />
 
       <main
         style={{
@@ -47,7 +49,11 @@ export function ThermalStickerLandscapeTemplate({
           borderRight: '0.25mm solid #111',
         }}
       >
-        <ReceiverHeader receiverName={receiverName} receiverTelephones={receiverTelephones} />
+        <ReceiverHeader
+          receiverName={receiverName}
+          receiverTelephones={receiverTelephones}
+          callSender={callSender}
+        />
 
         <div
           style={{
@@ -111,21 +117,14 @@ export function ThermalStickerLandscapeTemplate({
             width: '100%',
           }}
         >
-          <div style={{ display: 'grid', justifyItems: 'center', rowGap: '0.4mm' }}>
-            <BrandedQrCode
-              value={qrValue}
-              size={220}
-              variant="print"
-              ariaLabel="Parcel tracking QR code"
-              className="justify-self-end"
-              style={{ width: '28mm', height: '28mm', backgroundColor: '#ffffff' }}
-            />
-            <div
-              style={{ fontSize: '1.8mm', fontWeight: 800, lineHeight: 1, whiteSpace: 'nowrap' }}
-            >
-              {bookingCode}
-            </div>
-          </div>
+          <BrandedQrCode
+            value={qrValue}
+            size={220}
+            variant="print"
+            ariaLabel="Parcel tracking QR code"
+            className="justify-self-end"
+            style={{ width: '28mm', height: '28mm', backgroundColor: '#ffffff' }}
+          />
         </div>
       </aside>
     </div>
@@ -135,15 +134,18 @@ export function ThermalStickerLandscapeTemplate({
 function ReceiverHeader({
   receiverName,
   receiverTelephones,
+  callSender,
 }: {
   receiverName: string;
   receiverTelephones: string;
+  callSender?: boolean;
 }) {
   const receiverNameFontSize = landscapeReceiverNameFontSize(receiverName);
 
   return (
     <header
       style={{
+        position: 'relative',
         minWidth: 0,
         display: 'grid',
         gridTemplateRows: 'auto minmax(0, 1fr) auto',
@@ -152,6 +154,7 @@ function ReceiverHeader({
         overflow: 'hidden',
       }}
     >
+      {callSender ? <ThermalStickerCallSenderMark /> : null}
       <div style={{ fontSize: '3mm', fontWeight: 700, textTransform: 'uppercase', lineHeight: 1 }}>
         Receiver
       </div>

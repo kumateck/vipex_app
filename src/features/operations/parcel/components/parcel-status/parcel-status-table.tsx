@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
-import { ParcelStatus } from '@/db/schemas/enums';
 import { DataTable } from '@/components/datatable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,12 +11,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import type { PaginationMeta, PaginationRequestDto } from '@/server/types/pagination.types';
 import { CallSenderBadge } from '../call-sender-badge';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { STATUS_LABELS } from './constants';
-import { canReturnToPickup, formatCurrency, formatPhones, formatReceivedAt } from './utils';
+import { PaymentTypeFilter, type PaymentType } from './payment-type-filter';
+import { ParcelStatusSearch } from './parcel-status-search';
+import {
+  canChangeCallOutcome,
+  canReturnToPickup,
+  formatCurrency,
+  formatPhones,
+  formatReceivedAt,
+} from './utils';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
+import { EMPTY_META as DEFAULT_META } from '../parcel-super-search/constants';
 
 type ParcelStatusTableProps = {
   rows: ParcelSearchRow[];
@@ -30,8 +41,16 @@ type ParcelStatusTableProps = {
   onSearchSubmit: () => void;
   onCallOutcome: (parcel: ParcelSearchRow) => void;
   onReturnToPickup: (parcel: ParcelSearchRow) => Promise<void>;
+  onMarkCalled: (parcel: ParcelSearchRow) => Promise<void>;
+  selectedParcelIds: Set<string>;
+  onToggleParcel: (parcelId: string, checked: boolean) => void;
+  onSelectAll: (checked: boolean) => void;
+  onBatchCallOutcome: () => void;
+  meta?: PaginationMeta;
+  onRequestChange: (request: PaginationRequestDto) => void;
+  paymentType: PaymentType;
+  onPaymentTypeChange: (value: PaymentType) => void;
 };
-
 export function ParcelStatusTable({
   rows,
   loading,
@@ -43,9 +62,43 @@ export function ParcelStatusTable({
   onSearchSubmit,
   onCallOutcome,
   onReturnToPickup,
+  onMarkCalled,
+  selectedParcelIds,
+  onToggleParcel,
+  onSelectAll,
+  onBatchCallOutcome,
+  meta,
+  onRequestChange,
+  paymentType,
+  onPaymentTypeChange,
 }: ParcelStatusTableProps) {
+  const selectedCount = rows.filter((row) => selectedParcelIds.has(row.id)).length;
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
+      {
+        id: 'select',
+        header: () => (
+          <Checkbox
+            checked={
+              rows.some((row) => canChangeCallOutcome(row.status)) &&
+              rows
+                .filter((row) => canChangeCallOutcome(row.status))
+                .every((row) => selectedParcelIds.has(row.id))
+            }
+            onCheckedChange={(checked) => onSelectAll(checked === true)}
+            aria-label="Select all parcels"
+          />
+        ),
+        enableSorting: false,
+        cell: ({ row }) => (
+          <Checkbox
+            disabled={!canChangeCallOutcome(row.original.status)}
+            checked={selectedParcelIds.has(row.original.id)}
+            onCheckedChange={(checked) => onToggleParcel(row.original.id, checked === true)}
+            aria-label={`Select ${row.original.bookingCode}`}
+          />
+        ),
+      },
       {
         id: 'rowNumber',
         header: 'No.',
@@ -64,6 +117,7 @@ export function ParcelStatusTable({
             <p className="text-muted-foreground text-xs">
               Received {formatReceivedAt(row.original.receivedAt)}
             </p>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
           </div>
         ),
       },
@@ -135,7 +189,7 @@ export function ParcelStatusTable({
         header: 'Status',
         accessorFn: (row) => STATUS_LABELS[row.status] ?? String(row.status),
         cell: ({ row }) => {
-          const contacted = row.original.status === ParcelStatus.CUSTOMER_CONTACTED;
+          const contacted = Boolean(row.original.callCenterCalledAt);
           return (
             <div className="space-y-1">
               <Badge
@@ -165,8 +219,14 @@ export function ParcelStatusTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onCallOutcome(row.original)}>
-                Call Outcome
+              <ViewParcelDetailsMenuItem parcelId={row.original.id} />
+              {canChangeCallOutcome(row.original.status) ? (
+                <DropdownMenuItem onClick={() => onCallOutcome(row.original)}>
+                  Call Outcome
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem onClick={() => void onMarkCalled(row.original)}>
+                Mark as Called
               </DropdownMenuItem>
               {canReturnToPickup(row.original.status) ? (
                 <DropdownMenuItem onClick={() => void onReturnToPickup(row.original)}>
@@ -178,45 +238,55 @@ export function ParcelStatusTable({
         ),
       },
     ],
-    [isSaving, onCallOutcome, onReturnToPickup],
+    [
+      isSaving,
+      onCallOutcome,
+      onMarkCalled,
+      onReturnToPickup,
+      onSelectAll,
+      onToggleParcel,
+      rows,
+      selectedParcelIds,
+    ],
   );
-
   return (
     <ScrollableWrapper>
       <Card>
         <CardHeader>
           <CardTitle>Parcel Status (Call Receivers)</CardTitle>
           <CardDescription>
-            Queue includes parcels at arrival, returned to office, and already-contacted parcels
-            still awaiting an outcome (pickup or delivery).
+            Assigned parcels stay here after a pickup or delivery choice until marked as called or
+            delivered.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form
-            className="flex items-center gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              onSearchSubmit();
-            }}
-          >
-            <Input
-              value={searchInput}
-              onChange={(event) => onSearchInputChange(event.target.value)}
-              placeholder="Search by tracking, booking, receiver name or phone"
-              className="h-11 text-base"
-            />
-            <Button type="submit" className="h-11 px-6" disabled={!companyId || !branchId}>
-              Search
-            </Button>
-          </form>
-
+          <ParcelStatusSearch
+            value={searchInput}
+            onChange={onSearchInputChange}
+            onSubmit={onSearchSubmit}
+            disabled={!companyId || !branchId}
+          />
+          <PaymentTypeFilter value={paymentType} onChange={onPaymentTypeChange} />
+          {selectedCount > 0 ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {selectedCount} parcel(s) selected
+              </span>
+              <Button type="button" onClick={onBatchCallOutcome} disabled={isSaving}>
+                Call Outcome for Selected
+              </Button>
+            </div>
+          ) : null}
           <DataTable
-            mode="client"
+            mode="server"
             data={rows}
             columns={columns}
+            meta={meta ?? DEFAULT_META}
             loading={loading}
             showSearch={false}
             enableVirtualization={false}
+            pageSizeOptions={[10, 20, 30, 40, 50]}
+            onRequestChange={onRequestChange}
           />
         </CardContent>
       </Card>

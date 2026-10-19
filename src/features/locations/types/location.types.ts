@@ -3,6 +3,8 @@ import type { ServerListQuery } from '@/services/rtk-query';
 export interface Location {
   id: string;
   name: string;
+  canSend?: boolean;
+  canReceive?: boolean;
   branchId: string;
   branch?: {
     id: string;
@@ -23,6 +25,8 @@ export type LocationListQuery = ServerListQuery<LocationFilters>;
 
 export interface LocationMutationInput {
   name: string;
+  canSend?: boolean;
+  canReceive?: boolean;
   branchId?: string;
 }
 
@@ -33,4 +37,6 @@ export interface LocationCreatePayload extends LocationMutationInput {
 
 export interface LocationUpdatePayload {
   name: string;
+  canSend?: boolean;
+  canReceive?: boolean;
 }

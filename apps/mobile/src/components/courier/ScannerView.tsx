@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, {
@@ -28,22 +28,31 @@ export function ScannerView({ onCodeScanned, processing = false }: ScannerViewPr
   const device = useCameraDevice('back');
   const codeScanner = useLockedCodeScanner(onCodeScanned);
   const scanProgress = useSharedValue(0);
-  const [cameraError, setCameraError] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState(() =>
+    Camera.getCameraPermissionStatus(),
+  );
   const [cameraRetryKey, setCameraRetryKey] = useState(0);
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [manualCode, setManualCode] = useState('');
 
   useFocusEffect(
     useCallback(() => {
-      setCameraError(false);
+      setCameraError(null);
       setTorchEnabled(false);
+      setPermissionStatus(Camera.getCameraPermissionStatus());
     }, []),
   );
 
   const restartCamera = useCallback(() => {
-    setCameraError(false);
+    setCameraError(null);
     setCameraRetryKey((current) => current + 1);
   }, []);
+
+  const requestCameraPermission = useCallback(async () => {
+    const granted = await requestPermission();
+    setPermissionStatus(granted ? 'granted' : Camera.getCameraPermissionStatus());
+  }, [requestPermission]);
 
   const submitManualCode = useCallback(() => {
     const code = manualCode.trim();
@@ -78,7 +87,19 @@ export function ScannerView({ onCodeScanned, processing = false }: ScannerViewPr
   return (
     <View>
       {!hasPermission ? (
-        <AppButton title="Enable Camera Access" onPress={() => void requestPermission()} />
+        <View style={styles.permissionPanel}>
+          <Text style={{ color: theme.colors.textSubtle }}>
+            Camera access is required to scan parcel QR codes.
+          </Text>
+          <AppButton
+            title={permissionStatus === 'denied' ? 'Open Camera Settings' : 'Enable Camera Access'}
+            onPress={() =>
+              void (permissionStatus === 'denied'
+                ? Linking.openSettings()
+                : requestCameraPermission())
+            }
+          />
+        </View>
       ) : device && isFocused ? (
         <View style={[styles.cameraWrap, { borderColor: theme.colors.border }]}>
           <Camera
@@ -90,7 +111,7 @@ export function ScannerView({ onCodeScanned, processing = false }: ScannerViewPr
             torch={torchEnabled ? 'on' : 'off'}
             zoom={device.neutralZoom}
             enableZoomGesture
-            onError={() => setCameraError(true)}
+            onError={(error) => setCameraError(error.message)}
           />
           {!cameraError ? (
             <>
@@ -137,7 +158,10 @@ export function ScannerView({ onCodeScanned, processing = false }: ScannerViewPr
           {cameraError ? (
             <View style={styles.processingOverlay} accessibilityLiveRegion="assertive">
               <Text style={styles.processingTitle}>Camera session stopped</Text>
-              <Text style={styles.processingText}>Restart the camera to continue scanning.</Text>
+              <Text style={styles.processingText}>{cameraError}</Text>
+              <Text style={styles.processingText}>
+                Restart the camera. If this repeats, update or reinstall Vipex Mobile.
+              </Text>
               <AppButton title="Restart Camera" onPress={restartCamera} />
             </View>
           ) : null}
@@ -242,6 +266,7 @@ const styles = StyleSheet.create({
   processingTitle: { color: '#ffffff', fontSize: 22, fontWeight: '800' },
   processingText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
   manualEntry: { gap: mobileSpacing.xs, marginTop: mobileSpacing.md },
+  permissionPanel: { gap: mobileSpacing.sm, marginBottom: mobileSpacing.sm },
   manualEntryTitle: { fontSize: 16, fontWeight: '800' },
   manualEntryHint: { fontSize: 14, lineHeight: 19 },
 });

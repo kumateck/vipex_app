@@ -5,6 +5,8 @@ export type InvoiceA5TemplateProps = {
   parcelContent?: string | null;
   parcelValueCedis?: number | null;
   receivedByName?: string | null;
+  cashierName?: string | null;
+  duplicate?: boolean;
   destinationBranchName: string;
   destinationLocationName: string;
   payerLabel: string;
@@ -19,6 +21,7 @@ export type InvoiceA5TemplateProps = {
   senderPaidCedis: number;
   receiverToPayCedis: number;
   amountPaidCedis: number;
+  storageChargeCedis?: number;
   amountInWords: string;
   tax: {
     vat: number;

@@ -2,17 +2,28 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { PaymentStatusBookingCell } from '../parcel-processed-consignment';
+import { ParcelTimestampsCell } from '../parcel-timestamps';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
+import { canEditSecondReceiver } from '@/shared/shipments/second-receiver';
+import { CallCenterAssignmentPaymentCell } from './call-center-assignment-payment-cell';
 import type { ParcelRow } from './call-center-assignment-types';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
+
+const formatPhones = (primary?: string | null, secondary?: string | null) =>
+  [primary, secondary].filter(Boolean).join(' / ') || '-';
 
 export function useCallCenterAssignmentColumns({
   onOpenAssignDialog,
+  onEditSecondReceiver,
+  canManageSecondReceiver,
   selectedParcelIds,
   onToggleParcel,
   rows,
   onToggleAll,
 }: {
   onOpenAssignDialog: (parcel: ParcelRow) => void;
+  onEditSecondReceiver: (parcel: ParcelRow) => void;
+  canManageSecondReceiver: boolean;
   selectedParcelIds: Set<string>;
   onToggleParcel: (parcelId: string) => void;
   rows: ParcelRow[];
@@ -43,8 +54,21 @@ export function useCallCenterAssignmentColumns({
       accessorKey: 'bookingCode',
       header: 'Booking Code',
       cell: ({ row }) => (
-        <div className="font-mono font-medium">
-          <PaymentStatusBookingCell parcel={row.original} />
+        <div className="space-y-1">
+          <div className="font-mono font-medium">{row.original.bookingCode}</div>
+          <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'senderName',
+      header: 'Sender',
+      cell: ({ row }) => (
+        <div className="space-y-1">
+          <div className="font-medium">{row.original.senderName ?? '-'}</div>
+          <div className="text-xs text-muted-foreground">
+            {formatPhones(row.original.senderPhone, row.original.senderPhone2)}
+          </div>
         </div>
       ),
     },
@@ -54,14 +78,42 @@ export function useCallCenterAssignmentColumns({
       cell: ({ row }) => (
         <div className="space-y-1">
           <div className="font-medium">{row.original.receiverName ?? '-'}</div>
-          <div className="text-xs text-muted-foreground">{row.original.receiverPhone ?? '-'}</div>
+          <div className="text-xs text-muted-foreground">
+            {formatPhones(row.original.receiverPhone, row.original.receiverPhone2)}
+          </div>
+          {row.original.secondReceiverName ? (
+            <div className="text-xs text-muted-foreground">
+              2nd: {row.original.secondReceiverName}
+              {row.original.secondReceiverPhone ? ` (${row.original.secondReceiverPhone})` : ''}
+            </div>
+          ) : null}
         </div>
+      ),
+    },
+    {
+      id: 'payment',
+      header: 'Payment',
+      cell: ({ row }) => <CallCenterAssignmentPaymentCell parcel={row.original} />,
+    },
+    {
+      accessorKey: 'receivedAt',
+      header: 'Dates',
+      cell: ({ row }) => (
+        <ParcelTimestampsCell
+          createdAt={row.original.createdAt}
+          receivedAt={row.original.receivedAt}
+        />
       ),
     },
     {
       accessorKey: 'parcelDetails',
       header: 'Details',
       cell: ({ row }) => <div className="text-sm">{row.original.parcelDetails}</div>,
+    },
+    {
+      accessorKey: 'parcelContent',
+      header: 'Content',
+      cell: ({ row }) => <div className="text-sm">{row.original.parcelContent || '-'}</div>,
     },
     {
       accessorKey: 'callCenterAssignedToUserName',
@@ -80,9 +132,17 @@ export function useCallCenterAssignmentColumns({
       id: 'actions',
       header: 'Action',
       cell: ({ row }) => (
-        <Button variant="outline" size="sm" onClick={() => onOpenAssignDialog(row.original)}>
-          {row.original.callCenterAssignedToUserName ? 'Reassign' : 'Assign'}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <ViewParcelDetailsButton parcelId={row.original.id} />
+          <Button variant="outline" size="sm" onClick={() => onOpenAssignDialog(row.original)}>
+            {row.original.callCenterAssignedToUserName ? 'Reassign' : 'Assign'}
+          </Button>
+          {canManageSecondReceiver && canEditSecondReceiver(row.original.status) ? (
+            <Button variant="outline" size="sm" onClick={() => onEditSecondReceiver(row.original)}>
+              {row.original.secondReceiverName ? 'Change 2nd Receiver' : 'Add 2nd Receiver'}
+            </Button>
+          ) : null}
+        </div>
       ),
     },
   ];

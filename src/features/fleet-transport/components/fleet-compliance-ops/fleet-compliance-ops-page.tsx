@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Link } from 'react-router-dom';
@@ -83,7 +84,7 @@ export function FleetComplianceOpsPage() {
       toast.success('Incident marked as resolved');
       await refetchIncidents();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to resolve incident');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to resolve incident');
     }
   };
 
@@ -96,7 +97,7 @@ export function FleetComplianceOpsPage() {
       toast.success('Incident reopened');
       await refetchIncidents();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to reopen incident');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to reopen incident');
     }
   };
 
@@ -109,7 +110,7 @@ export function FleetComplianceOpsPage() {
         `Re-ack reminder done. Candidates ${result.candidates}, recipients ${result.recipients}, email sent ${result.emailSent}.`,
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to run re-ack reminder');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to run re-ack reminder');
     }
   };
 
@@ -123,7 +124,7 @@ export function FleetComplianceOpsPage() {
       );
       await refetchOpsQueue();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to run escalation workflow');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to run escalation workflow');
     }
   };
 
@@ -138,7 +139,7 @@ export function FleetComplianceOpsPage() {
       );
       await Promise.all([refetchIncidents(), refetchOpsQueue()]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to run full automation');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to run full automation');
     }
   };
 

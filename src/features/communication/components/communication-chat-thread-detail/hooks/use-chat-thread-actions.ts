@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -43,7 +44,7 @@ export function useChatThreadActions({
       toast.success('Message deleted');
       refetchMessages();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete message.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to delete message.');
     }
   };
 
@@ -62,7 +63,7 @@ export function useChatThreadActions({
       }).unwrap();
       refetchMessages();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update message flag.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update message flag.');
     }
   };
 
@@ -77,7 +78,7 @@ export function useChatThreadActions({
       }).unwrap();
       refetchMessages();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add reaction.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to add reaction.');
     }
   };
 
@@ -100,7 +101,7 @@ export function useChatThreadActions({
       toast.success('Message forwarded');
       refetchMessages();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to forward message.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to forward message.');
     }
   };
 
@@ -127,7 +128,7 @@ export function useChatThreadActions({
       toast.success('Call bubble created');
       refetchMessages();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create call bubble.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create call bubble.');
     }
   };
 
@@ -160,7 +161,7 @@ export function useChatThreadActions({
       toast.success('Meeting bubble created');
       refetchMessages();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create meeting bubble.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create meeting bubble.');
     }
   };
 

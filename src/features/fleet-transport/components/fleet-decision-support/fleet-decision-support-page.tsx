@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -51,7 +52,7 @@ export function FleetDecisionSupportPage() {
         `Snapshot created. Fraud flagged trips: ${result.fraud.flaggedTrips}, incidents in window: ${result.compliance.incidentsInWindow}.`,
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to run analytics snapshot');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to run analytics snapshot');
     }
   };
 

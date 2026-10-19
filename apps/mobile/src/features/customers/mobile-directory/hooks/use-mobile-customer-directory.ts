@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
@@ -20,7 +21,7 @@ export function useMobileCustomerDirectory(canRead: boolean, canUpdate: boolean)
       const result = await withAuth((token) => listMobileCustomers(token, submittedSearch));
       setCustomers(result.data);
     } catch (error) {
-      notifyError('Customers unavailable', error instanceof Error ? error.message : 'Try again.');
+      notifyError('Customers unavailable', getMobileErrorMessage(error, '') || 'Try again.');
     } finally {
       setLoading(false);
     }
@@ -38,7 +39,7 @@ export function useMobileCustomerDirectory(canRead: boolean, canUpdate: boolean)
         setSelected(null);
         await load();
       } catch (error) {
-        notifyError('Customer not saved', error instanceof Error ? error.message : 'Try again.');
+        notifyError('Customer not saved', getMobileErrorMessage(error, '') || 'Try again.');
       } finally {
         setSaving(false);
       }

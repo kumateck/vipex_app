@@ -672,11 +672,10 @@ export function EmployeeCreateEditPage() {
                         navigate('/hr/employees');
                       } catch (error) {
                         toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : isEditing
-                              ? 'Failed to update employee'
-                              : 'Failed to create employee',
+                          getErrorMessage(
+                            error,
+                            isEditing ? 'Failed to update employee' : 'Failed to create employee',
+                          ),
                         );
                       }
                     }}
@@ -692,3 +691,4 @@ export function EmployeeCreateEditPage() {
     </div>
   );
 }
+import { getErrorMessage } from '@/lib/TheAduseiErrorResponse';

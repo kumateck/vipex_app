@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { normalizePhoneDigits, isTenDigitPhone, phoneLengthMessage } from '@/lib/phone';
@@ -5,7 +6,7 @@ import { ParcelStatus, UserStatus } from '@/db/schemas/enums';
 import { useGetBranchOperationsSettingsQuery } from '@/features/branches/api/branches.api';
 import {
   useAddCustomerCardMutation,
-  useCreateCustomerMutation,
+  useResolveSecondReceiverMutation,
   useListCardOptionsQuery,
   useListCustomerCardsQuery,
 } from '@/features/customers/api';
@@ -45,7 +46,7 @@ export function useWaitingPickupWorkflow() {
       companyId,
       destinationId: branchId,
       status: ParcelStatus.AWAITING_PICKUP,
-      senderPaid: true,
+      cashierCollectionRequired: false,
       hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled),
     },
   });
@@ -54,7 +55,8 @@ export function useWaitingPickupWorkflow() {
 
   const [updateParcel, { isLoading: isUpdatingParcel }] = useUpdateParcelMutation();
   const [addCustomerCard, { isLoading: isAddingCard }] = useAddCustomerCardMutation();
-  const [createCustomer, { isLoading: isCreatingCustomer }] = useCreateCustomerMutation();
+  const [resolveSecondReceiver, { isLoading: isCreatingCustomer }] =
+    useResolveSecondReceiverMutation();
   const cardOptionsQuery = useListCardOptionsQuery();
   const staffOptionsQuery = useListUserOptionsQuery(
     companyId && branchId && cashierLocationId
@@ -104,7 +106,7 @@ export function useWaitingPickupWorkflow() {
         companyId,
         destinationId: branchId,
         status: ParcelStatus.AWAITING_PICKUP,
-        senderPaid: true,
+        cashierCollectionRequired: false,
         hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, previous.search),
       },
     }));
@@ -140,7 +142,7 @@ export function useWaitingPickupWorkflow() {
         companyId,
         destinationId: branchId,
         status: ParcelStatus.AWAITING_PICKUP,
-        senderPaid: true,
+        cashierCollectionRequired: false,
         hasPickupQueue: getQueueFilterBySearch(isPickupQueueEnabled, term),
       },
     }));
@@ -154,7 +156,7 @@ export function useWaitingPickupWorkflow() {
       await listQuery.refetch();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to move parcel to home delivery',
+        getApplicationErrorMessage(error, '') || 'Failed to move parcel to home delivery',
       );
     }
   };
@@ -187,7 +189,7 @@ export function useWaitingPickupWorkflow() {
         if (!isTenDigitPhone(telephone)) {
           throw new Error(phoneLengthMessage('Second receiver telephone'));
         }
-        secondReceiverId = (await createCustomer({ fullname, telephone }).unwrap()).id;
+        secondReceiverId = (await resolveSecondReceiver({ fullname, telephone }).unwrap()).id;
       }
       secondCard = await resolveCustomerCard({
         customerId: secondReceiverId,

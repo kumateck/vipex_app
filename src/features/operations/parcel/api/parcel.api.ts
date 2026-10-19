@@ -58,6 +58,7 @@ export type SenderCashierParcel = {
   chargePsw: number;
   plannedToBePaidPsw: number;
   status: number;
+  callSender?: boolean;
   createdAt: string;
   currentHolderType?: number | null;
   currentHolderBranchId?: string | null;
@@ -66,6 +67,9 @@ export type SenderCashierParcel = {
   currentHolderLocationName?: string | null;
   currentHolderWarehouseId?: string | null;
   currentHolderWarehouseName?: string | null;
+  storageChargePsw?: number;
+  storageChargeDays?: number;
+  storageChargeStartAt?: string | null;
 };
 
 export type ProcessedParcel = SenderCashierParcel;
@@ -90,6 +94,7 @@ export type ParcelSearchRow = {
   receiverId: string;
   secondReceiverId: string | null;
   status: number;
+  callCenterCalledAt?: string | null;
   parcelDetails: string;
   parcelContent: string;
   parcelValuePsw: number;
@@ -102,6 +107,9 @@ export type ParcelSearchRow = {
   pickupLocationName?: string | null;
   plannedToBePaidPsw: number;
   outstandingPrincipalPsw?: number;
+  paidPrincipalPsw?: number;
+  senderPaidPrincipalPsw?: number;
+  receiverPaidPrincipalPsw?: number;
   outstandingDeliveryFeePsw?: number;
   method: number;
   shelfPickerStaffId: string | null;
@@ -130,14 +138,19 @@ export type ParcelSearchRow = {
   secondReceiverPhone?: string | null;
   secondReceiverPhone2?: string | null;
   dropoffAddress?: string | null;
+  riderReturnedAt?: string | null;
   deliveryFeePsw?: number | null;
   riderUserId?: string | null;
   riderName?: string | null;
+  createdByName?: string | null;
+  callCenterAssignedToUserId?: string | null;
+  callCenterAssignedToUserName?: string | null;
   pickupQueueId?: string | null;
   pickupQueueCode?: string | null;
   pickupQueueNumber?: number | null;
   pickupQueuedAt?: string | null;
   pickupQueueEndedAt?: string | null;
+  deliveredAt?: string | null;
   currentHolderType?: number | null;
   currentHolderBranchId?: string | null;
   currentHolderBranchName?: string | null;
@@ -191,6 +204,75 @@ export type ParcelStorageSettlement = {
   paidPsw: number;
   waivedPsw: number;
   outstandingPsw: number;
+};
+
+export type ParcelStorageClearanceRow = {
+  id: string;
+  companyId: string;
+  parcelId: string;
+  status: number;
+  requestedDays: number;
+  accruedDaysAtRequest: number;
+  dailyRatePsw: number;
+  requestedAmountPsw: number;
+  clearAll: boolean;
+  reason: string;
+  evidenceUrl: string | null;
+  requestedBy: string;
+  requestedByName: string | null;
+  requestedAt: string;
+  approvedBy: string | null;
+  approvedByName: string | null;
+  approvedAt: string | null;
+  approvalNote: string | null;
+  returnedBy: string | null;
+  returnedByName: string | null;
+  returnedAt: string | null;
+  returnNote: string | null;
+  rejectedBy: string | null;
+  rejectedByName: string | null;
+  rejectedAt: string | null;
+  rejectionNote: string | null;
+  executedBy: string | null;
+  executedByName: string | null;
+  executedAt: string | null;
+  executedDays: number | null;
+  executedAmountPsw: number | null;
+  accountingJournalEntryId: string | null;
+  accountingPostedAt: string | null;
+  bookingCode: string;
+  trackingCode: string;
+  parcelStatus: number;
+  senderName: string | null;
+  receiverName: string | null;
+};
+
+export type ParcelStorageClearanceDetail = {
+  request: Pick<
+    ParcelStorageClearanceRow,
+    | 'id'
+    | 'parcelId'
+    | 'status'
+    | 'requestedDays'
+    | 'requestedAmountPsw'
+    | 'reason'
+    | 'clearAll'
+    | 'evidenceUrl'
+  >;
+  accruedDays: number;
+  totalAccruedDays: number;
+  dailyRatePsw: number;
+  outstandingPsw: number;
+  paidPsw: number;
+  waivedPsw: number;
+  remainingDays: number;
+  history: {
+    id: string;
+    action: string;
+    actorName: string | null;
+    createdAt: string;
+    metadata: Record<string, unknown> | null;
+  }[];
 };
 
 export type ParcelDiscrepancyRow = {
@@ -281,7 +363,35 @@ export type ParcelInternalHolderSnapshot = {
   updatedAt: string;
 };
 
+export type HomeDeliveryReceipt = {
+  bookingCode: string;
+  trackingCode: string;
+  parcelDetails: string;
+  parcelContent: string;
+  dropoffAddress: string | null;
+  senderName: string | null;
+  senderPhone: string | null;
+  senderPhone2: string | null;
+  receiverName: string | null;
+  receiverPhone: string | null;
+  receiverPhone2: string | null;
+  destinationName: string | null;
+  chargePsw: number;
+  deliveryFeePsw: number;
+  paidPrincipalPsw: number;
+  paidDeliveryFeePsw: number;
+  principalDuePsw: number;
+  deliveryFeeDuePsw: number;
+  totalDuePsw: number;
+  grossPsw: number;
+  netPsw: number;
+  taxTotalPsw: number;
+  taxRows: Array<{ label: string; amountPsw: number }>;
+};
+
 export type ParcelFullDetails = {
+  /** The parcel as list/search rows show it (names, phones, payer totals, rider, holder). */
+  summary?: ParcelSearchRow | null;
   parcel: {
     id: string;
     companyId: string;
@@ -291,8 +401,11 @@ export type ParcelFullDetails = {
     bookingCode: string;
     trackingCode: string;
     senderId: string;
+    senderNameSnapshot: string;
     receiverId: string;
+    receiverNameSnapshot: string;
     secondReceiverId: string | null;
+    secondReceiverNameSnapshot: string | null;
     status: number;
     parcelDetails: string;
     parcelContent: string;
@@ -313,6 +426,7 @@ export type ParcelFullDetails = {
     deletedAt: string | null;
     deleteReason: string | null;
     createdBy: string | null;
+    processedBy?: string | null;
     createdAt: string;
     receivedBy: string | null;
     receivedAt: string | null;
@@ -321,6 +435,8 @@ export type ParcelFullDetails = {
     updatedAt: string;
     cashierSessionId: string | null;
   };
+  /** Full names for every user id referenced in these details. */
+  userNames?: Record<string, string>;
   payments: Array<{
     id: string;
     companyId: string;
@@ -357,6 +473,10 @@ export type ParcelFullDetails = {
     frontDeskUserId: string | null;
     deliveryUserId: string | null;
     riderUserId: string | null;
+    riderName?: string | null;
+    riderAssignedAt?: string | null;
+    riderCompletedAt?: string | null;
+    returnedAt?: string | null;
     signatureImage: string | null;
     receiverCalledConfirmedBy: string | null;
     receiverCalledConfirmedAt: string | null;
@@ -546,11 +666,16 @@ export type ParcelSearchFilters = {
   status?: number | null;
   statuses?: number[] | null;
   senderPaid?: boolean | null;
+  paymentType?: 'paid' | 'to_be_paid' | 'partial' | null;
   hasPickupQueue?: boolean | null;
   agedOnly?: boolean | null;
   storageChargeAccruing?: boolean | null;
+  cashierCollectionRequired?: boolean | null;
   includeDeleted?: boolean | null;
   assignedToCurrentUser?: boolean | null;
+  callCenterUncalledOnly?: boolean | null;
+  sentDate?: string | null;
+  consignmentNumber?: string | null;
 };
 
 export type IncomingConsignmentRow = {
@@ -697,11 +822,115 @@ export const parcelApi = api.injectEndpoints({
       }),
       providesTags: [{ type: 'Bookings', id: 'LIST' }],
     }),
+    listReturnToSourceParcels: builder.query<
+      ServerListResponse<ParcelSearchRow>,
+      { page: number; pageSize: number; search?: string }
+    >({
+      query: (params) => ({ url: '/shipments/parcels/return-to-source', params }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    listDeliveryReversalCandidates: builder.query<
+      ServerListResponse<ParcelSearchRow>,
+      { page?: number; pageSize?: number; search?: string }
+    >({
+      query: (params) => ({ url: '/shipments/parcels/delivery-reversal-candidates', params }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    previewParcelFinancialRepair: builder.query<
+      {
+        id: string;
+        bookingCode: string;
+        trackingCode: string;
+        status: number;
+        chargePsw: number;
+        activePrincipalPaidPsw: number;
+        currentToBePaidPsw: number;
+        expectedToBePaidPsw: number;
+        needsRepair: boolean;
+        canRepair: boolean;
+        restriction: string | null;
+      },
+      { search: string }
+    >({
+      query: ({ search }) => ({
+        url: '/shipments/parcels/financial-repair/preview',
+        params: { search },
+      }),
+    }),
+    repairParcelFinancialState: builder.mutation<
+      {
+        id: string;
+        bookingCode: string;
+        trackingCode: string;
+        previousToBePaidPsw: number;
+        plannedToBePaidPsw: number;
+      },
+      { search: string; reason: string }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcels/financial-repair/execute',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: (_result, _error) => [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    returnParcelToSource: builder.mutation<
+      { id: string; status: number },
+      { id: string; reason: string }
+    >({
+      query: ({ id, reason }) => ({
+        url: `/shipments/parcels/${id}/return-to-source`,
+        method: 'POST',
+        body: { reason },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Bookings', id: 'LIST' },
+        { type: 'Bookings', id },
+      ],
+    }),
+    lookupCallOutcomeReceiver: builder.query<
+      { id: string; fullname: string; telephone: string | null; telephone2: string | null } | null,
+      string
+    >({
+      query: (telephone) => ({
+        url: `/shipments/parcels/call-center/receiver-lookup/${encodeURIComponent(telephone)}`,
+      }),
+    }),
+    changeCallOutcomeMainReceiver: builder.mutation<
+      { id: string; receiverId: string; status: number; receiverName: string },
+      {
+        id: string;
+        telephone: string;
+        fullname?: string;
+        outcome: 'follow_up' | 'pickup' | 'delivery';
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/${id}/call-outcome/change-main-receiver`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    reverseParcelDelivery: builder.mutation<
+      { id: string; status: number },
+      { id: string; reason: string }
+    >({
+      query: ({ id, reason }) => ({
+        url: `/shipments/parcels/${id}/reverse-delivery`,
+        method: 'POST',
+        body: { reason },
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
     getParcelDetails: builder.query<ParcelFullDetails, string>({
       query: (id) => ({
         url: `/shipments/parcels/${id}/details`,
       }),
       providesTags: (_result, _error, id) => [{ type: 'Bookings', id }],
+    }),
+    getHomeDeliveryReceipt: builder.query<HomeDeliveryReceipt, string>({
+      query: (id) => ({ url: `/shipments/parcels/${id}/home-delivery-receipt` }),
     }),
     listParcelDispositionActions: builder.query<ParcelDispositionActionRow[], string>({
       query: (id) => ({
@@ -738,20 +967,6 @@ export const parcelApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
-    }),
-    waiveParcelStorageAccrual: builder.mutation<
-      { id: string },
-      { id: string; reason: string; waivedAmountCedis?: number | string | null }
-    >({
-      query: ({ id, ...body }) => ({
-        url: `/shipments/parcels/${id}/storage-waivers`,
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: (_result, _error, arg) => [
-        { type: 'Bookings', id: 'LIST' },
-        { type: 'Bookings', id: arg.id },
-      ],
     }),
     listProcessedParcelsForConsignment: builder.query<
       ServerListResponse<ProcessedParcel>,
@@ -859,6 +1074,15 @@ export const parcelApi = api.injectEndpoints({
         status: number;
         message: string;
         storageSettlement?: ParcelStorageSettlement;
+        storagePayment?: { id: string; amounts: { grossCedis: number } } | null;
+        receiptTaxBreakdown?: {
+          vatCedis: number;
+          getfundCedis: number;
+          nhilCedis: number;
+          covidCedis: number;
+          taxTotalCedis: number;
+          taxComponentKeys: string[];
+        } | null;
         payment: null | {
           id: string;
           amounts: {
@@ -909,12 +1133,13 @@ export const parcelApi = api.injectEndpoints({
       ],
     }),
     requestReceiverOtp: builder.mutation<
-      { expiresAt: string },
+      { expiresAt: string; channel?: 'sms' | 'whatsapp' },
       {
         parcelId: string;
         targetReceiver: 'main' | 'second';
         force?: boolean;
         phoneSlot?: 'primary' | 'secondary';
+        channel?: 'sms' | 'whatsapp';
       }
     >({
       query: (body) => ({
@@ -1054,6 +1279,32 @@ export const parcelApi = api.injectEndpoints({
     >({
       query: (body) => ({
         url: '/shipments/parcels/bulk-mark-received',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    saveBulkCallOutcome: builder.mutation<
+      { parcelIds: string[]; updatedCount: number; status: number },
+      { parcelIds: string[]; outcome: 'follow_up' | 'pickup' | 'delivery' }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcels/bulk-call-outcome',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    recordCallCenterContact: builder.mutation<
+      { id: string; status: number; calledAt: string },
+      {
+        id: string;
+        outcome?: 'follow_up' | 'pickup' | 'delivery';
+        secondReceiverId?: string | null;
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/${id}/call-center/contact`,
         method: 'POST',
         body,
       }),
@@ -1231,6 +1482,119 @@ export const parcelApi = api.injectEndpoints({
     >({
       query: ({ id, ...body }) => ({
         url: `/shipments/parcels/reconciliation-cases/${id}/execute`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    listParcelStorageClearances: builder.query<
+      ServerListResponse<ParcelStorageClearanceRow>,
+      ServerListQuery<{
+        companyId?: string | null;
+        branchId?: string | null;
+        statuses?: number[] | null;
+      }>
+    >({
+      query: (query) => ({
+        url: '/shipments/parcels/storage-clearances',
+        params: buildServerPaginationParams(query),
+      }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    searchStorageClearanceParcels: builder.query<
+      ServerListResponse<ParcelSearchRow>,
+      { search: string; page: number; pageSize: number }
+    >({
+      query: (params) => ({ url: '/shipments/parcels/storage-clearances/parcel-search', params }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    getStorageClearanceParcelAccrual: builder.query<
+      {
+        parcelId: string;
+        accruedDays: number;
+        totalAccruedDays: number;
+        dailyRatePsw: number;
+        outstandingPsw: number;
+      },
+      string
+    >({
+      query: (id) => ({ url: `/shipments/parcels/storage-clearances/parcels/${id}` }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    getParcelStorageClearanceDetail: builder.query<ParcelStorageClearanceDetail, string>({
+      query: (id) => ({ url: `/shipments/parcels/storage-clearances/${id}` }),
+      providesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    createParcelStorageClearance: builder.mutation<
+      { id: string },
+      {
+        parcelId: string;
+        requestedDays?: number | null;
+        clearAll?: boolean;
+        reason: string;
+        evidenceUrl?: string | null;
+      }
+    >({
+      query: (body) => ({
+        url: '/shipments/parcels/storage-clearances',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    resubmitParcelStorageClearance: builder.mutation<
+      { id: string },
+      {
+        id: string;
+        requestedDays?: number | null;
+        clearAll?: boolean;
+        reason: string;
+        evidenceUrl?: string | null;
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/storage-clearances/${id}/resubmit`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    approveParcelStorageClearance: builder.mutation<
+      { id: string },
+      { id: string; note?: string | null }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/storage-clearances/${id}/approve`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    rejectParcelStorageClearance: builder.mutation<{ id: string }, { id: string; note: string }>({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/storage-clearances/${id}/reject`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    returnParcelStorageClearanceForReview: builder.mutation<
+      { id: string },
+      { id: string; note: string }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/storage-clearances/${id}/return-for-review`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Bookings', id: 'LIST' }],
+    }),
+    executeParcelStorageClearance: builder.mutation<
+      { id: string; executedDays: number; executedAmountPsw: number },
+      { id: string; note?: string | null }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/shipments/parcels/storage-clearances/${id}/execute`,
         method: 'POST',
         body,
       }),
@@ -1449,8 +1813,20 @@ export const {
   useCreateBookingWithParcelsMutation,
   useListSenderCashierParcelsQuery,
   useSearchParcelsQuery,
+  useListReturnToSourceParcelsQuery,
+  useListDeliveryReversalCandidatesQuery,
+  useLazyPreviewParcelFinancialRepairQuery,
+  useRepairParcelFinancialStateMutation,
+  useLookupCallOutcomeReceiverQuery,
+  useChangeCallOutcomeMainReceiverMutation,
+  useReverseParcelDeliveryMutation,
+  useReturnParcelToSourceMutation,
   useLazySearchParcelsQuery,
   useGetParcelDetailsQuery,
+  useGetParcelStorageClearanceDetailQuery,
+  useLazySearchStorageClearanceParcelsQuery,
+  useGetStorageClearanceParcelAccrualQuery,
+  useLazyGetHomeDeliveryReceiptQuery,
   useLazyGetParcelDetailsQuery,
   useListParcelDispositionActionsQuery,
   useListProcessedParcelsForConsignmentQuery,
@@ -1471,11 +1847,12 @@ export const {
   useUpdateParcelStatusMutation,
   useMarkParcelReceivedMutation,
   useMarkParcelsReceivedMutation,
+  useSaveBulkCallOutcomeMutation,
+  useRecordCallCenterContactMutation,
   useUpdateParcelMutation,
   useSendParcelStatusCallNotificationMutation,
   useRecordParcelDispositionActionMutation,
   useLogParcelStickerPrintMutation,
-  useWaiveParcelStorageAccrualMutation,
   useSoftDeleteParcelMutation,
   useLogParcelDiscrepancyMutation,
   useListOpenParcelDiscrepanciesQuery,
@@ -1485,6 +1862,13 @@ export const {
   useRequestParcelReconciliationCaseMutation,
   useApproveParcelReconciliationCaseMutation,
   useExecuteParcelReconciliationCaseMutation,
+  useListParcelStorageClearancesQuery,
+  useCreateParcelStorageClearanceMutation,
+  useResubmitParcelStorageClearanceMutation,
+  useApproveParcelStorageClearanceMutation,
+  useRejectParcelStorageClearanceMutation,
+  useReturnParcelStorageClearanceForReviewMutation,
+  useExecuteParcelStorageClearanceMutation,
   useCollectDoorstepAddressMutation,
   useDispatchDoorstepParcelsMutation,
   useListRiderDoorstepParcelsQuery,

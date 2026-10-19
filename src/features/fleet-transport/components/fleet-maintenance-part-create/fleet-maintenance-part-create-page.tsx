@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -39,7 +40,7 @@ export function FleetMaintenancePartCreatePage() {
       toast.success('Maintenance part created');
       navigate('/fleet-transport/maintenance');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create maintenance part');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create maintenance part');
     }
   };
 

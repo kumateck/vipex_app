@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
-import logoPng from '@/assets/logo.png';
+import { PRINT_LOGO_DATA_URI } from '@/shared/printing/print-logo';
 
 export interface PrintableReportSection {
   heading: string;
@@ -56,7 +56,7 @@ export const PrintableReportDocument = forwardRef<HTMLDivElement, PrintableRepor
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <img
-                  src={logoPng}
+                  src={PRINT_LOGO_DATA_URI}
                   alt="Vipex logo"
                   style={{ width: '42px', height: '42px', objectFit: 'contain' }}
                 />

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -68,7 +69,7 @@ export function FleetDispatchRouteAssignmentPage() {
       }).unwrap();
       toast.success('Route assignment updated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update route assignment');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update route assignment');
     }
   };
 

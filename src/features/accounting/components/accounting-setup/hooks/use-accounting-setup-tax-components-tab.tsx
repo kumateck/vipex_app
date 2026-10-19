@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
@@ -146,7 +147,7 @@ export function useAccountingSetupTaxComponentsTab({
       resetTaxComponentForm(payload.profileId);
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save tax component');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save tax component');
     }
   }
 
@@ -169,7 +170,7 @@ export function useAccountingSetupTaxComponentsTab({
       resetTaxComponentForm();
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete tax component');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to delete tax component');
     }
   }
 

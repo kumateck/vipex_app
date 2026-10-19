@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -30,12 +31,14 @@ import {
 import { useAuthStore } from '@/stores/auth-store';
 import { CashierType, UserType } from '@/db/schemas/enums';
 import { PermissionKeys } from '@/shared/permissions/constants';
+import { SessionDelegatesDialog } from '@/features/cashiers/components/session-delegates';
 
 export function CashierSessionControls() {
   const authUser = useAuthStore((state) => state.user);
   const location = useLocation();
   const [isOpenDialog, setIsOpenDialog] = useState(false);
   const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
+  const [delegatesOpen, setDelegatesOpen] = useState(false);
   const [sessionTypeId, setSessionTypeId] = useState('');
   const [openingBalance, setOpeningBalance] = useState('');
   const [closingBalance, setClosingBalance] = useState('0');
@@ -134,7 +137,7 @@ export function CashierSessionControls() {
       setSessionTypeId('');
       setOpeningBalance('');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open session');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to open session');
     }
   };
 
@@ -159,7 +162,7 @@ export function CashierSessionControls() {
       setIsCloseDialogOpen(false);
       setClosingBalance('0');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to close session');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to close session');
     }
   };
 
@@ -229,6 +232,19 @@ export function CashierSessionControls() {
   return (
     <div className="flex items-center gap-2">
       <CashierSessionSummaryBadges mode={summaryMode} summary={summary} />
+      {(cashierType === CashierType.SENDING || cashierType === CashierType.FULL) &&
+      canReadSessions ? (
+        <>
+          <Button size="sm" variant="outline" onClick={() => setDelegatesOpen(true)}>
+            Delegates
+          </Button>
+          <SessionDelegatesDialog
+            sessionId={activeSession.id}
+            open={delegatesOpen}
+            onOpenChange={setDelegatesOpen}
+          />
+        </>
+      ) : null}
       {canCloseSessions ? (
         <>
           <Button

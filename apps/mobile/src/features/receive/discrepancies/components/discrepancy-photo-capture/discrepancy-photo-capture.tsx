@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
@@ -41,7 +42,7 @@ export function DiscrepancyPhotoCapture({ value, onChange }: Props) {
       });
       setActive(false);
     } catch (error) {
-      notifyError('Photo not captured', error instanceof Error ? error.message : 'Try again.');
+      notifyError('Photo not captured', getMobileErrorMessage(error, '') || 'Try again.');
     } finally {
       setCapturing(false);
     }

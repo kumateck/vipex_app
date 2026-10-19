@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useListPickupQueueCardsQuery } from '../../api/parcel.api';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { CallSenderBadge } from '../call-sender-badge';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) return '-';
@@ -116,8 +117,9 @@ export function ParcelPickupQueueBoardPage({
                   <p>
                     <strong>Telephone:</strong> {card.receiverPhone ?? '-'}
                   </p>
-                  <p>
+                  <p className="flex flex-wrap items-center gap-2">
                     <strong>Booking:</strong> {card.bookingCode}
+                    <ViewParcelDetailsButton parcelId={card.parcelId} />
                   </p>
                   <p>
                     <strong>Parcel:</strong> {card.parcelDetails}

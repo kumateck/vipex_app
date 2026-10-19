@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
@@ -63,7 +64,7 @@ export function ParcelDiscrepanciesPage() {
       setResolvingRow(null);
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to resolve discrepancy');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to resolve discrepancy');
     }
   };
 

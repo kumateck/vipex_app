@@ -613,10 +613,12 @@ export async function getParcelRecipientsRepo(companyId: string, parcelId: strin
       bookingCode: parcels.bookingCode,
       trackingCode: parcels.trackingCode,
       branch: branches.name,
+      branchPhone: branches.telephone,
       location: locations.name,
       secondReceiverId: parcels.secondReceiverId,
+      secondReceiverName: parcels.secondReceiverNameSnapshot,
       primaryReceiverId: customers.id,
-      primaryReceiverName: customers.fullname,
+      primaryReceiverName: parcels.receiverNameSnapshot,
       primaryReceiverPhone: customers.telephone,
       primaryReceiverPhone2: customers.telephone2,
       primaryReceiverEmail: customers.email,
@@ -662,6 +664,7 @@ export async function getParcelRecipientsRepo(companyId: string, parcelId: strin
     bookingCode: parcel.bookingCode,
     trackingCode: parcel.trackingCode,
     branch: parcel.branch,
+    branchPhone: parcel.branchPhone,
     location: parcel.location,
     primary: {
       id: parcel.primaryReceiverId,
@@ -674,7 +677,7 @@ export async function getParcelRecipientsRepo(companyId: string, parcelId: strin
     secondary: secondary[0]
       ? {
           id: secondary[0].id,
-          name: secondary[0].fullname,
+          name: parcel.secondReceiverName ?? secondary[0].fullname,
           phone: secondary[0].telephone,
           email: secondary[0].email,
           type: 'second_receiver',

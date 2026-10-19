@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { CreateBucketCommand, HeadBucketCommand, S3Client } from '@aws-sdk/client-s3';
 import { env } from '@/server/utils/env';
 import { BadRequest } from '@/server/utils/http-error';
@@ -67,7 +68,7 @@ export async function ensureMinioBucketReady() {
       bucket: env.MINIO_BUCKET,
       code: getMinioErrorCode(error),
       statusCode: getMinioHttpStatusCode(error),
-      message: error instanceof Error ? error.message : String(error),
+      message: getApplicationErrorMessage(error, '') || String(error),
     });
     throw error;
   });
@@ -100,7 +101,7 @@ async function ensureBucket() {
       bucket: env.MINIO_BUCKET,
       statusCode,
       code,
-      message: error instanceof Error ? error.message : String(error),
+      message: getApplicationErrorMessage(error, '') || String(error),
       elapsedMs: Date.now() - startedAt,
     });
 

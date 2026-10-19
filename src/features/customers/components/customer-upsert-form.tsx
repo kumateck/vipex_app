@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -141,7 +142,7 @@ export function CustomerUpsertForm({ mode, customerId, initialData }: CustomerUp
       toast.success('Customer created');
       navigate(`/customers/${created.id}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save customer');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save customer');
     }
   };
 

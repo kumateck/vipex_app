@@ -35,6 +35,18 @@ const catalog = [
   ['CanUpdateCards', 'Update cards', 'Cards'],
   ['CanDeleteCards', 'Delete cards', 'Cards'],
 
+  // Customer website inbox (independent of internal tickets)
+  [
+    'CanReadCustomerMessages',
+    'View customer website enquiries, complaints and feedback',
+    'Customer Messages',
+  ],
+  [
+    'CanManageCustomerMessages',
+    'Manage customer message status and internal notes',
+    'Customer Messages',
+  ],
+
   // Shipments / Parcels / Consignments / Grouping
   ['CanReadShipments', 'List shipments', 'Shipments'],
   ['CanCreateShipments', 'Create shipments', 'Shipments'],
@@ -49,6 +61,8 @@ const catalog = [
   ['CanReadParcelOutgoing', 'View in-transit outgoing parcels', 'Shipments'],
   ['CanReadParcelIncoming', 'View in-transit incoming parcels', 'Shipments'],
   ['CanReadParcelScan', 'View and use parcel scan-to-receive', 'Shipments'],
+  ['CanReverseParcelDelivery', 'Reverse a parcel delivery confirmation', 'Shipments'],
+  ['CanRepairParcelFinancialState', 'Preview and repair parcel financial state', 'Shipments'],
   ['CanCreateParcels', 'Create parcels', 'Shipments'],
   ['CanUpdateParcels', 'Update parcels', 'Shipments'],
   ['CanDeleteParcels', 'Delete parcels', 'Shipments'],
@@ -61,6 +75,10 @@ const catalog = [
   ['CanRequestParcelReconciliation', 'Request parcel reconciliation cases', 'Shipments'],
   ['CanApproveParcelReconciliation', 'Approve parcel reconciliation cases', 'Shipments'],
   ['CanExecuteParcelReconciliation', 'Execute parcel reconciliation cases', 'Shipments'],
+  ['CanReadParcelStorageClearances', 'View parcel storage clearance requests', 'Shipments'],
+  ['CanRequestParcelStorageClearance', 'Request parcel storage fee clearance', 'Shipments'],
+  ['CanApproveParcelStorageClearance', 'Approve parcel storage fee clearance', 'Shipments'],
+  ['CanExecuteParcelStorageClearance', 'Execute parcel storage fee clearance', 'Accounting'],
   [
     'CanOverrideParcelReconciliationWindow',
     'Override parcel reconciliation standard execution window',
@@ -108,6 +126,11 @@ const catalog = [
   ['CanAssignCallCenterParcels', 'Assign parcels to call center representatives', 'Deliveries'],
   ['CanReadShelfPickerUpdate', 'View shelf picker update page', 'Deliveries'],
   ['CanUpdateParcelShelfPicker', 'Update parcel shelf picker assignments', 'Deliveries'],
+  [
+    'CanManageParcelSecondReceiver',
+    'Add, change, or remove parcel second receivers on Shelf Picker Update and Parcel Assignment',
+    'Deliveries',
+  ],
 
   // Payments / Accounting
   ['CanCreatePayments', 'Create payments', 'Payments'],
@@ -328,6 +351,7 @@ const catalog = [
   ['CanViewReportCustomersInactive', 'View report: Inactive Customers', 'Reports'],
   ['CanViewReportParcelsBookings', 'View report: Booking Register', 'Reports'],
   ['CanViewReportParcelsRegister', 'View report: Parcel Register', 'Reports'],
+  ['CanViewReportParcelsDailyAudit', 'View report: Daily Parcel Audit', 'Reports'],
   ['CanViewReportParcelsTracking', 'View report: Parcel Tracking', 'Reports'],
   ['CanViewReportParcelsInTransitOutgoing', 'View report: In-Transit Outgoing', 'Reports'],
   ['CanViewReportParcelsInTransitIncoming', 'View report: In-Transit Incoming', 'Reports'],
@@ -373,6 +397,11 @@ const catalog = [
   ['CanReadCompanyProfile', 'View company profile settings', 'Platform'],
   ['CanManageParcelAgeingPolicy', 'Manage parcel ageing and storage charges', 'Platform'],
   ['CanManagePrinterRouting', 'Manage desktop printer routing', 'Platform'],
+  [
+    'CanApproveRegisteredDevices',
+    'Approve, revoke and block registered mobile and desktop devices',
+    'Platform',
+  ],
   ['CanManageDesktopUpdates', 'Manage desktop app update checks and installation', 'Platform'],
   ['CanReadDashboard', 'View dashboard', 'Platform'],
   ['CanViewBasicAnalytics', 'View basic analytics', 'Analytics'],
@@ -780,6 +809,7 @@ export const AccountingSetupPermissionKeys = Object.freeze({
 });
 
 export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> = Object.freeze({
+  '/customer-messages': PermissionKeys.CanReadCustomerMessages,
   '/users/password-management': PermissionKeys.CanSetUserPassword,
   '/parcels/sender-payments': PermissionKeys.CanCreateSenderPayments,
   '/parcels/processed': PermissionKeys.CanReadConsignments,
@@ -793,14 +823,23 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/parcels/in-transit/outgoing': PermissionKeys.CanReadParcelOutgoing,
   '/parcels/in-transit/incoming': PermissionKeys.CanReadParcelIncoming,
   '/parcels/discrepancies': PermissionKeys.CanReadParcelIncoming,
+  '/parcels/return-to-source': PermissionKeys.CanReadParcels,
   '/parcels/reconciliation-cases': PermissionKeys.CanReadParcelReconciliation,
+  '/parcels/storage-clearances': PermissionKeys.CanReadParcelStorageClearances,
+  '/parcels/storage-clearances/new': PermissionKeys.CanRequestParcelStorageClearance,
+  '/parcels/storage-clearances/approvals': PermissionKeys.CanApproveParcelStorageClearance,
+  '/parcels/storage-clearances/execution': PermissionKeys.CanExecuteParcelStorageClearance,
   '/parcels/receive': PermissionKeys.CanReadParcelScan,
+  '/parcels/delivery-reversal': PermissionKeys.CanReverseParcelDelivery,
+  '/parcels/financial-repair': PermissionKeys.CanRepairParcelFinancialState,
   '/parcels/home-delivery/dispatch': PermissionKeys.CanDispatchForDelivery,
+  '/parcels/home-delivery/returned': PermissionKeys.CanDispatchForDelivery,
   '/parcels/home-delivery/rider-assigned': PermissionKeys.CanDispatchForDelivery,
   '/parcels/delivery-cashier': PermissionKeys.CanCompleteDoorstepDelivery,
   '/parcels/status': PermissionKeys.CanReadCallCenterParcelStatus,
   '/parcels/call-center-assignment': PermissionKeys.CanReadCallCenterAssignment,
   '/parcels/shelf-picker-update': PermissionKeys.CanReadShelfPickerUpdate,
+  '/parcels/shelf-pickup-reassignment': PermissionKeys.CanUpdateParcelShelfPicker,
   '/parcels/home-delivery/address': PermissionKeys.CanMarkDoorstepCalled,
   '/parcels/rider/current': PermissionKeys.CanReadRiderCurrentParcels,
   '/parcels/rider/history': PermissionKeys.CanReadRiderHistory,
@@ -936,10 +975,12 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/it-support/tickets/new': PermissionKeys.CanCreateItSupportTickets,
   '/settings/company': PermissionKeys.CanReadCompanyProfile,
   '/settings/sms': PermissionKeys.CanReadCompanyProfile,
+  '/settings/whatsapp': PermissionKeys.CanReadCompanyProfile,
   '/settings/modules': PermissionKeys.CanManageCompanyModules,
   '/settings/parcel-ageing': PermissionKeys.CanManageParcelAgeingPolicy,
   '/settings/app-updates': PermissionKeys.CanManageDesktopUpdates,
   '/settings/printer-routing': PermissionKeys.CanManagePrinterRouting,
+  '/settings/devices': PermissionKeys.CanApproveRegisteredDevices,
   '/settings/appearance': PermissionKeys.CanManageAppearance,
   '/dashboard': PermissionKeys.CanReadDashboard,
   '/dashboard/accountant': PermissionKeys.CanReadDashboard,
@@ -1085,6 +1126,7 @@ export const RoutePermissionOverrides: Readonly<Record<string, PermissionKey>> =
   '/reports/customers/inactive': PermissionKeys.CanViewReportCustomersInactive,
   '/reports/parcels/bookings': PermissionKeys.CanViewReportParcelsBookings,
   '/reports/parcels/register': PermissionKeys.CanViewReportParcelsRegister,
+  '/reports/parcels/daily-audit': PermissionKeys.CanViewReportParcelsDailyAudit,
   '/reports/parcels/tracking': PermissionKeys.CanViewReportParcelsTracking,
   '/reports/parcels/in-transit-out': PermissionKeys.CanViewReportParcelsInTransitOutgoing,
   '/reports/parcels/in-transit-in': PermissionKeys.CanViewReportParcelsInTransitIncoming,

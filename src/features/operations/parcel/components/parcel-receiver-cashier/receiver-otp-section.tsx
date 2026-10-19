@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { useParcelReceiverCashierWorkflow } from './use-parcel-receiver-cashier-workflow';
+import { OtpChannelToggle } from '../otp-channel-toggle';
 
 type WorkflowDialog = ReturnType<typeof useParcelReceiverCashierWorkflow>['dialog'];
 
@@ -47,7 +49,7 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
       await dialog.handleRequestOtp(isResend);
       toast.success(isResend ? 'Collection OTP resent to the customer' : 'Collection OTP sent');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send OTP');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to send OTP');
     }
   };
 
@@ -56,7 +58,7 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
       await dialog.handleVerifyOtp();
       toast.success('Customer presence confirmed');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Invalid OTP');
+      toast.error(getApplicationErrorMessage(error, '') || 'Invalid OTP');
     }
   };
 
@@ -101,6 +103,12 @@ export function ReceiverOtpSection({ dialog }: ReceiverOtpSectionProps) {
               </ToggleGroup>
             </div>
           ) : null}
+
+          <OtpChannelToggle
+            value={dialog.otpChannel}
+            onChange={dialog.setOtpChannel}
+            disabled={dialog.otpRequestPending}
+          />
 
           <div className="flex items-center gap-2">
             <Button

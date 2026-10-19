@@ -237,6 +237,17 @@ export const customersApi = api.injectEndpoints({
       },
       invalidatesTags: invalidateEntityListTag('Customers'),
     }),
+    resolveSecondReceiver: builder.mutation<
+      { id: string },
+      { fullname: string; telephone: string }
+    >({
+      query: (body) => ({
+        url: '/customers/resolve-second-receiver',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Customers', id: 'LIST' }],
+    }),
     createCustomerCrm: builder.mutation<{ id: string }, CreateCustomerInput>({
       query: (body) => {
         const user = useAuthStore.getState().user;
@@ -457,6 +468,7 @@ export const {
   useListCustomersQuery,
   useGetCustomerByIdQuery,
   useFindCustomersByTelephoneQuery,
+  useResolveSecondReceiverMutation,
   useCreateCustomerMutation,
   useCreateCustomerCrmMutation,
   useUpdateCustomerMutation,

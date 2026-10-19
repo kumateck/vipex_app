@@ -6,6 +6,7 @@ import {
   SelectValue,
 } from '@/components/ui/select-searchable';
 import { Label } from '@/components/ui/label';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import type { ParcelSearchRow } from '../../api/parcel.api';
 import { parcelSelectLabel } from './utils';
 
@@ -40,15 +41,21 @@ export function ParcelSelectionField({
         <SelectContent>
           {parcels.map((parcel) => (
             <SelectItem key={parcel.id} value={parcel.id}>
-              {parcelSelectLabel(parcel)}
+              <span className="flex flex-wrap items-center gap-2">
+                {parcelSelectLabel(parcel)}
+                <ParcelStorageFeeBadge storageChargePsw={parcel.storageChargePsw} />
+              </span>
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       {selectedParcel ? (
-        <p className="text-xs text-muted-foreground">
-          {selectedPrefix}: {parcelSelectLabel(selectedParcel)}
-        </p>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span>
+            {selectedPrefix}: {parcelSelectLabel(selectedParcel)}
+          </span>
+          <ParcelStorageFeeBadge storageChargePsw={selectedParcel.storageChargePsw} />
+        </div>
       ) : null}
     </div>
   );

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -49,7 +50,7 @@ export function ProcurementRequestsCreatePage() {
       toast.success('Purchase request created');
       navigate('/procurement/purchase-requests');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create purchase request');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create purchase request');
     }
   };
 

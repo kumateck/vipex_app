@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,7 @@ export function FleetMaintenanceWorkOrdersPage() {
       await updateWorkOrder({ id, body: { status: 1 } }).unwrap();
       toast.success('Work order set to in progress');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update work order');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update work order');
     }
   };
 
@@ -35,7 +36,7 @@ export function FleetMaintenanceWorkOrdersPage() {
       await updateWorkOrder({ id, body: { status: 2 } }).unwrap();
       toast.success('Work order completed');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to complete work order');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to complete work order');
     }
   };
 

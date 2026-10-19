@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
@@ -101,7 +102,7 @@ export function useAccountingSetupTaxProfilesTab({
       resetTaxProfileForm();
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save tax profile');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save tax profile');
     }
   }
 
@@ -129,7 +130,7 @@ export function useAccountingSetupTaxProfilesTab({
       await refetch();
       if (onAfterDelete) await onAfterDelete();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete tax profile');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to delete tax profile');
     }
   }
 

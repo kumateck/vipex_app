@@ -24,9 +24,30 @@ import {
   updateCustomerCtrl,
   updateCustomerCardCtrl,
 } from './controller';
+import { findOrCreateCustomerSvc } from './service';
 
 export const customersRoutes = new Elysia({ name: 'customers' })
   .use(authPlugin)
+  .post(
+    '/resolve-second-receiver',
+    ({ body, user }) => {
+      const authUser = user as AuthUser;
+      return findOrCreateCustomerSvc({
+        companyId: authUser.companyId ?? '',
+        fullname: body.fullname,
+        telephone: body.telephone,
+        createdBy: authUser.sub,
+      });
+    },
+    {
+      body: t.Object({
+        fullname: t.String({ minLength: 1, maxLength: 255 }),
+        telephone: t.String({ minLength: 10, maxLength: 20 }),
+      }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateCustomers)],
+      detail: { tags: ['Customers'], summary: 'Resolve or create a second receiver by telephone' },
+    },
+  )
   .get(
     '/',
     async ({ query, user }) =>
@@ -67,6 +88,27 @@ export const customersRoutes = new Elysia({ name: 'customers' })
       }),
       beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanReadCustomers)],
       detail: { tags: ['Customers'], summary: 'Find customers by telephone' },
+    },
+  )
+  .get(
+    '/lookup/booking-by-telephone/:telephone',
+    async ({ params, user }) => {
+      const rows = await findCustomersByTelephoneCtrl({
+        companyId: (user as AuthUser).companyId ?? '',
+        telephone: params.telephone,
+        limit: 10,
+      });
+      return rows.map(({ id, fullname, telephone, telephone2 }) => ({
+        id,
+        fullname,
+        telephone,
+        telephone2,
+      }));
+    },
+    {
+      params: t.Object({ telephone: t.String({ pattern: '^\\d{10}$' }) }),
+      beforeHandle: [requireAuth(), requirePermissions(PermissionKeys.CanCreateBookingWithParcels)],
+      detail: { tags: ['Customers'], summary: 'Find customer for parcel booking by telephone' },
     },
   )
   .get('/cards/options', async ({ user }) => listCardOptionsCtrl(user!.companyId!), {

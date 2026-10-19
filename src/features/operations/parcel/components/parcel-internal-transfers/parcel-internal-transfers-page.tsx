@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -85,7 +86,7 @@ export function ParcelInternalTransfersPage() {
         },
       }).unwrap();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Search failed');
+      toast.error(getApplicationErrorMessage(error, '') || 'Search failed');
     }
   }, [agedOnly, branchId, companyId, searchParcels, searchTerm, storageChargeAccruingOnly]);
 
@@ -137,7 +138,7 @@ export function ParcelInternalTransfersPage() {
       setNotes('');
       setSearchTerm('');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create internal transfer');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create internal transfer');
     }
   }, [
     branchId,

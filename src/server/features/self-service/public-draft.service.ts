@@ -1,12 +1,15 @@
-import { BadRequest, Conflict, NotFound, TooManyRequests } from '@/server/utils/http-error';
+import type { PublicDraftSubmission } from './public-draft.types';
+import { fingerprintPublicDraft } from './draft-request-fingerprint';
+import { readSubmittedDraft } from './submission-receipt';
+import { BadRequest, NotFound, TooManyRequests } from '@/server/utils/http-error';
 import { getCacheStore } from '@/server/services/cache';
 import { toPesewas } from '@/server/utils/gh-money';
 import { getBranchRepo } from '@/server/features/branches/repository';
 import { BranchType, SelfServiceDraftStatus } from '@/db/schemas/enums';
-import { createSelfServiceDraftRepo } from './drafts.repository';
+import { persistPublicDraft } from './persist-public-draft';
 import { validateSelfServiceCustomerHintSvc } from './customer-lookup.service';
 import { validateSelfServiceDestinationSvc } from './destination.service';
-import { consumeSelfServiceSessionSvc, validateSelfServiceSessionSvc } from './session.service';
+import { validateSelfServiceSessionSvc } from './session.service';
 import {
   SELF_SERVICE_TERMS_VERSION,
   hasAcceptedCurrentSelfServiceTerms,
@@ -22,14 +25,14 @@ function normalizePhone(value: string): string {
 async function rateLimitPublicSubmission(phone: string, ip: string | null) {
   const cache = getCacheStore();
   const phoneCount = await cache.incr(`rl:self-service-draft:phone:${phone}`, 24 * 60 * 60);
-  if (phoneCount > 5) {
+  if (phoneCount > 50) {
     throw TooManyRequests(
       'Too many self-service submissions from this phone today. Please try again later.',
     );
   }
   if (ip) {
     const ipCount = await cache.incr(`rl:self-service-draft:ip:${ip}`, 24 * 60 * 60);
-    if (ipCount > 20) {
+    if (ipCount > 200) {
       throw TooManyRequests(
         'Too many self-service submissions from this network today. Please try again later.',
       );
@@ -50,28 +53,14 @@ export async function getSelfServiceBranchInfoSvc(input: {
   return { branchId: branch.id, branchName: branch.name };
 }
 
-export async function submitSelfServiceDraftSvc(input: {
-  branchId: string;
-  sender: { fullname: string; phone: string; phone2?: string | null; customerId?: string | null };
-  receiver: {
-    fullname: string;
-    phone: string;
-    phone2?: string | null;
-    customerId?: string | null;
-  };
-  destinationBranchId: string;
-  destinationLocationId?: string | null;
-  parcelContent: string;
-  parcelValueCedis: number | string;
-  callSender: boolean;
-  termsAccepted: boolean;
-  termsVersion: string;
-  sessionToken: string;
-  requestIp?: string | null;
-}) {
+export async function submitSelfServiceDraftSvc(input: PublicDraftSubmission) {
   if (!hasAcceptedCurrentSelfServiceTerms(input)) {
     throw BadRequest('You must accept the current Terms & Conditions before submitting');
   }
+
+  const fingerprint = fingerprintPublicDraft(input);
+  const replay = await readSubmittedDraft(input.sessionToken, input.branchId, fingerprint);
+  if (replay) return replay;
 
   await validateSelfServiceSessionSvc({
     branchId: input.branchId,
@@ -112,8 +101,6 @@ export async function submitSelfServiceDraftSvc(input: {
     throw BadRequest('Enter a valid parcel value');
   }
 
-  await rateLimitPublicSubmission(senderPhone, input.requestIp ?? null);
-
   const [senderCustomerId, receiverCustomerId, destination] = await Promise.all([
     validateSelfServiceCustomerHintSvc({
       companyId: branch.companyId,
@@ -133,35 +120,34 @@ export async function submitSelfServiceDraftSvc(input: {
     }),
   ]);
 
-  await consumeSelfServiceSessionSvc({
-    branchId: branch.id,
-    sessionToken: input.sessionToken,
-  });
-
   const now = Date.now();
-  const created = await createSelfServiceDraftRepo({
-    companyId: branch.companyId,
-    branchId: branch.id,
-    status: SelfServiceDraftStatus.PENDING,
-    senderFullname,
-    senderPhone,
-    senderPhone2,
-    senderCustomerId,
-    receiverFullname,
-    receiverPhone,
-    receiverPhone2,
-    receiverCustomerId,
-    destinationBranchId: destination.destinationBranchId,
-    destinationLocationId: destination.destinationLocationId,
-    parcelContent,
-    parcelValuePsw,
-    callSender: Boolean(input.callSender),
-    termsVersion: SELF_SERVICE_TERMS_VERSION,
-    termsAcceptedAt: new Date(now),
-    expiresAt: new Date(now + DRAFT_TTL_MS),
-    requestIp: input.requestIp ?? null,
+  return persistPublicDraft({
+    fingerprint,
+    beforeCreate: () => rateLimitPublicSubmission(senderPhone, input.requestIp ?? null),
+    sessionToken: input.sessionToken,
+    branchName: branch.name,
+    values: {
+      companyId: branch.companyId,
+      branchId: branch.id,
+      status: SelfServiceDraftStatus.PENDING,
+      senderFullname,
+      senderPhone,
+      senderPhone2,
+      senderCustomerId,
+      receiverFullname,
+      receiverPhone,
+      receiverPhone2,
+      receiverCustomerId,
+      destinationBranchId: destination.destinationBranchId,
+      destinationLocationId: destination.destinationLocationId,
+      parcelContent,
+      parcelValuePsw,
+      // Customers no longer choose CS; staff set it when completing the draft.
+      callSender: false,
+      termsVersion: SELF_SERVICE_TERMS_VERSION,
+      termsAcceptedAt: new Date(now),
+      expiresAt: new Date(now + DRAFT_TTL_MS),
+      requestIp: input.requestIp ?? null,
+    },
   });
-  if (!created) throw Conflict('Unable to submit your booking right now. Please retry.');
-
-  return { draftId: created.id, expiresAt: created.expiresAt.toISOString() };
 }

@@ -1,0 +1,76 @@
+import { listReceivingLocations } from '../services';
+import { useEffect, useState } from 'react';
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
+import { listBranchOptions } from '@mobile/lib/api';
+import { notifyError } from '@mobile/lib/notify';
+import { useAuth } from '@mobile/providers/auth-provider';
+import type { BranchOption, LocationOption } from '@mobile/types/booking';
+
+export function useParcelBranchOptions(
+  companyId: string | null,
+  destinationBranchId: string,
+  canCreate: boolean,
+  isHeadOffice: boolean,
+) {
+  const { withAuth } = useAuth();
+  const [branchOptions, setBranchOptions] = useState<BranchOption[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+  const [locationOptions, setLocationOptions] = useState<LocationOption[]>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (!companyId || !canCreate || isHeadOffice) return;
+    let cancelled = false;
+    setIsLoadingBranches(true);
+    withAuth((token) => listBranchOptions(token, { companyId }))
+      .then((options) => {
+        if (!cancelled) setBranchOptions(options);
+      })
+      .catch((error) => {
+        notifyError(
+          'Failed to load branches',
+          getMobileErrorMessage(error, '') || 'Please try again',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingBranches(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, canCreate, isHeadOffice, withAuth, reloadKey]);
+
+  useEffect(() => {
+    if (!companyId || !destinationBranchId) {
+      setLocationOptions([]);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingLocations(true);
+    withAuth((token) => listReceivingLocations(token, { companyId, branchId: destinationBranchId }))
+      .then((options) => {
+        if (!cancelled) setLocationOptions(options);
+      })
+      .catch((error) => {
+        notifyError(
+          'Failed to load locations',
+          getMobileErrorMessage(error, '') || 'Please try again',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingLocations(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, destinationBranchId, withAuth, reloadKey]);
+
+  return {
+    branchOptions,
+    isLoadingBranches,
+    locationOptions,
+    isLoadingLocations,
+    retry: () => setReloadKey((current) => current + 1),
+  };
+}

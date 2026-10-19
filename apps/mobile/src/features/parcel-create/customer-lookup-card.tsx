@@ -1,3 +1,4 @@
+import { CustomerNameEditAction } from './components/customer-name-edit-action';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
@@ -16,7 +17,10 @@ export function CustomerLookupCard({ title, lookup }: CustomerLookupCardProps) {
 
   return (
     <AppCard>
-      <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
+        <CustomerNameEditAction title={title} lookup={lookup} />
+      </View>
 
       <AppLabel>Telephone</AppLabel>
       <View style={styles.row}>
@@ -30,12 +34,18 @@ export function CustomerLookupCard({ title, lookup }: CustomerLookupCardProps) {
           />
         </View>
         <AppButton
-          title={lookup.isLookingUp ? 'Searching...' : 'Find'}
+          title={lookup.isLookingUp ? 'Searching...' : 'Search again'}
           onPress={() => void lookup.lookup()}
           disabled={!canLookup || lookup.isLookingUp}
           variant="secondary"
         />
       </View>
+
+      {canLookup && !lookup.hasLookedUp && !lookup.isLookingUp ? (
+        <Text style={[styles.helper, { color: theme.colors.textSubtle }]}>
+          Customer lookup starts automatically.
+        </Text>
+      ) : null}
 
       {lookup.hasLookedUp && lookup.matches.length > 0 ? (
         <View style={styles.matches}>

@@ -1,6 +1,13 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { ENV } from '@mobile/lib/env';
 import { reportMobileErrorToDiscord } from '@mobile/lib/mobile-error-reporter';
 import type { LoginResponse, SessionState, TokenPair } from '@mobile/types/auth';
+import {
+  getMobileDeviceMetadata,
+  loadDeviceCredential,
+  saveDeviceCredential,
+  type DeviceStatus,
+} from '@mobile/lib/device-registration';
 import type {
   CommunicationCallSession,
   CommunicationChannel,
@@ -15,6 +22,7 @@ import type {
 } from '@mobile/types/communication';
 import type {
   ParcelFullDetails,
+  ParcelHistoryEvent,
   RiderBenchmarkResponse,
   ParcelSearchRow,
   PickupQueueCard,
@@ -92,7 +100,7 @@ async function probeHealth(
       ok: false,
       status: null,
       latencyMs: Date.now() - started,
-      error: isAbort ? 'timeout' : error instanceof Error ? error.message : 'network_error',
+      error: isAbort ? 'timeout' : getMobileErrorMessage(error, '') || 'network_error',
     };
   }
 }
@@ -192,6 +200,7 @@ function toQueryString(query?: RequestOptions['query']): string {
 async function request<T>(options: RequestOptions): Promise<T> {
   let lastError: Error | null = null;
   const method = options.method ?? 'GET';
+  const credential = await loadDeviceCredential();
 
   let attempt = 0;
   for (const baseUrl of [
@@ -208,6 +217,10 @@ async function request<T>(options: RequestOptions): Promise<T> {
         method,
         headers: {
           'content-type': 'application/json',
+          'x-vipex-client': 'mobile',
+          ...(credential
+            ? { 'x-vipex-device-id': credential.id, 'x-vipex-device-secret': credential.secret }
+            : {}),
           ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
         },
         body: options.body ? JSON.stringify(options.body) : undefined,
@@ -216,11 +229,13 @@ async function request<T>(options: RequestOptions): Promise<T> {
       clearTimeout(timeout);
 
       const json = (await response.json().catch(() => null)) as {
-        error?: { message?: string; details?: Record<string, unknown> };
+        error?: { message?: string; details?: Record<string, unknown> } | string;
+        message?: string;
+        errors?: unknown;
       } | null;
 
       if (!response.ok) {
-        const serverMessage = json?.error?.message?.trim();
+        const serverMessage = getMobileErrorMessage(json, 'Request failed');
         logMobileApiError({
           method,
           path: options.path,
@@ -228,14 +243,16 @@ async function request<T>(options: RequestOptions): Promise<T> {
           activeBaseUrl: activeApiBaseUrl,
           candidateBaseUrl: baseUrl,
           status: response.status,
-          message: serverMessage || 'Request failed',
+          message: serverMessage,
           responseBody: json,
           attempt,
         });
-        throw new ApiRequestError(`${serverMessage || 'Request failed'} (${response.status})`, {
+        const details =
+          json?.error && typeof json.error === 'object' ? json.error.details : undefined;
+        throw new ApiRequestError(`${serverMessage} (${response.status})`, {
           status: response.status,
           url: targetUrl,
-          details: json?.error?.details,
+          details,
         });
       }
 
@@ -273,6 +290,31 @@ async function request<T>(options: RequestOptions): Promise<T> {
   throw lastError ?? new Error('Network request failed');
 }
 
+export async function registerMobileDevice(email: string, password: string) {
+  if (await loadDeviceCredential()) return getMobileDeviceStatus();
+  const result = await request<{ id: string; secret: string; status: DeviceStatus }>({
+    path: '/auth/devices/register',
+    method: 'POST',
+    body: { email, password, ...getMobileDeviceMetadata() },
+  });
+  await saveDeviceCredential({ id: result.id, secret: result.secret });
+  return result.status;
+}
+
+export async function getMobileDeviceStatus(): Promise<DeviceStatus | null> {
+  if (!(await loadDeviceCredential())) return null;
+  const result = await request<{ status: DeviceStatus }>({ path: '/auth/devices/status' });
+  return result.status;
+}
+
+export async function getMobileDeviceAccess(accessToken: string): Promise<boolean> {
+  const result = await request<{ required: boolean }>({
+    path: '/auth/devices/access',
+    token: accessToken,
+  });
+  return typeof result.required === 'boolean';
+}
+
 export function mobileApiGet<T>(input: {
   path: string;
   token: string;
@@ -296,6 +338,23 @@ export function mobileApiPost<T>(input: {
     token: input.token,
     body: input.body,
   });
+}
+
+export function mobileApiPatch<T>(input: {
+  path: string;
+  token: string;
+  body: unknown;
+}): Promise<T> {
+  return request<T>({
+    path: input.path,
+    method: 'PATCH',
+    token: input.token,
+    body: input.body,
+  });
+}
+
+export function mobileApiDelete<T>(input: { path: string; token: string }): Promise<T> {
+  return request<T>({ path: input.path, method: 'DELETE', token: input.token });
 }
 
 export async function login(email: string, password: string): Promise<SessionState> {
@@ -459,6 +518,17 @@ export async function getParcelDetails(
   };
 }
 
+export async function getParcelHistory(
+  accessToken: string,
+  parcelId: string,
+): Promise<ParcelHistoryEvent[]> {
+  const payload = await request<{ events?: ParcelHistoryEvent[] }>({
+    path: `/shipments/parcels/${parcelId}/history`,
+    token: accessToken,
+  });
+  return Array.isArray(payload?.events) ? payload.events : [];
+}
+
 export async function updateParcelStatus(
   accessToken: string,
   parcelId: string,
@@ -612,6 +682,7 @@ export async function updateParcel(
     parcelDetails?: string;
     parcelContent?: string;
     status?: number;
+    secondReceiverId?: string | null;
   },
 ): Promise<{ id: string }> {
   const { id, ...body } = input;
@@ -648,7 +719,7 @@ export async function findCustomersByTelephone(
   input: { telephone: string; limit?: number },
 ): Promise<CustomerLookupResult[]> {
   const payload = await request<unknown>({
-    path: `/customers/lookup/by-telephone/${encodeURIComponent(input.telephone)}`,
+    path: `/customers/lookup/booking-by-telephone/${encodeURIComponent(input.telephone)}`,
     token: accessToken,
     query: { limit: input.limit ?? 10 },
   });
@@ -665,6 +736,18 @@ export async function createCustomer(
 ): Promise<{ id: string }> {
   return request<{ id: string }>({
     path: '/customers',
+    method: 'POST',
+    token: accessToken,
+    body: input,
+  });
+}
+
+export async function resolveSecondReceiver(
+  accessToken: string,
+  input: { fullname: string; telephone: string },
+): Promise<{ id: string }> {
+  return request<{ id: string }>({
+    path: '/customers/resolve-second-receiver',
     method: 'POST',
     token: accessToken,
     body: input,

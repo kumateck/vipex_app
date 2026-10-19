@@ -1,7 +1,7 @@
-import logoPng from '@/assets/logo.png';
-import { ThermalStickerWordmark } from './thermal-sticker-wordmark';
+import { PRINT_LOGO_DATA_URI } from '@/shared/printing/print-logo';
+import { ThermalStickerBrand } from './thermal-sticker-brand';
 
-export function ThermalStickerHeaderPanel() {
+export function ThermalStickerHeaderPanel({ duplicate }: { duplicate?: boolean }) {
   return (
     <section
       style={{
@@ -12,11 +12,11 @@ export function ThermalStickerHeaderPanel() {
       }}
     >
       <img
-        src={logoPng}
+        src={PRINT_LOGO_DATA_URI}
         alt="Vipex emblem"
         style={{ width: '20mm', height: '20mm', objectFit: 'contain' }}
       />
-      <ThermalStickerWordmark size="landscape" />
+      <ThermalStickerBrand size="landscape" duplicate={duplicate} />
     </section>
   );
 }

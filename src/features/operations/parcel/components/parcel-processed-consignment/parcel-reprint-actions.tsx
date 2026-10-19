@@ -1,3 +1,7 @@
+import {
+  ParcelInformationEditorDialog,
+  useParcelInformationEditor,
+} from '../../parcel-information-editor';
 import { useState } from 'react';
 import { EllipsisVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,6 +18,7 @@ import {
   MIN_STICKER_COPIES,
   normalizeStickerCopies,
 } from '../parcel-receipt-print-controls/sticker-copies';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 type ParcelReprintActionsProps = {
   parcel: ProcessedParcel;
@@ -28,40 +33,48 @@ export function ParcelReprintActions({
   onReprintReceipt,
   onReprintSticker,
 }: ParcelReprintActionsProps) {
+  const editor = useParcelInformationEditor(parcel);
   const [stickerCopies, setStickerCopies] = useState(1);
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button size="icon" variant="outline" className="h-8 w-8">
-          <EllipsisVertical className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
-        <div className="space-y-1 px-2 py-1.5">
-          <Label htmlFor={`sticker-copies-${parcel.id}`} className="text-xs">
-            Sticker copies
-          </Label>
-          <Input
-            id={`sticker-copies-${parcel.id}`}
-            type="number"
-            min={MIN_STICKER_COPIES}
-            value={stickerCopies}
-            onChange={(event) =>
-              setStickerCopies(normalizeStickerCopies(event.target.valueAsNumber))
-            }
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-          />
-        </div>
-        <DropdownMenuItem onClick={() => onReprintSticker(parcel, stickerCopies)}>
-          Reprint Sticker
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onReprintReceipt(parcel)}>
-          Reprint Receipt
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onEdit(parcel)}>Edit</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button aria-label="Parcel actions" size="icon" variant="outline" className="h-8 w-8">
+            <EllipsisVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <ViewParcelDetailsMenuItem parcelId={parcel.id} />
+          <div className="space-y-1 px-2 py-1.5">
+            <Label htmlFor={`sticker-copies-${parcel.id}`} className="text-xs">
+              Sticker copies
+            </Label>
+            <Input
+              id={`sticker-copies-${parcel.id}`}
+              type="number"
+              min={MIN_STICKER_COPIES}
+              value={stickerCopies}
+              onChange={(event) =>
+                setStickerCopies(normalizeStickerCopies(event.target.valueAsNumber))
+              }
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+            />
+          </div>
+          <DropdownMenuItem onClick={() => onReprintSticker(parcel, stickerCopies)}>
+            Reprint Sticker
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onReprintReceipt(parcel)}>
+            Reprint Receipt
+          </DropdownMenuItem>
+          {editor.canEdit ? <DropdownMenuItem onClick={editor.begin}>Edit</DropdownMenuItem> : null}
+          <DropdownMenuItem onClick={() => onEdit(parcel)}>
+            Edit routing &amp; contacts
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <ParcelInformationEditorDialog editor={editor} bookingCode={parcel.bookingCode} />
+    </>
   );
 }

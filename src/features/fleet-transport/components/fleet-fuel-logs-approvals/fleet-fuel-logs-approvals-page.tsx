@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -55,7 +56,7 @@ export function FleetFuelLogsApprovalsPage() {
       await approveLog({ id }).unwrap();
       toast.success('Fuel log approved');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to approve fuel log');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to approve fuel log');
     }
   };
 
@@ -71,7 +72,7 @@ export function FleetFuelLogsApprovalsPage() {
       toast.success('Fuel log rejected');
       setReasons((prev) => ({ ...prev, [id]: '' }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to reject fuel log');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to reject fuel log');
     }
   };
 

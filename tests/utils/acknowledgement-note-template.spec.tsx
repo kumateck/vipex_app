@@ -31,6 +31,9 @@ describe('A5 acknowledgement note', () => {
       />,
     );
 
+    expect(html).not.toContain('<canvas');
+    expect(html).toMatch(/<path d="M[^"]+" fill="#000"/);
+    expect(html).toMatch(/<img src="data:image\/png;base64,[^"]+" alt="Vipex logo"/);
     expect(html).toContain('ACKNOWLEDGEMENT NOTE');
     expect(html).toContain('Techiman: 0559085369');
     expect(html).toContain('Tamale: 0502638678');

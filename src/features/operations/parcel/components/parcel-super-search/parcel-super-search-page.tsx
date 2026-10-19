@@ -1,14 +1,19 @@
 import { useMemo, useState } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
+import { PermissionKeys } from '@/shared/permissions/constants';
 import { useListBranchOptionsQuery } from '@/features/branches/api/branches.api';
 import { type ParcelSearchRow, useSearchParcelsQuery } from '../../api/parcel.api';
 import { ParcelSuperSearchDetailsDialog } from './parcel-super-search-details-dialog';
 import { ParcelSuperSearchTable } from './parcel-super-search-table';
+import { ReturnToSourceDialog } from './return-to-source-dialog';
 import type { ParcelSuperSearchQuery } from './types';
+
+const EMPTY_PARCEL_ROWS: ParcelSearchRow[] = [];
 
 export function ParcelSuperSearchPage() {
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
+  const branchId = user?.branch?.id ?? null;
 
   const [searchInput, setSearchInput] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState('');
@@ -18,6 +23,11 @@ export function ParcelSuperSearchPage() {
     filters: { companyId, includeDeleted: true },
   });
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
+  const [returningParcel, setReturningParcel] = useState<{
+    id: string;
+    bookingCode: string;
+    sourceName: string;
+  } | null>(null);
 
   const shouldSearch = submittedSearch.trim().length > 0;
 
@@ -41,7 +51,7 @@ export function ParcelSuperSearchPage() {
     [branchOptions],
   );
 
-  const rows = data?.data ?? [];
+  const rows = data?.data ?? EMPTY_PARCEL_ROWS;
   const rowById = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
   const selectedParcelRow: ParcelSearchRow | undefined = selectedParcelId
     ? rowById.get(selectedParcelId)
@@ -74,7 +84,15 @@ export function ParcelSuperSearchPage() {
         branchNameById={branchNameById}
         selectedParcelRow={selectedParcelRow}
         onClose={() => setSelectedParcelId(null)}
+        branchId={branchId}
+        showReturnAvailability
+        canRecordReturn={(user?.permissions ?? []).includes(PermissionKeys.CanUpdateParcels)}
+        onReturnToSource={(parcel) => {
+          setSelectedParcelId(null);
+          setReturningParcel(parcel);
+        }}
       />
+      <ReturnToSourceDialog parcel={returningParcel} onClose={() => setReturningParcel(null)} />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -38,7 +39,7 @@ export function ProcurementSupplierQuotesListPage() {
       await acceptQuote({ id }).unwrap();
       toast.success('Quote accepted');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to accept quote');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to accept quote');
     }
   };
 

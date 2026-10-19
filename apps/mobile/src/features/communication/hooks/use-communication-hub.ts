@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useState } from 'react';
 import {
   listCommunicationCalls,
@@ -142,7 +143,7 @@ export function useCommunicationHub() {
     } catch (error) {
       notifyError(
         'Communication load failed',
-        error instanceof Error ? error.message : 'Unable to load communication data',
+        getMobileErrorMessage(error, '') || 'Unable to load communication data',
       );
     } finally {
       setLoading(false);

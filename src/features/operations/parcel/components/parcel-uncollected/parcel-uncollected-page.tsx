@@ -15,6 +15,8 @@ import type { ServerListQuery } from '@/services/rtk-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { type ParcelSearchRow, useSearchParcelsQuery } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
+import { ViewParcelDetailsButton } from '@/features/operations/parcel-details';
 
 const EMPTY_META: PaginationMeta = {
   totalRecords: 0,
@@ -63,7 +65,16 @@ export function ParcelUncollectedPage() {
 
   const columns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        id: 'booking',
+        header: 'Booking',
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <span>{row.original.bookingCode}</span>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+          </div>
+        ),
+      },
       {
         id: 'receiver',
         header: 'Receiver',
@@ -103,6 +114,12 @@ export function ParcelUncollectedPage() {
         ),
       },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
+      {
+        id: 'actions',
+        header: 'Action',
+        enableSorting: false,
+        cell: ({ row }) => <ViewParcelDetailsButton parcelId={row.original.id} />,
+      },
     ],
     [],
   );

@@ -16,6 +16,7 @@ export type ParcelFormValues = {
   parcelContent: string;
   parcelValue: string;
   charge: string;
+  chargeAgentUserId: string;
   paymentResponsibility: PaymentResponsibility;
   senderSettlementMode: SenderSettlementMode;
   senderPartialPayment: string;
@@ -31,10 +32,13 @@ export type ParcelBookingFormValues = {
 
 export type ReceiptSummary = {
   bookingId: string;
+  /** Booking customer; used to offer digital receipt delivery. */
+  senderId?: string;
   parcels: Array<{
     parcelId?: string;
     bookingCode: string;
     trackingCode: string;
+    callSender?: boolean;
     parcelDetails: string;
     parcelContent?: string | null;
     parcelValueCedis?: number | null;

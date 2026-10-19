@@ -1,7 +1,9 @@
+import { useDeliveryCashierCollections } from './use-delivery-cashier-collections';
 import type { RefObject } from 'react';
 import type { DailyCashierSalesReport } from '@/features/reporting/api/reporting.api';
 import { PrintableReportDocument } from '@/features/reporting/components/printable-report-document';
 import { PAYMENT_METHOD_LABELS } from './daily-cashier-sales-constants';
+import type { CashierSalesRouteSummary } from './daily-cashier-sales-route-summary';
 import type {
   DailyCashierSalesFilterLabel,
   DailyCashierSalesReportTab,
@@ -18,6 +20,7 @@ type DailyCashierSalesPrintDocumentProps = {
   generatedAt: string;
   filters: DailyCashierSalesFilterLabel[];
   report?: DailyCashierSalesReport;
+  routeSummary: CashierSalesRouteSummary[];
   activeTab: DailyCashierSalesReportTab;
 };
 
@@ -27,9 +30,11 @@ export function DailyCashierSalesPrintDocument({
   generatedAt,
   filters,
   report,
+  routeSummary,
   activeTab,
 }: DailyCashierSalesPrintDocumentProps) {
   const isToBePaid = activeTab === 'tobepaid';
+  const collections = useDeliveryCashierCollections(report);
 
   return (
     <div className="hidden">
@@ -44,13 +49,21 @@ export function DailyCashierSalesPrintDocument({
         }
         generatedAt={generatedAt}
         filters={filters}
-        sections={isToBePaid ? buildToBePaidSections(report) : buildPaymentSections(report)}
+        sections={
+          isToBePaid
+            ? buildToBePaidSections(report)
+            : buildPaymentSections(report, routeSummary, collections)
+        }
       />
     </div>
   );
 }
 
-function buildPaymentSections(report?: DailyCashierSalesReport) {
+function buildPaymentSections(
+  report: DailyCashierSalesReport | undefined,
+  routeSummary: CashierSalesRouteSummary[],
+  collections: ReturnType<typeof useDeliveryCashierCollections>,
+) {
   const transactions = groupDeliveryCashierTransactions(report?.transactions ?? []);
 
   return [
@@ -71,8 +84,43 @@ function buildPaymentSections(report?: DailyCashierSalesReport) {
       rows: [
         ['Sender', formatMoneyPsw(report?.cashierTypeTotals.senderPsw ?? 0)],
         ['Receiver', formatMoneyPsw(report?.cashierTypeTotals.receiverPsw ?? 0)],
-        ['Delivery', formatMoneyPsw(report?.cashierTypeTotals.deliveryPsw ?? 0)],
+        ['Delivery total', formatMoneyPsw(report?.cashierTypeTotals.deliveryPsw ?? 0)],
       ],
+    },
+    ...(collections.visible
+      ? [
+          {
+            heading: 'Delivery cashier collections',
+            headers: ['Received component', 'Amount'],
+            rows: [
+              ['Delivery fees received', formatMoneyPsw(collections.deliveryFeeReceivedPsw)],
+              ['To Be Paid received', formatMoneyPsw(collections.toBePaidReceivedPsw)],
+            ],
+          },
+        ]
+      : []),
+    {
+      heading: 'Sales by Route',
+      headers: [
+        'Source → Destination',
+        'Payments',
+        'Sender',
+        'Receiver',
+        'Delivery',
+        'Cash',
+        'Non-cash',
+        'Total',
+      ],
+      rows: routeSummary.map((route) => [
+        `${route.sourceBranchName} → ${route.destinationBranchName}`,
+        String(route.transactions),
+        formatMoneyPsw(route.senderPsw),
+        formatMoneyPsw(route.receiverPsw),
+        formatMoneyPsw(route.deliveryPsw),
+        formatMoneyPsw(route.cashPsw),
+        formatMoneyPsw(route.nonCashPsw),
+        formatMoneyPsw(route.grossPsw),
+      ]),
     },
     {
       heading: 'Payments',
@@ -90,7 +138,10 @@ function buildPaymentSections(report?: DailyCashierSalesReport) {
         String(index + 1),
         formatDateTime(row.receivedAt),
         row.bookingCode,
-        [row.parcelDetails, row.parcelContent].filter(Boolean).join(' - ') || '-',
+        [
+          [row.parcelDetails, row.parcelContent].filter(Boolean).join(' - ') || '-',
+          `${row.sourceBranchName || row.sourceBranchId} → ${row.destinationBranchName || row.destinationBranchId}`,
+        ].join(' | '),
         [row.payerName, row.payerTelephone].filter(Boolean).join(' - '),
         row.whoPaid,
         PAYMENT_METHOD_LABELS[row.method] ?? String(row.method),

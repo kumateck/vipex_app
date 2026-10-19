@@ -6,8 +6,13 @@ import type {
   PrintRuntime,
 } from '../types';
 import { getPreferredPrinterForLayout } from './printer-preferences';
+import { receiptLayoutFromHtml } from '@/shared/printing/receipt-paper';
 
 function applyPreferredPrinter(request: DesktopPrintRequest): DesktopPrintRequest {
+  if (request.layout === 'invoice-a5-receipt') {
+    const layout = receiptLayoutFromHtml(request.html);
+    if (layout) request = { ...request, layout };
+  }
   if (request.deviceName) return request;
   const deviceName = getPreferredPrinterForLayout(request.layout);
   return deviceName ? { ...request, deviceName, silent: true } : request;

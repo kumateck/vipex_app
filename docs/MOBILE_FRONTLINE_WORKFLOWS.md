@@ -1,6 +1,6 @@
 # Mobile Frontline Workflows
 
-Last audited: 2026-08-27
+Last audited: 2026-09-21
 
 ## Scope
 
@@ -25,28 +25,154 @@ Each Operations workflow card opens its registered native screen. The shared mob
 | Receiving discrepancies | `CanReadParcelIncoming`                                    | The current server discrepancy endpoints use `CanReadParcelIncoming` for create/list/resolve; photo upload requires authentication and is linked to the authorized discrepancy. |
 | Delivery-change review  | `CanMarkDoorstepCalled`                                    | Approve/reject: `CanMarkDoorstepCalled`, plus server branch matching.                                                                                                           |
 | Customer directory      | `CanReadCustomers`                                         | Limited contact update: `CanUpdateCustomers`                                                                                                                                    |
+| Parcel creation         | `CanCreateBookingWithParcels` for minimal telephone lookup | New customer creation: `CanCreateCustomers`; booking submission: `CanCreateBookingWithParcels`                                                                                  |
 
 Read access never substitutes for a separate mutation permission. The server remains authoritative when a cached screen or stale session attempts an action.
 
+## Rider Third-party Handover
+
+The delivery cashier adds or changes the parcel's second receiver on web/desktop under Delivery
+Cashier → Upcoming handovers, using `CanManageParcelSecondReceiver`. The parcel must be at that
+cashier's destination branch and Address Collected or Dispatched. After refreshing Assigned
+Deliveries, the rider sees this contact and selects **Main receiver** or **Second receiver** when
+confirming handover. There is no mobile rider contact-entry form. A missing second contact disables
+that choice and tells the rider to contact the cashier. Selecting the other person clears the
+signature so the selected recipient must sign. Existing collection values/checks are retained.
+
+Rider selection requires `CanCompleteDoorstepDelivery`, not customer-create or receiver-management
+permission. A changed/removed cashier contact produces 409; reload and reselect before signing.
+The server locks the parcel and checks assignment, active company customer, pending changes,
+signature and amounts. Selection and receipt identity are audited atomically with completion.
+The optional second contact stays on the parcel even when the main receiver collects. No new
+mobile cashier screen or schema migration is introduced for this workflow.
+
+## Parcel Creation and Customer Reuse
+
+The mobile parcel creation form automatically searches for the sender and recipient when a
+ten-digit telephone is entered. It checks primary and optional secondary telephones, shows matching
+customer names, and selects a single match. Staff choose a match when a number is shared by more
+than one active customer. An unmatched number allows a new name and optional second number.
+Submitting checks both numbers again: an existing customer ID is attached to the booking and
+parcel instead of creating a duplicate; a new customer is created only when neither number
+matches. A duplicate created concurrently is resolved by repeating the lookup. Different
+customers matched by the two numbers require staff to correct the entry. Lookup errors prevent
+submission rather than silently attempting customer creation. Self-service draft completion already
+uses server-side resolve-or-create and has no editable customer telephone fields on mobile.
+
+The booking lookup endpoint requires `CanCreateBookingWithParcels`, scopes results to the signed-in
+company, and returns only customer ID, name, and telephone fields. The general customer directory
+continues to require `CanReadCustomers`. QA: create parcels with new and existing sender/recipient
+numbers; match a secondary number; use the same customer for both roles; submit before automatic
+lookup finishes; test concurrent duplicate creation, two numbers owned by different customers,
+lookup failure, and a booking creator without customer-directory permission.
+
+Every mobile parcel creation form includes an optional CS switch: **Call Sender before deliver to
+Receiver**. The selected value is saved with the parcel and appears as `CS` on the mobile printed
+sticker while receiver name and telephone remain visible. Resetting the form clears the switch.
+QA: create with CS on and off, including the receiver-paid print path and sticker retry.
+
+For fully receiver-paid bookings, staff may tick **Complete & print sticker**. A sender or full
+cashier must have an active session, or must have assigned the staff member to that active session
+from web session controls or the mobile cashier dashboard. The server completes the parcel in the
+cashier session; the phone then opens its native print dialog for the sticker. The printer must be
+available through the phone's print service. If printing fails, the booking remains complete and
+the screen offers a sticker retry without resubmitting it. Unticked bookings remain queued for
+Sender Cashier Payments. The parcel's processed-by user is the cashier who owns the session;
+created-by and the audit retain the staff member who entered the booking. Sender-paid bookings
+cannot use this option.
+
+Selected sender and receiver customers now have a pencil icon when the staff member holds
+`CanUpdateCustomers`. Tap it to open a name popup, edit the name and save before processing.
+The primary/secondary numbers and customer ID are read-only for this action. The selected match
+and form name refresh after a successful `PATCH /customers/:id`; choosing the same customer for
+both roles refreshes both names. Failure retains the popup and values. Existing parcel snapshots
+are not renamed; the upcoming booking captures the saved name. A missing update grant hides the
+icon. Correcting an already processed parcel's wrong sender identity is a separate source-branch
+web/desktop action, documented in [Parcel Operations](PARCEL_OPERATIONS.md).
+
+### Charge Agent and Receiving Location Selection
+
+Mobile parcel creation displays **Agent who charged the parcel (required)** immediately after
+**Charge (GHS)**. This selector already records `chargeAgentUserId`; its placement and label
+now make the required step explicit. It lists active staff at the authenticated source branch,
+permits a different staff member from the creator and blocks submission on an empty/invalid
+selection or unavailable agent list. The backend validates supplied agents; older omitted
+values retain the documented NULL compatibility behavior. Charge assignment creates no payment.
+
+Destination pickup options use `GET /locations/options?canReceive=true`. Sending-only/disabled
+receiving locations are omitted. Server booking validation also rejects non-receiving destination
+locations and non-sending assigned sources. Migration `0082_location_service_capabilities` is
+required before deploying these queries; existing locations default to both services.
+
+### Scan-to-Receive Request Quotas
+
+Authenticated receiving traffic is exempt from the shared backend request quota. This covers
+in-transit parcel searches, parcel details, receiving/closing consignments, mark-received
+endpoints and the mobile `PATCH /shipments/parcels/:id` arrival-status confirmation. The same
+shared endpoints benefit web and desktop receiving. Invalid/unsigned tokens, public traffic,
+unrelated searches and other parcel status updates keep their quotas. Endpoint authentication,
+receiving permissions, branch checks and duplicate/in-flight scan protections remain enforced.
+No per-hour/day parcel scan maximum is added on mobile. Network and validation failures still
+show the existing retry/error states.
+
+QA: scan/search/confirm more than the configured quota at one branch, including consignment
+receiving; verify no HTTP 429 from the shared limiter. Check unrelated status updates and
+unsigned/public traffic still receive 429 above their quota. Verify a repeated camera event
+still cannot submit the same in-flight scan twice. Cover source/destination service flags and
+required charge-agent selection, lookup failure/retry, and create-form reset.
+Coverage: `receiving-rate-limit.spec.ts`, existing `rate-limit.spec.ts` and charge-agent tests.
+
 ## Self-Service Completion
 
-Mobile lists active drafts for the authenticated branch. Staff can inspect sender, receiver, declared contents, declared value, destination, expiry, and claim status.
+Mobile exposes **Self-Service Bookings** directly in the navigation drawer and in the Operations Hub
+when the user has `CanReadSelfServiceBookings`. It lists active drafts for the authenticated branch.
+Staff can inspect sender, receiver, declared contents, declared value, submission time, expiry, and
+claim status. A search field filters the list by sender or receiver name or phone (spaces and
+dashes ignored).
 
 An authorized completing agent can:
 
-1. Claim an available draft.
-2. Confirm parcel details and the authoritative charge.
-3. Select sender, receiver, or split payment responsibility.
-4. Enter the sender portion for a split payment.
-5. Complete the draft through `POST /self-service/drafts/:id/complete`.
+1. Open an available draft; mobile claims it before displaying the completion form, matching the web
+   workflow and preventing another agent from completing it concurrently.
+2. Optionally tap **Edit booking details** to correct everything the customer entered: sender and
+   receiver contacts, destination branch and pickup location, contents and declared value. Saving
+   calls `PATCH /self-service/drafts/:id` and keeps the completion entries already made.
+3. Confirm parcel details and the authoritative charge.
+   The officer turns on the CS switch when the sender asked to be called before handover. It starts
+   off for new drafts because customers no longer choose CS on the public form.
+4. Select sender, receiver, or split payment responsibility.
+5. Enter the sender portion for a split payment.
+6. Complete the draft through `POST /self-service/drafts/:id/complete`.
 
 Mobile currently submits `PAY_NOW` settlement. Credit completion remains available on desktop until the mobile flow includes customer credit eligibility, credit-limit presentation, and cashier-session parity. The server rejects concurrent claims, expired drafts, invalid destinations, invalid charges, and unavailable payment/session combinations.
 
-## Call-Center Follow-up and Address Collection
+Users with read permission but without `CanCompleteSelfServiceBookings` can inspect drafts without
+claiming them. A failed claim keeps the user on the queue and shows the server error; it must not open
+an editable completion form.
 
-The list is restricted to the authenticated branch and parcels in Home Delivery Requested status. Staff can search by booking, tracking, or receiver data and use the device telephone application to call the receiver.
+## Call-Center Assigned Calls and Address Collection
 
-- Users with `CanReadCallCenterParcelStatus` can record the call through `/deliveries/dd/:parcelId/call`.
+The Call Center Follow-up screen has two permission-aware queues:
+
+- **Assigned calls** is available with `CanReadCallCenterParcelStatus`. It uses `GET /shipments/parcels/call-center/assigned`, which restricts results to the authenticated user's company, destination branch, and user ID. Assigned parcels remain visible while uncalled, even after a provisional pickup or home-delivery choice; completed deliveries are excluded.
+- **Delivery addresses** is available with `CanMarkDoorstepCalled`. It uses `GET /shipments/parcels/call-center/address-collection`, scoped by the server to the authenticated company and branch and to Home Delivery Requested parcels.
+
+When both permissions are present, mobile shows a native queue switch and defaults to Assigned calls. Users with only one permission see only the permitted workflow. Both queues support search by booking, tracking, receiver, or telephone data.
+
+An assigned parcel card shows booking and received time, parcel and receiver details, route, receiver amount, contact state, and underlying parcel status. The Call Outcome sheet can open the device telephone application and records one of:
+
+- Customer will get back → Awaiting Pickup (the call is recorded separately)
+- Customer will come → Awaiting Pickup
+- Customer wants delivery → Home Delivery Requested
+
+Assignment can set Awaiting Pickup before a call. **Mark as called** records contact without
+changing that status. **Change outcome and record call** can switch between pickup and home
+delivery while the parcel has not advanced to address collection or dispatch. Both actions remove
+the parcel from Assigned calls; merely opening the telephone application does not mark it called.
+
+Awaiting Pickup optionally supports a second receiver, subject to server customer-create permission and validation. The form requires a name and a ten-digit telephone number. An exact match to an active customer phone in the company links that existing customer; otherwise the server creates one. SMS is selected by default; email is optional. Parcel status is saved before notification dispatch. If notification dispatch fails, mobile reports partial success, closes the completed outcome, and refreshes the assigned queue rather than inviting a duplicate status mutation.
+
+- In Delivery addresses, users who also have `CanReadCallCenterParcelStatus` can record the call through `/deliveries/dd/:parcelId/call`.
 - Users with `CanMarkDoorstepCalled` can save a confirmed address and delivery fee through `/deliveries/dd/:parcelId/address-collected`.
 - A user with only one permission receives only that capability; opening the telephone application itself does not grant the server mutation.
 
@@ -106,7 +232,8 @@ Credit eligibility, credit limit, customer type, identity verification, governme
 - Granted, read-only, action-only where supported, and fully denied permission combinations for every workflow.
 - Direct navigation with no permission performs no protected request.
 - Self-service available, claimed, concurrent claim, expired, completed, split-payment, and server-validation cases.
-- Call-center user with call-only permission, address-only permission, both permissions, missing phone, invalid address, and invalid fee.
+- Call-center agent with no assignments, assigned arrival/contacted/returned parcels, search, each outcome, missing phone, invalid second receiver, notification partial failure, and refresh after save.
+- Call-center user with assigned-call-only permission, address-only permission, both permissions, invalid address, and invalid fee.
 - Discrepancy selected-system-record, unmatched physical parcel, missing identity, missing notes, denied camera, capture failure, upload failure after create, and successful linked upload.
 - Delivery review branch mismatch, already-reviewed conflict, approval, rejection, and optional note.
 - Customer search with no results, read-only details, permitted contact update, duplicate telephone conflict, and company isolation.

@@ -1,19 +1,20 @@
 import { sweepExpiredSelfServiceDraftsSvc } from './drafts.service';
+import { sweepExpiredSelfServiceSessions } from './session-store';
 
 const SWEEP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 let started = false;
 
-// Self-service drafts have a 1-hour TTL and must be auto-deleted if no agent
-// completes them in time. There is no cron/scheduler infrastructure in this
-// codebase, but the server runs as a single long-lived Bun process (see
-// src/index.tsx), so a simple in-process interval is sufficient - call this
-// once at server boot.
+// Both deletions are idempotent across server instances. Expiry is enforced on
+// every request even if this cleanup timer is delayed or the server is offline.
 export function startSelfServiceDraftExpirySweep(): void {
   if (started) return;
   started = true;
 
   const runSweep = () => {
+    sweepExpiredSelfServiceSessions().catch((error) => {
+      console.error('[self-service] Failed to sweep expired sessions', error);
+    });
     sweepExpiredSelfServiceDraftsSvc().catch((error) => {
       console.error('[self-service] Failed to sweep expired drafts', error);
     });

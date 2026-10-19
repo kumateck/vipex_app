@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -58,7 +59,7 @@ export function ProcurementSuppliersListPage() {
       }).unwrap();
       toast.success(supplier.isActive ? 'Supplier deactivated' : 'Supplier activated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update supplier status');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update supplier status');
     }
   };
 

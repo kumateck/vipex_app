@@ -13,7 +13,7 @@ export const PARCEL_STATUS_OPTIONS: Array<{ value: ParcelStatus; label: string }
   { value: ParcelStatus.DISPATCHED, label: 'Dispatched' },
   { value: ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER, label: 'Rider gave parcel to customer' },
   { value: ParcelStatus.DELIVERED_AT_HOME, label: 'Delivered at home' },
-  { value: ParcelStatus.RETURNED_TO_OFFICE, label: 'Returned to office' },
+  { value: ParcelStatus.RETURNED_TO_OFFICE, label: 'Returned by rider' },
   { value: ParcelStatus.RETURNED_TO_SENDER, label: 'Returned to sender' },
   { value: ParcelStatus.CANCELLED, label: 'Cancelled' },
 ];

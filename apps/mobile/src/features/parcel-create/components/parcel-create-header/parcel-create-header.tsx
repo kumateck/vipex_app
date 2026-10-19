@@ -32,7 +32,9 @@ export function ParcelCreateHeader({
       <View style={styles.titleGroup}>
         <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
         <Text style={[styles.subtitle, { color: theme.colors.textSubtle }]}>
-          Create the booking here, then complete payment and printing at the sender cashier.
+          {paymentResponsibility === PaymentResponsibility.RECIPIENT
+            ? 'Choose whether to queue the parcel or complete it and print a sticker here.'
+            : 'Create the booking here, then complete sender payment at the cashier.'}
         </Text>
       </View>
     </View>

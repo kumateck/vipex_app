@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -56,7 +57,7 @@ export function FleetTripCrewPage() {
       toast.success('Trip crew updated');
       navigate('/fleet-transport/trips');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update trip crew');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update trip crew');
     }
   };
 

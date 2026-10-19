@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
@@ -108,7 +109,7 @@ export function WarehousesPage() {
       resetForm();
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save warehouse');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save warehouse');
     }
   }
 
@@ -125,7 +126,7 @@ export function WarehousesPage() {
       if (editing?.id === deleteTarget.id) resetForm();
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete warehouse');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to delete warehouse');
     }
   }
 

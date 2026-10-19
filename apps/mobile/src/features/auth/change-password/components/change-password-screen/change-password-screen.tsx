@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { AppScreen } from '@mobile/components/screen';
 import { changePassword } from '@mobile/lib/api';
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useAuth } from '@mobile/providers/auth-provider';
 import {
   AppButton,
@@ -36,7 +37,7 @@ export function ChangePasswordScreen() {
       setOldPassword('');
       setNewPassword('');
     } catch (err) {
-      Alert.alert('Failed', err instanceof Error ? err.message : 'Unable to change password');
+      Alert.alert('Failed', getMobileErrorMessage(err, 'Unable to change password'));
     } finally {
       setLoading(false);
     }

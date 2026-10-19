@@ -2,11 +2,18 @@ import { BrandedQrCode } from '@/components/ui/branded-qr-code';
 import { InvoiceA5Header } from './invoice-a5-header';
 import type { InvoiceA5TemplateProps } from './invoice-a5-template.types';
 import { isToBePaidDeliveryReceipt } from './invoice-a5-template.utils';
-import { InvoiceTaxSummary } from './invoice-tax-summary';
+import { InvoiceA5Summary } from './invoice-a5-summary';
+import { receiptTaxRows } from './receipt-tax-rows';
+import { useReceiptPaperFormat } from '../../hooks/use-receipt-paper-format';
+import { isVerticalReceiptPaper } from '@/shared/printing';
+import { ReceiptRollTemplate } from './receipt-roll-template';
 import { InvoiceA5Terms } from './invoice-a5-terms';
 import { ToBePaidReceiptA5Template } from './to-be-paid-receipt-a5-template';
 
 export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
+  const paperFormat = useReceiptPaperFormat();
+  if (isVerticalReceiptPaper(paperFormat))
+    return <ReceiptRollTemplate {...props} paperFormat={paperFormat} />;
   const {
     bookingCode,
     issuedAtLabel,
@@ -20,14 +27,17 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
     senderPaidCedis,
     receiverToPayCedis,
     amountPaidCedis,
+    storageChargeCedis = 0,
     amountInWords,
+    cashierName,
+    duplicate,
     tax,
     qrValue,
     formatMoney,
   } = props;
 
   if (isToBePaidDeliveryReceipt(props)) {
-    return <ToBePaidReceiptA5Template {...props} />;
+    return <ToBePaidReceiptA5Template {...props} paperFormat={paperFormat} />;
   }
 
   const isPartialReceipt = senderPaidCedis > 0 && receiverToPayCedis > 0;
@@ -38,28 +48,12 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
       ? formatMoney(parcelValueCedis)
       : '-';
   const destinationLabel = formatDestinationLabel(destinationBranchName, destinationLocationName);
-  const configuredTaxKeys = new Set(
-    (tax.taxComponentKeys ?? []).map((key) => key.replace(/[\s_-]+/g, '').toLowerCase()),
-  );
-  const isConfigured = (label: string) => {
-    const aliases: Record<string, string[]> = {
-      GETFUND: ['getfund', 'getfl', 'getfundlevy'],
-      NHIL: ['nhil', 'nhillevy'],
-      VAT: ['vat'],
-      COVID: ['covid', 'covid19levy', 'covidlevy'],
-    };
-    return (aliases[label] ?? []).some((key) => configuredTaxKeys.has(key));
-  };
-  const taxRows = [
-    { label: 'GETFUND', value: tax.getfund },
-    { label: 'NHIL', value: tax.nhil },
-    { label: 'VAT', value: tax.vat },
-    { label: 'COVID', value: tax.covid ?? 0 },
-  ].filter((row) => isConfigured(row.label));
+  const taxRows = receiptTaxRows(tax);
 
   return (
     <div
       className="invoice-a5-root bg-white text-black"
+      data-receipt-paper={paperFormat}
       style={{
         width: '198mm',
         boxSizing: 'border-box',
@@ -74,6 +68,8 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
         issuedAtLabel={issuedAtLabel}
         title="Tax Invoice"
         subtitle={isPartialReceipt ? 'PARTIAL PAYMENT RECEIPT' : undefined}
+        cashierName={cashierName}
+        duplicate={duplicate}
       />
 
       <div
@@ -178,49 +174,13 @@ export function InvoiceA5Template(props: InvoiceA5TemplateProps) {
         </div>
       </div>
 
-      <div style={{ borderTop: '0.28mm solid #111', paddingTop: '1.1mm' }}>
-        <div
-          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.6mm', height: '100%' }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              paddingLeft: '5mm',
-            }}
-          >
-            <div style={{ fontSize: '4.8mm', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>
-              TERMS AND CONDITIONS APPLY
-            </div>
-          </div>
-
-          <div
-            style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
-          >
-            <div
-              style={{
-                textAlign: 'center',
-                fontWeight: 700,
-                fontSize: '4.2mm',
-                lineHeight: 1.1,
-                whiteSpace: 'nowrap',
-                padding: '1.2mm 0 1mm',
-              }}
-            >
-              Being: cost of courier service
-            </div>
-
-            <InvoiceTaxSummary
-              formatMoney={formatMoney}
-              isToBePaidReceipt={false}
-              priceBeforeTax={priceBeforeTax}
-              taxRows={taxRows}
-              totalPaid={totalPaid}
-            />
-          </div>
-        </div>
-      </div>
+      <InvoiceA5Summary
+        formatMoney={formatMoney}
+        priceBeforeTax={priceBeforeTax}
+        storageChargeCedis={storageChargeCedis}
+        taxRows={taxRows}
+        totalPaid={totalPaid}
+      />
       <InvoiceA5Terms />
     </div>
   );

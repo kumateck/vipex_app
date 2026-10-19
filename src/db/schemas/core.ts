@@ -76,6 +76,8 @@ export const locations = pgTable(
       .notNull()
       .references(() => branches.id),
     name: varchar('name', { length: 255 }).notNull(),
+    canSend: boolean('can_send').notNull().default(true),
+    canReceive: boolean('can_receive').notNull().default(true),
     isDeleted: boolean('is_deleted').notNull().default(false),
     createdBy: varchar('created_by', { length: 25 }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),

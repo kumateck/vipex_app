@@ -1,4 +1,4 @@
-import { PaymentMethod } from '@/db/schemas/enums';
+import { ParcelStatus, PaymentMethod } from '@/db/schemas/enums';
 import { formatDateTime } from '@/lib/dates';
 
 export const formatCurrency = (amountPsw: number) => `GHS ${(amountPsw / 100).toFixed(2)}`;
@@ -10,7 +10,54 @@ export function formatParcelDate(value: string | null | undefined) {
   return formatDateTime(date);
 }
 
+export function resolveParcelDeliveredAt(input: {
+  status: number;
+  deliveredAt?: string | null;
+  confirmedAt?: string | null;
+}) {
+  const delivered =
+    input.status === ParcelStatus.DELIVERED_BY_OFFICE ||
+    input.status === ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER ||
+    input.status === ParcelStatus.DELIVERED_AT_HOME;
+  return delivered ? (input.deliveredAt ?? input.confirmedAt ?? null) : null;
+}
+
+const HOME_DELIVERY_RIDER_LABELS: Record<number, string> = {
+  [ParcelStatus.HOME_DELIVERY_REQUESTED]: 'Assigned Rider',
+  [ParcelStatus.ADDRESS_COLLECTED]: 'Assigned Rider',
+  [ParcelStatus.DISPATCHED]: 'Assigned Rider',
+  [ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER]: 'D By',
+  [ParcelStatus.DELIVERED_AT_HOME]: 'D By',
+  [ParcelStatus.RETURNED_TO_OFFICE]: 'Returned By',
+};
+
+/** Rider line for home-delivery statuses; null for statuses unrelated to home delivery. */
+export function resolveParcelRider(input: { status: number; riderName?: string | null }) {
+  const label = HOME_DELIVERY_RIDER_LABELS[input.status];
+  if (!label) return null;
+  return { label, name: input.riderName?.trim() || 'Not assigned' };
+}
+
 export function paymentMethodLabel(method: number) {
   const label = PaymentMethod[method];
   return typeof label === 'string' ? label : String(method);
+}
+
+export function deliveredPrincipalPayers(parcel: {
+  status: number;
+  senderPaidPrincipalPsw?: number;
+  receiverPaidPrincipalPsw?: number;
+}) {
+  if (
+    parcel.status !== ParcelStatus.DELIVERED_BY_OFFICE &&
+    parcel.status !== ParcelStatus.RIDER_GIVEN_PARCEL_TO_CUSTOMER &&
+    parcel.status !== ParcelStatus.DELIVERED_AT_HOME
+  ) {
+    return null;
+  }
+
+  const payers: Array<'S' | 'R'> = [];
+  if (Number(parcel.senderPaidPrincipalPsw ?? 0) > 0) payers.push('S');
+  if (Number(parcel.receiverPaidPrincipalPsw ?? 0) > 0) payers.push('R');
+  return payers;
 }

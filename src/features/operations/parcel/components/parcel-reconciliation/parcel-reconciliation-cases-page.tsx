@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { PermissionKeys } from '@/shared/permissions/constants';
 import { useAuthStore } from '@/stores/auth-store';
 import {
@@ -13,6 +14,8 @@ import { ParcelReconciliationTable } from './parcel-reconciliation-table';
 import type { ParcelReconciliationQuery } from './types';
 
 export function ParcelReconciliationCasesPage() {
+  const [searchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search')?.trim() ?? '';
   const user = useAuthStore((state) => state.user);
   const companyId = user?.company?.id ?? null;
   const branchId = user?.branch?.id ?? null;
@@ -35,6 +38,7 @@ export function ParcelReconciliationCasesPage() {
   const [query, setQuery] = useState<ParcelReconciliationQuery>({
     page: 1,
     pageSize: 20,
+    search: initialSearch || undefined,
     filters: serverFilters,
   });
 
@@ -49,6 +53,7 @@ export function ParcelReconciliationCasesPage() {
   return (
     <div className="w-full space-y-4 p-4">
       <ParcelReconciliationTable
+        initialSearch={initialSearch}
         data={data?.data ?? []}
         meta={data?.meta ?? EMPTY_META}
         loading={isLoading}

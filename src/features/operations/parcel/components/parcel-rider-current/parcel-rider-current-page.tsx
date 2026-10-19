@@ -1,9 +1,10 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { isTenDigitPhone, normalizePhoneDigits, phoneLengthMessage } from '@/lib/phone';
 import {
   useAddCustomerCardMutation,
-  useCreateCustomerMutation,
+  useResolveSecondReceiverMutation,
   useListCardOptionsQuery,
   useListCustomerCardsQuery,
 } from '@/features/customers/api';
@@ -58,7 +59,7 @@ export function ParcelRiderCurrentPage() {
   );
 
   const [addCustomerCard] = useAddCustomerCardMutation();
-  const [createCustomer] = useCreateCustomerMutation();
+  const [resolveSecondReceiver] = useResolveSecondReceiverMutation();
   const [uploadImage, { isLoading: isUploadingSignature }] = useUploadImageMutation();
   const [riderGiven, { isLoading: isConfirming }] = useRiderGivenParcelToCustomerMutation();
   const [riderReturned, { isLoading: isReturning }] = useRiderReturnParcelToOfficeMutation();
@@ -83,9 +84,9 @@ export function ParcelRiderCurrentPage() {
   const handleReturn = async (row: RiderDoorstepRecord) => {
     try {
       await riderReturned({ parcelId: row.parcelId, riderUserId }).unwrap();
-      toast.success('Parcel returned to branch pickup');
+      toast.success('Parcel marked Returned by Rider for branch reprocessing');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to return parcel');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to return parcel');
     }
   };
 
@@ -156,7 +157,7 @@ export function ParcelRiderCurrentPage() {
             toast.error(phoneLengthMessage('Second receiver telephone'));
             return;
           }
-          const created = await createCustomer({ fullname, telephone }).unwrap();
+          const created = await resolveSecondReceiver({ fullname, telephone }).unwrap();
           secondReceiverId = created.id;
         }
 
@@ -183,7 +184,7 @@ export function ParcelRiderCurrentPage() {
       toast.success('Handover confirmed');
       setSelected(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to confirm handover');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to confirm handover');
     }
   };
 

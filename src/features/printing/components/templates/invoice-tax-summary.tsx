@@ -2,6 +2,7 @@ type InvoiceTaxSummaryProps = {
   formatMoney: (amount: number) => string;
   isToBePaidReceipt: boolean;
   priceBeforeTax: number;
+  storageChargeCedis?: number;
   taxRows: Array<{ label: string; value: number }>;
   totalPaid: number;
 };
@@ -10,6 +11,7 @@ export function InvoiceTaxSummary({
   formatMoney,
   isToBePaidReceipt,
   priceBeforeTax,
+  storageChargeCedis = 0,
   taxRows,
   totalPaid,
 }: InvoiceTaxSummaryProps) {
@@ -27,6 +29,12 @@ export function InvoiceTaxSummary({
         <span>Price:</span>
         <span style={{ whiteSpace: 'nowrap' }}>{formatMoney(priceBeforeTax)}</span>
       </div>
+      {storageChargeCedis > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', columnGap: '8.5mm' }}>
+          <span>Ageing storage (included):</span>
+          <span style={{ whiteSpace: 'nowrap' }}>{formatMoney(storageChargeCedis)}</span>
+        </div>
+      )}
       {taxRows.map((row) => (
         <div
           key={row.label}

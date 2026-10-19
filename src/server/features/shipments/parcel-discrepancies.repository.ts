@@ -77,10 +77,10 @@ export async function listOpenParcelDiscrepanciesRepo(input: {
   search?: string | null;
 }) {
   const creator = alias(users, 'creator');
+  const sender = alias(customers, 'discrepancy_sender');
+  const receiver = alias(customers, 'discrepancy_receiver');
   const branch = alias(branches, 'b');
   const destinationLocation = alias(locations, 'dl');
-  const sender = alias(customers, 's');
-  const receiver = alias(customers, 'r');
 
   const where = and(
     eq(parcelDiscrepancies.companyId, input.companyId),
@@ -118,15 +118,15 @@ export async function listOpenParcelDiscrepanciesRepo(input: {
       destinationId: parcels.destinationId,
       pickupLocationId: parcels.pickupLocationId,
       destinationLocationName: destinationLocation.name,
-      senderName: sender.fullname,
-      receiverName: receiver.fullname,
+      senderName: sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname}, '')`,
+      receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
     })
     .from(parcelDiscrepancies)
     .leftJoin(parcels, eq(parcelDiscrepancies.parcelId, parcels.id))
+    .leftJoin(sender, eq(sender.id, parcels.senderId))
+    .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
     .leftJoin(branch, eq(parcelDiscrepancies.branchId, branch.id))
     .leftJoin(creator, eq(parcelDiscrepancies.createdBy, creator.id))
-    .leftJoin(sender, eq(parcels.senderId, sender.id))
-    .leftJoin(receiver, eq(parcels.receiverId, receiver.id))
     .leftJoin(destinationLocation, eq(parcels.pickupLocationId, destinationLocation.id))
     .where(where)
     .orderBy(desc(parcelDiscrepancies.createdAt))

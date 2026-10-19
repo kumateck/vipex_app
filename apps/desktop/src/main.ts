@@ -7,12 +7,20 @@ import {
   net,
   session,
   shell,
-  type WebContentsPrintOptions,
 } from 'electron';
 import { lookup } from 'node:dns/promises';
+import { getPrintOptions } from './printing/print-options';
+import { prepareReceiptPaper } from './printing/receipt-paper';
+import { preparePrintAssets } from './printing/print-assets';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { autoUpdater } from 'electron-updater';
+import {
+  getDesktopDeviceStatus,
+  installDesktopDeviceHeaders,
+  loadDesktopDeviceCredential,
+  registerDesktopDevice,
+} from './device-registration';
 
 declare const __DESKTOP_WEB_BASE_URL__: string;
 declare const __DESKTOP_UPDATE_FEED_URL__: string;
@@ -58,7 +66,13 @@ function ignoreBrokenTerminalPipe(stream: NodeJS.WriteStream) {
 ignoreBrokenTerminalPipe(process.stdout);
 ignoreBrokenTerminalPipe(process.stderr);
 
-type PrintLayout = 'thermal-sticker' | 'invoice-a5' | 'invoice-a5-receipt' | 'report-a4';
+type PrintLayout =
+  | 'thermal-sticker'
+  | 'invoice-a5'
+  | 'invoice-a5-receipt'
+  | 'receipt-80mm'
+  | 'receipt-58mm'
+  | 'report-a4';
 
 type PrintHtmlRequest = {
   html: string;
@@ -511,51 +525,6 @@ async function navigateToDeepLink(deepLinkUrl: string) {
   await mainWindow.loadURL(target);
 }
 
-function getPrintOptions(request: PrintHtmlRequest): WebContentsPrintOptions {
-  const baseOptions: WebContentsPrintOptions = {
-    silent: Boolean(request.silent),
-    printBackground: true,
-    margins: {
-      marginType: 'none',
-    },
-  };
-
-  if (request.deviceName) {
-    baseOptions.deviceName = request.deviceName;
-  }
-
-  if (request.copies && request.copies > 1) {
-    baseOptions.copies = request.copies;
-  }
-
-  if (request.layout === 'thermal-sticker') {
-    baseOptions.pageSize = {
-      width: 100000,
-      height: 100000,
-    };
-    baseOptions.landscape = false;
-    baseOptions.scaleFactor = 100;
-    baseOptions.pagesPerSheet = 1;
-    baseOptions.collate = false;
-    baseOptions.duplexMode = 'simplex';
-    baseOptions.pageRanges = [{ from: 0, to: 0 }];
-    baseOptions.margins = {
-      marginType: 'none',
-    };
-  }
-
-  if (request.layout === 'invoice-a5' || request.layout === 'invoice-a5-receipt') {
-    baseOptions.pageSize = 'A5';
-    if (request.layout === 'invoice-a5-receipt') {
-      baseOptions.landscape = true;
-    }
-  } else if (request.layout === 'report-a4') {
-    baseOptions.pageSize = 'A4';
-  }
-
-  return baseOptions;
-}
-
 function createPrintWindow(request: PrintHtmlRequest) {
   const isSilent = Boolean(request.silent);
 
@@ -643,7 +612,9 @@ async function printLoadedWindow(
   printWindow: BrowserWindow,
   diagnostics: PrintDiagnosticEvent[],
 ) {
-  const options = getPrintOptions(request);
+  await preparePrintAssets(printWindow.webContents);
+  const receiptHeight = await prepareReceiptPaper(printWindow.webContents, request.layout);
+  const options = getPrintOptions(request, receiptHeight);
   const printers = await printWindow.webContents.getPrintersAsync();
   const printerSummary = printers.map((printer) => ({
     name: printer.name,
@@ -740,6 +711,12 @@ async function validateRequestedPrinter(request: PrintHtmlRequest) {
 }
 
 function registerIpcHandlers() {
+  ipcMain.handle('device:status', () =>
+    getDesktopDeviceStatus(activeDesktopBaseUrl ?? getWebBaseUrl()),
+  );
+  ipcMain.handle('device:register', (_event, input: { email: string; password: string }) =>
+    registerDesktopDevice(activeDesktopBaseUrl ?? getWebBaseUrl(), input.email, input.password),
+  );
   ipcMain.handle('app:retry-load', async () => {
     if (!app.isPackaged) {
       if (mainWindow && !mainWindow.isDestroyed()) {
@@ -1034,8 +1011,10 @@ app.on('open-url', (event, url) => {
   void navigateToDeepLink(url);
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   logDesktopRoutingSelection();
+  await loadDesktopDeviceCredential();
+  installDesktopDeviceHeaders([...getPackagedWebBaseUrlCandidates(), DEV_WEB_BASE_URL]);
   attachDesktopNetworkLogging();
 
   if (app.isPackaged) {

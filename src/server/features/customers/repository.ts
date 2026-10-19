@@ -240,12 +240,9 @@ export async function findCustomersByTelephoneRepo(input: {
       and(
         eq(customers.companyId, input.companyId),
         eq(customers.isDeleted, false),
-        or(
-          eq(customers.telephone, term),
-          eq(customers.telephone2, term),
-          ilike(customers.telephone, `%${term}%`),
-          ilike(customers.telephone2, `%${term}%`),
-        ),
+        /^\d{10}$/.test(term)
+          ? or(eq(customers.telephone, term), eq(customers.telephone2, term))
+          : or(ilike(customers.telephone, `%${term}%`), ilike(customers.telephone2, `%${term}%`)),
       ),
     )
     .orderBy(asc(customers.fullname), asc(customers.id))
@@ -256,10 +253,13 @@ export async function findCustomersByTelephoneRepo(input: {
 // booking): unlike findCustomersByTelephoneRepo (fuzzy ilike, full row, staff-only),
 // this only matches an exact phone number and returns just enough to greet a
 // returning customer by name - no address/email/credit/etc.
-export async function findCustomerNameByExactTelephoneRepo(input: {
-  companyId: string;
-  telephone: string;
-}): Promise<{
+export async function findCustomerNameByExactTelephoneRepo(
+  input: {
+    companyId: string;
+    telephone: string;
+  },
+  executor: DbExecutor = db,
+): Promise<{
   id: string;
   fullname: string;
   telephone: string | null;
@@ -268,7 +268,7 @@ export async function findCustomerNameByExactTelephoneRepo(input: {
   const term = input.telephone.trim();
   if (!term) return null;
 
-  const [row] = await db
+  const [row] = await executor
     .select({
       id: customers.id,
       fullname: customers.fullname,

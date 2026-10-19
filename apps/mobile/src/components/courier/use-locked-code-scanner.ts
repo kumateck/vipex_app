@@ -37,6 +37,7 @@ export function useLockedCodeScanner(onCodeScanned: (code: string) => void | Pro
         .finally(() => {
           lastHandledRef.current = { code: value, completedAt: Date.now() };
           inFlightRef.current = false;
+          visibleCodeRef.current = null;
         });
     },
   });

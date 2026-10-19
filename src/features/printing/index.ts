@@ -1,4 +1,7 @@
 export * from './types';
+export * from './hooks/use-receipt-paper-format';
+export * from './components/templates/receipt-roll-template';
+export * from './components/templates/home-delivery-receipt-roll-template';
 export * from './constants/page-styles';
 export * from './hooks/use-managed-react-print';
 export * from './hooks/use-print-scenarios';
@@ -8,6 +11,7 @@ export * from './services/html-document';
 export * from './services/browser-print';
 export * from './services/printer-preferences';
 export * from './components/templates/invoice-a5-template';
+export * from './components/templates/home-delivery-receipt-a5-template';
 export * from './components/templates/to-be-paid-receipt-a5-template';
 export * from './components/templates/invoice-a5-terms';
 export * from './components/templates/thermal-sticker-header-panel';

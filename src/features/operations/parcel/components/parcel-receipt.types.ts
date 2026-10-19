@@ -1,6 +1,8 @@
 export type ReceiptPrintData = {
   bookingCode: string;
   trackingCode: string;
+  callSender?: boolean;
+  stickerStatusLabel?: 'PENDING' | 'CREDIT';
   parcelDetails: string;
   parcelContent?: string | null;
   parcelValueCedis?: number | null;
@@ -21,6 +23,7 @@ export type ReceiptPrintData = {
   senderPaidCedis: number;
   receiverToPayCedis: number;
   amountPaidCedis?: number;
+  storageChargeCedis?: number;
   issuedAt: string;
   taxBreakdown?: {
     vatCedis: number;

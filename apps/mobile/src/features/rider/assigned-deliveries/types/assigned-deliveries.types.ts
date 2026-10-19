@@ -4,6 +4,8 @@ export type DeliveryHandoverInput = {
   signatureImage: string;
   principalAmountCedis: number;
   deliveryFeeAmountCedis: number;
+  secondReceiverId?: string;
+  handoverTarget: 'main' | 'second';
 };
 
 export type ActiveDeliveryAction = {

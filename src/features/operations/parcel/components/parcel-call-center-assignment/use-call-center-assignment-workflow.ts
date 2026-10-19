@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
+import { getErrorMessage, getResponseError } from '@/lib/TheAduseiErrorResponse';
 import type { PaginationMeta } from '@/server/types/pagination.types';
 import type { ParcelRow, StaffOption } from './call-center-assignment-types';
 
@@ -45,22 +46,26 @@ export function useCallCenterAssignmentWorkflow() {
       const params = new URLSearchParams({
         page: String(query.page ?? 1),
         pageSize: String(query.pageSize ?? 20),
-        companyId,
-        destinationId: branchId,
-        statuses: '3,12,4',
         ...(searchInput && { search: searchInput }),
       });
       const [parcelsRes, staffRes] = await Promise.all([
-        fetch(`/v1/shipments/parcels?${params}`, {
+        fetch(`/v1/shipments/parcels/call-center?${params}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
         fetch('/v1/shipments/parcels/assignment-staff', {
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
       ]);
-      if (!parcelsRes.ok || !staffRes.ok) throw new Error('Failed to fetch call center data');
+      if (!parcelsRes.ok) {
+        throw await getResponseError(parcelsRes, 'Failed to fetch parcels');
+      }
+      if (!staffRes.ok) {
+        throw await getResponseError(staffRes, 'Failed to fetch call center staff');
+      }
       setListData(await parcelsRes.json());
       setStaffOptions(await staffRes.json());
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Failed to fetch call center data'));
     } finally {
       setIsLoading(false);
     }
@@ -88,8 +93,7 @@ export function useCallCenterAssignmentWorkflow() {
       });
 
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Failed to assign parcel');
+        throw await getResponseError(res, 'Failed to assign parcel');
       }
 
       setSelectedParcel(null);
@@ -97,7 +101,7 @@ export function useCallCenterAssignmentWorkflow() {
       await listQuery.refetch();
       toast.success('Parcel assigned successfully');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to assign parcel');
+      toast.error(getErrorMessage(error, 'Failed to assign parcel'));
       throw error;
     } finally {
       setIsSaving(false);

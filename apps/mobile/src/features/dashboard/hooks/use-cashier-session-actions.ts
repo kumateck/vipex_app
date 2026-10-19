@@ -1,11 +1,14 @@
 import { useCallback, useRef, useState } from 'react';
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { closeCashierSession, listCashierSessionTypes, openCashierSession } from '../services';
 import type { CashierSessionActionState } from '../types';
 
 function actionErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message.replace(/\s*\(\d{3}\)$/, '');
-  return 'The cashier session could not be updated.';
+  return getMobileErrorMessage(error, 'The cashier session could not be updated.').replace(
+    /\s*\(\d{3}\)$/,
+    '',
+  );
 }
 
 export function useCashierSessionActions(input: {

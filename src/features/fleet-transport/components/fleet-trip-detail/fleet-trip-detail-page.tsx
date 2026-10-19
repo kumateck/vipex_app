@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -108,7 +109,7 @@ export function FleetTripDetailPage() {
       }).unwrap();
       toast.success(value === '__none__' ? 'Route unassigned' : 'Route assigned');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to assign route');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to assign route');
     }
   };
 
@@ -140,7 +141,7 @@ export function FleetTripDetailPage() {
       setEventNote('');
       toast.success(eventType === 'checkIn' ? 'Check-in recorded' : 'Check-out recorded');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to record trip event');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to record trip event');
     }
   };
 
@@ -157,7 +158,7 @@ export function FleetTripDetailPage() {
       setStatusNote('');
       toast.success('Trip status update recorded');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to record status update');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to record status update');
     }
   };
 
@@ -184,7 +185,7 @@ export function FleetTripDetailPage() {
       setTelemetryNote('');
       toast.success('Telemetry point recorded');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to record telemetry');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to record telemetry');
     }
   };
 

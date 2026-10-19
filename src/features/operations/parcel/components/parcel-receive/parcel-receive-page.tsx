@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from 'sonner';
@@ -27,6 +28,8 @@ import {
 } from '../../api/parcel.api';
 import { extractScannedCode } from '../../utils/scan-code';
 import { ParcelInternalHolderBadge } from '../parcel-internal-holder-badge';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 type BarcodeDetectorLike = {
   detect: (source: CanvasImageSource) => Promise<Array<{ rawValue?: string }>>;
@@ -358,7 +361,7 @@ export function ParcelReceivePage() {
           await confirmReceive(parcel, 'scan');
           triggerScanSuccessFeedback();
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : 'Failed to receive scanned parcel');
+          toast.error(getApplicationErrorMessage(error, '') || 'Failed to receive scanned parcel');
         }
       }, 3000);
     },
@@ -369,7 +372,16 @@ export function ParcelReceivePage() {
 
   const manualColumns = useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        id: 'booking',
+        header: 'Booking',
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <span>{row.original.bookingCode}</span>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+          </div>
+        ),
+      },
       { accessorKey: 'parcelDetails', header: 'Parcel Details' },
       { accessorKey: 'parcelContent', header: 'Parcel Content' },
       {
@@ -406,6 +418,7 @@ export function ParcelReceivePage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <ViewParcelDetailsMenuItem parcelId={row.original.id} />
               <DropdownMenuItem
                 onClick={async () => {
                   try {
@@ -413,7 +426,7 @@ export function ParcelReceivePage() {
                     triggerScanSuccessFeedback();
                   } catch (error) {
                     toast.error(
-                      error instanceof Error ? error.message : 'Failed to receive parcel',
+                      getApplicationErrorMessage(error, '') || 'Failed to receive parcel',
                     );
                   }
                 }}

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -40,7 +41,7 @@ export function ProcurementFleetPoliciesCreatePage() {
       toast.success('Fleet procurement policy rule created');
       navigate('/procurement/fleet-policies');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create policy rule');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create policy rule');
     }
   };
 

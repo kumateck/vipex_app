@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -57,7 +58,7 @@ export function MomoRequestToPayPanel({
       setTransactionId(result.id);
       toast.success('Payment request sent. Ask the customer to approve on their phone.');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to initiate MoMo payment');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to initiate MoMo payment');
     }
   };
 

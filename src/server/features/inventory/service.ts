@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { Conflict, NotFound, BadRequest } from '../../utils/http-error';
 import {
   InventoryMaintenanceIssueType,
@@ -1664,7 +1665,7 @@ export async function sendInventoryNearExpiryAlertsSvc(input: {
     return {
       sent: false,
       recipients: recipients.length,
-      reason: error instanceof Error ? error.message : 'Email notification failed',
+      reason: getApplicationErrorMessage(error, '') || 'Email notification failed',
     };
   }
 
@@ -2863,7 +2864,7 @@ export async function retryOpenStockReservationsForProductSvc(input: {
     } catch (error) {
       failed.push({
         reservationId: row.id,
-        message: error instanceof Error ? error.message : 'Allocation failed',
+        message: getApplicationErrorMessage(error, '') || 'Allocation failed',
       });
     }
   }

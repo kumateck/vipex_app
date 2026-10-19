@@ -1,4 +1,5 @@
 import type { PrintLayout } from '../types';
+import { receiptRollPageStyle } from './receipt-roll-page-style';
 
 const BASE_STYLE = `
   @media print {
@@ -66,6 +67,8 @@ export const PAGE_STYLES: Record<PrintLayout, string> = {
       }
     }
   `,
+  'receipt-80mm': receiptRollPageStyle(80),
+  'receipt-58mm': receiptRollPageStyle(58),
   'report-a4': `
     ${BASE_STYLE}
     @media print {

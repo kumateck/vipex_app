@@ -10,7 +10,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { ParcelSearchRow } from '../../api/parcel.api';
+import { ParcelStorageFeeBadge } from '../parcel-storage-fee-badge';
 import { ParcelInternalHolderBadge } from '../parcel-internal-holder-badge';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 type UseParcelInternalTransfersSearchColumnsOptions = {
   selectedParcelIds: Set<string>;
@@ -23,7 +25,16 @@ export function useParcelInternalTransfersSearchColumns({
 }: UseParcelInternalTransfersSearchColumnsOptions) {
   return useMemo<ColumnDef<ParcelSearchRow>[]>(
     () => [
-      { accessorKey: 'bookingCode', header: 'Booking' },
+      {
+        id: 'booking',
+        header: 'Booking',
+        cell: ({ row }) => (
+          <div className="space-y-1">
+            <span>{row.original.bookingCode}</span>
+            <ParcelStorageFeeBadge storageChargePsw={row.original.storageChargePsw} />
+          </div>
+        ),
+      },
       { accessorKey: 'receiverName', header: 'Receiver' },
       { accessorKey: 'parcelDetails', header: 'Parcel' },
       {
@@ -70,6 +81,7 @@ export function useParcelInternalTransfersSearchColumns({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <ViewParcelDetailsMenuItem parcelId={row.original.id} />
               <DropdownMenuItem onClick={() => onAddParcel(row.original)}>
                 {selectedParcelIds.has(row.original.id) ? 'Selected' : 'Add'}
               </DropdownMenuItem>

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -39,7 +40,7 @@ export function StockLotExpiryAlertsPage() {
       toast.success(`Expired ${result.expiredCount} lots`);
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Sweep failed');
+      toast.error(getApplicationErrorMessage(error, '') || 'Sweep failed');
     }
   };
 

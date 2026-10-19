@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { toast } from 'sonner';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -23,7 +24,7 @@ export function FleetShiftRostersPage() {
       await updateRoster({ id, status }).unwrap();
       toast.success(status === 1 ? 'Roster marked completed' : 'Roster cancelled');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update roster');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update roster');
     }
   };
 

@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { canViewCashierSalesReport } from '@mobile/lib/permissions';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { getCashierSalesReport } from '../services';
@@ -7,12 +8,11 @@ import type { CashierSalesReport, CashierSalesReportState } from '../types';
 import { normalizeDateKey } from '../utils';
 
 function reportErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.toLowerCase().includes('network')) {
+  const message = getMobileErrorMessage(error, 'The cashier report could not be loaded.');
+  if (message.toLowerCase().includes('network')) {
     return 'Could not reach VIPEx. Check your connection and try again.';
   }
-  return error instanceof Error
-    ? error.message.replace(/\s*\(\d{3}\)$/, '')
-    : 'The cashier report could not be loaded.';
+  return message.replace(/\s*\(\d{3}\)$/, '');
 }
 
 export function useCashierSalesReport(initialDate?: string): CashierSalesReportState {

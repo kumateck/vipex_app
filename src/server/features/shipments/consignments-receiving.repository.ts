@@ -32,8 +32,8 @@ export async function listConsignmentItemsRepo(
   const arrivedByUser = sql<
     string | null
   >`(select ${users.fullname} from ${users} where ${users.id} = ${consignmentItems.arrivedBy})`;
-  const senderCustomer = sql<string>`(select ${customers.fullname} from ${customers} where ${customers.id} = ${parcels.senderId})`;
-  const receiverCustomer = sql<string>`(select ${customers.fullname} from ${customers} where ${customers.id} = ${parcels.receiverId})`;
+  const sender = alias(customers, 'receiving_sender');
+  const receiver = alias(customers, 'receiving_receiver');
 
   return db
     .select({
@@ -41,8 +41,8 @@ export async function listConsignmentItemsRepo(
       trackingCode: parcels.trackingCode,
       bookingCode: parcels.bookingCode,
       parcelDetails: parcels.parcelDetails,
-      senderName: senderCustomer,
-      receiverName: receiverCustomer,
+      senderName: sql<string>`coalesce(nullif(btrim(${parcels.senderNameSnapshot}), ''), ${sender.fullname}, '')`,
+      receiverName: sql<string>`coalesce(nullif(btrim(${parcels.receiverNameSnapshot}), ''), ${receiver.fullname}, '')`,
       addedAt: consignmentItems.addedAt,
       arrivedAt: consignmentItems.arrivedAt,
       arrivedBy: consignmentItems.arrivedBy,
@@ -50,6 +50,8 @@ export async function listConsignmentItemsRepo(
     })
     .from(consignmentItems)
     .innerJoin(parcels, eq(parcels.id, consignmentItems.parcelId))
+    .leftJoin(sender, eq(sender.id, parcels.senderId))
+    .leftJoin(receiver, eq(receiver.id, parcels.receiverId))
     .where(
       and(eq(consignmentItems.consignmentId, consignmentId), isNull(consignmentItems.removedAt)),
     )

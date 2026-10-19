@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -40,7 +41,7 @@ export function ProcurementDemandConsolidationsCreatePage() {
       toast.success(`Consolidation ${result.consolidationNo} created.`);
       navigate('/procurement/demands/consolidations');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create consolidation');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create consolidation');
     }
   };
 

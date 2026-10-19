@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -114,7 +115,7 @@ export async function uploadImageDataUrl(input: {
       contentType,
       code: getMinioErrorCode(error),
       statusCode: getMinioHttpStatusCode(error),
-      message: error instanceof Error ? error.message : String(error),
+      message: getApplicationErrorMessage(error, '') || String(error),
       elapsedMs: Date.now() - startedAt,
     });
     throw error;

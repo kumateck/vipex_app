@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
@@ -43,7 +44,7 @@ export function ProcurementDemandsApprovalsPage() {
       await approveDemand({ id }).unwrap();
       toast.success('Demand approved');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to approve demand');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to approve demand');
     }
   };
 
@@ -57,7 +58,7 @@ export function ProcurementDemandsApprovalsPage() {
       await rejectDemand({ id, rejectionReason }).unwrap();
       toast.success('Demand rejected');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to reject demand');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to reject demand');
     }
   };
 

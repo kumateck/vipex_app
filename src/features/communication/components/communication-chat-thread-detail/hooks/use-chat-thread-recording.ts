@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { buildRecordedUpload } from '../services/build-recorded-upload';
@@ -119,7 +120,7 @@ export function useChatThreadRecording({ onRecorded }: UseChatThreadRecordingPar
 
             onRecorded(pending);
           } catch (error) {
-            toast.error(error instanceof Error ? error.message : 'Failed to process recording.');
+            toast.error(getApplicationErrorMessage(error, '') || 'Failed to process recording.');
           } finally {
             closeRecorderDialog(false);
           }
@@ -144,7 +145,7 @@ export function useChatThreadRecording({ onRecorded }: UseChatThreadRecordingPar
       }, 250);
       setIsRecording(true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to start recording.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Unable to start recording.');
       closeRecorderDialog();
     } finally {
       setIsPreparingRecording(false);

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { toast } from 'sonner';
@@ -52,7 +53,7 @@ export function NotificationCampaignsApprovalsPage() {
       await approveCampaign({ id }).unwrap();
       toast.success('Campaign approved');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to approve campaign');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to approve campaign');
     }
   };
 
@@ -63,7 +64,7 @@ export function NotificationCampaignsApprovalsPage() {
       await rejectCampaign({ id, note: reason.trim() }).unwrap();
       toast.success('Campaign rejected');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to reject campaign');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to reject campaign');
     }
   };
 

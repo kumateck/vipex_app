@@ -3,6 +3,10 @@ import { useAuthStore, type AuthUser } from '@/stores/auth-store';
 import { store } from '@/store';
 import { useBreadcrumbStore } from '@/stores/route-store';
 import { clearApiInFlightRequests } from '@/services/api';
+import { refreshAuthSession } from '@/features/auth/session';
+import type { CurrentUserProfileResponse } from '@/features/auth/types';
+
+export type { CurrentUserProfileResponse } from '@/features/auth/types';
 
 export interface LoginRequest {
   email: string;
@@ -84,22 +88,6 @@ export interface CurrentUserReadOnlyPermissionsResponse {
   readOnlyPermissions: string[];
 }
 
-export interface CurrentUserProfileResponse {
-  id: string;
-  fullname: string;
-  email: string;
-  telephone: string;
-  employeeId: string | null;
-  role: { id: string; name: string } | null;
-  branch: { id: string; name: string; type: number } | null;
-  company: { id: string; name: string; useAccounting: boolean } | null;
-  location: { id: string; name: string } | null;
-  locationId: string | null;
-  locationName: string | null;
-  userType: number | null;
-  cashierType: number | null;
-}
-
 export interface UpdateCurrentUserProfileRequest {
   fullname?: string;
   telephone?: string;
@@ -127,10 +115,10 @@ export const authApi = api.injectEndpoints({
           const { data } = await queryFulfilled;
           clearApiInFlightRequests();
           store.dispatch(api.util.resetApiState());
-          useAuthStore.persist.clearStorage();
+          useAuthStore.persist?.clearStorage();
           useAuthStore.getState().logout();
           useBreadcrumbStore.getState().reset();
-          useBreadcrumbStore.persist.clearStorage();
+          useBreadcrumbStore.persist?.clearStorage();
           const accessToken = data.tokens?.accessToken ?? data.accessToken ?? '';
           const refreshToken = data.tokens?.refreshToken ?? data.refreshToken ?? '';
 
@@ -162,40 +150,43 @@ export const authApi = api.injectEndpoints({
           clearApiInFlightRequests();
           store.dispatch(api.util.resetApiState());
           useAuthStore.getState().logout();
-          useAuthStore.persist.clearStorage();
+          useAuthStore.persist?.clearStorage();
           useBreadcrumbStore.getState().reset();
-          useBreadcrumbStore.persist.clearStorage();
+          useBreadcrumbStore.persist?.clearStorage();
         }
       },
     }),
 
     refreshToken: builder.mutation<RefreshTokenResponse, RefreshTokenRequest>({
-      query: (body) => ({
-        url: '/auth/refresh',
-        method: 'POST',
-        body,
-      }),
-      async onQueryStarted(_args, { queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
-          const currentAuth = useAuthStore.getState();
-
-          if (currentAuth.user) {
-            currentAuth.setAuth({
-              user: data.user,
-              accessToken: data.tokens.accessToken,
-              refreshToken: data.tokens.refreshToken,
-            });
-          }
-        } catch (_err) {
-          // If refresh fails, logout user
-          clearApiInFlightRequests();
-          store.dispatch(api.util.resetApiState());
-          useAuthStore.getState().logout();
-          useAuthStore.persist.clearStorage();
-          useBreadcrumbStore.getState().reset();
-          useBreadcrumbStore.persist.clearStorage();
+      async queryFn({ refreshToken }) {
+        if (useAuthStore.getState().refreshToken !== refreshToken) {
+          return { error: { status: 'CUSTOM_ERROR', error: 'Session changed. Please retry.' } };
         }
+        const result = await refreshAuthSession();
+        if (result.status === 'refreshed') {
+          return {
+            data: {
+              tokens: { accessToken: result.accessToken, refreshToken: result.refreshToken },
+              user: result.user,
+            },
+          };
+        }
+        if (result.status === 'invalid') {
+          clearApiInFlightRequests();
+          // Resetting RTK state inside this queryFn aborts its own 401 response.
+          // The next login clears cached API data before setting new credentials.
+          useAuthStore.getState().logout();
+          useAuthStore.persist?.clearStorage();
+          useBreadcrumbStore.getState().reset();
+          useBreadcrumbStore.persist?.clearStorage();
+          return { error: { status: 401, data: { message: 'Session expired' } } };
+        }
+        return {
+          error: {
+            status: 'CUSTOM_ERROR',
+            error: 'Connection interrupted while renewing your session. Please retry.',
+          },
+        };
       },
     }),
 

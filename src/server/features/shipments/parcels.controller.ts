@@ -1,3 +1,5 @@
+import { getParcelHistorySvc } from './parcel-history/parcel-history.service';
+import { executeParcelStorageClearanceSvc } from './parcel-storage-clearance-execution.service';
 import { buildPaginationMeta, normalizePagination } from '@/server/utils/pagination';
 import type { PaginatedResponseDto, PaginationRequestDto } from '@/server/types/pagination.types';
 import {
@@ -9,7 +11,6 @@ import {
   listEligibleParcelCorrectionSessionsSvc,
   listParcelReconciliationCasesSvc,
   listParcelDispositionActionsSvc,
-  waiveParcelStorageAccrualSvc,
   listOpenParcelDiscrepanciesSvc,
   listParcelsSvc,
   logParcelDiscrepancySvc,
@@ -23,22 +24,40 @@ import {
   updateParcelSvc,
 } from './parcels.service';
 import { markIncomingParcelsArrivedSvc } from './parcel-bulk-receiving.service';
+import {
+  approveParcelStorageClearanceSvc,
+  createParcelStorageClearanceSvc,
+  rejectParcelStorageClearanceSvc,
+  resubmitParcelStorageClearanceSvc,
+  returnParcelStorageClearanceForReviewSvc,
+} from './parcel-storage-clearance.service';
+import { listParcelStorageClearancesSvc } from './parcel-storage-clearance-list.service';
 
 export async function listParcelsCtrl(
   q: PaginationRequestDto<{
     companyId?: string | null;
     sourceId?: string | null;
     destinationId?: string | null;
+    scopedBranchId?: string | null;
     locationId?: string | null;
     status?: number | null;
     statuses?: number[] | null;
+    riderReturnedOnly?: boolean;
     senderPaid?: boolean | null;
+    paymentType?: 'paid' | 'to_be_paid' | 'partial' | null;
     hasPickupQueue?: boolean | null;
     agedOnly?: boolean | null;
     storageChargeAccruing?: boolean | null;
+    cashierCollectionRequired?: boolean | null;
     received?: boolean | null;
     includeDeleted?: boolean | null;
     assignedToUserId?: string | null;
+    callCenterAssignmentOrder?: boolean;
+    callCenterUncalledOnly?: boolean;
+    shelfPickerAssignmentOrder?: boolean;
+    shelfPickerAssigned?: boolean;
+    sentDate?: string | null;
+    consignmentNumber?: string | null;
   }>,
 ): Promise<PaginatedResponseDto<unknown>> {
   const pagination = normalizePagination(q, { pageSize: 20, maxPageSize: 200 });
@@ -48,17 +67,27 @@ export async function listParcelsCtrl(
     companyId: q.filters?.companyId ?? null,
     sourceId: q.filters?.sourceId ?? null,
     destinationId: q.filters?.destinationId ?? null,
+    scopedBranchId: q.filters?.scopedBranchId ?? null,
     locationId: q.filters?.locationId ?? null,
     status: q.filters?.status ?? null,
     statuses: q.filters?.statuses ?? null,
+    riderReturnedOnly: q.filters?.riderReturnedOnly ?? false,
     senderPaid: q.filters?.senderPaid ?? null,
+    paymentType: q.filters?.paymentType ?? null,
     hasPickupQueue: q.filters?.hasPickupQueue ?? null,
     agedOnly: q.filters?.agedOnly ?? null,
     storageChargeAccruing: q.filters?.storageChargeAccruing ?? null,
+    cashierCollectionRequired: q.filters?.cashierCollectionRequired ?? null,
     search: pagination.search ?? null,
     received: q.filters?.received ?? null,
     includeDeleted: q.filters?.includeDeleted ?? null,
     assignedToUserId: q.filters?.assignedToUserId ?? null,
+    callCenterAssignmentOrder: q.filters?.callCenterAssignmentOrder ?? false,
+    callCenterUncalledOnly: q.filters?.callCenterUncalledOnly ?? false,
+    shelfPickerAssignmentOrder: q.filters?.shelfPickerAssignmentOrder ?? false,
+    shelfPickerAssigned: q.filters?.shelfPickerAssigned,
+    sentDate: q.filters?.sentDate ?? null,
+    consignmentNumber: q.filters?.consignmentNumber ?? null,
     sort: pagination.sort ?? null,
   });
   return {
@@ -66,13 +95,16 @@ export async function listParcelsCtrl(
       ...p,
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
+      riderReturnedAt: p.riderReturnedAt ? p.riderReturnedAt.toISOString() : null,
       receivedAt: p.receivedAt ? p.receivedAt.toISOString() : null,
       confirmedAt: p.confirmedAt ? p.confirmedAt.toISOString() : null,
+      callCenterCalledAt: p.callCenterCalledAt ? p.callCenterCalledAt.toISOString() : null,
       deletedAt: p.deletedAt ? p.deletedAt.toISOString() : null,
       bookingCreatedAt: p.bookingCreatedAt ? p.bookingCreatedAt.toISOString() : null,
       consignmentCreatedAt: p.consignmentCreatedAt ? p.consignmentCreatedAt.toISOString() : null,
       pickupQueuedAt: p.pickupQueuedAt ? p.pickupQueuedAt.toISOString() : null,
       pickupQueueEndedAt: p.pickupQueueEndedAt ? p.pickupQueueEndedAt.toISOString() : null,
+      deliveredAt: p.deliveredAt ? p.deliveredAt.toISOString() : null,
     })),
     meta: buildPaginationMeta({
       totalRecords,
@@ -83,9 +115,10 @@ export async function listParcelsCtrl(
 }
 
 export const getParcelByIdCtrl = getParcelSvc;
-export async function getParcelDetailsCtrl(id: string) {
-  const result = await getParcelFullDetailsSvc(id);
+export async function getParcelDetailsCtrl(id: string, scope: { companyId?: string | null } = {}) {
+  const result = await getParcelFullDetailsSvc(id, scope);
   return {
+    summary: result.summary,
     parcel: {
       ...result.parcel,
       createdAt: result.parcel.createdAt.toISOString(),
@@ -151,8 +184,10 @@ export async function getParcelDetailsCtrl(id: string) {
       createdAt: row.createdAt ? row.createdAt.toISOString() : null,
     })),
     storageSettlement: result.storageSettlement,
+    userNames: result.userNames,
   };
 }
+export const getParcelHistoryCtrl = getParcelHistorySvc;
 export const createParcelCtrl = createParcelSvc;
 export const updateParcelCtrl = updateParcelSvc;
 export const markParcelReceivedCtrl = markParcelReceivedSvc;
@@ -163,7 +198,34 @@ export const logParcelStickerPrintCtrl = logParcelStickerPrintSvc;
 export const softDeleteParcelCtrl = softDeleteParcelSvc;
 export const listParcelDispositionActionsCtrl = listParcelDispositionActionsSvc;
 export const recordParcelDispositionActionCtrl = recordParcelDispositionActionSvc;
-export const waiveParcelStorageAccrualCtrl = waiveParcelStorageAccrualSvc;
+
+export const createParcelStorageClearanceCtrl = createParcelStorageClearanceSvc;
+export const approveParcelStorageClearanceCtrl = approveParcelStorageClearanceSvc;
+export const rejectParcelStorageClearanceCtrl = rejectParcelStorageClearanceSvc;
+export const returnParcelStorageClearanceForReviewCtrl = returnParcelStorageClearanceForReviewSvc;
+export const resubmitParcelStorageClearanceCtrl = resubmitParcelStorageClearanceSvc;
+export const executeParcelStorageClearanceCtrl = executeParcelStorageClearanceSvc;
+
+export async function listParcelStorageClearancesCtrl(input: {
+  companyId: string;
+  branchId?: string | null;
+  statuses?: number[] | null;
+  search?: string | null;
+  page: number;
+  pageSize: number;
+}) {
+  const page = Math.max(1, Number(input.page || 1));
+  const pageSize = Math.max(1, Math.min(100, Number(input.pageSize || 20)));
+  const { data, totalRecords } = await listParcelStorageClearancesSvc({
+    companyId: input.companyId,
+    branchId: input.branchId ?? null,
+    statuses: input.statuses ?? null,
+    search: input.search?.trim() || null,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  });
+  return { data, meta: buildPaginationMeta({ totalRecords, page, pageSize }) };
+}
 
 export async function listOpenParcelDiscrepanciesCtrl(input: {
   companyId: string;
@@ -271,7 +333,6 @@ export async function listParcelReconciliationCasesCtrl(input: {
     meta: buildPaginationMeta({ totalRecords, page, pageSize }),
   };
 }
-
 export async function assignParcelToCallCenterCtrl(input: { parcelId: string; userId: string }) {
   const { assignParcelToCallCenterSvc } = await import('./parcels.service');
   return assignParcelToCallCenterSvc(input);
@@ -283,8 +344,11 @@ export async function bulkAssignParcelsToCallCenterCtrl(input: {
   const { bulkAssignParcelsToCallCenterSvc } = await import('./parcels.service');
   return bulkAssignParcelsToCallCenterSvc(input);
 }
-
-export async function updateParcelShelfPickerCtrl(input: { parcelId: string; userId: string }) {
-  const { updateParcelShelfPickerSvc } = await import('./parcels.service');
+export async function updateParcelShelfPickerCtrl(
+  input: Parameters<
+    typeof import('./shelf-picker-assignment.service').updateParcelShelfPickerSvc
+  >[0],
+) {
+  const { updateParcelShelfPickerSvc } = await import('./shelf-picker-assignment.service');
   return updateParcelShelfPickerSvc(input);
 }

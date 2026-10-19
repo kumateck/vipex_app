@@ -34,6 +34,12 @@ export const GROUP_DEFAULTS: Record<string, GroupDefault> = {
     subdomain: 'Customer Lifecycle',
     module: 'Customer Identification',
   },
+  // Website enquiries, complaints and feedback; separate from CS and IT tickets.
+  'Customer Messages': {
+    domain: 'Commercial',
+    subdomain: 'Customer Lifecycle',
+    module: 'Customer Website Messages',
+  },
   Shipments: { domain: 'Operations', subdomain: 'Parcel Lifecycle', module: 'Booking & Shipping' },
   Cashiers: {
     domain: 'Finance',
@@ -135,6 +141,7 @@ export const KEY_OVERRIDES: Partial<Record<PermissionKey, Partial<GroupDefault>>
   CanReadParcelReceivingModule: { module: 'Parcel Receiving' },
   CanReadParcelIncoming: { module: 'Parcel Receiving' },
   CanReadParcelScan: { module: 'Parcel Receiving' },
+  CanReverseParcelDelivery: { module: 'Pickup & Collection' },
   CanCreateReceiverPayments: {
     domain: 'Operations',
     subdomain: 'Parcel Lifecycle',
@@ -149,6 +156,15 @@ export const KEY_OVERRIDES: Partial<Record<PermissionKey, Partial<GroupDefault>>
   CanRequestParcelReconciliation: { module: 'Parcel Reconciliation' },
   CanApproveParcelReconciliation: { module: 'Parcel Reconciliation' },
   CanExecuteParcelReconciliation: { module: 'Parcel Reconciliation' },
+  CanReadParcelStorageClearances: { module: 'Storage Fee Clearance' },
+  CanRequestParcelStorageClearance: { module: 'Storage Fee Clearance' },
+  CanApproveParcelStorageClearance: { module: 'Storage Fee Clearance' },
+  // Catalog group stays Accounting; list it beside the other clearance permissions.
+  CanExecuteParcelStorageClearance: {
+    domain: 'Operations',
+    subdomain: 'Parcel Lifecycle',
+    module: 'Storage Fee Clearance',
+  },
   CanOverrideParcelReconciliationWindow: { module: 'Parcel Reconciliation' },
   CanReadAccountingAccounts: { module: 'Chart of Accounts' },
   CanCreateAccountingAccounts: { module: 'Chart of Accounts' },

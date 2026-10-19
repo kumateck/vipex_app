@@ -1,1 +1,1 @@
-export * from '../components/parcel-in-transit';
+export { ParcelInTransitPage } from '../components/parcel-in-transit';

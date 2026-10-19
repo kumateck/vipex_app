@@ -1,10 +1,8 @@
-import { useEffect } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from 'react-router-dom';
+import { Controller } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -14,82 +12,21 @@ import {
   SelectValue,
 } from '@/components/ui/select-searchable';
 import { Spinner } from '@/components/ui';
-import { normalizeOptionalFields } from '@/lib/optional-fields';
-import { useAuthStore } from '@/stores/auth-store';
-import { useListBranchOptionsQuery } from '@/features/branches';
-import {
-  createLocationSchema,
-  editLocationSchema,
-  type CreateLocationFormValues,
-  type EditLocationFormValues,
-} from '../schemas/location-form.schema';
-import type { Location } from '../types/location.types';
+import type { LocationFormProps } from '../types/location-form.types';
+import { useLocationForm } from '../hooks';
 
-interface LocationFormBaseProps {
-  initialData?: Partial<Location>;
-  isSubmitting: boolean;
-  title: string;
-  submitButtonText: string;
-}
-
-interface CreateLocationFormProps extends LocationFormBaseProps {
-  mode: 'create';
-  onSubmit: (data: CreateLocationFormValues) => Promise<void>;
-}
-
-interface EditLocationFormProps extends LocationFormBaseProps {
-  mode: 'edit';
-  onSubmit: (data: EditLocationFormValues) => Promise<void>;
-}
-
-type LocationFormProps = CreateLocationFormProps | EditLocationFormProps;
-type LocationFormValues = { name: string; branchId?: string };
-
-export function LocationForm({
-  mode,
-  initialData,
-  onSubmit,
-  isSubmitting,
-  title,
-  submitButtonText,
-}: LocationFormProps) {
-  const navigate = useNavigate();
-  const schema = mode === 'create' ? createLocationSchema : editLocationSchema;
-  const companyId = useAuthStore((state) => state.user?.company?.id ?? null);
-  const { data: branchesData, isLoading: isLoadingBranches } = useListBranchOptionsQuery(
-    { companyId },
-    { skip: mode !== 'create' },
-  );
-
+export function LocationForm(props: LocationFormProps) {
+  const { mode, isSubmitting, title, submitButtonText } = props;
   const {
     control,
     register,
     handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<LocationFormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: mode === 'create' ? { name: '', branchId: '' } : { name: '' },
-    mode: 'onSubmit',
-  });
-
-  useEffect(() => {
-    if (mode === 'edit' && initialData) {
-      reset({ name: initialData.name ?? '' });
-      return;
-    }
-    reset({ name: '', branchId: '' });
-  }, [initialData, mode, reset]);
-
-  const submit = async (values: LocationFormValues) => {
-    if (mode === 'create') {
-      const normalized = normalizeOptionalFields(values, ['branchId'] as const);
-      await onSubmit({ name: normalized.name, branchId: normalized.branchId as string });
-      return;
-    }
-    await onSubmit({ name: values.name });
-  };
-
+    errors,
+    submit,
+    branchesData,
+    isLoadingBranches,
+    onCancel,
+  } = useLocationForm(props);
   return (
     <div className="w-full max-w-lg mx-auto p-4">
       <Card>
@@ -145,6 +82,25 @@ export function LocationForm({
                   ) : null}
                 </Field>
               ) : null}
+              {(['canSend', 'canReceive'] as const).map((name) => (
+                <Controller
+                  key={name}
+                  control={control}
+                  name={name}
+                  render={({ field }) => (
+                    <Field className="flex-row items-center gap-3">
+                      <Checkbox
+                        id={name}
+                        checked={field.value}
+                        onCheckedChange={(value) => field.onChange(value === true)}
+                      />
+                      <FieldLabel htmlFor={name}>
+                        {name === 'canSend' ? 'Sends parcels' : 'Receives parcels'}
+                      </FieldLabel>
+                    </Field>
+                  )}
+                />
+              ))}
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? <Spinner /> : null}
@@ -152,7 +108,7 @@ export function LocationForm({
                     ? `${mode === 'create' ? 'Creating...' : 'Saving...'}`
                     : submitButtonText}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => navigate('/locations')}>
+                <Button type="button" variant="outline" onClick={onCancel}>
                   Cancel
                 </Button>
               </div>

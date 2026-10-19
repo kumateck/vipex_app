@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';
@@ -19,7 +20,7 @@ export function useCompanyModuleSettings() {
         toast.success(`${moduleCode} ${isEnabled ? 'enabled' : 'disabled'}`);
         await refetch();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to update company module');
+        toast.error(getApplicationErrorMessage(error, '') || 'Failed to update company module');
       }
     },
     [refetch, setCompanyModuleState, updateUser, user?.company],

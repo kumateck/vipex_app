@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { PaymentMethod } from '@/db/schemas/enums';
@@ -50,7 +51,7 @@ export function useParcelCreateSenderPayment({
       setMomoTransactionId('');
       return true;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load parcel for payment');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to load parcel for payment');
       return false;
     }
   };
@@ -93,7 +94,7 @@ export function useParcelCreateSenderPayment({
       setPendingReceipt(null);
       setPendingParcels([]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to collect sender payment');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to collect sender payment');
     }
   };
 
@@ -126,6 +127,7 @@ function buildPendingParcelFromDetails(
     parcelId: fallback.parcelId,
     bookingCode: details.parcel.bookingCode,
     trackingCode: details.parcel.trackingCode,
+    callSender: details.parcel.callSender,
     parcelDetails: details.parcel.parcelDetails,
     parcelContent: details.parcel.parcelContent,
     parcelValueCedis: Number(details.parcel.parcelValuePsw ?? 0) / 100,

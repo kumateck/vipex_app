@@ -2,7 +2,7 @@ import { sendMail } from '../mailer';
 import { env } from '../../../utils/env';
 
 function appBaseUrl() {
-  return env.APP_BASE_URL || 'http://localhost:3000';
+  return env.APP_BASE_URL || 'http://localhost:8080';
 }
 
 export function buildPasswordSetupEmail(otpCode: string, email: string) {

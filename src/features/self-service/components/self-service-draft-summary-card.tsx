@@ -33,10 +33,6 @@ export function SelfServiceDraftSummaryCard({ draft }: { draft: SelfServiceDraft
           <p className="text-xs text-muted-foreground">Declared Value</p>
           <p className="text-sm">GH₵{(draft.parcelValuePsw / 100).toFixed(2)}</p>
         </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Call Sender Before Delivery</p>
-          <p className="text-sm">{draft.callSender ? 'Yes' : 'No'}</p>
-        </div>
       </CardContent>
     </Card>
   );

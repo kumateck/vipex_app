@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { Conflict, NotFound } from '@/server/utils/http-error';
 import { recordAuditLog } from '../audit/logger';
 import { sendMail } from '@/server/services/mail/mailer';
@@ -1158,7 +1159,7 @@ export async function runFleetComplianceExpiryAlertJobSvc(input: {
         status: 'failed',
         attemptCount: 1,
         errorMessage:
-          error instanceof Error ? error.message : 'Failed to send compliance alert email',
+          getApplicationErrorMessage(error, '') || 'Failed to send compliance alert email',
       });
       emailFailed += 1;
     }
@@ -1281,7 +1282,7 @@ export async function runFleetLowStockAlertJobSvc(input: {
       await updateFleetComplianceAlertDispatchRepo(emailDispatch.id, input.companyId, {
         status: 'failed',
         attemptCount: 1,
-        errorMessage: error instanceof Error ? error.message : 'Failed to send low-stock email',
+        errorMessage: getApplicationErrorMessage(error, '') || 'Failed to send low-stock email',
       });
       emailFailed += 1;
     }
@@ -1439,7 +1440,7 @@ export async function runFleetPolicyReackReminderJobSvc(input: {
         status: 'failed',
         attemptCount: 1,
         errorMessage:
-          error instanceof Error ? error.message : 'Failed to send policy reminder email',
+          getApplicationErrorMessage(error, '') || 'Failed to send policy reminder email',
       });
       emailFailed += 1;
     }
@@ -1772,7 +1773,7 @@ export async function runFleetComplianceEscalationJobSvc(input: {
         await updateFleetComplianceAlertDispatchRepo(emailDispatch.id, input.companyId, {
           status: 'failed',
           attemptCount: 1,
-          errorMessage: error instanceof Error ? error.message : 'Failed to send escalation email',
+          errorMessage: getApplicationErrorMessage(error, '') || 'Failed to send escalation email',
         });
         emailFailed += 1;
       }

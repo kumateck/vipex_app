@@ -53,11 +53,10 @@ export function NotificationProvidersUpsertPage() {
       onClose();
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : isEditMode
-            ? 'Failed to update provider'
-            : 'Failed to create provider',
+        getErrorMessage(
+          error,
+          isEditMode ? 'Failed to update provider' : 'Failed to create provider',
+        ),
       );
     }
   };
@@ -103,3 +102,4 @@ export function NotificationProvidersUpsertPage() {
 }
 
 export const NotificationProvidersCreatePage = NotificationProvidersUpsertPage;
+import { getErrorMessage } from '@/lib/TheAduseiErrorResponse';

@@ -8,8 +8,8 @@ import {
 
 describe('thermal sticker receiver sizing', () => {
   test('uses the portrait destination branch scale', () => {
-    expect(portraitDestinationFontSize('Accra')).toBe('8.4mm');
-    expect(portraitDestinationFontSize('A destination branch')).toBe('6.6mm');
+    expect(portraitDestinationFontSize('Accra')).toBe('7.6mm');
+    expect(portraitDestinationFontSize('A destination branch')).toBe('5mm');
   });
 
   test('uses the landscape destination branch scale', () => {
@@ -18,7 +18,7 @@ describe('thermal sticker receiver sizing', () => {
   });
 
   test('sizes portrait receiver names independently of the destination', () => {
-    expect(portraitReceiverNameFontSize('Michael Agyenim')).toBe('5mm');
+    expect(portraitReceiverNameFontSize('Michael Agyenim')).toBe('4.4mm');
     expect(portraitReceiverNameFontSize('A receiver with a longer full name')).toBe('3.2mm');
   });
 

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { EllipsisVertical } from 'lucide-react';
@@ -123,7 +124,7 @@ export function useAccountingSetupAccountsTab({
       resetAccountForm();
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save account');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to save account');
     }
   }
 
@@ -148,7 +149,7 @@ export function useAccountingSetupAccountsTab({
       resetAccountForm();
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete account');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to delete account');
     }
   }
 

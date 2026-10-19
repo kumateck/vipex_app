@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 
-const backendTarget = process.env.VITE_BACKEND_URL ?? 'http://localhost:3000';
+const backendTarget = process.env.VITE_BACKEND_URL ?? 'http://localhost:8080';
 const webDir = path.dirname(fileURLToPath(import.meta.url));
 const appBuildId = process.env.VIPEX_BUILD_ID ?? process.env.GITHUB_SHA ?? new Date().toISOString();
 

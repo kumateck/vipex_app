@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { toast } from 'sonner';
 import type { Dispatch, SetStateAction } from 'react';
 
@@ -49,7 +50,7 @@ export function createCommunicationSidebarActions(input: {
         state: { optimisticThreadTitle: optimisticTitle },
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to open chat.';
+      const message = getApplicationErrorMessage(error, '') || 'Failed to open chat.';
       toast.error(message);
     } finally {
       input.setStartingUserId(null);
@@ -64,7 +65,7 @@ export function createCommunicationSidebarActions(input: {
       await input.createEngagementRequest(payload).unwrap();
       toast.success('Chat request sent.');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to send chat request.';
+      const message = getApplicationErrorMessage(error, '') || 'Failed to send chat request.';
       toast.error(message);
     }
   };
@@ -74,7 +75,7 @@ export function createCommunicationSidebarActions(input: {
       await input.approveEngagementRequest({ id }).unwrap();
       toast.success('Chat request approved. Direct thread created.');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to approve request.';
+      const message = getApplicationErrorMessage(error, '') || 'Failed to approve request.';
       toast.error(message);
     }
   };
@@ -84,7 +85,7 @@ export function createCommunicationSidebarActions(input: {
       await input.declineEngagementRequest({ id }).unwrap();
       toast.success('Chat request declined.');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to decline request.';
+      const message = getApplicationErrorMessage(error, '') || 'Failed to decline request.';
       toast.error(message);
     }
   };
@@ -110,7 +111,7 @@ export function createCommunicationSidebarActions(input: {
       await input.markChannelRead({ id: channelId }).unwrap();
       input.navigate(`/communication/calls/${joined.call.id}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to join voice channel.';
+      const message = getApplicationErrorMessage(error, '') || 'Failed to join voice channel.';
       toast.error(message);
     } finally {
       input.setJoiningVoiceChannelId(null);

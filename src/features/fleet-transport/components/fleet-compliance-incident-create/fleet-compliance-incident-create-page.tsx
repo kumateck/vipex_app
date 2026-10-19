@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -59,7 +60,7 @@ export function FleetComplianceIncidentCreatePage() {
       toast.success('Compliance incident created');
       navigate('/fleet-transport/compliance/ops');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create incident');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create incident');
     }
   };
 

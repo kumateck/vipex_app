@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { ParcelReconciliationCaseType, ParcelStatus } from '@/db/schemas/enums';
@@ -11,7 +12,7 @@ import {
   useRequestParcelReconciliationCaseMutation,
   useSoftDeleteParcelMutation,
 } from '../../api/parcel.api';
-import { SENDER_PAYMENTS_DEFAULT_SORT } from './constants';
+import { SENDER_PAYMENTS_DEFAULT_SORT, SENDER_PAYMENTS_REFRESH_INTERVAL_MS } from './constants';
 import { useReconciliationRequestState } from './use-reconciliation-request-state';
 import { useSenderPaymentCollection } from './use-sender-payment-collection';
 import { toDataUrl } from './utils';
@@ -51,8 +52,9 @@ export function useSenderPaymentsWorkflow() {
     }));
   }, [branchId, companyId]);
 
-  const { data, isLoading, refetch } = useListSenderCashierParcelsQuery(query, {
+  const { data, isLoading, isFetching, refetch } = useListSenderCashierParcelsQuery(query, {
     skip: !companyId || !branchId,
+    pollingInterval: SENDER_PAYMENTS_REFRESH_INTERVAL_MS,
   });
   const [softDeleteParcel, { isLoading: isDeletingParcel }] = useSoftDeleteParcelMutation();
   const [requestReconciliationCase, { isLoading: isRequestingReconciliation }] =
@@ -89,7 +91,7 @@ export function useSenderPaymentsWorkflow() {
       }
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete parcel');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to delete parcel');
     }
   };
 
@@ -137,7 +139,7 @@ export function useSenderPaymentsWorkflow() {
       reconciliation.closeReconciliationCase();
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create reconciliation case');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create reconciliation case');
     }
   };
 
@@ -150,6 +152,8 @@ export function useSenderPaymentsWorkflow() {
     canRequestReconciliation,
     data,
     isLoading,
+    isRefreshing: isFetching,
+    refresh: refetch,
     ...collection,
     deleteTargetParcel,
     deleteReason,

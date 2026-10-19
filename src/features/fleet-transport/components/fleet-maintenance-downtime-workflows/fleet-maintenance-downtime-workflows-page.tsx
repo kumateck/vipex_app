@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { formatDateTime as sharedFormatDateTime } from '@/lib/dates';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -33,7 +34,7 @@ export function FleetMaintenanceDowntimeWorkflowsPage() {
       await reopenDowntime({ id }).unwrap();
       toast.success('Downtime event reopened');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to reopen downtime event');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to reopen downtime event');
     }
   };
 

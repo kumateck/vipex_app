@@ -2,25 +2,295 @@
 
 ## Purpose
 
-The application prints parcel stickers and A5 customer documents from the browser and the desktop application. Printing is part of parcel creation, payment, receiving, and reprint workflows, but a successful print is not the authority for whether the parcel or payment exists.
+The application prints parcel stickers and A5 customer documents from the browser and desktop application. Mobile receiver-paid creation and completed self-service bookings can also open the phone's native print dialog for a parcel sticker. Printing is part of parcel creation, payment, receiving, and reprint workflows, but a successful print is not the authority for whether the parcel or payment exists.
+
+Self-service completion retains a completed-booking panel on web, desktop and mobile, with manual
+**Print Sticker** and a positive whole-number copy input. It prints only the saved parcel's sticker;
+retrying a print never resubmits completion. Web/desktop retain the shared sticker module/session
+gates and routing. Mobile retains print retry and a separate usage-log retry, and can retry loading
+destination names before printing. Self-service labels with no receiver amount show **PENDING** or
+**CREDIT**, since completion itself records no sender payment. See
+[Self-Service Booking](SELF_SERVICE_BOOKING.md#payment-and-printing) for workflow and QA scenarios.
+
+When `callSender` is true, portrait and landscape parcel stickers print a prominent black-on-white
+`CS` mark beside the receiver block. Receiver name and phone remain visible. The mark is present
+on original and reprinted stickers, in browser/desktop printing and the mobile to-be-paid print
+dialog. Unflagged parcels have no CS mark. It means call the sender before handing the parcel to
+the receiver; it does not remove the receiver contact or change payment status. QA: print and
+reprint flagged/unflagged parcels in both orientations, check copies and receiver details, and
+verify mobile printed HTML matches the stored final CS choice.
+
+The mobile sticker header prints the Vipex company emblem beside the VIPEX PARCEL wordmark. Its
+image is embedded in the HTML passed to the native print dialog, so it does not depend on a
+network image request or printer access to application assets. If the shared logo PNG changes,
+regenerate `apps/mobile/src/features/parcel-create/services/sticker-logo-data-uri.json` from
+`src/assets/logo.png`. QA: print a mobile sticker and confirm the emblem appears in the preview
+and on paper for one and multiple copies; check that the QR code and header remain legible.
+
+### Portrait sticker layout
+
+The 90 x 92 mm portrait sticker (browser/desktop and mobile print dialog) sizes its payment
+status and receiver blocks to their content, and the destination, sender, sender telephone,
+and parcel details rows to their content, so no value is clipped by a border line. Every label
+and value line has at least 1.1x line spacing and about 0.5 mm padding from the borders. The
+receiver name prints at 5 mm for names up to 12 characters, stepping down to 4.4 mm, 3.8 mm,
+and 3.2 mm for longer names, so the receiver telephone always prints in full beneath it. The
+to-be-paid amount prints at 4 mm with space above the payment note. Location names longer than
+10 characters print smaller so two-word locations usually fit on one line. The header is 22 mm
+with a 21 mm QR code. Landscape stickers are unchanged.
+QA: print portrait to-be-paid and paid stickers with a short receiver name (`ADU EVANS`), a
+long receiver name (23+ characters), a long sender name, a two-word location, and a long
+destination, with and without the CS mark; confirm no text touches or is cut by a border line
+on browser, desktop, and mobile output.
+
+## QR codes and logos in print documents
+
+All web/desktop receipt and parcel-sticker QR codes use inline SVG with a white quiet zone and
+black modules. Their artwork survives HTML serialization for desktop single, parallel, automatic,
+home-delivery, and duplicate/reprint jobs; a canvas element alone does not carry its pixels into a
+separate document. Tracking URLs and existing QR dimensions remain unchanged. The on-screen
+branded QR variant retains its existing rendering.
+
+Receipt, sticker, and printable-report headers embed the existing Vipex PNG artwork as a data URI.
+The print window does not need to resolve a relative web asset path or fetch the logo over the
+network. Browser and desktop printing wait for image/font readiness. A missing/broken image or
+10-second loading timeout fails the print preparation instead of silently printing without artwork.
+Native checks run before roll-height measurement and before dispatching a physical print job.
+
+QA: preview and serialize paid/unpaid A5 receipts, partial payments, duplicates, home delivery,
+58/80 mm roll receipts, and portrait/landscape stickers; assert each QR has vector modules and each
+header has an embedded logo. Open the serialized document without an app origin and verify logo
+loading and scan each QR to the exact tracking URL. Test failed and delayed image loads. Physical
+printer/driver and QR-scan acceptance still require a branch hardware test. Mobile native sticker
+artwork already uses embedded logos/QR markup and is unaffected by this fix.
+
+## Xprinter browser-style receipts
+
+For the wide acknowledgement/invoice design used by browser printing, select **Settings →
+Printer Routing → Invoice / Receipt Printer → XP-80C** (or the installed receipt printer), then
+choose **Xprinter — 80 mm browser-style receipt** and save on that workstation. This is a
+separate choice from the stacked vertical receipt. Existing saved format choices are preserved.
+The Windows driver must use the installed printer's 80 mm roll. No manual browser scale is
+needed with this profile; in the browser dialog use the matching roll, no margins and 100% scale.
+
+Paid invoices, unpaid acknowledgement notes, duplicate reprints and home-delivery receipts keep
+the original 198 mm wide artwork, including its header, bordered amounts and QR position. Once
+fonts and images load, browser and desktop use the same preparation: measure the artwork,
+rotate it **90 degrees to the left (counterclockwise)** across the roll and scale it to fit a 72 mm printable area, centered on
+80 mm paper. Fitting is automatic in both clients: compact artwork is enlarged and taller artwork
+is reduced proportionally to fill the same 72 mm printable width. Long/wrapped content is measured
+before fitting. Roll length follows the scaled
+artwork width with 2 mm clearance at each end. Desktop uses the matching custom paper size,
+portrait orientation, no margins and 100% native scale, so the artwork is not scaled twice or
+centered on an A5-sized sheet outside the roll. Single and parallel receipt jobs both use this
+geometry. Missing/invalid artwork fails preparation; it never sends a cropped substitute.
+The transform translates the rotated artwork down by its scaled original width so the left
+rotation does not send the receipt above the page. Its four corners stay inside the printable
+area, with 4 mm side clearance and at least 2 mm feed clearance. This replaces the earlier
+clockwise rotation. Paper orientation stays portrait in the driver because the artwork itself
+is rotated. Update both the web client and desktop build to apply the shared preparation.
+
+The profile is local to web/desktop printing. Digital receipts remain A5; mobile sticker printing,
+sticker routing/copies, A4 reports, payments and permissions are unchanged. This change addresses
+the paper/layout mismatch that can leave only a strip of an A5 receipt visible on an 80 mm roll.
+Windows driver behavior and physical output still require acceptance on the branch printer.
+
+QA: save/reload this profile with XP-80C; print an unpaid acknowledgement matching the browser
+sample, paid invoice, partial payment, duplicate, storage and home-delivery receipt. Confirm the
+full border, logo, all customer/parcel/payment details and terms fit on one sheet, scan the QR,
+and compare browser and routed desktop output. With the paper held in its feed direction,
+the receipt header must be along the left edge, matching a 90-degree left turn; no narrow strip
+of unrotated text or clockwise output is acceptable. Check compact and tall receipts both fill the
+72 mm printable width without cutting the border, preserving their proportions. Repeat with long names/details and a parallel
+sticker job; confirm only stickers receive their chosen copy count. Switch back to A5 and each
+vertical profile to verify their layouts. Test missing images, failed printer and cancellation;
+no parcel/payment is resubmitted. Automated geometry/render checks do not replace XP-80C hardware QA.
+
+## Xprinter vertical receipts
+
+In desktop **Settings → Printer Routing**, select the installed Xprinter under **Invoice /
+Receipt Printer**, choose **Xprinter — 80 mm vertical receipt** or **Xprinter — 58 mm vertical
+receipt** under **Receipt Paper Format**, then save. Choose the paper width loaded in the printer;
+printer names come from the operating system rather than a hard-coded model list. Install the
+correct Xprinter driver and matching roll width in the operating system first.
+
+The format is saved on this workstation. Existing workstations default to the A5 landscape
+receipt. Paid invoices, unpaid acknowledgement notes, original/duplicate reprints, and home-delivery
+receipts use a vertical roll layout with the existing recorded customer/payment/tax data, branding,
+QR code, and terms. It reflows the content instead of rotating or shrinking the A5 sheet. The
+80 mm layout has a 72 mm content area; the 58 mm layout has a 48 mm content area. Main/secondary
+phone values and long names wrap without cropping. No payment or parcel state changes occur.
+
+Desktop single and parallel receipt jobs use the selected receipt printer, a matching 80/58 mm
+portrait custom paper size, no page margins, and 100% scaling. The native print window measures the
+rendered receipt to set its roll length, adds 4 mm clearance, and prints all pages; invalid/missing
+content or receipts longer than 2 m fail visibly rather than truncate. Browser print CSS uses the
+selected receipt profile when present and the user selects the physical printer in the system
+print dialog; its default sheet length is 297 mm. Stickers, ordinary A5 documents, A4 reports,
+permissions, cashier-session gates, and sticker copy routing retain their existing behavior.
+Mobile native printing does not use this desktop receipt profile.
+
+QA: select an installed Xprinter and save each width; reload and verify selection persists. Print
+an unpaid acknowledgement, sender/receiver payment, storage receipt, partial payment, duplicate,
+and home-delivery receipt. Verify names/phones, all amounts/taxes, QR scan, orientation, and no
+clipping or extra A5-width output. Test a parallel sticker/receipt job and ensure only the receipt
+uses the roll format. Select A5 again and verify the existing landscape receipt. Clear routing and
+verify A5 defaults. Confirm missing/offline printer and cancellation failures do not reprint or
+alter recorded payments. Physical output still needs acceptance on each branch's printer/driver.
 
 ## Documents
 
-| Document           | Purpose                                                                  |
-| ------------------ | ------------------------------------------------------------------------ |
-| Parcel sticker     | Tracking and routing label attached to each physical parcel.             |
-| A5 receipt/invoice | Customer and transaction document containing parcel and payment details. |
-| A4 consignment     | Saved source-to-destination parcel manifest that can be printed again.   |
+| Document                 | Purpose                                                                                                  |
+| ------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Parcel sticker           | Tracking and routing label attached to each physical parcel.                                             |
+| A5 receipt/invoice       | Customer and transaction document containing parcel and payment details.                                 |
+| A5 home delivery receipt | Per-parcel delivery document printed from Home Delivery Dispatch or Rider Assigned Parcels.              |
+| A4 rider assignment list | All parcels in the selected rider's Current, History, or All view, including rows beyond the table page. |
+| A4 consignment           | Saved source-to-destination parcel manifest that can be printed again.                                   |
 
 The A5 document includes payer details where a payer differs from the sender or receiver.
-For taxable principal payments, the A5 tax summary prints only the configured tax components from
-the payment response. The payment response carries the configured component keys, so an unset
-VAT, GETFUND, NHIL, or COVID component is not printed as a zero row.
+Sender and receiver names on parcel documents come from names stored with the parcel, so later
+customer profile edits do not rewrite historical receipts or consignment lists. Existing parcels
+are backfilled in batches from customer names available when the backfill runs. Deploy the
+new printing code after the backfill completes; see the rollout steps in
+[Parcel operations](PARCEL_OPERATIONS.md).
+The receiver cashier A5 receipt shows an **Ageing storage** line when storage was collected at
+handover. Its printed total adds the actual storage payment to the receiver's to-be-paid principal
+payment. A previously paid parcel with only storage due still produces a receiver payment receipt
+for the storage charge through the same A5 print flow. For any receipt with storage, the server
+calculates the displayed tax components from the combined principal and storage collection using
+the active tax profile, or the default Ghana rules, as with the home delivery receipt. This
+receipt-only tax calculation is not saved; the storage payment remains a separate payment record.
+With no storage payment, the existing principal receipt and its payment tax breakdown are used.
+The separate storage payment is already included in daily cashier sales as a non-voided payment;
+printing does not create another sale. If a required payment response lacks receipt amounts,
+the client reports an error instead of producing an incomplete receipt. QA: print receipts for
+principal only, storage only, and principal plus storage; verify the storage line, total, and
+daily cashier sales against the recorded payments without double counting. Confirm the receipt
+tax components use the combined amount when storage is present, and the existing principal tax
+breakdown when it is absent.
+Home Delivery Dispatch and Rider Assigned Parcels offer **Print** on each parcel row, including
+current rider assignments and completed rider history. The print action
+loads current amounts from a read-only, branch-scoped endpoint and produces one A5 document through
+the browser or the configured desktop A5 printer. The receipt shows the parcel's remaining
+receiver to-be-paid amount only when positive, plus the unpaid delivery fee. Sender-paid
+principal and earlier payments are not printed as amounts due or previously paid on this
+delivery receipt. A sender-paid parcel owes only the unpaid delivery fee; a receiver-paid or
+partial parcel owes its remaining receiver balance plus the unpaid delivery fee. Voided fee
+payments do not reduce the balance.
+
+On **Rider Assigned Parcels**, staff select one rider and a Current, History, or All view,
+then choose **Print List** to print an A4 list of every parcel returned for that rider and
+view. Each row prints the booking code (the tracking code is not printed), parcel details,
+receiver and phone, the collected home (doorstep drop-off) address, to-be-paid amount,
+delivery fee, and an empty **Delivered** checkbox for the rider or dispatcher to tick by pen
+when the delivery succeeds. Delivery status is not printed; the checkbox is a paper record
+only and does not change any delivery state. A parcel with no collected address prints `-`.
+The sheet header shows the rider name, view, print date, and parcel count, and the footer
+shows column totals. It is independent of the table's page size. The button is disabled until the
+selected rider's data has loaded and contains at least one parcel. This uses the existing
+rider list response and `report-a4` browser or desktop print route; it makes no parcel or
+payment changes. The per-parcel A5 **Print** action remains available. Mobile has no
+rider assignment list print action.
+
+QA: assign more than ten parcels to one rider and verify the printed list contains every
+booking, not only the first table page. Verify each row shows the booking code without the
+tracking code, the collected home address (or `-`), and an unticked checkbox large enough to
+tick by pen, and that no status column is printed. Switch between Current, History, and All and
+verify the printed mode, statuses, count, and totals. Switch riders and verify the
+previous rider's parcels do not appear. Confirm empty or loading lists cannot print,
+and check browser and desktop A4 output across multiple pages.
+
+The home delivery receipt calculates the tax breakdown when opened from the amount due on
+delivery: remaining receiver balance plus unpaid delivery fee. It uses the active company tax
+profile, or the default Ghana tax rules if none is configured. The tax box shows the net price,
+configured components, and the same amount due as the receipt total; no
+receipt tax calculation is saved. A parcel outside the authenticated dispatch branch, a parcel
+outside the address-collected/returned-to-office queue, or a parcel without an active doorstep
+delivery fee cannot generate this receipt. Load or print failures show an error and leave parcel
+and payment records unchanged. QA: print sender-paid, receiver-paid, and partial parcels; verify
+fee-only and combined balances, with no sender payment shown; void a fee payment and confirm a
+new print reflects the increased balance; compare
+tax components against the active tax profile; print a current rider assignment and a completed
+history row; check browser and desktop A5 printing.
+For taxable principal payments, the A5 tax summary prints the configured tax components from the
+payment response and any recorded nonzero component even if its configured-key list is absent.
+This applies to original and duplicate sender- and receiver-paid receipts. An unset VAT, GETFUND,
+NHIL, or COVID component is not printed as a zero row.
 If no company tax profile is configured, the payment service applies the default Ghana tax
 calculator.
 Paid sender and receiver receipt flows now require the payment response to include its tax
 breakdown before creating the receipt; they fail visibly instead of printing a paid receipt with
 silently substituted zero tax values.
+
+Web and desktop **Reprint Receipt** actions in Processed Parcels and Outgoing In Transit load the
+saved, non-voided sender principal payments before printing a paid A5 receipt. Their recorded
+gross and tax amounts are summed and used for the reprint; delivery fees and recipient payments are
+not included. The tax rows reflect the components actually charged on those payments, rather than
+the tax profile currently active. A reprint carries a conspicuous `DUPLICATE` label below the
+document title, including when the document is a to-be-paid acknowledgement note. The original
+receipt is unchanged. Sticker reprints also carry `DUPLICATE`, printed in the header under the
+VIP PARCEL wordmark (portrait and landscape) rather than inside the status box, so it does not push
+the Parcel Details row off the sticker. If a paid receipt's recorded payment or tax data
+cannot be loaded, reprinting is cancelled with an error instead of producing a receipt with missing
+tax. A no-payment acknowledgement note can still be reprinted. The receipt's original issue date
+is retained; no new payment or tax calculation is saved.
+
+QA: Render the shared A5 template with sender- and receiver-paid data in original and duplicate
+mode, including a payment response without component keys, and compare each nonzero tax row with
+the payment record. The current Processed Parcels and Outgoing In Transit reprint actions cover
+sender principal payments; delivered receiver-paid receipts can also be reprinted from Receiver Cashier. Reprint a
+sender-paid and partial-payment receipt and compare gross, net, and each tax row with
+the non-voided payment records. Confirm `DUPLICATE` appears in browser and desktop A5 output, but
+not on the original. Change the active tax profile and confirm an existing receipt still shows its
+recorded nonzero components. Reprint a to-be-paid note and confirm the label appears. Deny the tax
+request or remove the payment from a paid parcel and confirm no incomplete receipt prints. Verify
+sticker-only reprints still work.
+
+**Receiver Cashier → Delivered → Reprint Receipt** prints a duplicate of the recorded receiver
+principal and storage collection for an office-delivered parcel at the cashier's branch. It uses
+the saved non-voided payment gross amounts and tax columns; sender payments, delivery fees, and
+other miscellaneous charges are excluded from the receipt total. The office confirmation date is
+retained. A missing/voided payment, missing confirmation date, failed request, or ineligible parcel
+cancels printing visibly. No payment, delivery, or tax write occurs. The existing cashier-session
+and desktop receipt-paper routing apply; mobile has no equivalent screen.
+
+**Existing storage-tax mismatch:** the original receiver handover flow computes a combined
+principal-plus-storage tax box for printing but does not persist that combined breakdown.
+Storage payments are recorded as `OTHER` with zero tax. Therefore storage-inclusive duplicates
+show the tax actually saved on the payments, which can differ from the tax box on the original
+print. Historical combined tax cannot be recovered exactly from those records; reprinting does
+not substitute the currently active tax profile. The collected storage and gross total remain
+available. Second-receiver handover names are used when second-card evidence was saved; without
+that evidence, the main receiver name is shown because the handover target is not persisted.
+
+All explicit parcel reprint actions mark the output **DUPLICATE**: paid receipts, unpaid
+acknowledgement notes, portrait/landscape stickers (including every selected copy), and saved
+consignment manifests from Previous Consignments. Original prints retain their existing labels.
+The shared receipt selection menu always renders duplicate output. Printing again from the
+latest-booking receipt card also marks the copy once the first print completes. Browser and desktop
+print paths share the marking; 58/80 mm roll receipt layouts retain the duplicate header.
+
+QA: reprint receiver principal-only and storage-inclusive receipts and compare each amount and tax
+column with the active payment records. Test fully sender-paid parcels with storage-only
+collection and missing/voided receiver payments. Verify the original handover date, DUPLICATE on
+both sticker orientations and all copies, sender and receiver receipts, acknowledgement notes,
+and saved consignment manifests. Print again from the latest-booking card and verify DUPLICATE.
+Confirm original documents remain unmarked. Check A5 and
+58/80 mm receipt output, cancellation, offline printers, and retry behavior on branch hardware.
+
+All A5 payment receipts and receiver acknowledgement notes print the authenticated cashier's name
+in the header. This applies to sender payment, receiver payment, to-be-paid acknowledgement, and
+home-delivery receipt flows; if no cashier identity is available, the header shows `-`.
+The shared A5 header uses the same checked-in logo data URI as mobile stickers. Bun and web builds
+can both resolve this JSON asset without a bundler-specific image query. Browser print previews and
+standalone desktop print jobs therefore do not need to resolve a separate logo URL. If the source
+logo changes, regenerate the shared data URI from `src/assets/logo.png` before building.
+This applies to original sender- and receiver-paid receipts and to duplicate rendering of either
+payer type. QA: print original sender- and receiver-paid receipts in browser and desktop modes;
+reprint a sender receipt and verify the logo and `DUPLICATE` label. Verify duplicate-mode receiver
+rendering with the template test. A failed image load must not be mistaken for a successful print
+verification; check the preview or physical paper.
 
 Both sender payment receipts and receiver acknowledgement notes include these terms:
 
@@ -35,6 +305,8 @@ Parcel QR codes require an opaque white background with an uninterrupted white q
 four sides. The printed QR uses solid black modules, no center logo, Q-level error correction, and a
 larger physical footprint on parcel stickers. Blue, dark, transparent, patterned, or reflective
 stock must not occupy the QR area: thermal printers cannot print white ink to correct dark stock.
+The parcel sticker must not print a booking or tracking code directly beneath the QR. Manual lookup
+remains available in the receiving application when a QR cannot be scanned.
 
 New parcel stickers must use white label stock or stationery with a factory-produced opaque white
 QR panel. For blue stickers already in circulation, staff must completely cover the old QR with a
@@ -42,6 +314,24 @@ white QR-only overlay label of at least 30 mm square, or use manual code search.
 tape or glossy wrapping over the QR because glare can hide finder patterns.
 
 ## Intended Sticker Copy Rule
+
+Mobile **Complete & print sticker** asks for a positive whole number of copies (default one),
+generates one label page per copy, and passes them together to the phone print service. The
+printed label includes the tracking QR, destination, sender, receiver, and receiver amount due.
+No code appears directly under the QR. The QR has a white quiet zone and Q-level error
+correction. If the native print dialog fails after creation, mobile keeps the completed booking
+and exposes a retry button for the same sticker; it does not create another parcel.
+After the phone print service accepts the job, mobile records the selected copy count in sticker
+usage. If usage logging fails, mobile offers **Retry Print Log** without printing another label.
+On Android, the print service reports that the job was queued; physical printer failure must be
+checked on the device. On iOS, cancellation keeps the print retry available.
+The Android build overrides the native print library's obsolete compile SDK with the app's
+configured SDK; the library cannot compile against the removed Android 31 SDK otherwise.
+
+QA: choose one, two, and larger whole-number copy counts; reject empty, decimal, zero, negative,
+infinite, or unsafe values. Confirm the phone print preview has one 90 × 92 mm label page per
+copy and that a device print service can reach the paired printer. Simulate print failure and
+retry without a second booking. Test the QR with a scanner on actual white label stock.
 
 This is the canonical requirement for every sticker-print entry point across the entire application:
 
@@ -101,6 +391,19 @@ The repository does not yet meet the intended rule everywhere.
 | Audit logging                     | Sticker usage endpoint accepts a copy count.   | Log the requested successful quantity consistently from every path. |
 
 This table is a documented implementation mismatch, not permission to retain the current cap.
+
+## Online Copies (Digital Receipts)
+
+Digital receipt links (module `digital_receipts`) show a server-rendered copy of the **same templates**:
+`InvoiceA5Template`, which falls back to `ToBePaidReceiptA5Template` for the unpaid acknowledgement
+note, and `HomeDeliveryReceiptA5Template`. They are rendered with the A5 landscape page style.
+
+Template props are produced by shared mappers used by both the print dialogs and the server:
+`buildInvoiceA5Props`, `computeParcelReceiptTax` and `buildHomeDeliveryReceiptA5Props`.
+Changing what a printed receipt shows therefore changes the online copy too.
+
+The online copy is always A5 (ignores the station's roll-paper preference), is not marked DUPLICATE,
+and shows no cashier name. See [Digital receipts](DIGITAL_RECEIPTS.md#parity-with-the-printed-copy).
 
 ## Browser Printing
 
@@ -164,6 +467,8 @@ Rules:
 - Print on approved opaque white stock and scan from several Android devices under normal and dim
   branch lighting.
 - Confirm the QR has a white quiet zone, no logo over its modules, and no clipping at label edges.
+- Confirm portrait and landscape stickers contain no human-readable booking or tracking code below
+  the QR.
 - Reject blue or dark stock without an opaque white QR panel; verify an existing blue label can be
   recovered with a white 30 mm overlay label or manual code entry.
 - Print 1, 2, 20, 21, 100, and another user-entered positive whole number.

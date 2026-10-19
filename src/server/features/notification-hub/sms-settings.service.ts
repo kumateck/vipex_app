@@ -1,3 +1,4 @@
+import { getSmsEventBodyError, resolveMnotifyApiRoot } from './utils';
 import { notificationProviders } from '@/db/schemas';
 import { env } from '@/server/utils/env';
 import { BadRequest, Conflict } from '@/server/utils/http-error';
@@ -33,8 +34,7 @@ function isProviderConfigured(providerKey: string, configJson: unknown) {
   if (key === 'mnotify') {
     return Boolean(
       (hasText(config, 'apiKey') || env.MNOTIFY_API_KEY) &&
-        (hasText(config, 'senderId') || env.MNOTIFY_SENDER_ID) &&
-        (hasText(config, 'apiUrl') || env.MNOTIFY_API_URL),
+        (hasText(config, 'senderId') || env.MNOTIFY_SENDER_ID),
     );
   }
   if (key === 'mtn') {
@@ -125,13 +125,23 @@ export async function getSmsProviderBalanceSvc(input: { companyId: string; provi
     existing?.configJson && typeof existing.configJson === 'object'
       ? (existing.configJson as Record<string, unknown>)
       : {};
-  const apiKey = (typeof cfg.apiKey === 'string' && cfg.apiKey) || env.MNOTIFY_API_KEY || '';
-  const apiUrl = (typeof cfg.apiUrl === 'string' && cfg.apiUrl) || env.MNOTIFY_API_URL || '';
+  const apiKey =
+    (typeof cfg.apiKey === 'string' && cfg.apiKey.trim()) || env.MNOTIFY_API_KEY?.trim() || '';
+  let apiUrl: string;
+  try {
+    apiUrl = resolveMnotifyApiRoot(
+      (typeof cfg.apiUrl === 'string' && cfg.apiUrl) || env.MNOTIFY_API_URL || '',
+    );
+  } catch {
+    throw BadRequest('mNotify provider has an invalid API URL');
+  }
   if (!apiKey || !apiUrl) {
     throw BadRequest('mNotify provider is missing configuration (apiKey/apiUrl)');
   }
 
-  const response = await fetch(`${apiUrl}/balance/sms?key=${encodeURIComponent(apiKey)}`);
+  const response = await fetch(`${apiUrl}/balance/sms?key=${encodeURIComponent(apiKey)}`, {
+    signal: AbortSignal.timeout(15000),
+  });
   if (!response.ok) {
     throw BadRequest(`mNotify balance check failed: ${response.status}`);
   }
@@ -210,6 +220,9 @@ export async function updateCompanySmsEventSvc(input: {
   if (unknownVariables.length) {
     throw BadRequest(`Unknown SMS variables: ${unknownVariables.join(', ')}`);
   }
+
+  const bodyError = getSmsEventBodyError(definition.smsType, body);
+  if (bodyError) throw BadRequest(bodyError);
 
   const template = await upsertSmsEventTemplateRepo({
     companyId: input.companyId,

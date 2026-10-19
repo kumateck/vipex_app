@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { PaymentMethod } from '@/db/schemas/enums';
@@ -8,6 +9,7 @@ import type { ReceiptPrintData } from '../parcel-receipt.types';
 import { buildSenderReceiptData } from './build-sender-receipt-data';
 import { resolveMomoTransactionId, type MtnPaymentFlow } from './sender-payment-method';
 import { getSenderDuePsw } from './utils';
+import { useReceiptDelivery } from '@/features/digital-receipts/hooks';
 
 type UseSenderPaymentCollectionArgs = {
   companyId: string | null;
@@ -30,6 +32,7 @@ export function useSenderPaymentCollection({ companyId, refetch }: UseSenderPaym
   });
   const [collectSenderAndProcess, { isLoading: isCollecting }] =
     useCollectSenderAndProcessMutation();
+  const receiptDelivery = useReceiptDelivery(selectedParcel?.senderId);
 
   const setPaymentMethod = (method: string) => {
     setPaymentMethodRaw(method);
@@ -90,25 +93,31 @@ export function useSenderPaymentCollection({ companyId, refetch }: UseSenderPaym
       const destinationLocationName =
         pickupLocation?.name ?? selectedParcel.pickupLocationId ?? '-';
 
-      setLastPrintedReceipt(
-        buildSenderReceiptData({
-          parcel: selectedParcel,
-          senderDueCedis,
-          amountValue,
-          totalChargeCedis,
-          receiverToPayCedis,
-          destinationBranchName,
-          destinationLocationName,
-          taxBreakdown: result.payment?.amounts,
-        }),
+      void receiptDelivery.deliver(
+        [selectedParcel.id],
+        senderDueCedis > 0 ? 'sender_payment' : 'booking',
       );
+      if (receiptDelivery.includesPhysical) {
+        setLastPrintedReceipt(
+          buildSenderReceiptData({
+            parcel: selectedParcel,
+            senderDueCedis,
+            amountValue,
+            totalChargeCedis,
+            receiverToPayCedis,
+            destinationBranchName,
+            destinationLocationName,
+            taxBreakdown: result.payment?.amounts,
+          }),
+        );
+      }
       toast.success(
         senderDueCedis > 0 ? 'Payment collected successfully' : 'Receipts generated successfully',
       );
       setSelectedParcel(null);
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to process parcel');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to process parcel');
     }
   };
 
@@ -129,5 +138,6 @@ export function useSenderPaymentCollection({ companyId, refetch }: UseSenderPaym
     pickupLocationName: pickupLocation?.name ?? '',
     lastPrintedReceipt,
     clearLastPrintedReceipt: () => setLastPrintedReceipt(null),
+    receiptDelivery,
   };
 }

@@ -1,19 +1,33 @@
-import { useCallback, useEffect, useState } from 'react';
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
 import {
   claimSelfServiceDraft,
   completeSelfServiceDraft,
   listSelfServiceDrafts,
+  updateSelfServiceDraft,
 } from '../services/self-service-agent.service';
-import type { CompleteSelfServiceDraftInput, SelfServiceDraft } from '../types';
+import type {
+  CompleteSelfServiceDraftInput,
+  CompletedSelfServiceBooking,
+  SelfServiceDraft,
+  UpdateSelfServiceDraftInput,
+} from '../types';
+import { filterSelfServiceDrafts } from '../utils';
 
 export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
   const { withAuth } = useAuth();
   const [drafts, setDrafts] = useState<SelfServiceDraft[]>([]);
   const [selected, setSelected] = useState<SelfServiceDraft | null>(null);
+  const [completedBooking, setCompletedBooking] = useState<CompletedSelfServiceBooking | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [openingDraftId, setOpeningDraftId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const visibleDrafts = useMemo(() => filterSelfServiceDrafts(drafts, search), [drafts, search]);
 
   const load = useCallback(async () => {
     if (!canRead) return;
@@ -21,13 +35,35 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
     try {
       setDrafts(await withAuth(listSelfServiceDrafts));
     } catch (error) {
-      notifyError('Drafts unavailable', error instanceof Error ? error.message : 'Try again.');
+      notifyError('Drafts unavailable', getMobileErrorMessage(error, '') || 'Try again.');
     } finally {
       setLoading(false);
     }
   }, [canRead, withAuth]);
 
   useEffect(() => void load(), [load]);
+
+  const open = useCallback(
+    async (draft: SelfServiceDraft) => {
+      if (!canComplete || draft.claimedBy) {
+        setSelected(draft);
+        return;
+      }
+      setSaving(true);
+      setOpeningDraftId(draft.id);
+      try {
+        const claimed = await withAuth((token) => claimSelfServiceDraft(token, draft.id));
+        setSelected(claimed);
+        await load();
+      } catch (error) {
+        notifyError('Could not open draft', getMobileErrorMessage(error, '') || 'Try again.');
+      } finally {
+        setOpeningDraftId(null);
+        setSaving(false);
+      }
+    },
+    [canComplete, load, withAuth],
+  );
 
   const claim = useCallback(async () => {
     if (!selected || !canComplete) return;
@@ -38,7 +74,7 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
       notifySuccess('You can now complete this booking.', 'Draft claimed');
       await load();
     } catch (error) {
-      notifyError('Could not claim draft', error instanceof Error ? error.message : 'Try again.');
+      notifyError('Could not claim draft', getMobileErrorMessage(error, '') || 'Try again.');
     } finally {
       setSaving(false);
     }
@@ -46,17 +82,38 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
 
   const complete = useCallback(
     async (input: CompleteSelfServiceDraftInput) => {
-      if (!canComplete) return null;
+      if (!canComplete || !selected || selected.id !== input.id) return null;
       setSaving(true);
       try {
         const result = await withAuth((token) => completeSelfServiceDraft(token, input));
+        setCompletedBooking({ draft: selected, input, result });
         notifySuccess(result.parcels[0]?.trackingCode ?? result.bookingId, 'Booking completed');
         setSelected(null);
         await load();
         return result;
       } catch (error) {
-        notifyError('Completion failed', error instanceof Error ? error.message : 'Try again.');
+        notifyError('Completion failed', getMobileErrorMessage(error, '') || 'Try again.');
         return null;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [canComplete, load, selected, withAuth],
+  );
+
+  const updateDraft = useCallback(
+    async (input: UpdateSelfServiceDraftInput) => {
+      if (!canComplete) return false;
+      setSaving(true);
+      try {
+        const updated = await withAuth((token) => updateSelfServiceDraft(token, input));
+        setSelected(updated);
+        notifySuccess('Booking details saved.', 'Booking updated');
+        await load();
+        return true;
+      } catch (error) {
+        notifyError('Could not update booking', getMobileErrorMessage(error, '') || 'Try again.');
+        return false;
       } finally {
         setSaving(false);
       }
@@ -64,5 +121,22 @@ export function useSelfServiceAgent(canRead: boolean, canComplete: boolean) {
     [canComplete, load, withAuth],
   );
 
-  return { drafts, selected, setSelected, loading, saving, load, claim, complete };
+  return {
+    drafts,
+    completedBooking,
+    dismissCompletedBooking: () => setCompletedBooking(null),
+    visibleDrafts,
+    search,
+    setSearch,
+    selected,
+    setSelected,
+    loading,
+    saving,
+    openingDraftId,
+    load,
+    open,
+    claim,
+    complete,
+    updateDraft,
+  };
 }

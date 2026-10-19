@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -56,7 +57,7 @@ export function ProcurementFleetPoliciesEditPage() {
       toast.success('Fleet procurement policy rule updated');
       navigate('/procurement/fleet-policies');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update policy rule');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update policy rule');
     }
   };
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listRiderParcels } from '@mobile/lib/api';
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { notifyError } from '@mobile/lib/notify';
 import { useAuth } from '@mobile/providers/auth-provider';
 import {
@@ -113,10 +114,7 @@ export function useRiderBoardData(selectedDate: string, view: 'current' | 'histo
       setHistoryRows(history.rows ?? []);
       setDailyAnalytics(analytics);
     } catch (err) {
-      notifyError(
-        'Load failed',
-        err instanceof Error ? err.message : 'Unable to load rider parcels',
-      );
+      notifyError('Load failed', getMobileErrorMessage(err, 'Unable to load rider parcels'));
       void hapticError();
     } finally {
       setRefreshing(false);

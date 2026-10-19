@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { PickupOtpVerification } from './use-pickup-otp-verification';
+import { OtpChannelToggle } from '../otp-channel-toggle';
 
 type PhoneSlot = 'primary' | 'secondary';
 
@@ -55,7 +57,7 @@ export function PickupOtpVerificationSection({
       await otp.request(isResend);
       toast.success(isResend ? 'Collection OTP resent to the customer' : 'Collection OTP sent');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send collection OTP');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to send collection OTP');
     }
   };
 
@@ -64,7 +66,7 @@ export function PickupOtpVerificationSection({
       await otp.verify();
       toast.success('Customer presence confirmed');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Invalid collection OTP');
+      toast.error(getApplicationErrorMessage(error, '') || 'Invalid collection OTP');
     }
   };
 
@@ -109,6 +111,12 @@ export function PickupOtpVerificationSection({
               </ToggleGroup>
             </div>
           ) : null}
+
+          <OtpChannelToggle
+            value={otp.otpChannel}
+            onChange={otp.setOtpChannel}
+            disabled={otp.otpRequestPending}
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             <Button

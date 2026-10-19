@@ -15,6 +15,8 @@ export function ParcelSenderPaymentsPage() {
     canRequestReconciliation,
     data,
     isLoading,
+    isRefreshing,
+    refresh,
     selectedParcel,
     closeCollectPayment,
     amount,
@@ -56,6 +58,7 @@ export function ParcelSenderPaymentsPage() {
     pickupLocationName,
     lastPrintedReceipt,
     clearLastPrintedReceipt,
+    receiptDelivery,
   } = useSenderPaymentsWorkflow();
 
   return (
@@ -65,11 +68,13 @@ export function ParcelSenderPaymentsPage() {
           data={data?.data ?? []}
           meta={data?.meta}
           loading={isLoading}
+          isRefreshing={isRefreshing}
           companyId={companyId}
           branchId={branchId}
           canDeleteParcel={canDeleteParcel}
           canRequestReconciliation={canRequestReconciliation}
           onRequestChange={setQuery}
+          onRefresh={() => void refresh()}
           onOpenCollectPayment={openCollectPayment}
           onOpenDeleteParcel={openDeleteParcel}
           onOpenReconciliationCase={openReconciliationCase}
@@ -87,6 +92,7 @@ export function ParcelSenderPaymentsPage() {
           momoTransactionId={momoTransactionId}
           onMomoConfirmed={setMomoTransactionId}
           isSubmitting={isSubmitting}
+          receiptDelivery={receiptDelivery}
           onClose={closeCollectPayment}
           onSubmit={handleCollectPayment}
         />

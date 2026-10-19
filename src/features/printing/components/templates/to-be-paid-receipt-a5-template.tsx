@@ -2,10 +2,15 @@ import { BrandedQrCode } from '@/components/ui/branded-qr-code';
 import { InvoiceA5Header } from './invoice-a5-header';
 import { InvoiceA5Terms } from './invoice-a5-terms';
 import type { InvoiceA5TemplateProps } from './invoice-a5-template.types';
+import type { ReceiptPaperFormat } from '@/shared/printing';
 
-export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
+export function ToBePaidReceiptA5Template(
+  props: InvoiceA5TemplateProps & { paperFormat?: ReceiptPaperFormat },
+) {
   const {
     bookingCode,
+    cashierName,
+    duplicate,
     destinationBranchName,
     destinationLocationName,
     issuedAtLabel,
@@ -29,6 +34,7 @@ export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
   return (
     <div
       className="invoice-a5-root bg-white text-black"
+      data-receipt-paper={props.paperFormat ?? 'a5'}
       style={{
         width: '198mm',
         boxSizing: 'border-box',
@@ -39,7 +45,12 @@ export function ToBePaidReceiptA5Template(props: InvoiceA5TemplateProps) {
         lineHeight: 1.2,
       }}
     >
-      <InvoiceA5Header issuedAtLabel={issuedAtLabel} title="ACKNOWLEDGEMENT NOTE" />
+      <InvoiceA5Header
+        issuedAtLabel={issuedAtLabel}
+        title="ACKNOWLEDGEMENT NOTE"
+        cashierName={cashierName}
+        duplicate={duplicate}
+      />
 
       <div
         style={{

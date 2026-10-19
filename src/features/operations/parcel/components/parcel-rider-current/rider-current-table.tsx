@@ -13,6 +13,7 @@ import {
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import type { RiderDoorstepRecord } from '../../api/parcel.api';
 import { CallSenderBadge } from '../call-sender-badge';
+import { ViewParcelDetailsMenuItem } from '@/features/operations/parcel-details';
 
 type RiderCurrentTableProps = {
   data:
@@ -75,6 +76,7 @@ export function RiderCurrentTable({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <ViewParcelDetailsMenuItem parcelId={row.original.parcelId} />
               <DropdownMenuItem
                 disabled={pendingParcelIds.has(row.original.parcelId)}
                 onClick={() => onOpenDeliveryDetails(row.original)}

@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from '@mobile/navigation/router-compat';
 import {
@@ -45,10 +46,7 @@ export function useReceiveConsignmentSession() {
       setConsignment(detail);
       setItems(itemRows);
     } catch (error) {
-      notifyError(
-        'Load failed',
-        error instanceof Error ? error.message : 'Unable to load consignment',
-      );
+      notifyError('Load failed', getMobileErrorMessage(error, '') || 'Unable to load consignment');
     } finally {
       setLoading(false);
     }
@@ -97,7 +95,7 @@ export function useReceiveConsignmentSession() {
       } catch (error) {
         notifyError(
           'Receive failed',
-          error instanceof Error ? error.message : 'Unable to receive parcel',
+          getMobileErrorMessage(error, '') || 'Unable to receive parcel',
         );
         void hapticError();
       } finally {
@@ -129,7 +127,7 @@ export function useReceiveConsignmentSession() {
       }
       notifyError(
         'Close failed',
-        error instanceof Error ? error.message : 'Unable to close consignment',
+        getMobileErrorMessage(error, '') || 'Unable to close consignment',
       );
       void hapticError();
     } finally {
@@ -163,7 +161,7 @@ export function useReceiveConsignmentSession() {
     } catch (error) {
       notifyError(
         'Close failed',
-        error instanceof Error ? error.message : 'Unable to close consignment',
+        getMobileErrorMessage(error, '') || 'Unable to close consignment',
       );
       void hapticError();
     } finally {

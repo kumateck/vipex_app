@@ -5,6 +5,9 @@ export function inferReadPermissionByPath(pathname?: string): PermissionKey | un
   const exactRoutePermission = RoutePermissionOverrides[pathname];
   if (exactRoutePermission) return exactRoutePermission;
 
+  if (pathname === '/customer-messages' || pathname.startsWith('/customer-messages/'))
+    return PermissionKeys.CanReadCustomerMessages;
+
   if (pathname.startsWith('/parcels/in-transit/outgoing'))
     return PermissionKeys.CanReadParcelOutgoing;
   if (pathname.startsWith('/parcels/in-transit/incoming'))

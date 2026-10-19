@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { UserOption } from '@/features/users/api/users.api';
@@ -218,7 +219,7 @@ export function useChatThreadComposer({
       setTyping(normalizedThreadId, false);
       refetchMessages();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send message.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to send message.');
     }
   };
 

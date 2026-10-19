@@ -6,6 +6,10 @@
 - PostgreSQL `>=14`
 - PostGIS extension for geospatial endpoints
 - Redis (optional; app has memory fallback for some features)
+- Public self-service booking tokens use PostgreSQL after migration `0087`, so they survive
+  backend restarts without Redis. Configure `REDIS_URL` for shared rate-limit counters when
+  running multiple instances. Bun Redis connections use `new Bun.RedisClient(url)`; a configured
+  Redis runtime/connection failure must be surfaced, not silently replaced with memory.
 
 ## 2. First-Time Setup (New Joiner)
 
@@ -38,6 +42,21 @@ Example values:
 ```bash
 bun run migrate
 ```
+
+For an existing production database, check the actual database identity, schema and pending
+migrations before running this command. The migrator applies **all** pending journal entries
+in a transaction; approving one additive migration does not establish the safety of unrelated
+pending changes. `bun run scripts/check-parcel-assignment-schema.ts` provides a read-only preflight
+for parcel assignment schema drift. See [Parcel schema compatibility](PARCEL_OPERATIONS.md#call-center-assignment-schema-compatibility)
+for repair migration `0078`, lock limits, and separate foreign-key validation.
+The preflight also reports pickup queue indexes. Repair `0079` removes the obsolete lifetime
+parcel key only when the replacement daily uniqueness indexes are valid; see
+[Shelf pickup reassignment](PARCEL_OPERATIONS.md#shelf-pickup-reassignment). A current migration
+ledger alone does not establish that historical constraints match the application schema.
+
+Do not use `bun run generate`, `db:fresh`, database resets or `db:push:unsafe` to repair production.
+The current `generate` command rebuilds migration history from a baseline. Add a forward migration
+and its journal/snapshot entry instead; never edit already applied migrations.
 
 6. Run required seeds for an existing database with users (in order):
 

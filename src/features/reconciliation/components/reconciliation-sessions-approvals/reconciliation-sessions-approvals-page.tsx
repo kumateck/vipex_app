@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { formatDateTime as formatDateTimeShared } from '@/lib/dates';
 import { toast } from 'sonner';
@@ -57,7 +58,7 @@ export function ReconciliationSessionsApprovalsPage() {
       await approveSession({ id }).unwrap();
       toast.success('Session approved');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to approve session');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to approve session');
     }
   };
 
@@ -66,7 +67,7 @@ export function ReconciliationSessionsApprovalsPage() {
       await finalizeSession({ id }).unwrap();
       toast.success('Session finalized');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to finalize session');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to finalize session');
     }
   };
 

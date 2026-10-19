@@ -39,11 +39,11 @@ export const RIDER_OPERATIONS_GUIDES: HelpGuide[] = [
       {
         title: 'Handle a parcel the rider returns',
         description:
-          'If a rider cannot complete a delivery, they can return the parcel to the office from Current Deliveries. Use Return to Office to record it and take the parcel out of that rider’s active list.',
+          'If a rider cannot complete a delivery, use Return to Office from Current Deliveries to record it. Dispatch staff then open Last Mile Delivery → Rider Returns to move it to office pickup or redispatch it to a selected rider.',
       },
     ],
     expectedResult:
-      'The delivery change request is resolved (approved or declined) and the rider’s app reflects the decision, or a returned parcel is removed from the rider’s current deliveries and available for reassignment.',
+      'The delivery change request is resolved (approved or declined) and the rider’s app reflects the decision, or a returned parcel is removed from current deliveries and waits in Rider Returns for reprocessing.',
     commonIssues: [
       {
         problem:

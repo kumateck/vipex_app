@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -26,7 +27,7 @@ export function useRiderDeliveryChangeRequest() {
       toast.success('Address and delivery fee change sent for review');
       setSelected(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to request delivery change');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to request delivery change');
     }
   };
 

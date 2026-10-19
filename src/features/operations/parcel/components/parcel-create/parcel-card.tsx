@@ -87,7 +87,9 @@ export function ParcelCard({
   const previousBranchId = useRef(destinationBranchId);
 
   const { data: locationOptions = [], isLoading: isLoadingLocations } = useListLocationOptionsQuery(
-    destinationBranchId && companyId ? { companyId, branchId: destinationBranchId } : undefined,
+    destinationBranchId && companyId
+      ? { companyId, branchId: destinationBranchId, canReceive: true }
+      : undefined,
     { skip: !destinationBranchId || !companyId },
   );
 
@@ -238,6 +240,7 @@ export function ParcelCard({
               <ParcelCardChargeSection
                 control={control}
                 parcelChargeName={parcelChargeName}
+                parcelChargeAgentName={`parcels.${index}.chargeAgentUserId`}
                 parcelPaymentName={parcelPaymentName}
                 parcelSettlementName={parcelSettlementName}
                 senderPartialPaymentName={senderPartialPaymentName}

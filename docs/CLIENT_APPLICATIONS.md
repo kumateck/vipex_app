@@ -12,11 +12,36 @@ Vipex has three user-facing clients sharing the same server domain rules.
 
 The API is mounted under `/v1`. The server, not a client, is the authority for permissions, tenant scope, validation, pricing, payments, and status transitions.
 
+Mobile and Electron desktop sign-in use approved device registrations only when the company's
+`device_verification` module is enabled; browser sign-in is unchanged. See
+[Native Device Registration](DEVICE_REGISTRATION.md) for the native credential,
+approval, revocation, migration, and rollout limits.
+On desktop, a temporary policy-check outage (including a refresh during that check) blocks the
+protected workspace with Retry instead of clearing the saved login. A temporary refresh failure
+on an ordinary API request preserves the login and returns a retryable error; the next device
+check blocks the workspace if verification remains unavailable. Confirmed invalid sessions and
+denied devices still require a new sign-in. Web and desktop API calls share one refresh in flight.
+
 ## Web Application
 
 The web client contains the complete sidebar workspace and feature modules. It uses shared authentication, module and permission gates, responsive layouts, browser printing, and the in-app help system.
 
 Pages are thin route wrappers. Feature UI, hooks, services, types, and dialogs live in their domain feature folders according to `AGENTS.md`.
+
+The web and Electron routers use `src/routes/generated.tsx`, generated from the page wrappers
+under `src/pages`. Adding a page or sidebar link requires regenerating this router; an outdated
+router produces **404 · Not Found** even when the page source exists. `bun run dev:web` now
+generates routes before starting Vite and watches page additions/removals while it runs.
+`bun run build:web` generates routes before bundling. The same behavior applies when running
+the `dev` and `build` scripts directly in `apps/web`. Route generation failure stops startup or
+the build. The generated file remains ignored by Git; do not edit it manually.
+
+After adding pages, run `bun run routes:generate` before route tests. The client registration
+test `tests/utils/client-page-routes.spec.ts` checks that shelf pickup reassignment and all four
+storage clearance pages resolve through React Router inside the protected layout, including
+reassignment links with booking searches. Manual QA: navigate from the sidebar, open each new
+URL directly, and refresh it. Existing deployed bundles require rebuilding and deployment to
+include new pages; local generation does not update an already deployed application.
 
 Production HTML and SPA fallback responses use `no-store/no-cache`; content-hashed files under
 `/assets/` use a one-year immutable cache. If navigation hits the short deployment interval and a

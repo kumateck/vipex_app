@@ -3,6 +3,7 @@ export type ThermalStickerOrientation = 'landscape' | 'portrait';
 export type ThermalStickerTemplateProps = {
   bookingCode: string;
   issuedAtLabel: string;
+  duplicate?: boolean;
   printedByName?: string | null;
   printedByBranchName?: string | null;
   printedByLocationName?: string | null;
@@ -14,17 +15,19 @@ export type ThermalStickerTemplateProps = {
   receiverName: string;
   receiverTelephone: string;
   receiverTelephone2?: string | null;
+  callSender?: boolean;
   destinationBranchName: string;
   destinationLocationName: string;
   toBePaidCedis?: number;
+  paymentStatusLabel?: 'PENDING' | 'CREDIT';
   qrValue: string;
   formatMoney: (amount: number) => string;
   orientation?: ThermalStickerOrientation;
 };
 
 export type PreparedThermalStickerTemplateProps = {
-  bookingCode: string;
   issuedAtLabel: string;
+  duplicate?: boolean;
   printedByName?: string | null;
   printedByBranchName?: string | null;
   printedByLocationName?: string | null;
@@ -32,6 +35,7 @@ export type PreparedThermalStickerTemplateProps = {
   senderTelephones: string;
   receiverName: string;
   receiverTelephones: string;
+  callSender?: boolean;
   destinationBranchName: string;
   destinationLocationName: string;
   parcelContent?: string | null;

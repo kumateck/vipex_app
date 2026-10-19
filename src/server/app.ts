@@ -19,6 +19,8 @@ import { usersRoutes } from './features/users/routes';
 import { customersRoutes } from './features/customers/routes';
 import { bookingsRoutes } from './features/shipments/bookings.routes';
 import { parcelsRoutes } from './features/shipments/parcels.routes';
+import { parcelSecondReceiverRoutes } from './features/shipments/parcel-second-receiver.routes';
+import { parcelInformationEditRoutes } from './features/shipments/parcel-information-edit.routes';
 import { consignmentsRoutes } from './features/shipments/consignments.routes';
 import { autoGroupingRoutes } from './features/consignments/auto-grouping.routes';
 import { cashiersRoutes } from './features/cashiers/routes';
@@ -62,6 +64,11 @@ import { momoRoutes } from './features/momo/routes';
 import { selfServicePublicRoutes } from './features/self-service/public.routes';
 import { selfServiceAgentRoutes } from './features/self-service/agent.routes';
 import { startSelfServiceDraftExpirySweep } from './features/self-service/expiry-sweep';
+import { publicContactRoutes, customerContactRoutes } from './features/public-contact';
+import { publicTrackingRoutes } from './features/public-tracking/public-tracking.routes';
+import { receiptReprintRoutes } from './features/receipt-reprint/receipt-reprint.routes';
+import { whatsappMessagingRoutes, whatsappWebhookRoutes } from './features/whatsapp-messaging';
+import { digitalReceiptRoutes, publicReceiptRoutes } from './features/digital-receipts';
 
 export const app = new Elysia()
   .use(swaggerPlugin)
@@ -74,6 +81,11 @@ export const app = new Elysia()
   .use(auditTrail)
   .use(errorHandler)
   .use(health)
+  .use(publicTrackingRoutes)
+  .use(publicContactRoutes)
+  .use(receiptReprintRoutes)
+  .use(whatsappWebhookRoutes)
+  .use(publicReceiptRoutes)
   // Mount dev routes BEFORE any catch-all
   .use(isDev ? devMailRoutes : (a: Elysia) => a)
   .group('/v1', (v1) =>
@@ -84,6 +96,7 @@ export const app = new Elysia()
       .group('/locations', (r) => r.use(locationsRoutes))
       .group('/warehouses', (r) => r.use(warehousesRoutes))
       .group('/customers', (r) => r.use(customersRoutes))
+      .group('/customer-messages', (r) => r.use(customerContactRoutes))
       .group('/cards', (r) => r.use(cardsRoutes))
       .group('/uploads', (r) => r.use(uploadsRoutes))
       .group('/cashiers', (r) => r.use(cashiersRoutes))
@@ -92,7 +105,9 @@ export const app = new Elysia()
         (s) =>
           s
             .group('/bookings', (r) => r.use(bookingsRoutes).use(bookingWithParcelsRoutes))
-            .group('/parcels', (r) => r.use(parcelsRoutes))
+            .group('/parcels', (r) =>
+              r.use(parcelsRoutes).use(parcelSecondReceiverRoutes).use(parcelInformationEditRoutes),
+            )
             .group('/parcel-internal-transfers', (r) => r.use(parcelInternalTransfersRoutes))
             .group('/consignments', (r) => r.use(consignmentsRoutes))
             .group('/auto-grouping', (r) => r.use(autoGroupingRoutes)),
@@ -112,6 +127,8 @@ export const app = new Elysia()
       .group('/customer-wallet-credit', (r) => r.use(customerWalletCreditRoutes))
       .group('/reconciliation', (r) => r.use(reconciliationRoutes))
       .group('/notification-hub', (r) => r.use(notificationHubRoutes))
+      .group('/whatsapp', (r) => r.use(whatsappMessagingRoutes))
+      .group('/digital-receipts', (r) => r.use(digitalReceiptRoutes))
       .group('/momo', (r) => r.use(momoRoutes))
       .group('/self-service', (r) => r.use(selfServicePublicRoutes).use(selfServiceAgentRoutes))
       .group('/desktop-updates', (r) => r.use(desktopUpdatesRoutes))

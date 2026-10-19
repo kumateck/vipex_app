@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +19,7 @@ import {
 } from '@/components/ui/select-searchable';
 import { PaymentMethod } from '@/db/schemas/enums';
 import { ReceiverOtpSection } from './receiver-otp-section';
+import { ReceiptDeliveryPicker } from '@/features/digital-receipts';
 import { ReceiverPaymentSecondarySections } from './receiver-payment-secondary-sections';
 import { ReceiverPaymentPrimarySections } from './receiver-payment-primary-sections';
 import { ReceiverPaymentDialogSkeleton } from './receiver-payment-dialog-skeleton';
@@ -140,6 +142,13 @@ export function ReceiverPaymentDeliveryDialog({
                   </p>
                 </div>
               )}
+
+              {dialog.receiverDuePsw > 0 || dialog.storageOutstandingPsw > 0 ? (
+                <ReceiptDeliveryPicker
+                  delivery={dialog.receiptDelivery}
+                  disabled={dialog.isSaving}
+                />
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -158,7 +167,7 @@ export function ReceiverPaymentDeliveryDialog({
                 await dialog.handleConfirmDelivered();
                 toast.success('Payment received and parcel marked as DELIVERED_BY_OFFICE');
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : 'Failed to confirm delivery');
+                toast.error(getApplicationErrorMessage(error, '') || 'Failed to confirm delivery');
               }
             }}
             disabled={

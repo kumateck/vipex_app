@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { notifyError, notifySuccess } from '@mobile/lib/notify';
@@ -17,7 +18,7 @@ export function useDeliveryChangeReview(canReview: boolean) {
     try {
       setRequests(await withAuth(listPendingDeliveryChangeReviews));
     } catch (error) {
-      notifyError('Reviews unavailable', error instanceof Error ? error.message : 'Try again.');
+      notifyError('Reviews unavailable', getMobileErrorMessage(error, '') || 'Try again.');
     } finally {
       setLoading(false);
     }
@@ -41,7 +42,7 @@ export function useDeliveryChangeReview(canReview: boolean) {
         setSelected(null);
         await load();
       } catch (error) {
-        notifyError('Decision not saved', error instanceof Error ? error.message : 'Try again.');
+        notifyError('Decision not saved', getMobileErrorMessage(error, '') || 'Try again.');
       } finally {
         setSaving(false);
       }

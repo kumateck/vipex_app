@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useUploadImageMutation } from '@/features/uploads/api/uploads.api';
@@ -95,7 +96,7 @@ export function useChatThreadUpload({
       setUploadCaption('');
       setIsUploadDialogOpen(true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open file preview.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to open file preview.');
     }
   };
 
@@ -151,7 +152,7 @@ export function useChatThreadUpload({
       setTyping(normalizedThreadId, false);
       refetchMessages();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to upload file.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to upload file.');
     }
   };
 

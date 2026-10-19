@@ -6,6 +6,9 @@ import { router } from '@mobile/navigation/router-compat';
 import { reportDateFromSession } from '@mobile/features/reporting/cashier-sales-report';
 import { mobileSpacing } from '@mobile/theme/layout';
 import { CloseCashierSessionDialog, OpenCashierSessionDialog } from '../../dialogs';
+import { SessionDelegatesDialog } from '../../dialogs';
+import { AppButton } from '@mobile/components/ui';
+import { CashierType } from '@mobile/constants/payment';
 import { useCashierDashboard, useCashierSessionActions, useDashboardMotion } from '../../hooks';
 import { expectedClosingBalancePsw, isActiveSession } from '../../utils';
 import { ActiveSessionCard } from './active-session-card';
@@ -22,6 +25,7 @@ export function CashierDashboard() {
   const motion = useDashboardMotion();
   const [openDialogVisible, setOpenDialogVisible] = useState(false);
   const [closeDialogVisible, setCloseDialogVisible] = useState(false);
+  const [delegatesVisible, setDelegatesVisible] = useState(false);
   const actions = useCashierSessionActions({
     canReadSessionTypes: dashboard.access.sessionTypes,
     onChanged: dashboard.refresh,
@@ -81,6 +85,15 @@ export function CashierDashboard() {
             </Animated.View>
           ) : null}
           <Animated.View style={[styles.content, motion.contentStyle]}>
+            {hasActiveSession &&
+            (dashboard.cashierType === CashierType.SENDING ||
+              dashboard.cashierType === CashierType.FULL) ? (
+              <AppButton
+                title="Manage to-be-paid delegates"
+                variant="secondary"
+                onPress={() => setDelegatesVisible(true)}
+              />
+            ) : null}
             {dashboard.access.report ? (
               <CashierReportLinkCard
                 onPress={() =>
@@ -125,6 +138,11 @@ export function CashierDashboard() {
               if (success) setCloseDialogVisible(false);
             });
         }}
+      />
+      <SessionDelegatesDialog
+        visible={delegatesVisible && hasActiveSession}
+        sessionId={session?.id ?? ''}
+        onClose={() => setDelegatesVisible(false)}
       />
     </AppScreen>
   );

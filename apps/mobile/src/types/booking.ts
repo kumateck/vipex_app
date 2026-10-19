@@ -21,6 +21,7 @@ export type CreateBookingWithParcelsInput = {
   senderId: string;
   status: number;
   deferSenderCashierCompletion?: boolean;
+  completeToBePaid?: boolean;
   parcels: Array<{
     destinationId: string;
     pickupLocationId?: string | null;
@@ -31,9 +32,11 @@ export type CreateBookingWithParcelsInput = {
     method: number;
     parcelValueCedis?: number;
     chargeCedis?: number;
+    chargeAgentUserId?: string | null;
     plannedToBePaidCedis?: number;
     senderPaymentCedis?: number;
     paymentResponsibility?: number;
+    callSender?: boolean;
   }>;
 };
 

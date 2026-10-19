@@ -3,7 +3,7 @@ import { AppCard } from '@/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import type { ParcelFullDetails } from '@mobile/types/parcels';
 import { mobileRadius, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
-import { formatCedis, formatDate, paymentMethodLabel } from '../utils';
+import { formatCedis, formatDate, paymentMethodLabel, personName } from '../utils';
 
 function DetailRow({ label, value, first }: { label: string; value: string; first?: boolean }) {
   const { theme } = useAppearance();
@@ -50,6 +50,10 @@ export function ParcelFinancialSections({ details }: { details: ParcelFullDetail
                 <DetailRow label="Method" value={paymentMethodLabel(payment.method)} />
                 <DetailRow label="Received" value={formatDate(payment.receivedAt)} />
                 <DetailRow label="Receipt" value={payment.receiptNo ?? '-'} />
+                <DetailRow
+                  label="Received By"
+                  value={personName(details.userNames, payment.cashierUserId)}
+                />
                 {payment.notes ? <DetailRow label="Notes" value={payment.notes} /> : null}
                 {payment.voidedAt ? (
                   <View
@@ -65,7 +69,7 @@ export function ParcelFinancialSections({ details }: { details: ParcelFullDetail
                       Voided
                     </Text>
                     <Text style={[styles.detailValue, { color: theme.colors.danger }]}>
-                      {`${formatDate(payment.voidedAt)} (${payment.voidReason ?? 'No reason'})`}
+                      {`${formatDate(payment.voidedAt)} by ${personName(details.userNames, payment.voidedBy)} (${payment.voidReason ?? 'No reason'})`}
                     </Text>
                   </View>
                 ) : null}

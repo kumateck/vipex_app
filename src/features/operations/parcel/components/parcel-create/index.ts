@@ -3,6 +3,7 @@ export * from './buffered-parcel-field';
 export * from './customer-lookup-section';
 export * from './existing-customer-edit-action';
 export * from './parcel-card';
+export * from './parcel-charge-agent-field';
 export * from './parcel-card-charge-section';
 export * from './parcel-card-destination-section';
 export * from './parcel-card-info-section';

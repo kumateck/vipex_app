@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -40,7 +41,7 @@ export function FleetDispatchLoadMatchingCreatePage() {
       toast.success('Load matched to trip');
       navigate('/fleet-transport/dispatch/load-matching');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to assign load');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to assign load');
     }
   };
 

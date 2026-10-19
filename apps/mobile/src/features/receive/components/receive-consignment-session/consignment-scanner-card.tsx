@@ -8,7 +8,7 @@ type ConsignmentScannerCardProps = {
   manualCode: string;
   scanBusy: boolean;
   onChangeManualCode: (value: string) => void;
-  onReceive: (code: string) => void;
+  onReceive: (code: string) => void | Promise<void>;
 };
 
 export function ConsignmentScannerCard({
@@ -28,7 +28,7 @@ export function ConsignmentScannerCard({
   return (
     <AppCard>
       <Text style={[styles.title, { color: theme.colors.text }]}>Scanner</Text>
-      <ScannerView onCodeScanned={onReceive} />
+      <ScannerView onCodeScanned={onReceive} processing={scanBusy} />
       {scanBusy ? (
         <Text style={[styles.helper, { color: theme.colors.textSubtle }]}>Processing scan...</Text>
       ) : null}

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -98,7 +99,7 @@ export function StockReservationsListPage() {
       const result = await allocateReservation({ reservationId }).unwrap();
       toast.success(`Allocated ${result.allocatedQuantity} with short ${result.shortQuantity}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Allocation failed');
+      toast.error(getApplicationErrorMessage(error, '') || 'Allocation failed');
     }
   };
 
@@ -107,7 +108,7 @@ export function StockReservationsListPage() {
       const result = await issueReservation({ reservationId }).unwrap();
       toast.success(`Issued ${result.issuedQuantity}, remaining ${result.remainingQuantity}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Issue failed');
+      toast.error(getApplicationErrorMessage(error, '') || 'Issue failed');
     }
   };
 

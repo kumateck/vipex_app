@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +20,7 @@ import { PickupMainCardSection } from './pickup-main-card-section';
 import { PickupOtpVerificationSection } from './pickup-otp-verification-section';
 import { PickupVerificationHandoverSection } from './pickup-verification-handover-section';
 import { PickupVerificationDialogSkeleton } from './pickup-verification-dialog-skeleton';
+import { ShelfPickupReassignmentLink } from '../parcel-shelf-pickup-reassignment';
 import type { PickupVerificationDialogProps } from './pickup-verification-dialog-types';
 export function PickupVerificationDialog({
   open,
@@ -127,6 +129,13 @@ export function PickupVerificationDialog({
                     ? `Only active staff assigned to ${staffLocationName} are shown.`
                     : 'Your user account needs an assigned location before staff can be selected.'}
                 </p>
+                {parcelDetails?.parcel.shelfPickerStaffId ||
+                parcelDetails?.pickupQueue?.pickerStaffId ? (
+                  <ShelfPickupReassignmentLink
+                    bookingCode={parcel.bookingCode}
+                    disabled={isSaving}
+                  />
+                ) : null}
               </div>
               <PickupMainCardSection
                 mode={mainCardMode}
@@ -231,7 +240,7 @@ export function PickupVerificationDialog({
                 await onRequestHomeDelivery();
               } catch (error) {
                 toast.error(
-                  error instanceof Error ? error.message : 'Failed to move parcel to home delivery',
+                  getApplicationErrorMessage(error, '') || 'Failed to move parcel to home delivery',
                 );
               }
             }}
@@ -244,7 +253,7 @@ export function PickupVerificationDialog({
               try {
                 await onConfirmDelivered();
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : 'Failed to confirm delivery');
+                toast.error(getApplicationErrorMessage(error, '') || 'Failed to confirm delivery');
               }
             }}
             disabled={

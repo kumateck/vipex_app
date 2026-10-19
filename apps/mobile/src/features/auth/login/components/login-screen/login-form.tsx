@@ -5,16 +5,20 @@ import { Link } from '@mobile/navigation/router-compat';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import type { LoginFormProps } from '../../types';
+import { LoginDeviceRegistration } from './login-device-registration';
 import { LoginField } from './login-field';
 
 export function LoginForm({
   email,
   error,
   loading,
+  deviceStatus,
   password,
   onEmailChange,
   onPasswordChange,
   onSubmit,
+  onRegisterDevice,
+  onCheckDevice,
 }: LoginFormProps) {
   const { theme } = useAppearance();
   const disabled = loading || !email.trim() || !password;
@@ -108,6 +112,13 @@ export function LoginForm({
           </>
         )}
       </Pressable>
+      <LoginDeviceRegistration
+        deviceStatus={deviceStatus}
+        registerDisabled={disabled}
+        checkDisabled={loading}
+        onRegister={onRegisterDevice}
+        onCheck={onCheckDevice}
+      />
     </View>
   );
 }

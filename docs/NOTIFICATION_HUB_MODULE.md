@@ -133,7 +133,9 @@ Call-center event endpoint also allows existing call-center permission:
 
 Current behavior:
 
-- Default provider is resolved by company and channel (`sms` or `email`).
+- Default provider is resolved by company and channel (`sms`, `email`, or `whatsapp`).
+- `whatsapp` uses provider key `meta_cloud` and only sends Meta-approved templates. It is managed from WhatsApp Settings (module `whatsapp_messaging`), not from this page. WhatsApp secrets are masked (`••••••••`) in provider list/detail responses. Delivery status (`delivered`, `read`, `failed`) is updated by the public WhatsApp webhook. See [WhatsApp messaging](WHATSAPP_MESSAGING.md).
+- Digital receipt emails are sent through SMTP and logged here with `channel = 'email'`, `provider_key = 'smtp'`.
 - SMS providers are pluggable by `provider_key`.
 - Built-in SMS keys:
   - `log_only`
@@ -147,6 +149,8 @@ provider. Environment-backed providers such as `mnotify` are offered when their 
 variables are present; secrets are not returned to the client.
 
 ## Application SMS Definitions
+
+Digital receipt events (`digital_receipt_booking`, `digital_receipt_payment`, `digital_receipt_home_delivery`) appear in the definitions list and can be edited like other events. Their variables are `customerName`, `bookingCode`, `amountPaid`, `balance`, `destination`, `receiptUrl`, `branch` (destination branch), and `location` (pickup location, or drop-off address for home delivery). They are only dispatched when the `digital_receipts` module is enabled. See [Digital receipts](DIGITAL_RECEIPTS.md).
 
 Transactional SMS actions use a central event catalog and a company-specific template override:
 
@@ -166,6 +170,46 @@ can still dispatch operational messages. Every parcel event exposes `{{branch}}`
 `{{location}}`; these resolve to the parcel's destination branch and pickup or queue location, with
 an empty location when the parcel has no assigned pickup location. Pickup queue tickets use the
 branch name as the queue location when no more specific location exists.
+Call-outcome SMS templates also expose `{{branchPhone}}`, the destination branch's telephone.
+The token renders as an empty string when that branch has no telephone. Existing call-outcome
+templates show the token in the edit form's Variables JSON and save it with the other supported
+variables; their message body changes only when an editor adds `{{branchPhone}}`. QA: edit a
+previously saved pickup template, add the token to the body, send for a branch with a telephone,
+and verify its number appears; repeat with a branch without one and verify no unresolved token.
+
+OTP SMS events are explicitly classified at the event-definition level. The
+`receiver_pickup_otp` event sends `sms_type: "otp"` in the mNotify provider payload (and the same
+field to custom webhook providers). Ordinary queue, parcel-status, template, and bulk messages do
+not include `sms_type`. Account setup and password-reset OTP delivery is currently email-only.
+
+Pickup OTP delivery uses the BMS/mNotify quick-SMS endpoint with `recipient` as an array,
+`sms_type: "otp"` and the JSON boolean `is_schedule: false`, matching
+[BMS OTP documentation](https://bms.africa/otp). The OTP flag uses the provider's main wallet,
+which is billed separately from SMS credit bundles. The app's SMS-balance lookup does not
+verify that main-wallet balance. Enabling a branch's OTP requirement does not select or
+configure an SMS provider: the company still needs an active default SMS provider, an enabled
+API key and an approved sender ID.
+
+A pickup OTP request only succeeds after SMS dispatch reports provider acceptance. Missing
+configuration, no default provider, provider rejection or a dispatch exception returns HTTP 503
+and expires the newly generated undelivered OTP, so a fresh attempt is possible. The failed
+notification dispatch remains visible with its error for diagnosis. A failed forced resend does
+not invalidate a previous successfully sent OTP. Existing code expiry/verification rules and
+parcel/payment state remain unchanged. Provider acceptance is not proof of handset delivery;
+use BMS delivery reports to investigate messages accepted but not received. `log_only` remains
+a simulation provider and does not send a real SMS.
+
+Previously, the pickup OTP endpoint discarded the SMS dispatch result and could return success
+for a failed send. This is corrected in the application source; production delivery and current
+wallet/provider settings must be checked separately. Codes created by the previous behavior
+retain their five-minute expiry or can be replaced through the existing forced-resend action.
+
+QA: mock missing/default-provider/configuration errors, provider rejection and thrown transport
+errors; expect HTTP 503, failed-code expiry and no parcel/payment changes. Retry after fixing
+configuration; verify success only after provider acceptance. Force resend with an existing valid
+OTP and a failed replacement; verify only the replacement is expired. Confirm OTP requests use
+boolean `is_schedule: false` and `sms_type: "otp"`; ordinary SMS keeps the OTP flag absent.
+Coverage: `otp-sms-delivery.test.ts` and `sms-provider-payloads.test.ts`.
 
 Reusable templates and new bulk SMS messages support `{{senderName}}`, `{{senderPhone}}`,
 `{{recipientName}}`, `{{recipientPhone}}`, `{{branch}}`, `{{location}}`, and `{{date}}`.
@@ -183,6 +227,8 @@ QA scenarios:
 3. Enter `{{companyId}}` or another unsupported token; verify the editor rejects the message.
 4. Add `{{branch}}` and `{{location}}` to a transactional parcel definition; verify the dispatched
    message contains the parcel's destination branch and pickup or queue location.
+5. Request and resend a receiver pickup OTP through mNotify; verify both provider requests include
+   `sms_type: "otp"`. Send a queue ticket and bulk SMS; verify neither includes `sms_type`.
 
 Adding providers:
 

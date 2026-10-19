@@ -1,6 +1,7 @@
 import { BadRequest, Forbidden, NotFound } from '../../utils/http-error';
 import { BRANCH_TYPES, USER_TYPES } from '@/shared/access/constants';
-import { BranchType, CashierType, UserType } from '@/db/schemas/enums';
+import { BranchType, CashierType } from '@/db/schemas/enums';
+import { getCashierTypeUpdate, normalizeCashierTypeByUserType } from './cashier-type';
 import { sendPasswordSetupInvite } from './service.invite';
 import {
   createUserRepo,
@@ -16,21 +17,6 @@ import {
 
 function normalizeUserEmail(email: string): string {
   return email.trim().toLowerCase();
-}
-
-function isValidCashierType(value: number) {
-  return value >= CashierType.SENDING && value <= CashierType.FULL;
-}
-
-function normalizeCashierTypeByUserType(userType: number, cashierType?: number | null) {
-  if (userType !== UserType.CASHIER) return null;
-  if (cashierType === null || cashierType === undefined) {
-    throw BadRequest('Cashier type is required for cashier users');
-  }
-  if (!isValidCashierType(cashierType)) {
-    throw BadRequest('Invalid cashier type');
-  }
-  return cashierType;
 }
 
 export async function listUsersSvc(p: ListUserParams) {
@@ -179,10 +165,7 @@ export async function updateUserSvc(
     throw BadRequest('Invalid user type');
   }
 
-  const effectiveUserType = nextPatch.userType ?? cur.userType;
-  const cashierTypeProvided = Object.prototype.hasOwnProperty.call(nextPatch, 'cashierType');
-  const effectiveCashierType = cashierTypeProvided ? nextPatch.cashierType : cur.cashierType;
-  nextPatch.cashierType = normalizeCashierTypeByUserType(effectiveUserType, effectiveCashierType);
+  Object.assign(nextPatch, getCashierTypeUpdate(cur, nextPatch));
 
   const nextBranchId = nextPatch.branchId ?? cur.branchId;
   if (nextPatch.branchId) {

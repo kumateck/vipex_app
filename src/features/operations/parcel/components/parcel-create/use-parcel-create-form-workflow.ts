@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -212,6 +213,7 @@ export function useParcelCreateFormWorkflow() {
                 : PaymentMethod.CASH,
             parcelValueCedis: amounts[index]?.value,
             chargeCedis: amounts[index]?.charge,
+            chargeAgentUserId: parcel.chargeAgentUserId,
             callSender: parcel.callSender,
             senderPaymentCedis: 0,
             plannedToBePaidCedis:
@@ -230,12 +232,10 @@ export function useParcelCreateFormWorkflow() {
         }),
       }).unwrap();
 
-      const receipt = buildParcelCreateReceipt({
-        response,
-        values,
-        amounts,
-        branchOptions,
-      });
+      const receipt: ReceiptSummary = {
+        ...buildParcelCreateReceipt({ response, values, amounts, branchOptions }),
+        senderId: resolvedSenderId,
+      };
       // A cashier who can collect sender payments is always offered the chance to
       // complete payment now, regardless of whether they also want to print a receipt.
       // Parcels with nothing owed by the sender never reach this dialog — the backend
@@ -256,7 +256,7 @@ export function useParcelCreateFormWorkflow() {
       );
     } catch (error) {
       if (isApiRejectionError(error)) return;
-      toast.error(error instanceof Error ? error.message : 'Failed to create parcel transaction');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create parcel transaction');
     }
   };
 

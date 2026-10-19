@@ -32,6 +32,14 @@ describe('Company SMS settings', () => {
     }
   });
 
+  test('classifies only receiver pickup verification messages as OTP SMS', () => {
+    const otpEvents = SMS_EVENT_DEFINITIONS.filter(
+      (definition) => 'smsType' in definition && definition.smsType === 'otp',
+    );
+
+    expect(otpEvents.map((definition) => definition.code)).toEqual(['receiver_pickup_otp']);
+  });
+
   test('maps every parcel call outcome to a defined SMS action', () => {
     expect(getParcelStatusSmsEventCode('pickup')).toBe('parcel_status_call_pickup');
     expect(getParcelStatusSmsEventCode('delivery')).toBe('parcel_status_call_delivery');

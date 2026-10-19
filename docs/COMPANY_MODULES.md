@@ -87,12 +87,16 @@ Current dependency graph includes:
 - `document_compliance` -> `customers`
 - `dispatch_optimization` -> `shipments`
 - `notification_hub` -> `customers`
+- `whatsapp_messaging` -> `notification_hub`
+- `digital_receipts` -> `notification_hub` (its WhatsApp channel additionally needs `whatsapp_messaging` enabled and configured; this is checked at send time, not as a module dependency)
 - `communication_internal` -> none
 - `communication_customer_service` -> `customers`, `communication_internal`
 - `communication_calls_livekit` -> `communication_internal`
 - `it_support` -> none
 - `bi_executive_dashboard` -> `accounting`
 - `partner_agent_portal` -> `shipments`, `customers`, `payments`
+- `device_verification` -> none
+- `biometrics` -> `customers`
 
 Behavior:
 
@@ -134,6 +138,13 @@ The company settings page shows one card per module with:
 - enable / disable action button
 
 This UI is intentionally simple and uses action buttons instead of a switch component.
+
+`device_verification` appears as **Device Verification** and starts disabled for each company.
+Enabling it makes native mobile/desktop sign-in and sessions require an approved registration;
+disabling it allows native users to proceed without that check. The Device Approvals review
+page (`/settings/devices`) and review APIs are available whether it is enabled or not, so devices
+can be pre-registered and approved before enablement. See [Native Device Registration](DEVICE_REGISTRATION.md)
+for enforcement, client behavior, and rollout cautions.
 
 Additionally:
 
@@ -196,6 +207,28 @@ Current backend route-module enforcement:
 - `/v1/communication/calls` -> `communication_calls_livekit`
 - `/v1/customer-service/*` -> `communication_customer_service`
 - `/v1/it-support/*` -> `it_support`
+
+## Messaging and Receipt Modules
+
+- `whatsapp_messaging`: WhatsApp Cloud API channel, `/settings/whatsapp` (route-module mapped), `/v1/whatsapp/*` (except `/v1/whatsapp/availability`, which reports the module state and is only auth-guarded), WhatsApp option for pickup OTPs. See [WhatsApp messaging](WHATSAPP_MESSAGING.md).
+- `digital_receipts`: receipt delivery picker and `/v1/digital-receipts/*`. The public `GET /v1/public/receipts/:token` returns 404 when the module is disabled. See [Digital receipts](DIGITAL_RECEIPTS.md).
+
+Both are off by default. Turning either off restores the previous SMS-only / print-only behaviour.
+
+## Biometric Verification Module
+
+- `biometrics` appears as **Biometric Verification**. It is off by default for each company and
+  needs `customers` enabled first.
+- **Off** means the company does not use fingerprints at all. **On** means the company may use
+  them, and branch policy decides where they are required.
+- **Implemented:** the catalog entry, the dependency rule, and enable/disable from
+  `/settings/company` (audit logged).
+- **Not implemented yet:** enabling the module currently changes no behaviour. No fingerprint
+  routes, screens, or pickup checks exist yet.
+- **Planned:** when fingerprint features ship, every one will be gated on this module. Disabling it
+  must restore today's OTP-only pickup and unverified-sender booking. Per-branch policy
+  (`otp` / `fingerprint` / `either` / `both`) will apply only while the module is enabled.
+- See [Biometric verification](BIOMETRIC_VERIFICATION.md).
 
 ## Recommended Use
 

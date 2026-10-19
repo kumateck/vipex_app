@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -62,7 +63,7 @@ export function ProcurementDemandsCreatePage() {
       toast.success('Procurement demand created');
       navigate('/procurement/demands');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create demand');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create demand');
     }
   };
 

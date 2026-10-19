@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -73,7 +74,7 @@ export function CommunicationChatCreatePage() {
       toast.success('Thread created.');
       navigate(`/communication/chat/${created.id}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create thread.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create thread.');
     }
   };
 
@@ -105,7 +106,7 @@ export function CommunicationChatCreatePage() {
       }
       navigate('/communication/chat');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create channel.');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to create channel.');
     }
   };
 

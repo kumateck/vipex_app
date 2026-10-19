@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -77,7 +78,7 @@ export function NotificationCampaignsListPage() {
       await submitCampaign({ id }).unwrap();
       toast.success('Campaign submitted for approval');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to submit campaign');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to submit campaign');
     }
   };
 
@@ -86,7 +87,7 @@ export function NotificationCampaignsListPage() {
       const result = await sendCampaign({ id }).unwrap();
       toast.success(`Campaign sent (${result.sentCount} sent, ${result.failedCount} failed)`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send campaign');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to send campaign');
     }
   };
 

@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -47,7 +48,7 @@ export function FleetVehicleDocumentsCreatePage() {
       toast.success('Document added');
       navigate(`/fleet-transport/vehicles/view/${id}/documents`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add document');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to add document');
     }
   };
 

@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 import {
   AppButton,
   AppCard,
@@ -9,7 +8,14 @@ import {
 } from '@mobile/components/ui/mobile';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
-import type { CompleteSelfServiceDraftInput, SelfServiceDraft } from '../../types';
+import type {
+  CompleteSelfServiceDraftInput,
+  SelfServiceDraft,
+  UpdateSelfServiceDraftInput,
+} from '../../types';
+import { useSelfServiceCompletionForm } from '../../hooks';
+import { ParcelChargeAgentField } from '@mobile/features/parcel-create/components/parcel-create-screen';
+import { SelfServiceDraftSummary } from './self-service-draft-summary';
 
 type Props = {
   draft: SelfServiceDraft;
@@ -18,6 +24,7 @@ type Props = {
   onBack: () => void;
   onClaim: () => Promise<void>;
   onComplete: (input: CompleteSelfServiceDraftInput) => Promise<unknown>;
+  onUpdateDraft: (input: UpdateSelfServiceDraftInput) => Promise<boolean>;
 };
 
 const PAYMENT_OPTIONS = [
@@ -33,31 +40,33 @@ export function SelfServiceCompletionForm({
   onBack,
   onClaim,
   onComplete,
+  onUpdateDraft,
 }: Props) {
   const { theme } = useAppearance();
-  const [parcelDetails, setParcelDetails] = useState(draft.parcelContent);
-  const [chargeCedis, setChargeCedis] = useState('');
-  const [paymentResponsibility, setPaymentResponsibility] = useState<
-    'SENDER' | 'RECEIVER' | 'SPLIT'
-  >('SENDER');
-  const [senderPartialPaymentCedis, setSenderPartialPaymentCedis] = useState('');
-  const destinationId = draft.destinationBranchId ?? '';
-  const valid = destinationId && parcelDetails.trim() && Number(chargeCedis) >= 0;
+  const {
+    parcelDetails,
+    setParcelDetails,
+    chargeCedis,
+    setChargeCedis,
+    paymentResponsibility,
+    setPaymentResponsibility,
+    senderPartialPaymentCedis,
+    setSenderPartialPaymentCedis,
+    callSender,
+    setCallSender,
+    valid,
+    submit,
+    chargeAgent,
+  } = useSelfServiceCompletionForm(draft, canComplete, onComplete);
 
   return (
     <>
-      <AppCard>
-        <Text style={[styles.title, { color: theme.colors.text }]}>Complete booking</Text>
-        <Text style={[styles.text, { color: theme.colors.textMuted }]}>
-          Sender: {draft.senderFullname} · {draft.senderPhone}
-        </Text>
-        <Text style={[styles.text, { color: theme.colors.textMuted }]}>
-          Receiver: {draft.receiverFullname} · {draft.receiverPhone}
-        </Text>
-        <Text style={[styles.text, { color: theme.colors.textMuted }]}>
-          Declared value: GHS {(draft.parcelValuePsw / 100).toFixed(2)}
-        </Text>
-      </AppCard>
+      <SelfServiceDraftSummary
+        draft={draft}
+        saving={saving}
+        canEdit={canComplete && Boolean(draft.claimedBy)}
+        onUpdateDraft={onUpdateDraft}
+      />
 
       {!canComplete ? (
         <Text style={[styles.text, { color: theme.colors.textSubtle }]}>
@@ -76,6 +85,7 @@ export function SelfServiceCompletionForm({
           <AppInput
             value={parcelDetails}
             onChangeText={setParcelDetails}
+            placeholder="Enter parcel details recorded by the completing officer"
             multiline
             maxLength={255}
           />
@@ -86,6 +96,17 @@ export function SelfServiceCompletionForm({
             keyboardType="decimal-pad"
             placeholder="0.00"
           />
+          <ParcelChargeAgentField {...chargeAgent} />
+          <View style={styles.callSenderRow}>
+            <View style={styles.callSenderText}>
+              <AppLabel>CS — Call Sender before deliver to Receiver</AppLabel>
+              <Text style={[styles.text, { color: theme.colors.textMuted }]}>
+                Turn on if the sender asked to be called before the receiver gets the parcel. CS is
+                marked on the sticker.
+              </Text>
+            </View>
+            <Switch value={callSender} onValueChange={setCallSender} />
+          </View>
           <AppSelectField
             label="Payment responsibility"
             value={paymentResponsibility}
@@ -109,19 +130,7 @@ export function SelfServiceCompletionForm({
             title="Complete booking"
             loading={saving}
             disabled={!valid}
-            onPress={() =>
-              void onComplete({
-                id: draft.id,
-                destinationId,
-                pickupLocationId: draft.destinationLocationId,
-                parcelDetails: parcelDetails.trim(),
-                chargeCedis,
-                paymentResponsibility,
-                senderSettlementMode: 'PAY_NOW',
-                senderPartialPaymentCedis:
-                  paymentResponsibility === 'SPLIT' ? senderPartialPaymentCedis : null,
-              })
-            }
+            onPress={() => void submit()}
           />
         </AppCard>
       )}
@@ -131,7 +140,8 @@ export function SelfServiceCompletionForm({
 }
 
 const styles = StyleSheet.create({
-  title: { ...mobileTextStyles.title3 },
   text: { ...mobileTextStyles.subhead },
   spacer: { marginTop: mobileSpacing.xs },
+  callSenderRow: { flexDirection: 'row', alignItems: 'center', gap: mobileSpacing.sm },
+  callSenderText: { flex: 1 },
 });

@@ -23,6 +23,15 @@ function createSqlClient() {
     idle_timeout: 20,
     max_lifetime: 60 * 30,
     backoff: (retries) => Math.max(0.5, Math.min(0.5 * 2 ** retries, 30)),
+    // JIT compilation cost seconds per request on parcel list/search queries (measured
+    // 5.0s of a 5.7s query in production); OLTP queries here never recover that cost.
+    connection: {
+      jit: 'off',
+      // Parallel hash plans exhausted production PostgreSQL shared memory (53100)
+      // during booking-code searches. Keep OLTP queries off dynamic shared memory.
+      // Postgres.js drops falsy startup values: numeric 0 is ignored; string '0' is sent.
+      max_parallel_workers_per_gather: '0',
+    },
   });
 }
 

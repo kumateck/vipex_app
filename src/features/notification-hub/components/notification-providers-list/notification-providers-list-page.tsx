@@ -1,3 +1,4 @@
+import { getErrorMessage as getApplicationErrorMessage } from '@/lib/TheAduseiErrorResponse';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -69,7 +70,7 @@ export function NotificationProvidersListPage() {
       await updateProvider({ id, body: { isActive: !isActive } }).unwrap();
       toast.success(`Provider ${isActive ? 'deactivated' : 'activated'}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update provider');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to update provider');
     }
   };
 
@@ -78,7 +79,7 @@ export function NotificationProvidersListPage() {
       await setDefaultProvider({ id }).unwrap();
       toast.success('Default provider updated');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to set default provider');
+      toast.error(getApplicationErrorMessage(error, '') || 'Failed to set default provider');
     }
   };
 

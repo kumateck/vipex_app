@@ -1,3 +1,4 @@
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { useCallback, useEffect, useRef } from 'react';
 import { Alert, AppState, Platform } from 'react-native';
 import { useAuth } from '@mobile/providers/auth-provider';
@@ -46,7 +47,7 @@ export function useMobileUpdate() {
     } catch (error) {
       Alert.alert(
         'Update failed',
-        error instanceof Error ? error.message : 'Unable to start the mobile update.',
+        getMobileErrorMessage(error, '') || 'Unable to start the mobile update.',
       );
     } finally {
       installingRef.current = false;

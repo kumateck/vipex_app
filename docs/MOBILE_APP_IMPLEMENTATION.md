@@ -57,6 +57,8 @@ The implemented validation, failure behavior, and QA cases are documented in [Mo
 - Assigned and current deliveries.
 - Delivery history.
 - Customer collection fields and signature capture.
+- Selection of the main or cashier-added second receiver at handover; changing the selection
+  clears the signature. Cashiers manage the contact in the web/desktop Delivery Cashier queue.
 - Delivery change requests.
 - Real-time assignment and delivery updates.
 
@@ -98,6 +100,16 @@ Mobile navigation, destination screens, background loads, and mutations use the 
 ## Navigation and Architecture
 
 New work follows the feature structure under `apps/mobile/src/features/<domain>/<feature>/`, separating components, dialogs, hooks, services, types, and utilities. Screen files are wrappers around feature components.
+
+Import aliases:
+
+- `@mobile/*` resolves only to `apps/mobile/src/*`.
+- `@/*` resolves to `apps/mobile/src/*` first, then to the root `src/*`. That is how mobile reuses
+  pure shared helpers such as `@/shared/shipments/parcel-information-edit`.
+- TypeScript (`apps/mobile/tsconfig.json` `paths`) and Metro (`resolveRequest` in
+  `apps/mobile/metro.config.js`) must keep the same order. If they differ, the code typechecks but
+  fails at runtime with "Unable to resolve module".
+- Only import root modules that have no web-only or server-only dependencies.
 
 Older route-compatible files under `apps/mobile/app` may remain during migration, but the active native entry point is `src/app`; the presence of those files does not make this an Expo managed app.
 
@@ -152,3 +164,8 @@ iOS distribution uses the approved iOS release process; an Android APK update mu
 - Android and iOS native build and device smoke tests.
 
 See [Mobile QA Smoke Checklist](MOBILE_QA_SMOKE_CHECKLIST.md) and [Client Applications](CLIENT_APPLICATIONS.md).
+
+Cashier Sales Report reached from a shift now separates Delivery Cashier **Delivery fees received**
+and **To Be Paid received**. Both use posted payment components in the selected report scope;
+**Outstanding To Be Paid** remains the unpaid sending-parcel balance. See
+[Cashier payments and shifts](CASHIER_PAYMENTS_AND_SHIFTS.md#delivery-cashier-received-summary).

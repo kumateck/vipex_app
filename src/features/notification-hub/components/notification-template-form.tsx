@@ -52,6 +52,11 @@ function toPrettyJson(value: unknown) {
   }
 }
 
+function withBranchPhoneVariable(code: string, value: unknown) {
+  if (!code.startsWith('parcel_status_call_') || !Array.isArray(value)) return value;
+  return value.includes('branchPhone') ? value : [...value, 'branchPhone'];
+}
+
 export function NotificationTemplateForm({
   mode,
   isSubmitting,
@@ -78,7 +83,7 @@ export function NotificationTemplateForm({
     setName(next.name);
     setSubject(next.subject);
     setBody(next.body);
-    setVariablesText(toPrettyJson(next.variablesJson));
+    setVariablesText(toPrettyJson(withBranchPhoneVariable(next.code, next.variablesJson)));
     setIsActive(next.isActive);
   }, [initialValues]);
 

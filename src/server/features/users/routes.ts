@@ -226,18 +226,7 @@ export const usersRoutes = new Elysia({ name: 'users' })
         cashierType?: CashierType | null;
       };
 
-      const userType = payload.userType;
-      const cashierType =
-        userType === undefined
-          ? payload.cashierType
-          : userType === UserType.CASHIER
-            ? (payload.cashierType ?? null)
-            : null;
-
-      return updateUserSvc(params.id, {
-        ...payload,
-        cashierType,
-      });
+      return updateUserSvc(params.id, payload);
     },
     {
       params: t.Object({ id: UUID }),

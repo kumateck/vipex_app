@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -16,8 +15,9 @@ import { useAppearance } from '@mobile/providers/appearance-provider';
 import { mobileRadius, mobileShadow, mobileSpacing, mobileTextStyles } from '@mobile/theme/layout';
 import { CustomerSignaturePad } from '../components/customer-signature-pad';
 import { RiderCollectionFields } from '../components/rider-collection-fields';
+import { RiderThirdPartyFields } from '../components/rider-third-party-fields';
 import type { DeliveryHandoverInput } from '../types';
-import { getOutstandingDeliveryFeePsw, getOutstandingPrincipalPsw } from '../utils';
+import { useDeliveryHandoverForm } from '../hooks';
 
 type Props = {
   delivery: RiderDoorstepRecord;
@@ -26,37 +26,9 @@ type Props = {
   onConfirm: (input: DeliveryHandoverInput) => void;
 };
 
-function cedisInput(pesewas?: number) {
-  return pesewas ? (pesewas / 100).toFixed(2) : '0.00';
-}
-
 export function DeliverySignatureDialog(props: Props) {
   const { theme } = useAppearance();
-  const [signatureImage, setSignatureImage] = useState('');
-  const [principal, setPrincipal] = useState(() =>
-    cedisInput(getOutstandingPrincipalPsw(props.delivery)),
-  );
-  const [deliveryFee, setDeliveryFee] = useState(() =>
-    cedisInput(getOutstandingDeliveryFeePsw(props.delivery)),
-  );
-
-  const principalAmountCedis = Number(principal || 0);
-  const deliveryFeeAmountCedis = Number(deliveryFee || 0);
-  const amountsValid =
-    Number.isFinite(principalAmountCedis) &&
-    Number.isFinite(deliveryFeeAmountCedis) &&
-    principalAmountCedis >= 0 &&
-    deliveryFeeAmountCedis >= 0;
-  const canSubmit = Boolean(signatureImage) && amountsValid && !props.busy;
-
-  const confirm = () => {
-    if (!canSubmit) return;
-    props.onConfirm({
-      signatureImage,
-      principalAmountCedis,
-      deliveryFeeAmountCedis,
-    });
-  };
+  const form = useDeliveryHandoverForm(props.delivery, props.busy, props.onConfirm);
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={props.onClose}>
@@ -97,15 +69,20 @@ export function DeliverySignatureDialog(props: Props) {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.content}
           >
+            <RiderThirdPartyFields receiver={form.receiver} disabled={props.busy} />
             <RiderCollectionFields
-              principal={principal}
-              deliveryFee={deliveryFee}
+              principal={form.principal}
+              deliveryFee={form.deliveryFee}
               disabled={props.busy}
-              onPrincipalChange={setPrincipal}
-              onDeliveryFeeChange={setDeliveryFee}
+              onPrincipalChange={form.setPrincipal}
+              onDeliveryFeeChange={form.setDeliveryFee}
             />
-            <CustomerSignaturePad disabled={props.busy} onChange={setSignatureImage} />
-            {!amountsValid ? (
+            <CustomerSignaturePad
+              key={form.signatureKey}
+              disabled={props.busy}
+              onChange={form.setSignatureImage}
+            />
+            {!form.amountsValid ? (
               <Text style={[styles.error, { color: theme.colors.danger }]}>
                 Enter valid payment amounts.
               </Text>
@@ -124,9 +101,9 @@ export function DeliverySignatureDialog(props: Props) {
             <View style={styles.actionPrimary}>
               <AppButton
                 title="Confirm handover"
-                onPress={confirm}
+                onPress={form.confirm}
                 loading={props.busy}
-                disabled={!canSubmit}
+                disabled={!form.canSubmit}
               />
             </View>
           </View>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { getMobileErrorMessage } from '@mobile/lib/mobile-error-message';
 import { canViewRiderCurrent } from '@mobile/lib/permissions';
 import { useAuth } from '@mobile/providers/auth-provider';
 import { getRiderDailyAnalytics } from '../services';
@@ -17,12 +18,11 @@ const EMPTY_ANALYTICS: RiderDailyAnalytics = {
 };
 
 function dashboardErrorMessage(error: unknown) {
-  if (error instanceof Error && error.message.toLowerCase().includes('network')) {
+  const message = getMobileErrorMessage(error, 'Rider analytics could not be loaded.');
+  if (message.toLowerCase().includes('network')) {
     return 'Could not reach VIPEx. Check your connection and try again.';
   }
-  return error instanceof Error
-    ? error.message.replace(/\s*\(\d{3}\)$/, '')
-    : 'Rider analytics could not be loaded.';
+  return message.replace(/\s*\(\d{3}\)$/, '');
 }
 
 export function useRiderDashboard(): RiderDashboardState {

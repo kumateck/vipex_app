@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { Switch, Text, View } from 'react-native';
 import { useAppearance } from '@mobile/providers/appearance-provider';
 import { BranchType } from '@mobile/constants/branch';
 import { PaymentResponsibility } from '@mobile/constants/payment';
@@ -6,6 +6,8 @@ import type { BranchOption, LocationOption } from '@mobile/types/booking';
 import { mobileTextStyles } from '@mobile/theme/layout';
 import { AppCard, AppInput, AppLabel, AppSelectField } from '@mobile/components/ui/mobile';
 import type { MobilePaymentResponsibility } from '../../mobile-parcel-payment-plan';
+import { StickerPrintChoice } from './sticker-print-choice';
+import { ParcelChargeAgentField } from './parcel-charge-agent-field';
 
 const PAYMENT_RESPONSIBILITY_OPTIONS = [
   { value: String(PaymentResponsibility.SENDER), label: 'Sender pay — complete at cashier' },
@@ -22,7 +24,13 @@ type ParcelBookingFieldsProps = {
   parcelContent: string;
   parcelValue: string;
   charge: string;
+  chargeAgent: React.ComponentProps<typeof ParcelChargeAgentField>;
+  callSender: boolean;
   paymentResponsibility: MobilePaymentResponsibility;
+  printSticker: boolean;
+  stickerCopies: string;
+  onPrintStickerChange: (value: boolean) => void;
+  onStickerCopiesChange: (value: string) => void;
   isLoadingBranches: boolean;
   isLoadingLocations: boolean;
   onDestinationChange: (value: string) => void;
@@ -31,6 +39,7 @@ type ParcelBookingFieldsProps = {
   onParcelContentChange: (value: string) => void;
   onParcelValueChange: (value: string) => void;
   onChargeChange: (value: string) => void;
+  onCallSenderChange: (value: boolean) => void;
   onPaymentResponsibilityChange: (value: MobilePaymentResponsibility) => void;
 };
 
@@ -44,7 +53,13 @@ export function ParcelBookingFields({
   parcelContent,
   parcelValue,
   charge,
+  chargeAgent,
+  callSender,
   paymentResponsibility,
+  printSticker,
+  stickerCopies,
+  onPrintStickerChange,
+  onStickerCopiesChange,
   isLoadingBranches,
   isLoadingLocations,
   onDestinationChange,
@@ -53,6 +68,7 @@ export function ParcelBookingFields({
   onParcelContentChange,
   onParcelValueChange,
   onChargeChange,
+  onCallSenderChange,
   onPaymentResponsibilityChange,
 }: ParcelBookingFieldsProps) {
   const { theme } = useAppearance();
@@ -125,6 +141,16 @@ export function ParcelBookingFields({
           placeholder="0.00"
           keyboardType="decimal-pad"
         />
+        <ParcelChargeAgentField {...chargeAgent} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <AppLabel>CS — Call Sender before deliver to Receiver</AppLabel>
+            <Text style={[mobileTextStyles.footnote, { color: theme.colors.textSubtle }]}>
+              The receiver name and number remain on the parcel sticker.
+            </Text>
+          </View>
+          <Switch value={callSender} onValueChange={onCallSenderChange} />
+        </View>
         <AppSelectField
           label="Payment Responsibility"
           value={String(paymentResponsibility)}
@@ -134,10 +160,18 @@ export function ParcelBookingFields({
           options={PAYMENT_RESPONSIBILITY_OPTIONS}
           placeholder="Select who pays"
         />
-        <Text style={[mobileTextStyles.footnote, { color: theme.colors.textSubtle }]}>
-          Payment and all sticker or receipt printing must be completed from Sender Cashier Payments
-          on desktop.
-        </Text>
+        {paymentResponsibility === PaymentResponsibility.RECIPIENT ? (
+          <StickerPrintChoice
+            value={printSticker}
+            onChange={onPrintStickerChange}
+            copies={stickerCopies}
+            onCopiesChange={onStickerCopiesChange}
+          />
+        ) : (
+          <Text style={[mobileTextStyles.footnote, { color: theme.colors.textSubtle }]}>
+            Sender payment and receipt printing are completed at Sender Cashier Payments.
+          </Text>
+        )}
       </AppCard>
     </>
   );

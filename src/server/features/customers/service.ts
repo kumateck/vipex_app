@@ -2,6 +2,7 @@ import { BadRequest, Conflict, NotFound } from '../../utils/http-error';
 import { db } from '@/db/config';
 import { recordAuditLog } from '../audit/logger';
 import { toPesewas } from '@/server/utils/gh-money';
+import { resolveCustomerByTelephone } from './resolve-customer-by-telephone';
 import {
   createCustomerCreditAllocationRepo,
   createCustomerCardRepo,
@@ -189,18 +190,18 @@ export async function findOrCreateCustomerSvc(input: {
   const telephone = normalizeCustomerTelephone(input.telephone);
   const telephone2 = normalizeCustomerTelephone(input.telephone2);
 
-  const existing = await findCustomerByCompanyTelephonesRepo({
-    companyId: input.companyId,
-    telephones: [telephone, telephone2].filter((value): value is string => !!value),
-  });
-  if (existing) return { id: existing.id };
-
-  return createCustomerSvc({
-    companyId: input.companyId,
-    fullname: input.fullname,
-    telephone,
-    telephone2,
-    createdBy: input.createdBy,
+  const telephones = [telephone, telephone2].filter((value): value is string => !!value);
+  return resolveCustomerByTelephone({
+    findExisting: () =>
+      findCustomerByCompanyTelephonesRepo({ companyId: input.companyId, telephones }),
+    create: () =>
+      createCustomerSvc({
+        companyId: input.companyId,
+        fullname: input.fullname,
+        telephone,
+        telephone2,
+        createdBy: input.createdBy,
+      }),
   });
 }
 

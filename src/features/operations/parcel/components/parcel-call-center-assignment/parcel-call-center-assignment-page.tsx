@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/auth-store';
+import { getErrorMessage, getResponseError } from '@/lib/TheAduseiErrorResponse';
 import ScrollableWrapper from '@/components/ui/scroll-wrapper';
 import { DataTable } from '@/components/datatable';
 import { ParcelStatus } from '@/db/schemas/enums';
@@ -13,6 +14,8 @@ import { EMPTY_META } from './call-center-assignment-types';
 import { AssignParcelDialog } from './assign-parcel-dialog';
 import { BulkAssignParcelsDialog } from './bulk-assign-parcels-dialog';
 import { PaymentStatusLegend } from '../parcel-processed-consignment';
+import { ParcelSecondReceiverDialog } from '../../dialogs/parcel-second-receiver-dialog';
+import { useParcelSecondReceiver } from '../../hooks/use-parcel-second-receiver';
 
 export function ParcelCallCenterAssignmentPage() {
   const workflow = useCallCenterAssignmentWorkflow();
@@ -21,9 +24,14 @@ export function ParcelCallCenterAssignmentPage() {
   const [selectedParcelIds, setSelectedParcelIds] = useState<Set<string>>(new Set());
   const [isBulkSaving, setIsBulkSaving] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const refetchList = table.listQuery.refetch;
+  const refreshList = useCallback(() => void refetchList(), [refetchList]);
+  const secondReceiver = useParcelSecondReceiver(refreshList);
 
   const columns = useCallCenterAssignmentColumns({
     onOpenAssignDialog: table.openAssignDialog,
+    onEditSecondReceiver: secondReceiver.open,
+    canManageSecondReceiver: secondReceiver.canManage,
     selectedParcelIds,
     onToggleParcel: (parcelId) =>
       setSelectedParcelIds((current) => {
@@ -56,14 +64,16 @@ export function ParcelCallCenterAssignmentPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ parcelIds: [...selectedParcelIds], userId: staffId }),
       });
-      if (!response.ok) throw new Error('Failed to assign selected parcels');
+      if (!response.ok) {
+        throw await getResponseError(response, 'Failed to assign selected parcels');
+      }
       setSelectedParcelIds(new Set());
       dialog.setSelectedParcel(null);
       setBulkOpen(false);
       table.handleSearchSubmit(searchInput);
       toast.success(`${selectedParcelIds.size} parcels assigned successfully`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to assign selected parcels');
+      toast.error(getErrorMessage(error, 'Failed to assign selected parcels'));
       throw error;
     } finally {
       setIsBulkSaving(false);
@@ -147,6 +157,8 @@ export function ParcelCallCenterAssignmentPage() {
             table.handleSearchSubmit(searchInput);
           }}
         />
+
+        <ParcelSecondReceiverDialog state={secondReceiver} />
 
         <BulkAssignParcelsDialog
           open={bulkOpen}
